@@ -26,7 +26,7 @@ using the jupyter notebook:
     mesh.show() # display mesh using matplotlib
     r2.filtering(minErr=0)
     r2.invert()
-    r2.showSection()
+    r2.showSection(outputname='/home/user/test.png')
 ```
 
 
