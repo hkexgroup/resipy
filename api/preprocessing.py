@@ -1,8 +1,29 @@
 import numpy as np
 import os
 import pandas as pd
+from scipy.stats.kde import gaussian_kde
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 # Finding common measurements between Normal and Reciprocal datasets and doing the reciprocal error analysis (power law)
 # Dataset structure: Pandas, Normal dataset columns: An, Bn, Mn, Nn, Rn and Reciprocal dataset columns: Ar, Br, Mr, Nr, Rr
+# needed functions below
+def fit(x,a,m): # power-law fit (based on previous studies)
+    return a*(x**m)
+def R_sqr (y,y_predict): # calculating R squared value to measure fitting accuracy
+    	rsdl = y - y_predict
+    	ss_res = np.sum(rsdl**2)
+    	ss_tot = np.sum((y-np.mean(y))**2)
+    	R2 = 1-(ss_res/ss_tot)
+    	R2 = np.around(R2,decimals=4)
+def linear_coefs (x,y): #linear fit parameteres for decay curve
+    data = np.concatenate((np.log(x)[:,None],np.log(y)[:,None]),axis=1)
+    if np.log(y).sum() !=0:
+        data_no_nan = data[~np.isnan(data).any(axis=1)]
+        coefs = np.linalg.lstsq(np.vstack([data_no_nan[:,0], np.ones(len(data_no_nan[:,0]))]).T,data_no_nan[:,1])[0]
+        return coefs
+    else:
+        coefs = np.array([0,0])
+        return
 def find_common (N,R):
 	df_1 = N
 	df_2 = R
