@@ -8,6 +8,8 @@ provides a standalone graphical user interface (GUI) along with a python API for
 Project structure
 -----------------
 
+![project structure](structure.png)*main project structure*
+
 .. figure:: structure.png
     :width: 200px
     :align: center
@@ -20,6 +22,23 @@ Project structure
 Clone
 -----
 To clone the project please use git
+
+
+Examples
+--------
+
+using the jupyter notebook:
+``` python
+    import r2gui.api as r2
+    r2.readData(filename)
+    mesh = r2.mesh()
+    mesh.show() # display mesh using matplotlib
+    r2.filtering(minErr=0)
+    r2.invert()
+    r2.showSection()
+```
+
+
 
 
 Best practices
