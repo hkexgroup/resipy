@@ -8,16 +8,7 @@ provides a standalone graphical user interface (GUI) along with a python API for
 Project structure
 -----------------
 
-![project structure](structure.png)*main project structure*
-
-.. figure:: structure.png
-    :width: 200px
-    :align: center
-    :height: 100px
-    :alt: alternate text
-    :figclass: align-center
-
-    General overlook of the project structure with the three main parts.
+![project structure](structure.png)*General overlook of the project structure with the three main parts.*
 
 Clone
 -----
