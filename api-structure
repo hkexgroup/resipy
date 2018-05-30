@@ -1,0 +1,32 @@
+API structure
+=============
+
+
+R2 class:
+    survey class:
+        filtering() methods
+    filtering() methods
+    mesh class:
+        quadrilateral mesh
+        triangular mesh
+    inversion class:
+        R2 wrapper class:
+            R2.in writer() method
+            R2 invert() method
+            R2 getOutput() method
+        R3 wrapper class
+            idem
+        cR2 wrapper class
+        
+R2m class(R2):
+    showSurvey() method
+    showMesh() method
+    showSection() method
+
+R2gui class(R2):
+    based on Qt
+    
+
+
+        
+        
