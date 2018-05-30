@@ -1,36 +1,54 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue May 29 15:38:17 2018
 
-@author: jkl
+"""
+ZetCode PyQt5 tutorial 
+
+In this example, we receive data from
+a QInputDialog dialog. 
+
+Aauthor: Jan Bodnar
+Website: zetcode.com 
+Last edited: August 2017
 """
 
+from PyQt5.QtWidgets import (QWidget, QPushButton, QLineEdit, 
+    QInputDialog, QApplication)
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QTabWidget, QPushButton, \
-    QMessageBox
 
+class Example(QWidget):
+    
+    def __init__(self):
+        super().__init__()
+        
+        self.initUI()
+        
+        
+    def initUI(self):      
+
+        self.btn = QPushButton('Dialog', self)
+        self.btn.move(20, 20)
+        self.btn.clicked.connect(self.showDialog)
+        
+        self.le = QLineEdit(self)
+        self.le.move(130, 22)
+        
+        self.setGeometry(300, 300, 290, 150)
+        self.setWindowTitle('Input dialog')
+        self.show()
+        
+        
+    def showDialog(self):
+        
+        text, ok = QInputDialog.getText(self, 'Input Dialog', 
+            'Enter your name:')
+        
+        if ok:
+            self.le.setText(str(text))
+        
+        
 if __name__ == '__main__':
-
+    
     app = QApplication(sys.argv)
-
-    w = QWidget()
-    w.resize(250, 150)
-    w.move(300, 300)
-    w.setWindowTitle('Example windows')
-#
-#tab = QTabWidget(w)
-#tab1 = tab.addTab(w,'Importing data')
-#tab2 = tab.addTab(w,'Processing')
-#tab3 = tab.addTab(w,'Inversion')
-
-    submit = QPushButton('hello',w)
-    bquit = QPushButton('quit app',w)
-
-#bquit.clicked.connect(app.quit)
-
-    w.show()
-
-    app.exec()   
+    ex = Example()
     sys.exit(app.exec_())
-

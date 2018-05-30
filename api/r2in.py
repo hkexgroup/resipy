@@ -9,10 +9,13 @@ from mesh import Mesh
 class R2in:
     def __init__(self, param):
         ''' param is a dictionary that contains all the variables to be written to R2.in'''
-
+        self.param = param
+        
     def writeR2(self, outputname=''):
         ''' write to R2.in
         '''
 
         if outputname == '':
             ouptutname = dirname + '/local' # write to local name
+        
+    
