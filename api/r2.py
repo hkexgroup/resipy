@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 import os
 
+from QuadMesh import QuadMesh
+from TriMesh import TriMesh
+
 
 class R2():
     def __init__(self, dirname=''):
@@ -18,46 +21,39 @@ class R2():
             print('using the current directory:', dirname)
         self.dirname = dirname
         
+        
     def setwd(self, dirname):
         ''' set the working directory
         '''
         self.dirname = self.dirname
     
-    def readData(self, fname):
-        ''' read electrode and quadrupoles data
-        '''
-        
     
-    def parseData(self, fname):
-        data = pd.read_csv(fname)
-        return data
-        
-    def createR2in(self, param):
-        ''' create R2.in object
-        '''
-        
-    def invert(self):
-        ''' perform inversion
-        '''
+    def creatSurvey(self, fname):
+        ''' read electrode and quadrupoles data and return 
+        a survey object
+        '''    
     
-    def show(self):
-        ''' plot the results 
-        '''
-        
+    
     def createMesh(self, typ='quad'):
         ''' create a mesh object
         typ:
             quad : quadrilateral mesh
             triang : triangular mesh
         '''
-        
+        if typ == 'quad':
+            mesh = QuadMesh(elec, nnode=4)
+        if typ == 'trian':
+            mesh = TriMesh(elec, resolution=1)
         self.mesh = mesh
         
         
-    def showMesh(self):
-        ''' call show mesh
+    def invert(self, param):
+        ''' invert the data, first generate R2.in file, then run
+        inversion using appropriate wrapper, then return results
         '''
-
+        
+        
+        
         
 #%% test code
 k = R2()
