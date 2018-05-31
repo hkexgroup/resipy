@@ -12,17 +12,58 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import  numpy as np
+
+
+from mesh_class import mesh_obj
+import meshTools as mt # need to put in API and create modules
+
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, figure=None):
         super(MatplotlibWidget, self).__init__(parent)
-        self.figure = Figure()
+        if figure is None:
+            figure = Figure()
+            axes = figure.add_subplot(111)
+        else:
+            axes = figure.get_axes()
+        self.axis = axes
+        self.figure = figure
         self.canvas = FigureCanvasQTAgg(self.figure)
 
-        self.axis = self.figure.add_subplot(111)
 
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
+    
+    def plot(self, callback):
+        ''' call a callback plot function and give it the ax to plot to
+        '''
+        print('plot is called')
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        callback(ax=ax)
+        self.canvas.draw()
+        
+
+    def draw(self, fig):
+        print('creating new figure')
+        self.figure = fig
+        self.figure.suptitle('hello')
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.canvas.draw()
+        self.figure.canvas.draw()
+    
+    def drawAxes(self, ax):
+        print('draw Awes')
+        self.figure.clf()
+        self.figure.axes.append(ax)
+#        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.figure.canvas.draw()
+        self.canvas.draw()
+#    def update(self, fig):
+        
+        
         
 #class ThreadSample(QThread):
 #    newSample = pyqtSignal(list)
@@ -74,9 +115,9 @@ class App(QMainWindow):
         
         button = QPushButton('Import Data')
         def getfile():
-            fname, _ = QFileDialog.getOpenFileName(tab1,'Open File')
-            authorEdit.setText(fname)
-            return fname
+            self.fname, _ = QFileDialog.getOpenFileName(tab1,'Open File')
+            authorEdit.setText(self.fname)
+            
         button.clicked.connect(getfile)
         grid.addWidget(button, 3, 0)
         
@@ -106,12 +147,34 @@ class App(QMainWindow):
         # tab 2
         
         grid = QGridLayout()
+#        self.fname = r'C:\Users\blanchy\Downloads\pyScripts\r2gui\f001_res.vtk'
+
+                
+        def callback2(ax):
+            ax.plot(np.random.randn(20,5), '+--')
+            ax.set_title('Random data nnnnndfghdfh')
         
-        button = QPushButton('Generate Mesh')
-        grid.addWidget(button, 1, 0)
-        
-        grid.addWidget(QLabel('Mesh'), 2, 0)
-        
+        def updateGraph2():
+            mw1.plot(callback2)
+                
+            
+        def plotMesh():
+            print(self.fname)
+            mesh_dict=mt.vtk_import(self.fname)#makes a dictionary of a mesh 
+            mesh = mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+    
+#            mesh.summary()
+            print('ready to draw')
+            mw1.plot(mesh.show) # mesh.show() is the callback function to be called with ax
+#            mw.plot(callback)
+            
+        btn = QPushButton('Plot Mesh')
+        btn.clicked.connect(plotMesh)
+        grid.addWidget(btn, 1, 0)
+
+        mw1 = MatplotlibWidget()
+        grid.addWidget(mw1, 2, 0)
+       
         tab2.setLayout(grid)
         
         # tab 3
@@ -131,15 +194,33 @@ class App(QMainWindow):
 
         grid = QGridLayout()
 
-        def drawSample():
-            mw.axis.clear()
-            mw.axis.plot(random.sample(range(0,10),10))
-            mw.canvas.draw()
+#        def drawSample():
+#            mw.axis.clear()
+#            mw.axis.plot(random.sample(range(0,10),10))
+#            mw.canvas.draw()
+        
+        def callback(ax):
+            ax.plot(np.random.randn(20,5), '*-')
+            ax.set_title('Random data')
+        
+        def updateGraph():
+            mw.plot(callback)
+            
+            
+#        def newGraph():
+#            fig, ax = plt.subplots()
+#            ax.plot(np.random.randn(100,3))
+#            mw.draw(fig)
+##            mw.drawAxes(ax)
+        
+
             
         btn = QPushButton('Draw random sample')
-        btn.clicked.connect(drawSample)
-            
+#        btn.clicked.connect(drawSample)
+#        btn.clicked.connect(newGraph)
+        btn.clicked.connect(updateGraph)
         mw = MatplotlibWidget()
+        
         
         grid.addWidget(btn, 1, 0)
         grid.addWidget(mw, 2, 0)
