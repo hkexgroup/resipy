@@ -1,4 +1,3 @@
-
 """
 Created on Wed May 30 10:19:09 2018, python 3.6.5
 Import a vtk file with an unstructured grid (triangular elements) and 
@@ -17,6 +16,12 @@ Class:
 import math as ma
 import tkinter as tk
 from tkinter import filedialog
+#import anaconda libraries
+from numpy import array
+import matplotlib.pyplot as plt
+import matplotlib.cm as cmaps
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 
 #%% triangle centriod - compute center of a triangular element
 def tri_cent(p,q,r):#code expects points as p=(x,y) and so on ... (counter clockwise prefered)
@@ -242,8 +247,45 @@ class mesh_obj:
         print("Number of cell attributes: %i"%int(self.no_attributes))
         print("original file path: %s"%self.file_path())
 
-    def show_mesh(self):
-        pass
+    def show(self,color_map='jet'):#displays the mesh using matplotlib
+        """
+        Show a mesh object using matplotlib. The color map variable should be 
+        a string refering to the color map you want (default is "jet").
+        As we're using the matplotlib package here any color map avialable within 
+        matplotlib package can be used to display the mesh here also. See: 
+        https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html
+        """ 
+        if not isinstance(color_map,str):#check the color map variable is a string
+            raise NameError('color_map variable is not a string')
+            #not currently checking if the passed variable is in the matplotlib library
+        
+        patches=[]#list wich will hold the polygon instances 
+        no_verts=self.Type2VertsNo()#number of vertices each element has 
+        for i in range(self.num_elms):
+            node_coord=[]#coordinates of the corner of each element 
+            for k in range(no_verts):
+                node_coord.append((
+                        self.node_x[self.node_data[k][i]],
+                        self.node_y[self.node_data[k][i]]))                 
+            polygon= Polygon(node_coord,True)
+            patches.append(polygon) #patch list   
+        #build colour map
+        X=self.cell_atributes
+        colour_array=cmaps.jet(plt.Normalize(min(X),max(X))(X))#maps color onto mesh
+        plt.set_cmap(color_map)
+        #compile polygons patches into a "patch collection"
+        pc=PatchCollection(patches,alpha=0.8,edgecolor='k',facecolor=colour_array)
+        pc.set_array(array(X))
+        #make figure
+        fig,ax=plt.subplots()#blit polygons to axis
+        ax.add_collection(pc)
+        #were dealing with patches and matplotlib isnt smart enough to know what the right limits are 
+        plt.ylim([min(self.node_y),max(self.node_y)])
+        plt.xlim([min(self.node_x),max(self.node_x)])
+        #update the figure
+        cbar=plt.colorbar(pc,ax=ax)#add colorbar
+        cbar.set_label(self.atribute_title) #set colorbar title      
+        plt.show()
     
     def log10(self):#adds a log 10 (resistivity) to the mesh
         #currently this expects that the 
