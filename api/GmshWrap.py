@@ -69,7 +69,7 @@ def GenGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path=
         fh=open(file_name,'w')
     else:
         fh=open(os.path.join(path,file_name),'w')#file handle
-    fh.write("//Jamyd91's Python Slope Stability code version 0.1 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
+    fh.write("//Jamyd91's gmsh wrapper code v 0.1 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
     fh.write("//2D mesh coordinates\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
     fh.write("//Define surface points\n")
