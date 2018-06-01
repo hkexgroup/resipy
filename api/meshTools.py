@@ -2,12 +2,14 @@
 """
 Created on Wed May 30 10:19:09 2018, python 3.6.5
 @author: jamyd91
-Import a vtk file with an unstructured grid (triangular elements) and 
-creates a mesh object (with associated functions). 
+Import a vtk file with an unstructured grid (triangular/quad elements) and 
+creates a mesh object (with associated functions). The mesh object can have quad or
+triangular elements. It is assigned a cell type according the convention in vtk files. 
+(ie. cell type 9 <- quad, cell type 5 <- triangle)
 
 Functions: 
     tri_cent() - computes the centre point for a 2d triangular element
-    vtk_import() - imports a triangular unstructured grid from a vtk file
+    vtk_import() - imports a triangular / quad unstructured grid from a vtk file
     readR2_resdat () - reads resistivity values from a R2 file. 
 Classes: 
     mesh_obj
@@ -33,13 +35,13 @@ def tri_cent(p,q,r):#code expects points as p=(x,y) and so on ... (counter clock
     
 #%% import a vtk file 
 def vtk_import(file_path='ask_to_open',parameter_title='default'):
-    #Converts a gmsh mesh file into a mesh.dat file needed for R2. 
+    #imports a 2d mesh file into the python workspace, can have triangular or quad type elements 
 #INPUT:
     #file_path - file path to mesh file. note that a error will occur if the file format is not as expected
     #save_path - leave this as default to save the file in the working directory, make this 'ask_to_open' to open a dialogue box, else enter a custom file path.
     #parameter_title - name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
 #OUTPUT: 
-    #dictionary with some 'useful' info about the mesh
+    #dictionary with some 'useful' info about the mesh, which can be converted in to a mesh object 
 ###############################################################################
     if file_path=='ask_to_open':#use a dialogue box to open a file
         print("please select the vtk file to import using the pop up dialogue box. \n")
@@ -49,6 +51,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     #open the selected file for reading
     fid=open(file_path,'r')
     print("importing vtk (2D mesh) file into python workspace...")
+    
     #read in header info and perform checks to make sure things are as expected
     vtk_ver=fid.readline().strip()#read first line
     if vtk_ver.find('vtk')==-1:
@@ -62,6 +65,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     dataset_type=fid.readline().strip().split()#read line 4
     if dataset_type[1]!='UNSTRUCTURED_GRID':
         print("Warning: code intended to deal with an 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
+    
     #read node data
     print("importing mesh nodes...")
     node_info=fid.readline().strip().split()#read line 5
@@ -77,42 +81,82 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         y_coord.append(float(coord_data[1]))
         z_coord.append(float(coord_data[2]))
         node_num.append(i)
+    
     #now read in element data
     print("importing mesh element info...")
     elm_info=fid.readline().strip().split()#read line with cell data
     no_elms=int(elm_info[1])
-    no_pts=[]
+    no_pts=[]#assign lists to nodes 
     node1=[]
     node2=[]
     node3=[]
+    node4=[]
     elm_num=[]
-    centriod_x=[]
+    centriod_x=[]#list will contain the centre points of elements 
     centriod_y=[]
-    areas=[]
-    #import element data ... expects triangles
+    areas=[]#areas of cells (might be useful in the future)
+    ignored_cells=0
+    #import element data ... expects triangles or quads 
     for i in range(no_elms):
         elm_data=fid.readline().strip().split()
-        if int(elm_data[0])!=3:
-            raise ImportError("non-triangle elements detected! Aborting vtk import.")
-        no_pts.append(int(elm_data[0]))
-        #nodes
-        node1.append(int(elm_data[1]))
-        node2.append(int(elm_data[2]))
-        node3.append(int(elm_data[3]))
-        elm_num.append(i+1)
-        #find the centriod of the element for triangles
-        n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
-        n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])])
-        n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])])
-        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
-        centriod_x.append(xy_tuple[0])
-        centriod_y.append(xy_tuple[1])
-        #find area of element (for a triangle this is 0.5*base*height)
-        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
-        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
-        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-        areas.append(0.5*base*height)
+        if int(elm_data[0])==3:
+            if i==0:
+                print("triangular elements detected")
+                vert_no=3
+            no_pts.append(int(elm_data[0]))
+            #nodes
+            node1.append(int(elm_data[1]))
+            node2.append(int(elm_data[2]))
+            node3.append(int(elm_data[3]))
+            elm_num.append(i+1)
+            #find the centriod of the element for triangles
+            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
+            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])])
+            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])])
+            xy_tuple=tri_cent(n1,n2,n3)#actual calculation
+            centriod_x.append(xy_tuple[0])
+            centriod_y.append(xy_tuple[1])
+            #find area of element (for a triangle this is 0.5*base*height)
+            base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+            mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+            height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+            areas.append(0.5*base*height)
+        elif int(elm_data[0])==4:
+            if i==0:
+                print("quad elements detected")
+                vert_no=4
+            no_pts.append(int(elm_data[0]))
+            #nodes
+            node1.append(int(elm_data[1]))
+            node2.append(int(elm_data[2]))
+            node3.append(int(elm_data[3]))
+            node4.append(int(elm_data[4]))
+            elm_num.append(i+1)
+            #assuming element centres are the average of the x - y coordinates for the quad
+            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
+            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])])
+            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])])
+            n4=(x_coord[int(elm_data[4])],y_coord[int(elm_data[4])])
+            (n1[0],n2[0],n3[0],n4[0])
+            centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0])))
+            centriod_y.append(np.mean((n1[1],n2[1],n3[1],n4[1])))
+            #finding element areas, base times height.  
+            elm_len=abs(n2[0]-n1[0])#element length
+            elm_hgt=abs(n2[1]-n3[1])#element hieght
+            areas.append(elm_len*elm_hgt)
+        else: 
+            print("WARNING: unkown cell type encountered!")
+            ignored_cells+=1
+    #compile some information        
     centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
+    if vert_no==3:
+        node_maps=(node1,node2,node3)
+    elif vert_no==4:
+        node_maps=(node1,node2,node3,node4)
+        
+    if ignored_cells>0:
+        print("%i cells ignored in the vtk file"%ignored_cells)
+    
     #now for final part of file - cell type info
     cell_type_data=fid.readline().strip()
     cell_type=fid.readline().strip().split()
@@ -143,7 +187,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
                indx=i+2
                break
             if i==range(len(cell_attributes)):
-               print("Warning: could not find relevant table for element attributes! Make sure you havent made a mistake with table name in the VTK file. \n")
+               print("WARNING: could not find relevant table for element attributes! Make sure you havent made a mistake with table name in the VTK file. \n")
                indx=3
         values=[float(k) for k in cell_attributes[indx].split()]
     elif do_find==2:
@@ -166,7 +210,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             'node_id':node_num,#node id number 
             'elm_id':elm_num,#element id number 
             'num_elm_nodes':no_pts,#number of points which make an element
-            'node_data':(node1,node2,node3),#nodes of element vertices
+            'node_data':node_maps,#nodes of element vertices
             'elm_centre':centriod,#centre of elements (x,y)
             'elm_area':areas,#area of each element
             'cell_type':cell_type,
@@ -178,6 +222,12 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
+    #reads resistivity values in f00#_res.dat file output from R2, 
+#INPUT:
+    #file_path - string which maps to the _res.dat file
+#OUTPUT:
+    #res_values - resistivity values returned from the .dat file 
+################################################################################
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
     fh=open(file_path,'r')
@@ -225,6 +275,7 @@ class mesh_obj:
         self.cell_attributes=cell_attributes 
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
+        self.ndims=2
         
     def file_path(self):#returns the file path from where the mesh was imported
         return(format(self.original_file_path))
@@ -295,9 +346,12 @@ class mesh_obj:
         mesh_obj.no_attributes += 1
         self.log_attribute=np.log10(self.cell_attributes)
             
-    def add_attribute(self):
+    def add_attribute(self,values):
+        if len(values)!=self.num_elms:
+            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         mesh_obj.no_attributes += 1
-        pass #allows us to add an attributes to each element. 
+        self.new_attribute=values #allows us to add an attributes to each element.
+        #this function needs fleshing out more to allow custom titles and attribute names
     
     def update_attribute(self,new_attributes,new_title='default'):
         if len(new_attributes)!=self.num_elms:
