@@ -2,14 +2,16 @@
 """
 Created on Tue Apr 10 14:32:14 2018
 Simple wrapper for creating 2d triangular meshes with gmsh and converting it 
-into a mesh.dat format for R2 
+into a mesh.dat format for R2. The code tri_mesh ()expects a directory "Executables"
+exists within the working directory with a gmsh.exe inside it! 
+
 @author: jamyd91
 Programs:
     arange () - creates a list of values like np.arange does
     ccw() - checks cartesian points are oreintated clockwise 
     GenGeoFile () - generates a .geo file for gmsh
     gmsh2R2mesh () - converts a gmsh.msh file to a mesh.dat file readable by R2
-    tri_cent() - combines the above codes into one line. 
+    tri_cent () - combines GenGeoFile and gmsh2R2msh functions into one function 
 """
 #python standard libraries 
 import tkinter as tk
@@ -54,7 +56,6 @@ def GenGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path=
     #path - directory to save the .geo file 
 #OUTPUT:
     #gmsh . geo file which can be ran in gmsh
-
 ###############################################################################
     #formalities and error checks
     if len(topo_x) != len(topo_y):
@@ -67,7 +68,7 @@ def GenGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path=
     if path=='default':#written to working directory 
         fh=open(file_name,'w')
     else:
-        fh=open(path+file_name,'w')#file handle
+        fh=open(os.path.join(path,file_name),'w')#file handle
     fh.write("//Jamyd91's Python Slope Stability code version 0.1 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
     fh.write("//2D mesh coordinates\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
@@ -178,7 +179,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
 #INPUT:
     #file_path - file path to mesh file. note that a error will occur if the file format is not as expected
     #save_path - leave this as default to save the file in the working directory, make this 'ask_to_open' to open a dialogue box, else enter a custom file path.
-    #return_mesh - make this 'yes' if you want to return information from the mesh conversion to make a mesh object for example
+    #return_info - make this 'yes' if you want to return information from the mesh conversion
 #OUTPUT: 
     #dictionary with some 'useful' info about the mesh
 ###############################################################################
@@ -345,6 +346,16 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
                 'dict_type':'mesh_info',
                 'original_file_path':file_path} 
         #create mesh object 
+
+#%% check directory 
+def check_directory_setup():
+    dir_name="Executables/gms.exe"
+    if not os.path.isfile(dir_name):
+        print('no gmsh file exists!')
+        
+        #os.makedirs(dir_name)
+        
+        
         
 #%% gmsh wrapper
 def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50):
@@ -359,21 +370,28 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50):
 #OUTPUT: 
     #mesh.dat in the Executables directory
 ###############################################################################
-    
+    #check directories 
+    try:
+        os.stat("Executables")
+    except FileNotFoundError:
+        print("could not find Executables directory")
+        os.mkdir("Executables")
+    if not os.path.isfile("Executables/gmsh.exe"):
+        raise EnvironmentError("No gmsh.exe exists in the Executables directory!")
     #make .geo file
     file_name="temp"
-    node_pos,_=GenGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,doi=doi,path="Executables/")
+    node_pos,_=GenGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path="Executables")
     # handling gmsh
     cwd=os.getcwd()#get current working directory 
     ewd=os.path.join(cwd,"Executables")#change working directory to /Executables
     os.chdir(ewd)#ewd - exe working directory 
-    os.system('gmsh '+file_name+'.geo -2')#run gmsh to make a triangular mesh
+    os.system('gmsh '+file_name+'.geo -2')#run gmsh 
     #convert into mesh.dat 
     mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes')
-    os.remove("temp.geo");os.remove("temp.msh")#removes the .geo and .msh files, comment to keep them. 
+    os.remove("temp.geo");os.remove("temp.msh")
     #change back to orginal working directory
     os.chdir(cwd)
-    return mesh_dict # returns a dictionary with mesh info
+    return mesh_dict
         
 #%% work in progress       
 #write R2.in file for a forward model ONLY
