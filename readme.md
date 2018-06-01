@@ -17,8 +17,8 @@ To clone the project please use git
 
 Examples
 --------
-
-using the jupyter notebook:
+Check out the jupyter notebook examples (examples/jupyter-notebook/).
+Below here is snippset:
 ``` python
     import r2gui.api as r2
     r2.readData(filename)
