@@ -10,6 +10,11 @@ import numpy as np
 import pandas as pd
 import os
 import sys
+import shutil
+import platform
+from subprocess import PIPE, call, Popen
+OS = platform.system()
+
 sys.path.append(os.path.relpath('..'))
 
 #from QuadMesh import QuadMesh
@@ -70,12 +75,19 @@ class R2(object): # R2 master class instanciated by the GUI
         inversion using appropriate wrapper, then return results
         '''
         
+    def pseudo(self):
+        self.surveys[0].pseudo()
+    
+    def plotError(self):
+        self.surveys[0].plotError()
         
         
         
 #%% test code
 #k = R2()
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
+
+
 
 
 

@@ -7,7 +7,7 @@ Created on Wed May 30 20:09:24 2018
 """
 
 import numpy as np
-
+import os
 
 def write2in(param, dirname):
     ''' write R2.in file
@@ -111,9 +111,8 @@ def write2in(param, dirname):
     
 
     # write configuration file
-    with open(dirname + '/R2.in','w') as f:
+    with open(os.path.join(dirname,'R2.in'),'w') as f:
         f.write(content)
-    
     
     return content
 
