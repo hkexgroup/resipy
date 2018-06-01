@@ -4,6 +4,7 @@ Created on Tue Apr 10 14:32:14 2018
 Simple wrapper for creating 2d triangular meshes with gmsh and converting it 
 into a mesh.dat format for R2. The code tri_mesh ()expects a directory "Executables"
 exists within the working directory with a gmsh.exe inside it! 
+please find gmsh.exe online at http://gmsh.info/
 
 @author: jamyd91
 Programs:
