@@ -1,8 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import sys
-import random
-
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox)
@@ -12,12 +9,18 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+
 import matplotlib.pyplot as plt
-import  numpy as np
+import numpy as np
+import pandas as pd
+import random
+import os
+import sys
+sys.path.append(os.path.relpath('..'))
 
-
-from mesh_class import mesh_obj
-import meshTools as mt # need to put in API and create modules
+from api.mesh_class import mesh_obj
+import api.meshTools as mt
+from api.R2 import R2
 
 
 class MatplotlibWidget(QWidget):
@@ -83,6 +86,7 @@ class App(QMainWindow):
         super().__init__()
         self.setWindowTitle('R2 GUI')
         self.setGeometry(300,300,600,400)
+        self.r2 = R2()
         
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -91,7 +95,7 @@ class App(QMainWindow):
         tab2 = QWidget()
         tab3 = QWidget()
         
-        #tab 1
+        #%% tab 1
         grid = QGridLayout()
         
         title = QLabel('Title')
@@ -100,43 +104,42 @@ class App(QMainWindow):
         titleEdit = QLineEdit()
         titleEdit.setText('My beautiful survey')
         authorEdit = QLineEdit()
-        
+                
         grid.addWidget(title, 1, 0)
         grid.addWidget(titleEdit, 1, 1)
         
         grid.addWidget(author, 2, 0)
         grid.addWidget(authorEdit, 2, 1)
         
-#        openFile = QAction(QIcon('open.png'), 'Open', self)
-#        openFile.setShortcut('Ctrl+O')
-#        openFile.setStatusTip('Open new File')
-#        openFile.triggered.connect(self.showDialog)
-#        
-        
-        button = QPushButton('Import Data')
+        filename = QLabel('')
+        grid.addWidget(filename, 3, 1)
+
         def getfile():
             self.fname, _ = QFileDialog.getOpenFileName(tab1,'Open File')
-            authorEdit.setText(self.fname)
-            
+            filename.setText(self.fname)
+            self.r2.createSurvey(self.fname)
+            plotError()
+        
+        button = QPushButton('Import Data') 
         button.clicked.connect(getfile)
         grid.addWidget(button, 3, 0)
         
-        button = QPushButton('hello')
-        button.clicked.connect(QMessageBox)
-        grid.addWidget(button, 4, 0)
         
-        # chose inversion type
-        inv_type = QComboBox()
-        inv_type.addItem('Regular One')
-        inv_type.addItem('New one')
-        inv_type.addItem('No a good one')
-        grid.addWidget(inv_type, 4, 0)
+        def plotPseudo():
+            mwPseudo.plot(self.r2.surveys[0].pseudo)
+        
+        btn = QPushButton('Plot Pseudo')
+        btn.clicked.connect(plotPseudo)
+        grid.addWidget(btn, 3, 1)
 
-        inv_type = QListWidget()        
-        inv_type.addItem('Regular One')
-        inv_type.addItem('New one')
-        inv_type.addItem('No a good one')
-        grid.addWidget(inv_type, 5, 0)
+        mwPseudo = MatplotlibWidget()
+        grid.addWidget(mwPseudo, 4, 0)
+        
+        def plotError():
+            mwError.plot(self.r2.surveys[0].plotError)
+            
+        mwError = MatplotlibWidget()
+        grid.addWidget(mwError, 4, 1)
         
         
         tab1.setLayout(grid)
@@ -144,7 +147,7 @@ class App(QMainWindow):
         
         
         
-        # tab 2
+        #%% tab 2
         
         grid = QGridLayout()
 #        self.fname = r'C:\Users\blanchy\Downloads\pyScripts\r2gui\f001_res.vtk'
@@ -177,18 +180,35 @@ class App(QMainWindow):
        
         tab2.setLayout(grid)
         
-        # tab 3
+        #%% tab 3
         
         grid = QGridLayout()
         
         singular_type = QCheckBox('Singularity Removal')
         grid.addWidget(singular_type, 0, 1)
         
+        button = QPushButton('hello')
+        button.clicked.connect(QMessageBox)
+        grid.addWidget(button, 3, 0)
+        
+        # chose inversion type
+        inv_type = QComboBox()
+        inv_type.addItem('Regular One')
+        inv_type.addItem('New one')
+        inv_type.addItem('No a good one')
+        grid.addWidget(inv_type, 4, 0)
+
+        inv_type = QListWidget()        
+        inv_type.addItem('Regular One')
+        inv_type.addItem('New one')
+        inv_type.addItem('No a good one')
+        grid.addWidget(inv_type, 5, 0)
+        
         
         tab3.setLayout(grid)
         
         
-        # tab 4
+        #%% tab 4
         
         tab4 = QWidget()
 
