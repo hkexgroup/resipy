@@ -21,7 +21,7 @@ sys.path.append(os.path.relpath('..'))
 #from TriMesh import TriMesh
 
 from api.Survey import Survey
-
+from api.r2in import write2in
 
 class R2(object): # R2 master class instanciated by the GUI
     def __init__(self, dirname=''):
@@ -33,10 +33,11 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
         
+        
     def setwd(self, dirname):
         ''' set the working directory
         '''
-        self.dirname = self.dirname
+        self.dirname = dirname
     
     
     def createSurvey(self, fname, ftype='Syscal', info={}):
@@ -53,8 +54,11 @@ class R2(object): # R2 master class instanciated by the GUI
         # define electrode position according to first survey
         if len(self.surveys) == 1:
             self.elec = self.surveys[0].elec
-        
             
+            # attribute method of Survey object to R2
+            self.pseudo = self.surveys[0].pseudo
+            self.plotError = self.surveys[0].plotError
+            self.linfit = self.surveys[0].linfit
         
     
     def createMesh(self, typ='quad'):
@@ -70,27 +74,39 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh = mesh
         
         
-    def invert(self, param):
+    def invert(self, param={}):
         ''' invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results
         '''
+        # write configuration file
+#        write2in(param, self.dirname)
         
-    def pseudo(self):
-        self.surveys[0].pseudo()
-    
-    def plotError(self):
-        self.surveys[0].plotError()
+        # copy R2.exe
+#        os.copy('../external-exe/R2.exe',self.dirname)
+
+        self.runR2()
         
+    def runR2(self):
+        # run R2.exe
+        cwd = os.getcwd()
+        os.chdir(self.dirname)
+        
+        if OS == 'Linux':
+            cmd = ['wine','R2.exe']
+        if OS == 'Windows':
+            cmd = ['R2.exe']
+        
+        p = Popen(cmd, stdout=PIPE, shell=False)
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            print(line.decode('utf-8'))
+            
+        os.chdir(cwd)
         
         
 #%% test code
-#k = R2()
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
-
-
-
-
-
-
-
-       
+#k.pseudo(contour=True)
+#k.linfit(iplot=True)
+#k.invert()

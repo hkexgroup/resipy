@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-    QListWidget, QFileDialog, QCheckBox, QComboBox)
+    QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit)
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -86,7 +86,7 @@ class App(QMainWindow):
         super().__init__()
         self.setWindowTitle('R2 GUI')
         self.setGeometry(300,300,600,400)
-        self.r2 = R2()
+        self.r2 = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
         
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -225,30 +225,46 @@ class App(QMainWindow):
         
         def updateGraph():
             mw.plot(callback)
-            
-            
-#        def newGraph():
-#            fig, ax = plt.subplots()
-#            ax.plot(np.random.randn(100,3))
-#            mw.draw(fig)
-##            mw.drawAxes(ax)
-        
 
-            
         btn = QPushButton('Draw random sample')
-#        btn.clicked.connect(drawSample)
-#        btn.clicked.connect(newGraph)
         btn.clicked.connect(updateGraph)
         mw = MatplotlibWidget()
-        
         
         grid.addWidget(btn, 1, 0)
         grid.addWidget(mw, 2, 0)
         
+        
+        # run R2
+        def dataReady():
+            cursor = logText.textCursor()
+            cursor.movePosition(cursor.End)
+#            cursor.insertText(text)
+            cursor.insertText(str(self.process.readAll(), 'utf-8'))
+            logText.ensureCursorVisible()
+            
+        def logInversion():
+#            self.r2.invert(callback=dataReady)
+    #            dataReady('kk\n')         
+            
+            self.process = QProcess(self)
+            self.process.setWorkingDirectory(self.r2.dirname)
+            # QProcess emits `readyRead` when there is data to be read
+            self.process.readyRead.connect(dataReady)
+            self.process.start('wine R2.exe')
+
+
+        btn = QPushButton('Invert')
+        btn.clicked.connect(logInversion)
+        
+        grid.addWidget(btn, 3, 0)
+        
+        logText = QTextEdit()
+        grid.addWidget(logText, 4, 0)
+        
         tab4.setLayout(grid)
                     
         
-        
+        #%%
         tabs.addTab(tab1, 'Processing')
         tabs.addTab(tab2, 'Mesh')
         tabs.addTab(tab3, 'Inversion')

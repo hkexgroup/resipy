@@ -205,8 +205,8 @@ class Survey(object):
         self.dfg['linError'] = predictRecipError
         
         if iplot:
-            figs = []
-            fig,ax=plt.subplots()
+            if ax is None:
+                fig, ax = plt.subplots()
             ax.loglog(recipMean, recipError, '+', label='raw')
             ax.loglog(xm[inan],ystdErr[inan],'o', label='bin means')
             ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
@@ -214,22 +214,19 @@ class Survey(object):
             ax.loglog(xm[inan],predy,'r-',label='linear regression')
             ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
             ax.legend()
-#            fig.show()
-            figs.append(fig)
             
-            fig,ax=plt.subplots()
-            isort = np.argsort(recipMean)
-            ax.plot(recipMean,recipError,'o', label='raw errors')
-            ax.plot(recipMean,predictRecipError,'o', label='predicted')
-            ax.plot(recipMean[isort],2*predictRecipError[isort],'-', label='2*prediction')
-            ax.legend()
-            ax.set_title('Linear fit prediction')
-            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-            ax.set_ylabel('Reciprocal Error [$\Omega$]')
-#            fig.show()
-            figs.append(fig)
+#            fig,ax=plt.subplots()
+#            isort = np.argsort(recipMean)
+#            ax.plot(recipMean,recipError,'o', label='raw errors')
+#            ax.plot(recipMean,predictRecipError,'o', label='predicted')
+#            ax.plot(recipMean[isort],2*predictRecipError[isort],'-', label='2*prediction')
+#            ax.legend()
+#            ax.set_title('Linear fit prediction')
+#            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
+#            ax.set_ylabel('Reciprocal Error [$\Omega$]')
+##            fig.show()
+#            figs.append(fig)
             
-            return figs
         
       
         
@@ -377,7 +374,8 @@ class Survey(object):
                 return X, Y, Z
             X, Y, Z = grid(xpos, ypos, resist)
             if ax is None:
-                fig, ax = plt.subplots(figsize=figsize)
+                fig, ax = plt.subplots()
+            figsize=(10,6)
             cax = ax.contourf(X,Y,Z)
 #            cbar = fig.colorbar(cax, ax=ax)
 #            cbar.set_label(label)

@@ -118,6 +118,6 @@ def write2in(param, dirname):
 
 
 #%% test code
-content = write2in(param={}, dirname='.')
+#content = write2in(param={}, dirname='.')
 
 
