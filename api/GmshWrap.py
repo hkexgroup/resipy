@@ -11,7 +11,7 @@ Programs:
     ccw() - checks cartesian points are oreintated clockwise 
     GenGeoFile () - generates a .geo file for gmsh
     gmsh2R2mesh () - converts a gmsh.msh file to a mesh.dat file readable by R2
-    tri_cent () - combines GenGeoFile and gmsh2R2msh functions into one function, returns a mesh object 
+    tri_mesh () - combines GenGeoFile and gmsh2R2msh functions into one function, returns a mesh object 
 """
 #python standard libraries 
 import tkinter as tk
