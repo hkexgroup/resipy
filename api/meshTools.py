@@ -11,6 +11,7 @@ Functions:
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
     readR2_resdat () - reads resistivity values from a R2 file. 
+    quad_mesh () - creates a quadrilateral mesh given electride x and y coordinates
 Classes: 
     mesh_obj
 """
@@ -490,7 +491,7 @@ def quad_mesh(elec_x,elec_y,doi=30,cell_height=1,nbe=3):
     #print some warnings for debugging 
     if len(topo)!=len(meshx):
         print("WARNING: topography vector and x coordinate arrays not the same length! ")
-    elif len(elec_nodes)!=no_electrodes:
+    elif len(elec_node)!=no_electrodes:
         print("WARNING: electrode node vector and number of electrodes mismatch! ")
      
     # what is the number of regions? (elements)
