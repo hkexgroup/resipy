@@ -11,7 +11,8 @@ Functions:
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
     readR2_resdat () - reads resistivity values from a R2 file. 
-    quad_mesh () - creates a quadrilateral mesh given electride x and y coordinates
+    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates 
+                 (returns info needed for R2in)
 Classes: 
     mesh_obj
 """
