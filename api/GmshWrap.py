@@ -4,7 +4,6 @@ Created on Tue Apr 10 14:32:14 2018
 Simple wrapper for creating 2d triangular meshes with gmsh and converting it 
 into a mesh.dat format for R2. The code tri_mesh ()expects a directory "Executables"
 exists within the working directory with a gmsh.exe inside it! 
-please find gmsh.exe online at http://gmsh.info/
 
 @author: jamyd91
 Programs:
@@ -12,7 +11,7 @@ Programs:
     ccw() - checks cartesian points are oreintated clockwise 
     GenGeoFile () - generates a .geo file for gmsh
     gmsh2R2mesh () - converts a gmsh.msh file to a mesh.dat file readable by R2
-    tri_cent () - combines GenGeoFile and gmsh2R2msh functions into one function 
+    tri_cent () - combines GenGeoFile and gmsh2R2msh functions into one function, returns a mesh object 
 """
 #python standard libraries 
 import tkinter as tk
@@ -20,6 +19,8 @@ from tkinter import filedialog
 import os 
 #anaconda libraries
 import numpy as np
+#impoty R2gui API package 
+import meshTools as mt  
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -44,19 +45,19 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
         return 2 # points are counter clockwise
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def GenGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path='default'):
+def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path='default'):
 #writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
 #INPUT:
     #topo_x - x coordinates of the surface
     #topo_y - y coordinates of the surface 
     #elec_x - x coordinates of the electrodes 
     #elec_y - y coordinates of the electrodes
-    #file_name - name of the generated gmsh file (can include file path also) (optional)
+    #file_name - name of the generated gmsh file (optional)
     #doi - depth of investigation (optional)
     #cl - characteristic length (optional)
     #path - directory to save the .geo file 
 #OUTPUT:
-    #gmsh . geo file which can be ran in gmsh
+    #gmsh . geo file which can be run / loaded into gmsh
 ###############################################################################
     #formalities and error checks
     if len(topo_x) != len(topo_y):
@@ -70,7 +71,7 @@ def GenGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path=
         fh=open(file_name,'w')
     else:
         fh=open(os.path.join(path,file_name),'w')#file handle
-    fh.write("//Jamyd91's gmsh wrapper code v 0.1 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
+    fh.write("//Jamyd91's gmsh wrapper code version 0.1 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
     fh.write("//2D mesh coordinates\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
     fh.write("//Define surface points\n")
@@ -346,17 +347,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
                 'parameter_title':'material',
                 'dict_type':'mesh_info',
                 'original_file_path':file_path} 
-        #create mesh object 
-
-#%% check directory 
-def check_directory_setup():
-    dir_name="Executables/gms.exe"
-    if not os.path.isfile(dir_name):
-        print('no gmsh file exists!')
-        
-        #os.makedirs(dir_name)
-        
-        
+            #the information here is returned as a mesh dictionary because it much easier to debug 
         
 #%% gmsh wrapper
 def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50):
@@ -381,7 +372,7 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50):
         raise EnvironmentError("No gmsh.exe exists in the Executables directory!")
     #make .geo file
     file_name="temp"
-    node_pos,_=GenGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path="Executables")
+    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path="Executables")
     # handling gmsh
     cwd=os.getcwd()#get current working directory 
     ewd=os.path.join(cwd,"Executables")#change working directory to /Executables
@@ -392,46 +383,49 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50):
     os.remove("temp.geo");os.remove("temp.msh")
     #change back to orginal working directory
     os.chdir(cwd)
-    return mesh_dict
+    
+    return mt.Mesh_obj.mesh_dict2obj(mesh_dict)# return a mesh object 
         
 #%% work in progress       
 #write R2.in file for a forward model ONLY
-def R2in(node_pos,gmsh_dump):
-    fh=open('R2.in','w')#file handle
-    title='Conceptual modelling of hollin hill - forward model test'
-    if len(title)>80:
-        raise NameError("file title cannot be more than 80 characters in length")
-    fh.write('%s\n\n'%title)#write title and drop down 2 lines
-    #next line takes the form: see documentation R2.3.1 README file. 
-    #job_type, mesh_type, flux_type, singular_type, res_matrix
-    job_type=0#forward model 
-    mesh_type=3#because we're using a triangular mesh
-    flux_type=3.0#type of current flow, 3.0 for normal operation
-    singular_type=0#1 if singularity removal is required 
-    res_matrix=0#use this option to return a sensitivity map or resolution matrix... 0 if neither is required
-    if job_type==2:
-        pass# set up protections against invalid arguments in the future
-    fh.write('    %i    %i   %.1f    %i    %i\n\n'%(job_type, mesh_type, flux_type, singular_type, res_matrix))#write r2 instructions
-    scaling_factor=1
-    fh.write('    %i  << vessel_dia\n\n'%scaling_factor)#apply scaling factor to mesh, no idea why why we write 'vessel_dia' after it
-    num_regions=gmsh_dump['num_regions']
-    fh.write('   %i << num_regions\n'%num_regions)#write out number of regions
-    element_ranges=gmsh_dump['element_ranges']
-    fh.write('         %i      %i   100.000 << elem_1,elem_2,value\n'%(element_ranges[0][1],element_ranges[0][2]))#place holder code
-    for i in range(num_regions-1):
-        fh.write('         %i      %i   100.000 \n'%(element_ranges[i+1][1],element_ranges[i+1][2]))#place holder code
-    fh.write('\n\n')#drop down 2 lines
-    fh.write('    0  << num_poly\n')#write the entire mesh to file and alter display later
-    fh.write('\n\n')#drop down 2 lines
-    #now to add the electrodes and thier corresponding locations
-    num_electrodes=len(node_pos)
-    fh.write('  %i  << num_electrodes\n'%num_electrodes)
-    for i in range(num_electrodes):
-        #assuming our electrodes are sorted in ascending order then
-        elec_no=i+1
-        node_no=node_pos[i]
-        fh.write(' %i     %i\n'%(elec_no,node_no))#we dont need a row number as weve used a triangular mesh 
-    #finished! hopefully
-    fh.close()
-    print('written R2.in file to "exports"')
+# =============================================================================
+# def R2in(node_pos,gmsh_dump):
+#     fh=open('R2.in','w')#file handle
+#     title='Conceptual modelling of hollin hill - forward model test'
+#     if len(title)>80:
+#         raise NameError("file title cannot be more than 80 characters in length")
+#     fh.write('%s\n\n'%title)#write title and drop down 2 lines
+#     #next line takes the form: see documentation R2.3.1 README file. 
+#     #job_type, mesh_type, flux_type, singular_type, res_matrix
+#     job_type=0#forward model 
+#     mesh_type=3#because we're using a triangular mesh
+#     flux_type=3.0#type of current flow, 3.0 for normal operation
+#     singular_type=0#1 if singularity removal is required 
+#     res_matrix=0#use this option to return a sensitivity map or resolution matrix... 0 if neither is required
+#     if job_type==2:
+#         pass# set up protections against invalid arguments in the future
+#     fh.write('    %i    %i   %.1f    %i    %i\n\n'%(job_type, mesh_type, flux_type, singular_type, res_matrix))#write r2 instructions
+#     scaling_factor=1
+#     fh.write('    %i  << vessel_dia\n\n'%scaling_factor)#apply scaling factor to mesh, no idea why why we write 'vessel_dia' after it
+#     num_regions=gmsh_dump['num_regions']
+#     fh.write('   %i << num_regions\n'%num_regions)#write out number of regions
+#     element_ranges=gmsh_dump['element_ranges']
+#     fh.write('         %i      %i   100.000 << elem_1,elem_2,value\n'%(element_ranges[0][1],element_ranges[0][2]))#place holder code
+#     for i in range(num_regions-1):
+#         fh.write('         %i      %i   100.000 \n'%(element_ranges[i+1][1],element_ranges[i+1][2]))#place holder code
+#     fh.write('\n\n')#drop down 2 lines
+#     fh.write('    0  << num_poly\n')#write the entire mesh to file and alter display later
+#     fh.write('\n\n')#drop down 2 lines
+#     #now to add the electrodes and thier corresponding locations
+#     num_electrodes=len(node_pos)
+#     fh.write('  %i  << num_electrodes\n'%num_electrodes)
+#     for i in range(num_electrodes):
+#         #assuming our electrodes are sorted in ascending order then
+#         elec_no=i+1
+#         node_no=node_pos[i]
+#         fh.write(' %i     %i\n'%(elec_no,node_no))#we dont need a row number as weve used a triangular mesh 
+#     #finished! hopefully
+#     fh.close()
+#     print('written R2.in file to "exports"')
+# =============================================================================
 
