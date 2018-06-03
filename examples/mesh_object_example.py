@@ -8,7 +8,10 @@ Example of how to use mesh object
 import numpy as np 
 #import R API libraries
 import meshTools as mt
-import GmshWrap as gw
+import gmshWrap as gw
+import matplotlib.pyplot as plt
+
+plt.close('all')
 
 #%% set up mock up geometry of an ERT survey on a slope 
 surf_x=[-40, 0 , 170, 210]
@@ -19,23 +22,35 @@ elec_x=np.linspace(0,170,25)#electrode x positions
 #interpolate electrode y positions 
 elec_y = np.interp(elec_x,surf_x,surf_y)
 
-#%% generate mesh of the slope 
-mesh_dict = gw.tri_mesh(surf_x,surf_y,elec_x,elec_y)
-#convert mesh dictionary into a mesh object
-mesh=mt.mesh_obj.mesh_dict2obj(mesh_dict)
+#axis limits 
+xlim=(min(surf_x),max(surf_x))
+ylim=(40,110)
 
-#%% show something about the mesh 
-mesh.summary()
-mesh.show()
+#%% generate a triagnular mesh of the slope 
+tri_mesh = gw.tri_mesh(surf_x,surf_y,elec_x,elec_y)
+
+# show something about the mesh 
+tri_mesh.summary()
+tri_mesh.show(xlim=xlim,ylim=ylim)
 #when showing the mesh we haven't actually inverted anything, so it just shows 
 #the material assigned to the mesh elements by gmsh. 
 
-#%% 
-# =============================================================================
-# mesh_dict2= mt.vtk_import()
-# qmesh = mt.mesh_obj.mesh_dict2obj(mesh_dict2)
-# 
-# qmesh.summary()
-# qmesh.show()
-# =============================================================================
+#%% generate a quad mesh 
+qmesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)#
+#mesh object, x node coordinates, y node coordinates, topography, x coordinate nodes with electrodes
 
+#show the quad mesh 
+qmesh.summary()
+qmesh.show(xlim=xlim,ylim=ylim)
+
+#again we havent inverted anything so the mesh is just blank 
+
+#%% importing a vtk file 
+
+mesh_dict = mt.vtk_import()
+
+mesh_obj = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
+
+#show info about mesh 
+mesh_obj.summary()
+mesh_obj.show()
