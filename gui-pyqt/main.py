@@ -268,6 +268,17 @@ class App(QMainWindow):
         def logInversion():
 #            self.r2.invert(callback=dataReady)
 #            dataReady('kk\n')
+            param = {} # TODO to be set in the previous tab
+            if 'mesh' not in self.r2.param:
+                self.r2.createMesh()
+        
+            # write configuration file
+            if self.r2.configFile == '':
+                self.r2.write2in(param=param)
+        
+            self.r2.surveys[0].write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
+        
+        
             self.process = QProcess(self)
             self.process.setWorkingDirectory(self.r2.dirname)
             # QProcess emits `readyRead` when there is data to be read
