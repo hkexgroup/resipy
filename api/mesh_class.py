@@ -16,8 +16,7 @@ Class:
 #import python standard libraries 
 import math as ma
 
-#import meshTools as mt
-import api.meshTools as mt
+import meshTools as mt
 
 import numpy as np
 import time

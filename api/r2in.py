@@ -24,25 +24,25 @@ def write2in(param, dirname):
             'job_type':1,
             'mesh_type':4, # meshx, meshy, topo should be defined
             'flux_type':3,
-            'singular_type':1,
+            'singular_type':0,
             'res_matrix':1,
             'scale':1, # only used for triangular mesh
             'num_regions':1,
             'regions':None, # should be defined by the number of element in the mesh
-            'patchx':1,
-            'patchy':1,
+            'patch_x':1,
+            'patch_y':1,
             'inverse_type':1,
             'target_decrease':1,    
             'data_type':0,
-            'reg_mode':1,
-            'tol':1e-5,
+            'reg_mode':0,
+            'tol':1,
             'max_iter':10,
-            'error_mod':0,
+            'error_mod':2,
             'alpha_aniso':1,
             'a_wgt':0.01,
             'b_wgt':0.02,
             'rho_min':-1000,
-            'rho_max':-1000,
+            'rho_max':1000,
             'num_poly':5,
             'xy_poly_table':np.zeros((5,2)),
             'num_elec':None, #should be define when importing data
@@ -71,16 +71,20 @@ def write2in(param, dirname):
         topo = param['topo']
         content = content + '\t{}\t{}\t<< numnp_x, numnp_y\n\n'.format(
                 len(meshx), len(meshy))
-        content = content + '\t' + ' '.join(['{:.4f}']*len(meshx)).format(*meshx) + '<< xx \n\n'
-        content = content + '\t' + ' '.join(['{:.4f}']*len(topo)).format(*topop) + '<< topo \n\n'        
-        content = content + '\t' + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '<< yy \n\n'
+        content = content + '\t' + ' '.join(['{:.4f}']*len(meshx)).format(*meshx) + '\t<< xx \n\n'
+        content = content + '\t' + ' '.join(['{:.4f}']*len(topo)).format(*topo) + '\t<< topo \n\n'        
+        content = content + '\t' + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '\t<< yy \n\n'
     elif param['mesh_type'] == 3:
         content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
     else:
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])
+    if param['regions'] is None:
+        print(len(meshx), len(meshy))
+        param['regions'] = np.array([1, (len(meshx)-1)*(len(meshy)-1), 100])
     if param['num_regions'] > 0:
-        content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*len(param['regions'])).format(param['regions'].flatten())
+        content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*int(len(param['regions'])/3)).format(*param['regions'].flatten())
+    content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
     if param['job_type'] == 1 & param['mesh_type'] == 4|5:
         content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
                 param['patchx'], param['patchy'])
@@ -101,12 +105,23 @@ def write2in(param, dirname):
             param['b_wgt'],
             param['rho_min'],
             param['rho_max'])
+    if param['xy_poly_table'].sum() == 0:
+        left = param['meshx'][param['node_elec'][0,1]]
+        right = param['meshx'][param['node_elec'][-1,1]]
+        dist = (right-left)/2
+        param['xy_poly_table'] = np.array([[left, 0],
+                                          [right, 0],
+                                          [right, -dist],
+                                          [left, -dist],
+                                          [left, 0]])
+    param['num_xy_poly'] = param['xy_poly_table'].shape[0]
     content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
     content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
-            param['xy_poly_table'].flatten())
-    content = content + '{}\t<< num_electrodes\n'.format(param['num_elec'])
-    content = content + ''.join(['{}\t{}\n']*len(param['node_elec'])).format(
-            param['node_elec'].flatten())
+            *param['xy_poly_table'].flatten())
+    param['num_elec'] = param['node_elec'].shape[0]
+    content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
+    content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
+            *param['node_elec'].flatten())
     content = content + '\n'
     
 
@@ -118,6 +133,17 @@ def write2in(param, dirname):
 
 
 #%% test code
-#content = write2in(param={}, dirname='.')
+#import meshTools as mt
+#elec_x = np.arange(10)
+#elec_y = np.zeros(len(elec_x))
+#mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)
+#param = {}
+#param['meshx'] = meshx
+#param['meshy'] = meshy
+#param['topo'] = topo
+#param['mesh_type'] = 4
+#param['mesh'] = mesh
+#param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
+#content = write2in(param=param, dirname='.')
 
 

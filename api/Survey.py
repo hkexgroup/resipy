@@ -385,8 +385,36 @@ class Survey(object):
 
         if ax is None:
             return fig
+    
+    
+    def write2protocol(self, outputname='', errTyp='obs', errTot=False):
+        ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
+        n = np.sum(ie)
+        if errTyp=='obs':
+            error = self.df['reciprocalErr'].values[ie]
+        if errTyp =='lme':
+            error = self.dfg['lmeError'].values
+        if errTyp == 'lin':
+            error = self.dfg['linError'].values
+#            error = self.linStdError
+        if errTot == True:
+            if len(self.modError) == 0:
+                print('ERROR : you must specify a modelling error')
+            else:
+                error = np.sqrt(error**2 + self.modError[ie]**2)
+        arr = self.df[['a','b','m','n']].values[ie,:]
+        res = self.df['reciprocalMean'].values[ie]
         
+        if outputname != '':
+            with open(outputname, 'w') as f:
+                f.write(str(n) + '\n')
+                for i in range(n):
+                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:.0f}\t{5:f}\t{6:f}\n'.format(
+                            i+1, arr[i,0], arr[i,1], arr[i,2], arr[i,3], res[i], error[i]))
+#        return np.hstack([arr, res.reshape((len(res), 1)), error.reshape((len(error), 1))])
         
+  
+    
 """        
     def addModError(self, fname):
         # add the modelling error for both normal and reciprocal quadrupoles
@@ -801,5 +829,7 @@ class Survey(object):
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
 #s.pseudo(contour=True, ax=ax)
-        
+#s.linfit()
+#s.write2protocol('test/protocol2.dat')
+
         

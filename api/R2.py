@@ -23,6 +23,7 @@ sys.path.append(os.path.relpath('../api'))
 from Survey import Survey
 from r2in import write2in
 import meshTools as mt
+from mesh_class import mesh_obj
 
 
 
@@ -36,7 +37,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
         self.param = {} # dict configuration variables for inversion
-        
+        self.configFile = ''
         
     def setwd(self, dirname):
         ''' set the working directory
@@ -86,10 +87,13 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['meshx'] = meshx
             self.param['meshy'] = meshy
             self.param['topo'] = topo
+            self.param['mesh_type'] = 4
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         if typ == 'trian':
             mesh = TriMesh(self.elec, resolution=1)
         self.mesh = mesh
         self.param['mesh'] = mesh
+        
         
     def showMesh(self, ax=None):
         if self.mesh is None:
@@ -105,7 +109,7 @@ class R2(object): # R2 master class instanciated by the GUI
         '''
         for p in param:
             self.param[p] = param[p]
-        write2in(param, self.dirname)
+        self.configFile = write2in(self.param, self.dirname)
     
         
     def runR2(self):
@@ -125,24 +129,45 @@ class R2(object): # R2 master class instanciated by the GUI
             
         os.chdir(cwd)
         
-    def invert(self, param={}):
+        
+    def invert(self, param={}, iplot=True):
         ''' invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results
         '''
         # write configuration file
-#        self.write2in(param=param)
+        if self.configFile == '':
+            self.write2in(param=param)
         
+        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'))
+        
+        if 'mesh' not in self.param:
+            self.createMesh()
+            
         # copy R2.exe
 #        os.copy('../external-exe/R2.exe',self.dirname)
 
         self.runR2()
         
+        if iplot is True:
+            self.showResults()
+    
+    
+    def showResults(self, ax=None):
+        fresults = os.path.join(self.dirname, 'f001_res.vtk')
+        if os.path.isfile(fresults):
+            mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
+            mesh = mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+            mesh.show(ax=ax)
+        else:
+            print('Sorry no VTK output produced')
+        
         
 #%% test code
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
-#k.createSurvey('test/syscalFile.csv', ftype='Syscal')
+#k.createSurvey('test/18041712.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.createMesh(typ='quad')
 #k.write2in()
-#k.invert()
+#k.invert(iplot=None)
+#k.showResults()
