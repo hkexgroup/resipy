@@ -105,15 +105,17 @@ def write2in(param, dirname):
             param['b_wgt'],
             param['rho_min'],
             param['rho_max'])
-    if param['num_xy_poly'] == -1:
-        left = param['meshx'][param['node_elec'][0,1]]
-        right = param['meshx'][param['node_elec'][-1,1]]
-        dist = (right-left)/2
-        param['xy_poly_table'] = np.array([[left, 0],
-                                          [right, 0],
-                                          [right, -dist],
-                                          [left, -dist],
-                                          [left, 0]])
+    if param['num_poly'] == -1:
+        leftx = param['meshx'][param['node_elec'][0,1]-4]
+        rightx = param['meshx'][param['node_elec'][-1,1]+4]
+        lefty = param['topo'][param['node_elec'][0,1]-4]
+        righty = param['topo'][param['node_elec'][-1,1]+4]
+        dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
+        param['xy_poly_table'] = np.array([[leftx, lefty],
+                                          [rightx, righty],
+                                          [rightx, -dist],
+                                          [leftx, -dist],
+                                          [leftx, lefty]])
         param['num_xy_poly'] = param['xy_poly_table'].shape[0]
     content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
     if param['num_xy_poly'] != 0:

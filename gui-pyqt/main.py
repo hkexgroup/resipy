@@ -270,7 +270,11 @@ class App(QMainWindow):
                 self.process.start('wine R2.exe')
             else:
                 self.process.start('R2.exe')
-            mwInvResult.plot(self.r2.showResults)
+            self.process.finished.connect(plotSection)
+        
+        def plotSection():
+#            mwInvResult.plot(self.r2.showResults)
+            mwInvResult.plot(self.r2.showSection)
 
 
         btn = QPushButton('Invert')

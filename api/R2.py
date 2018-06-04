@@ -12,6 +12,7 @@ import os
 import sys
 import shutil
 import platform
+import matplotlib.pyplot as plt
 from subprocess import PIPE, call, Popen
 OS = platform.system()
 
@@ -134,22 +135,24 @@ class R2(object): # R2 master class instanciated by the GUI
         ''' invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results
         '''
+        # create mesh if not already done
+        if 'mesh' not in self.param:
+            self.createMesh()
+        
         # write configuration file
         if self.configFile == '':
             self.write2in(param=param)
         
         self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'))
         
-        if 'mesh' not in self.param:
-            self.createMesh()
-            
         # copy R2.exe
 #        os.copy('../external-exe/R2.exe',self.dirname)
 
         self.runR2()
         
         if iplot is True:
-            self.showResults()
+#            self.showResults()
+            self.showSection()
     
     
     def showResults(self, ax=None):
@@ -161,6 +164,56 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             print('Sorry no VTK output produced')
         
+    def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
+        if fname == '':
+            fname = os.path.join(self.dirname, 'f001_res.dat')
+        res = pd.read_csv(fname, delimiter=' *', header=None, engine='python').values
+        lenx = len(np.unique(res[:,0]))
+        leny = len(np.unique(res[:,1]))
+        x = res[:,0].reshape((leny, lenx), order='F')
+        y = res[:,1].reshape((leny, lenx), order='F')
+        z = res[:,2].reshape((leny, lenx), order='F')
+        if isen:
+            sen = pd.read_csv(fname.replace('res','sen'), delimiter=' *', header=None, engine='python').values
+            lenx = len(np.unique(sen[:,0]))
+            leny = len(np.unique(sen[:,1]))
+        #            xs = sen[:,0].reshape((leny, lenx), order='F')
+        #            ys = sen[:,1].reshape((leny, lenx), order='F')
+            zs = sen[:,2].reshape((leny, lenx), order='F')
+            zs = np.log10(zs)
+            zs -= np.min(zs)
+            alpha = zs/np.max(zs)
+        #            alpha[alpha < 0] = 0
+            print(np.max(alpha), np.min(alpha))
+        if ilog10:
+            z = np.log10(z)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            fig = ax.get_figure()
+        cax = ax.pcolormesh(x, y, z)
+        ax.plot(self.elec[:,0], self.elec[:,1], 'ko')
+    #    fig.canvas.draw() # need to draw the figure to have the cax.get_facecolors()
+    #    print(cax.get_facecolors().shape)
+    #    print(alpha.flatten().shape)
+    #    for a in cax.get_facecolors():
+    #        a[3] = 0
+        #for a, b in zip(cax.get_facecolors(), alpha.flatten()):
+        #    a[3] = 0.5
+        #    print(a)
+    #    fig.canvas.draw()
+        cbar = fig.colorbar(cax, ax=ax)
+        if ilog10:
+            cbar.set_label(r'$\log_{10}(\rho) [\Omega.m]$')
+        else:
+            cbar.set_label(r'$\rho [\Omega.m]$')
+        ax.set_ylabel('Depth [m]')
+        ax.set_xlabel('Distance [m]')
+#        fig.tight_layout()
+    #    fig.show()
+#        return fig
+
+
         
 #%% test code
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
@@ -170,4 +223,5 @@ class R2(object): # R2 master class instanciated by the GUI
 #k.createMesh(typ='quad')
 #k.write2in()
 #k.invert(iplot=None)
+#k.showSection()
 #k.showResults()
