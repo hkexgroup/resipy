@@ -15,6 +15,11 @@ Functions:
                  (returns info needed for R2in)
 Classes: 
     mesh_obj
+    
+Dependencies: 
+    matplotlib
+    numpy
+    tkinter (python standard)
 """
 #import standard python packages
 import tkinter as tk
@@ -360,8 +365,8 @@ class Mesh_obj:
         pc.set_array(np.array(X))#maps polygon color map into patch collection 
         #make figure
         if ax is None:
-            fig,ax=plt.subplots()#blit polygons to axis
-        ax.add_collection(pc)
+            fig,ax=plt.subplots()
+        ax.add_collection(pc)#blit polygons to axis
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are 
         plt.ylim(ylim)
         plt.xlim(xlim)
@@ -372,6 +377,7 @@ class Mesh_obj:
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
 #        plt.show()#display the plot
 #        return ax # return axis handle 
+
             
     def add_attribute(self,values):
         #add a new attribute to mesh 
@@ -428,7 +434,7 @@ class Mesh_obj:
         print("_______________________________________________________")
         
 #%% build a quad mesh        
-def quad_mesh(elec_x,elec_y,doi=30,cell_height=1,nbe=3):
+def quad_mesh(elec_x,elec_y,doi=30,nbe=3,cell_height='default'):
 # creates a quaderlateral mesh given the electrode x and y positions. Function
 # relies heavily on the numpy package.
 # INPUT: 
@@ -449,9 +455,7 @@ def quad_mesh(elec_x,elec_y,doi=30,cell_height=1,nbe=3):
     elec_x=elec_x[sorted_idx]
     elec_y=elec_y[sorted_idx]
     no_electrodes=len(elec_x)
-    
-    #setup thickness of cells in survey area
-    node_y=np.arange(0,doi,cell_height)#defines the depth to each node
+
     
     #set up node spacing (ie how many nodes occur within electrode spacings)
     #nbe - > nodes between electrodes 
@@ -471,6 +475,11 @@ def quad_mesh(elec_x,elec_y,doi=30,cell_height=1,nbe=3):
     flank=e_spacing*100#flank of survey, how much bigger it needs to be 
     max_depth=min(elec_y)-doi # maximum depth of survey 
     b_max_depth=abs(max_depth-flank)#background max depth
+    if cell_height=='default':
+        cell_height = 0.25 * e_spacing # (thickness of cells)
+    
+    #setup thickness of cells in survey area
+    node_y=np.arange(0,doi,cell_height)#defines the depth to each node
     
     #set up extra points on edge of survey 
     no_of_extra_nodes = 15
