@@ -434,15 +434,15 @@ class Mesh_obj:
         print("_______________________________________________________")
         
 #%% build a quad mesh        
-def quad_mesh(elec_x,elec_y,doi=30,nbe=3,cell_height='default'):
+def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
 # creates a quaderlateral mesh given the electrode x and y positions. Function
 # relies heavily on the numpy package.
 # INPUT: 
 #     elec_y - electrode x coordinates 
 #     elec_y - electrode y coordinates 
-#     doi - depth of investigation
-#     cell_height - height of each cell in the survey area
-#     nbe - number of element nodes in between each electrode 
+#     doi - depth of investigation (if left as -1 = half survey width)
+#     cell_height - cell thicknesses in the mesh (if left as -1 = 1/4 electrode spacing)
+#     nbe - number of element nodes in between each electrode (if left as -1 = 3)
 # OUTPUT: 
 #     Mesh - mesh object 
 #     meshx - mesh x locations for R2in file 
@@ -455,6 +455,15 @@ def quad_mesh(elec_x,elec_y,doi=30,nbe=3,cell_height='default'):
     elec_x=elec_x[sorted_idx]
     elec_y=elec_y[sorted_idx]
     no_electrodes=len(elec_x)
+    e_spacing=np.mean(np.diff(elec_x))#electode spacing 
+    
+    #set up default values
+    if cell_height==-1:
+        cell_height = 0.25 * e_spacing # (thickness of cells)
+    if doi == -1:
+        doi = (max(elec_x)-min(elec_x))*0.5
+    if nbe == -1:
+        nbe=3 # 3 nodes betweens electrodes means there will be 4 elements per electrode pair .
 
     
     #set up node spacing (ie how many nodes occur within electrode spacings)
@@ -471,12 +480,10 @@ def quad_mesh(elec_x,elec_y,doi=30,nbe=3,cell_height='default'):
     node_spacing=np.mean(np.diff(node_x))
     
     #setup some nuemonn boundary parameters (background region)
-    e_spacing=np.mean(np.diff(elec_x))#electode spacing 
     flank=e_spacing*100#flank of survey, how much bigger it needs to be 
     max_depth=min(elec_y)-doi # maximum depth of survey 
     b_max_depth=abs(max_depth-flank)#background max depth
-    if cell_height=='default':
-        cell_height = 0.25 * e_spacing # (thickness of cells)
+
     
     #setup thickness of cells in survey area
     node_y=np.arange(0,doi,cell_height)#defines the depth to each node
