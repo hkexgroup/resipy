@@ -489,7 +489,7 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     node_y=np.arange(0,doi,cell_height)#defines the depth to each node
     
     #set up extra points on edge of survey 
-    no_of_extra_nodes = 15
+    no_of_extra_nodes = 8
     x_extension = np.logspace(np.log10(node_spacing), np.log10(flank), no_of_extra_nodes)
     y_node_extension = np.logspace(np.log10(doi), np.log10(b_max_depth), no_of_extra_nodes)
     
@@ -500,7 +500,7 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     meshy = list(np.sort(np.concatenate((node_y,y_node_extension))))
     
     #find the columns relating to the electrode nodes? 
-    elec_node=[meshx.index(elec_x[i]) for i in range(len(elec_x))]
+    elec_node=[meshx.index(elec_x[i])+1 for i in range(len(elec_x))]
     
     #topography handling 
     topo_bck=np.linspace(min(elec_y),elec_y[0],len(x_extension))
