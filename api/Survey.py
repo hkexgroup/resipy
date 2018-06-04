@@ -187,7 +187,7 @@ class Survey(object):
             return fig
         
 
-    def linfit(self, iplot=False, ax=None):
+    def linfit(self, iplot=True, ax=None):
         # linear fit
         recipMean = np.abs(self.dfg['recipMean'].values)
         recipError = np.abs(self.dfg['recipError'].values)

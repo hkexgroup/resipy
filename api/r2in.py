@@ -43,7 +43,7 @@ def write2in(param, dirname):
             'b_wgt':0.02,
             'rho_min':-1000,
             'rho_max':1000,
-            'num_poly':5,
+            'num_poly':-1,
             'xy_poly_table':np.zeros((5,2)),
             'num_elec':None, #should be define when importing data
             'elec_node':None # should be define when building the mesh
@@ -105,7 +105,7 @@ def write2in(param, dirname):
             param['b_wgt'],
             param['rho_min'],
             param['rho_max'])
-    if param['xy_poly_table'].sum() == 0:
+    if param['num_xy_poly'] == -1:
         left = param['meshx'][param['node_elec'][0,1]]
         right = param['meshx'][param['node_elec'][-1,1]]
         dist = (right-left)/2
@@ -114,10 +114,11 @@ def write2in(param, dirname):
                                           [right, -dist],
                                           [left, -dist],
                                           [left, 0]])
-    param['num_xy_poly'] = param['xy_poly_table'].shape[0]
+        param['num_xy_poly'] = param['xy_poly_table'].shape[0]
     content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
-    content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
-            *param['xy_poly_table'].flatten())
+    if param['num_xy_poly'] != 0:
+        content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
+                *param['xy_poly_table'].flatten())
     param['num_elec'] = param['node_elec'].shape[0]
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
     content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(

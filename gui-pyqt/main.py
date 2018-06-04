@@ -16,11 +16,14 @@ import pandas as pd
 import random
 import os
 import sys
-sys.path.append(os.path.relpath('..'))
+import platform
+OS = platform.system()
 
-from api.mesh_class import mesh_obj
-import api.meshTools as mt
-from api.R2 import R2
+sys.path.append(os.path.relpath('../api'))
+
+from mesh_class import mesh_obj
+import meshTools as mt
+from R2 import R2
 
 
 class MatplotlibWidget(QWidget):
@@ -42,32 +45,30 @@ class MatplotlibWidget(QWidget):
     def plot(self, callback):
         ''' call a callback plot function and give it the ax to plot to
         '''
-        print('plot is called')
+#        print('plot is called')
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         callback(ax=ax)
+        self.figure.tight_layout()
         self.canvas.draw()
         
-
-    def draw(self, fig):
-        print('creating new figure')
-        self.figure = fig
-        self.figure.suptitle('hello')
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.canvas.draw()
-        self.figure.canvas.draw()
-    
-    def drawAxes(self, ax):
-        print('draw Awes')
-        self.figure.clf()
-        self.figure.axes.append(ax)
+#
+#    def draw(self, fig):
+#        print('creating new figure')
+#        self.figure = fig
+#        self.figure.suptitle('hello')
 #        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.figure.canvas.draw()
-        self.canvas.draw()
-#    def update(self, fig):
-        
-        
-        
+#        self.canvas.draw()
+#        self.figure.canvas.draw()
+#    
+#    def drawAxes(self, ax):
+#        print('draw Awes')
+#        self.figure.clf()
+#        self.figure.axes.append(ax)
+##        self.canvas = FigureCanvasQTAgg(self.figure)
+#        self.figure.canvas.draw()
+#        self.canvas.draw()
+    
 #class ThreadSample(QThread):
 #    newSample = pyqtSignal(list)
 #    
@@ -85,17 +86,16 @@ class App(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
         self.setWindowTitle('R2 GUI')
-        self.setGeometry(300,300,600,400)
+        self.setGeometry(100,100,1000,600)
         self.r2 = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
         
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
-        tab1 = QWidget()
-        tab2 = QWidget()
-        tab3 = QWidget()
         
-        #%% tab 1
+        #%% tab 1 importing data
+        tab1 = QWidget()
+        tabs.addTab(tab1, 'Importing')
         grid = QGridLayout()
         
         title = QLabel('Title')
@@ -141,47 +141,69 @@ class App(QMainWindow):
         mwError = MatplotlibWidget()
         grid.addWidget(mwError, 4, 1)
         
-        
         tab1.setLayout(grid)
         
+    
         
-        
-        
-        #%% tab 2
-        
+        #%% tab 2 PRE PROCESSING
+        tabPreProcessing = QWidget()
+        tabs.addTab(tabPreProcessing, 'PreProcessing')
         grid = QGridLayout()
-#        self.fname = r'C:\Users\blanchy\Downloads\pyScripts\r2gui\f001_res.vtk'
+ 
+        def fitLinError():
+            mwFitError.plot(self.r2.surveys[0].linfit)
+        
+        def fitLmeError():
+            print('NOT READY YET')
+#            mwFitError.plot(self.r2.surveys[0].lmefit)
+        
+        btn = QPushButton('Fit Linear model')
+        btn.clicked.connect(fitLinError)
+        grid.addWidget(btn, 0, 0)
+        
+        btn = QPushButton('Fit LME model')
+        btn.clicked.connect(fitLmeError)
+        grid.addWidget(btn, 0, 1)
+               
+        mwFitError = MatplotlibWidget()
+        grid.addWidget(mwFitError, 2, 1)
+        
+        tabPreProcessing.setLayout(grid)
+        
+        
+        #%% tab MESH
+        tab3 = QWidget()
+        tabs.addTab(tab3, 'Mesh')
+        grid = QGridLayout()
 
                 
         def callback2(ax):
             ax.plot(np.random.randn(20,5), '+--')
             ax.set_title('Random data nnnnndfghdfh')
         
-        def updateGraph2():
-            mw1.plot(callback2)
-                
+#        def updateGraph2():
+#            mw1.plot(callback2)
             
-        def plotMesh():
-            print(self.fname)
-            mesh_dict=mt.vtk_import(self.fname)#makes a dictionary of a mesh 
-            mesh = mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
-    
-#            mesh.summary()
-            print('ready to draw')
-            mw1.plot(mesh.show) # mesh.show() is the callback function to be called with ax
-#            mw.plot(callback)
+        def generateMesh():
+#            mesh_dict=mt.vtk_import(self.fname)#makes a dictionary of a mesh 
+#            mesh = mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+            self.r2.createMesh(typ='quad')
+            print(self.r2.mesh.summary())
+            mw1.plot(self.r2.mesh.show) # mesh.show() is the callback function to be called with ax
             
-        btn = QPushButton('Plot Mesh')
-        btn.clicked.connect(plotMesh)
+        btn = QPushButton('Generate Quadrilateral Mesh')
+        btn.clicked.connect(generateMesh)
         grid.addWidget(btn, 1, 0)
 
         mw1 = MatplotlibWidget()
         grid.addWidget(mw1, 2, 0)
        
-        tab2.setLayout(grid)
+        tab3.setLayout(grid)
         
-        #%% tab 3
         
+        #%% tab INVERSION SETTINGS
+        tabInversionSettings = QWidget()
+        tabs.addTab(tabInversionSettings, 'Inversion settings')
         grid = QGridLayout()
         
         singular_type = QCheckBox('Singularity Removal')
@@ -205,34 +227,29 @@ class App(QMainWindow):
         grid.addWidget(inv_type, 5, 0)
         
         
-        tab3.setLayout(grid)
+        tabInversionSettings.setLayout(grid)
         
         
-        #%% tab 4
+        #%% tab 5 INVERSION
         
-        tab4 = QWidget()
-
+        tabInversion = QWidget()
+        tabs.addTab(tabInversion, 'Inversion')
         grid = QGridLayout()
 
-#        def drawSample():
-#            mw.axis.clear()
-#            mw.axis.plot(random.sample(range(0,10),10))
-#            mw.canvas.draw()
-        
-        def callback(ax):
-            ax.plot(np.random.randn(20,5), '*-')
-            ax.set_title('Random data')
-        
-        def updateGraph():
-            mw.plot(callback)
-
-        btn = QPushButton('Draw random sample')
-        btn.clicked.connect(updateGraph)
-        mw = MatplotlibWidget()
-        
-        grid.addWidget(btn, 1, 0)
-        grid.addWidget(mw, 2, 0)
-        
+#        def callback(ax):
+#            ax.plot(np.random.randn(20,5), '*-')
+#            ax.set_title('Random data')
+#        
+#        def updateGraph():
+#            mw.plot(callback)
+#
+#        btn = QPushButton('Draw random sample')
+#        btn.clicked.connect(updateGraph)
+#        mw = MatplotlibWidget()
+#        
+#        grid.addWidget(btn, 1, 0)
+#        grid.addWidget(mw, 2, 0)
+#        
         
         # run R2
         def dataReady():
@@ -244,37 +261,47 @@ class App(QMainWindow):
             
         def logInversion():
 #            self.r2.invert(callback=dataReady)
-    #            dataReady('kk\n')         
-            
+#            dataReady('kk\n')
             self.process = QProcess(self)
             self.process.setWorkingDirectory(self.r2.dirname)
             # QProcess emits `readyRead` when there is data to be read
             self.process.readyRead.connect(dataReady)
-            self.process.start('wine R2.exe')
+            if OS == 'Linux':
+                self.process.start('wine R2.exe')
+            else:
+                self.process.start('R2.exe')
+            mwInvResult.plot(self.r2.showResults)
 
 
         btn = QPushButton('Invert')
         btn.clicked.connect(logInversion)
         
-        grid.addWidget(btn, 3, 0)
+        grid.addWidget(btn, 0, 0)
         
         logText = QTextEdit()
-        grid.addWidget(logText, 4, 0)
+        grid.addWidget(logText, 1, 0)
         
-        tab4.setLayout(grid)
+        mwInvResult = MatplotlibWidget()
+        grid.addWidget(mwInvResult, 2, 0)        
+        
+        
+        tabInversion.setLayout(grid)
                     
         
-        #%%
-        tabs.addTab(tab1, 'Processing')
-        tabs.addTab(tab2, 'Mesh')
-        tabs.addTab(tab3, 'Inversion')
-        tabs.addTab(tab4, 'Results')
+        #%% tab 6 POSTPROCESSING
+        tabPostProcessing = QWidget()
+        tabs.addTab(tabPostProcessing, 'Post Processing')
+        grid = QGridLayout()
         
+        grid.addWidget(QLabel('TO BE IMPLEMENTED'), 0, 0)
+        
+        tabPostProcessing.setLayout(grid)
+        
+        
+        #%%
         layout.addWidget(tabs)
         self.table_widget.setLayout(layout)
-                
         self.setCentralWidget(self.table_widget)
- 
         self.show()
 
 ''' 
