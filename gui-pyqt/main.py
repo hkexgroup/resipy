@@ -21,8 +21,9 @@ OS = platform.system()
 
 sys.path.append(os.path.relpath('../api'))
 
-from mesh_class import mesh_obj
+#from mesh_class import mesh_obj
 import meshTools as mt
+from meshTools import Mesh_obj
 from R2 import R2
 
 
@@ -99,30 +100,35 @@ class App(QMainWindow):
         grid = QGridLayout()
         
         title = QLabel('Title')
-        author = QLabel('Author')
+        
+        def getwd():
+            fdir = QFileDialog.getExistingDirectory(tab1, 'Choose Working Directory')
+            self.r2.setwd(fdir)
+            wdEdit.setText(fdir)
+            
+        wd = QPushButton('Working directory')
+        wd.clicked.connect(getwd)
         
         titleEdit = QLineEdit()
         titleEdit.setText('My beautiful survey')
-        authorEdit = QLineEdit()
+        wdEdit = QLineEdit()
                 
         grid.addWidget(title, 1, 0)
         grid.addWidget(titleEdit, 1, 1)
         
-        grid.addWidget(author, 2, 0)
-        grid.addWidget(authorEdit, 2, 1)
+        grid.addWidget(wd, 2, 0)
+        grid.addWidget(wdEdit, 2, 1)
         
-        filename = QLabel('')
-        grid.addWidget(filename, 3, 1)
 
         def getfile():
-            self.fname, _ = QFileDialog.getOpenFileName(tab1,'Open File')
-            filename.setText(self.fname)
+            self.fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
+            buttonf.setText(self.fname)
             self.r2.createSurvey(self.fname)
             plotError()
         
-        button = QPushButton('Import Data') 
-        button.clicked.connect(getfile)
-        grid.addWidget(button, 3, 0)
+        buttonf = QPushButton('Import Data') 
+        buttonf.clicked.connect(getfile)
+        grid.addWidget(buttonf, 3, 0)
         
         
         def plotPseudo():
