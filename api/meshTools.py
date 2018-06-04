@@ -321,7 +321,8 @@ class Mesh_obj:
     def show(self,color_map='Spectral',
              color_bar=True,
              xlim="default",
-             ylim="default"):#displays the mesh using matplotlib
+             ylim="default",
+             ax=None):#displays the mesh using matplotlib
         """
         Show a mesh object using matplotlib. The color map variable should be 
         a string refering to the color map you want (default is "jet").
@@ -358,7 +359,8 @@ class Mesh_obj:
         pc=PatchCollection(patches,alpha=0.8,edgecolor='k',facecolor=colour_array)
         pc.set_array(np.array(X))#maps polygon color map into patch collection 
         #make figure
-        fig,ax=plt.subplots()#blit polygons to axis
+        if ax is None:
+            fig,ax=plt.subplots()#blit polygons to axis
         ax.add_collection(pc)
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are 
         plt.ylim(ylim)
@@ -368,8 +370,8 @@ class Mesh_obj:
             cbar=plt.colorbar(pc,ax=ax)#add colorbar
             cbar.set_label(self.atribute_title) #set colorbar title      
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
-        plt.show()#display the plot
-        return ax # return axis handle 
+#        plt.show()#display the plot
+#        return ax # return axis handle 
             
     def add_attribute(self,values):
         #add a new attribute to mesh 

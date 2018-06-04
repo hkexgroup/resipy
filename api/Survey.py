@@ -7,13 +7,13 @@ Created on Fri Jun  1 11:21:54 2018
 """
 import sys
 import os
-sys.path.append(os.path.relpath('..'))
+sys.path.append(os.path.relpath('../api'))
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from api.parsers import *
+from parsers import *
 
 class Survey(object):
     def __init__(self, fname, ftype=None, name=''):
