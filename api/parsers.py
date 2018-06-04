@@ -30,7 +30,7 @@ def syscalParser(fname):
         spacing = np.unique(np.sort(array.flatten()))[1]
         array = np.round(array/spacing+1).astype(int)
         df[['a','b','m','n']] = array
-        df['resist'] = df['i']/df['vp']
+        df['resist'] = df['vp']/df['i']
         imax = int(np.max(array))
         elec = np.zeros((imax,3))
         elec[:,0] = np.arange(0,imax)*spacing

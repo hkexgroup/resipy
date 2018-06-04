@@ -459,11 +459,11 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     
     #set up default values
     if cell_height==-1:
-        cell_height = 0.25 * e_spacing # (thickness of cells)
+        cell_height = e_spacing/4 # (thickness of cells)
     if doi == -1:
         doi = (max(elec_x)-min(elec_x))*0.5
     if nbe == -1:
-        nbe=3 # 3 nodes betweens electrodes means there will be 4 elements per electrode pair .
+        nbe=7 # 7 nodes betweens electrodes means there will be 8 elements per electrode pair .
 
     
     #set up node spacing (ie how many nodes occur within electrode spacings)
@@ -500,7 +500,7 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     meshy = list(np.sort(np.concatenate((node_y,y_node_extension))))
     
     #find the columns relating to the electrode nodes? 
-    elec_node=[meshx.index(elec_x[i])+1 for i in range(len(elec_x))]
+    elec_node=[meshx.index(elec_x[i]) for i in range(len(elec_x))]
     
     #topography handling 
     topo_bck=np.linspace(min(elec_y),elec_y[0],len(x_extension))

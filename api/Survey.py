@@ -826,7 +826,7 @@ class Survey(object):
 
         
 #%% test code
-#s = Survey('test/syscalFile.csv', ftype='Syscal')
+#s = Survey('test/17040301.csv', ftype='Syscal')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)

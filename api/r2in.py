@@ -81,7 +81,7 @@ def write2in(param, dirname):
     content = content + '{} << num_regions\n'.format(param['num_regions'])
     if param['regions'] is None:
         print(len(meshx), len(meshy))
-        param['regions'] = np.array([1, (len(meshx)-1)*(len(meshy)-1), 100])
+        param['regions'] = np.array([1, (len(meshx)-1)*(len(meshy)-1), 50])
     if param['num_regions'] > 0:
         content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*int(len(param['regions'])/3)).format(*param['regions'].flatten())
     content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])

@@ -24,7 +24,7 @@ sys.path.append(os.path.relpath('../api'))
 from Survey import Survey
 from r2in import write2in
 import meshTools as mt
-from mesh_class import mesh_obj
+from meshTools import Mesh_obj
 
 
 
@@ -112,6 +112,9 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param[p] = param[p]
         self.configFile = write2in(self.param, self.dirname)
     
+#    def write2protocol(self, **kwargs):
+#        self.surveys[0].write2protocol(**kwargs)
+        
         
     def runR2(self):
         # run R2.exe
@@ -159,7 +162,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fresults = os.path.join(self.dirname, 'f001_res.vtk')
         if os.path.isfile(fresults):
             mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
-            mesh = mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+            mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
             mesh.show(ax=ax)
         else:
             print('Sorry no VTK output produced')
@@ -216,12 +219,12 @@ class R2(object): # R2 master class instanciated by the GUI
 
         
 #%% test code
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
-#k.createSurvey('test/18041712.csv', ftype='Syscal')
-#k.pseudo(contour=True)
+k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+k.createSurvey('test/17040301.csv', ftype='Syscal')
+k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.createMesh(typ='quad')
 #k.write2in()
-#k.invert(iplot=None)
+k.invert(iplot=None)
 #k.showSection()
 #k.showResults()
