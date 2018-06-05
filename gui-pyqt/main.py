@@ -286,7 +286,7 @@ class App(QMainWindow):
             if OS == 'Linux':
                 self.process.start('wine R2.exe')
             else:
-                self.process.start('R2.exe')
+                self.process.start(os.path.join(self.r2.dirname, 'R2.exe')) # need absolute path
             self.process.finished.connect(plotSection)
         
         def plotSection():
