@@ -26,7 +26,7 @@ Another option is just to download the git from gitlab itself (see screenshot be
 
 Examples
 --------
-Check out the jupyter notebook examples (examples/jupyter-notebook/).
+Check out the jupyter notebook examples (![examples/jupyter-notebook](examples/jupyter-notebook)).
 Below here is snippset:
 ``` python
     import r2gui.api as r2
