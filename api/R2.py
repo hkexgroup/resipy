@@ -25,7 +25,7 @@ from Survey import Survey
 from r2in import write2in
 import meshTools as mt
 from meshTools import Mesh_obj
-from testMesh import QuadMesh
+#from testMesh import QuadMesh
 
 
 
@@ -103,10 +103,10 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
-            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
-            ylim = (0, 110) # TODO
-            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
-        
+#            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
+#            ylim = (0, 110) # TODO
+#            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
+            self.mesh.show(ax=ax)
     
     def write2in(self, param={}):
         ''' create configuration file for inversion
@@ -231,6 +231,6 @@ class R2(object): # R2 master class instanciated by the GUI
 #fig.suptitle('kkk')
 #k.mesh.show(ax=ax)
 #k.write2in()
-#k.invert(iplot=True)
+#k.invert(iplot=False)
 #k.showSection()
 #k.showResults()

@@ -39,20 +39,22 @@ class MatplotlibWidget(QWidget):
         self.axis = axes
         self.figure = figure
         self.canvas = FigureCanvasQTAgg(self.figure)
-        if navi is True:
-            self.navi_toolbar = NavigationToolbar(self.canvas, self)
-
-
+        
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
+
+        if navi is True:
+            self.navi_toolbar = NavigationToolbar(self.canvas, self)
+            self.layoutVertical.addWidget(self.navi_toolbar)
+
     
     def plot(self, callback):
         ''' call a callback plot function and give it the ax to plot to
         '''
-#        print('plot is called')
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         callback(ax=ax)
+        ax.set_aspect('auto')
         self.figure.tight_layout()
         self.canvas.draw()
         
@@ -202,7 +204,7 @@ class App(QMainWindow):
         mw1 = MatplotlibWidget(navi=True)
         grid.addWidget(mw1, 2, 0)
         
-        
+        '''
         def changeValue(value):
             print(value)
             self.r2.createMesh(elemy=value)
@@ -224,9 +226,9 @@ class App(QMainWindow):
         sld.valueChanged[int].connect(changeValue)
         grid.addWidget(sld, 4, 0)
         
-        mwqm = MatplotlibWidget()
+        mwqm = MatplotlibWidget(navi=True)
         grid.addWidget(mwqm, 5, 0)
-        
+        '''
        
         tabMesh.setLayout(grid)
         
