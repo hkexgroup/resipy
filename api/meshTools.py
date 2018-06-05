@@ -542,7 +542,7 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
             for i in range(1,elemx):
                 xx3[i] = xx3[i-1]-dxx*xgf
                 dxx = dxx*xgf
-            meshx = np.r_[meshx, xx3, xx2]
+            meshx = np.r_[meshx, xx3[::-1], xx2[1:]]
         xx = np.arange(elec1, elec2, dx)
         meshx = np.r_[meshx, xx]
         if i == len(elec)-2:
@@ -555,13 +555,14 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
             meshx = np.r_[meshx, xx2, xx3]
     
     # create e_nodes
-    elec_node = np.arange(8, 8+len(elec)*elemx, elemx)
+    elec_node = np.arange(2*elemx-1, 2*elemx-1+len(elec)*elemx, elemx)
 
     #TODO make sure it's dividable by patchx and patch y
     
     # create meshy
     meshy = np.zeros(elemy)
-    dyy = espacing/(elemx*2)
+#    dyy = espacing/(elemx*4)
+    dyy = 0.05
     for i in range(1, elemy):
         meshy[i] = meshy[i-1]+dyy*yf
         dyy = dyy*yf
@@ -570,7 +571,7 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
     for i in range(1, elemy2):
         yy[i] = yy[i-1]+dyy*xgf
         dyy = dyy*xgf
-    meshy = np.r_[meshy, yy]
+    meshy = np.r_[meshy, yy[1:]]
     
     # create topo
     topo = np.interp(meshx, elec[:,0], elec[:,1])

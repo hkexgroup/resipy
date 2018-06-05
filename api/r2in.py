@@ -71,9 +71,9 @@ def write2in(param, dirname):
         topo = param['topo']
         content = content + '\t{}\t{}\t<< numnp_x, numnp_y\n\n'.format(
                 len(meshx), len(meshy))
-        content = content + '\t' + ' '.join(['{:.4f}']*len(meshx)).format(*meshx) + '\t<< xx \n\n'
-        content = content + '\t' + ' '.join(['{:.4f}']*len(topo)).format(*topo) + '\t<< topo \n\n'        
-        content = content + '\t' + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '\t<< yy \n\n'
+        content = content + ' '.join(['{:.4f}']*len(meshx)).format(*meshx) + '\t<< xx \n\n'
+        content = content + ' '.join(['{:.4f}']*len(topo)).format(*topo) + '\t<< topo \n\n'        
+        content = content + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '\t<< yy \n\n'
     elif param['mesh_type'] == 3:
         content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
     else:

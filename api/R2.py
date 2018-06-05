@@ -85,7 +85,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh = QuadMesh(elec, nnode=4)
             elec_x = self.elec[:,0]
             elec_y = self.elec[:,1]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y,elemx=8)
 #            mesh = QuadMesh()
 #            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
@@ -223,7 +223,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
 #%% test code
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
-#k.createSurvey('test/17040301.csv', ftype='Syscal')
+#k.createSurvey('test/syscalFile.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.createMesh(typ='quad')
@@ -231,6 +231,6 @@ class R2(object): # R2 master class instanciated by the GUI
 #fig.suptitle('kkk')
 #k.mesh.show(ax=ax)
 #k.write2in()
-#k.invert(iplot=None)
+#k.invert(iplot=True)
 #k.showSection()
 #k.showResults()
