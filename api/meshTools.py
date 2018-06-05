@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cmaps
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
+from matplotlib.colors import Normalize,ListedColormap
 
 #%% triangle centriod 
 def tri_cent(p,q,r):#code expects points as p=(x,y) and so on ... (counter clockwise prefered)
@@ -245,6 +246,25 @@ def readR2_resdat(file_path):
         res_values.append(float(line[2]))
     return res_values   
 
+#%% read in sensitivity values 
+def readR2_sensdat(file_path):
+    #reads resistivity values in f00#_res.dat file output from R2, 
+#INPUT:
+    #file_path - string which maps to the _res.dat file
+#OUTPUT:
+    #res_values - resistivity values returned from the .dat file 
+################################################################################
+    if not isinstance (file_path,str):
+        raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
+    fh=open(file_path,'r')
+    dump=fh.readlines()
+    fh.close()
+    sens_values=[]
+    for i in range(len(dump)):
+        line=dump[i].split()
+        sens_values.append(float(line[2]))
+    return sens_values   
+
 #%% create mesh object
 class Mesh_obj: 
     """
@@ -285,6 +305,11 @@ class Mesh_obj:
         self.original_file_path=original_file_path
         self.ndims=2
     
+    def add_e_nodes(self,e_nodes):
+        self.e_nodes = e_nodes
+        self.elec_x = np.array(self.node_x)[np.array(e_nodes)]
+        self.elec_y = np.array(self.node_y)[np.array(e_nodes)]
+    
     #add some functions to allow adding some extra attributes to mesh 
     def add_sensitvity(self,values):#sensitivity of the mesh
         if len(values)!=self.num_elms:
@@ -323,11 +348,12 @@ class Mesh_obj:
         print("Number of cell attributes: %i"%int(self.no_attributes))
         print("original file path: %s"%self.file_path())
 
-    def show(self,color_map='Spectral',
+    def show(self,color_map='Spectral',#displays the mesh using matplotlib
              color_bar=True,
              xlim="default",
              ylim="default",
-             ax=None):#displays the mesh using matplotlib
+             ax=None,
+             sens=False):
         """
         Show a mesh object using matplotlib. The color map variable should be 
         a string refering to the color map you want (default is "jet").
@@ -335,15 +361,34 @@ class Mesh_obj:
         matplotlib package can be used to display the mesh here also. See: 
         https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html
         """ 
+        #INPUT:
+            #color_map - color map reference 
+            #color_bar - Boolian, True to plot colorbar 
+            #xlim -  axis x limits as (ymin, ymax)
+            #ylim - axis y limits as (ymin, ymax)
+            #ax - axis handle if preexisting (error will thrown up if not)
+            #sens - Boolian, enter true to plot sensitivities 
+        #OUTPUT:
+            #matplotlib figure with mesh 
+        #######################################################################
         #check color map argument is a string 
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
             #not currently checking if the passed variable is in the matplotlib library
+                #make figure
+        if ax is None:
+            fig,ax=plt.subplots()
         #if no dimensions are given then set the plot limits to edge of mesh
-        if xlim=="default":
-            xlim=[min(self.node_x),max(self.node_x)]
-        if ylim=="default":
-            ylim=[min(self.node_y),max(self.node_y)]
+        try: 
+            if xlim=="default":
+                xlim=[min(self.elec_x),max(self.elec_x)]
+            if ylim=="default":
+                ylim=[min(self.elec_y)-10,max(self.elec_y)+10]
+        except AttributeError:
+            if xlim=="default":
+                xlim=[min(self.node_x),max(self.node_x)]
+            if ylim=="default":
+                ylim=[min(self.node_y),max(self.node_y)]                
         #compile mesh coordinates into polygon coordinates  
         patches=[]#list wich will hold the polygon instances 
         no_verts=self.Type2VertsNo()#number of vertices each element has 
@@ -353,28 +398,46 @@ class Mesh_obj:
                 node_coord.append((
                         self.node_x[self.node_data[k][i]],
                         self.node_y[self.node_data[k][i]]))                 
-            polygon= Polygon(node_coord,True)#create a polygon instance 
+            polygon = Polygon(node_coord,True)#create a polygon instance 
             patches.append(polygon) #patch list   
         
         #build colour map
         X=self.cell_attributes
         colour_array=cmaps.jet(plt.Normalize(min(X),max(X))(X))#maps color onto mesh
-        plt.set_cmap(color_map)
+        
         #compile polygons patches into a "patch collection"
-        pc=PatchCollection(patches,alpha=0.8,edgecolor='k',facecolor=colour_array)
+        pc=PatchCollection(patches,edgecolor='k',facecolor=colour_array,cmap=color_map)
         pc.set_array(np.array(X))#maps polygon color map into patch collection 
-        #make figure
-        if ax is None:
-            fig,ax=plt.subplots()
         ax.add_collection(pc)#blit polygons to axis
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are 
-        plt.ylim(ylim)
-        plt.xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_xlim(xlim)
         #update the figure
         if color_bar:#add the color bar 
             cbar=plt.colorbar(pc,ax=ax)#add colorbar
             cbar.set_label(self.atribute_title) #set colorbar title      
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
+                
+        #biuld alpha channel if we have sensitivities 
+        if sens:
+            try:
+                wieghts = np.log10(np.array(self.sensitivities)) # 
+                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
+                raw_alpha = np.ones((self.num_elms,4),dtype=float)
+                raw_alpha[..., -1] = alphas
+                alpha_map = ListedColormap(raw_alpha) 
+                pca = PatchCollection(patches,edgecolor=None,facecolor=raw_alpha,cmap=alpha_map)
+                pca.set_array(wieghts)
+                ax.add_collection(pca)
+            except AttributeError:
+                print("no sensitivities in mesh object to plot")
+        
+        #try add electrodes to figure if we have them 
+        try: 
+            ax.scatter(self.elec_x,self.elec_y,'k')
+        except AttributeError:
+            print("no electrodes in mesh object to plot")
+            
 #        plt.show()#display the plot
 #        return ax # return axis handle 
 
@@ -450,6 +513,7 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
 #     topo - topography for R2in file
 #     elec_node - x columns where the electrodes are 
 ###############################################################################
+    ###
     #sort electrodes so that x is in ascending order using numpy 
     sorted_idx=np.argsort(elec_x)
     elec_x=elec_x[sorted_idx]
@@ -459,11 +523,11 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     
     #set up default values
     if cell_height==-1:
-        cell_height = e_spacing/4 # (thickness of cells)
+        cell_height = 0.25 * e_spacing # (thickness of cells)
     if doi == -1:
         doi = (max(elec_x)-min(elec_x))*0.5
     if nbe == -1:
-        nbe=7 # 7 nodes betweens electrodes means there will be 8 elements per electrode pair .
+        nbe=3 # 3 nodes betweens electrodes means there will be 4 elements per electrode pair .
 
     
     #set up node spacing (ie how many nodes occur within electrode spacings)
@@ -473,6 +537,7 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
         temp=np.linspace(elec_x[i],elec_x[i+1],nbe+2)#go between each electrode and make new node positions 
         new_nodes=np.append(elec_x[i],temp[1:-1])#make an array with extra node locations. some splicing is needed here becuase otherwise we will get duplicated node points 
         node_x=np.append(node_x,new_nodes)#append new nodes to node x coordinate array 
+    
     node_x=np.append(node_x,elec_x[-1])#adds last electrode to node x coordinate array 
     #interpolate new topo positions using 1d interpolation
     survey_y=np.interp(node_x,elec_x,elec_y)   
@@ -489,7 +554,7 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     node_y=np.arange(0,doi,cell_height)#defines the depth to each node
     
     #set up extra points on edge of survey 
-    no_of_extra_nodes = 8
+    no_of_extra_nodes = 15
     x_extension = np.logspace(np.log10(node_spacing), np.log10(flank), no_of_extra_nodes)
     y_node_extension = np.logspace(np.log10(doi), np.log10(b_max_depth), no_of_extra_nodes)
     
@@ -499,14 +564,17 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
     meshx = list(np.sort(np.concatenate((x_bck,node_x,x_fwd))))#keep outputs as lists
     meshy = list(np.sort(np.concatenate((node_y,y_node_extension))))
     
-    #find the columns relating to the electrode nodes? 
-    elec_node=[meshx.index(elec_x[i]) for i in range(len(elec_x))]
+
     
     #topography handling 
     topo_bck=np.linspace(min(elec_y),elec_y[0],len(x_extension))
     topo_fwd=np.linspace(elec_y[-1],max(elec_y),len(x_extension))
     topo = list(np.concatenate((topo_bck,survey_y,topo_fwd)))#keep outputs as lists
     
+    
+    ###
+    #find the columns relating to the electrode nodes? 
+    elec_node=[meshx.index(elec_x[i])+1 for i in range(len(elec_x))]
     #print some warnings for debugging 
     if len(topo)!=len(meshx):
         print("WARNING: topography vector and x coordinate arrays not the same length! ")
