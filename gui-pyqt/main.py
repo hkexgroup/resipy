@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-    QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit)
-from PyQt5.QtGui import QIcon
+    QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider)
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
-
+from PyQt5.QtCore import Qt
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 import matplotlib.pyplot as plt
@@ -28,7 +29,7 @@ from R2 import R2
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None):
+    def __init__(self, parent=None, figure=None, navi=False):
         super(MatplotlibWidget, self).__init__(parent)
         if figure is None:
             figure = Figure()
@@ -38,6 +39,8 @@ class MatplotlibWidget(QWidget):
         self.axis = axes
         self.figure = figure
         self.canvas = FigureCanvasQTAgg(self.figure)
+        if navi is True:
+            self.navi_toolbar = NavigationToolbar(self.canvas, self)
 
 
         self.layoutVertical = QVBoxLayout(self)
@@ -178,8 +181,8 @@ class App(QMainWindow):
         
         
         #%% tab MESH
-        tab3 = QWidget()
-        tabs.addTab(tab3, 'Mesh')
+        tabMesh= QWidget()
+        tabs.addTab(tabMesh, 'Mesh')
         grid = QGridLayout()
 
                 
@@ -201,10 +204,36 @@ class App(QMainWindow):
         btn.clicked.connect(generateMesh)
         grid.addWidget(btn, 1, 0)
 
-        mw1 = MatplotlibWidget()
+        mw1 = MatplotlibWidget(navi=True)
         grid.addWidget(mw1, 2, 0)
+        
+        
+        def changeValue(value):
+            print(value)
+            self.r2.createMesh(elemy=value)
+            plotQuadMesh()
+            
+        def plotQuadMesh():
+            print('plotQuadMesh')
+            mwqm.plot(self.r2.mesh.show)
+        
+        def genQuadMesh():
+            self.r2.createMesh()
+            
+        btn = QPushButton('QuadMesh')
+        btn.clicked.connect(genQuadMesh)
+        grid.addWidget(btn, 3, 0)
+        
+        sld = QSlider(Qt.Horizontal)
+        sld.setGeometry(30, 40, 100, 30)
+        sld.valueChanged[int].connect(changeValue)
+        grid.addWidget(sld, 4, 0)
+        
+        mwqm = MatplotlibWidget()
+        grid.addWidget(mwqm, 5, 0)
+        
        
-        tab3.setLayout(grid)
+        tabMesh.setLayout(grid)
         
         
         #%% tab INVERSION SETTINGS

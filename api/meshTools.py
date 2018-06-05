@@ -497,7 +497,8 @@ class Mesh_obj:
         print("_______________________________________________________")
         
 #%% build a quad mesh        
-def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
+def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
+              elemx=4, xgf=1.5, elemy=20, yf=1.1, ygf=1.5):
 # creates a quaderlateral mesh given the electrode x and y positions. Function
 # relies heavily on the numpy package.
 # INPUT: 
@@ -514,67 +515,61 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
 #     elec_node - x columns where the electrodes are 
 ###############################################################################
     ###
-    #sort electrodes so that x is in ascending order using numpy 
-    sorted_idx=np.argsort(elec_x)
-    elec_x=elec_x[sorted_idx]
-    elec_y=elec_y[sorted_idx]
-    no_electrodes=len(elec_x)
-    e_spacing=np.mean(np.diff(elec_x))#electode spacing 
+    elec = np.c_[elec_x, elec_y]
     
-    #set up default values
-    if cell_height==-1:
-        cell_height = 0.25 * e_spacing # (thickness of cells)
-    if doi == -1:
-        doi = (max(elec_x)-min(elec_x))*0.5
-    if nbe == -1:
-        nbe=3 # 3 nodes betweens electrodes means there will be 4 elements per electrode pair .
+    # create meshx
+    meshx = np.array([])
+    for i in range(len(elec)-1):
+        elec1 = elec[i,0]
+        elec2 = elec[i+1,0]
+        espacing = np.abs(elec1-elec2)
+        dx = espacing/elemx # we ask for elemx nodes between electrodes
+        if i == 0:
+            xx2 = np.arange(elec1-espacing, elec1, dx)
+            xx3 = np.ones(elemx)*elec1-espacing
+            dxx = espacing
+            for i in range(1,elemx):
+                xx3[i] = xx3[i-1]-dxx*xgf
+                dxx = dxx*xgf
+            meshx = np.r_[meshx, xx3, xx2]
+        xx = np.arange(elec1, elec2, dx)
+        meshx = np.r_[meshx, xx]
+        if i == len(elec)-2:
+            xx2 = np.arange(elec2, elec2+espacing, dx)
+            xx3 = np.ones(elemx)*elec2+espacing
+            dxx = espacing
+            for i in range(1,elemx):
+                xx3[i] = xx3[i-1]+dxx*xgf
+                dxx = dxx*xgf
+            meshx = np.r_[meshx, xx2, xx3]
+    
+    # create e_nodes
+    elec_node = np.arange(8, 8+len(elec)*elemx, elemx)
 
+    #TODO make sure it's dividable by patchx and patch y
     
-    #set up node spacing (ie how many nodes occur within electrode spacings)
-    #nbe - > nodes between electrodes 
-    node_x=np.array(())#make an empty array
-    for i in range (len(elec_x)-1):
-        temp=np.linspace(elec_x[i],elec_x[i+1],nbe+2)#go between each electrode and make new node positions 
-        new_nodes=np.append(elec_x[i],temp[1:-1])#make an array with extra node locations. some splicing is needed here becuase otherwise we will get duplicated node points 
-        node_x=np.append(node_x,new_nodes)#append new nodes to node x coordinate array 
+    # create meshy
+    meshy = np.zeros(elemy)
+    dyy = espacing/(elemx*2)
+    for i in range(1, elemy):
+        meshy[i] = meshy[i-1]+dyy*yf
+        dyy = dyy*yf
+    elemy2 = int(elemy/2)
+    yy = np.ones(elemy2)*meshy[-1]
+    for i in range(1, elemy2):
+        yy[i] = yy[i-1]+dyy*xgf
+        dyy = dyy*xgf
+    meshy = np.r_[meshy, yy]
     
-    node_x=np.append(node_x,elec_x[-1])#adds last electrode to node x coordinate array 
-    #interpolate new topo positions using 1d interpolation
-    survey_y=np.interp(node_x,elec_x,elec_y)   
-    #compute node spacing 
-    node_spacing=np.mean(np.diff(node_x))
+    # create topo
+    topo = np.interp(meshx, elec[:,0], elec[:,1])
     
-    #setup some nuemonn boundary parameters (background region)
-    flank=e_spacing*100#flank of survey, how much bigger it needs to be 
-    max_depth=min(elec_y)-doi # maximum depth of survey 
-    b_max_depth=abs(max_depth-flank)#background max depth
-
-    
-    #setup thickness of cells in survey area
-    node_y=np.arange(0,doi,cell_height)#defines the depth to each node
-    
-    #set up extra points on edge of survey 
-    no_of_extra_nodes = 15
-    x_extension = np.logspace(np.log10(node_spacing), np.log10(flank), no_of_extra_nodes)
-    y_node_extension = np.logspace(np.log10(doi), np.log10(b_max_depth), no_of_extra_nodes)
-    
-    #sort into and y node coordinates 
-    x_fwd=max(elec_x)+x_extension
-    x_bck=min(elec_x)-x_extension
-    meshx = list(np.sort(np.concatenate((x_bck,node_x,x_fwd))))#keep outputs as lists
-    meshy = list(np.sort(np.concatenate((node_y,y_node_extension))))
-    
-
-    
-    #topography handling 
-    topo_bck=np.linspace(min(elec_y),elec_y[0],len(x_extension))
-    topo_fwd=np.linspace(elec_y[-1],max(elec_y),len(x_extension))
-    topo = list(np.concatenate((topo_bck,survey_y,topo_fwd)))#keep outputs as lists
-    
+    no_electrodes = len(elec)
     
     ###
     #find the columns relating to the electrode nodes? 
-    elec_node=[meshx.index(elec_x[i])+1 for i in range(len(elec_x))]
+#    elec_node=[meshx.index(elec_x[i])+1 for i in range(len(elec_x))]
+    
     #print some warnings for debugging 
     if len(topo)!=len(meshx):
         print("WARNING: topography vector and x coordinate arrays not the same length! ")
@@ -638,4 +633,8 @@ def quad_mesh(elec_x,elec_y,doi=-1,nbe=-1,cell_height=-1):
                     'no attribute')
     
     return Mesh,meshx,meshy,topo,elec_node
-    
+
+
+#%% test code
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
+

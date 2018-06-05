@@ -25,6 +25,7 @@ from Survey import Survey
 from r2in import write2in
 import meshTools as mt
 from meshTools import Mesh_obj
+from testMesh import QuadMesh
 
 
 
@@ -67,7 +68,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.linfit = self.surveys[0].linfit
         
     
-    def createMesh(self, typ='default'):
+    def createMesh(self, typ='default', **kwargs):
         ''' create a mesh object
         typ:
             quad : quadrilateral mesh
@@ -82,9 +83,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('Using a triangular mesh')
         if typ == 'quad':
 #            mesh = QuadMesh(elec, nnode=4)
-            elec_x = self.elec[:,0]
-            elec_y = self.elec[:,1]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)
+#            elec_x = self.elec[:,0]
+#            elec_y = self.elec[:,1]
+#            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)
+            mesh = QuadMesh()
+            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
             self.param['meshy'] = meshy
             self.param['topo'] = topo
@@ -219,12 +222,15 @@ class R2(object): # R2 master class instanciated by the GUI
 
         
 #%% test code
-k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
-k.createSurvey('test/17040301.csv', ftype='Syscal')
-k.pseudo(contour=True)
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+#k.createSurvey('test/17040301.csv', ftype='Syscal')
+#k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.createMesh(typ='quad')
+#fig, ax = plt.subplots()
+#fig.suptitle('kkk')
+#k.mesh.show(ax)
 #k.write2in()
-k.invert(iplot=None)
+#k.invert(iplot=None)
 #k.showSection()
 #k.showResults()
