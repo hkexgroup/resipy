@@ -12,7 +12,16 @@ Project structure
 
 Clone
 -----
-To clone the project please use git
+To clone the project please use git:
+
+```
+git clone git@gitlab.com:sagitta1618/r2gui.git
+```
+
+You may need to generate a public ssh key to be able to fully use the git command line.
+
+Another option is just to download the git from gitlab itself (see screenshot below):
+![download project](download.png)*Download a zip of the project*
 
 
 Examples
