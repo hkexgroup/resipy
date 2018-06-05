@@ -83,11 +83,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('Using a triangular mesh')
         if typ == 'quad':
 #            mesh = QuadMesh(elec, nnode=4)
-#            elec_x = self.elec[:,0]
-#            elec_y = self.elec[:,1]
-#            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)
-            mesh = QuadMesh()
-            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
+            elec_x = self.elec[:,0]
+            elec_y = self.elec[:,1]
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)
+#            mesh = QuadMesh()
+#            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
             self.param['meshy'] = meshy
             self.param['topo'] = topo
@@ -229,7 +229,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #k.createMesh(typ='quad')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
-#k.mesh.show(ax)
+#k.mesh.show(ax=ax)
 #k.write2in()
 #k.invert(iplot=None)
 #k.showSection()

@@ -189,13 +189,8 @@ class App(QMainWindow):
         def callback2(ax):
             ax.plot(np.random.randn(20,5), '+--')
             ax.set_title('Random data nnnnndfghdfh')
-        
-#        def updateGraph2():
-#            mw1.plot(callback2)
-            
+
         def generateMesh():
-#            mesh_dict=mt.vtk_import(self.fname)#makes a dictionary of a mesh 
-#            mesh = mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
             self.r2.createMesh(typ='quad')
             print(self.r2.mesh.summary())
             mw1.plot(self.r2.mesh.show) # mesh.show() is the callback function to be called with ax

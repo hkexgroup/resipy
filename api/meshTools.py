@@ -22,8 +22,8 @@ Dependencies:
     tkinter (python standard)
 """
 #import standard python packages
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 #import anaconda libraries
 import numpy as np
 import matplotlib.pyplot as plt
@@ -31,6 +31,7 @@ import matplotlib.cm as cmaps
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from matplotlib.colors import Normalize,ListedColormap
+import time
 
 #%% triangle centriod 
 def tri_cent(p,q,r):#code expects points as p=(x,y) and so on ... (counter clockwise prefered)
@@ -293,10 +294,12 @@ class Mesh_obj:
         #assign varaibles to the mesh object 
         self.num_nodes=num_nodes
         self.num_elms=num_elms
-        self.node_x=node_x;self.node_y=node_y;self.node_z=node_z
+        self.node_x = node_x
+        self.node_y = node_y
+        self.node_z = node_z
         self.node_id=node_id
         self.elm_id=elm_id
-        self.node_data=node_data
+        self.node_data = node_data
         self.elm_centre=elm_centre
         self.elm_area=elm_area
         self.cell_type=cell_type
@@ -383,15 +386,20 @@ class Mesh_obj:
             if xlim=="default":
                 xlim=[min(self.elec_x),max(self.elec_x)]
             if ylim=="default":
-                ylim=[min(self.elec_y)-10,max(self.elec_y)+10]
+                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
+                print(doiEstimate)
+                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
         except AttributeError:
             if xlim=="default":
                 xlim=[min(self.node_x),max(self.node_x)]
             if ylim=="default":
-                ylim=[min(self.node_y),max(self.node_y)]                
+                ylim=[min(self.node_y),max(self.node_y)]
+        print('xlim', xlim, ylim)
         #compile mesh coordinates into polygon coordinates  
         patches=[]#list wich will hold the polygon instances 
         no_verts=self.Type2VertsNo()#number of vertices each element has 
+
+        a = time.time()            
         for i in range(self.num_elms):
             node_coord=[]#coordinates of the corner of each element 
             for k in range(no_verts):
@@ -400,11 +408,13 @@ class Mesh_obj:
                         self.node_y[self.node_data[k][i]]))                 
             polygon = Polygon(node_coord,True)#create a polygon instance 
             patches.append(polygon) #patch list   
+        print('elapsed', time.time()-a)
         
         #build colour map
         X=self.cell_attributes
         colour_array=cmaps.jet(plt.Normalize(min(X),max(X))(X))#maps color onto mesh
         
+        a = time.time()
         #compile polygons patches into a "patch collection"
         pc=PatchCollection(patches,edgecolor='k',facecolor=colour_array,cmap=color_map)
         pc.set_array(np.array(X))#maps polygon color map into patch collection 
@@ -417,7 +427,8 @@ class Mesh_obj:
             cbar=plt.colorbar(pc,ax=ax)#add colorbar
             cbar.set_label(self.atribute_title) #set colorbar title      
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
-                
+        print('elapsed', time.time()-a)
+
         #biuld alpha channel if we have sensitivities 
         if sens:
             try:
@@ -434,7 +445,7 @@ class Mesh_obj:
         
         #try add electrodes to figure if we have them 
         try: 
-            ax.scatter(self.elec_x,self.elec_y,'k')
+            ax.plot(self.elec_x,self.elec_y,'ko')
         except AttributeError:
             print("no electrodes in mesh object to plot")
             
@@ -632,9 +643,12 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
                     [0]*no_elms,
                     'no attribute')
     
+    elec_node2 = elec_node*len(meshy) # because we use columns based flattening
+    Mesh.add_e_nodes(elec_node2)
+    
     return Mesh,meshx,meshy,topo,elec_node
 
 
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
-
+#mesh.show()
