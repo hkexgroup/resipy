@@ -10,7 +10,7 @@ Project structure
 
 ![project structure](structure.png)*General overlook of the project structure with the three main parts.*
 
-Clone
+Download/Clone the project
 -----
 To clone the project please use git:
 
@@ -43,7 +43,7 @@ cd r2gui/examples/jupyter-notebook
 jupyter notebook # the command is jupyter-notebook (with a dash) on Linux but without dash on Windows
 ```
 
-You can then execute each cell of the notebook using ```Shfit + Enter```. This will work on the same example as for the GUI above.
+You can then execute each cell of the notebook using ```Shift + Enter```. This will work on the same example as for the GUI above.
 
 
 
@@ -65,11 +65,6 @@ If there is a feature you would like to see in the API or the GUI or if there is
  please raise an issue on Gitlab describing it.
 The issue will then be assigned to someone to be addressed. This will allow to spread the workload and avoid
 two people doing the same work in parallel.
-
-
-
-
-someone
 
 
 
