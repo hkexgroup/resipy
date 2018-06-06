@@ -23,8 +23,8 @@ OS = platform.system()
 sys.path.append(os.path.relpath('../api'))
 
 #from mesh_class import mesh_obj
-import meshTools as mt
-from meshTools import Mesh_obj
+#import meshTools as mt
+#from meshTools import Mesh_obj
 from R2 import R2
 
 
@@ -312,7 +312,8 @@ class App(QMainWindow):
             if OS == 'Linux':
                 self.process.start('wine R2.exe')
             else:
-                self.process.start(os.path.join(self.r2.dirname, 'R2.exe')) # need absolute path
+                wdpath = "\"" + os.path.join(self.r2.dirname, 'R2.exe').replace('\\','/') + "\""
+                self.process.start(wdpath) # need absolute path and escape quotes (if space in the path)
             self.process.finished.connect(plotSection)
         
         def plotSection():
