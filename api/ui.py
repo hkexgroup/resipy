@@ -126,6 +126,7 @@ class App(QMainWindow):
         tab1 = QWidget()
         tabs.addTab(tab1, 'Importing')
         gridImport = QGridLayout()
+        topLayout = QHBoxLayout()
         
         # meta data (title and date of survey)
         title = QLabel('Title')
@@ -155,12 +156,17 @@ class App(QMainWindow):
         
 
         def getfile():
-            self.fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
-            buttonf.setText(self.fname)
-            self.r2.createSurvey(self.fname)
-            if all(self.r2.surveys[0].df['irecip'].values == 0):
-                hbox4.addWidget(buttonfr)
-            plotPseudo()
+            fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
+            if fname != '':
+                self.fname = fname
+                buttonf.setText(self.fname)
+                self.r2.createSurvey(self.fname)
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    hbox4.addWidget(buttonfr)
+                else:
+                    plotError()
+                    generateMesh()
+                plotPseudo()
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
@@ -199,22 +205,22 @@ class App(QMainWindow):
         hbox5.addWidget(ipCheck)
         hbox5.addWidget(topoCheck)
         
-        # electrode table
-        # TODO add copy paste functionnality
-        elecTable = QTableWidget()
-        elecTable.setRowCount(10)
-        elecTable.setColumnCount(3)
-        elecTable.setVisible(False)
-        gridImport.addWidget(elecTable, 0, 1)
-        
         metaLayout = QVBoxLayout()
         metaLayout.addLayout(hbox1)
         metaLayout.addLayout(hbox2)
         metaLayout.addWidget(wd)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
-        gridImport.addLayout(metaLayout, 0, 0)
-        
+        topLayout.addLayout(metaLayout)
+
+        # electrode table
+        # TODO add copy paste functionnality
+        elecTable = QTableWidget()
+        elecTable.setRowCount(10)
+        elecTable.setColumnCount(3)
+        elecTable.setVisible(False)
+        topLayout.addWidget(elecTable)
+        gridImport.addLayout(topLayout, 0, 0)        
         
         def plotPseudo():
             mwPseudo.plot(self.r2.surveys[0].pseudo)
@@ -222,16 +228,16 @@ class App(QMainWindow):
         def plotPseudoIP():
             mwPseudoIP.plot(self.r2.surveys[0].pseudo)
         
-#        btn = QPushButton('Plot Pseudo')
-#        btn.clicked.connect(plotPseudo)
-#        grid.addWidget(btn, 3, 1)
+        pseudoLayout = QHBoxLayout()
 
         mwPseudo = MatplotlibWidget(navi=True)
-        gridImport.addWidget(mwPseudo, 1, 0)
+        pseudoLayout.addWidget(mwPseudo)
                 
         mwPseudoIP = MatplotlibWidget(navi=True)
         mwPseudoIP.setVisible(False)
-        gridImport.addWidget(mwPseudoIP, 1, 1)
+        pseudoLayout.addWidget(mwPseudoIP)
+        
+        gridImport.addLayout(pseudoLayout, 1, 0)
         
 #        def plotError():
 #            mwError.plot(self.r2.surveys[0].plotError)
@@ -255,6 +261,9 @@ class App(QMainWindow):
         
         errorLayout = QVBoxLayout()
         
+        def plotError():
+            mwFitError.plot(self.r2.plotError)
+            
         def fitLinError():
             mwFitError.plot(self.r2.linfit)
         
@@ -265,13 +274,16 @@ class App(QMainWindow):
         def fitModel(index):
             print(index)
             if index == 0:
+                plotError()
+            elif index == 1:
                 fitLinError()
-            elif index == 2:
+            elif index == 3:
                 fitLmeError()
             else:
                 print('NOT IMPLEMENTED YET')
         
         errFitType = QComboBox()
+        errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Exponential')
         errFitType.addItem('Linear Mixed Effect')
@@ -304,24 +316,34 @@ class App(QMainWindow):
         #%% tab MESH
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
-        grid = QGridLayout()
-
+        meshLayout = QVBoxLayout()
                 
         def callback2(ax):
             ax.plot(np.random.randn(20,5), '+--')
             ax.set_title('Random data nnnnndfghdfh')
 
-        def generateMesh():
-            self.r2.createMesh(typ='quad')
+        def generateMesh(index=0):
+            if index == 0:
+                self.r2.createMesh(typ='quad')
+            elif index == 1:
+                self.r2.createMesh(typ='quad')
+                # TODO to implemente the triangular mesh
+            else:
+                print('NOT IMPLEMENTED')
             print(self.r2.mesh.summary())
-            mw1.plot(self.r2.mesh.show) # mesh.show() is the callback function to be called with ax
-            
-        btn = QPushButton('Generate Quadrilateral Mesh')
-        btn.clicked.connect(generateMesh)
-        grid.addWidget(btn, 1, 0)
-
-        mw1 = MatplotlibWidget(navi=True)
-        grid.addWidget(mw1, 2, 0)
+            mwMesh.plot(self.r2.mesh.show) # mesh.show() is the callback function to be called with ax
+        
+        
+        meshType = QComboBox()
+        meshType.addItem('Quadrilateral Mesh')
+        meshType.addItem('Triangular Mesh')
+        meshType.currentIndexChanged.connect(generateMesh)
+        meshLayout.addWidget(meshType)
+        
+        # TODO EVENTUALLY SHOW MESH OPTION HERE
+        
+        mwMesh = MatplotlibWidget(navi=True)
+        meshLayout.addWidget(mwMesh)
         
         '''
         def changeValue(value):
@@ -349,14 +371,17 @@ class App(QMainWindow):
         grid.addWidget(mwqm, 5, 0)
         '''
        
-        tabMesh.setLayout(grid)
+        tabMesh.setLayout(meshLayout)
         
         
         #%% tab INVERSION SETTINGS
-        tabInversionSettings = QWidget()
+        tabInversionSettings = QTabWidget()
         tabs.addTab(tabInversionSettings, 'Inversion settings')
+
+        # general tab
+        generalSettings = QWidget()
         grid = QGridLayout()
-        
+            
         singular_type = QCheckBox('Singularity Removal')
         grid.addWidget(singular_type, 0, 1)
         
@@ -378,7 +403,21 @@ class App(QMainWindow):
         grid.addWidget(inv_type, 5, 0)
         
         
-        tabInversionSettings.setLayout(grid)
+        generalSettings.setLayout(grid)
+        tabInversionSettings.addTab(generalSettings, 'General')
+        
+        
+        # advanced settings
+        advancedSettings = QWidget()
+        gridAdv = QGridLayout()
+        
+        btn = QPushButton('Press me')
+        gridAdv.addWidget(btn)
+        
+        advancedSettings.setLayout(gridAdv)
+        tabInversionSettings.addTab(advancedSettings, 'Advanced')
+
+        
         
         
         #%% tab 5 INVERSION
@@ -415,7 +454,7 @@ class App(QMainWindow):
 #            dataReady('kk\n')
             param = {} # TODO to be set in the previous tab
             if 'mesh' not in self.r2.param:
-                self.r2.createMesh()
+                generateMesh() # that will call mesh creation
         
             # write configuration file
             if self.r2.configFile == '':
