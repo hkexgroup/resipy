@@ -153,7 +153,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # copy R2.exe
 #        os.copy('../external-exe/R2.exe',self.dirname)
-
+        shutil.copy('R2.exe', os.path.join(self.dirname, 'R2.exe'))
+        
         self.runR2()
         
         if iplot is True:
