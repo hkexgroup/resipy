@@ -179,11 +179,11 @@ class App(QMainWindow):
         grid = QGridLayout()
  
         def fitLinError():
-            mwFitError.plot(self.r2.surveys[0].linfit)
+            mwFitError.plot(self.r2.linfit)
         
         def fitLmeError():
             print('NOT READY YET')
-#            mwFitError.plot(self.r2.surveys[0].lmefit)
+            mwFitError.plot(self.r2.lmefit)
         
         btn = QPushButton('Fit Linear model')
         btn.clicked.connect(fitLinError)

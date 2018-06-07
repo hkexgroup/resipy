@@ -12,6 +12,7 @@ sys.path.append(os.path.relpath('../api'))
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import statsmodels.formula.api as smf
 
 from parsers import *
 
@@ -277,37 +278,32 @@ class Survey(object):
             
             return figs
         
-    def lmefit(self, iplot=False):
+    def lmefit(self, iplot=True, ax=None):
         # fit linear mixed effect model
         # NEED filterData() before
-        ie = self.irecip > 0
-        data = np.vstack([np.abs(self.recipMean), np.abs(self.recipError)]).T
-        data = np.hstack((data, self.array[ie]))
+        recipMean = np.abs(self.dfg['recipMean'].values)
+        recipError = np.abs(self.dfg['recipError'].values)
+        irecip = self.df['irecip'].values
+        array = self.df[['a','b','m','n']].values
+        
+        ie = irecip > 0
+        data = np.vstack([recipMean, recipError]).T
+        data = np.hstack((data, array[ie]))
         df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
         md = smf.mixedlm('obsErr~avgR', df, groups=df[['c1', 'c2', 'p1', 'p2']])
         mdf = md.fit()
-        print(np.min(df['avgR']))
-        print(np.min(df['obsErr']))
-        print(np.min(mdf.predict()))
+        #print(np.min(df['avgR']))
+        #print(np.min(df['obsErr']))
+        #print(np.min(mdf.predict()))
         print(mdf.summary())
         
 
-        self.lmeError = mdf.predict()
+        self.dfg['lmeError'] = mdf.predict()
         
         if iplot:
-            figs = []
-            fig, ax = plt.subplots()
-            ax.plot(df['avgR'],df['obsErr'], 'o', label='observed')
-            ax.plot(df['avgR'], mdf.predict(), 'o', label='predicted')
-            ax.legend()
-            ax.set_title('Linear Mixed Effect Model Predictions')
-            ax.set_xlabel('Transfer Resistance [$\Omega$]')
-            ax.set_ylabel('Reciprocal Error [$\Omega$]')
-            ax.grid()
-            fig.show()
-            figs.append(fig)
+            if ax is None:
+                fig, ax = plt.subplots()
 
-            fig, ax = plt.subplots()
             ax.loglog(df['obsErr'], mdf.predict(), 'o')
             ax.loglog([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
             ax.grid()
@@ -315,10 +311,6 @@ class Survey(object):
             ax.set_title('Linear Mixed Effect Model Fit')
             ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
             ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
-            fig.show()
-            figs.append(fig)
-            
-            return fig
     
     
     def pseudo(self, ax=None, contour=False, log=True, geom=True):

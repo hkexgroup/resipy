@@ -66,6 +66,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
             self.linfit = self.surveys[0].linfit
+            self.lmefit = self.surveys[0].lmefit
         
     
     def createMesh(self, typ='default', **kwargs):
@@ -227,6 +228,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
+#k.lmefit(iplot=True)
 #k.createMesh(typ='quad')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
