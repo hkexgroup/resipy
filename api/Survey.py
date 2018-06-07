@@ -12,7 +12,7 @@ sys.path.append(os.path.relpath('../api'))
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-import statsmodels.formula.api as smf
+#import statsmodels.formula.api as smf
 
 from parsers import *
 
@@ -42,13 +42,24 @@ class Survey(object):
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
         
-        if True:         
+        if False:         
             resist = self.df['resist'].values
             iout = np.isnan(resist) | np.isinf(resist)
             if np.sum(iout) > 0:
                 print('BAD transfer resistance data : ', np.sum(iout))
             self.filterData(~iout)
             self.filterData(irecip != 0) # filter out dummy and non reciprocal
+    
+    def addData(self, fname, ftype='Syscal'):
+        ''' add data to the actual survey (for instance the reciprocal if they
+        are not in the same file)
+        '''
+        if ftype == 'Syscal':
+            elec, data = syscalParser(fname)
+        else:
+            raise Exception('Sorry this file type is not implemented yet')
+        self.df = self.df.append(data)
+        
     
     def filterData(self, i2keep):
         self.ndata = len(i2keep)
@@ -190,6 +201,8 @@ class Survey(object):
 
     def linfit(self, iplot=True, ax=None):
         # linear fit
+        if 'recipMean' not in self.dfg.columns:
+            self.reciprocal()
         recipMean = np.abs(self.dfg['recipMean'].values)
         recipError = np.abs(self.dfg['recipError'].values)
 
@@ -279,38 +292,39 @@ class Survey(object):
             return figs
         
     def lmefit(self, iplot=True, ax=None):
-        # fit linear mixed effect model
-        # NEED filterData() before
-        recipMean = np.abs(self.dfg['recipMean'].values)
-        recipError = np.abs(self.dfg['recipError'].values)
-        irecip = self.df['irecip'].values
-        array = self.df[['a','b','m','n']].values
-        
-        ie = irecip > 0
-        data = np.vstack([recipMean, recipError]).T
-        data = np.hstack((data, array[ie]))
-        df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
-        md = smf.mixedlm('obsErr~avgR', df, groups=df[['c1', 'c2', 'p1', 'p2']])
-        mdf = md.fit()
-        #print(np.min(df['avgR']))
-        #print(np.min(df['obsErr']))
-        #print(np.min(mdf.predict()))
-        print(mdf.summary())
-        
-
-        self.dfg['lmeError'] = mdf.predict()
-        
-        if iplot:
-            if ax is None:
-                fig, ax = plt.subplots()
-
-            ax.loglog(df['obsErr'], mdf.predict(), 'o')
-            ax.loglog([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-            ax.grid()
-            ax.legend()
-            ax.set_title('Linear Mixed Effect Model Fit')
-            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+        print('NOT IMPLEMENTED YET')
+#        # fit linear mixed effect model
+#        # NEED filterData() before
+#        recipMean = np.abs(self.dfg['recipMean'].values)
+#        recipError = np.abs(self.dfg['recipError'].values)
+#        irecip = self.df['irecip'].values
+#        array = self.df[['a','b','m','n']].values
+#        
+#        ie = irecip > 0
+#        data = np.vstack([recipMean, recipError]).T
+#        data = np.hstack((data, array[ie]))
+#        df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
+#        md = smf.mixedlm('obsErr~avgR', df, groups=df[['c1', 'c2', 'p1', 'p2']])
+#        mdf = md.fit()
+#        #print(np.min(df['avgR']))
+#        #print(np.min(df['obsErr']))
+#        #print(np.min(mdf.predict()))
+#        print(mdf.summary())
+#        
+#
+#        self.dfg['lmeError'] = mdf.predict()
+#        
+#        if iplot:
+#            if ax is None:
+#                fig, ax = plt.subplots()
+#
+#            ax.loglog(df['obsErr'], mdf.predict(), 'o')
+#            ax.loglog([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+#            ax.grid()
+#            ax.legend()
+#            ax.set_title('Linear Mixed Effect Model Fit')
+#            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+#            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
     
     
     def pseudo(self, ax=None, contour=False, log=True, geom=True):

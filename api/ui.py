@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-    QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider)
+    QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
+    QTableWidget)
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 from PyQt5.QtCore import Qt
@@ -20,6 +21,7 @@ import sys
 import shutil
 import platform
 OS = platform.system()
+from datetime import datetime
 
 sys.path.append(os.path.relpath('../api')) # not needed anymore
 
@@ -47,7 +49,9 @@ print( 'os.getcwd is', os.getcwd() )
 
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None, figure=None, navi=False):
-        super(MatplotlibWidget, self).__init__(parent)
+        super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
+        # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
+        # plot again on them
         if figure is None:
             figure = Figure()
             axes = figure.add_subplot(111)
@@ -62,7 +66,9 @@ class MatplotlibWidget(QWidget):
 
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
+            self.navi_toolbar.setMaximumHeight(30)
             self.layoutVertical.addWidget(self.navi_toolbar)
+            
 
     
     def plot(self, callback):
@@ -119,65 +125,136 @@ class App(QMainWindow):
         #%% tab 1 importing data
         tab1 = QWidget()
         tabs.addTab(tab1, 'Importing')
-        grid = QGridLayout()
+        gridImport = QGridLayout()
         
+        # meta data (title and date of survey)
         title = QLabel('Title')
+        titleEdit = QLineEdit()
+        titleEdit.setText('My beautiful survey')
         
+        date = QLabel('Date')
+        dateEdit = QLineEdit()
+        dateEdit.setText(datetime.now().strftime('%Y-%m-%d')) # get today date
+        
+        hbox1 = QHBoxLayout()
+        hbox1.addWidget(title)
+        hbox1.addWidget(titleEdit)
+        
+        hbox2 = QHBoxLayout()
+        hbox2.addWidget(date)
+        hbox2.addWidget(dateEdit)
+        
+        # ask for working directory, and survey file to input
         def getwd():
             fdir = QFileDialog.getExistingDirectory(tab1, 'Choose Working Directory')
             self.r2.setwd(fdir)
-            wdEdit.setText(fdir)
+            wd.setText(fdir)
             
-        wd = QPushButton('Working directory')
+        wd = QPushButton('Press here to set working directory')
         wd.clicked.connect(getwd)
-        
-        titleEdit = QLineEdit()
-        titleEdit.setText('My beautiful survey')
-        wdEdit = QLineEdit()
-                
-        grid.addWidget(title, 1, 0)
-        grid.addWidget(titleEdit, 1, 1)
-        
-        grid.addWidget(wd, 2, 0)
-        grid.addWidget(wdEdit, 2, 1)
         
 
         def getfile():
             self.fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
             buttonf.setText(self.fname)
             self.r2.createSurvey(self.fname)
-            plotError()
+            if all(self.r2.surveys[0].df['irecip'].values == 0):
+                hbox4.addWidget(buttonfr)
+            plotPseudo()
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
-        grid.addWidget(buttonf, 3, 0)
+        
+        def getfileR():
+            fnameRecip, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
+            buttonfr.setText(fnameRecip)
+            self.r2.surveys[0].addData(fnameRecip)
+        
+        buttonfr = QPushButton('If you have reciprocals upload them here') 
+        buttonfr.clicked.connect(getfileR)
+        
+        hbox4 = QHBoxLayout()
+        hbox4.addWidget(buttonf)
+        
+        def diplayTopo(state):
+            if state  == Qt.Checked:
+                elecTable.setVisible(True)
+            else:
+                elecTable.setVisible(False)
+        
+        def diplayPseudoIP(state):
+            if state  == Qt.Checked:
+                plotPseudoIP()
+                mwPseudoIP.setVisible(True)
+                tabPreProcessing.setTabEnabled(2, True)
+            else:
+                mwPseudoIP.setVisible(False)
+                tabPreProcessing.setTabEnabled(2, False)
+
+        ipCheck = QCheckBox('Induced Polarization')
+        ipCheck.stateChanged.connect(diplayPseudoIP)
+        topoCheck = QCheckBox('Topography')
+        topoCheck.stateChanged.connect(diplayTopo)
+        hbox5 = QHBoxLayout()
+        hbox5.addWidget(ipCheck)
+        hbox5.addWidget(topoCheck)
+        
+        # electrode table
+        # TODO add copy paste functionnality
+        elecTable = QTableWidget()
+        elecTable.setRowCount(10)
+        elecTable.setColumnCount(3)
+        elecTable.setVisible(False)
+        gridImport.addWidget(elecTable, 0, 1)
+        
+        metaLayout = QVBoxLayout()
+        metaLayout.addLayout(hbox1)
+        metaLayout.addLayout(hbox2)
+        metaLayout.addWidget(wd)
+        metaLayout.addLayout(hbox4)
+        metaLayout.addLayout(hbox5)
+        gridImport.addLayout(metaLayout, 0, 0)
         
         
         def plotPseudo():
             mwPseudo.plot(self.r2.surveys[0].pseudo)
         
-        btn = QPushButton('Plot Pseudo')
-        btn.clicked.connect(plotPseudo)
-        grid.addWidget(btn, 3, 1)
+        def plotPseudoIP():
+            mwPseudoIP.plot(self.r2.surveys[0].pseudo)
+        
+#        btn = QPushButton('Plot Pseudo')
+#        btn.clicked.connect(plotPseudo)
+#        grid.addWidget(btn, 3, 1)
 
-        mwPseudo = MatplotlibWidget()
-        grid.addWidget(mwPseudo, 4, 0)
+        mwPseudo = MatplotlibWidget(navi=True)
+        gridImport.addWidget(mwPseudo, 1, 0)
+                
+        mwPseudoIP = MatplotlibWidget(navi=True)
+        mwPseudoIP.setVisible(False)
+        gridImport.addWidget(mwPseudoIP, 1, 1)
         
-        def plotError():
-            mwError.plot(self.r2.surveys[0].plotError)
-            
-        mwError = MatplotlibWidget()
-        grid.addWidget(mwError, 4, 1)
+#        def plotError():
+#            mwError.plot(self.r2.surveys[0].plotError)
+#            
+#        mwError = MatplotlibWidget()
+#        grid.addWidget(mwError, 4, 1)
         
-        tab1.setLayout(grid)
+        tab1.setLayout(gridImport)
         
     
         
         #%% tab 2 PRE PROCESSING
-        tabPreProcessing = QWidget()
+        tabPreProcessing = QTabWidget()
         tabs.addTab(tabPreProcessing, 'PreProcessing')
-        grid = QGridLayout()
- 
+        
+        manualLayout = QVBoxLayout()
+        
+        mwManualFiltering = MatplotlibWidget(navi=True)
+        manualLayout.addWidget(mwManualFiltering)
+        
+        
+        errorLayout = QVBoxLayout()
+        
         def fitLinError():
             mwFitError.plot(self.r2.linfit)
         
@@ -185,18 +262,43 @@ class App(QMainWindow):
             print('NOT READY YET')
             mwFitError.plot(self.r2.lmefit)
         
-        btn = QPushButton('Fit Linear model')
-        btn.clicked.connect(fitLinError)
-        grid.addWidget(btn, 0, 0)
+        def fitModel(index):
+            print(index)
+            if index == 0:
+                fitLinError()
+            elif index == 2:
+                fitLmeError()
+            else:
+                print('NOT IMPLEMENTED YET')
         
-        btn = QPushButton('Fit LME model')
-        btn.clicked.connect(fitLmeError)
-        grid.addWidget(btn, 0, 1)
-               
-        mwFitError = MatplotlibWidget()
-        grid.addWidget(mwFitError, 2, 1)
+        errFitType = QComboBox()
+        errFitType.addItem('Linear')
+        errFitType.addItem('Exponential')
+        errFitType.addItem('Linear Mixed Effect')
+        errFitType.currentIndexChanged.connect(fitModel)
+        errorLayout.addWidget(errFitType)
         
-        tabPreProcessing.setLayout(grid)
+        mwFitError = MatplotlibWidget(navi=True)
+        errorLayout.addWidget(mwFitError)
+       
+        
+        ipLayout = QVBoxLayout()
+        
+        mwIPFiltering = MatplotlibWidget(navi=True)
+        ipLayout.addWidget(mwIPFiltering)
+        
+        
+        manualWidget = QWidget()
+        manualWidget.setLayout(manualLayout)
+        tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
+        errorWidget = QWidget()
+        errorWidget.setLayout(errorLayout)
+        tabPreProcessing.addTab(errorWidget, 'Error-based filtering')
+        ipWidget = QWidget()
+        ipWidget.setVisible(False)
+        ipWidget.setLayout(ipLayout)
+        tabPreProcessing.addTab(ipWidget, 'IP filtering')
+        tabPreProcessing.setTabEnabled(2, False)
         
         
         #%% tab MESH
@@ -352,7 +454,7 @@ class App(QMainWindow):
         logText = QTextEdit()
         grid.addWidget(logText, 1, 0)
         
-        mwInvResult = MatplotlibWidget()
+        mwInvResult = MatplotlibWidget(navi=True)
         grid.addWidget(mwInvResult, 2, 0)        
         
         
