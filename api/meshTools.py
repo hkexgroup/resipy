@@ -22,15 +22,13 @@ Dependencies:
     tkinter (python standard)
 """
 #import standard python packages
-#import tkinter as tk
-#from tkinter import filedialog
+import tkinter as tk
+from tkinter import filedialog
 #import anaconda libraries
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm as cmaps
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection, PolyCollection
-from matplotlib.colors import Normalize,ListedColormap
+from matplotlib.collections import PolyCollection
+from matplotlib.colors import ListedColormap
 import time
 
 #%% triangle centriod 
