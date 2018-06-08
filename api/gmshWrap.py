@@ -23,10 +23,11 @@ Dependencies:
 #python standard libraries 
 import tkinter as tk
 from tkinter import filedialog
-import os 
+import os, platform
+from subprocess import PIPE, Popen
 #anaconda libraries
 import numpy as np
-#impoty R2gui API package 
+#import R2gui API package 
 import meshTools as mt  
 
 #%% utility functions 
@@ -384,7 +385,18 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False):
     cwd=os.getcwd()#get current working directory 
     ewd=os.path.join(cwd,"Executables")#change working directory to /Executables
     os.chdir(ewd)#ewd - exe working directory 
-    os.system('gmsh '+file_name+'.geo -2')#run gmsh 
+    
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+        cmd_line = 'gmsh '+file_name+'.geo -2'
+    elif platform.system() == "Linux":
+        cmd_line = ['wine', 'gmsh '+file_name+'.geo -2']
+        
+    #os.system('gmsh '+file_name+'.geo -2')#run gmsh 
+    p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+    while p.poll() is None:
+        line = p.stdout.readline().rstrip()
+        print(line.decode('utf-8'))
+        
     #convert into mesh.dat 
     mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes')
     if keep_files is False: 
