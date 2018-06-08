@@ -351,12 +351,14 @@ class Mesh_obj:
         print("Number of cell attributes: %i"%int(self.no_attributes))
         print("original file path: %s"%self.file_path())
 
-    def show(self,color_map='Spectral',#displays the mesh using matplotlib
-             color_bar=True,
-             xlim="default",
-             ylim="default",
-             ax=None,
-             sens=False):
+    def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
+             color_bar = True,
+             xlim = "default",
+             ylim = "default",
+             ax = None,
+             electrodes = True,
+             sens = False,
+             edge_color = 'k'):
         """
         Show a mesh object using matplotlib. The color map variable should be 
         a string refering to the color map you want (default is "jet").
@@ -370,6 +372,7 @@ class Mesh_obj:
             #xlim -  axis x limits as (ymin, ymax)
             #ylim - axis y limits as (ymin, ymax)
             #ax - axis handle if preexisting (error will thrown up if not)
+            #electrodes - Boolian, enter true to add electrodes to plot
             #sens - Boolian, enter true to plot sensitivities 
         #OUTPUT:
             #matplotlib figure with mesh 
@@ -394,69 +397,51 @@ class Mesh_obj:
                 xlim=[min(self.node_x),max(self.node_x)]
             if ylim=="default":
                 ylim=[min(self.node_y),max(self.node_y)]
-        print('xlim', xlim, ylim)
+        #print('xlim', xlim, ylim)
+        a = time.time() #time how long it takes to plot the mesh? 
+        
+        ##plot mesh! ## 
         #compile mesh coordinates into polygon coordinates  
-#        patches=[]#list wich will hold the polygon instances 
-        no_verts=self.Type2VertsNo()#number of vertices each element has 
-
-        a = time.time()            
-#        for i in range(self.num_elms):
-#            node_coord=[]#coordinates of the corner of each element 
-#            for k in range(no_verts):
-#                node_coord.append((
-#                        self.node_x[self.node_data[k][i]],
-#                        self.node_y[self.node_data[k][i]]))                 
-#            polygon = Polygon(node_coord,True)#create a polygon instance 
-#            patches.append(polygon) #patch list   
-        print('elapsed', time.time()-a)
-        
-        #build colour map
-        X=np.array(self.cell_attributes)
-#        colour_array=plt.cm.jet(plt.Normalize(min(X),max(X))(X))#maps color onto mesh
-        
-        a = time.time()
-        #compile polygons patches into a "patch collection"
-#        pc=PatchCollection(patches,edgecolor='k',facecolor=colour_array,cmap=color_map)
-#        pc.set_array(np.array(X))#maps polygon color map into patch collection 
-#        ax.add_collection(pc)#blit polygons to axis
-        #were dealing with patches and matplotlib isnt smart enough to know what the right limits are 
         nodes = np.c_[self.node_x, self.node_y]
-        connection = np.array(self.node_data).T
-        coll = PolyCollection(nodes[connection], array=X, cmap=plt.cm.viridis, edgecolors='k')
-        ax.add_collection(coll)
+        connection = np.array(self.node_data).T # connection matrix 
+        #compile polygons patches into a "patch collection"
+        X=np.array(self.cell_attributes) # maps resistivity values on the color map
+        coordinates = nodes[connection]
+        coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color)
+        #coll = PolyCollection(nodes[connection], array=X, cmap=color_map, edgecolors=edge_color)
+        ax.add_collection(coll)#blit polygons to axis
         ax.autoscale()
-        
+        #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
         ax.set_ylim(ylim)
         ax.set_xlim(xlim)
-        #update the figure
+        
         if color_bar:#add the color bar 
             cbar = plt.colorbar(coll, ax=ax)#add colorbar
             cbar.set_label(self.atribute_title) #set colorbar title      
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
-        print('elapsed', time.time()-a)
 
         #biuld alpha channel if we have sensitivities 
         if sens:
             try:
-                wieghts = np.log10(np.array(self.sensitivities)) # 
+                weights = np.log10(np.array(self.sensitivities)) #values assigned to alpha channels 
                 alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-                raw_alpha = np.ones((self.num_elms,4),dtype=float)
+                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                 raw_alpha[..., -1] = alphas
-                alpha_map = ListedColormap(raw_alpha) 
-                pca = PatchCollection(patches,edgecolor=None,facecolor=raw_alpha,cmap=alpha_map)
-                pca.set_array(wieghts)
-                ax.add_collection(pca)
+                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                #make alpha collection
+                alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors=None)
+                #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
+                #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
+                ax.add_collection(alpha_coll)
             except AttributeError:
                 print("no sensitivities in mesh object to plot")
         
-        #try add electrodes to figure if we have them 
-        try: 
-            ax.plot(self.elec_x,self.elec_y,'ko')
-        except AttributeError:
-            print("no electrodes in mesh object to plot")
-            
-#        plt.show()#display the plot
-#        return ax # return axis handle 
+        if electrodes: #try add electrodes to figure if we have them 
+            try: 
+                ax.plot(self.elec_x,self.elec_y,'ko')
+            except AttributeError:
+                print("no electrodes in mesh object to plot")
+        print('Mesh plotted in %6.5f seconds'%(time.time()-a))
 
             
     def add_attribute(self,values):
@@ -657,5 +642,8 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
 
 
 #%% test code
-mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
-mesh.show()
+# =============================================================================
+# mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
+# mesh.show()
+# =============================================================================
+
