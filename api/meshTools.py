@@ -29,7 +29,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cmaps
 from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
+from matplotlib.collections import PatchCollection, PolyCollection
 from matplotlib.colors import Normalize,ListedColormap
 import time
 
@@ -396,35 +396,41 @@ class Mesh_obj:
                 ylim=[min(self.node_y),max(self.node_y)]
         print('xlim', xlim, ylim)
         #compile mesh coordinates into polygon coordinates  
-        patches=[]#list wich will hold the polygon instances 
+#        patches=[]#list wich will hold the polygon instances 
         no_verts=self.Type2VertsNo()#number of vertices each element has 
 
         a = time.time()            
-        for i in range(self.num_elms):
-            node_coord=[]#coordinates of the corner of each element 
-            for k in range(no_verts):
-                node_coord.append((
-                        self.node_x[self.node_data[k][i]],
-                        self.node_y[self.node_data[k][i]]))                 
-            polygon = Polygon(node_coord,True)#create a polygon instance 
-            patches.append(polygon) #patch list   
+#        for i in range(self.num_elms):
+#            node_coord=[]#coordinates of the corner of each element 
+#            for k in range(no_verts):
+#                node_coord.append((
+#                        self.node_x[self.node_data[k][i]],
+#                        self.node_y[self.node_data[k][i]]))                 
+#            polygon = Polygon(node_coord,True)#create a polygon instance 
+#            patches.append(polygon) #patch list   
         print('elapsed', time.time()-a)
         
         #build colour map
-        X=self.cell_attributes
-        colour_array=cmaps.jet(plt.Normalize(min(X),max(X))(X))#maps color onto mesh
+        X=np.array(self.cell_attributes)
+#        colour_array=plt.cm.jet(plt.Normalize(min(X),max(X))(X))#maps color onto mesh
         
         a = time.time()
         #compile polygons patches into a "patch collection"
-        pc=PatchCollection(patches,edgecolor='k',facecolor=colour_array,cmap=color_map)
-        pc.set_array(np.array(X))#maps polygon color map into patch collection 
-        ax.add_collection(pc)#blit polygons to axis
+#        pc=PatchCollection(patches,edgecolor='k',facecolor=colour_array,cmap=color_map)
+#        pc.set_array(np.array(X))#maps polygon color map into patch collection 
+#        ax.add_collection(pc)#blit polygons to axis
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are 
+        nodes = np.c_[self.node_x, self.node_y]
+        connection = np.array(self.node_data).T
+        coll = PolyCollection(nodes[connection], array=X, cmap=plt.cm.viridis, edgecolors='k')
+        ax.add_collection(coll)
+        ax.autoscale()
+        
         ax.set_ylim(ylim)
         ax.set_xlim(xlim)
         #update the figure
         if color_bar:#add the color bar 
-            cbar=plt.colorbar(pc,ax=ax)#add colorbar
+            cbar = plt.colorbar(coll, ax=ax)#add colorbar
             cbar.set_label(self.atribute_title) #set colorbar title      
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
         print('elapsed', time.time()-a)
@@ -651,5 +657,5 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
 
 
 #%% test code
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
-#mesh.show()
+mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
+mesh.show()
