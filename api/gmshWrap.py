@@ -358,7 +358,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             #the information here is returned as a mesh dictionary because it much easier to debug 
         
 #%% gmsh wrapper
-def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False):
+def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = True):
     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function will only work if current working directory has path: Execuatbles/gmsh.exe"""
 #INPUT: 
@@ -391,11 +391,13 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False):
     elif platform.system() == "Linux":
         cmd_line = ['wine', 'gmsh '+file_name+'.geo -2']
         
-    #os.system('gmsh '+file_name+'.geo -2')#run gmsh 
-    p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-    while p.poll() is None:
-        line = p.stdout.readline().rstrip()
-        print(line.decode('utf-8'))
+    if show_output: 
+        p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            print(line.decode('utf-8'))
+    else:
+        os.system('gmsh '+file_name+'.geo -2')#run gmsh 
         
     #convert into mesh.dat 
     mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes')
