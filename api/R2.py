@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from subprocess import PIPE, call, Popen
 OS = platform.system()
 
-sys.path.append(os.path.relpath('../api'))
+#sys.path.append(os.path.relpath('../api'))
 
 #from QuadMesh import QuadMesh
 #from TriMesh import TriMesh
@@ -25,6 +25,7 @@ from Survey import Survey
 from r2in import write2in
 import meshTools as mt
 from meshTools import Mesh_obj
+from gmshWrap import tri_mesh
 #from testMesh import QuadMesh
 
 
@@ -95,7 +96,13 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         if typ == 'trian':
-            mesh = TriMesh(self.elec, resolution=1)
+            mesh, e_ranges = tri_mesh([],[], self.elec[:,0], self.elec[:,1])
+            self.param['mesh_type'] = 3
+            self.param['num_regions'] = len(e_ranges)
+            self.param['regions'] = np.array(e_ranges)
+            self.param['num_xy_poly'] = 0
+            e_nodes = np.arange(len(self.elec))+1
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
         
@@ -114,6 +121,10 @@ class R2(object): # R2 master class instanciated by the GUI
         '''
         for p in param:
             self.param[p] = param[p]
+        # check if survey has reciprocal (and so error model)
+        if all(self.surveys[0].df['irecip'].values == 0):
+            self.param['wgt_a'] = 0.01
+            self.param['wgt_b'] = 0.02
         self.configFile = write2in(self.param, self.dirname)
     
 #    def write2protocol(self, **kwargs):
@@ -163,12 +174,12 @@ class R2(object): # R2 master class instanciated by the GUI
             self.showSection()
     
     
-    def showResults(self, ax=None):
+    def showResults(self, ax=None, **kwargs):
         fresults = os.path.join(self.dirname, 'f001_res.vtk')
         if os.path.isfile(fresults):
             mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
             mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
-            mesh.show(ax=ax)
+            mesh.show(ax=ax, **kwargs)
         else:
             print('Sorry no VTK output produced')
         
@@ -230,10 +241,14 @@ class R2(object): # R2 master class instanciated by the GUI
 #k.linfit(iplot=True)
 #k.lmefit(iplot=True)
 #k.createMesh(typ='quad')
+#k.mesh.show()
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
 #k.mesh.show(ax=ax)
 #k.write2in()
 #k.invert(iplot=False)
 #k.showSection()
-#k.showResults()
+#fig, ax = plt.subplots()
+#fig.suptitle('kkk')
+#k.showResults(ax=ax)
+

@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
     QTableWidget)
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QIntValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 from PyQt5.QtCore import Qt
 
@@ -68,7 +68,21 @@ class MatplotlibWidget(QWidget):
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
             self.layoutVertical.addWidget(self.navi_toolbar)
-            
+    
+    
+    def setMinMax(self, vmin, vmax):
+        coll = self.axis.collections[0]
+        oldLimits = coll.get_clim()
+        if vmin == '':
+            vmin = oldLimits[0]
+        else:
+            vmin = int(vmin)
+        if vmax == '':
+            vmax = oldLimits[0]
+        else:
+            vmax = int(vmax)
+        coll.set_clim(vmin, vmax)
+        self.canvas.draw()
 
     
     def plot(self, callback):
@@ -76,6 +90,7 @@ class MatplotlibWidget(QWidget):
         '''
         self.figure.clear()
         ax = self.figure.add_subplot(111)
+        self.axis = ax
         callback(ax=ax)
         ax.set_aspect('auto')
         self.figure.tight_layout()
@@ -164,8 +179,9 @@ class App(QMainWindow):
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     hbox4.addWidget(buttonfr)
                 else:
+                    tabPreProcessing.setTabEnabled(1, True)
                     plotError()
-                    generateMesh()
+                generateMesh()
                 plotPseudo()
         
         buttonf = QPushButton('Import Data') 
@@ -175,7 +191,10 @@ class App(QMainWindow):
             fnameRecip, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
             buttonfr.setText(fnameRecip)
             self.r2.surveys[0].addData(fnameRecip)
-        
+            if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                tabPreProcessing.setTabEnabled(1, True) # no point in doing error processing if there is no reciprocal
+                plotError()
+
         buttonfr = QPushButton('If you have reciprocals upload them here') 
         buttonfr.clicked.connect(getfileR)
         
@@ -311,6 +330,7 @@ class App(QMainWindow):
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'IP filtering')
         tabPreProcessing.setTabEnabled(2, False)
+        tabPreProcessing.setTabEnabled(1, False)
         
         
         #%% tab MESH
@@ -326,7 +346,7 @@ class App(QMainWindow):
             if index == 0:
                 self.r2.createMesh(typ='quad')
             elif index == 1:
-                self.r2.createMesh(typ='quad')
+                self.r2.createMesh(typ='trian')
                 # TODO to implemente the triangular mesh
             else:
                 print('NOT IMPLEMENTED')
@@ -424,7 +444,7 @@ class App(QMainWindow):
         
         tabInversion = QWidget()
         tabs.addTab(tabInversion, 'Inversion')
-        grid = QGridLayout()
+        invLayout = QVBoxLayout()
 
 #        def callback(ax):
 #            ax.plot(np.random.randn(20,5), '*-')
@@ -481,23 +501,55 @@ class App(QMainWindow):
             self.process.finished.connect(plotSection)
         
         def plotSection():
-#            mwInvResult.plot(self.r2.showResults)
-            mwInvResult.plot(self.r2.showSection)
+            mwInvResult.plot(self.r2.showResults)
+            # TODO if we want to plot different attribute
+#            mwInvResult.plot(self.r2.showSection)
+        
+        def replotSection(index=-1):
+            print(index)
+            mwInvResult.plot(self.r2.showResults) # TODO PASS ATTRIBUTE
+        
+        def setCBarLimit():
+            print(vmaxEdit.text())
+            mwInvResult.setMinMax(vmaxEdit.text(), vminEdit.text())
 
 
         btn = QPushButton('Invert')
         btn.clicked.connect(logInversion)
-        
-        grid.addWidget(btn, 0, 0)
+        invLayout.addWidget(btn)
         
         logText = QTextEdit()
-        grid.addWidget(logText, 1, 0)
+        invLayout.addWidget(logText)
+        
+        # option for display
+        displayOptions = QHBoxLayout()
+        attributeName = QComboBox()
+        attributeName.addItem('Log(Resistivity)')
+        attributeName.addItem('Resistivity')
+        attributeName.addItem('Sensitivity')
+        attributeName.currentIndexChanged.connect(plotSection)
+        displayOptions.addWidget(attributeName)
+        
+        vminLabel = QLabel('Min:')
+        vminEdit = QLineEdit()
+        vminEdit.setValidator(QIntValidator())
+        vminEdit.editingFinished.connect(setCBarLimit)
+        vmaxLabel = QLabel('Max:')
+        vmaxEdit = QLineEdit()
+        vmaxEdit.editingFinished.connect(setCBarLimit)
+        vmaxEdit.setValidator(QIntValidator())
+        displayOptions.addWidget(vminLabel)
+        displayOptions.addWidget(vminEdit)
+        displayOptions.addWidget(vmaxLabel)
+        displayOptions.addWidget(vmaxEdit)
+        
+        invLayout.addLayout(displayOptions)
         
         mwInvResult = MatplotlibWidget(navi=True)
-        grid.addWidget(mwInvResult, 2, 0)        
+        invLayout.addWidget(mwInvResult)
         
         
-        tabInversion.setLayout(grid)
+        tabInversion.setLayout(invLayout)
                     
         
         #%% tab 6 POSTPROCESSING

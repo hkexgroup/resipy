@@ -22,8 +22,8 @@ Dependencies:
     tkinter (python standard)
 """
 #import standard python packages
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 #import anaconda libraries
 import numpy as np
 import matplotlib.pyplot as plt
@@ -356,7 +356,10 @@ class Mesh_obj:
              ax = None,
              electrodes = True,
              sens = False,
-             edge_color = 'k'):
+             edge_color = 'k',
+             vmin=None,
+             vmax=None,
+             attr='None'):
         """
         Show a mesh object using matplotlib. The color map variable should be 
         a string refering to the color map you want (default is "jet").
@@ -405,7 +408,12 @@ class Mesh_obj:
         #compile polygons patches into a "patch collection"
         X=np.array(self.cell_attributes) # maps resistivity values on the color map
         coordinates = nodes[connection]
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
         coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color)
+        coll.set_clim(vmin=vmin, vmax=vmax)
         #coll = PolyCollection(nodes[connection], array=X, cmap=color_map, edgecolors=edge_color)
         ax.add_collection(coll)#blit polygons to axis
         ax.autoscale()
@@ -640,8 +648,6 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
 
 
 #%% test code
-# =============================================================================
-# mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
-# mesh.show()
-# =============================================================================
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
+#mesh.show()
 

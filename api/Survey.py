@@ -7,7 +7,7 @@ Created on Fri Jun  1 11:21:54 2018
 """
 import sys
 import os
-sys.path.append(os.path.relpath('../api'))
+#sys.path.append(os.path.relpath('../api'))
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,6 +15,7 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from parsers import *
+
 
 class Survey(object):
     def __init__(self, fname, ftype=None, name=''):
@@ -41,14 +42,21 @@ class Survey(object):
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
-        
-        if False:         
-            resist = self.df['resist'].values
-            iout = np.isnan(resist) | np.isinf(resist)
-            if np.sum(iout) > 0:
-                print('BAD transfer resistance data : ', np.sum(iout))
-            self.filterData(~iout)
-            self.filterData(irecip != 0) # filter out dummy and non reciprocal
+        if all(irecip == 0) == False: # contains reciprocal
+            self.basicFilter()
+            
+    
+    def basicFilter(self):
+        ''' perform basic filtering on the data
+        '''
+        resist = self.df['resist'].values
+        irecip = self.df['irecip'].values
+        iout = np.isnan(resist) | np.isinf(resist)
+        if np.sum(iout) > 0:
+            print('BAD transfer resistance data : ', np.sum(iout))
+        self.filterData(~iout)
+        self.filterData(irecip != 0) # filter out dummy and non reciprocal
+    
     
     def addData(self, fname, ftype='Syscal'):
         ''' add data to the actual survey (for instance the reciprocal if they
@@ -59,6 +67,10 @@ class Survey(object):
         else:
             raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
+        self.ndata = len(self.df)
+        self.reciprocal()
+        self.basicFilter() # we assume the user input reciprocal data not another
+        # normal survey
         
     
     def filterData(self, i2keep):
@@ -397,22 +409,27 @@ class Survey(object):
     
     def write2protocol(self, outputname='', errTyp='obs', errTot=False):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
+        if all(self.df['irecip'].values == 0) is False:
+            if errTyp == 'obs':
+                error = self.df['reciprocalErr'].values[ie]
+            if errTyp =='lme':
+                error = self.dfg['lmeError'].values
+            if errTyp == 'lin':
+                error = self.dfg['linError'].values
+    #            error = self.linStdError
+            if errTot == True:
+                if len(self.modError) == 0:
+                    print('ERROR : you must specify a modelling error')
+                else:
+                    error = np.sqrt(error**2 + self.modError[ie]**2)
+            res = self.df['reciprocalMean'].values[ie]
+        else: # why don't they have reciprocals my god !!
+            ie = np.ones(len(self.df), dtype=bool)
+            res = self.df['resist'].values
+            error = np.ones(len(self.df))*np.nan # won't be read anyway
         n = np.sum(ie)
-        if errTyp=='obs':
-            error = self.df['reciprocalErr'].values[ie]
-        if errTyp =='lme':
-            error = self.dfg['lmeError'].values
-        if errTyp == 'lin':
-            error = self.dfg['linError'].values
-#            error = self.linStdError
-        if errTot == True:
-            if len(self.modError) == 0:
-                print('ERROR : you must specify a modelling error')
-            else:
-                error = np.sqrt(error**2 + self.modError[ie]**2)
         arr = self.df[['a','b','m','n']].values[ie,:]
-        res = self.df['reciprocalMean'].values[ie]
-        
+
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(n) + '\n')
@@ -832,12 +849,14 @@ class Survey(object):
 
         
 #%% test code
-#s = Survey('test/17040301.csv', ftype='Syscal')
+#s = Survey('test/syscalFile.csv', ftype='Syscal')
+#s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
+#s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
-#s.write2protocol('test/protocol2.dat')
+#s.write2protocol('test/protocol.dat')
 
         

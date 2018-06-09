@@ -21,10 +21,10 @@ Dependencies:
 
 """
 #python standard libraries 
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, platform
-from subprocess import PIPE, Popen
+from subprocess import PIPE, Popen, call
 #anaconda libraries
 import numpy as np
 #import R2gui API package 
@@ -320,8 +320,9 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
         assctns=[]
         #following for loop finds the element number ranges assocaited with a distinct region in the mesh
         for k in regions:
-            indx=[i for i in range(len(elem_entity)) if elem_entity[i]==k]
-            assctns.append((k,min(indx)+1,max(indx)+1))
+            indx=[m for m in range(len(elem_entity)) if elem_entity[m]==k]
+            if len(indx) > 0:
+                assctns.append((k,min(indx)+1,max(indx)+1))
         #create a dump of the mesh data incase the user wants to see it later on   
         dump={'nat_elm_num':nat_elm_num,
               'elm_type':elm_type,
@@ -358,7 +359,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             #the information here is returned as a mesh dictionary because it much easier to debug 
         
 #%% gmsh wrapper
-def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = True):
+def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = False):
     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function will only work if current working directory has path: Execuatbles/gmsh.exe"""
 #INPUT: 
@@ -387,9 +388,9 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
     os.chdir(ewd)#ewd - exe working directory 
     
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = 'gmsh '+file_name+'.geo -2'
+        cmd_line = 'gmsh.exe '+file_name+'.geo -2'
     elif platform.system() == "Linux":
-        cmd_line = ['wine', 'gmsh '+file_name+'.geo -2']
+        cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
         
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
@@ -397,7 +398,7 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
             line = p.stdout.readline().rstrip()
             print(line.decode('utf-8'))
     else:
-        os.system('gmsh '+file_name+'.geo -2')#run gmsh 
+        call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
     mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes')
@@ -406,8 +407,15 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
     #change back to orginal working directory
     os.chdir(cwd)
     
-    return mt.Mesh_obj.mesh_dict2obj(mesh_dict)# return a mesh object 
-        
+    return mt.Mesh_obj.mesh_dict2obj(mesh_dict), mesh_dict['element_ranges']# return a mesh object 
+
+
+#%% test code
+#mesh, element_ranges = tri_mesh(np.arange(10), np.random.randn(10),
+#                np.arange(10), np.random.randn(10))
+#mesh.show()
+
+
 #%% work in progress       
 #write R2.in file for a forward model ONLY
 # =============================================================================

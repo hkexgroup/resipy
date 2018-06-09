@@ -43,7 +43,7 @@ def write2in(param, dirname):
             'b_wgt':0.02,
             'rho_min':-1000,
             'rho_max':1000,
-            'num_poly':-1,
+            'num_xy_poly':-1,
             'xy_poly_table':np.zeros((5,2)),
             'num_elec':None, #should be define when importing data
             'elec_node':None # should be define when building the mesh
@@ -80,10 +80,10 @@ def write2in(param, dirname):
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])
     if param['regions'] is None:
-        print(len(meshx), len(meshy))
-        param['regions'] = np.array([1, (len(meshx)-1)*(len(meshy)-1), 50])
+        if param['mesh_type'] == 4:
+            param['regions'] = np.array([[1, (len(meshx)-1)*(len(meshy)-1), 50]])
     if param['num_regions'] > 0:
-        content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*int(len(param['regions'])/3)).format(*param['regions'].flatten())
+        content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
     content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
     if param['job_type'] == 1 & param['mesh_type'] == 4|5:
         content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
@@ -105,7 +105,7 @@ def write2in(param, dirname):
             param['b_wgt'],
             param['rho_min'],
             param['rho_max'])
-    if param['num_poly'] == -1:
+    if param['num_xy_poly'] == -1:
         leftx = param['meshx'][param['node_elec'][0,1]-4]
         rightx = param['meshx'][param['node_elec'][-1,1]+4]
         lefty = param['topo'][param['node_elec'][0,1]-4]
