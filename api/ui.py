@@ -3,8 +3,8 @@
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-    QTableWidget)
-from PyQt5.QtGui import QIcon, QPixmap, QIntValidator
+    QTableWidget, QFormLayout)
+from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 from PyQt5.QtCore import Qt
 
@@ -29,7 +29,7 @@ sys.path.append(os.path.relpath('../api')) # not needed anymore
 #import meshTools as mt
 #from meshTools import Mesh_obj
 from R2 import R2
-
+from r2help import r2help
 
 # small code to see where are all the directories
 frozen = 'not'
@@ -400,30 +400,226 @@ class App(QMainWindow):
 
         # general tab
         generalSettings = QWidget()
-        grid = QGridLayout()
-            
-        singular_type = QCheckBox('Singularity Removal')
-        grid.addWidget(singular_type, 0, 1)
+        generalLayout = QHBoxLayout()
+        invForm = QFormLayout()
         
-        button = QPushButton('hello')
-        button.clicked.connect(QMessageBox)
-        grid.addWidget(button, 3, 0)
+        # help section
+        def showHelp(arg):
+            if arg not in r2help:
+                helpSection.setText('SORRY NOT IN HELP')
+            else:
+                helpSection.setHtml(r2help[arg])
         
-        # chose inversion type
-        inv_type = QComboBox()
-        inv_type.addItem('Regular One')
-        inv_type.addItem('New one')
-        inv_type.addItem('No a good one')
-        grid.addWidget(inv_type, 4, 0)
+        def job_typeFunc(index):
+            self.r2.param['job_type'] = index
+        job_type = QComboBox()
+        job_type.addItem('Inversion [1]')
+        job_type.addItem('Forward [0]')
+        job_type.currentIndexChanged.connect(job_typeFunc)
+        invForm.addRow(QLabel('Job Type:'), job_type)
+        
+        def flux_typeFunc(index):
+            if index == 0:
+                self.r2.param['flux_type'] = 3
+            else:
+                self.r2.param['flux_type'] = 2
+        flux_typeLabel = QLabel('<a href="flux_type">Flux Type</a>:')
+        flux_typeLabel.linkActivated.connect(showHelp)
+        flux_type = QComboBox()
+        flux_type.addItem('3D')
+        flux_type.addItem('2D')
+        flux_type.currentIndexChanged.connect(flux_typeFunc)
+        invForm.addRow(flux_typeLabel, flux_type)
+        
+        def singular_typeFunc(state):
+            if state == Qt.Checked:
+                self.r2.param['singular_type'] = 1
+            else:
+                self.r2.param['singular_type'] = 0
+        singular_typeLabel = QLabel('<a href="singular_type">Remove Singularity</a>')
+        singular_typeLabel.linkActivated.connect(showHelp)
+        singular_type = QCheckBox()
+        singular_type.stateChanged.connect(singular_typeFunc)
+        invForm.addRow(singular_typeLabel, singular_type)
+        
+        def res_matrixFunc(index):
+            self.r2.param['res_matrix'] = index
+        res_matrixLabel = QLabel('<a href="res_matrix">Value for <code>res_matrix</code><a/>')
+        res_matrixLabel.linkActivated.connect(showHelp)
+        res_matrix = QComboBox()
+        res_matrix.addItem('No sensisitivity/resolution matrix [0]')
+        res_matrix.addItem('Sensitivity matrix [1]')
+        res_matrix.addItem('True Resolution Matrix [2]')
+        res_matrix.addItem('Sensitivity map [3]')
+        res_matrix.setCurrentIndex(1)
+        res_matrix.currentIndexChanged.connect(res_matrixFunc)
+        invForm.addRow(res_matrixLabel, res_matrix)
+        
+        # put in adv
+        def patch_size_xFunc():
+            self.r2.param['patch_size_x'] = int(patch_size_x.text())
+        patch_size_xLabel = QLabel('<a href="patch">Patch size x<a/>:')
+        patch_size_xLabel.linkActivated.connect(showHelp)
+        patch_size_x = QLineEdit()
+        patch_size_x.setValidator(QIntValidator())
+        patch_size_x.setText('1')
+        patch_size_x.editingFinished.connect(patch_size_xFunc)
+        invForm.addRow(patch_size_xLabel, patch_size_x)
 
-        inv_type = QListWidget()        
-        inv_type.addItem('Regular One')
-        inv_type.addItem('New one')
-        inv_type.addItem('No a good one')
-        grid.addWidget(inv_type, 5, 0)
+        # put in adv
+        def patch_size_yFunc():
+            self.r2.param['patch_size_y'] = int(patch_size_y.text())
+        patch_size_yLabel = QLabel('<a href="patch">Patch size y<a/>:')
+        patch_size_yLabel.linkActivated.connect(showHelp)
+        patch_size_y = QLineEdit()
+        patch_size_y.setValidator(QIntValidator())
+        patch_size_y.setText('1')
+        patch_size_y.editingFinished.connect(patch_size_yFunc)
+        invForm.addRow(patch_size_yLabel, patch_size_y)
+        
+        def inv_typeFunc(index):
+            self.r2.param['inversion_type'] = index
+        inv_typeLabel = QLabel('<a href="inverse_type">Inversion Type</a>:')
+        inv_typeLabel.linkActivated.connect(showHelp)
+        inv_type = QComboBox()
+        inv_type.addItem('Pseudo Marquardt [0]')
+        inv_type.addItem('Regularized Inversion with Linear Filtering [1]')
+        inv_type.addItem('Regularized Inversion with Quadratic Filtering [2]')
+        inv_type.addItem('Qualitative Solution [3]')
+        inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+        inv_type.setCurrentIndex(1)
+        inv_type.currentIndexChanged.connect(inv_typeFunc)
+        invForm.addRow(inv_typeLabel, inv_type)
+        
+        def data_typeFunc(index):
+            self.r2.param['data_type'] = index
+        data_typeLabel = QLabel('<a href="data_type">Data type</a>:')
+        data_typeLabel.linkActivated.connect(showHelp)
+        data_type = QComboBox()
+        data_type.addItem('Normal [0]')
+        data_type.addItem('Logarithmic [1]')
+        data_type.currentIndexChanged.connect(data_typeFunc)
+        invForm.addRow(data_typeLabel, data_type)
+        
+        def reg_modeFunc(index):
+            self.r2.param['reg_mode'] = index
+        reg_modeLabel = QLabel('<a href="reg_mode">Regularization mode</a>:')
+        reg_modeLabel.linkActivated.connect(showHelp)
+        reg_mode = QComboBox()
+        reg_mode.addItem('Normal regularization [0]')
+        reg_mode.addItem('Regularization from initial model [1]')
+        reg_mode.addItem('Regularization from difference inversion [2]')
+        reg_mode.currentIndexChanged.connect(reg_modeFunc)
+        invForm.addRow(reg_modeLabel, reg_mode)
+        
+        def toleranceFunc():
+            self.r2.param['tolerance'] = float(tolerance.text())
+        toleranceLabel = QLabel('<a href="tolerance">Value for tolerance</a>:')
+        toleranceLabel.linkActivated.connect(showHelp)
+        tolerance = QLineEdit()
+        tolerance.setValidator(QDoubleValidator())
+        tolerance.setText('1.0')
+        tolerance.editingFinished.connect(toleranceFunc)
+        invForm.addRow(toleranceLabel, tolerance)
+        
+        def max_iterationsFunc():
+            self.r2.param['max_iterations'] = int(max_iterations.text())
+        max_iterationsLabel = QLabel('<a href="max_iterations">Maximum number of iterations</a>:')
+        max_iterationsLabel.linkActivated.connect(showHelp)
+        max_iterations = QLineEdit()
+        max_iterations.setValidator(QIntValidator())
+        max_iterations.setText('10')
+        max_iterations.editingFinished.connect(max_iterationsFunc)
+        invForm.addRow(max_iterationsLabel, max_iterations)
+        
+        def error_modFunc(index):
+            self.r2.param['error_mod'] = index
+        error_modLabel = QLabel('<a href="error_mod">Update the weights</a>:')
+        error_modLabel.linkActivated.connect(showHelp)
+        error_mod = QComboBox()
+        error_mod.addItem('Keep the same weights [0]')
+        error_mod.addItem('Update the weights [1]')
+        error_mod.addItem('Update the weights (recommended) [2]')
+        error_mod.setCurrentIndex(1)
+        error_mod.currentIndexChanged.connect(error_modFunc)
+        invForm.addRow(error_modLabel, error_mod)
         
         
-        generalSettings.setLayout(grid)
+#        def createLabel(helpTag, title): # doesn't seem to work
+#            ql = QLabel('<a href="' + helpTag + '>' + title + '</a>:')
+#            ql.linkActivated.connect(showHelp)
+#            return ql
+
+        def alpha_anisoFunc():
+            self.r2.param['alpha_aniso'] = float(alpha_aniso.text())
+        alpha_anisoLabel = QLabel('<a href="alpha_aniso">Value for <code>alpha_aniso</code></a>:')
+        alpha_anisoLabel.linkActivated.connect(showHelp)
+        alpha_aniso = QLineEdit()
+        alpha_aniso.setValidator(QDoubleValidator())
+        alpha_aniso.setText('1.0')
+        alpha_aniso.editingFinished.connect(alpha_anisoFunc)
+        invForm.addRow(alpha_anisoLabel, alpha_aniso)
+        
+        def a_wgtFunc():
+            self.r2.param['a_wgt'] = float(a_wgt.text())
+        a_wgtLabel = QLabel('<a href="errorParam"><code>a_wgt</code></a>:')
+        a_wgtLabel.linkActivated.connect(showHelp)
+        a_wgt = QLineEdit()
+        a_wgt.setValidator(QDoubleValidator())
+        a_wgt.setText('0.01')
+        a_wgt.editingFinished.connect(a_wgtFunc)
+        invForm.addRow(a_wgtLabel, a_wgt)
+        
+        def b_wgtFunc():
+            self.r2.param['b_wgt'] = float(b_wgt.text())
+        b_wgtLabel = QLabel('<a href="errorParam"><code>b_wgt</code></a>:')
+        b_wgtLabel.linkActivated.connect(showHelp)
+        b_wgt = QLineEdit()
+        b_wgt.setValidator(QDoubleValidator())
+        b_wgt.setText('0.02')
+        b_wgt.editingFinished.connect(b_wgtFunc)
+        invForm.addRow(b_wgtLabel, b_wgt)
+        
+        def rho_minFunc():
+            self.r2.param['rho_min'] = float(rho_min.text())
+        rho_minLabel = QLabel('<a href="errorParam">Minimum apparent resistivity</a>:')
+        rho_minLabel.linkActivated.connect(showHelp)
+        rho_min = QLineEdit()
+        rho_min.setValidator(QDoubleValidator())
+        rho_min.setText('-1000')
+        rho_min.editingFinished.connect(rho_minFunc)
+        invForm.addRow(rho_minLabel, rho_min)
+
+        def rho_maxFunc():
+            self.r2.param['rho_max'] = float(rho_max.text())
+        rho_maxLabel = QLabel('<a href="errorParam">Maximum apparent resistivity</a>:')
+        rho_maxLabel.linkActivated.connect(showHelp)
+        rho_max = QLineEdit()
+        rho_max.setValidator(QDoubleValidator())
+        rho_max.setText('1000')
+        rho_max.editingFinished.connect(rho_maxFunc)
+        invForm.addRow(rho_maxLabel, rho_max)        
+        
+        def target_decreaseFunc():
+            self.r2.param['target_decrease'] = float(target_decrease.text())
+        target_decreaseLabel = QLabel('<a href="target_decrease">Target decrease</a>:')
+        target_decreaseLabel.linkActivated.connect(showHelp)
+        target_decrease = QLineEdit()
+        target_decrease.setValidator(QDoubleValidator())
+        target_decrease.setText('1.0')
+        target_decrease.editingFinished.connect(target_decreaseFunc)
+        invForm.addRow(target_decreaseLabel, target_decrease)
+                
+        
+        generalLayout.addLayout(invForm)
+        
+        
+        helpSection = QTextEdit('Help will be display here')
+        helpSection.setReadOnly(True)
+        helpSection.setText('Click on the labels and help will be displayed here')
+        generalLayout.addWidget(helpSection)
+        
+        generalSettings.setLayout(generalLayout)
         tabInversionSettings.addTab(generalSettings, 'General')
         
         
@@ -437,8 +633,6 @@ class App(QMainWindow):
         advancedSettings.setLayout(gridAdv)
         tabInversionSettings.addTab(advancedSettings, 'Advanced')
 
-        
-        
         
         #%% tab 5 INVERSION
         
@@ -477,8 +671,8 @@ class App(QMainWindow):
                 generateMesh() # that will call mesh creation
         
             # write configuration file
-            if self.r2.configFile == '':
-                self.r2.write2in(param=param)
+#            if self.r2.configFile == '':
+            self.r2.write2in(param=param)
         
             self.r2.surveys[0].write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
         
@@ -519,6 +713,7 @@ class App(QMainWindow):
         invLayout.addWidget(btn)
         
         logText = QTextEdit()
+        logText.setReadOnly(True)
         invLayout.addWidget(logText)
         
         # option for display
