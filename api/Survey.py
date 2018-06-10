@@ -104,15 +104,18 @@ class Survey(object):
         '''compute reciprocal measurments
         '''
         resist = self.df['resist'].values
+        phase = -1.2*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
         array = self.df[['a','b','m','n']].values
         
         R = np.copy(resist)
+        M = np.copy(phase)
         ndata = len(R)
         Ri = np.zeros(ndata)
         reciprocalErr = np.zeros(ndata)*np.nan
         reciprocalErrRel = np.zeros(ndata)*np.nan
         reciprocalMean = np.zeros(ndata)*np.nan
+        reci_IP_err = np.zeros(ndata)*np.nan
         # search for reciprocal measurement
         count=1
         notfound=0
@@ -133,6 +136,7 @@ class Survey(object):
                 # flag first reciprocal found like this we can
                 # delete the second one when we find it
                 # (no loss of information)
+                reci_IP_err[index] = M[i]-M[index]
                 if Ri[i] == 0: # only if Ri == 0 otherwise we will
                     # overwrite all the data
                     Ri[i] = count # flag the first found
@@ -167,6 +171,7 @@ class Survey(object):
         self.df['reciprocalErrRel'] = reciprocalErrRel
         self.df['reciprocalErr'] = reciprocalErr
         self.df['reciprocalMean'] = reciprocalMean
+        self.df['reci_IP_err'] = reci_IP_err
         
         return Ri
     
