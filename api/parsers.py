@@ -24,6 +24,7 @@ def syscalParser(fname):
                                 'In':'i',
                                 'Vp':'vp',
                                 'Dev.':'dev',
+                                'M':'ip', #M1, M2,...Mn are good for now when importing
                                 'Sp':'sp'})
         
         array = df[['a','b','m','n']].values
