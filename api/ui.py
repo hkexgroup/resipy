@@ -172,6 +172,8 @@ class App(QMainWindow):
 
         def getfile():
             fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
+            if len(self.r2.surveys) > 0: # will need to change this for time-lapse
+                self.r2.surveys = []
             if fname != '':
                 self.fname = fname
                 buttonf.setText(self.fname)
