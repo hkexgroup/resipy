@@ -462,7 +462,7 @@ class Survey(object):
         if ax is None:
             return fig
     
-        def pseudoIP(self, ax=None, contour=False): #IP pseudo section
+    def pseudoIP(self, ax=None, contour=False): #IP pseudo section
         ''' create true pseudo graph with points and no interpolation
         '''
         array = self.df[['a','b','m','n']].values
