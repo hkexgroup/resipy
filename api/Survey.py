@@ -104,15 +104,18 @@ class Survey(object):
         '''compute reciprocal measurments
         '''
         resist = self.df['resist'].values
+        phase = -1.2*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
         array = self.df[['a','b','m','n']].values
         
         R = np.copy(resist)
+        M = np.copy(phase)
         ndata = len(R)
         Ri = np.zeros(ndata)
         reciprocalErr = np.zeros(ndata)*np.nan
         reciprocalErrRel = np.zeros(ndata)*np.nan
         reciprocalMean = np.zeros(ndata)*np.nan
+        reci_IP_err = np.zeros(ndata)*np.nan
         # search for reciprocal measurement
         count=1
         notfound=0
@@ -133,6 +136,7 @@ class Survey(object):
                 # flag first reciprocal found like this we can
                 # delete the second one when we find it
                 # (no loss of information)
+                reci_IP_err[index] = M[i]-M[index]
                 if Ri[i] == 0: # only if Ri == 0 otherwise we will
                     # overwrite all the data
                     Ri[i] = count # flag the first found
@@ -167,6 +171,7 @@ class Survey(object):
         self.df['reciprocalErrRel'] = reciprocalErrRel
         self.df['reciprocalErr'] = reciprocalErr
         self.df['reciprocalMean'] = reciprocalMean
+        self.df['reci_IP_err'] = reci_IP_err
         
         return Ri
     
@@ -198,8 +203,7 @@ class Survey(object):
         # note : all data might not be in the bins, check with sum(nbins)
         return mbins, vbins, nbins
     
-    
-    def plotError(self, ax=None):
+    def plotError(self, ax=None): 
         if ax is None:
             fig, ax = plt.subplots()
         reciprocalMean = self.df['reciprocalMean'].values
@@ -209,7 +213,59 @@ class Survey(object):
         ax.set_ylabel('Reciprocal Error [$\Omega$]')
         if ax is None:
             return fig
+
+    def phaseplotError(self, ax=None): #plotting phase discrepancies over R
+        if ax is None:
+            fig, ax = plt.subplots()
+        reciprocalMean = np.abs(self.df['reciprocalMean'].values)
+        phase = np.abs(-1.2*self.df['reci_IP_err'].values)
+        ax.semilogx(reciprocalMean, phase, 'o')
+        ax.set_xlabel(r'LogR [$\Omega$]')
+        ax.set_ylabel(r's($\phi$) [mRad]')
+        if ax is None:
+            return fig
         
+    @staticmethod    
+    def R_sqr(y, y_predict): # calculating R squared value to measure fitting accuracy
+        rsdl = y - y_predict
+        ss_res = np.sum(rsdl**2)
+        ss_tot = np.sum((y-np.mean(y))**2)
+        R2 = 1-(ss_res/ss_tot)
+        R2 = np.around(R2,decimals=4)
+        return R2
+        
+    def plotIPFit(self, ax=None):
+        if ax is None:
+            fig, ax = plt.subplots()        
+        numbins_ip = 16
+        binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
+        Rn = np.abs(self.df['resist'])
+        phasedisc = self.df['reci_IP_err']
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-25 & Phase_dicrep<25')# Sorting data based on R. the querry is based on environmental IP
+        bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
+        for i in range(numbins_ip): # bining 
+        	ns=i*binsize_ip
+        	ne=ns+binsize_ip-1
+        	bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
+        	bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
+        bins_ip = bins_ip.dropna()
+        coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]))[0] # calculating fitting coefficients (a,m)
+        R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
+        ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
+        ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="bin means")
+        ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power law fit")
+        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_xlabel(r'LogR [$\Omega$]')      
+        ax.legend(loc='best', frameon=True)
+        R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
+        a1 = np.around(np.exp(coefs_ip[0]),decimals=3)
+        a2 = np.around(coefs_ip[1], decimals=3)
+        a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
+        a4 = np.around(coefs_ip[1], decimals=1)
+        print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
+        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))           
+        if ax is None:
+            return fig   
 
     def linfit(self, iplot=True, ax=None):
         # linear fit
@@ -406,6 +462,56 @@ class Survey(object):
         if ax is None:
             return fig
     
+        def pseudoIP(self, ax=None, contour=False): #IP pseudo section
+        ''' create true pseudo graph with points and no interpolation
+        '''
+        array = self.df[['a','b','m','n']].values
+        elecpos = self.elec[:,0]
+        ip = self.df['ip'].values            
+
+        label = r'$\phi$ [mRad]'
+        
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        if contour is False:
+            if ax is None:
+                fig, ax = plt.subplots()
+            else:
+                fig = ax.get_figure()
+            cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
+            cbar = fig.colorbar(cax, ax=ax)
+            cbar.set_label(label)
+            ax.set_title('IP pseudo Section')
+    #        fig.suptitle(self.name, x= 0.2)
+#            fig.tight_layout()
+        
+        if contour:
+            from matplotlib.mlab import griddata
+            def grid(x, y, z, resX=100, resY=100):
+                "Convert 3 column data to matplotlib grid"
+                xi = np.linspace(min(x), max(x), resX)
+                yi = np.linspace(min(y), max(y), resY)
+                Z = griddata(x, y, z, xi, yi, interp='linear')
+                X, Y = np.meshgrid(xi, yi)
+                return X, Y, Z
+            X, Y, Z = grid(xpos, ypos, ip)
+            if ax is None:
+                fig, ax = plt.subplots()
+            figsize=(10,6)
+            cax = ax.contourf(X,Y,Z)
+            cbar = fig.colorbar(cax, ax=ax)
+            cbar.set_label(label)
+            ax.set_title('IP pseudo Section')
+#            fig.suptitle(self.name, x= 0.2)
+#            fig.tight_layout()
+
+        if ax is None:
+            return fig
     
     def write2protocol(self, outputname='', errTyp='obs', errTot=False):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
