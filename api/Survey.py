@@ -203,7 +203,7 @@ class Survey(object):
         # note : all data might not be in the bins, check with sum(nbins)
         return mbins, vbins, nbins
     
-    def plotError(self, ax=None): #plotting phase discrepancies over R
+    def plotError(self, ax=None): 
         if ax is None:
             fig, ax = plt.subplots()
         reciprocalMean = self.df['reciprocalMean'].values
@@ -214,6 +214,17 @@ class Survey(object):
         if ax is None:
             return fig
 
+    def phaseplotError(self, ax=None): #plotting phase discrepancies over R
+        if ax is None:
+            fig, ax = plt.subplots()
+        reciprocalMean = np.abs(self.df['reciprocalMean'].values)
+        phase = np.abs(-1.2*self.df['reci_IP_err'].values)
+        ax.semilogx(reciprocalMean, phase, 'o')
+        ax.set_xlabel(r'LogR [$\Omega$]')
+        ax.set_ylabel(r's($\phi$) [mRad]')
+        if ax is None:
+            return fig
+        
     @staticmethod    
     def R_sqr(y, y_predict): # calculating R squared value to measure fitting accuracy
         rsdl = y - y_predict
@@ -223,7 +234,7 @@ class Survey(object):
         R2 = np.around(R2,decimals=4)
         return R2
         
-    def plotIPFit(self, ax=None): #plotting Phase power law error fit
+    def plotIPFit(self, ax=None):
         if ax is None:
             fig, ax = plt.subplots()        
         numbins_ip = 16
@@ -243,8 +254,8 @@ class Survey(object):
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="bin means")
         ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power law fit")
-        plt.ylabel(r's($\phi$) [mRad]')
-        plt.xlabel(r'LogR [$\Omega$]')      
+        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_xlabel(r'LogR [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
         a1 = np.around(np.exp(coefs_ip[0]),decimals=3)
@@ -252,9 +263,9 @@ class Survey(object):
         a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
         a4 = np.around(coefs_ip[1], decimals=1)
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-        plt.title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))           
+        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))           
         if ax is None:
-            return fig    
+            return fig   
 
     def linfit(self, iplot=True, ax=None):
         # linear fit
