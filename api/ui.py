@@ -315,6 +315,27 @@ class App(QMainWindow):
         
         ipLayout = QVBoxLayout()
         
+        def phaseplotError():
+            mwIPFiltering.plot(self.r2.phaseplotError)
+        
+        def phasePLerr():
+            mwIPFiltering.plot(self.r2.plotIPFit)
+            
+        def ipfitModel(index):
+            print(index)
+            if index == 0:
+                phaseplotError()
+            elif index == 1:
+                phasePLerr()
+            else:
+                print('NOT IMPLEMENTED YET')
+            
+        iperrFitType = QComboBox()
+        iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
+        iperrFitType.addItem('Power law')
+        iperrFitType.currentIndexChanged.connect(ipfitModel)
+        ipLayout.addWidget(iperrFitType)
+        
         mwIPFiltering = MatplotlibWidget(navi=True)
         ipLayout.addWidget(mwIPFiltering)
         
