@@ -211,9 +211,11 @@ class App(QMainWindow):
             if state  == Qt.Checked:
                 plotPseudoIP()
                 phaseplotError()
+                showIpOptions(True)
                 mwPseudoIP.setVisible(True)
                 tabPreProcessing.setTabEnabled(2, True)
             else:
+                showIpOptions(False)
                 mwPseudoIP.setVisible(False)
                 tabPreProcessing.setTabEnabled(2, False)
 
@@ -421,7 +423,6 @@ class App(QMainWindow):
         
         
         #%% tab INVERSION SETTINGS
-                #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()
         tabs.addTab(tabInversionSettings, 'Inversion settings')
 
@@ -435,6 +436,12 @@ class App(QMainWindow):
         advancedLayout = QHBoxLayout()
         advForm = QFormLayout()
         
+        def showIpOptions(arg):
+            opts = [c_wgt, c_wgtLabel, d_wgt, d_wgtLabel,
+                    singular_type, singular_typeLabel,
+                    res_matrix, res_matrixLabel]
+            iopts = arg*[1, 1, 1, 1, 0, 0, 0, 0]
+            [o.setVisible(io) for o, io in zip(opts, iopts)]
         
         # help sections
         def showHelp(arg):
@@ -643,6 +650,26 @@ class App(QMainWindow):
         b_wgt.setText('0.02')
         b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(b_wgtLabel, b_wgt)
+        
+        def c_wgtFunc():
+            self.r2.param['b_wgt'] = float(c_wgt.text())
+        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
+        c_wgtLabel.linkActivated.connect(showHelp)
+        c_wgt = QLineEdit()
+        c_wgt.setValidator(QDoubleValidator())
+        c_wgt.setText('2')
+        c_wgt.editingFinished.connect(c_wgtFunc)
+        invForm.addRow(c_wgtLabel, c_wgt)
+        
+        def d_wgtFunc():
+            self.r2.param['d_wgt'] = float(d_wgt.text())
+        d_wgtLabel = QLabel('<a href="errorParam"><code>b_wgt</code></a>:')
+        d_wgtLabel.linkActivated.connect(showHelp)
+        d_wgt = QLineEdit()
+        d_wgt.setValidator(QDoubleValidator())
+        d_wgt.setText('1')
+        d_wgt.editingFinished.connect(b_wgtFunc)
+        invForm.addRow(d_wgtLabel, d_wgt)
         
         def rho_minFunc():
             self.r2.param['rho_min'] = float(rho_min.text())

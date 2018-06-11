@@ -41,6 +41,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh = None # mesh object (one per R2 instance)
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
+        self.typ = 'R2' # or cR2 or R3, cR3
         
     def setwd(self, dirname):
         ''' set the working directory
@@ -118,16 +119,18 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
             self.mesh.show(ax=ax)
     
-    def write2in(self, param={}):
+    def write2in(self, param={}, typ=''):
         ''' create configuration file for inversion
         '''
+        if typ == '':
+            typ = self.typ
         for p in param:
             self.param[p] = param[p]
         # check if survey has reciprocal (and so error model)
         if all(self.surveys[0].df['irecip'].values == 0):
             self.param['wgt_a'] = 0.01
             self.param['wgt_b'] = 0.02
-        self.configFile = write2in(self.param, self.dirname)
+        self.configFile = write2in(self.param, self.dirname, typ=typ)
     
 #    def write2protocol(self, **kwargs):
 #        self.surveys[0].write2protocol(**kwargs)

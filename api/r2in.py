@@ -9,7 +9,7 @@ Created on Wed May 30 20:09:24 2018
 import numpy as np
 import os
 
-def write2in(param, dirname):
+def write2in(param, dirname, typ='R2'):
     ''' write R2.in file
     param = dictionnary of the parameters
     '''
@@ -41,6 +41,8 @@ def write2in(param, dirname):
             'alpha_aniso':1,
             'a_wgt':0.01,
             'b_wgt':0.02,
+            'd_wgt':2,
+            'c_wgt':1,
             'rho_min':-1000,
             'rho_max':1000,
             'num_xy_poly':-1,
@@ -59,12 +61,20 @@ def write2in(param, dirname):
     # create text for R2.in
     content = ''
     content = content + '{}\n\n'.format(param['lineTitle'])
-    content = content + '{}\t{}\t{}\t{}\t{}\n\n'.format(
+    if typ == 'R2':
+        content = content + '{}\t{}\t{}\t{}\t{}\n\n'.format(
+                            param['job_type'],
+                            param['mesh_type'],
+                            param['flux_type'],
+                            param['singular_type'],
+                            param['res_matrix'])
+    elif typ == 'cR2':
+        content = content + '{}\t{}\t{}\n\n'.format(
                         param['job_type'],
                         param['mesh_type'],
-                        param['flux_type'],
-                        param['singular_type'],
-                        param['res_matrix'])
+                        param['flux_type'])
+    else:
+        print('NOT IMPLEMENTED')
     if param['mesh_type'] == 4: # quadrilateral mesh
         meshx = param['meshx']
         meshy = param['meshy']
@@ -100,27 +110,37 @@ def write2in(param, dirname):
             param['max_iter'],
             param['error_mod'],
             param['alpha_aniso'])
-    content = content + '{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+    if typ == 'R2':
+        content = content + '{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+                param['a_wgt'],
+                param['b_wgt'],
+                param['rho_min'],
+                param['rho_max'])
+    elif typ == 'cR2':
+            content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
             param['a_wgt'],
             param['b_wgt'],
+            param['c_wgt'],
+            param['d_wgt'],
             param['rho_min'],
             param['rho_max'])
-    if param['num_xy_poly'] == -1:
-        leftx = param['meshx'][param['node_elec'][0,1]-4]
-        rightx = param['meshx'][param['node_elec'][-1,1]+4]
-        lefty = param['topo'][param['node_elec'][0,1]-4]
-        righty = param['topo'][param['node_elec'][-1,1]+4]
-        dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
-        param['xy_poly_table'] = np.array([[leftx, lefty],
-                                          [rightx, righty],
-                                          [rightx, -dist],
-                                          [leftx, -dist],
-                                          [leftx, lefty]])
-        param['num_xy_poly'] = param['xy_poly_table'].shape[0]
-    content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
-    if param['num_xy_poly'] != 0:
-        content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
-                *param['xy_poly_table'].flatten())
+    if typ == 'R2':
+        if param['num_xy_poly'] == -1:
+            leftx = param['meshx'][param['node_elec'][0,1]-4]
+            rightx = param['meshx'][param['node_elec'][-1,1]+4]
+            lefty = param['topo'][param['node_elec'][0,1]-4]
+            righty = param['topo'][param['node_elec'][-1,1]+4]
+            dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
+            param['xy_poly_table'] = np.array([[leftx, lefty],
+                                              [rightx, righty],
+                                              [rightx, -dist],
+                                              [leftx, -dist],
+                                              [leftx, lefty]])
+            param['num_xy_poly'] = param['xy_poly_table'].shape[0]
+        content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
+        if param['num_xy_poly'] != 0:
+            content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
+                    *param['xy_poly_table'].flatten())
     param['num_elec'] = param['node_elec'].shape[0]
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
     content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
@@ -129,7 +149,11 @@ def write2in(param, dirname):
     
 
     # write configuration file
-    with open(os.path.join(dirname,'R2.in'),'w') as f:
+    if typ == 'R2':
+        fname = 'R2.in'
+    elif typ == 'cR2':
+        fname = 'cR2.in'
+    with open(os.path.join(dirname,fname),'w') as f:
         f.write(content)
     
     return content
