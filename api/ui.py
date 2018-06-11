@@ -210,6 +210,7 @@ class App(QMainWindow):
         def diplayPseudoIP(state):
             if state  == Qt.Checked:
                 plotPseudoIP()
+                phaseplotError()
                 mwPseudoIP.setVisible(True)
                 tabPreProcessing.setTabEnabled(2, True)
             else:
@@ -366,7 +367,11 @@ class App(QMainWindow):
         def generateMesh(index=0):
             if index == 0:
                 self.r2.createMesh(typ='quad')
+                scale.setVisible(False)
+                scaleLabel.setVisible(False)
             elif index == 1:
+                scale.setVisible(True)
+                scaleLabel.setVisile(True)
                 self.r2.createMesh(typ='trian')
                 # TODO to implemente the triangular mesh
             else:
@@ -416,6 +421,7 @@ class App(QMainWindow):
         
         
         #%% tab INVERSION SETTINGS
+                #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()
         tabs.addTab(tabInversionSettings, 'Inversion settings')
 
@@ -424,12 +430,25 @@ class App(QMainWindow):
         generalLayout = QHBoxLayout()
         invForm = QFormLayout()
         
-        # help section
+        # advanced tab
+        advancedSettings = QWidget()
+        advancedLayout = QHBoxLayout()
+        advForm = QFormLayout()
+        
+        
+        # help sections
         def showHelp(arg):
             if arg not in r2help:
                 helpSection.setText('SORRY NOT IN HELP')
             else:
                 helpSection.setHtml(r2help[arg])
+        
+        def showHelp2(arg):
+            if arg not in r2help:
+                helpSection2.setText('SORRY NOT IN HELP')
+            else:
+                helpSection2.setHtml(r2help[arg])
+        
         
         def job_typeFunc(index):
             self.r2.param['job_type'] = index
@@ -466,7 +485,7 @@ class App(QMainWindow):
         def res_matrixFunc(index):
             self.r2.param['res_matrix'] = index
         res_matrixLabel = QLabel('<a href="res_matrix">Value for <code>res_matrix</code><a/>')
-        res_matrixLabel.linkActivated.connect(showHelp)
+        res_matrixLabel.linkActivated.connect(showHelp2)
         res_matrix = QComboBox()
         res_matrix.addItem('No sensisitivity/resolution matrix [0]')
         res_matrix.addItem('Sensitivity matrix [1]')
@@ -474,32 +493,56 @@ class App(QMainWindow):
         res_matrix.addItem('Sensitivity map [3]')
         res_matrix.setCurrentIndex(1)
         res_matrix.currentIndexChanged.connect(res_matrixFunc)
-        invForm.addRow(res_matrixLabel, res_matrix)
+        advForm.addRow(res_matrixLabel, res_matrix)
+        
+        def scaleFunc():
+            self.r2.param['scale'] = float(scale.text())
+        scaleLabel = QLabel('<a href="scale"> Scale for triangular mesh</a>:')
+        scaleLabel.linkActivated.connect(showHelp)
+        scaleLabel.setVisible(False)
+        scale = QLineEdit()
+        scale.setValidator(QDoubleValidator())
+        scale.setText('1.0')
+        scale.editingFinished.connect(scaleFunc)
+        scale.setVisible(False)
+        invForm.addRow(scaleLabel, scale)
         
         # put in adv
         def patch_size_xFunc():
             self.r2.param['patch_size_x'] = int(patch_size_x.text())
         patch_size_xLabel = QLabel('<a href="patch">Patch size x<a/>:')
-        patch_size_xLabel.linkActivated.connect(showHelp)
+        patch_size_xLabel.linkActivated.connect(showHelp2)
         patch_size_x = QLineEdit()
         patch_size_x.setValidator(QIntValidator())
         patch_size_x.setText('1')
         patch_size_x.editingFinished.connect(patch_size_xFunc)
-        invForm.addRow(patch_size_xLabel, patch_size_x)
+        advForm.addRow(patch_size_xLabel, patch_size_x)
 
         # put in adv
         def patch_size_yFunc():
             self.r2.param['patch_size_y'] = int(patch_size_y.text())
         patch_size_yLabel = QLabel('<a href="patch">Patch size y<a/>:')
-        patch_size_yLabel.linkActivated.connect(showHelp)
+        patch_size_yLabel.linkActivated.connect(showHelp2)
         patch_size_y = QLineEdit()
         patch_size_y.setValidator(QIntValidator())
         patch_size_y.setText('1')
         patch_size_y.editingFinished.connect(patch_size_yFunc)
-        invForm.addRow(patch_size_yLabel, patch_size_y)
+        advForm.addRow(patch_size_yLabel, patch_size_y)
         
         def inv_typeFunc(index):
             self.r2.param['inversion_type'] = index
+            opts = [data_typeLabel, data_type,
+                    reg_modeLabel, reg_mode,
+                    toleranceLabel, tolerance,
+                    max_iterationsLabel, max_iterations,
+                    error_modLabel, error_mod,
+                    alpha_anisoLabel, alpha_aniso,
+                    a_wgtLabel, a_wgt,
+                    b_wgtLabel, b_wgt]
+            if index == 3: # qualitative solution
+                [o.setVisible(False) for o in opts]
+            else:
+                [o.setVisible(True) for o in opts]
         inv_typeLabel = QLabel('<a href="inverse_type">Inversion Type</a>:')
         inv_typeLabel.linkActivated.connect(showHelp)
         inv_type = QComboBox()
@@ -556,14 +599,14 @@ class App(QMainWindow):
         def error_modFunc(index):
             self.r2.param['error_mod'] = index
         error_modLabel = QLabel('<a href="error_mod">Update the weights</a>:')
-        error_modLabel.linkActivated.connect(showHelp)
+        error_modLabel.linkActivated.connect(showHelp2)
         error_mod = QComboBox()
         error_mod.addItem('Keep the same weights [0]')
         error_mod.addItem('Update the weights [1]')
         error_mod.addItem('Update the weights (recommended) [2]')
         error_mod.setCurrentIndex(1)
         error_mod.currentIndexChanged.connect(error_modFunc)
-        invForm.addRow(error_modLabel, error_mod)
+        advForm.addRow(error_modLabel, error_mod)
         
         
 #        def createLabel(helpTag, title): # doesn't seem to work
@@ -574,12 +617,12 @@ class App(QMainWindow):
         def alpha_anisoFunc():
             self.r2.param['alpha_aniso'] = float(alpha_aniso.text())
         alpha_anisoLabel = QLabel('<a href="alpha_aniso">Value for <code>alpha_aniso</code></a>:')
-        alpha_anisoLabel.linkActivated.connect(showHelp)
+        alpha_anisoLabel.linkActivated.connect(showHelp2)
         alpha_aniso = QLineEdit()
         alpha_aniso.setValidator(QDoubleValidator())
         alpha_aniso.setText('1.0')
         alpha_aniso.editingFinished.connect(alpha_anisoFunc)
-        invForm.addRow(alpha_anisoLabel, alpha_aniso)
+        advForm.addRow(alpha_anisoLabel, alpha_aniso)
         
         def a_wgtFunc():
             self.r2.param['a_wgt'] = float(a_wgt.text())
@@ -634,7 +677,6 @@ class App(QMainWindow):
         
         generalLayout.addLayout(invForm)
         
-        
         helpSection = QTextEdit('Help will be display here')
         helpSection.setReadOnly(True)
         helpSection.setText('Click on the labels and help will be displayed here')
@@ -644,14 +686,14 @@ class App(QMainWindow):
         tabInversionSettings.addTab(generalSettings, 'General')
         
         
-        # advanced settings
-        advancedSettings = QWidget()
-        gridAdv = QGridLayout()
+        advancedLayout.addLayout(advForm)
         
-        btn = QPushButton('Press me')
-        gridAdv.addWidget(btn)
+        helpSection2 = QTextEdit('Help will be display here')
+        helpSection2.setReadOnly(True)
+        helpSection2.setText('Click on the labels and help will be displayed here')
+        advancedLayout.addWidget(helpSection2)
         
-        advancedSettings.setLayout(gridAdv)
+        advancedSettings.setLayout(advancedLayout)
         tabInversionSettings.addTab(advancedSettings, 'Advanced')
 
         
@@ -758,6 +800,19 @@ class App(QMainWindow):
         displayOptions.addWidget(vminEdit)
         displayOptions.addWidget(vmaxLabel)
         displayOptions.addWidget(vmaxEdit)
+        
+        showEdge = QCheckBox('Show edges')
+        showEdge.stateChanged.connect(lambda x: print(x))
+        showEdge.setChecked(True)
+        displayOptions.addWidget(showEdge)
+        
+        contour = QCheckBox('Contour')
+        contour.stateChanged.connect(lambda x : print(x))
+        displayOptions.addWidget(contour)
+        
+        showSens = QCheckBox('Sensitivity overlay')
+        showSens.stateChanged.connect(lambda x : print(x))
+        displayOptions.addWidget(showSens)
         
         invLayout.addLayout(displayOptions)
         
