@@ -117,7 +117,7 @@ def write2in(param, dirname, typ='R2'):
                 param['rho_min'],
                 param['rho_max'])
     elif typ == 'cR2':
-            content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+            content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, c_wgt, d_wgt, rho_min, rho_max\n\n'.format(
             param['a_wgt'],
             param['b_wgt'],
             param['c_wgt'],

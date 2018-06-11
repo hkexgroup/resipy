@@ -236,12 +236,64 @@ class R2(object): # R2 master class instanciated by the GUI
 #        fig.tight_layout()
     #    fig.show()
 #        return fig
+    
+    def pseudoError(self, ax=None):
+        ''' plot pseudo section of errors from file f001_err.dat
+        '''
+        err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)
+        array = err[:,[-2,-1,-4,-3]].astype(int)
+        errors = err[:,0]
+        spacing = np.diff(self.elec[[0,1],0])
+        pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
 
+
+def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
+    nelec = np.max(array)
+    elecpos = np.arange(0, spacing*nelec, spacing)
+    resist = resist
+    
+    if geom: # compute and applied geometric factor
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        resist = resist*K
+        
+    if log:
+        resist = np.sign(resist)*np.log10(np.abs(resist))
+    if label == '':
+        if log:
+            label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+        else:
+            label = r'$\rho_a$ [$\Omega.m$]'
+    
+    cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+    pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+    xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+    ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+    
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
+    cax = ax.scatter(xpos, ypos, c=resist, s=70)#, norm=mpl.colors.LogNorm())
+    cbar = fig.colorbar(cax, ax=ax)
+    cbar.set_label(label)
+    ax.set_title('Pseudo Section')
 
         
 #%% test code
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+#k.typ = 'cR2'
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
+#k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.lmefit(iplot=True)
@@ -252,6 +304,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #k.mesh.show(ax=ax)
 #k.write2in()
 #k.invert(iplot=False)
+#k.pseudoError()
 #k.showSection()
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')

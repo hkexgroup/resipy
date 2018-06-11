@@ -23,6 +23,9 @@ import platform
 OS = platform.system()
 from datetime import datetime
 
+from matplotlib import rcParams
+rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+
 sys.path.append(os.path.relpath('../api')) # not needed anymore
 
 #from mesh_class import mesh_obj
@@ -788,6 +791,7 @@ class App(QMainWindow):
         
         def plotSection():
             mwInvResult.plot(self.r2.showResults)
+            plotInvError()
             # TODO if we want to plot different attribute
 #            mwInvResult.plot(self.r2.showSection)
         
@@ -853,13 +857,25 @@ class App(QMainWindow):
                     
         
         #%% tab 6 POSTPROCESSING
-        tabPostProcessing = QWidget()
+        tabPostProcessing = QTabWidget()
         tabs.addTab(tabPostProcessing, 'Post Processing')
-        grid = QGridLayout()
         
-        grid.addWidget(QLabel('TO BE IMPLEMENTED'), 0, 0)
+        invError = QWidget()
+        tabPostProcessing.addTab(invError, 'Inversion Errors')
+        invErrorLayout = QVBoxLayout()
         
-        tabPostProcessing.setLayout(grid)
+        def plotInvError():
+            mwInvError.plot(self.r2.pseudoError)
+            
+        mwInvError = MatplotlibWidget(navi=True)
+        invErrorLayout.addWidget(mwInvError)
+        
+        
+        invError.setLayout(invErrorLayout)
+        
+        
+        # add Jimmy graph
+        
         
         
         #%%
