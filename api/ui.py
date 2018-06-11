@@ -245,7 +245,7 @@ class App(QMainWindow):
             mwPseudo.plot(self.r2.surveys[0].pseudo)
         
         def plotPseudoIP():
-            mwPseudoIP.plot(self.r2.surveys[0].pseudo)
+            mwPseudoIP.plot(self.r2.surveys[0].pseudoIP)
         
         pseudoLayout = QHBoxLayout()
 
