@@ -451,6 +451,56 @@ class Survey(object):
         if ax is None:
             return fig
     
+        def pseudoIP(self, ax=None, contour=False): #IP pseudo section
+        ''' create true pseudo graph with points and no interpolation
+        '''
+        array = self.df[['a','b','m','n']].values
+        elecpos = self.elec[:,0]
+        ip = self.df['ip'].values            
+
+        label = r'$\phi$ [mRad]'
+        
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        if contour is False:
+            if ax is None:
+                fig, ax = plt.subplots()
+            else:
+                fig = ax.get_figure()
+            cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
+            cbar = fig.colorbar(cax, ax=ax)
+            cbar.set_label(label)
+            ax.set_title('IP pseudo Section')
+    #        fig.suptitle(self.name, x= 0.2)
+#            fig.tight_layout()
+        
+        if contour:
+            from matplotlib.mlab import griddata
+            def grid(x, y, z, resX=100, resY=100):
+                "Convert 3 column data to matplotlib grid"
+                xi = np.linspace(min(x), max(x), resX)
+                yi = np.linspace(min(y), max(y), resY)
+                Z = griddata(x, y, z, xi, yi, interp='linear')
+                X, Y = np.meshgrid(xi, yi)
+                return X, Y, Z
+            X, Y, Z = grid(xpos, ypos, ip)
+            if ax is None:
+                fig, ax = plt.subplots()
+            figsize=(10,6)
+            cax = ax.contourf(X,Y,Z)
+            cbar = fig.colorbar(cax, ax=ax)
+            cbar.set_label(label)
+            ax.set_title('IP pseudo Section')
+#            fig.suptitle(self.name, x= 0.2)
+#            fig.tight_layout()
+
+        if ax is None:
+            return fig
     
     def write2protocol(self, outputname='', errTyp='obs', errTot=False):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
