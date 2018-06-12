@@ -42,6 +42,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.typ = 'R2' # or cR2 or R3, cR3
+        self.errTyp = 'obs' # type of error to add
         
     def setwd(self, dirname):
         ''' set the working directory
@@ -166,7 +167,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.configFile == '':
             self.write2in(param=param)
         
-        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'))
+        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'), errTyp=self.errTyp)
         
         # copy R2.exe
 #        os.copy('../external-exe/R2.exe',self.dirname)

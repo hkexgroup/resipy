@@ -290,13 +290,16 @@ class App(QMainWindow):
         
         def plotError():
             mwFitError.plot(self.r2.plotError)
+            self.r2.errTyp = 'obs'
             
         def fitLinError():
             mwFitError.plot(self.r2.linfit)
+            self.r2.errTyp = 'lin'
         
         def fitLmeError():
             print('NOT READY YET')
             mwFitError.plot(self.r2.lmefit)
+            self.r2.errTyp = 'lme'
         
         def fitModel(index):
             print(index)
@@ -642,7 +645,7 @@ class App(QMainWindow):
         a_wgtLabel.linkActivated.connect(showHelp)
         a_wgt = QLineEdit()
         a_wgt.setValidator(QDoubleValidator())
-        a_wgt.setText('0.01')
+        a_wgt.setText('0.0')
         a_wgt.editingFinished.connect(a_wgtFunc)
         invForm.addRow(a_wgtLabel, a_wgt)
         
@@ -652,7 +655,7 @@ class App(QMainWindow):
         b_wgtLabel.linkActivated.connect(showHelp)
         b_wgt = QLineEdit()
         b_wgt.setValidator(QDoubleValidator())
-        b_wgt.setText('0.02')
+        b_wgt.setText('0.0')
         b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(b_wgtLabel, b_wgt)
         
