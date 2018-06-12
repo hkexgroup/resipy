@@ -278,7 +278,7 @@ class App(QMainWindow):
         
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
-        tabs.addTab(tabPreProcessing, 'PreProcessing')
+        tabs.addTab(tabPreProcessing, 'Pre-processing')
         
         manualLayout = QVBoxLayout()
         
@@ -353,11 +353,11 @@ class App(QMainWindow):
         tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
         errorWidget = QWidget()
         errorWidget.setLayout(errorLayout)
-        tabPreProcessing.addTab(errorWidget, 'Error-based filtering')
+        tabPreProcessing.addTab(errorWidget, 'Resistance Error Model')
         ipWidget = QWidget()
         ipWidget.setVisible(False)
         ipWidget.setLayout(ipLayout)
-        tabPreProcessing.addTab(ipWidget, 'IP filtering')
+        tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
         tabPreProcessing.setTabEnabled(2, False)
         tabPreProcessing.setTabEnabled(1, False)
         
@@ -858,7 +858,7 @@ class App(QMainWindow):
         
         #%% tab 6 POSTPROCESSING
         tabPostProcessing = QTabWidget()
-        tabs.addTab(tabPostProcessing, 'Post Processing')
+        tabs.addTab(tabPostProcessing, 'Post-processing')
         
         invError = QWidget()
         tabPostProcessing.addTab(invError, 'Inversion Errors')
