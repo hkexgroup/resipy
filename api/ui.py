@@ -381,7 +381,7 @@ class App(QMainWindow):
                 scaleLabel.setVisible(False)
             elif index == 1:
                 scale.setVisible(True)
-                scaleLabel.setVisile(True)
+                scaleLabel.setVisible(True)
                 self.r2.createMesh(typ='trian')
                 # TODO to implemente the triangular mesh
             else:
@@ -663,20 +663,24 @@ class App(QMainWindow):
             self.r2.param['b_wgt'] = float(c_wgt.text())
         c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
         c_wgtLabel.linkActivated.connect(showHelp)
+        c_wgtLabel.setVisible(False)
         c_wgt = QLineEdit()
         c_wgt.setValidator(QDoubleValidator())
         c_wgt.setText('2')
         c_wgt.editingFinished.connect(c_wgtFunc)
+        c_wgt.setVisible(False)
         invForm.addRow(c_wgtLabel, c_wgt)
         
         def d_wgtFunc():
             self.r2.param['d_wgt'] = float(d_wgt.text())
         d_wgtLabel = QLabel('<a href="errorParam"><code>b_wgt</code></a>:')
         d_wgtLabel.linkActivated.connect(showHelp)
+        d_wgtLabel.setVisible(False)
         d_wgt = QLineEdit()
         d_wgt.setValidator(QDoubleValidator())
         d_wgt.setText('1')
         d_wgt.editingFinished.connect(b_wgtFunc)
+        d_wgt.setVisible(False)
         invForm.addRow(d_wgtLabel, d_wgt)
         
         def rho_minFunc():
