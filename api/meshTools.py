@@ -22,8 +22,8 @@ Dependencies:
     tkinter (python standard)
 """
 #import standard python packages
-#import tkinter as tk
-#from tkinter import filedialog
+import tkinter as tk
+from tkinter import filedialog
 #import anaconda libraries
 import numpy as np
 import matplotlib.pyplot as plt
@@ -57,7 +57,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         file_path=filedialog.askopenfilename(title='Select mesh file',filetypes=(("VTK files","*.vtk"),("all files","*.*")))#
     #open the selected file for reading
     fid=open(file_path,'r')
-    print("importing vtk (2D mesh) file into python workspace...")
+    #print("importing vtk mesh file into python workspace...")
     
     #read in header info and perform checks to make sure things are as expected
     vtk_ver=fid.readline().strip()#read first line
@@ -74,9 +74,13 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         print("Warning: code intended to deal with an 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
     
     #read node data
-    print("importing mesh nodes...")
+    #print("importing mesh nodes...")
     node_info=fid.readline().strip().split()#read line 5
-    no_nodes=int(node_info[1])
+    try:
+        no_nodes=int(node_info[1])
+    except IndexError:#if we get this then there is a white space between the node info and header lines
+        node_info=fid.readline().strip().split()#read line 5
+        no_nodes=int(node_info[1])
     #now read in node data
     x_coord=[]#make lists for each of the relevant parameters for each node
     y_coord=[]
@@ -90,17 +94,28 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         node_num.append(i)
     
     #now read in element data
-    print("importing mesh element info...")
+    #print("importing mesh element info...")
     elm_info=fid.readline().strip().split()#read line with cell data
-    no_elms=int(elm_info[1])
+    try:
+        no_elms=int(elm_info[1])
+    except IndexError: # quick bug fix
+        elm_info=fid.readline().strip().split()#read line with cell data
+        no_elms=int(elm_info[1])
+        
     no_pts=[]#assign lists to nodes 
     node1=[]
     node2=[]
     node3=[]
     node4=[]
+    node5=[]
+    node6=[]
+    node7=[]
+    node8=[]
+    #node9=[]
     elm_num=[]
     centriod_x=[]#list will contain the centre points of elements 
     centriod_y=[]
+    centriod_z=[]
     areas=[]#areas of cells (might be useful in the future)
     ignored_cells=0
     #import element data ... expects triangles or quads 
@@ -108,7 +123,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         elm_data=fid.readline().strip().split()
         if int(elm_data[0])==3:
             if i==0:
-                print("triangular elements detected")
+                #print("triangular elements detected")
                 vert_no=3
             no_pts.append(int(elm_data[0]))
             #nodes
@@ -130,7 +145,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             areas.append(0.5*base*height)
         elif int(elm_data[0])==4:
             if i==0:
-                print("quad elements detected")
+                #print("quad elements detected")
                 vert_no=4
             no_pts.append(int(elm_data[0]))
             #nodes
@@ -150,64 +165,98 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             elm_len=abs(n2[0]-n1[0])#element length
             elm_hgt=abs(n2[1]-n3[1])#element hieght
             areas.append(elm_len*elm_hgt)
+        elif int(elm_data[0])==8: # this following code is getting silly in how long it is. Need to work on a more efficent way
+            if i==0:
+                #print("voxel elements detected")
+                vert_no=8
+            no_pts.append(int(elm_data[0]))
+            #nodes
+            node1.append(int(elm_data[1]))
+            node2.append(int(elm_data[2]))
+            node3.append(int(elm_data[3]))
+            node4.append(int(elm_data[4]))
+            node5.append(int(elm_data[5]))
+            node6.append(int(elm_data[6]))
+            node7.append(int(elm_data[7]))
+            node8.append(int(elm_data[8]))
+            #assuming element centres are the average of the x - y coordinates for the quad
+            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])],z_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
+            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])],z_coord[int(elm_data[2])])
+            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])],z_coord[int(elm_data[3])])
+            n4=(x_coord[int(elm_data[4])],y_coord[int(elm_data[4])],z_coord[int(elm_data[4])])
+            n5=(x_coord[int(elm_data[5])],y_coord[int(elm_data[5])],z_coord[int(elm_data[5])]) 
+            n6=(x_coord[int(elm_data[6])],y_coord[int(elm_data[6])],z_coord[int(elm_data[6])])
+            n7=(x_coord[int(elm_data[7])],y_coord[int(elm_data[7])],z_coord[int(elm_data[7])])
+            n8=(x_coord[int(elm_data[8])],y_coord[int(elm_data[8])],z_coord[int(elm_data[8])])
+            centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0],n5[0],n6[0],n7[0],n8[0])))
+            centriod_y.append(np.mean((n1[1],n2[1],n3[1],n4[1],n5[1],n6[1],n7[1],n8[1])))
+            centriod_z.append(np.mean((n1[2],n2[2],n3[2],n4[2],n5[2],n6[2],n7[2],n8[2])))
+            #estimate element VOLUMES, base area times height.  
+            elm_len=abs(n2[0]-n1[0])#element length
+            elm_width = abs(n1[1]-n3[1])
+            elm_thick=abs(n5[2]-n1[2])#element hieght
+            areas.append(elm_len*elm_width*elm_thick)
+            
         else: 
             print("WARNING: unkown cell type encountered!")
             ignored_cells+=1
     #compile some information        
-    centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
+    
     if vert_no==3:
         node_maps=(node1,node2,node3)
+        centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
     elif vert_no==4:
         node_maps=(node1,node2,node3,node4)
+        centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
+    elif vert_no==8:
+        node_maps=(node1,node2,node3,node4,node5,node6,node7,node8)
+        centriod=(centriod_x,centriod_y,centriod_z)#centres of each element in form (x...,y...)
         
     if ignored_cells>0:
         print("%i cells ignored in the vtk file"%ignored_cells)
     
-    #now for final part of file - cell type info
-    cell_type_data=fid.readline().strip()
-    cell_type=fid.readline().strip().split()
-    _=fid.readline()#read point data line
-    _=fid.readline()#read cell data line ... i'm not sure why these need to be repeated, must be for the table lookup process
-    cell_attributes=fid.readlines()#reads the last portion of the file
+    cell_attr_dump=fid.readlines()#reads the last portion of the file
     #finished reading the file
+    
+    #find cell types
+    for i,line_info in enumerate(cell_attr_dump):
+        if line_info.find("CELL_TYPES") == 0:
+            cell_type = [int(k) for k in cell_attr_dump[i+1].strip().split()]
+            break
+    
     fid.close()
-    print("reading cell attributes...")
+    #print("reading cell attributes...")
     # read through cell attributes to find the relevant parameter table?
-    if parameter_title=='default' and title=='Output from R2':    
-        parameter_title='Resistivity(Ohm-m)'# the name of title if the output is from R2
-        do_find=1
-    elif parameter_title == 'n/a':#dont bother looking for attributes
-        do_find=0
-    elif parameter_title=='default':
-        do_find=2
-    else:
-        do_find=1
-    #now that conditions for finding a parameter table have been decided... 
-    if do_find==1:
-        for i in range(len(cell_attributes)):
-            probe=cell_attributes[i].split()
-            if probe[1]==parameter_title:
-               #then the following line should read "LOOKUP_TABLE default"
-               check=cell_attributes[i+1]
-               print("identified relevant table for element attributes...")
-               indx=i+2
-               break
-            if i==range(len(cell_attributes)):
-               print("WARNING: could not find relevant table for element attributes! Make sure you havent made a mistake with table name in the VTK file. \n")
-               indx=3
-        values=[float(k) for k in cell_attributes[indx].split()]
-    elif do_find==2:
-        if len(cell_attributes)>=3:
-            probe=cell_attributes[1].split()
-            parameter_title=probe[1]
-            values=[float(k) for k in cell_attributes[3].split()]
-        else:
-            values='n/a'    
-    elif do_find==0:
-        values='n/a'
-#need two options here, either find depth or find if the elements lie in a certain region
-    print("finished importing mesh.\n")
-#return information in a dictionary: 
+    
+    #find scalar values in the vtk file
+    num_attr = 0
+    cell_attr = {}
+    found = False # boolian if we have found the parameter of interest
+    for i,line_info in enumerate(cell_attr_dump):
+        if line_info.find("SCALARS") == 0:
+            attr_title = line_info.split()[1]
+            #check look up table
+            if cell_attr_dump[i+1].split()[1] != "default":
+                print("WARNING: unrecognised lookup table")
+            values=[float(k) for k in cell_attr_dump[i+2].split()]
+            cell_attr[attr_title] = values
+            if attr_title == parameter_title:#then its the parameter of interest that the user was trying extract
+                found = True
+                values_oi = values        
+            num_attr += 1
+    
+    #put in fail safe if no attributes are found        
+    if num_attr == 0:
+        print("no cell attributes found")
+        cell_attr = float("nan")
+        values = float("nan")
+        parameter_title = "n/a"
+    
+    if not found: # primary attribute defaults to the last attribute found
+        parameter_title = attr_title
+        values_oi = values
+    #print("finished importing mesh.\n")
+#return information in a dictionary, this is easier to debug than an object: 
     return {'num_nodes':no_nodes,#number of nodes
             'num_elms':no_elms,#number of elements 
             'node_x':x_coord,#x coordinates of nodes 
@@ -218,11 +267,11 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             'num_elm_nodes':no_pts,#number of points which make an element
             'node_data':node_maps,#nodes of element vertices
             'elm_centre':centriod,#centre of elements (x,y)
-            'elm_area':areas,#area of each element
+            'elm_area':areas,#area of each element (or volume)
             'cell_type':cell_type,
-            'parameters':values,#the values of the attributes given to each cell 
+            'parameters':values_oi,#the values of the attributes given to each cell 
             'parameter_title':parameter_title,
-            'cell_attribute_dump':cell_attributes,
+            'cell_attribute_dump':cell_attr,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     
@@ -304,7 +353,12 @@ class Mesh_obj:
         self.cell_attributes=cell_attributes 
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
-        self.ndims=2
+        #decide if mesh is 3D or not 
+        if max(node_z) - min(node_z) == 0:
+            self.ndims=2
+        else:
+            self.ndims=3
+    
     
     def add_e_nodes(self,e_nodes):
         self.e_nodes = e_nodes
@@ -359,7 +413,7 @@ class Mesh_obj:
              edge_color = 'k',
              vmin=None,
              vmax=None,
-             attr='None'):
+             attr=None):
         """
         Show a mesh object using matplotlib. The color map variable should be 
         a string refering to the color map you want (default is "jet").
@@ -375,6 +429,9 @@ class Mesh_obj:
             #ax - axis handle if preexisting (error will thrown up if not)
             #electrodes - Boolian, enter true to add electrodes to plot
             #sens - Boolian, enter true to plot sensitivities 
+            #vmin - minimum limit for the color bar scale 
+            #vmax- maximum limit for the color bar scale 
+            #attr - which attribute in the mesh to plot, ### add more info here ### 
         #OUTPUT:
             #matplotlib figure with mesh 
         #######################################################################
@@ -382,7 +439,20 @@ class Mesh_obj:
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
             #not currently checking if the passed variable is in the matplotlib library
-                #make figure
+        
+        ### overall this code section needs prettying up to make it easier to change attributes ### 
+        #decide which attribute to plot, we may decide to have other attritbutes! 
+        if attr is None or attr == "Resistivity" or attr == "IP": 
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        elif attr == "Sensitivity":
+            try:
+                X = np.log10(np.array(self.sensitivities))
+                color_bar_title = "log sensitivity"
+            except AttributeError:
+                raise ValueError("No sensitivities in the mesh object to plot")
+        
+
         if ax is None:
             fig,ax=plt.subplots()
         #if no dimensions are given then set the plot limits to edge of mesh
@@ -399,14 +469,15 @@ class Mesh_obj:
             if ylim=="default":
                 ylim=[min(self.node_y),max(self.node_y)]
         #print('xlim', xlim, ylim)
-        a = time.time() #time how long it takes to plot the mesh? 
+       
         
-        ##plot mesh! ## 
+        ##plot mesh! ##
+        a = time.time() #start timer on how long it takes to plot the mesh
         #compile mesh coordinates into polygon coordinates  
         nodes = np.c_[self.node_x, self.node_y]
         connection = np.array(self.node_data).T # connection matrix 
         #compile polygons patches into a "patch collection"
-        X=np.array(self.cell_attributes) # maps resistivity values on the color map
+        ###X=np.array(self.cell_attributes) # maps resistivity values on the color map### <-- disabled 
         coordinates = nodes[connection]
         if vmin is None:
             vmin = np.min(X)
@@ -414,7 +485,6 @@ class Mesh_obj:
             vmax = np.max(X)
         coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color)
         coll.set_clim(vmin=vmin, vmax=vmax)
-        #coll = PolyCollection(nodes[connection], array=X, cmap=color_map, edgecolors=edge_color)
         ax.add_collection(coll)#blit polygons to axis
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
@@ -423,7 +493,8 @@ class Mesh_obj:
         
         if color_bar:#add the color bar 
             cbar = plt.colorbar(coll, ax=ax)#add colorbar
-            cbar.set_label(self.atribute_title) #set colorbar title      
+            cbar.set_label(color_bar_title) #set colorbar title      
+        
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
 
         #biuld alpha channel if we have sensitivities 
