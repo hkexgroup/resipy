@@ -70,6 +70,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.plotError = self.surveys[0].plotError
             self.linfit = self.surveys[0].linfit
             self.lmefit = self.surveys[0].lmefit
+            self.pwlfit = self.surveys[0].pwlfit
             self.phaseplotError = self.surveys[0].phaseplotError
             self.plotIPFit = self.surveys[0].plotIPFit
         
