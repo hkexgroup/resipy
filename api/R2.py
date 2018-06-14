@@ -140,13 +140,19 @@ class R2(object): # R2 master class instanciated by the GUI
         
     def runR2(self):
         # run R2.exe
+        exeName = self.typ + '.exe'
         cwd = os.getcwd()
         os.chdir(self.dirname)
+        targetName = os.path.join(self.dirname, exeName)
+        
+        # copy R2.exe
+        if ~os.path.exists(targetName):
+            shutil.copy(os.path.join(cwd, 'exe', exeName), targetName)  
         
         if OS == 'Linux':
-            cmd = ['wine','R2.exe']
+            cmd = ['wine',exeName]
         if OS == 'Windows':
-            cmd = ['R2.exe']
+            cmd = [exeName]
         
         p = Popen(cmd, stdout=PIPE, shell=False)
         while p.poll() is None:
@@ -169,11 +175,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.write2in(param=param)
         
         self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'), errTyp=self.errTyp)
-        
-        # copy R2.exe
-#        os.copy('../external-exe/R2.exe',self.dirname)
-        shutil.copy('R2.exe', os.path.join(self.dirname, 'R2.exe'))
-        
+              
         self.runR2()
         
         if iplot is True:
