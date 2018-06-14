@@ -800,13 +800,14 @@ class App(QMainWindow):
             self.r2.write2in(param=param)
         
             self.r2.surveys[0].write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
-        
+            exeName = self.r2.typ + '.exe'
+            
             if frozen == 'not':
-                shutil.copy('R2.exe',
-                    os.path.join(self.r2.dirname, 'R2.exe'))
+                shutil.copy(os.path.join('./exe', exeName),
+                    os.path.join(self.r2.dirname, exeName))
             else:
-                shutil.copy(os.path.join(bundle_dir, 'R2.exe'),
-                    os.path.join(self.r2.dirname, 'R2.exe'))
+                shutil.copy(os.path.join(bundle_dir, 'exe', exeName),
+                    os.path.join(self.r2.dirname, exeName))
             
             self.process = QProcess(self)
             self.process.setWorkingDirectory(self.r2.dirname)

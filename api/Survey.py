@@ -1095,13 +1095,13 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 
         
 #%% test code
-s = Survey('test/syscalFile.csv', ftype='Syscal')
+#s = Survey('test/syscalFile.csv', ftype='Syscal')
 #s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
 #s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
-s.manualFilter()
+#s.manualFilter()
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
 #s.write2protocol('test/protocol.dat')
