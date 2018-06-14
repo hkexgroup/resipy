@@ -267,6 +267,39 @@ class Survey(object):
         if ax is None:
             return fig   
 
+    def pwlfit(self, ax = None):
+        if ax is None:
+            fig, ax = plt.subplots()        
+        numbins = 20
+        if 'recipMean' not in self.dfg.columns:
+            self.reciprocal()
+        binsize = int(len(self.dfg['recipMean'])/numbins) 
+        error_input = np.abs(self.dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        bins = np.zeros((numbins,2))
+        for i in range(numbins): # bining 
+        	ns=i*binsize
+        	ne=ns+binsize-1
+        	bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
+        	bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
+        R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
+        ax.loglog(np.abs(self.dfg['recipMean']),np.abs(self.dfg['recipError']), '+', label = "Raw")
+        ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
+        ax.plot(bins[:,0],R_error_predict,'r', label="Power law fit")
+        ax.set_ylabel(r'Log$R_{error} [\Omega]$')
+        ax.set_xlabel(r'Log$R_{avg} [\Omega]$')      
+        ax.legend(loc='best', frameon=True)
+        R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
+        a1 = np.around(np.exp(coefs[0]),decimals=3)
+        a2 = np.around(coefs[1], decimals=3)
+        a3 = np.around(np.exp(coefs[0]),decimals=1)
+        a4 = np.around(coefs[1], decimals=1)
+        print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
+        ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))           
+        self.dfg['pwlError'] = a1*(self.dfg['recipMean']**a2)
+        if ax is None:
+            return fig
+
     def linfit(self, iplot=True, ax=None):
         # linear fit
         if 'recipMean' not in self.dfg.columns:
@@ -522,6 +555,8 @@ class Survey(object):
                 error = self.dfg['lmeError'].values
             if errTyp == 'lin':
                 error = self.dfg['linError'].values
+            if errTyp == 'pwl':
+                error = self.dfg['pwlError'].values
     #            error = self.linStdError
             if errTot == True:
                 if len(self.modError) == 0:
