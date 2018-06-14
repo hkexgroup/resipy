@@ -544,8 +544,99 @@ class Survey(object):
                             i+1, arr[i,0], arr[i,1], arr[i,2], arr[i,3], res[i], error[i]))
 #        return np.hstack([arr, res.reshape((len(res), 1)), error.reshape((len(error), 1))])
         
+
+    def manualFilter(self, ax=None):
+        array = self.df[['a','b','m','n']].values
+        resist = np.ones(len(self.df))
+        spacing = 0.25
+        pseudo(array, resist, spacing, ax=ax)
+        
+        
   
+def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False):
+    #figsize=(12,3)
+    """ create true pseudo graph with points and no interpolation
+    """
+    geom = False
+    log = False
+    nelec = np.max(array)
+    elecpos = np.arange(0, spacing*nelec, spacing)
+    resist = resist
     
+    if geom: # compute and applied geometric factor
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        resist = resist*K
+        
+    if log:
+        resist = np.sign(resist)*np.log10(np.abs(resist))
+        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+    else:
+        label = r'$\rho_a$ [$\Omega.m$]'
+    
+    cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+    pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+    xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+    ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+    
+    
+    def onpick(event):
+        # TODO single doesn't want to change the electrode selection
+        if lines[event.artist] == 'data':
+            print('onpick event', event.ind[0])
+            print(iselect[event.ind[0]])
+            if iselect[event.ind[0]] == True:
+                print('set to false')
+                iselect[event.ind[0]] = False
+            else:
+                iselect[event.ind[0]] = True
+        
+#        if lines[event.artist] == 'elec':
+#            print('onpick2', event.ind[0])
+#            ie = (array == (event.ind[0]+1)).any(-1)
+#            if all(iselect[ie] == True):
+#                iselect[ie] = False
+#            else:
+#                iselect[ie] = True
+#            if eselect[event.ind[0]] == True:
+#                eselect[event.ind[0]] = False
+#            else:
+#                eselect[event.ind[0]] = True
+#            elecKilled.set_xdata(elecpos[eselect])
+#            elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
+        print('update canvas')
+        killed.set_xdata(x[iselect])
+        killed.set_ydata(y[iselect])
+        killed.figure.canvas.draw()
+            
+            
+    if ax is None:
+        fig, ax = plt.subplots()
+    caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+    cax,  = ax.plot(xpos, ypos, 'o', picker=5)
+    cax.figure.canvas.mpl_connect('pick_event', onpick)
+    #for i in range(int(len(array)/2)):
+    #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
+    
+    line = cax
+    killed, = line.axes.plot([],[],'r*')
+    elecKilled, = line.axes.plot([],[],'r+')
+    x = np.array(line.get_xdata())
+    y = np.array(line.get_ydata())
+    iselect = np.zeros(len(y),dtype=bool)
+    eselect = np.zeros(len(elecpos), dtype=bool)
+    
+    lines = {line:'data',caxElec:'elec',killed:'killed'}
+
 """        
     def addModError(self, fname):
         # add the modelling error for both normal and reciprocal quadrupoles
@@ -961,6 +1052,7 @@ class Survey(object):
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
+#s.manualFilter()
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
 #s.write2protocol('test/protocol.dat')

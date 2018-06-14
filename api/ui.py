@@ -282,6 +282,22 @@ class App(QMainWindow):
         
         manualLayout = QVBoxLayout()
         
+        def plotManualFiltering():
+            mwManualFiltering.plot(self.r2.surveys[0].manualFilter)
+        
+        notice = QLabel('Press "Start" and then click on the dots to select them. Press "Done" to remove them.')
+        manualLayout.addWidget(notice)
+        
+        btnLayout = QHBoxLayout()
+        btnStart = QPushButton('Start')
+        btnStart.clicked.connect(plotManualFiltering)
+        btnLayout.addWidget(btnStart)
+        btnDone = QPushButton('Done')
+        btnDone.clicked.connect(lambda x: print('TO BE IMPLEMENTED'))
+        btnLayout.addWidget(btnDone)
+        manualLayout.addLayout(btnLayout)
+        
+        
         mwManualFiltering = MatplotlibWidget(navi=True)
         manualLayout.addWidget(mwManualFiltering)
         
