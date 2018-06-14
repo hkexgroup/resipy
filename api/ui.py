@@ -317,12 +317,18 @@ class App(QMainWindow):
             mwFitError.plot(self.r2.lmefit)
             self.r2.errTyp = 'lme'
         
+        def fitpwl():
+            mwFitError.plot(self.r2.pwlfit)
+            self.r2.errTyp = 'pwl'
+
         def fitModel(index):
             print(index)
             if index == 0:
                 plotError()
             elif index == 1:
                 fitLinError()
+            elif index == 2:
+                fitpwl()
             elif index == 3:
                 fitLmeError()
             else:
@@ -331,6 +337,7 @@ class App(QMainWindow):
         errFitType = QComboBox()
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
+        errFitType.addItem('Power-law')
         errFitType.addItem('Exponential')
         errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(fitModel)
