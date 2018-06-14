@@ -458,11 +458,11 @@ class Mesh_obj:
         #if no dimensions are given then set the plot limits to edge of mesh
         try: 
             if xlim=="default":
-                xlim=[min(self.elec_x),max(self.elec_x)]
+                xlim=[min(self.elec_x)-1,max(self.elec_x)+1]
             if ylim=="default":
                 doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
                 print(doiEstimate)
-                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
+                ylim=[min(self.elec_y)-doiEstimate-1,max(self.elec_y)+0.1] # +0.1 so we can see the electrode
         except AttributeError:
             if xlim=="default":
                 xlim=[min(self.node_x),max(self.node_x)]

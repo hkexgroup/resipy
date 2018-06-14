@@ -413,7 +413,10 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
     #change back to orginal working directory
     os.chdir(cwd)
     
-    return mt.Mesh_obj.mesh_dict2obj(mesh_dict), mesh_dict['element_ranges']# return a mesh object 
+    mesh = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
+    mesh.add_e_nodes(np.arange(len(elec_x)))
+    
+    return mesh, mesh_dict['element_ranges']
 
 
 #%% test code
