@@ -53,7 +53,7 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
         return 2 # points are counter clockwise
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path='default'):
+def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path='default'):
 #writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
 #INPUT:
     #topo_x - x coordinates of the surface
@@ -68,6 +68,12 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=50,cl=5,path=
     #gmsh . geo file which can be run / loaded into gmsh
 ###############################################################################
     #formalities and error checks
+    if doi == -1:
+        doi = (np.max(elec_x) - np.min(elec_x))/2
+        print(doi)
+        # TODO very rough, better to consider 2/3 of the longest dipole
+    if cl == -1:
+        cl = np.mean(np.diff(elec_x))/4
     if len(topo_x) != len(topo_y):
         raise ValueError("topograpghy x and y arrays are not the same length!")
     if len(elec_x) != len(elec_y):
@@ -373,18 +379,18 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
 ###############################################################################
     #check directories 
     try:
-        os.stat("Executables")
+        os.stat("exe")
     except FileNotFoundError:
         print("could not find Executables directory")
-        os.mkdir("Executables")
-    if not os.path.isfile("Executables/gmsh.exe"):
+        os.mkdir("exe")
+    if not os.path.isfile("exe/gmsh.exe"):
         raise EnvironmentError("No gmsh.exe exists in the Executables directory!")
     #make .geo file
     file_name="temp"
-    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path="Executables")
+    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path="exe")
     # handling gmsh
     cwd=os.getcwd()#get current working directory 
-    ewd=os.path.join(cwd,"Executables")#change working directory to /Executables
+    ewd=os.path.join(cwd,"exe")#change working directory to /Executables
     os.chdir(ewd)#ewd - exe working directory 
     
     if platform.system() == "Windows":#command line input will vary slighty by system 
@@ -411,8 +417,8 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
 
 
 #%% test code
-#mesh, element_ranges = tri_mesh(np.arange(10), np.random.randn(10),
-#                np.arange(10), np.random.randn(10))
+#mesh, element_ranges = tri_mesh(np.arange(10), np.zeros(10),
+#                np.arange(10), np.zeros(10), keep_files=True)
 #mesh.show()
 
 
