@@ -582,13 +582,17 @@ class Survey(object):
 
     def manualFilter(self, ax=None):
         array = self.df[['a','b','m','n']].values
-        resist = np.ones(len(self.df))
-        spacing = 0.25
-        pseudo(array, resist, spacing, ax=ax)
+        if 'reciprocalErr' in self.df.columns:
+            resist = self.df['reciprocalErr'].values
+            print('set to reciprocal')
+        else:
+            resist = np.ones(self.df.shape[0])
+        spacing = np.mean(np.diff(self.elec[:,0]))
+        pseudo(array, resist, spacing, ax=ax, label='Reciprocal Error [Ohm.m]')
         
         
   
-def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False):
+def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
     #figsize=(12,3)
     """ create true pseudo graph with points and no interpolation
     """
@@ -612,9 +616,9 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
         
     if log:
         resist = np.sign(resist)*np.log10(np.abs(resist))
-        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
-    else:
-        label = r'$\rho_a$ [$\Omega.m$]'
+#        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+#    else:
+#        label = r'$\rho_a$ [$\Omega.m$]'
     
     cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
         + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
@@ -635,19 +639,19 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
             else:
                 iselect[event.ind[0]] = True
         
-#        if lines[event.artist] == 'elec':
-#            print('onpick2', event.ind[0])
-#            ie = (array == (event.ind[0]+1)).any(-1)
-#            if all(iselect[ie] == True):
-#                iselect[ie] = False
-#            else:
-#                iselect[ie] = True
-#            if eselect[event.ind[0]] == True:
-#                eselect[event.ind[0]] = False
-#            else:
-#                eselect[event.ind[0]] = True
-#            elecKilled.set_xdata(elecpos[eselect])
-#            elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
+        if lines[event.artist] == 'elec':
+            print('onpick2', event.ind[0])
+            ie = (array == (event.ind[0]+1)).any(-1)
+            if all(iselect[ie] == True):
+                iselect[ie] = False
+            else:
+                iselect[ie] = True
+            if eselect[event.ind[0]] == True:
+                eselect[event.ind[0]] = False
+            else:
+                eselect[event.ind[0]] = True
+            elecKilled.set_xdata(elecpos[eselect])
+            elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
         print('update canvas')
         killed.set_xdata(x[iselect])
         killed.set_ydata(y[iselect])
@@ -656,21 +660,31 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
             
     if ax is None:
         fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
     caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
-    cax,  = ax.plot(xpos, ypos, 'o', picker=5)
+    cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
+    cbar = fig.colorbar(cax, ax=ax)
+    cbar.set_label(label)
     cax.figure.canvas.mpl_connect('pick_event', onpick)
     #for i in range(int(len(array)/2)):
     #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
     
     line = cax
-    killed, = line.axes.plot([],[],'r*')
-    elecKilled, = line.axes.plot([],[],'r+')
-    x = np.array(line.get_xdata())
-    y = np.array(line.get_ydata())
+    killed, = line.axes.plot([],[],'rx')
+    elecKilled, = line.axes.plot([],[],'rx')
+#    x = np.array(line.get_xdata())
+#    y = np.array(line.get_ydata())
+    x = line.get_offsets()[:,0]
+    y = line.get_offsets()[:,1]
     iselect = np.zeros(len(y),dtype=bool)
     eselect = np.zeros(len(elecpos), dtype=bool)
     
     lines = {line:'data',caxElec:'elec',killed:'killed'}
+
+
+
+
 
 """        
     def addModError(self, fname):
@@ -1081,13 +1095,13 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 
         
 #%% test code
-#s = Survey('test/syscalFile.csv', ftype='Syscal')
+s = Survey('test/syscalFile.csv', ftype='Syscal')
 #s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
 #s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
-#s.manualFilter()
+s.manualFilter()
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
 #s.write2protocol('test/protocol.dat')
