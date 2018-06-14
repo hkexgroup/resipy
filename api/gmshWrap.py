@@ -365,7 +365,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             #the information here is returned as a mesh dictionary because it much easier to debug 
         
 #%% gmsh wrapper
-def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = False):
+def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = False, path='exe', save_path='default'):
     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function will only work if current working directory has path: Execuatbles/gmsh.exe"""
 #INPUT: 
@@ -387,7 +387,7 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
         raise EnvironmentError("No gmsh.exe exists in the Executables directory!")
     #make .geo file
     file_name="temp"
-    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path="exe")
+    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=path)
     # handling gmsh
     cwd=os.getcwd()#get current working directory 
     ewd=os.path.join(cwd,"exe")#change working directory to /Executables
@@ -407,7 +407,7 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
-    mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes')
+    mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes', save_path=save_path)
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
     #change back to orginal working directory
@@ -421,7 +421,7 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=False, show_output = 
 
 #%% test code
 #mesh, element_ranges = tri_mesh(np.arange(10), np.zeros(10),
-#                np.arange(10), np.zeros(10), keep_files=True)
+#                np.arange(10), np.zeros(10), keep_files=True, save_path='../test/mesh.dat')
 #mesh.show()
 
 
