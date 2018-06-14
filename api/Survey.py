@@ -555,6 +555,8 @@ class Survey(object):
                 error = self.dfg['lmeError'].values
             if errTyp == 'lin':
                 error = self.dfg['linError'].values
+            if errTyp == 'pwl':
+                error = self.dfg['pwlError'].values
     #            error = self.linStdError
             if errTot == True:
                 if len(self.modError) == 0:
