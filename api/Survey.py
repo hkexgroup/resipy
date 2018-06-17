@@ -301,34 +301,34 @@ class Survey(object):
             return fig
 
     def linfit(self, iplot=True, ax=None):
-        # linear fit
-        if 'recipMean' not in self.dfg.columns:
-            self.reciprocal()
-        recipMean = np.abs(self.dfg['recipMean'].values)
-        recipError = np.abs(self.dfg['recipError'].values)
+        # # linear fit
+        # if 'recipMean' not in self.dfg.columns:
+        #     self.reciprocal()
+        # recipMean = np.abs(self.dfg['recipMean'].values)
+        # recipError = np.abs(self.dfg['recipError'].values)
 
-        # logspace classes, fit, R^2
-        xm,ystdErr,nbs=self.logClasses3(recipMean,recipError,np.mean, class1=np.arange(-2,2,0.5))# clength=10)
-        inan = ~np.isnan(ystdErr)
-        slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
-        predy=10**(offset+slope*np.log10(xm[inan]))
-        # R2 makes sens in linear fitting space only and only for the classes
-        r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
-        print('Simple linear log fit : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
+        # # logspace classes, fit, R^2
+        # xm,ystdErr,nbs=self.logClasses3(recipMean,recipError,np.mean, class1=np.arange(-2,2,0.5))# clength=10)
+        # inan = ~np.isnan(ystdErr)
+        # slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
+        # predy=10**(offset+slope*np.log10(xm[inan]))
+        # # R2 makes sens in linear fitting space only and only for the classes
+        # r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
+        # print('Simple linear log fit : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
         
-        predictRecipError = 10**offset*recipMean**slope
-        self.dfg['linError'] = predictRecipError
+        # predictRecipError = 10**offset*recipMean**slope
+        # self.dfg['linError'] = predictRecipError
         
-        if iplot:
-            if ax is None:
-                fig, ax = plt.subplots()
-            ax.loglog(recipMean, recipError, '+', label='raw')
-            ax.loglog(xm[inan],ystdErr[inan],'o', label='bin means')
-            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-            ax.set_ylabel('Reciprocal Error [$\Omega$]')
-            ax.loglog(xm[inan],predy,'r-',label='linear regression')
-            ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
-            ax.legend()
+        # if iplot:
+        #     if ax is None:
+        #         fig, ax = plt.subplots()
+        #     ax.loglog(recipMean, recipError, '+', label='raw')
+        #     ax.loglog(xm[inan],ystdErr[inan],'o', label='bin means')
+        #     ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
+        #     ax.set_ylabel('Reciprocal Error [$\Omega$]')
+        #     ax.loglog(xm[inan],predy,'r-',label='linear regression')
+        #     ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
+        #     ax.legend()
             
 #            fig,ax=plt.subplots()
 #            isort = np.argsort(recipMean)
@@ -341,9 +341,37 @@ class Survey(object):
 #            ax.set_ylabel('Reciprocal Error [$\Omega$]')
 ##            fig.show()
 #            figs.append(fig)
-            
-        
-      
+        if ax is None:
+            fig, ax = plt.subplots()        
+        numbins = 20
+        if 'recipMean' not in self.dfg.columns:
+            self.reciprocal()
+        binsize = int(len(self.dfg['recipMean'])/numbins) 
+        error_input = np.abs(self.dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        bins = np.zeros((numbins,2))
+        for i in range(numbins): # bining 
+        	ns=i*binsize
+        	ne=ns+binsize-1
+        	bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
+        	bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+        coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
+        R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
+        ax.loglog(np.abs(self.dfg['recipMean']),np.abs(self.dfg['recipError']), '+', label = "Raw")
+        ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
+        ax.loglog(bins[:,0],R_error_predict,'r', label="Linear fit")
+        ax.set_ylabel(r'Log$R_{error} [\Omega]$')
+        ax.set_xlabel(r'Log$R_{avg} [\Omega]$')      
+        ax.legend(loc='best', frameon=True)
+        R2= self.R_sqr((bins[:,1]),(R_error_predict))
+        a1 = np.around((coefs[0]),decimals=3)
+        a2 = np.around(coefs[1], decimals=3)
+        a3 = np.around((coefs[0]),decimals=1)
+        a4 = np.around(coefs[1], decimals=1)
+        print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
+        ax.set_title('Multi bin Linear plot\n' + r'$m =  %s, b = %s$ (R$^2$ = %s)' % (a1,a2,R2))     
+        self.dfg['linError'] = a1*(np.abs(self.dfg['recipMean']))+a2
+        if ax is None:
+            return fig                  
         
     def linfitStd(self, iplot=False):
         # linear fit with std
