@@ -94,7 +94,18 @@ class MatplotlibWidget(QWidget):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         self.axis = ax
+        self.callback = callback
         callback(ax=ax)
+        ax.set_aspect('auto')
+        self.figure.tight_layout()
+        self.canvas.draw()
+    
+    def replot(self, **kwargs):
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        self.axis = ax
+        callback = self.callback
+        callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
         self.figure.tight_layout()
         self.canvas.draw()
@@ -835,7 +846,13 @@ class App(QMainWindow):
         def setCBarLimit():
             print(vmaxEdit.text())
             mwInvResult.setMinMax(vmaxEdit.text(), vminEdit.text())
-
+            
+        def showEdges(status):
+            if status == Qt.Checked:
+                mwInvResult.replot(edge_color='k')
+            else:
+                mwInvResult.replot(edge_color='none')
+                
 
         btn = QPushButton('Invert')
         btn.clicked.connect(logInversion)
@@ -851,6 +868,7 @@ class App(QMainWindow):
         attributeName.addItem('Log(Resistivity)')
         attributeName.addItem('Resistivity')
         attributeName.addItem('Sensitivity')
+        attributeName.addItem('Phase')
         attributeName.currentIndexChanged.connect(plotSection)
         displayOptions.addWidget(attributeName)
         
@@ -868,8 +886,8 @@ class App(QMainWindow):
         displayOptions.addWidget(vmaxEdit)
         
         showEdge = QCheckBox('Show edges')
-        showEdge.stateChanged.connect(lambda x: print(x))
         showEdge.setChecked(True)
+        showEdge.stateChanged.connect(showEdges)
         displayOptions.addWidget(showEdge)
         
         contour = QCheckBox('Contour')

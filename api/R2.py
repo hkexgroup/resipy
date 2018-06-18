@@ -148,7 +148,10 @@ class R2(object): # R2 master class instanciated by the GUI
             
         self.configFile = write2in(self.param, self.dirname, typ=typ)
 
-      
+
+    def write2protocol(self, **kwargs): # DEPRACATED
+        self.surveys[0].write2protocol(**kwargs)
+        
         
     def runR2(self):
         # run R2.exe
@@ -186,7 +189,16 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.configFile == '':
             self.write2in(param=param)
         
-        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'), errTyp=self.errTyp)
+        if self.typ == 'R2':
+            ipBool = False
+        elif self.typ == 'cR2':
+            ipBool = True
+        else:
+            print('NOT IMPLEMENTED YET')
+            
+        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
+                errTyp=self.errTyp, ip=ipBool, errTypIP='none')
+            
               
         self.runR2()
         
@@ -306,20 +318,20 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
         
 #%% test code
-k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
-k.typ = 'cR2'
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+#k.typ = 'cR2'
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
-k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
+#k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.lmefit(iplot=True)
-k.createMesh(typ='quad')
+#k.createMesh(typ='quad')
 #k.createMesh(typ='trian')
 #k.mesh.show()
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
 #k.mesh.show(ax=ax)
-k.write2in()
+#k.write2in()
 #k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()

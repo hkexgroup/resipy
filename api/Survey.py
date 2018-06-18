@@ -33,6 +33,9 @@ class Survey(object):
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
+#        self.typ = 'R2'
+#        self.errTyp = 'obs'
+#        self.errTypIP = 'none'
         
         # to discard for the dataframe structure
 #        self.array = self.df[['a','b','m','n']].values
@@ -603,6 +606,8 @@ class Survey(object):
                     else:
                         protocol['error'] = np.sqrt(error**2 + self.modError[ie]**2)
             if errTypIP != 'none':
+                if 'PhaseError' not in self.dfg.columns: # TO BE DELETED
+                    self.dfg['PhaseError'] = 0.1 # TO BE DELTED
                 protocol['ipError'] = self.dfg['PhaseError'].values      
         else: # why don't they have reciprocals my god !!
             ie = np.ones(len(self.df), dtype=bool)
@@ -1144,6 +1149,6 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #s.manualFilter()
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
-#s.write2protocol('test/protocol.dat', ip=True)
+#s.write2protocol('test/protocol.dat', ip=True, errTypIP='pwl')
 
         
