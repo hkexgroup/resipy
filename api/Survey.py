@@ -266,7 +266,8 @@ class Survey(object):
         a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
         a4 = np.around(coefs_ip[1], decimals=1)
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))           
+        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
+        self.dfg['PhaseError'] = a1*(np.abs(self.dfg['resist'])**a2)
         if ax is None:
             return fig   
 
