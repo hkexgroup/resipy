@@ -296,7 +296,7 @@ class Survey(object):
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))           
-        self.dfg['pwlError'] = a1*(self.dfg['recipMean']**a2)
+        self.dfg['pwlError'] = a1*(np.abs(self.dfg['recipMean'])**a2)
         if ax is None:
             return fig
 
