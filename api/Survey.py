@@ -15,7 +15,7 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from parsers import *
-
+from DCA import DCA
 
 class Survey(object):
     def __init__(self, fname, ftype=None, name=''):
@@ -244,10 +244,10 @@ class Survey(object):
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-25 & Phase_dicrep<25')# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
-        	ns=i*binsize_ip
-        	ne=ns+binsize_ip-1
-        	bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
-        	bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
+            ns=i*binsize_ip
+            ne=ns+binsize_ip-1
+            bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
+            bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
         bins_ip = bins_ip.dropna()
         coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]))[0] # calculating fitting coefficients (a,m)
         R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
@@ -277,10 +277,10 @@ class Survey(object):
         error_input = np.abs(self.dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
-        	ns=i*binsize
-        	ne=ns+binsize-1
-        	bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
-        	bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+            ns=i*binsize
+            ne=ns+binsize-1
+            bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
+            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.loglog(np.abs(self.dfg['recipMean']),np.abs(self.dfg['recipError']), '+', label = "Raw")
@@ -350,10 +350,10 @@ class Survey(object):
         error_input = np.abs(self.dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
-        	ns=i*binsize
-        	ne=ns+binsize-1
-        	bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
-        	bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+            ns=i*binsize
+            ne=ns+binsize-1
+            bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
+            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
         coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.loglog(np.abs(self.dfg['recipMean']),np.abs(self.dfg['recipError']), '+', label = "Raw")
@@ -574,39 +574,46 @@ class Survey(object):
         if ax is None:
             return fig
     
-    def write2protocol(self, outputname='', errTyp='obs', errTot=False):
+    def write2protocol(self, outputname='', errTyp='obs', errTot=False, ip=False, errTypIP='none'):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
-        if all(self.df['irecip'].values == 0) is False:
-            if errTyp == 'obs':
-                error = self.df['reciprocalErr'].values[ie]
-            if errTyp =='lme':
-                error = self.dfg['lmeError'].values
-            if errTyp == 'lin':
-                error = self.dfg['linError'].values
-            if errTyp == 'pwl':
-                error = self.dfg['pwlError'].values
-    #            error = self.linStdError
-            if errTot == True:
-                if len(self.modError) == 0:
-                    print('ERROR : you must specify a modelling error')
-                else:
-                    error = np.sqrt(error**2 + self.modError[ie]**2)
-            res = self.df['reciprocalMean'].values[ie]
+        x = self.df[['a','b','m','n']].values[ie,:]
+        xx = np.c_[1+np.arange(len(x)), x]
+        protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
+        haveReciprocal = all(self.df['irecip'].values == 0)
+#        print('haveReciprocal = ', haveReciprocal)
+        if haveReciprocal == False:
+            protocol['R'] = self.dfg['recipMean'].values    
+            if ip == True:
+                if 'Phase' not in self.dfg.columns: # TO BE DELETED
+                    self.dfg['Phase'] = 0 # TO BE DELETED
+                protocol['Phase'] = self.dfg['Phase'].values
+            if errTyp != 'none':
+                if errTyp == 'obs':
+                    protocol['error'] = self.df['reciprocalErr'].values[ie]
+                if errTyp =='lme':
+                    protocol['error'] = self.dfg['lmeError'].values
+                if errTyp == 'lin':
+                    protocol['error'] = self.dfg['linError'].values
+                if errTyp == 'pwl':
+                    protocol['error'] = self.dfg['pwlError'].values
+        #            error = self.linStdError
+                if errTot == True:
+                    if len(self.modError) == 0:
+                        print('ERROR : you must specify a modelling error')
+                    else:
+                        protocol['error'] = np.sqrt(error**2 + self.modError[ie]**2)
+            if errTypIP != 'none':
+                protocol['ipError'] = self.dfg['PhaseError'].values      
         else: # why don't they have reciprocals my god !!
             ie = np.ones(len(self.df), dtype=bool)
-            res = self.df['resist'].values
-            error = np.ones(len(self.df))*np.nan # won't be read anyway
-        n = np.sum(ie)
-        arr = self.df[['a','b','m','n']].values[ie,:]
-
+            protocol['R'] = self.df['resist'].values
+        
         if outputname != '':
             with open(outputname, 'w') as f:
-                f.write(str(n) + '\n')
-                for i in range(n):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:.0f}\t{5:f}\t{6:f}\n'.format(
-                            i+1, arr[i,0], arr[i,1], arr[i,2], arr[i,3], res[i], error[i]))
-#        return np.hstack([arr, res.reshape((len(res), 1)), error.reshape((len(error), 1))])
-        
+                f.write(str(len(protocol)) + '\n')
+            with open(outputname, 'a') as f:
+                protocol.to_csv(f, sep='\t', header=False, index=False)
+                
 
     def manualFilter(self, ax=None):
         array = self.df[['a','b','m','n']].values
@@ -618,6 +625,10 @@ class Survey(object):
         spacing = np.mean(np.diff(self.elec[:,0]))
         pseudo(array, resist, spacing, ax=ax, label='Reciprocal Error [Ohm.m]')
         
+    def dca(self, dump=print):
+        ''' execute DCA filtering
+        '''
+        print('0% -> TODO')
         
   
 def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
@@ -1124,6 +1135,7 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
         
 #%% test code
 #s = Survey('test/syscalFile.csv', ftype='Syscal')
+#s = Survey('test/rifleday8_n2.csv', ftype='Syscal')
 #s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
 #s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
 #fig, ax = plt.subplots()
@@ -1132,6 +1144,6 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #s.manualFilter()
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
-#s.write2protocol('test/protocol.dat')
+#s.write2protocol('test/protocol.dat', ip=True)
 
         

@@ -42,7 +42,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.typ = 'R2' # or cR2 or R3, cR3
-        self.errTyp = 'obs' # type of error to add
+        self.errTyp = 'obs' # type of error to add for DC
+        self.errTypIP = 'none' # type of error to add for IP phase
+        
         
     def setwd(self, dirname):
         ''' set the working directory
@@ -126,17 +128,27 @@ class R2(object): # R2 master class instanciated by the GUI
         '''
         if typ == '':
             typ = self.typ
-        for p in param:
-            self.param[p] = param[p]
         # check if survey has reciprocal (and so error model)
         if all(self.surveys[0].df['irecip'].values == 0):
             self.param['wgt_a'] = 0.01
             self.param['wgt_b'] = 0.02
+        if typ == 'cR2':
+            if self.errTypIP != 'none': # we have individual errors
+                self.param['c_wgt'] = 0
+                self.param['d_wgt'] = 0
+                self.param['a_wgt'] = 0.01 # not sure of that (Gui)
+            else:
+                print('kkk')
+                self.param['c_wgt'] = 0.1 # better if set by user !!
+                self.param['d_wgt'] = 0.2
+        # all those parameters are default but the user can change them and call
+        # write2in again
+        for p in param:
+            self.param[p] = param[p]
+            
         self.configFile = write2in(self.param, self.dirname, typ=typ)
-    
-#    def write2protocol(self, **kwargs):
-#        self.surveys[0].write2protocol(**kwargs)
-        
+
+      
         
     def runR2(self):
         # run R2.exe
@@ -294,20 +306,20 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
         
 #%% test code
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
-#k.typ = 'cR2'
+k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+k.typ = 'cR2'
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
-#k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
+k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.lmefit(iplot=True)
-#k.createMesh(typ='quad')
+k.createMesh(typ='quad')
 #k.createMesh(typ='trian')
 #k.mesh.show()
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
 #k.mesh.show(ax=ax)
-#k.write2in()
+k.write2in()
 #k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()

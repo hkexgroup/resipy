@@ -134,7 +134,7 @@ class App(QMainWindow):
         super().__init__()
         self.setWindowTitle('R2 GUI')
         self.setGeometry(100,100,1000,600)
-        self.r2 = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+        self.r2 = R2(os.path.join(bundle_dir, 'invdir'))
         
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -169,7 +169,7 @@ class App(QMainWindow):
             self.r2.setwd(fdir)
             wd.setText(fdir)
             
-        wd = QPushButton('Press here to set working directory')
+        wd = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
         wd.clicked.connect(getwd)
         
 
@@ -214,12 +214,14 @@ class App(QMainWindow):
         
         def diplayPseudoIP(state):
             if state  == Qt.Checked:
+                self.r2.typ = 'cR2'
                 plotPseudoIP()
                 phaseplotError()
                 showIpOptions(True)
                 mwPseudoIP.setVisible(True)
                 tabPreProcessing.setTabEnabled(2, True)
             else:
+                self.r2.typ = 'R2'
                 showIpOptions(False)
                 mwPseudoIP.setVisible(False)
                 tabPreProcessing.setTabEnabled(2, False)
