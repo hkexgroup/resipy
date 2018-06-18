@@ -386,6 +386,18 @@ class App(QMainWindow):
         mwIPFiltering = MatplotlibWidget(navi=True)
         ipLayout.addWidget(mwIPFiltering)
         
+        def dcaFiltering():
+            self.r2.surveys[0].dca(dump=dcaProgress.setText)
+            
+        dcaLayout = QHBoxLayout()
+        dcaButton = QPushButton('DCA filtering')
+        dcaButton.clicked.connect(dcaFiltering)
+        dcaProgress = QLineEdit('0%')
+        dcaProgress.setReadOnly(True)
+        dcaLayout.addWidget(dcaButton)
+        dcaLayout.addWidget(dcaProgress)
+        ipLayout.addLayout(dcaLayout)
+        
         
         manualWidget = QWidget()
         manualWidget.setLayout(manualLayout)

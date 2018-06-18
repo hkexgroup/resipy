@@ -630,10 +630,13 @@ class Survey(object):
         spacing = np.mean(np.diff(self.elec[:,0]))
         pseudo(array, resist, spacing, ax=ax, label='Reciprocal Error [Ohm.m]')
         
-    def dca(self, dump=print):
+    def dca(self, dump=print): # TO BE IMPLEMENTED
+        import time
         ''' execute DCA filtering
         '''
-        print('0% -> TODO')
+        for i in range(100):
+            dump('{:2}% -> TODO'.format(i))
+            time.sleep(0.05)
         
   
 def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
@@ -1150,5 +1153,5 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
 #s.write2protocol('test/protocol.dat', ip=True, errTypIP='pwl')
-
+#s.dca()
         
