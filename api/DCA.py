@@ -26,7 +26,8 @@ def linear_coefs (x,y): #linear fit parameteres for decay curve
         coefs = np.array([0,0])
         return
 
-def DCA(data): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017). Decay curve analysis for data error quantification in time-domain induced polarization imaging. Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
+def DCA(data_in): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017). Decay curve analysis for data error quantification in time-domain induced polarization imaging. Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
+    data = data_in.copy()
     cnames = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11',
         'M12','M13','M14','M15','M16','M17','M18','M19','M20', 'TM1']
     if set(cnames) - set(data.columns):
@@ -88,6 +89,11 @@ def DCA(data): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Will
         appended_groups = pd.concat(appended_groups)
         K_std = np.std(appended_groups['K'])
         final_data = appended_groups.loc[np.abs(appended_groups['K'])<(2*K_std)]
+        final_data_dropped = final_data.drop(['DC_slope', 'DC_fit_a', 'DC_fit_b', 'Fit_DC_1', 
+                                       'Fit_DC_2', 'Fit_DC_3', 'Fit_DC_4', 'Fit_DC_5', 'Fit_DC_6', 'Fit_DC_7',
+                                       'Fit_DC_8', 'Fit_DC_9', 'Fit_DC_10', 'Fit_DC_11', 'Fit_DC_12',
+                                       'Fit_DC_13', 'Fit_DC_14', 'Fit_DC_15', 'Fit_DC_16', 'Fit_DC_17',
+                                       'Fit_DC_18', 'Fit_DC_19', 'Fit_DC_20', 'DC_rmsd', 'weight', 'K'], axis = 1).rename(columns = {'An':'a','Bn':'b'})
         return (final_data)
 #%%
 #test = DCA(df)
