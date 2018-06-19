@@ -267,7 +267,8 @@ class Survey(object):
         a4 = np.around(coefs_ip[1], decimals=1)
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
         ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
-        self.dfg['PhaseError'] = a1*(np.abs(self.dfg['recipMean'])**a2)
+        self.df['PhaseError'] = a1*(np.abs(self.df['resist'])**a2)
+        self.df['Phase'] = -1.2*self.df['ip']
         if ax is None:
             return fig   
 
@@ -581,6 +582,7 @@ class Survey(object):
     def write2protocol(self, outputname='', errTyp='obs', errTot=False, ip=False, errTypIP='none'):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         x = self.df[['a','b','m','n']].values[ie,:]
+        self.dfg['Phase'] = self.df['Phase'].values[ie]
         xx = np.c_[1+np.arange(len(x)), x]
         protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         haveReciprocal = all(self.df['irecip'].values == 0)
@@ -609,7 +611,7 @@ class Survey(object):
             if errTypIP != 'none':
                 if 'PhaseError' not in self.dfg.columns: # TO BE DELETED
                     self.dfg['PhaseError'] = 0.1 # TO BE DELTED
-                protocol['ipError'] = self.dfg['PhaseError'].values      
+                protocol['ipError'] = self.df['PhaseError'].values[ie]
         else: # why don't they have reciprocals my god !!
             ie = np.ones(len(self.df), dtype=bool)
             protocol['R'] = self.df['resist'].values
