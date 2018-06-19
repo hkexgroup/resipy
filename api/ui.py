@@ -367,6 +367,7 @@ class App(QMainWindow):
         
         def phasePLerr():
             mwIPFiltering.plot(self.r2.plotIPFit)
+            self.r2.errTypIP = 'pwlip'
             
         def ipfitModel(index):
             print(index)
