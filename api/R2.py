@@ -197,7 +197,7 @@ class R2(object): # R2 master class instanciated by the GUI
             print('NOT IMPLEMENTED YET')
             
         self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                errTyp=self.errTyp, ip=ipBool, errTypIP='none')
+                errTyp=self.errTyp, ip=ipBool, errTypIP=self.errTypIP)
             
               
         self.runR2()
