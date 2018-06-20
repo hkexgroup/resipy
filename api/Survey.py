@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from parsers import *
-from DCA import DCA
+from api.parsers import syscalParser
+from api.DCA import DCA
 
 class Survey(object):
     def __init__(self, fname, ftype=None, name=''):
@@ -582,14 +582,14 @@ class Survey(object):
     def write2protocol(self, outputname='', errTyp='obs', errTot=False, ip=False, errTypIP='none'):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         x = self.df[['a','b','m','n']].values[ie,:]
-        self.dfg['Phase'] = self.df['Phase'].values[ie]
         xx = np.c_[1+np.arange(len(x)), x]
         protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         haveReciprocal = all(self.df['irecip'].values == 0)
 #        print('haveReciprocal = ', haveReciprocal)
-        if haveReciprocal == False:
+        if haveReciprocal == False: # so we have reciprocals
             protocol['R'] = self.dfg['recipMean'].values    
             if ip == True:
+                self.dfg['Phase'] = self.df['Phase'].values[ie]
                 if 'Phase' not in self.dfg.columns: # TO BE DELETED
                     self.dfg['Phase'] = 0 # TO BE DELETED
                 protocol['Phase'] = self.dfg['Phase'].values
@@ -607,7 +607,7 @@ class Survey(object):
                     if len(self.modError) == 0:
                         print('ERROR : you must specify a modelling error')
                     else:
-                        protocol['error'] = np.sqrt(error**2 + self.modError[ie]**2)
+                        protocol['error'] = np.sqrt(protocol['error']**2 + self.modError[ie]**2)
             if errTypIP != 'none':
                 if 'PhaseError' not in self.dfg.columns: # TO BE DELETED
                     self.dfg['PhaseError'] = 0.1 # TO BE DELTED

@@ -4,9 +4,12 @@ block_cipher = None
 
 
 a = Analysis(['ui.py'],
-             pathex=['/media/jkl/data/phd/tmp/r2gui/api'],
+             pathex=[],
              binaries=[],
-             datas=[('R2.exe','./exe'),('gmsh.exe','./exe')]],
+             datas=[('./api/exe/R2.exe','./api/exe'),
+					('./api/exe/gmsh.exe','./api/exe'),
+					('./api/exe/cR2.exe', './api/exe'),
+					('./api/invdir', './api/invdir')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],

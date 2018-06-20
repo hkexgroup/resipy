@@ -18,16 +18,11 @@ OS = platform.system()
 
 #sys.path.append(os.path.relpath('../api'))
 
-#from QuadMesh import QuadMesh
-#from TriMesh import TriMesh
-
-from Survey import Survey
-from r2in import write2in
-import meshTools as mt
-from meshTools import Mesh_obj
-from gmshWrap import tri_mesh
-#from testMesh import QuadMesh
-
+from api.Survey import Survey
+from api.r2in import write2in
+import api.meshTools as mt
+from api.meshTools import Mesh_obj
+from api.gmshWrap import tri_mesh
 
 
 class R2(object): # R2 master class instanciated by the GUI
@@ -35,7 +30,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if dirname == '':
             dirname = os.getcwd()
             print('using the current directory:', dirname)
-        self.dirname = dirname # working directory
+        self.dirname = dirname # working directory (for the datas)
+        self.cwd = os.getcwd() # directory of the code
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
@@ -103,7 +99,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         if typ == 'trian':
-            mesh, e_ranges = tri_mesh([],[], self.elec[:,0], self.elec[:,1], save_path=os.path.join(self.dirname, 'mesh.dat'))
+            mesh, e_ranges = tri_mesh([],[], self.elec[:,0], self.elec[:,1], path=os.path.join(self.cwd, 'api', 'exe'), save_path=os.path.join(self.dirname, 'mesh.dat'))
             self.param['mesh_type'] = 3
             self.param['num_regions'] = len(e_ranges)
             self.param['regions'] = np.array(e_ranges)

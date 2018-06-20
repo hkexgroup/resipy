@@ -28,7 +28,7 @@ from subprocess import PIPE, Popen, call
 #anaconda libraries
 import numpy as np
 #import R2gui API package 
-import meshTools as mt  
+import api.meshTools as mt  
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -378,20 +378,19 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
     #mesh.dat in the Executables directory
 ###############################################################################
     #check directories 
-    try:
-        os.stat("exe")
-    except FileNotFoundError:
-        print("could not find Executables directory")
-        os.mkdir("exe")
-    if not os.path.isfile("exe/gmsh.exe"):
+#    try:
+#        os.stat("exe")
+#    except FileNotFoundError:
+#        print("could not find Executables directory")
+#        os.mkdir("exe")
+    if not os.path.isfile(os.path.join(path,'gmsh.exe')):
         raise EnvironmentError("No gmsh.exe exists in the Executables directory!")
     #make .geo file
     file_name="temp"
     node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=path)
     # handling gmsh
     cwd=os.getcwd()#get current working directory 
-    ewd=os.path.join(cwd,"exe")#change working directory to /Executables
-    os.chdir(ewd)#ewd - exe working directory 
+    os.chdir(path)#ewd - exe working directory 
     
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = 'gmsh.exe '+file_name+'.geo -2'

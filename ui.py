@@ -26,13 +26,13 @@ from datetime import datetime
 from matplotlib import rcParams
 rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
 
-sys.path.append(os.path.relpath('../api')) # not needed anymore
+#sys.path.append(os.path.relpath('../api')) # not needed anymore
 
 #from mesh_class import mesh_obj
 #import meshTools as mt
 #from meshTools import Mesh_obj
-from R2 import R2
-from r2help import r2help
+from api.R2 import R2
+from api.r2help import r2help
 
 # small code to see where are all the directories
 frozen = 'not'
@@ -145,7 +145,8 @@ class App(QMainWindow):
         super().__init__()
         self.setWindowTitle('R2 GUI')
         self.setGeometry(100,100,1000,600)
-        self.r2 = R2(os.path.join(bundle_dir, 'invdir'))
+        self.r2 = R2(os.path.join(bundle_dir, 'api', 'invdir'))
+        self.r2.cwd = bundle_dir
         
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -178,6 +179,7 @@ class App(QMainWindow):
         def getwd():
             fdir = QFileDialog.getExistingDirectory(tab1, 'Choose Working Directory')
             self.r2.setwd(fdir)
+            print('Working directory = ', fdir)
             wd.setText(fdir)
             
         wd = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
@@ -829,10 +831,10 @@ class App(QMainWindow):
             exeName = self.r2.typ + '.exe'
             
             if frozen == 'not':
-                shutil.copy(os.path.join('./exe', exeName),
+                shutil.copy(os.path.join('api','exe', exeName),
                     os.path.join(self.r2.dirname, exeName))
             else:
-                shutil.copy(os.path.join(bundle_dir, 'exe', exeName),
+                shutil.copy(os.path.join(bundle_dir, 'api', 'exe', exeName),
                     os.path.join(self.r2.dirname, exeName))
             
             self.process = QProcess(self)
