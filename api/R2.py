@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from subprocess import PIPE, call, Popen
 OS = platform.system()
 
-#sys.path.append(os.path.relpath('../api'))
+sys.path.append(os.path.relpath('..'))
 
 from api.Survey import Survey
 from api.r2in import write2in
@@ -124,19 +124,25 @@ class R2(object): # R2 master class instanciated by the GUI
         '''
         if typ == '':
             typ = self.typ
-        # check if survey has reciprocal (and so error model)
         if all(self.surveys[0].df['irecip'].values == 0):
-            self.param['wgt_a'] = 0.01
-            self.param['wgt_b'] = 0.02
+            if 'a_wgt' not in self.param:
+                self.param['a_wgt'] = 0.01
+            if 'b_wft' not in self.param:
+                self.param['b_wgt'] = 0.02
         if typ == 'cR2':
             if self.errTypIP != 'none': # we have individual errors
-                self.param['c_wgt'] = 0
-                self.param['d_wgt'] = 0
-                self.param['a_wgt'] = 0.01 # not sure of that (Gui)
+                if 'b_wgt' not in self.param:
+                    self.param['b_wgt'] = 0
+                if 'c_wgt' not in self.param:
+                    self.param['c_wgt'] = 0
+                if 'a_wgt' not in self.param:
+                    self.param['a_wgt'] = 0.01 # not sure of that (Gui)
             else:
-                print('kkk')
-                self.param['c_wgt'] = 0.1 # better if set by user !!
-                self.param['d_wgt'] = 0.2
+                if 'c_wgt' not in self.param:
+                    self.param['c_wgt'] = 1 # better if set by user !!
+                if 'd_wgt' not in self.param:
+                    self.param['d_wgt'] = 2
+                
         # all those parameters are default but the user can change them and call
         # write2in again
         for p in param:
@@ -145,8 +151,23 @@ class R2(object): # R2 master class instanciated by the GUI
         self.configFile = write2in(self.param, self.dirname, typ=typ)
 
 
-    def write2protocol(self, **kwargs): # DEPRACATED
-        self.surveys[0].write2protocol(**kwargs)
+    def write2protocol(self, errTyp='', errTypIP='', **kwargs):
+        if self.typ == 'R2':
+            ipBool = False
+        elif self.typ == 'cR2':
+            ipBool = True
+        else:
+            print('NOT IMPLEMENTED YET')
+
+        if errTyp == '':
+            errTyp = self.errTyp
+        if ipBool == True:
+            if errTypIP == '':
+                errTypIP = self.errTypIP
+        
+        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
+                errTyp=self.errTyp, ip=ipBool, errTypIP=self.errTypIP)
+        
         
         
     def runR2(self):
@@ -185,16 +206,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.configFile == '':
             self.write2in(param=param)
         
-        if self.typ == 'R2':
-            ipBool = False
-        elif self.typ == 'cR2':
-            ipBool = True
-        else:
-            print('NOT IMPLEMENTED YET')
-            
-        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                errTyp=self.errTyp, ip=ipBool, errTypIP=self.errTypIP)
-            
+        self.write2protocol()    
               
         self.runR2()
         
@@ -320,6 +332,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
+#k.pwlfit()
+#k.errTyp='obs'
 #k.lmefit(iplot=True)
 #k.createMesh(typ='quad')
 #k.createMesh(typ='trian')
@@ -328,6 +342,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #fig.suptitle('kkk')
 #k.mesh.show(ax=ax)
 #k.write2in()
+#k.plotIPFit()
+#k.errTyp = 'pwl'
+#k.errTypIP = 'pwl'
 #k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()

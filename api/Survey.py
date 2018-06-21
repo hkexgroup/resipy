@@ -47,6 +47,11 @@ class Survey(object):
         
         if all(irecip == 0) == False: # contains reciprocal
             self.basicFilter()
+        
+#        self.typ = 'R2' # or cR2 or R3, cR3
+#        self.errTyp = 'none' # type of error to add for DC
+#        self.errTypIP = 'none' # type of error to add for IP phase
+ 
             
     
     def basicFilter(self):
@@ -273,6 +278,7 @@ class Survey(object):
             return fig   
 
     def pwlfit(self, ax = None):
+#        self.errTyp = 'pwl'
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
@@ -306,6 +312,7 @@ class Survey(object):
             return fig
 
     def linfit(self, iplot=True, ax=None):
+#        self.errTyp = 'lin'
         # # linear fit
         # if 'recipMean' not in self.dfg.columns:
         #     self.reciprocal()
@@ -426,6 +433,7 @@ class Survey(object):
             return figs
         
     def lmefit(self, iplot=True, ax=None):
+#        self.errTyp = 'lme'
         print('NOT IMPLEMENTED YET')
 #        # fit linear mixed effect model
 #        # NEED filterData() before
@@ -579,19 +587,24 @@ class Survey(object):
         if ax is None:
             return fig
     
-    def write2protocol(self, outputname='', errTyp='obs', errTot=False, ip=False, errTypIP='none'):
+    def write2protocol(self, outputname='', errTyp='none', errTot=False, ip=False, errTypIP='none'):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         x = self.df[['a','b','m','n']].values[ie,:]
         xx = np.c_[1+np.arange(len(x)), x]
         protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         haveReciprocal = all(self.df['irecip'].values == 0)
 #        print('haveReciprocal = ', haveReciprocal)
+#        if errTyp == '':
+#            errTyp = self.errTyp
+#        if ip == True:
+#            if errTypIP == '':
+#                errTypIP == self.errTypIP
         if haveReciprocal == False: # so we have reciprocals
             protocol['R'] = self.dfg['recipMean'].values    
             if ip == True:
-                self.dfg['Phase'] = self.df['Phase'].values[ie]
-                if 'Phase' not in self.dfg.columns: # TO BE DELETED
-                    self.dfg['Phase'] = 0 # TO BE DELETED
+                self.dfg['Phase'] = self.df['ip'].values[ie]
+#                if 'Phase' not in self.dfg.columns: # TO BE DELETED
+#                    self.dfg['Phase'] = 0 # TO BE DELETED
                 protocol['Phase'] = self.dfg['Phase'].values
             if errTyp != 'none':
                 if errTyp == 'obs':
@@ -608,10 +621,11 @@ class Survey(object):
                         print('ERROR : you must specify a modelling error')
                     else:
                         protocol['error'] = np.sqrt(protocol['error']**2 + self.modError[ie]**2)
-            if errTypIP != 'none':
+            if errTypIP != 'none':  # or == 'pwlip'
                 if 'PhaseError' not in self.dfg.columns: # TO BE DELETED
                     self.dfg['PhaseError'] = 0.1 # TO BE DELTED
                 protocol['ipError'] = self.df['PhaseError'].values[ie]
+                
         else: # why don't they have reciprocals my god !!
             ie = np.ones(len(self.df), dtype=bool)
             protocol['R'] = self.df['resist'].values
@@ -1155,6 +1169,8 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #s.manualFilter()
 #s.pseudo(contour=True, ax=ax)
 #s.linfit()
-#s.write2protocol('test/protocol.dat', ip=True, errTypIP='pwl')
+#s.pwlfit()
+#s.plotIPFit()
+#s.write2protocol('test/protocol.dat', errTyp='lin', ip=True, errTypIP='pwl')
 #s.dca()
         

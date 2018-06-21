@@ -3,7 +3,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-    QTableWidget, QFormLayout)
+    QTableWidget, QFormLayout, QMessageBox)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 from PyQt5.QtCore import Qt
@@ -319,6 +319,12 @@ class App(QMainWindow):
         
         errorLayout = QVBoxLayout()
         
+        def errorModelSpecified():
+            a_wgt.setText('0.0')
+            a_wgtFunc()
+            b_wgt.setText('0.0')
+            b_wgtFunc()
+        
         def plotError():
             mwFitError.plot(self.r2.plotError)
             self.r2.errTyp = 'obs'
@@ -326,7 +332,7 @@ class App(QMainWindow):
         def fitLinError():
             mwFitError.plot(self.r2.linfit)
             self.r2.errTyp = 'lin'
-        
+            
         def fitLmeError():
             print('NOT READY YET')
             mwFitError.plot(self.r2.lmefit)
@@ -348,6 +354,16 @@ class App(QMainWindow):
                 fitLmeError()
             else:
                 print('NOT IMPLEMENTED YET')
+            if index == 0:
+                a_wgt.setText('0.01')
+                a_wgtFunc()
+                b_wgt.setText('0.02')
+                b_wgtFunc()
+            else:
+                a_wgt.setText('0.0')
+                a_wgtFunc()
+                b_wgt.setText('0.0')
+                b_wgtFunc()
         
         errFitType = QComboBox()
         errFitType.addItem('Observed Errors')
@@ -379,6 +395,17 @@ class App(QMainWindow):
                 phasePLerr()
             else:
                 print('NOT IMPLEMENTED YET')
+            if index == 0:
+                b_wgt.setText('0.02')
+                b_wgtFunc()
+                c_wgt.setText('1.0')
+                c_wgtFunc()
+            else:
+                b_wgt.setText('0.0')
+                b_wgtFunc()
+                c_wgt.setText('0.0')
+                c_wgtFunc()
+            
             
         iperrFitType = QComboBox()
         iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
@@ -696,7 +723,7 @@ class App(QMainWindow):
         a_wgtLabel.linkActivated.connect(showHelp)
         a_wgt = QLineEdit()
         a_wgt.setValidator(QDoubleValidator())
-        a_wgt.setText('0.0')
+        a_wgt.setText('0.01')
         a_wgt.editingFinished.connect(a_wgtFunc)
         invForm.addRow(a_wgtLabel, a_wgt)
         
@@ -706,31 +733,31 @@ class App(QMainWindow):
         b_wgtLabel.linkActivated.connect(showHelp)
         b_wgt = QLineEdit()
         b_wgt.setValidator(QDoubleValidator())
-        b_wgt.setText('0.0')
+        b_wgt.setText('0.02')
         b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(b_wgtLabel, b_wgt)
         
         def c_wgtFunc():
-            self.r2.param['b_wgt'] = float(c_wgt.text())
+            self.r2.param['c_wgt'] = float(c_wgt.text())
         c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
         c_wgtLabel.linkActivated.connect(showHelp)
         c_wgtLabel.setVisible(False)
         c_wgt = QLineEdit()
         c_wgt.setValidator(QDoubleValidator())
-        c_wgt.setText('2')
+        c_wgt.setText('1')
         c_wgt.editingFinished.connect(c_wgtFunc)
         c_wgt.setVisible(False)
         invForm.addRow(c_wgtLabel, c_wgt)
         
         def d_wgtFunc():
             self.r2.param['d_wgt'] = float(d_wgt.text())
-        d_wgtLabel = QLabel('<a href="errorParam"><code>b_wgt</code></a>:')
+        d_wgtLabel = QLabel('<a href="errorParam"><code>d_wgt</code></a>:')
         d_wgtLabel.linkActivated.connect(showHelp)
         d_wgtLabel.setVisible(False)
         d_wgt = QLineEdit()
         d_wgt.setValidator(QDoubleValidator())
-        d_wgt.setText('1')
-        d_wgt.editingFinished.connect(b_wgtFunc)
+        d_wgt.setText('2')
+        d_wgt.editingFinished.connect(d_wgtFunc)
         d_wgt.setVisible(False)
         invForm.addRow(d_wgtLabel, d_wgt)
         
@@ -816,20 +843,20 @@ class App(QMainWindow):
             cursor.insertText(str(self.process.readAll(), 'utf-8'))
             logText.ensureCursorVisible()
             
+            
         def logInversion():
 #            self.r2.invert(callback=dataReady)
 #            dataReady('kk\n')
-            param = {} # TODO to be set in the previous tab
             if 'mesh' not in self.r2.param:
                 generateMesh() # that will call mesh creation
         
             # write configuration file
-#            if self.r2.configFile == '':
-            self.r2.write2in(param=param)
-        
-            self.r2.surveys[0].write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
-            exeName = self.r2.typ + '.exe'
+            self.r2.write2in()
             
+            # write protocol file
+            self.r2.write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
+            
+            exeName = self.r2.typ + '.exe'
             if frozen == 'not':
                 shutil.copy(os.path.join('api','exe', exeName),
                     os.path.join(self.r2.dirname, exeName))
@@ -842,18 +869,27 @@ class App(QMainWindow):
             # QProcess emits `readyRead` when there is data to be read
             self.process.readyRead.connect(dataReady)
             if OS == 'Linux':
-                self.process.start('wine R2.exe')
+                self.process.start('wine ' + exeName)
             else:
-                wdpath = "\"" + os.path.join(self.r2.dirname, 'R2.exe').replace('\\','/') + "\""
+                wdpath = "\"" + os.path.join(self.r2.dirname, exeName).replace('\\','/') + "\""
                 self.process.start(wdpath) # need absolute path and escape quotes (if space in the path)
             self.process.finished.connect(plotSection)
         
         def plotSection():
-            mwInvResult.plot(self.r2.showResults)
-            plotInvError()
-            # TODO if we want to plot different attribute
-#            mwInvResult.plot(self.r2.showSection)
+            try:
+                mwInvResult.plot(self.r2.showResults)
+                plotInvError()
+                # TODO if we want to plot different attribute
+#                mwInvResult.plot(self.r2.showSection)
+            except:# ValueError as e:
+#                msgBox(e)
+                pass
         
+        def msgBox(text):
+            msg = QMessageBox()
+            msg.setText(text)
+            
+            
         def replotSection(index=-1):
             print(index)
             mwInvResult.plot(self.r2.showResults) # TODO PASS ATTRIBUTE
