@@ -31,6 +31,10 @@ def write2in(param, dirname, typ='R2'):
             'regions':None, # should be defined by the number of element in the mesh
             'patch_x':1,
             'patch_y':1,
+            'nx1':1,
+            'nz1':1,
+            'resistst':1,
+            'phasest':-0.1,
             'inverse_type':1,
             'target_decrease':1,    
             'data_type':0,
@@ -93,18 +97,29 @@ def write2in(param, dirname, typ='R2'):
         if param['mesh_type'] == 4:
             param['regions'] = np.array([[1, (len(meshx)-1)*(len(meshy)-1), 50]])
     if param['num_regions'] > 0:
-        content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
+        if typ == 'R2':            
+            content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
+        elif typ =='cR2':
+            content = content + '{}\t{}\t{}\t{}\t{}\t{} << nx1, nx2, nz1, nz2, resis, phase\n'.format(param['nx1'],
+            len(meshx)-1,
+            param['nz1'],
+            len(meshy)-1,
+            param['resistst'],
+            param['phasest'])
     content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
     if param['job_type'] == 1 & param['mesh_type'] == 4|5:
         content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
                 param['patchx'], param['patchy'])
+    if typ == 'R2':
+        content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
+                param['inverse_type'],
+                param['target_decrease'])    
+        content = content + '{}\t{}\t<< data type (0=normal;1=log), regularization type\n\n'.format(
+                param['data_type'],
+                param['reg_mode'])
+    elif typ == 'cR2':
+        content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
     
-    content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
-            param['inverse_type'],
-            param['target_decrease'])    
-    content = content + '{}\t{}\t<< data type (0=normal;1=log), regularization type\n\n'.format(
-            param['data_type'],
-            param['reg_mode'])
     content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
             param['tol'],
             param['max_iter'],

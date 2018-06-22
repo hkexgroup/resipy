@@ -405,6 +405,8 @@ class App(QMainWindow):
                 c_wgt.setText('1.0')
                 c_wgtFunc()
             else:
+                a_wgt.setText('0.01')
+                a_wgtFunc()
                 b_wgt.setText('0.0')
                 b_wgtFunc()
                 c_wgt.setText('0.0')
