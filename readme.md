@@ -9,7 +9,7 @@ Project structure
 -----------------
 
 ![project structure](structure.png)*General overlook of the project structure with the three main parts.*
-Don't hesitate to consult the [structure.md](structure.md) for more detailed information about each file of the project.
+Don't hesitate to consult the [structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
 
 
 Download/Clone the project
