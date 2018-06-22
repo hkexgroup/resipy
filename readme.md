@@ -2,14 +2,16 @@ GUI for R2 family code
 ======================
 
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
-provides a standalone graphical user interface (GUI) along with a python API for use in jupyter notebook.
+provides a standalone graphical user interface (GUI) along with a python API* for use in jupyter notebook.
+
+*API = Application Programming Interface
 
 
 Project structure
 -----------------
 
 ![project structure](structure.png)*General overlook of the project structure with the three main parts.*
-Don't hesitate to consult the [structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
+Don't hesitate to consult the [api-structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
 
 
 Download/Clone the project
