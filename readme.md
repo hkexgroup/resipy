@@ -58,9 +58,9 @@ Best practices
 Here are a set of best coding practices that we need to respect in order to make a
 simple, consistent and as easy to maintain as possible code:
 
-- use classes to group functions inside the python API (for instance all functions dealing with meshes should be implemented inside a big Mesh class if possible)
-- document functions : you can document your function directly in the code using the ReStructuredText convention (<link needed>) or just use comment with #
-- separation of API and GUI should allow to use the python API in jupyter notebook as well as in standalone GUI using pyQt5
+- use **classes** to group functions inside the python API (for instance all functions dealing with meshes should be implemented inside a big Mesh class if possible)
+- **document** functions : you can document your function directly in the code using the ReStructuredText convention (<link needed>) or just use comment with #
+- **separation of API and GUI** should allow to use the python API in jupyter notebook as well as in standalone GUI using pyQt5
 
 
 
