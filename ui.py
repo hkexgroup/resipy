@@ -145,7 +145,11 @@ class App(QMainWindow):
         super().__init__()
         self.setWindowTitle('R2 GUI')
         self.setGeometry(100,100,1000,600)
-        self.r2 = R2(os.path.join(bundle_dir, 'api', 'invdir'))
+        newwd = os.path.join(bundle_dir, 'api', 'invdir')
+        if os.path.exists(newwd):
+            shutil.rmtree(newwd)
+            os.mkdir(newwd)
+        self.r2 = R2(newwd)
         self.r2.cwd = bundle_dir
         
         self.table_widget = QWidget()
