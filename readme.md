@@ -9,6 +9,8 @@ Project structure
 -----------------
 
 ![project structure](structure.png)*General overlook of the project structure with the three main parts.*
+Don't hesitate to consult the (./structure.md) for more detailed information about each file of the project.
+
 
 Download/Clone the project
 -----
@@ -29,10 +31,10 @@ Try the GUI
 
 To test the GUI:
 ```
-cd r2gui/gui-pyqt
-python main.py
+cd r2gui
+python ui.py
 ```
-you can then test the GUI by first setting a working directory (./api/test) and specifying a survey file (./api/test/syscalFile.csv).
+You can then test the GUI by first setting a working directory (./api/test) and specifying a survey file (./api/test/syscalFile.csv).
 
 
 Try the Jupyter Notebook
@@ -40,10 +42,11 @@ Try the Jupyter Notebook
 To start the Jupyter notebook:
 ```
 cd r2gui/examples/jupyter-notebook
-jupyter notebook # the command is jupyter-notebook (with a dash) on Linux but without dash on Windows
+jupyter notebook # the command is jupyter-notebook (with a dash) on Linux but without on Windows
 ```
 
 You can then execute each cell of the notebook using ```Shift + Enter```. This will work on the same example as for the GUI above.
+To edit a cell, just double click on it.
 
 
 
