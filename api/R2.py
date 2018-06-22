@@ -176,10 +176,15 @@ class R2(object): # R2 master class instanciated by the GUI
         cwd = os.getcwd()
         os.chdir(self.dirname)
         targetName = os.path.join(self.dirname, exeName)
+#        actualPath = os.path.dirname(os.path.realpath(__file__))
+        actualPath = os.path.dirname(os.path.relpath(__file__))
+        print(actualPath)
+        print(os.path.relpath(__file__))
+        print(os.path.abspath(__file__))
         
         # copy R2.exe
         if ~os.path.exists(targetName):
-            shutil.copy(os.path.join(cwd, 'exe', exeName), targetName)  
+            shutil.copy(os.path.join(actualPath, 'exe', exeName), targetName)  
         
         if OS == 'Linux':
             cmd = ['wine',exeName]
@@ -351,4 +356,4 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
 #k.showResults(ax=ax)
-
+#print(os.path.dirname(os.path.realpath(__file__)))
