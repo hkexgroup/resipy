@@ -176,11 +176,7 @@ class R2(object): # R2 master class instanciated by the GUI
         cwd = os.getcwd()
         os.chdir(self.dirname)
         targetName = os.path.join(self.dirname, exeName)
-#        actualPath = os.path.dirname(os.path.realpath(__file__))
         actualPath = os.path.dirname(os.path.relpath(__file__))
-        print(actualPath)
-        print(os.path.relpath(__file__))
-        print(os.path.abspath(__file__))
         
         # copy R2.exe
         if ~os.path.exists(targetName):
@@ -353,7 +349,18 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()
+#k.showResults(attr='Resistivity')
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
 #k.showResults(ax=ax)
 #print(os.path.dirname(os.path.realpath(__file__)))
+
+
+fresults = os.path.join('./test/f001_res.vtk')
+if os.path.isfile(fresults):
+    print('kk')
+    mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
+    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+    mesh.show()
+
+

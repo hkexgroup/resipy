@@ -36,7 +36,7 @@ def write2in(param, dirname, typ='R2'):
             'resistst':1,
             'phasest':-0.1,
             'inverse_type':1,
-            'target_decrease':1,    
+            'target_decrease':0,    
             'data_type':0,
             'reg_mode':0,
             'tol':1,

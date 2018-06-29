@@ -793,7 +793,7 @@ class App(QMainWindow):
         target_decreaseLabel.linkActivated.connect(showHelp)
         target_decrease = QLineEdit()
         target_decrease.setValidator(QDoubleValidator())
-        target_decrease.setText('1.0')
+        target_decrease.setText('0')
         target_decrease.editingFinished.connect(target_decreaseFunc)
         invForm.addRow(target_decreaseLabel, target_decrease)
                 
