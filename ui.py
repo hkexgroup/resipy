@@ -138,7 +138,6 @@ class MatplotlibWidget(QWidget):
 #        
 #        self.newSample.emit(randomSample)
 
-
 class App(QMainWindow):
  
     def __init__(self, parent=None):
@@ -839,15 +838,34 @@ class App(QMainWindow):
 #        
 #        grid.addWidget(btn, 1, 0)
 #        grid.addWidget(mw, 2, 0)
-#        
+        
+        self.rms = []
         
         # run R2
         def dataReady():
             cursor = logText.textCursor()
             cursor.movePosition(cursor.End)
 #            cursor.insertText(text)
-            cursor.insertText(str(self.process.readAll(), 'utf-8'))
+            text = str(self.process.readAll(), 'utf-8')
+            cursor.insertText(text)
             logText.ensureCursorVisible()
+
+            # plot RMS graph
+            def parseRMS(ax):
+                tt = text.split('\n')
+                if len(tt) > 1:
+                    for i in range(len(tt)):
+                        a = tt[i].split()
+                        if len(a) > 0:
+                            if a[0] == 'Initial':
+                                self.rms.append(float(a[3]))
+                            if a[0] == 'Processing':
+                                self.rms = [] # flush x if we start new processing
+                    if len(self.rms) > 0:
+                        ax.plot(self.rms, 'o-')
+                ax.set_xlabel('Iterations')
+                ax.set_ylabel('RMS Misfit')
+            mwRMS.plot(parseRMS)
             
             
         def logInversion():
@@ -915,9 +933,18 @@ class App(QMainWindow):
         btn.clicked.connect(logInversion)
         invLayout.addWidget(btn)
         
+        logLayout = QHBoxLayout()
+        
         logText = QTextEdit()
         logText.setReadOnly(True)
-        invLayout.addWidget(logText)
+        logLayout.addWidget(logText)
+        
+        mwRMS = MatplotlibWidget(navi=False)
+        logLayout.addWidget(mwRMS)
+
+        logLayout.setStretch(0, 60)
+        logLayout.setStretch(1, 40)        
+        invLayout.addLayout(logLayout)
         
         # option for display
         displayOptions = QHBoxLayout()
