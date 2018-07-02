@@ -859,8 +859,8 @@ class App(QMainWindow):
                         if len(a) > 0:
                             if a[0] == 'Initial':
                                 self.rms.append(float(a[3]))
-                            if a[0] == 'Processing':
-                                self.rms = [] # flush x if we start new processing
+#                            if a[0] == 'Processing':
+#                                self.rms = [] # flush x if we start new processing
                     if len(self.rms) > 0:
                         ax.plot(self.rms, 'o-')
                 ax.set_xlabel('Iterations')
