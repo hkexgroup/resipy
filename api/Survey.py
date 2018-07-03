@@ -18,7 +18,7 @@ from api.parsers import syscalParser
 from api.DCA import DCA
 
 class Survey(object):
-    def __init__(self, fname, ftype=None, name='', spacing=None):
+    def __init__(self, fname, ftype='', name='', spacing=None):
         self.elec = []
         self.df = pd.DataFrame()
         self.name = name

@@ -172,13 +172,17 @@ class App(QMainWindow):
         
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
-                 print('timelapse checked')
                  self.r2.iTimeLapse = True
+                 buttonf.setText('Import Data Directory')
+                 buttonf.clicked.disconnect()
+                 buttonf.clicked.connect(getdir)
             else:
-                print('kk')
                 self.r2.iTimeLapse = False
+                buttonf.setText('Import Data')
+                buttonf.clicked.disconnect()
+                buttonf.clicked.connect(getfile)
                 
-        timeLapseCheck = QCheckBox('Time Lapse Survey')
+        timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
         
         def boreholeCheckFunc(state):
@@ -210,21 +214,48 @@ class App(QMainWindow):
         wd = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
         wd.clicked.connect(getwd)
         
-
+        
+        ftype = 'Syscal' # by default
+        
+        def fileTypeFunc(index):
+            if index == 0:
+                ftype = 'Syscal'
+            else:
+                ftype = '' # let to be guessed
+        fileType = QComboBox()
+        fileType.addItem('Syscal')
+        fileType.currentIndexChanged.connect(fileTypeFunc)
+        
+        spacingEdit = QLineEdit()
+        spacingEdit.setValidator(QDoubleValidator())
+        spacingEdit.setText('-1.0') # -1 let it search for the spacing
+        
+        
+        def getdir():
+            fdir = QFileDialog.getExistingDirectory(tab1, 'Choose the directory containing the data')
+            self.r2.createTimeLapseSurvey(fdir)
+            buttonf.setText(fdir + ' (Press to change)')
+            plotPseudo()
+            
         def getfile():
+            print('ftype = ', ftype)
             fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
             if len(self.r2.surveys) > 0: # will need to change this for time-lapse
                 self.r2.surveys = []
             if fname != '':
                 self.fname = fname
-                buttonf.setText(self.fname)
-                self.r2.createSurvey(self.fname)
+                buttonf.setText(self.fname + ' (Press to change)')
+                if float(spacingEdit.text()) == -1:
+                    spacing = None
+                else:
+                    spacing = float(spacingEdit.text())
+                self.r2.createSurvey(self.fname, ftype=ftype, spacing=spacing)
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     hbox4.addWidget(buttonfr)
                 else:
                     tabPreProcessing.setTabEnabled(1, True)
                     plotError()
-                generateMesh()
+#                generateMesh()
                 plotPseudo()
         
         buttonf = QPushButton('Import Data') 
@@ -233,7 +264,11 @@ class App(QMainWindow):
         def getfileR():
             fnameRecip, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
             buttonfr.setText(fnameRecip)
-            self.r2.surveys[0].addData(fnameRecip)
+            if float(spacingEdit.text()) == -1:
+                spacing = None
+            else:
+                spacing = float(spacingEdit.text())
+            self.r2.surveys[0].addData(fnameRecip, ftype=ftype, spacing=spacing)
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                 tabPreProcessing.setTabEnabled(1, True) # no point in doing error processing if there is no reciprocal
                 plotError()
@@ -242,7 +277,9 @@ class App(QMainWindow):
         buttonfr.clicked.connect(getfileR)
         
         hbox4 = QHBoxLayout()
-        hbox4.addWidget(buttonf)
+        hbox4.addWidget(fileType, 15)
+        hbox4.addWidget(spacingEdit, 10)
+        hbox4.addWidget(buttonf, 70)
         
         def diplayTopo(state):
             if state  == Qt.Checked:
@@ -888,7 +925,29 @@ class App(QMainWindow):
                 ax.set_xlabel('Iterations')
                 ax.set_ylabel('RMS Misfit')
             mwRMS.plot(parseRMS)
+        
+        def runR2(dirname=''):
+            # run R2
+            if dirname == '':
+                dirname = self.r2.dirname
+            exeName = self.r2.typ + '.exe'
+            if frozen == 'not':
+                shutil.copy(os.path.join('api','exe', exeName),
+                    os.path.join(self.r2.dirname, exeName))
+            else:
+                shutil.copy(os.path.join(bundle_dir, 'api', 'exe', exeName),
+                    os.path.join(self.r2.dirname, exeName))
             
+            self.process = QProcess(self)
+            self.process.setWorkingDirectory(dirname)
+            # QProcess emits `readyRead` when there is data to be read
+            self.process.readyRead.connect(dataReady)
+            if OS == 'Linux':
+                self.process.start('wine ' + exeName)
+            else:
+                wdpath = "\"" + os.path.join(self.r2.dirname, exeName).replace('\\','/') + "\""
+                self.process.start(wdpath) # need absolute path and escape quotes (if space in the path)
+
             
         def logInversion():
 #            self.r2.invert(callback=dataReady)
@@ -901,25 +960,21 @@ class App(QMainWindow):
             
             # write protocol file
             self.r2.write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
-            
-            exeName = self.r2.typ + '.exe'
-            if frozen == 'not':
-                shutil.copy(os.path.join('api','exe', exeName),
-                    os.path.join(self.r2.dirname, exeName))
+
+            def runMainInversion():
+                runR2()
+                self.process.finished.connect(plotSection)
+                
+            if self.r2.iTimeLapse == True:
+                refdir = os.path.join(self.dirname, 'ref')
+                runR2(refdir)
+                self.process.finished.connect(runMainInversion)
+                print('----------- finished inverting reference model ------------')
+                shutil.copy(os.path.join(refdir, 'f001_res.dat'),
+                            os.path.join(self.dirname, 'Start_res.dat'))
+                
             else:
-                shutil.copy(os.path.join(bundle_dir, 'api', 'exe', exeName),
-                    os.path.join(self.r2.dirname, exeName))
-            
-            self.process = QProcess(self)
-            self.process.setWorkingDirectory(self.r2.dirname)
-            # QProcess emits `readyRead` when there is data to be read
-            self.process.readyRead.connect(dataReady)
-            if OS == 'Linux':
-                self.process.start('wine ' + exeName)
-            else:
-                wdpath = "\"" + os.path.join(self.r2.dirname, exeName).replace('\\','/') + "\""
-                self.process.start(wdpath) # need absolute path and escape quotes (if space in the path)
-            self.process.finished.connect(plotSection)
+                runMainInversion()
         
         def plotSection():
             try:

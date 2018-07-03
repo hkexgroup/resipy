@@ -201,6 +201,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         if self.iTimeLapse == True:
             refdir = os.path.join(self.dirname, 'ref')
+            if os.path.exists(refdir) == False:
+                os.mkdir(refdir)
             param = self.param
             param['num_poly'] = 0
             self.configFile = write2in(param, refdir, typ=typ)
@@ -461,7 +463,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 
 #%% test for timelapse inversion
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test/')
 #k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
 #k.invert(iplot=False) #TODO run but doesn't converge !
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
