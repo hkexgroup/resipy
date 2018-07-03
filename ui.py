@@ -170,13 +170,35 @@ class App(QMainWindow):
         dateEdit = QLineEdit()
         dateEdit.setText(datetime.now().strftime('%Y-%m-%d')) # get today date
         
+        def timeLapseCheckFunc(state):
+            if state == Qt.Checked:
+                 print('timelapse checked')
+                 self.r2.iTimeLapse = True
+            else:
+                print('kk')
+                self.r2.iTimeLapse = False
+                
+        timeLapseCheck = QCheckBox('Time Lapse Survey')
+        timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
+        
+        def boreholeCheckFunc(state):
+            if state == Qt.Checked:
+                self.r2.iBorehole = True
+            else:
+                self.r2.iBorehole = False
+                
+        boreholeCheck = QCheckBox('Borehole Survey')
+        boreholeCheck.stateChanged.connect(boreholeCheckFunc)
+        
         hbox1 = QHBoxLayout()
         hbox1.addWidget(title)
         hbox1.addWidget(titleEdit)
+        hbox1.addWidget(timeLapseCheck)
         
         hbox2 = QHBoxLayout()
         hbox2.addWidget(date)
         hbox2.addWidget(dateEdit)
+        hbox2.addWidget(boreholeCheck)
         
         # ask for working directory, and survey file to input
         def getwd():

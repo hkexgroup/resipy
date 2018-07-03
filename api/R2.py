@@ -461,7 +461,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 
 #%% test for timelapse inversion
-k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
-k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
-k.invert()
-
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
+#k.invert(iplot=False) #TODO run but doesn't converge !
+#k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
+#k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))
