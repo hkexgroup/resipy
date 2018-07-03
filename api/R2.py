@@ -38,8 +38,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.typ = 'R2' # or cR2 or R3, cR3
-        self.errTyp = 'obs' # type of error to add for DC
+        self.errTyp = '' # type of error to add for DC
         self.errTypIP = 'none' # type of error to add for IP phase
+        self.iBorehole = False
+        self.iTimeLapse = False
         
         
     def setwd(self, dirname):
@@ -48,7 +50,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = dirname
     
     
-    def createSurvey(self, fname, ftype='Syscal', info={}):
+    def createSurvey(self, fname, ftype='Syscal', info={}, spacing=None):
         ''' read electrode and quadrupoles data and return 
         a survey object
         
@@ -56,7 +58,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ftype : type of file to be parsed
         info : dict of info about the survey
         '''    
-        self.surveys.append(Survey(fname, ftype))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing))
         self.surveysInfo.append(info)
         
         # define electrode position according to first survey
@@ -71,7 +73,56 @@ class R2(object): # R2 master class instanciated by the GUI
             self.pwlfit = self.surveys[0].pwlfit
             self.phaseplotError = self.surveys[0].phaseplotError
             self.plotIPFit = self.surveys[0].plotIPFit
+
+
+    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
+        ''' read electrode and quadrupoles data and return 
+        a survey object
         
+        fname : filename to be parsed
+        ftype : type of file to be parsed
+        info : dict of info about the survey
+        '''
+        self.iTimeLapse = True
+        self.iTimeLapseReciprocal = [] # true if survey has reciprocal
+        files = np.sort(os.listdir(dirname))
+        for f in files:
+            self.createSurvey(os.path.join(dirname, f))
+            haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
+            self.iTimeLapseReciprocal.append(haveReciprocal)
+            print('---------', f, 'imported')
+            if len(self.surveys) == 1:
+                ltime = len(self.surveys[0].df)
+            if len(self.surveys) > 1:
+                if len(self.surveys[-1].df) != ltime:
+                    print('ERROR:', f, 'survey doesn\'t have the same length')
+                    return
+        self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
+        self.elec = self.surveys[0].elec
+        
+        
+        # create bigSurvey
+        print('creating bigSurvey')
+        self.bigSurvey = Survey(os.path.join(dirname, files[0]), ftype=ftype)
+        # then override the df
+        if len(isurveys) == 0: # assume all surveys would be use for error modelling
+            isurveys = np.ones(len(self.surveys), dtype=bool)
+        isurveys = np.where(isurveys)[0] # convert to indices
+        df = self.bigSurvey.df.copy()
+        for i in isurveys:
+            df.append(self.surveys[i].df)
+        self.bigSurvey.df = df.copy() # override it
+        self.bigSurvey.dfOrigin = df.copy()
+        
+        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
+            
+        self.plotError = self.bigSurvey.plotError
+        self.linfit = self.bigSurvey.linfit
+        self.lmefit = self.bigSurvey.lmefit
+        self.pwlfit = self.bigSurvey.pwlfit
+        self.phaseplotError = self.bigSurvey.phaseplotError
+        self.plotIPFit = self.bigSurvey.plotIPFit
+            
     
     def createMesh(self, typ='default', **kwargs):
         ''' create a mesh object
@@ -147,9 +198,20 @@ class R2(object): # R2 master class instanciated by the GUI
         # write2in again
         for p in param:
             self.param[p] = param[p]
-            
-        self.configFile = write2in(self.param, self.dirname, typ=typ)
-
+        
+        if self.iTimeLapse == True:
+            refdir = os.path.join(self.dirname, 'ref')
+            param = self.param
+            param['num_poly'] = 0
+            self.configFile = write2in(param, refdir, typ=typ)
+            param = self.param
+            param['num_regions'] = 0
+            param['timeLapse'] = 'Start_res.dat'
+            write2in(param, self.dirname, typ=typ)
+        else:
+            self.configFile = write2in(self.param, self.dirname, typ=typ)
+        
+        
 
     def write2protocol(self, errTyp='', errTypIP='', **kwargs):
         if self.typ == 'R2':
@@ -165,17 +227,42 @@ class R2(object): # R2 master class instanciated by the GUI
             if errTypIP == '':
                 errTypIP = self.errTypIP
         
-        self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                errTyp=self.errTyp, ip=ipBool, errTypIP=self.errTypIP)
+        
+        if self.iTimeLapse == False:
+            self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
+                        errTyp=self.errTyp, ip=ipBool, errTypIP=self.errTypIP)
+        else:
+            # a bit simplistic but assign error to all based on Transfer resistance
+            allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
+            # let's assume it's False all the time for now
+            content = ''
+            for i, s in enumerate(self.surveys):
+                content = content + str(len(s.df)) + '\n'
+                if errTyp != '': # there is an error model
+                    s.df['error'] = self.bigSurvey.errorModel(s.df['resist'].values)
+                    s.df['index'] = np.arange(1, len(s.df)+1)
+                    content = content + s.df[['index','a','b','m','n','resist','error']].to_csv(sep='\t', header=False, index=False)
+                else:
+                    s.df['index'] = np.arange(1, len(s.df)+1)
+                    content = content + s.df[['index','a','b','m','n','resist']].to_csv(sep='\t', header=False, index=False)
+                if i == 0:
+                    refdir = os.path.join(self.dirname, 'ref')
+                    if os.path.exists(refdir) == False:
+                        os.mkdir(refdir)
+                    with open(os.path.join(refdir, 'protocol.dat'), 'w') as f:
+                        f.write(content) # write the protocol for the reference file
+            with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
+                f.write(content)
         
         
-        
-    def runR2(self):
+    def runR2(self, dirname=''):
         # run R2.exe
         exeName = self.typ + '.exe'
         cwd = os.getcwd()
-        os.chdir(self.dirname)
-        targetName = os.path.join(self.dirname, exeName)
+        if dirname == '':
+            dirname = self.dirname
+        os.chdir(dirname)
+        targetName = os.path.join(dirname, exeName)
         actualPath = os.path.dirname(os.path.relpath(__file__))
         
         # copy R2.exe
@@ -208,13 +295,21 @@ class R2(object): # R2 master class instanciated by the GUI
             self.write2in(param=param)
         
         self.write2protocol()    
-              
-        self.runR2()
+             
+        if self.iTimeLapse == True:
+            refdir = os.path.join(self.dirname, 'ref')
+            self.runR2(refdir)
+            print('----------- finished inverting reference model ------------')
+            shutil.copy(os.path.join(refdir, 'f001_res.dat'),
+                    os.path.join(self.dirname, 'Start_res.dat'))
+            self.runR2()
+        else:
+            self.runR2()
         
         if iplot is True:
 #            self.showResults()
-            self.showSection()
-    
+            self.showSection() # TODO need to debug that for timelapse and even for normal !
+            # pass an index for inverted survey time
     
     def showResults(self, ax=None, **kwargs):
         fresults = os.path.join(self.dirname, 'f001_res.vtk')
@@ -356,11 +451,17 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #print(os.path.dirname(os.path.realpath(__file__)))
 
 
-fresults = os.path.join('./test/f001_res.vtk')
-if os.path.isfile(fresults):
-    print('kk')
-    mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
-    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
-    mesh.show()
+#fresults = os.path.join('./test/f001_res.vtk')
+#if os.path.isfile(fresults):
+#    print('kk')
+#    mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
+#    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+#    mesh.show()
+#
 
+
+#%% test for timelapse inversion
+k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
+k.invert()
 

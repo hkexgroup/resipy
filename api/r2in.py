@@ -93,6 +93,8 @@ def write2in(param, dirname, typ='R2'):
     else:
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])
+    if param['num_regions'] == 0:
+        content = content + param['timeLapse'] + '\n'
     if param['regions'] is None:
         if param['mesh_type'] == 4:
             param['regions'] = np.array([[1, (len(meshx)-1)*(len(meshy)-1), 50]])

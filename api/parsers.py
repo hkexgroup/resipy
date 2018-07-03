@@ -9,8 +9,8 @@ Created on Fri Jun  1 11:23:23 2018
 import numpy as np
 import pandas as pd
 
-
-def syscalParser(fname):
+#%% usual syscal parser
+def syscalParser(fname, spacing=None):
         df = pd.read_csv(fname, skipinitialspace=True)
         # delete space at the end and the beginning of columns names
         headers = df.columns
@@ -28,7 +28,8 @@ def syscalParser(fname):
                                 'Sp':'sp'})
         
         array = df[['a','b','m','n']].values
-        spacing = np.unique(np.sort(array.flatten()))[1]
+        if spacing == None:
+            spacing = np.unique(np.sort(array.flatten()))[1]
         array = np.round(array/spacing+1).astype(int)
         df[['a','b','m','n']] = array
         df['resist'] = df['vp']/df['i']
@@ -38,6 +39,6 @@ def syscalParser(fname):
                 
         return elec, df
     
-#%%test code
+#test code
 #elec, df = syscalParser('test/syscalFile.csv')
 

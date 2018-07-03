@@ -18,13 +18,13 @@ from api.parsers import syscalParser
 from api.DCA import DCA
 
 class Survey(object):
-    def __init__(self, fname, ftype=None, name=''):
+    def __init__(self, fname, ftype=None, name='', spacing=None):
         self.elec = []
         self.df = pd.DataFrame()
         self.name = name
         
         if ftype == 'Syscal':
-            elec, data = syscalParser(fname)
+            elec, data = syscalParser(fname, spacing=spacing)
         else:
             raise Exception('Sorry this file type is not implemented yet')
         
@@ -308,6 +308,7 @@ class Survey(object):
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))           
         self.dfg['pwlError'] = a1*(np.abs(self.dfg['recipMean'])**a2)
+        self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
 
@@ -382,6 +383,7 @@ class Survey(object):
         print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin Linear plot\n' + r'$m =  %s, b = %s$ (R$^2$ = %s)' % (a1,a2,R2))     
         self.dfg['linError'] = a1*(np.abs(self.dfg['recipMean']))+a2
+        self.errorModel = lambda x : a1*(np.abs(x))+a2
         if ax is None:
             return fig                  
         
