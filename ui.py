@@ -898,14 +898,16 @@ class App(QMainWindow):
 #        grid.addWidget(btn, 1, 0)
 #        grid.addWidget(mw, 2, 0)
         
+        self.pindex = 0
         self.rms = []
+        self.rmsIndex = []
         
         # run R2
         def dataReady():
             cursor = logText.textCursor()
             cursor.movePosition(cursor.End)
 #            cursor.insertText(text)
-            text = str(self.process.readAll(), 'utf-8')
+            text = str(self.processes[-1].readAll(), 'utf-8')
             cursor.insertText(text)
             logText.ensureCursorVisible()
 
@@ -918,13 +920,26 @@ class App(QMainWindow):
                         if len(a) > 0:
                             if a[0] == 'Initial':
                                 self.rms.append(float(a[3]))
-#                            if a[0] == 'Processing':
-#                                self.rms = [] # flush x if we start new processing
+                                self.rmsIndex.append(self.pindex)
+                            if a[0] == 'Processing':
+                                print('new processing detected')
+                                self.pindex = self.pindex + 1
+                                print('index = ', self.pindex)
                     if len(self.rms) > 0:
-                        ax.plot(self.rms, 'o-')
+                        rms = np.array(self.rms)
+                        rmsIndex = np.array(self.rmsIndex)
+                        xx = np.arange(len(rms))
+                        iindex = np.unique(rmsIndex)
+                        print('iidnex', iindex)
+                        for ii in iindex:
+                            ie = rmsIndex == ii
+                            ax.plot(xx[ie], rms[ie], 'o-')
                 ax.set_xlabel('Iterations')
                 ax.set_ylabel('RMS Misfit')
             mwRMS.plot(parseRMS)
+        
+        
+        self.processes = []
         
         def runR2(dirname=''):
             # run R2
@@ -933,21 +948,21 @@ class App(QMainWindow):
             exeName = self.r2.typ + '.exe'
             if frozen == 'not':
                 shutil.copy(os.path.join('api','exe', exeName),
-                    os.path.join(self.r2.dirname, exeName))
+                    os.path.join(dirname, exeName))
             else:
                 shutil.copy(os.path.join(bundle_dir, 'api', 'exe', exeName),
-                    os.path.join(self.r2.dirname, exeName))
-            
-            self.process = QProcess(self)
-            self.process.setWorkingDirectory(dirname)
+                    os.path.join(dirname, exeName))
+            process = QProcess(self)
+            self.processes.append(process)
+            process.setWorkingDirectory(dirname)
             # QProcess emits `readyRead` when there is data to be read
-            self.process.readyRead.connect(dataReady)
+            process.readyRead.connect(dataReady)
             if OS == 'Linux':
-                self.process.start('wine ' + exeName)
+                process.start('wine ' + exeName)
             else:
                 wdpath = "\"" + os.path.join(self.r2.dirname, exeName).replace('\\','/') + "\""
-                self.process.start(wdpath) # need absolute path and escape quotes (if space in the path)
-
+                process.start(wdpath) # need absolute path and escape quotes (if space in the path)
+        
             
         def logInversion():
 #            self.r2.invert(callback=dataReady)
@@ -955,24 +970,27 @@ class App(QMainWindow):
             if 'mesh' not in self.r2.param:
                 generateMesh() # that will call mesh creation
         
-            # write configuration file
+            # write configuration file'
             self.r2.write2in()
             
             # write protocol file
-            self.r2.write2protocol(os.path.join(self.r2.dirname, 'protocol.dat'))
+            self.r2.write2protocol()#os.path.join(self.r2.dirname, 'protocol.dat'))
 
             def runMainInversion():
+                print('run main inversion')
                 runR2()
-                self.process.finished.connect(plotSection)
-                
-            if self.r2.iTimeLapse == True:
-                refdir = os.path.join(self.dirname, 'ref')
-                runR2(refdir)
-                self.process.finished.connect(runMainInversion)
+                self.processes[-1].finished.connect(plotSection)
+            
+            def timeLapseMainRun():
                 print('----------- finished inverting reference model ------------')
-                shutil.copy(os.path.join(refdir, 'f001_res.dat'),
-                            os.path.join(self.dirname, 'Start_res.dat'))
-                
+                shutil.copy(os.path.join(self.refdir, 'f001_res.dat'),
+                            os.path.join(self.r2.dirname, 'Start_res.dat'))
+                runMainInversion()
+            
+            if self.r2.iTimeLapse == True:
+                self.refdir = os.path.join(self.r2.dirname, 'ref')
+                runR2(self.refdir)
+                self.processes[-1].finished.connect(timeLapseMainRun)
             else:
                 runMainInversion()
         

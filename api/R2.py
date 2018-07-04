@@ -204,10 +204,11 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(refdir) == False:
                 os.mkdir(refdir)
             param = self.param
-            param['num_poly'] = 0
+            param['num_xy_poly'] = 0
             self.configFile = write2in(param, refdir, typ=typ)
             param = self.param
             param['num_regions'] = 0
+            param['regularization_type'] = 2
             param['timeLapse'] = 'Start_res.dat'
             write2in(param, self.dirname, typ=typ)
         else:
@@ -465,6 +466,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #%% test for timelapse inversion
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test/')
 #k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
-#k.invert(iplot=False) #TODO run but doesn't converge !
+#k.invert(iplot=False)
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
 #k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))
