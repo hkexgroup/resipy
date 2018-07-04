@@ -517,11 +517,11 @@ class App(QMainWindow):
             ax.set_title('Random data nnnnndfghdfh')
 
         def generateMesh(index=0):
-            if index == 0:
+            if index == 1:
                 self.r2.createMesh(typ='quad')
                 scale.setVisible(False)
                 scaleLabel.setVisible(False)
-            elif index == 1:
+            elif index == 2:
                 scale.setVisible(True)
                 scaleLabel.setVisible(True)
                 self.r2.createMesh(typ='trian')
@@ -533,12 +533,27 @@ class App(QMainWindow):
         
         
         meshType = QComboBox()
+        meshType.addItem('')
         meshType.addItem('Quadrilateral Mesh')
         meshType.addItem('Triangular Mesh')
         meshType.currentIndexChanged.connect(generateMesh)
         meshLayout.addWidget(meshType)
         
-        # TODO EVENTUALLY SHOW MESH OPTION HERE
+        meshOptionLayout = QHBoxLayout()
+        
+        def updateMesh():
+            nnodes = int(nnodesEdit.text())
+            self.r2.createMesh(typ='quad', elemx=nnodes)
+            mwMesh.plot(self.r2.mesh.show)
+        nnodesLabel = QLabel('Number of nodes between electrode:')
+        meshOptionLayout.addWidget(nnodesLabel)
+        nnodesEdit = QLineEdit()
+        nnodesEdit.setValidator(QIntValidator())
+        nnodesEdit.setText('8')
+        nnodesEdit.editingFinished.connect(updateMesh)
+        meshOptionLayout.addWidget(nnodesEdit)
+        
+        meshLayout.addLayout(meshOptionLayout)
         
         mwMesh = MatplotlibWidget(navi=True)
         meshLayout.addWidget(mwMesh)
