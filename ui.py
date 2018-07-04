@@ -516,7 +516,7 @@ class App(QMainWindow):
             ax.plot(np.random.randn(20,5), '+--')
             ax.set_title('Random data nnnnndfghdfh')
 
-        def generateMesh(index=0):
+        def generateMesh(index=1):
             if index == 1:
                 self.r2.createMesh(typ='quad')
                 scale.setVisible(False)
