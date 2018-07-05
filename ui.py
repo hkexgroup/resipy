@@ -3,7 +3,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-    QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView)
+    QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 from PyQt5.QtCore import Qt
@@ -542,14 +542,17 @@ class App(QMainWindow):
         mwIPFiltering = MatplotlibWidget(navi=True)
         ipLayout.addWidget(mwIPFiltering)
         
+        def dcaDump(val):
+            dcaProgress.setValue(val)
+            QApplication.processEvents()
+            
         def dcaFiltering():
-            self.r2.surveys[0].dca(dump=dcaProgress.setText)
+            self.r2.surveys[0].dca(dump=dcaDump)
             
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
         dcaButton.clicked.connect(dcaFiltering)
-        dcaProgress = QLineEdit('0%')
-        dcaProgress.setReadOnly(True)
+        dcaProgress = QProgressBar()
         dcaLayout.addWidget(dcaButton)
         dcaLayout.addWidget(dcaProgress)
         ipLayout.addLayout(dcaLayout)

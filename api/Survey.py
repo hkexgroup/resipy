@@ -653,8 +653,8 @@ class Survey(object):
         import time
         ''' execute DCA filtering
         '''
-        for i in range(100):
-            dump('{:2}% -> TODO'.format(i))
+        for i in range(101):
+            dump(i)
             time.sleep(0.05)
         
   
