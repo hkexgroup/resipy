@@ -3,7 +3,7 @@
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-    QTableWidget, QFormLayout, QMessageBox)
+    QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess
 from PyQt5.QtCore import Qt
@@ -150,7 +150,7 @@ class App(QMainWindow):
             os.mkdir(newwd)
         self.r2 = R2(newwd)
         self.r2.cwd = bundle_dir
-        
+ 
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
@@ -236,6 +236,7 @@ class App(QMainWindow):
             self.r2.createTimeLapseSurvey(fdir)
             buttonf.setText(fdir + ' (Press to change)')
             plotPseudo()
+            elecTable.iniTable(self.r2.elec)
             
         def getfile():
             print('ftype = ', ftype)
@@ -257,6 +258,7 @@ class App(QMainWindow):
                     plotError()
 #                generateMesh()
                 plotPseudo()
+                elecTable.iniTable(self.r2.elec)
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
@@ -283,8 +285,10 @@ class App(QMainWindow):
         
         def diplayTopo(state):
             if state  == Qt.Checked:
+                elecLabel.setVisible(True)
                 elecTable.setVisible(True)
             else:
+                elecLabel.setVisible(False)
                 elecTable.setVisible(False)
         
         def diplayPseudoIP(state):
@@ -315,15 +319,73 @@ class App(QMainWindow):
         metaLayout.addWidget(wd)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
-        topLayout.addLayout(metaLayout)
+        topLayout.addLayout(metaLayout, 60)
 
         # electrode table
-        # TODO add copy paste functionnality
-        elecTable = QTableWidget()
-        elecTable.setRowCount(10)
-        elecTable.setColumnCount(3)
-        elecTable.setVisible(False)
-        topLayout.addWidget(elecTable)
+        class ElecTable(QTableWidget):
+            def __init__(self, nrow=10, ncol=3, visible=True):
+                super(ElecTable, self).__init__(nrow, ncol)
+                self.setVisible(visible)
+                self.nrow = nrow
+                self.ncol = ncol
+                self.setHorizontalHeaderLabels(['x','y','z'])
+                header = self.horizontalHeader()
+                header.setSectionResizeMode(QHeaderView.Stretch)
+            
+            def keyPressEvent(self, e):
+                if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
+                    print('paste')
+                    # get clipboard
+                    text = QApplication.clipboard().text()
+                    # parse clipboard
+                    tt = []
+                    for row in text.split('\n'):
+                        trow = row.split()
+                        if len(trow) > 0:
+                            tt.append(trow)
+                    tt = np.array(tt)
+#                    self.setItem(0,0,QTableWidgetItem('hlo'))
+                    if np.sum(tt.shape) > 0:
+                        # get max row/columns
+                        cell = self.selectedIndexes()[0]
+                        c0, r0 = cell.column(), cell.row()
+                        self.setTable(tt, c0, r0)
+                else: # start editing
+                    cell = self.selectedIndexes()[0]
+                    c0, r0 = cell.column(), cell.row()
+                    self.editItem(self.item(r0,c0))
+                    
+                        
+            def iniTable(self, tt):
+                self.setRowCount(tt.shape[0])
+                self.setColumnCount(tt.shape[1])
+                self.ncol = tt.shape[1]
+                self.nrow = tt.shape[0]
+                self.setTable(tt)
+                
+            def setTable(self, tt, c0=0, r0=0):
+                # paste clipboard to qtableView
+                for i in range(c0, min([self.ncol, tt.shape[1]])):
+                    for j in range(r0, min([self.nrow, tt.shape[0]])):
+                        self.setItem(j,i,QTableWidgetItem(str(tt[j-r0, i-c0])))
+#                        print('item just ste', self.item(j,i).text())
+                    
+            def getTable(self):
+                table = np.zeros((self.nrow, self.ncol))
+                for i in range(self.ncol):
+                    for j in range(self.nrow):
+                        table[j,i] = float(self.item(j,i).text())
+#                print('table = ', table)
+                return table
+                    
+            
+        elecTable = ElecTable(visible=False)
+        elecLayout = QVBoxLayout()
+        elecLabel = QLabel('<i>Copy-Paste electrode here, or use Tab to edit</i>')
+        elecLabel.setVisible(False)
+        elecLayout.addWidget(elecLabel)
+        elecLayout.addWidget(elecTable, 35)
+        topLayout.addLayout(elecLayout)
         gridImport.addLayout(topLayout, 0, 0)        
         
         def plotPseudo():
@@ -517,6 +579,7 @@ class App(QMainWindow):
             ax.set_title('Random data nnnnndfghdfh')
 
         def generateMesh(index=1):
+            self.r2.elec = elecTable.getTable()
             if index == 1:
                 self.r2.createMesh(typ='quad')
                 scale.setVisible(False)
@@ -1129,6 +1192,13 @@ class App(QMainWindow):
         self.setCentralWidget(self.table_widget)
         self.show()
 
+
+    def keyPressEvent(self, e):
+        if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_Q):
+            self.close()
+        if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_W):
+            self.close()
+    
 ''' 
 class MyTableWidget(QWidget):        
  
@@ -1162,3 +1232,12 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = App()
     sys.exit(app.exec_())
+
+
+
+#%%
+#table = QTableWidget(10, 3)
+#table.setVisible(False)
+#table.setItem(0,0,QTableWidgetItem('4.3'))
+#table.setItem(1,1,QTableWidgetItem('2.3'))
+#print(table.item(0,0).text())
