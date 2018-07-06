@@ -259,7 +259,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 f.write(content)
         
         
-    def runR2(self, dirname=''):
+    def runR2(self, dirname='', dump=print):
         # run R2.exe
         exeName = self.typ + '.exe'
         cwd = os.getcwd()
@@ -281,12 +281,12 @@ class R2(object): # R2 master class instanciated by the GUI
         p = Popen(cmd, stdout=PIPE, shell=False)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
-            print(line.decode('utf-8'))
+            dump(line.decode('utf-8'))
             
         os.chdir(cwd)
         
         
-    def invert(self, param={}, iplot=True):
+    def invert(self, param={}, iplot=True, dump=print):
         ''' invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results
         '''
@@ -302,39 +302,39 @@ class R2(object): # R2 master class instanciated by the GUI
              
         if self.iTimeLapse == True:
             refdir = os.path.join(self.dirname, 'ref')
-            self.runR2(refdir)
+            self.runR2(refdir, dump=dump)
             print('----------- finished inverting reference model ------------')
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                     os.path.join(self.dirname, 'Start_res.dat'))
-            self.runR2()
+            self.runR2(dump=dump)
         else:
-            self.runR2()
+            self.runR2(dump=dump)
         
         if iplot is True:
 #            self.showResults()
             self.showSection() # TODO need to debug that for timelapse and even for normal !
             # pass an index for inverted survey time
     
-    def showResults(self, ax=None, edge_color='none', attr='Resistivity(log10)', sens=True, **kwargs):
+    def showResults(self, index=0, ax=None, edge_color='none', attr='Resistivity(log10)', sens=True, **kwargs):
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
-            self.meshResults[-1].show(ax=ax, edge_color=edge_color, attr=attr, sens=sens, **kwargs)
+            self.meshResults[index].show(ax=ax, edge_color=edge_color, attr=attr, sens=sens, **kwargs)
         else:
             print('Unexpected Error')
 
     
     def getResults(self):
-        fresults = os.path.join(self.dirname, 'f001_res.vtk')
-        if os.path.isfile(fresults):
-            mesh = mt.vtk_import(fresults)
-            mesh.elec_x = self.elec[:,0]
-            mesh.elec_y = self.elec[:,1]
-            self.meshResults.append(mesh)
-            return list(mesh.attr_cache.keys())
-        else:
-            print('Sorry no VTK output produced')
-            
+        for i in range(100):
+            fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
+            if os.path.exists(fresults):
+                mesh = mt.vtk_import(fresults)
+                mesh.elec_x = self.elec[:,0]
+                mesh.elec_y = self.elec[:,1]
+                self.meshResults.append(mesh)
+            else:
+                break
+
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         if fname == '':
