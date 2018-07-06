@@ -21,14 +21,17 @@ Dependencies:
 
 """
 #python standard libraries 
-#import tkinter as tk
-#from tkinter import filedialog
 import os, platform
 from subprocess import PIPE, Popen, call
 #anaconda libraries
 import numpy as np
 #import R2gui API package 
-import api.meshTools as mt  
+if __name__ =="__main__" or __name__=="gmshWrap":
+    import meshTools as mt 
+else:
+    import api.meshTools as mt
+    #the if statement in here is being used a quick fix becuase the module wont work with ui.py in the parent directory 
+    # if it is imported as "import meshTools as mt" despite being in the same directory. I dont know why this is.... 
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -367,7 +370,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
 #%% gmsh wrapper
 def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = False, path='exe', save_path='default'):
     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-    this function will only work if current working directory has path: Execuatbles/gmsh.exe"""
+    this function will only work if current working directory has path: exe/gmsh.exe"""
 #INPUT: 
     #surf_x - surface topography x coordinates
     #surf_y - surface topography y coordinates
@@ -378,25 +381,30 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
     #mesh.dat in the Executables directory
 ###############################################################################
     #check directories 
-#    try:
-#        os.stat("exe")
-#    except FileNotFoundError:
-#        print("could not find Executables directory")
-#        os.mkdir("exe")
-    if not os.path.isfile(os.path.join(path,'gmsh.exe')):
-        raise EnvironmentError("No gmsh.exe exists in the Executables directory!")
+    if path == "exe":
+        ewd = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                path)
+        print(ewd) #ewd - exe working directory 
+    else:
+        ewd = path
+        # else its assumed a custom directory has been given to the gmsh.exe
+    cwd=os.getcwd()#get current working directory 
+    
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
+        raise EnvironmentError("No gmsh.exe exists in the exe directory!")
+    
     #make .geo file
     file_name="temp"
-    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=path)
+    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd)
     # handling gmsh
-    cwd=os.getcwd()#get current working directory 
-    os.chdir(path)#ewd - exe working directory 
-    
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
     elif platform.system() == "Linux":
         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
         
+    os.chdir(ewd)
+    
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
@@ -424,46 +432,4 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
 #mesh.show()
 
 
-#%% work in progress       
-#write R2.in file for a forward model ONLY
-# =============================================================================
-# def R2in(node_pos,gmsh_dump):
-#     fh=open('R2.in','w')#file handle
-#     title='Conceptual modelling of hollin hill - forward model test'
-#     if len(title)>80:
-#         raise NameError("file title cannot be more than 80 characters in length")
-#     fh.write('%s\n\n'%title)#write title and drop down 2 lines
-#     #next line takes the form: see documentation R2.3.1 README file. 
-#     #job_type, mesh_type, flux_type, singular_type, res_matrix
-#     job_type=0#forward model 
-#     mesh_type=3#because we're using a triangular mesh
-#     flux_type=3.0#type of current flow, 3.0 for normal operation
-#     singular_type=0#1 if singularity removal is required 
-#     res_matrix=0#use this option to return a sensitivity map or resolution matrix... 0 if neither is required
-#     if job_type==2:
-#         pass# set up protections against invalid arguments in the future
-#     fh.write('    %i    %i   %.1f    %i    %i\n\n'%(job_type, mesh_type, flux_type, singular_type, res_matrix))#write r2 instructions
-#     scaling_factor=1
-#     fh.write('    %i  << vessel_dia\n\n'%scaling_factor)#apply scaling factor to mesh, no idea why why we write 'vessel_dia' after it
-#     num_regions=gmsh_dump['num_regions']
-#     fh.write('   %i << num_regions\n'%num_regions)#write out number of regions
-#     element_ranges=gmsh_dump['element_ranges']
-#     fh.write('         %i      %i   100.000 << elem_1,elem_2,value\n'%(element_ranges[0][1],element_ranges[0][2]))#place holder code
-#     for i in range(num_regions-1):
-#         fh.write('         %i      %i   100.000 \n'%(element_ranges[i+1][1],element_ranges[i+1][2]))#place holder code
-#     fh.write('\n\n')#drop down 2 lines
-#     fh.write('    0  << num_poly\n')#write the entire mesh to file and alter display later
-#     fh.write('\n\n')#drop down 2 lines
-#     #now to add the electrodes and thier corresponding locations
-#     num_electrodes=len(node_pos)
-#     fh.write('  %i  << num_electrodes\n'%num_electrodes)
-#     for i in range(num_electrodes):
-#         #assuming our electrodes are sorted in ascending order then
-#         elec_no=i+1
-#         node_no=node_pos[i]
-#         fh.write(' %i     %i\n'%(elec_no,node_no))#we dont need a row number as weve used a triangular mesh 
-#     #finished! hopefully
-#     fh.close()
-#     print('written R2.in file to "exports"')
-# =============================================================================
 
