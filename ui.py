@@ -79,11 +79,11 @@ class MatplotlibWidget(QWidget):
         if vmin == '':
             vmin = oldLimits[1]
         else:
-            vmin = int(vmin)
+            vmin = float(vmin)
         if vmax == '':
             vmax = oldLimits[0]
         else:
-            vmax = int(vmax)
+            vmax = float(vmax)
         coll.set_clim(vmin, vmax)
         self.canvas.draw()
 
