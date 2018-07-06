@@ -315,11 +315,11 @@ class R2(object): # R2 master class instanciated by the GUI
             self.showSection() # TODO need to debug that for timelapse and even for normal !
             # pass an index for inverted survey time
     
-    def showResults(self, ax=None, **kwargs):
+    def showResults(self, ax=None, edge_color='none', attr='Resistivity(log10)', sens=True, **kwargs):
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
-            self.meshResults[-1].show(**kwargs)
+            self.meshResults[-1].show(ax=ax, edge_color=edge_color, attr=attr, sens=sens, **kwargs)
         else:
             print('Unexpected Error')
 
@@ -328,6 +328,8 @@ class R2(object): # R2 master class instanciated by the GUI
         fresults = os.path.join(self.dirname, 'f001_res.vtk')
         if os.path.isfile(fresults):
             mesh = mt.vtk_import(fresults)
+            mesh.elec_x = self.elec[:,0]
+            mesh.elec_y = self.elec[:,1]
             self.meshResults.append(mesh)
             return list(mesh.attr_cache.keys())
         else:
@@ -458,6 +460,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()
+#fig, ax = plt.subplots()
+#fig.suptitle('hkk')
+#k.showResults()
 #k.showResults(edge_color='none', sens=True)
 #k.showResults(attr=attr[0])
 #fig, ax = plt.subplots()

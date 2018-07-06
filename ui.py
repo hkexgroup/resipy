@@ -77,7 +77,7 @@ class MatplotlibWidget(QWidget):
         coll = self.axis.collections[0]
         oldLimits = coll.get_clim()
         if vmin == '':
-            vmin = oldLimits[0]
+            vmin = oldLimits[1]
         else:
             vmin = int(vmin)
         if vmax == '':
@@ -994,6 +994,7 @@ class App(QMainWindow):
 
             # plot RMS graph
             def parseRMS(ax):
+#                rcParams.update({'font.size': 10})
                 tt = text.split('\n')
                 if len(tt) > 1:
                     for i in range(len(tt)):
@@ -1015,8 +1016,10 @@ class App(QMainWindow):
                         for ii in iindex:
                             ie = rmsIndex == ii
                             ax.plot(xx[ie], rms[ie], 'o-')
-                ax.set_xlabel('Iterations')
-                ax.set_ylabel('RMS Misfit')
+                ax.set_xlabel('Iterations', fontsize=8)
+                ax.tick_params(axis='both',which='major', labelsize=8)
+                ax.set_ylabel('RMS Misfit', fontsize=8)
+                ax.figure.tight_layout()
             mwRMS.plot(parseRMS)
         
         
@@ -1078,13 +1081,19 @@ class App(QMainWindow):
         def plotSection():
             try:
                 mwInvResult.plot(self.r2.showResults)
-                displayAttribute()
                 plotInvError()
-                # TODO if we want to plot different attribute
-#                mwInvResult.plot(self.r2.showSection)
+                self.displayParams = {'edge_color':'none',
+                                      'sens':True, 'attr':'Resistivity(log10)'}
+                displayAttribute()
             except:# ValueError as e:
 #                msgBox(e)
                 pass
+        
+        def replotSection():
+            edge_color = self.displayParams['edge_color']
+            sens = self.displayParams['sens']
+            attr = self.displayParams['attr']
+            mwInvResult.replot(edge_color=edge_color, sens=sens, attr=attr)
         
         def msgBox(text):
             msg = QMessageBox()
@@ -1102,10 +1111,18 @@ class App(QMainWindow):
             
         def showEdges(status):
             if status == Qt.Checked:
-                mwInvResult.replot(edge_color='k')
+                self.displayParams['edge_color'] = 'k'
             else:
-                mwInvResult.replot(edge_color='none')
-                
+                self.displayParams['edge_color'] = 'none'
+            replotSection()
+        
+        def showSens(status):
+            if status == Qt.Checked:
+                self.displayParams['sens'] = True
+            else:
+                self.displayParams['sens'] = False
+            replotSection()
+
 
         btn = QPushButton('Invert')
         btn.clicked.connect(logInversion)
@@ -1122,7 +1139,7 @@ class App(QMainWindow):
 
         logLayout.setStretch(0, 60)
         logLayout.setStretch(1, 40)        
-        invLayout.addLayout(logLayout)
+        invLayout.addLayout(logLayout, 30)
         
         # option for display
         def displayAttribute():
@@ -1131,9 +1148,8 @@ class App(QMainWindow):
                 attributeName.addItem(self.attr[i])
         
         def changeAttribute(index):
-            attr = self.attr[index]
-            print('plotting : ', attr)
-            mwInvResult.replot(attr=attr)
+            self.displayParams['attr'] = self.attr[index]
+            replotSection()
             
         displayOptions = QHBoxLayout()
         attributeName = QComboBox()
@@ -1157,23 +1173,25 @@ class App(QMainWindow):
         displayOptions.addWidget(vmaxLabel)
         displayOptions.addWidget(vmaxEdit)
         
-        showEdge = QCheckBox('Show edges')
-        showEdge.setChecked(True)
-        showEdge.stateChanged.connect(showEdges)
-        displayOptions.addWidget(showEdge)
+        edgeCheck= QCheckBox('Show edges')
+        edgeCheck.setChecked(False)
+        edgeCheck.stateChanged.connect(showEdges)
+        displayOptions.addWidget(edgeCheck)
         
-        contour = QCheckBox('Contour')
-        contour.stateChanged.connect(lambda x : print(x))
-        displayOptions.addWidget(contour)
+        #TODO to be implemented
+#        contour = QCheckBox('Contour')
+#        contour.stateChanged.connect(lambda x : print(x))
+#        displayOptions.addWidget(contour)
         
-        showSens = QCheckBox('Sensitivity overlay')
-        showSens.stateChanged.connect(lambda x : print(x))
-        displayOptions.addWidget(showSens)
+        sensCheck = QCheckBox('Sensitivity overlay')
+        sensCheck.setChecked(True)
+        sensCheck.stateChanged.connect(showSens)
+        displayOptions.addWidget(sensCheck)
         
-        invLayout.addLayout(displayOptions)
+        invLayout.addLayout(displayOptions, 10)
         
         mwInvResult = MatplotlibWidget(navi=True)
-        invLayout.addWidget(mwInvResult)
+        invLayout.addWidget(mwInvResult, 60)
         
         
         tabInversion.setLayout(invLayout)
