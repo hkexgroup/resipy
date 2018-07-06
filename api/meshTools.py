@@ -831,6 +831,14 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     fh.close()
     
 #%% test code
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
-#mesh.show()
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=3)
+#mesh.show(color_bar=False)
+#
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
+#mesh.show(color_bar=False)
 
+#mesh = vtk_import('test/test.vtk')
+#attrs = list(mesh.attr_cache)
+#mesh.show(attr=attrs[0])
+#mesh.show(attr=attrs[1])
+#mesh.show(attr=attrs[2], color_map='viridis')
