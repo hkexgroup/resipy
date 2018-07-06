@@ -42,6 +42,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.errTypIP = 'none' # type of error to add for IP phase
         self.iBorehole = False
         self.iTimeLapse = False
+        self.meshResults = [] # contains vtk mesh object of inverted section
         
         
     def setwd(self, dirname):
@@ -141,7 +142,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh = QuadMesh(elec, nnode=4)
             elec_x = self.elec[:,0]
             elec_y = self.elec[:,1]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y,elemx=8)
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y,**kwargs)
 #            mesh = QuadMesh()
 #            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
@@ -168,7 +169,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
 #            ylim = (0, 110) # TODO
 #            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
-            self.mesh.show(ax=ax)
+            self.mesh.show(ax=ax, color_bar=False)
     
     def write2in(self, param={}, typ=''):
         ''' create configuration file for inversion
@@ -315,14 +316,24 @@ class R2(object): # R2 master class instanciated by the GUI
             # pass an index for inverted survey time
     
     def showResults(self, ax=None, **kwargs):
+        if len(self.meshResults) == 0:
+            self.getResults()
+        if len(self.meshResults) > 0:
+            self.meshResults[-1].show(**kwargs)
+        else:
+            print('Unexpected Error')
+
+    
+    def getResults(self):
         fresults = os.path.join(self.dirname, 'f001_res.vtk')
         if os.path.isfile(fresults):
-            mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
-            mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
-            mesh.show(ax=ax, **kwargs)
+            mesh = mt.vtk_import(fresults)
+            self.meshResults.append(mesh)
+            return list(mesh.attr_cache.keys())
         else:
             print('Sorry no VTK output produced')
-        
+            
+            
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         if fname == '':
             fname = os.path.join(self.dirname, 'f001_res.dat')
@@ -447,7 +458,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()
-#k.showResults(attr='Resistivity')
+#k.showResults(edge_color='none', sens=True)
+#k.showResults(attr=attr[0])
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
 #k.showResults(ax=ax)

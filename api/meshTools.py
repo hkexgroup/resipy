@@ -81,7 +81,7 @@ class Mesh_obj:
         self.elec_y = np.array(self.node_y)[np.array(e_nodes)]
     
     #add some functions to allow adding some extra attributes to mesh 
-    def add_sensitvity(self,values):#sensitivity of the mesh
+    def add_sensitivity(self,values):#sensitivity of the mesh
         if len(values)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.sensitivities = values
@@ -624,6 +624,11 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     Mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
+    try:
+        Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
+    except:
+        print('no sensitivity')
+        pass
     Mesh.mesh_title = title
     return Mesh
     
@@ -840,5 +845,8 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh = vtk_import('test/test.vtk')
 #attrs = list(mesh.attr_cache)
 #mesh.show(attr=attrs[0])
-#mesh.show(attr=attrs[1])
-#mesh.show(attr=attrs[2], color_map='viridis')
+#mesh.show(attr=attrs[2])
+#mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
+
+
+

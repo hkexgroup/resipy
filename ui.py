@@ -1078,6 +1078,7 @@ class App(QMainWindow):
         def plotSection():
             try:
                 mwInvResult.plot(self.r2.showResults)
+                displayAttribute()
                 plotInvError()
                 # TODO if we want to plot different attribute
 #                mwInvResult.plot(self.r2.showSection)
@@ -1090,9 +1091,10 @@ class App(QMainWindow):
             msg.setText(text)
             
             
-        def replotSection(index=-1):
-            print(index)
-            mwInvResult.plot(self.r2.showResults) # TODO PASS ATTRIBUTE
+#        def replotSection(index=-1):
+#            def func(**kwargs):
+#                self.r2.showResults()
+#            mwInvResult.plot(self.r2.showResults) # TODO PASS ATTRIBUTE
         
         def setCBarLimit():
             print(vmaxEdit.text())
@@ -1123,13 +1125,23 @@ class App(QMainWindow):
         invLayout.addLayout(logLayout)
         
         # option for display
+        def displayAttribute():
+            self.attr = list(self.r2.meshResults[-1].attr_cache)
+            for i in range(len(self.attr)):
+                attributeName.addItem(self.attr[i])
+        
+        def changeAttribute(index):
+            attr = self.attr[index]
+            print('plotting : ', attr)
+            mwInvResult.replot(attr=attr)
+            
         displayOptions = QHBoxLayout()
         attributeName = QComboBox()
-        attributeName.addItem('Log(Resistivity)')
-        attributeName.addItem('Resistivity')
-        attributeName.addItem('Sensitivity')
-        attributeName.addItem('Phase')
-        attributeName.currentIndexChanged.connect(plotSection)
+#        attributeName.addItem('Log(Resistivity)')
+#        attributeName.addItem('Resistivity')
+#        attributeName.addItem('Sensitivity')
+#        attributeName.addItem('Phase')
+        attributeName.currentIndexChanged.connect(changeAttribute)
         displayOptions.addWidget(attributeName)
         
         vminLabel = QLabel('Min:')
