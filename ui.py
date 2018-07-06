@@ -147,7 +147,7 @@ class App(QMainWindow):
         newwd = os.path.join(bundle_dir, 'api', 'invdir')
         if os.path.exists(newwd):
             shutil.rmtree(newwd)
-            os.mkdir(newwd)
+        os.mkdir(newwd)
         self.r2 = R2(newwd)
         self.r2.cwd = bundle_dir
  
