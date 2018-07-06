@@ -35,11 +35,7 @@ class Mesh_obj:
     """
     create a mesh class
     put class variables here 
-    """
-    no_attributes = 1 # it follows we may want to add "attributes to each cell"
-    #... we begin assuming each cell has a resistivity assocaited with it but
-    #... we may also want associate each cell with a sensitivity for example
-    
+    """    
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
                  num_elms,#number of elements 
@@ -70,6 +66,8 @@ class Mesh_obj:
         self.cell_attributes=cell_attributes 
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
+        self.mesh_title = "not_given"
+        self.no_attributes = 1
         #decide if mesh is 3D or not 
         if max(node_z) - min(node_z) == 0: # mesh is probably 2D 
             self.ndims=2
@@ -117,10 +115,11 @@ class Mesh_obj:
         print("\n_______mesh summary_______")
         print("Number of elements: %i"%int(self.num_elms))
         print("Number of nodes: %i"%int(self.num_nodes))
-        print("Attribute title: %s"%self.atribute_title)
+        #print("Attribute title: %s"%self.atribute_title)
         print("Number of cell vertices: %i"%self.Type2VertsNo())
         print("Number of cell attributes: %i"%int(self.no_attributes))
         print("original file path: %s"%self.file_path())
+        print("\n")
 
     def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
@@ -148,6 +147,7 @@ class Mesh_obj:
             #ax - axis handle if preexisting (error will thrown up if not)
             #electrodes - Boolian, enter true to add electrodes to plot
             #sens - Boolian, enter true to plot sensitivities 
+            #edge_color - color of the cell edges, set to None if you dont want an edge
             #vmin - minimum limit for the color bar scale 
             #vmax- maximum limit for the color bar scale 
             #attr - which attribute in the mesh to plot, ### add more info here ### 
@@ -161,7 +161,8 @@ class Mesh_obj:
         
         ### overall this code section needs prettying up to make it easier to change attributes ### 
         #decide which attribute to plot, we may decide to have other attritbutes! 
-        if attr is None or attr == "Resistivity" or attr == "IP": 
+        if attr is None: 
+            #plots default attribute
             X=np.array(self.cell_attributes) # maps resistivity values on the color map
             color_bar_title = self.atribute_title
         elif attr == "Sensitivity":
@@ -170,7 +171,12 @@ class Mesh_obj:
                 color_bar_title = "log sensitivity"
             except AttributeError:
                 raise ValueError("No sensitivities in the mesh object to plot")
-        
+        else: 
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except KeyError:
+                raise NameError("no attribute with that name has been assigned to the mesh")
 
         if ax is None:
             fig,ax=plt.subplots()
@@ -187,14 +193,12 @@ class Mesh_obj:
                 xlim=[min(self.node_x),max(self.node_x)]
             if ylim=="default":
                 ylim=[min(self.node_y),max(self.node_y)]
-        #print('xlim', xlim, ylim)
-       
-        
+                
         ##plot mesh! ##
         a = time.time() #start timer on how long it takes to plot the mesh
         #compile mesh coordinates into polygon coordinates  
         nodes = np.c_[self.node_x, self.node_y]
-        connection = np.array(self.node_data).T # connection matrix 
+        connection = np.array(self.con_matrix).T # connection matrix 
         #compile polygons patches into a "patch collection"
         ###X=np.array(self.cell_attributes) # maps resistivity values on the color map### <-- disabled 
         coordinates = nodes[connection]
@@ -219,7 +223,7 @@ class Mesh_obj:
         #biuld alpha channel if we have sensitivities 
         if sens:
             try:
-                weights = np.log10(np.array(self.sensitivities)) #values assigned to alpha channels 
+                weights = np.array(self.sensitivities) #values assigned to alpha channels 
                 alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
                 raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                 raw_alpha[..., -1] = alphas
@@ -238,18 +242,57 @@ class Mesh_obj:
             except AttributeError:
                 print("no electrodes in mesh object to plot")
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))
+        
+    def apply_func(self,mesh_paras,material_no,new_key,function,*args):
+    #applys a function to a mesh by material number and mesh parameter
+    #INPUT: meshinfo 
+        #mesh_paras - mesh parameters from which new parameters are calculated 
+        #material_no - material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
+                        #...ie if you have 2 materials in the mesh then pass an array of ones and twos.
+        #new_key - key assigned to the parameter in the attr_cache. DOES NOT default
+        #function - function to applied to mesh, first argument must be the mesh parameter
+        #args - all arguments to be passed through function after to modify the mesh parameter,
+                #... argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
+                #... where letters are the material, numbers refer to the argument number
+    #OUTPUT:
+        #new parameters 
+    ###############################################################################
+        if len(material_no)!=len(mesh_paras):
+            raise ValueError('Mismatch between the number of material propeties (for the mesh) and parameters to be converted')
+        new_para=[0]*self.num_elms
+        #iterate through each set of argument variables
+        for iteration in range(len(args[0])):
+            parameters=[items[iteration] for items in args]#return parameters 
+            parameters.insert(0,0)#this adds an element to the front of the parameters which can be swapped out resistivity
+            for i in range(self.num_elms):
+                if material_no[i]==iteration+1:#does the material match the iteration? 
+                    parameters[0]=mesh_paras[i]#change parameter value at start of variables list
+                    new_para[i]=function(*parameters)#compute new parameter   
+        self.attr_cache[new_key] = new_para
+        self.no_attributes += 1
+        #return new_para
+        
+    def assign_material_attribute(self,material_no,attr_list,new_key):
+        if len(material_no) != self.num_elms:
+            raise ValueError("Mismatch between the number of elements and material propeties")
+        new_para=[0]*self.num_elms
+        for i in range(self.num_elms):
+            new_para[i] = attr_list[int(material_no[i]) - 1]
+        self.attr_cache[new_key] = new_para
+        self.no_attributes += 1
 
             
-    def add_attribute(self,values):
+    def add_attribute(self,values,key):
         #add a new attribute to mesh 
         if len(values)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        Mesh_obj.no_attributes += 1
-        self.new_attribute=values #allows us to add an attributes to each element.
+        self.no_attributes += 1
+        self.attr_cache[key]=values #allows us to add an attributes to each element.
         #this function needs fleshing out more to allow custom titles and attribute names
     
     def add_attr_dict(self,attr_dict):
         self.attr_cache=attr_dict
+        self.no_attributes = len(attr_dict)
     
     def update_attribute(self,new_attributes,new_title='default'):
         #allows you to reassign the cell attributes in the mesh object 
@@ -301,14 +344,18 @@ class Mesh_obj:
             print("%s"%available_functions[i])
         print("_______________________________________________________")
         
-    def write_vtk(self,file_path='default',file_name="default",
-                  title="export from r2 gui mesh object"):
-        #decide where ti save the file 
-        if file_path == 'default':
+    def write_vtk(self,file_path='default', title=None):
+        #decide where to save the file 
+        if file_path == "default":
             file_path = "mesh.vtk"
         #open file and write header information    
         fh = open(file_path,'w')
         fh.write("# vtk DataFile Version 3.0\n")
+        if title == None:
+            try:
+                title = self.mesh_title
+            except AttributeError:
+                title = "output from R2 gui meshTools module"
         fh.write(title+"\n")
         fh.write("ASCII\nDATASET UNSTRUCTURED_GRID\n")
         #define node coordinates
@@ -339,8 +386,6 @@ class Mesh_obj:
         fh.write("POINT_DATA %i"%self.num_nodes)        
         fh.close()
                  
-        
-
 #%% triangle centriod 
 def tri_cent(p,q,r):#code expects points as p=(x,y) and so on ... (counter clockwise prefered)
     Xm=(p[0]+q[0])/2
@@ -547,9 +592,12 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             attr_title = line_info.split()[1]
             #check look up table
             if cell_attr_dump[i+1].split()[1] != "default":
-                print("WARNING: unrecognised lookup table")
+                print("WARNING: unrecognised lookup table type")
             values=[float(k) for k in cell_attr_dump[i+2].split()]
             attr_dict[attr_title] = values
+            if num_attr ==0:# primary attribute defaults to the first attribute found
+                parameter_title = attr_title
+                values_oi = values
             if attr_title == parameter_title:#then its the parameter of interest that the user was trying extract
                 found = True
                 values_oi = values        
@@ -561,10 +609,6 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         attr_dict = {"no attributes":float("nan")}
         values = float("nan")
         parameter_title = "n/a"
-    
-    if not found: # primary attribute defaults to the last attribute found
-        parameter_title = attr_title
-        values_oi = values
     #print("finished importing mesh.\n")
     #information in a dictionary, this is easier to debug than an object in spyder: 
     mesh_dict = {'num_nodes':no_nodes,#number of nodes
@@ -584,7 +628,9 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
-    return (Mesh_obj.mesh_dict2obj(mesh_dict))
+    Mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
+    Mesh.mesh_title = title
+    return Mesh
     
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
@@ -768,7 +814,27 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
     
     return Mesh,meshx,meshy,topo,elec_node
 
-
+#%% write descrete points to a vtk file 
+def points2vtk (x,y,z,file_name="points.vtk",title='points'):
+    #function makes a .vtk file for some xyz coordinates. optional argument
+    #renames the name of the file (needs file path also) (default is "points.vtk"). 
+    #title is the name of the vtk file
+    
+    #error check
+    if len(x) != len(y) or len(x) != len(z):
+        raise ValueError('mis-match between vector lengths')
+    
+    fh=open(file_name,'w');#open file handle
+    #add header information
+    fh.write('# vtk DataFile Version 3.0\n')
+    fh.write(title+'\n')
+    fh.write('ASCII\n')
+    fh.write('DATASET POLYDATA\n')
+    #add data
+    fh.write('POINTS      %i double\n'%len(x))
+    [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
+    fh.close()
+    
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10))
 #mesh.show()
