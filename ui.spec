@@ -1,5 +1,6 @@
-# -*- mode: python -*-
-
+## -*- mode: python -*-
+import sys
+sys.setrecursionlimit(1500)
 block_cipher = None
 
 
@@ -29,4 +30,6 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True )
+          console=True,
+		  icon='r2icon.ico')
+
