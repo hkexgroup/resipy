@@ -1,20 +1,24 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
     QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
-from PyQt5.QtCore import QThread, pyqtSignal, QProcess
+from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
 
+print('importing matplotlib')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-
 import matplotlib.pyplot as plt
+print('importing numpy')
 import numpy as np
+print ('importing pandas')
 import pandas as pd
+print('importing python libraries')
 import random
 import os
 import sys
@@ -154,6 +158,7 @@ class App(QMainWindow):
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
+        self.setWindowIcon(QIcon('logo.png')) ### change this to change the icon of the window. 
         
         #%% tab 1 importing data
         tab1 = QWidget()
