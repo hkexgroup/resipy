@@ -56,7 +56,8 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
         return 2 # points are counter clockwise
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path='default'):
+def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path='default',
+               bh_survey=False):
 #writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
 #INPUT:
     #topo_x - x coordinates of the surface
@@ -67,16 +68,17 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
     #doi - depth of investigation (optional)
     #cl - characteristic length (optional)
     #path - directory to save the .geo file 
+    #bh_flag = False
 #OUTPUT:
     #gmsh . geo file which can be run / loaded into gmsh
 ###############################################################################
     #formalities and error checks
     if doi == -1:
-        doi = (np.max(elec_x) - np.min(elec_x))/2
-        print(doi)
+        doi = abs(np.max(elec_x) - np.min(elec_x))/2
+        # print(doi)
         # TODO very rough, better to consider 2/3 of the longest dipole
     if cl == -1:
-        cl = np.mean(np.diff(elec_x))/4
+        cl = np.mean(np.diff(elec_x))/2
     if len(topo_x) != len(topo_y):
         raise ValueError("topograpghy x and y arrays are not the same length!")
     if len(elec_x) != len(elec_y):
@@ -103,7 +105,7 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode location']*len(elec_x))
     flag_sort=[flag[i] for i in idx]
-#we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
+    #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
     cache_idx=[]
     for i in range(len(x_pts)-1):
         if x_pts[i]==x_pts[i+1] and y_pts[i]==y_pts[i+1]:
@@ -134,8 +136,8 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
         count2=count2+1
     fh.write("//add points below surface to make a polygon\n")#okay so we want to add in the lines which make up the base of the slope
     max_depth=min(y_pts)-doi
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};\n"%(count1+1,x_pts[0],max_depth,z_pts[0]))#point below left hand side of sudy area
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};\n"%(count1+2,x_pts[-1],max_depth,z_pts[-1]))#point below right hand side of sudy area
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*1.5};\n"%(count1+1,x_pts[0],max_depth,z_pts[0]))#point below left hand side of sudy area
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*1.5};\n"%(count1+2,x_pts[-1],max_depth,z_pts[-1]))#point below right hand side of sudy area
     fh.write("//make a polygon by defining lines between points just made\n")
     fh.write("Line(%i) = {%i,%i};\n"%(count2+1,1,count1+1))#line from first point on surface to depth
     fh.write("Line(%i) = {%i,%i};\n"%(count2+2,count1+1,count1+2))#line going from the 2 new points
@@ -183,7 +185,7 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
     fh.write("Plane Surface(1) = {%i};\n"%(count2+9))
     fh.write("Plane Surface(2) = {%i};\n"%(count2+10))
     fh.write("//Finally make a physical surface\n")
-    fh.write("Physical Surface(1) = {1, 2}\n")
+    fh.write("Physical Surface(1) = {1, 2};\n")
     fh.write("//j'ai fini!")
     fh.close()
     print("writing .geo to file completed\n")
@@ -191,6 +193,197 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
    #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
     node_pos=[i+1 for i, j in enumerate(flag_sort) if j == 'electrode location']
     return node_pos,file_name
+
+#%% make a .geo file for a borehole type set up
+def genGeoFile_bh(topo_x,topo_y,
+                  elec_x,elec_y,
+                  surf_elec_x,surf_elec_y,
+                  file_name="default",doi=-1,cl=-1,path='default'):
+#writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
+# + this version is designed for cross borehole studies. 
+#INPUT:
+    #topo_x - x coordinates of the surface
+    #topo_y - y coordinates of the surface 
+    #elec_x - x coordinates of the electrodes 
+    #elec_y - y coordinates of the electrodes
+    #surf_elec_x - x coordinates of electrodes at the surface (or very top of the borehole)
+    #surf_elec_y - y coordinates of electrodes at the surface ( " )
+    #file_name - name of the generated gmsh file (optional)
+    #doi - depth of investigation (optional)
+    #cl - characteristic length (optional) : describes the size of elements 
+    #path - directory to save the .geo file (optional)
+#OUTPUT:
+    #gmsh . geo file which can be run / loaded into gmsh
+###############################################################################
+    #formalities and error checks
+    if doi == -1:
+        doi = min(elec_y) + min(elec_y)*0.05
+        #print(doi)
+        # TODO very rough, better to consider 2/3 of the longest dipole
+    if cl == -1:
+        cl = abs(np.mean(np.diff(elec_y)))/2
+    if len(topo_x) != len(topo_y):
+        raise ValueError("topograpghy x and y arrays are not the same length!")
+    if len(elec_x) != len(elec_y):
+        raise ValueError("electrode x and y arrays are not the same length!")
+    if len(surf_elec_x) != len(surf_elec_y):
+        raise ValueError("surface electrode x and y arrays are not the same length!")
+    if file_name.find('.geo')==-1:
+        file_name=file_name+'.geo'#add file extension if not specified already
+    elec_x = np.array(elec_x)
+    elec_y = np.array(elec_y)
+    #start to write the file
+    if path=='default':#written to working directory 
+        fh=open(file_name,'w')
+    else:
+        fh=open(os.path.join(path,file_name),'w')#file handle
+    #write commented header info 
+    fh.write("//Jamyd91's gmsh wrapper code version 1.0, for a borehole array setup(run the following in gmsh to generate a triangular mesh with topograpghy)\n")
+    fh.write("//2D mesh coordinates\n")
+    #characteristic length 
+    fh.write("cl=%.2f;//define characteristic length\n" %cl)
+    
+    #add surface points ####
+    fh.write("//Define surface points\n")
+    #we have surface topography which will make the upper section of the mesh.
+    x_pts=np.append(topo_x,surf_elec_x)#append our electrode positions to our topograpghy 
+    y_pts=np.append(topo_y,surf_elec_y)
+    idx=np.argsort(x_pts)#now resort the x positions in ascending order
+    x_pts=x_pts[idx]#compute sorted arrays
+    y_pts=y_pts[idx]
+    z_pts=np.zeros((len(x_pts),1))#for now let z = 0 
+    flag=['topography point']*len(topo_x)
+    flag=flag+(['surface electrode']*len(surf_elec_x))
+    flag_sort=[flag[i] for i in idx]
+    #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
+    cache_idx=[]
+    for i in range(len(x_pts)-1):
+        if x_pts[i]==x_pts[i+1] and y_pts[i]==y_pts[i+1]:
+            cache_idx.append(i)
+    #if duplicated points were dectected we should remove them
+    if len(cache_idx)>0:
+        x_pts=np.delete(x_pts,cache_idx)#deletes first instance of the duplicate       
+        y_pts=np.delete(y_pts,cache_idx)
+        print("%i duplicated coordinate(s) were deleted" %len(cache_idx))
+        for k in range(len(cache_idx)):#what are we actually deleting?
+            if flag_sort[cache_idx[k]] == 'surface electrode':
+                flag_sort[cache_idx[k]+1] = 'surface electrode'
+
+    surf_node_pos=[i+1 for i, j in enumerate(flag_sort) if j == 'surface electrode']
+            
+    #now add the surface points to the file
+    count1 = 0
+    for i in range(len(x_pts)):
+        count1+=1
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(count1,x_pts[i],y_pts[i],z_pts[i],flag_sort[i]))
+    middle_right_idx = count1    
+    
+    #make the lines between each point
+    fh.write("//construct lines between each surface point\n")
+    count2=0
+    for i in range(len(x_pts)-1):
+        val=i+1
+        fh.write("Line(%i) = {%i,%i};\n"%(val,val,val+1))
+        count2=count2+1
+    fh.write("//add points below surface to make a polygon\n")#okay so we want to add in the lines which make up the base of the slope
+    max_depth=doi
+    count1+=1
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};\n"%(count1,x_pts[0],max_depth,z_pts[0]))#point below left hand side of sudy area
+    count1+=1
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};\n"%(count1,x_pts[-1],max_depth,z_pts[-1]))#point below right hand side of sudy area
+    fh.write("//make a polygon by defining lines between points just made\n")
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+1,1,count1-1))#line from first point on surface to depth
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+2,count1-1,count1))#line going from the 2 new points
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+3,count1,count1-2))#line going bottom to last electrode point
+    
+    #now add electrode positions 
+    fh.write("//electrode position coordinates\n")
+
+    elec_z=np.zeros((len(elec_x),1))#for now let z = 0 
+    #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
+    cache_idx=[]
+    for i in range(len(elec_x)-1):
+        if elec_x[i]==elec_x[i+1] and elec_y[i]==elec_y[i+1]:
+            cache_idx.append(i)
+    #if duplicated points were dectected we should remove them
+    if len(cache_idx)>0:
+        elec_x=np.delete(elec_x,cache_idx)#deletes first instance of the duplicate       
+        elec_y=np.delete(elec_y,cache_idx)
+        print("%i duplicated electrode coordinate(s) were deleted" %len(cache_idx))
+    
+    node_pos = [0]*len(elec_x)
+    for i in range(len(elec_x)):
+        count1+=1
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(count1,elec_x[i],elec_y[i],elec_z[i],"electrode point"))
+        node_pos[i] = count1
+    
+    #now extend boundaries beyond flanks of slope(so generate your Neummon boundary)
+    fh.write("//Add background region (Neumann boundary) points\n")
+    cl_factor=150#characteristic length multipleier for Nuemon boundary 
+    cl2=cl*cl_factor#assign new cl, this is so mesh elements get larger from the main model
+    fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
+    #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
+    e_spacing=np.mean(np.diff(elec_x))
+    flank=e_spacing*100
+    b_max_depth=max_depth-flank#background max depth
+    #add nuemon boundaries on left hand side
+    count1+=1;left_top_idx=count1
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(count1,x_pts[0]-flank,y_pts[0],z_pts[0]))
+    count1+=1;left_bot_idx=count1
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(count1,x_pts[0]-flank,b_max_depth,z_pts[0]))
+    #add nuemon boundary points on right hand side
+    count1+=1;right_top_idx=count1
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(count1,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
+    count1+=1;right_bot_idx=count1
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(count1,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
+    #make lines encompassing all the points - counter clock wise fashion
+    fh.write("//make lines encompassing all the background points - counter clock wise fashion\n")
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+4,1,left_top_idx))
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+5,left_top_idx,left_bot_idx))
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+6,left_bot_idx,right_bot_idx))
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+7,right_bot_idx,right_top_idx))
+    fh.write("Line(%i) = {%i,%i};\n"%(count2+8,right_top_idx,middle_right_idx ))
+    fh.write("//Add line loops and plane surfaces to mesh\n")
+    #make first line loop refering to the model region
+    fh.write("Line Loop(%i) = {"%(count2+9))
+    for i in np.arange(1,count2,1):
+        fh.write("%i, "%(i+1))
+    fh.write("%i, %i, %i, 1};\n"%(-(count2+3),-(count2+2),-(count2+1)))
+        #now add background region line loop (cos this be made more efficent?)
+    fh.write("Line Loop(%i) = {%i ,%i ,%i ,%i ,%i ,%i ,%i ,%i};\n"%(count2+10,
+             count2+1,
+             count2+2,
+             count2+3,
+             -(count2+8),
+             -(count2+7),
+             -(count2+6),
+             -(count2+5),
+             -(count2+4)))
+    fh.write("//Assign plane surfaces to be meshed\n")
+    fh.write("Plane Surface(1) = {%i};\n"%(count2+9))
+    fh.write("Plane Surface(2) = {%i};\n"%(count2+10))
+    fh.write("//Make a physical surface encompassing survey area and background region to be meshed\n")
+    fh.write("Physical Surface(1) = {1, 2};\n")
+    fh.write("//Make electrode nodes into physical points so they will be included into the mesh\n")
+    fh.write("Point %s In Surface{1};\n"%str(node_pos).replace('[','{').replace(']','}'))
+    ### following code allows you to add lines between each borehole electrode but it seems buggy with gmsh and i cant figure out why 
+    count3=count2+10
+    line_idx = []
+    for i in range(len(node_pos)-1):
+        if elec_x[i] == elec_x[i+1]:
+            count3+=1
+            fh.write("Line(%i) = {%i,%i};\n"%(count3,node_pos[i],node_pos[i+1]))
+            line_idx.append(count3)
+            
+    fh.write("Line %s In Surface {1};\n"%str(line_idx).replace('[','{').replace(']','}'))
+    ####
+    fh.write("//j'ai fini!")
+    fh.close()
+    print("writing .geo to file completed\n")
+    #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
+    #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
+    node_pos = np.append(node_pos,surf_node_pos) 
+    return node_pos
 
 #%% convert gmsh 2d mesh to R2
 def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
@@ -285,6 +478,8 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             num_corrected=num_corrected+1
         else:
             c_triangles.append((node1[i],node2[i],node3[i]))
+            
+    #TODO add element area and centre calculation method 
     print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
     fid.close()
     ##### write data to mesh.dat kind of file
@@ -368,7 +563,8 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             #the information here is returned as a mesh dictionary because it much easier to debug 
         
 #%% gmsh wrapper
-def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = False, path='exe', save_path='default'):
+def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = False, path='exe', save_path='default',
+             bh_flag=False,surf_elec_x=None,surf_elec_y=None):
     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function will only work if current working directory has path: exe/gmsh.exe"""
 #INPUT: 
@@ -396,7 +592,12 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
     
     #make .geo file
     file_name="temp"
-    node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd)
+    if bh_flag:
+        if surf_elec_x is None:
+            raise ValueError("no surface electrode x coordinates have been given")
+        node_pos = genGeoFile_bh(surf_x,surf_y,elec_x,elec_y,surf_elec_x,surf_elec_y,file_name=file_name,path=ewd)
+    else:
+        node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd)
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
@@ -421,7 +622,8 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
     os.chdir(cwd)
     
     mesh = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
-    mesh.add_e_nodes(np.arange(len(elec_x)))
+    
+    mesh.add_e_nodes(np.array(node_pos)-1)
     
     return mesh, mesh_dict['element_ranges']
 
