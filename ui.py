@@ -394,10 +394,10 @@ class App(QMainWindow):
         gridImport.addLayout(topLayout, 0, 0)        
         
         def plotPseudo():
-            mwPseudo.plot(self.r2.surveys[0].pseudo)
+            mwPseudo.plot(self.r2.pseudo)
         
         def plotPseudoIP():
-            mwPseudoIP.plot(self.r2.surveys[0].pseudoIP)
+            mwPseudoIP.plot(self.r2.pseudoIP)
         
         pseudoLayout = QHBoxLayout()
 
