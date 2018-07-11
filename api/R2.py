@@ -67,6 +67,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.elec = self.surveys[0].elec
             
             # attribute method of Survey object to R2
+            self.pseudoIP = self.surveys[0].pseudoIP
             self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
             self.linfit = self.surveys[0].linfit
