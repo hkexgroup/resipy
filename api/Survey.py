@@ -33,6 +33,8 @@ class Survey(object):
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
+        self.filt_typ = None
+        self.cbar = True
 #        self.typ = 'R2'
 #        self.errTyp = 'obs'
 #        self.errTypIP = 'none'
@@ -469,8 +471,35 @@ class Survey(object):
 #            ax.set_title('Linear Mixed Effect Model Fit')
 #            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
 #            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
-    
-    
+
+    def heatmap(self,ax=None): # (Reference: Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+        if self.filt_typ == 'raw':
+            temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+        elif self.filt_typ == 'filtered':
+            temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+        else:
+            temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*1.2
+        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).ip.unstack(0)     
+        if ax is None:
+            fig, ax = plt.subplots()  
+        else:
+            fig = ax.get_figure()             
+        m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=0, vmax=25)
+        ax.xaxis.set_ticks(np.arange(0,temp_heatmap_recip_filterN ['a'].max()+1,4))
+        ax.yaxis.set_ticks(np.arange(0,temp_heatmap_recip_filterN ['m'].max(),4))
+        ax.set_ylabel('A',fontsize = 22)
+        ax.set_xlabel('M',fontsize = 22)
+        ax.tick_params(labelsize=18)
+        ax.set_title('%s\n' % (self.filt_typ), fontsize=20)     
+        ax.grid(False)
+        if self.cbar==True:
+            cbhnf = fig.colorbar(m, ax=ax)
+            cbhnf.set_label(r'-$\phi$ [mRad]', fontsize=20)
+            cbhnf.ax.tick_params(labelsize=18)
+        if ax is None:
+            return fig
+
     def pseudo(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
         '''
