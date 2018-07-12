@@ -75,7 +75,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.pwlfit = self.surveys[0].pwlfit
             self.phaseplotError = self.surveys[0].phaseplotError
             self.plotIPFit = self.surveys[0].plotIPFit
-
+            self.heatmap = self.surveys[0].heatmap
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
         ''' read electrode and quadrupoles data and return 
