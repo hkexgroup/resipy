@@ -35,6 +35,10 @@ class Survey(object):
         self.ndata = len(data)
         self.filt_typ = None
         self.cbar = True
+        self.phimin = ''
+        self.phimax = ''
+        self.filterDataIP = pd.DataFrame()
+        self.filterDataIP_plotOrig = data[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
 #        self.typ = 'R2'
 #        self.errTyp = 'obs'
 #        self.errTypIP = 'none'
@@ -473,12 +477,14 @@ class Survey(object):
 #            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
 
     def heatmap(self,ax=None): # (Reference: Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
-        if self.filt_typ == 'raw':
+        if self.filt_typ == 'Raw':
             temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
-        elif self.filt_typ == 'filtered':
-            temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
-        else:
-            temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+        elif self.filt_typ == 'Filtered':
+#            temp_heatmap_recip_filterN = self.filterDataIP_plot
+            if self.filterDataIP.empty:
+                temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+            else:
+                temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
         temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*1.2
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).ip.unstack(0)     
         if ax is None:
@@ -486,8 +492,8 @@ class Survey(object):
         else:
             fig = ax.get_figure()             
         m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=0, vmax=25)
-        ax.xaxis.set_ticks(np.arange(0,temp_heatmap_recip_filterN ['a'].max()+1,4))
-        ax.yaxis.set_ticks(np.arange(0,temp_heatmap_recip_filterN ['m'].max(),4))
+        ax.xaxis.set_ticks(np.arange(0,self.filterDataIP_plotOrig['a'].max()+1,4))
+        ax.yaxis.set_ticks(np.arange(0,self.filterDataIP_plotOrig['m'].max(),4))
         ax.set_ylabel('A',fontsize = 22)
         ax.set_xlabel('M',fontsize = 22)
         ax.tick_params(labelsize=18)
@@ -499,6 +505,24 @@ class Survey(object):
             cbhnf.ax.tick_params(labelsize=18)
         if ax is None:
             return fig
+    
+    def iprangefilt(self):
+        if self.filterDataIP.empty:
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (self.phimin/1.2, self.phimax/1.2))
+        else:
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (self.phimin/1.2, self.phimax/1.2))
+            
+#        temp_data = self.filterDataIP_plotOrig
+#        mask = (temp_data.ip < self.phimin) | (temp_data.ip > self.phimax)
+#        temp_data.loc[mask, 'ip'] = np.nan
+#        self.filterDataIP_plot = temp_data
+        
+    def removerecip(self):
+        if self.filterDataIP.empty:
+            self.filterDataIP = self.df.query('m>a & m>b & n>a & n>b')
+        else:
+            self.filterDataIP = self.filterDataIP.query('m>a & m>b & n>a & n>b')
+#        self.filterDataIP_plot = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
 
     def pseudo(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
@@ -682,6 +706,10 @@ class Survey(object):
         import time
         ''' execute DCA filtering
         '''
+        if self.filterDataIP.empty:
+            self.filterDataIP = DCA(self.df)
+        else:
+            self.filterDataIP = DCA(self.filterDataIP)
         for i in range(101):
             dump(i)
             time.sleep(0.05)
