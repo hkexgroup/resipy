@@ -304,11 +304,17 @@ class App(QMainWindow):
                 showIpOptions(True)
                 mwPseudoIP.setVisible(True)
                 tabPreProcessing.setTabEnabled(2, True)
+                tabPreProcessing.setTabEnabled(3, True)
+                heatRaw()
+#                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
+                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                heatFilter()
             else:
                 self.r2.typ = 'R2'
                 showIpOptions(False)
                 mwPseudoIP.setVisible(False)
                 tabPreProcessing.setTabEnabled(2, False)
+                tabPreProcessing.setTabEnabled(3, False)
 
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(diplayPseudoIP)
@@ -546,6 +552,70 @@ class App(QMainWindow):
         
         mwIPFiltering = MatplotlibWidget(navi=True)
         ipLayout.addWidget(mwIPFiltering)
+
+        phasefiltlayout = QVBoxLayout()
+        
+        def phirange():
+            self.r2.surveys[0].phimin = float(phivminEdit.text())
+            self.r2.surveys[0].phimax = float(phivmaxEdit.text())
+            self.r2.surveys[0].iprangefilt()
+            heatFilter()
+        def removerecip():
+            self.r2.surveys[0].removerecip()
+            heatFilter()
+            
+        phitoplayout = QHBoxLayout()
+        rangelabel = QLabel('Phase range filtering:    ')
+        phivminlabel = QLabel('-phi min: ')
+        phivminEdit = QLineEdit()
+        phivminEdit.setValidator(QDoubleValidator())
+        phivmaxlabel = QLabel('-phi max: ')
+        phivmaxEdit = QLineEdit()
+        phivmaxEdit.setValidator(QDoubleValidator())
+        rangebutton = QPushButton('Apply')
+        rangebutton.clicked.connect(phirange)
+        
+        recipfilt = QPushButton('Remove reciprocals/nested')
+        recipfilt.clicked.connect(removerecip)
+        
+        phitoplayout.addWidget(rangelabel)
+        phitoplayout.addWidget(phivminlabel)
+        phitoplayout.addWidget(phivminEdit)
+        phitoplayout.addWidget(phivmaxlabel)
+        phitoplayout.addWidget(phivmaxEdit)
+        phitoplayout.addWidget(rangebutton)
+        phitoplayout.addWidget(recipfilt)
+        
+        phasefiltlayout.addLayout(phitoplayout,0)
+        
+        def filt_reset():
+            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df.copy()
+            heatFilter()
+        
+        resetlayout = QVBoxLayout()
+        filtreset = QPushButton('Reset all "phase" filters')
+        filtreset.clicked.connect(filt_reset)
+        resetlayout.addWidget(filtreset)
+#        recipfilt.clicked.connect("add function")
+        
+        
+        ipfiltlayout = QHBoxLayout()
+        
+        def heatRaw():
+            self.r2.surveys[0].filt_typ = 'Raw'
+#            self.r2.surveys[0].cbar = False
+            raw_hmp.plot(self.r2.heatmap)
+            
+        def heatFilter():
+            self.r2.surveys[0].filt_typ = 'Filtered'
+#            self.r2.surveys[0].cbar = True
+            filt_hmp.plot(self.r2.heatmap)
+            
+        raw_hmp = MatplotlibWidget(navi=True)
+        filt_hmp = MatplotlibWidget(navi=True)
+        ipfiltlayout.addWidget(raw_hmp)
+        ipfiltlayout.addWidget(filt_hmp)           
+
         
         def dcaDump(val):
             dcaProgress.setValue(val)
@@ -553,6 +623,7 @@ class App(QMainWindow):
             
         def dcaFiltering():
             self.r2.surveys[0].dca(dump=dcaDump)
+            heatFilter()
             
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
@@ -560,9 +631,11 @@ class App(QMainWindow):
         dcaProgress = QProgressBar()
         dcaLayout.addWidget(dcaButton)
         dcaLayout.addWidget(dcaProgress)
-        ipLayout.addLayout(dcaLayout)
         
-        
+        phasefiltlayout.addLayout(dcaLayout, 1)
+        phasefiltlayout.addLayout(resetlayout, 2)
+        phasefiltlayout.addLayout(ipfiltlayout, 3)
+            
         manualWidget = QWidget()
         manualWidget.setLayout(manualLayout)
         tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
@@ -573,6 +646,13 @@ class App(QMainWindow):
         ipWidget.setVisible(False)
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
+
+        ipfiltWidget = QWidget()
+#        ipfiltWidget.setVisible(False)
+        ipfiltWidget.setLayout(phasefiltlayout)
+        tabPreProcessing.addTab(ipfiltWidget, 'Phase Filtering')
+        
+        tabPreProcessing.setTabEnabled(3, False)
         tabPreProcessing.setTabEnabled(2, False)
         tabPreProcessing.setTabEnabled(1, False)
         
