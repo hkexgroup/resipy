@@ -94,6 +94,6 @@ def DCA(data_in): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & W
                                        'Fit_DC_8', 'Fit_DC_9', 'Fit_DC_10', 'Fit_DC_11', 'Fit_DC_12',
                                        'Fit_DC_13', 'Fit_DC_14', 'Fit_DC_15', 'Fit_DC_16', 'Fit_DC_17',
                                        'Fit_DC_18', 'Fit_DC_19', 'Fit_DC_20', 'DC_rmsd', 'weight', 'K'], axis = 1).rename(columns = {'An':'a','Bn':'b'})
-        return (final_data)
+        return (final_data_dropped)
 #%%
 #test = DCA(df)
