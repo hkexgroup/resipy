@@ -703,17 +703,13 @@ class Survey(object):
         pseudo(array, resist, spacing, ax=ax, label='Reciprocal Error [Ohm.m]')
         
     def dca(self, dump=print): # TO BE IMPLEMENTED
-        import time
         ''' execute DCA filtering
         '''
         if self.filterDataIP.empty:
-            self.filterDataIP = DCA(self.df)
+            self.filterDataIP = DCA(self.df, dump=dump)
         else:
-            self.filterDataIP = DCA(self.filterDataIP)
-        for i in range(101):
-            dump(i)
-            time.sleep(0.05)
-        
+            self.filterDataIP = DCA(self.filterDataIP, dump=dump)
+        dump(100)
   
 def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
     #figsize=(12,3)

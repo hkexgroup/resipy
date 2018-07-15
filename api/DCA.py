@@ -26,7 +26,7 @@ def linear_coefs (x,y): #linear fit parameteres for decay curve
         coefs = np.array([0,0])
         return
 
-def DCA(data_in): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017). Decay curve analysis for data error quantification in time-domain induced polarization imaging. Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
+def DCA(data_in, dump=print): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017). Decay curve analysis for data error quantification in time-domain induced polarization imaging. Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
     data = data_in.copy()
     cnames = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11',
         'M12','M13','M14','M15','M16','M17','M18','M19','M20', 'TM1']
@@ -84,6 +84,7 @@ def DCA(data_in): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & W
             group['K'] = temp_K
             appended_groups.append(group)
             percent_progress = i*100/len(filtered_R_IP.groupby(['An','Bn']))
+            dump(percent_progress)
             print('%s%s -Done' % (int(percent_progress),'%'))
         print('100% -Done - finished!')
         appended_groups = pd.concat(appended_groups)
