@@ -578,7 +578,7 @@ class App(QMainWindow):
         rangebutton = QPushButton('Apply')
         rangebutton.clicked.connect(phirange)
         
-        recipfilt = QPushButton('Remove reciprocals/nested')
+        recipfilt = QPushButton('Remove reciprocals')
         recipfilt.clicked.connect(removerecip)
 
         nestedfilt = QPushButton('Remove nested')
