@@ -563,7 +563,10 @@ class App(QMainWindow):
         def removerecip():
             self.r2.surveys[0].removerecip()
             heatFilter()
-            
+        def removenested():
+            self.r2.surveys[0].removenested()
+            heatFilter()
+
         phitoplayout = QHBoxLayout()
         rangelabel = QLabel('Phase range filtering:    ')
         phivminlabel = QLabel('-phi min: ')
@@ -577,6 +580,9 @@ class App(QMainWindow):
         
         recipfilt = QPushButton('Remove reciprocals/nested')
         recipfilt.clicked.connect(removerecip)
+
+        nestedfilt = QPushButton('Remove nested')
+        nestedfilt.clicked.connect(removenested)        
         
         phitoplayout.addWidget(rangelabel)
         phitoplayout.addWidget(phivminlabel)
@@ -585,6 +591,7 @@ class App(QMainWindow):
         phitoplayout.addWidget(phivmaxEdit)
         phitoplayout.addWidget(rangebutton)
         phitoplayout.addWidget(recipfilt)
+        phitoplayout.addWidget(nestedfilt)
         
         phasefiltlayout.addLayout(phitoplayout,0)
         
