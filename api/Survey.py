@@ -479,12 +479,15 @@ class Survey(object):
     def heatmap(self,ax=None): # (Reference: Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
         if self.filt_typ == 'Raw':
             temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+            dflen = len(self.dfOrigin)
         elif self.filt_typ == 'Filtered':
 #            temp_heatmap_recip_filterN = self.filterDataIP_plot
             if self.filterDataIP.empty:
                 temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+                dflen = len(self.df)
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+                dflen = len(self.filterDataIP)
         temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*1.2
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).ip.unstack(0)     
         if ax is None:
@@ -497,7 +500,7 @@ class Survey(object):
         ax.set_ylabel('A',fontsize = 22)
         ax.set_xlabel('M',fontsize = 22)
         ax.tick_params(labelsize=18)
-        ax.set_title('%s\n' % (self.filt_typ), fontsize=20)     
+        ax.set_title('%s\n%s measurements' % (self.filt_typ, dflen), fontsize=20)     
         ax.grid(False)
         if self.cbar==True:
             cbhnf = fig.colorbar(m, ax=ax)
