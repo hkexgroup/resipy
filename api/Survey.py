@@ -519,10 +519,15 @@ class Survey(object):
         
     def removerecip(self):
         if self.filterDataIP.empty:
+            self.filterDataIP = self.df.query('irecip>=0')
+        else:
+            self.filterDataIP = self.filterDataIP.query('irecip>=0')
+#        self.filterDataIP_plot = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+    def removenested(self):
+        if self.filterDataIP.empty:
             self.filterDataIP = self.df.query('m>a & m>b & n>a & n>b')
         else:
             self.filterDataIP = self.filterDataIP.query('m>a & m>b & n>a & n>b')
-#        self.filterDataIP_plot = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
 
     def pseudo(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
