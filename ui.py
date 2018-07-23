@@ -1084,8 +1084,11 @@ class App(QMainWindow):
                     a = tt[i].split()
                     if len(a) > 0:
                         if a[0] == 'Initial':
-                            self.rms.append(float(a[3]))
-                            self.rmsIndex.append(self.pindex)
+                            try:
+                                self.rms.append(float(a[3]))
+                                self.rmsIndex.append(self.pindex)
+                            except:
+                                pass
                         if a[0] == 'Processing':
                             print('new processing detected')
                             self.pindex = self.pindex + 1

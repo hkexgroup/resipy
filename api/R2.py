@@ -38,7 +38,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.typ = 'R2' # or cR2 or R3, cR3
-        self.errTyp = '' # type of error to add for DC
+        self.errTyp = 'none' # type of error to add for DC
         self.errTypIP = 'none' # type of error to add for IP phase
         self.iBorehole = False
         self.iTimeLapse = False
@@ -442,7 +442,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
 #k.typ = 'cR2'
 #k.createSurvey('test/syscalFile.csv', ftype='Syscal')
-#k.createSurvey('test/rifleday8_n2.csv', ftype='Syscal')
+#k.createSurvey('api/test/rifleday8_n2.csv', ftype='Syscal')
+#k.surveys[0].dca()
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
 #k.pwlfit()

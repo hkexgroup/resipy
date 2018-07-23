@@ -179,6 +179,11 @@ class Survey(object):
         irecip = Ri
         ie = irecip > 0
         
+        
+        self.dfg['a'] = array[ie,0]
+        self.dfg['b'] = array[ie,1]
+        self.dfg['m'] = array[ie,2]
+        self.dfg['n'] = array[ie,3]
         self.dfg['recipMean'] = reciprocalMean[ie]
         self.dfg['recipError'] = np.abs(reciprocalErr[ie])
         self.df['irecip'] = irecip
@@ -189,6 +194,51 @@ class Survey(object):
         
         return Ri
     
+    
+    def addFilteredIP(self):
+        # add Survey.filterDataIP to Survey.df and Survey.dfg
+        self.df['ip'] = np.nan # remove all IP from Survey.df
+        i2keepDf = np.zeros(self.df.shape[0], dtype=bool)
+        i2keepDfg = np.zeros(self.dfg.shape[0], dtype=bool)
+        ipArray = self.filterDataIP[['a','b','m','n']].values
+        dfArray = self.df[['a','b','m','n']].values
+        dfgArray = self.dfg[['a','b','m','n']].values
+        for i in range(self.filterDataIP.shape[0]):
+            print(i, end='')
+            rev1=[0,1,2,3]
+            rev2=[0,1,3,2]
+            rev3=[1,0,2,3]
+            rev4=[1,0,3,2]
+            index1=(dfArray == ipArray[i,rev1]).all(1)
+            index2=(dfArray == ipArray[i,rev2]).all(1)
+            index3=(dfArray == ipArray[i,rev3]).all(1)
+            index4=(dfArray == ipArray[i,rev4]).all(1)
+            index=index1|index2|index3|index4
+            
+            if np.sum(index) > 0:
+                self.df.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
+                i2keepDf[index] = True
+            
+            rev1=[0,1,2,3]
+            rev2=[0,1,3,2]
+            rev3=[1,0,2,3]
+            rev4=[1,0,3,2]
+            index1=(dfgArray == ipArray[i,rev1]).all(1)
+            index2=(dfgArray == ipArray[i,rev2]).all(1)
+            index3=(dfgArray == ipArray[i,rev3]).all(1)
+            index4=(dfgArray == ipArray[i,rev4]).all(1)
+            index=index1|index2|index3|index4
+            
+            if np.sum(index) > 0:
+                self.dfg.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
+                i2keepDfg[index] = True
+            
+        
+        print('df deleted = ', np.sum(~i2keepDf), 'dfg : ', np.sum(~i2keepDfg))
+        self.filterData(i2keepDf)
+        self.dfg = self.dfg[i2keepDfg]
+        
+        
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None):
@@ -717,7 +767,9 @@ class Survey(object):
             self.filterDataIP = DCA(self.df, dump=dump)
         else:
             self.filterDataIP = DCA(self.filterDataIP, dump=dump)
+        self.addFilteredIP()
         dump(100)
+        
   
 def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
     #figsize=(12,3)
@@ -1223,7 +1275,12 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
         
 #%% test code
 #s = Survey('test/syscalFile.csv', ftype='Syscal')
-#s = Survey('test/rifleday8_n2.csv', ftype='Syscal')
+#s = Survey('test/rifleday8.csv', ftype='Syscal')
+#s.dca()
+#s.addFilteredIP()
+#s.pwlfit()
+#s.plotIPFit()
+#s.write2protocol('kk.txt', ip=True, errTyp='pwl', errTypIP='pwl')
 #s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
 #s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
 #fig, ax = plt.subplots()
