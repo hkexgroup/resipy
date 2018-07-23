@@ -1149,6 +1149,7 @@ class App(QMainWindow):
         
         def logInversion():
             def func(text):
+#                print('t', text)
                 self.inversionOutput = text + '\n'
                 cursor = logText.textCursor()
                 cursor.movePosition(cursor.End)
@@ -1158,9 +1159,12 @@ class App(QMainWindow):
                 QApplication.processEvents()
                 
             self.r2.invert(iplot=False, dump=func)
+            print('plot section')
             plotSection()
+            print('end plot section')
             self.r2.getResults()
             for i in range(len(self.r2.meshResults)):
+                print('add ', i)
                 sectionId.addItem(str(i))
             
 #        def logInversion2():

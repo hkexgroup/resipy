@@ -44,7 +44,6 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = False
         self.meshResults = [] # contains vtk mesh object of inverted section
         
-        
     def setwd(self, dirname):
         ''' set the working directory
         '''
@@ -243,7 +242,7 @@ class R2(object): # R2 master class instanciated by the GUI
             content = ''
             for i, s in enumerate(self.surveys):
                 content = content + str(len(s.df)) + '\n'
-                if errTyp != '': # there is an error model
+                if errTyp != 'none': # there is an error model
                     s.df['error'] = self.bigSurvey.errorModel(s.df['resist'].values)
                     s.df['index'] = np.arange(1, len(s.df)+1)
                     content = content + s.df[['index','a','b','m','n','resist','error']].to_csv(sep='\t', header=False, index=False)
@@ -268,22 +267,35 @@ class R2(object): # R2 master class instanciated by the GUI
             dirname = self.dirname
         os.chdir(dirname)
         targetName = os.path.join(dirname, exeName)
-        actualPath = os.path.dirname(os.path.relpath(__file__))
+        actualPath = self.cwd
+#        actualPath = os.path.dirname(os.path.relpath(__file__))
         
         # copy R2.exe
         if ~os.path.exists(targetName):
-            shutil.copy(os.path.join(actualPath, 'exe', exeName), targetName)  
+            shutil.copy(os.path.join(actualPath, 'api', 'exe', exeName), targetName)  
         
         if OS == 'Linux':
             cmd = ['wine',exeName]
         if OS == 'Windows':
             cmd = [exeName]
         
-        p = Popen(cmd, stdout=PIPE, shell=False)
-        while p.poll() is None:
-            line = p.stdout.readline().rstrip()
-            dump(line.decode('utf-8'))
-            
+#        p = Popen(cmd, stdout=PIPE, shell=False)
+#        while p.poll() is None:
+#            line = p.stdout.readline().rstrip()
+#            dump(line.decode('utf-8'))
+        
+        def execute(cmd):
+            popen = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
+            for stdout_line in iter(popen.stdout.readline, ""):
+                yield stdout_line
+            popen.stdout.close()
+            return_code = popen.wait()
+            if return_code:
+                print('error on return_code')
+        
+        for text in execute(cmd):
+                dump(text.rstrip())
+
         os.chdir(cwd)
         
         
@@ -439,10 +451,12 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
         
 #%% test code
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
 #k.typ = 'cR2'
-#k.createSurvey('test/syscalFile.csv', ftype='Syscal')
+#k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createSurvey('api/test/rifleday8_n2.csv', ftype='Syscal')
+#k.invert(iplot=False)
 #k.surveys[0].dca()
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
