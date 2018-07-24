@@ -50,7 +50,9 @@ jupyter notebook # the command is jupyter-notebook (with a dash) on Linux but wi
 You can then execute each cell of the notebook using ```Shift + Enter```. This will work on the same example as for the GUI above.
 To edit a cell, just double click on it.
 
-
+Single .EXE
+---
+Development builds can be downloaded at : https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh
 
 Best practices
 --------------
