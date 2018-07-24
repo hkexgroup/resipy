@@ -83,11 +83,11 @@ class MatplotlibWidget(QWidget):
         if vmin == '':
             vmin = oldLimits[1]
         else:
-            vmin = int(vmin)
+            vmin = float(vmin)
         if vmax == '':
             vmax = oldLimits[0]
         else:
-            vmax = int(vmax)
+            vmax = float(vmax)
         coll.set_clim(vmin, vmax)
         self.canvas.draw()
 
@@ -104,12 +104,15 @@ class MatplotlibWidget(QWidget):
         self.figure.tight_layout()
         self.canvas.draw()
     
+    def setCallback(self, callback):
+        self.callback = callback
+        
     def replot(self, **kwargs):
+#        print('replot:', kwargs)
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         self.axis = ax
-        callback = self.callback
-        callback(ax=ax, **kwargs)
+        self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
         self.figure.tight_layout()
         self.canvas.draw()
@@ -1094,7 +1097,7 @@ class App(QMainWindow):
                             except:
                                 pass
                         if a[0] == 'Processing':
-                            print('new processing detected')
+#                            print('new processing detected')
                             self.pindex = self.pindex + 1
 #                            print('index = ', self.pindex)
                 if len(self.rms) > 0:
@@ -1165,12 +1168,8 @@ class App(QMainWindow):
                 QApplication.processEvents()
                 
             self.r2.invert(iplot=False, dump=func)
-            print('plot section')
             plotSection()
-            print('end plot section')
-            self.r2.getResults()
             for i in range(len(self.r2.meshResults)):
-                print('add ', i)
                 sectionId.addItem(str(i))
             
 #        def logInversion2():
@@ -1205,32 +1204,32 @@ class App(QMainWindow):
 #                runMainInversion()
         
         def plotSection():
-            try:
-                mwInvResult.plot(self.r2.showResults)
-                plotInvError()
-                self.displayParams = {'edge_color':'none',
-                                      'sens':True, 'attr':'Resistivity(log10)'}
-                displayAttribute()
-            except:# ValueError as e:
-#                msgBox(e)
-                pass
+#            self.r2.showResults()
+#            try:
+#            mwInvResult.plot(self.r2.showResults)
+            mwInvResult.setCallback(self.r2.showResults)
+            plotInvError()
+            self.displayParams = {'index':0,'edge_color':'none',
+                                  'sens':True, 'attr':'Resistivity(log10)'}
+            self.r2.getResults()
+            displayAttribute()
+            # graph will be plotted because changeSection will be called
+            sectionId.currentIndexChanged.connect(changeSection)
+            attributeName.currentIndexChanged.connect(changeAttribute)
+
         
         def replotSection():
+            index = self.displayParams['index']
             edge_color = self.displayParams['edge_color']
             sens = self.displayParams['sens']
             attr = self.displayParams['attr']
-            mwInvResult.replot(edge_color=edge_color, sens=sens, attr=attr)
+            print(edge_color, sens, attr)
+            mwInvResult.replot(index=index, edge_color=edge_color, sens=sens, attr=attr)
         
         def msgBox(text):
             msg = QMessageBox()
             msg.setText(text)
             
-            
-#        def replotSection(index=-1):
-#            def func(**kwargs):
-#                self.r2.showResults()
-#            mwInvResult.plot(self.r2.showResults) # TODO PASS ATTRIBUTE
-        
         def setCBarLimit():
             print(vmaxEdit.text())
             mwInvResult.setMinMax(vmaxEdit.text(), vminEdit.text())
@@ -1270,27 +1269,34 @@ class App(QMainWindow):
         # option for display
         def displayAttribute():
             self.attr = list(self.r2.meshResults[-1].attr_cache)
+            resistIndex = 0
             for i in range(len(self.attr)):
+                if self.attr[i] == 'Resistivity(log10)':
+                    resistIndex = i
                 attributeName.addItem(self.attr[i])
+            attributeName.setCurrentIndex(resistIndex)
+            sectionId.setCurrentIndex(0)
         
         def changeAttribute(index):
+#            print('changeAttribute', index)
             self.displayParams['attr'] = self.attr[index]
             replotSection()
+
             
         displayOptions = QHBoxLayout()
         
         def changeSection(index):
-            mwInvResult.plot(self.r2.meshResults[index].show)
+#            print('changeSection')
+            self.displayParams['index'] = index
+            replotSection()
             # find a way to keep the current display settings between section
             # without just replotting it here
 #            mwInvResult.replot()
             
         sectionId = QComboBox()
-        sectionId.currentIndexChanged.connect(changeSection)
         displayOptions.addWidget(sectionId)
         
         attributeName = QComboBox()
-        attributeName.currentIndexChanged.connect(changeAttribute)
         displayOptions.addWidget(attributeName, 20)
         
         vminLabel = QLabel('Min:')

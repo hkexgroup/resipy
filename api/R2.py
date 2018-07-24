@@ -338,11 +338,11 @@ class R2(object): # R2 master class instanciated by the GUI
             self.showSection() # TODO need to debug that for timelapse and even for normal !
             # pass an index for inverted survey time
     
-    def showResults(self, index=0, ax=None, edge_color='none', attr='Resistivity(log10)', sens=True, **kwargs):
+    def showResults(self, index=0, ax=None, edge_color='none', attr='Resistivity(log10)', sens=True, color_map='viridis', **kwargs):
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
-            self.meshResults[index].show(ax=ax, edge_color=edge_color, attr=attr, sens=sens, **kwargs)
+            self.meshResults[index].show(ax=ax, edge_color=edge_color, attr=attr, sens=sens, color_map=color_map, **kwargs)
         else:
             print('Unexpected Error')
 
@@ -467,6 +467,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createSurvey('api/test/rifleday8_n2.csv', ftype='Syscal')
 #k.invert(iplot=False)
+#k.showResults()
 #k.surveys[0].dca()
 #k.pseudo(contour=True)
 #k.linfit(iplot=True)
