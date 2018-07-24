@@ -273,8 +273,11 @@ class Survey(object):
         reciprocalMean = self.df['reciprocalMean'].values
         reciprocalErr = self.df['reciprocalErr'].values
         ax.loglog(np.abs(reciprocalMean), reciprocalErr, 'o')
-        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
+#        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
+#        ax.set_ylabel('Reciprocal Error [$\Omega$]')
+        ax.set_ylabel(r'$R_{error} [\Omega]$')
+        ax.set_xlabel(r'$R_{avg} [\Omega]$')  
+        ax.set_title('Observed Discrepancies\n')
         if ax is None:
             return fig
 

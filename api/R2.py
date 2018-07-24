@@ -110,11 +110,21 @@ class R2(object): # R2 master class instanciated by the GUI
             isurveys = np.ones(len(self.surveys), dtype=bool)
         isurveys = np.where(isurveys)[0] # convert to indices
         df = self.bigSurvey.df.copy()
+        dfg = self.bigSurvey.dfg.copy()
+        c = 0
         for i in isurveys:
-            df.append(self.surveys[i].df)
+            df2 = self.surveys[i].df
+            ipos = df2['irecip'].values > 0
+            ineg = df2['irecip'].values < 0
+            df2.loc[ipos, 'irecip'] = df2[ipos]['irecip'] + c
+            df2.loc[ineg, 'irecip'] = df2[ineg]['irecip'] - c
+            df = df.append(df2)
+            c = c + df2.shape[0]
+            dfg = dfg.append(self.surveys[i].dfg)
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
-        
+        self.bigSurvey.ndata = df.shape[0]
+        self.bigSurvey.dfg = dfg
         self.pseudo = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
@@ -497,8 +507,13 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 
 #%% test for timelapse inversion
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test/')
 #k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
+#k.linfit()
+#k.write2protocol('kk.txt')
 #k.invert(iplot=False)
+#k.showResults(index=0)
+#k.showResults(index=1)
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
 #k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))

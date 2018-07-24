@@ -242,6 +242,11 @@ class App(QMainWindow):
             buttonf.setText(fdir + ' (Press to change)')
             plotPseudo()
             elecTable.iniTable(self.r2.elec)
+            if all(self.r2.surveys[0].df['irecip'].values == 0):
+                pass
+            else:
+                tabPreProcessing.setTabEnabled(1, True)
+                plotError()
             
         def getfile():
             print('ftype = ', ftype)
@@ -504,7 +509,6 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Exponential')
         errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(fitModel)
         errorLayout.addWidget(errFitType)
@@ -1102,6 +1106,8 @@ class App(QMainWindow):
                     for ii in iindex:
                         ie = rmsIndex == ii
                         ax.plot(xx[ie], rms[ie], 'o-')
+            ax.set_xticks([])
+            ax.set_xticklabels([],[])
             ax.set_xlabel('Iterations', fontsize=8)
             ax.tick_params(axis='both',which='major', labelsize=8)
             ax.set_ylabel('RMS Misfit', fontsize=8)
