@@ -184,13 +184,13 @@ class App(QMainWindow):
                  buttonf.setText('Import Data Directory')
                  buttonf.clicked.disconnect()
                  buttonf.clicked.connect(getdir)
-                 reg_mode.setCurrentIndex(2)
+#                 reg_mode.setCurrentIndex(2)
             else:
                 self.r2.iTimeLapse = False
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
-                reg_mode.setCurrentIndex(0)
+#                reg_mode.setCurrentIndex(0)
                 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -472,7 +472,7 @@ class App(QMainWindow):
         
         def plotError():
             mwFitError.plot(self.r2.plotError)
-            self.r2.errTyp = 'obs'
+            self.r2.errTyp = 'none'
             
         def fitLinError():
             mwFitError.plot(self.r2.linfit)
