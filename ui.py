@@ -605,7 +605,7 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
         
         def filt_reset():
-            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df.copy()
+            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfphasereset.copy()
             heatFilter()
         
         resetlayout = QVBoxLayout()
