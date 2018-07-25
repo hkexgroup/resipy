@@ -29,6 +29,7 @@ class Survey(object):
             raise Exception('Sorry this file type is not implemented yet')
         
         self.df = data
+        self.dfphasereset = pd.DataFrame() #for preserving phase reset ability
         self.dfg = pd.DataFrame() # df with mean of resistivity
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
@@ -766,6 +767,7 @@ class Survey(object):
     def dca(self, dump=print): # TO BE IMPLEMENTED
         ''' execute DCA filtering
         '''
+        self.dfphasereset = self.df.copy()
         if self.filterDataIP.empty:
             self.filterDataIP = DCA(self.df, dump=dump)
         else:
