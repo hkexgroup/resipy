@@ -205,7 +205,6 @@ class Survey(object):
         dfArray = self.df[['a','b','m','n']].values
         dfgArray = self.dfg[['a','b','m','n']].values
         for i in range(self.filterDataIP.shape[0]):
-            print(i, end='')
             rev1=[0,1,2,3]
             rev2=[0,1,3,2]
             rev3=[1,0,2,3]
