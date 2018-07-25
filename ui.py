@@ -22,6 +22,7 @@ print('importing python libraries')
 import random
 import os
 import sys
+print('hello Paul !')
 import shutil
 import platform
 OS = platform.system()
