@@ -71,6 +71,7 @@ class Survey(object):
             print('BAD transfer resistance data : ', np.sum(iout))
         self.filterData(~iout)
         self.filterData(irecip != 0) # filter out dummy and non reciprocal
+        self.dfphasereset = self.df.copy()
     
     
     def addData(self, fname, ftype='Syscal'):
@@ -568,6 +569,7 @@ class Survey(object):
             self.filterDataIP = self.df.query('ip > %s and ip < %s' % (self.phimin/1.2, self.phimax/1.2))
         else:
             self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (self.phimin/1.2, self.phimax/1.2))
+        self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
 #        mask = (temp_data.ip < self.phimin) | (temp_data.ip > self.phimax)
@@ -580,6 +582,8 @@ class Survey(object):
         else:
             self.filterDataIP = self.filterDataIP.query('irecip>=0')
 #        self.filterDataIP_plot = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
+        self.addFilteredIP()
+
     def removenested(self):
         if self.filterDataIP.empty:
 #            self.filterDataIP = self.df.query('m>a & m>b & n>a & n>b')
@@ -593,6 +597,7 @@ class Survey(object):
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
             self.filterDataIP = temp_data.dropna()
+        self.addFilteredIP()
 
     def pseudo(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
@@ -775,7 +780,6 @@ class Survey(object):
     def dca(self, dump=print): # TO BE IMPLEMENTED
         ''' execute DCA filtering
         '''
-        self.dfphasereset = self.df.copy()
         if self.filterDataIP.empty:
             self.filterDataIP = DCA(self.df, dump=dump)
         else:
