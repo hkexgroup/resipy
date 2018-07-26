@@ -39,7 +39,7 @@ class Survey(object):
         self.phimin = ''
         self.phimax = ''
         self.filterDataIP = pd.DataFrame()
-        self.filterDataIP_plotOrig = data[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
+#        self.filterDataIP_plotOrig = data[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
 #        self.typ = 'R2'
 #        self.errTyp = 'obs'
 #        self.errTypIP = 'none'
@@ -197,48 +197,48 @@ class Survey(object):
     
     
     def addFilteredIP(self):
+        self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
         # add Survey.filterDataIP to Survey.df and Survey.dfg
-        self.df['ip'] = np.nan # remove all IP from Survey.df
-        i2keepDf = np.zeros(self.df.shape[0], dtype=bool)
-        i2keepDfg = np.zeros(self.dfg.shape[0], dtype=bool)
-        ipArray = self.filterDataIP[['a','b','m','n']].values
-        dfArray = self.df[['a','b','m','n']].values
-        dfgArray = self.dfg[['a','b','m','n']].values
-        for i in range(self.filterDataIP.shape[0]):
-            rev1=[0,1,2,3]
-            rev2=[0,1,3,2]
-            rev3=[1,0,2,3]
-            rev4=[1,0,3,2]
-            index1=(dfArray == ipArray[i,rev1]).all(1)
-            index2=(dfArray == ipArray[i,rev2]).all(1)
-            index3=(dfArray == ipArray[i,rev3]).all(1)
-            index4=(dfArray == ipArray[i,rev4]).all(1)
-            index=index1|index2|index3|index4
-            
-            if np.sum(index) > 0:
-                self.df.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
-                i2keepDf[index] = True
-            
-            rev1=[0,1,2,3]
-            rev2=[0,1,3,2]
-            rev3=[1,0,2,3]
-            rev4=[1,0,3,2]
-            index1=(dfgArray == ipArray[i,rev1]).all(1)
-            index2=(dfgArray == ipArray[i,rev2]).all(1)
-            index3=(dfgArray == ipArray[i,rev3]).all(1)
-            index4=(dfgArray == ipArray[i,rev4]).all(1)
-            index=index1|index2|index3|index4
-            
-            if np.sum(index) > 0:
-                self.dfg.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
-                i2keepDfg[index] = True
-            
-        
-        print('df deleted = ', np.sum(~i2keepDf), 'dfg : ', np.sum(~i2keepDfg))
-        self.filterData(i2keepDf)
-        self.dfg = self.dfg[i2keepDfg]
-        
-        
+#        self.df['ip'] = np.nan # remove all IP from Survey.df
+#        i2keepDf = np.zeros(self.df.shape[0], dtype=bool)
+#        i2keepDfg = np.zeros(self.dfg.shape[0], dtype=bool)
+#        ipArray = self.filterDataIP[['a','b','m','n']].values
+#        dfArray = self.df[['a','b','m','n']].values
+#        dfgArray = self.dfg[['a','b','m','n']].values
+#        for i in range(self.filterDataIP.shape[0]):
+##            print(i, end='')
+#            rev1=[0,1,2,3]
+#            rev2=[0,1,3,2]
+#            rev3=[1,0,2,3]
+#            rev4=[1,0,3,2]
+#            index1=(dfArray == ipArray[i,rev1]).all(1)
+#            index2=(dfArray == ipArray[i,rev2]).all(1)
+#            index3=(dfArray == ipArray[i,rev3]).all(1)
+#            index4=(dfArray == ipArray[i,rev4]).all(1)
+#            index=index1|index2|index3|index4
+#            
+#            if np.sum(index) > 0:
+#                self.df.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
+#                i2keepDf[index] = True
+#            
+#            rev1=[0,1,2,3]
+#            rev2=[0,1,3,2]
+#            rev3=[1,0,2,3]
+#            rev4=[1,0,3,2]
+#            index1=(dfgArray == ipArray[i,rev1]).all(1)
+#            index2=(dfgArray == ipArray[i,rev2]).all(1)
+#            index3=(dfgArray == ipArray[i,rev3]).all(1)
+#            index4=(dfgArray == ipArray[i,rev4]).all(1)
+#            index=index1|index2|index3|index4
+#            
+#            if np.sum(index) > 0:
+#                self.dfg.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
+#                i2keepDfg[index] = True
+#            
+#        
+##        print('df deleted = ', np.sum(~i2keepDf), 'dfg : ', np.sum(~i2keepDfg))
+#        self.filterData(i2keepDf)
+#        self.dfg = self.dfg[i2keepDfg] 
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None):
@@ -530,6 +530,7 @@ class Survey(object):
 #            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
 
     def heatmap(self,ax=None): # (Reference: Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+        filterDataIP_plotOrig = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
         if self.filt_typ == 'Raw':
             temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
             dflen = len(self.dfOrigin)
@@ -548,8 +549,8 @@ class Survey(object):
         else:
             fig = ax.get_figure()             
         m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=0, vmax=25)
-        ax.xaxis.set_ticks(np.arange(0,self.filterDataIP_plotOrig['a'].max()+1,4))
-        ax.yaxis.set_ticks(np.arange(0,self.filterDataIP_plotOrig['m'].max(),4))
+        ax.xaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['a'].max()+1,4))
+        ax.yaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['m'].max(),4))
         ax.set_ylabel('A',fontsize = 22)
         ax.set_xlabel('M',fontsize = 22)
         ax.tick_params(labelsize=18)
