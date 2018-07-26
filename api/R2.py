@@ -465,7 +465,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
 #k.typ = 'cR2'
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
-#k.createSurvey('api/test/rifleday8_n2.csv', ftype='Syscal')
+#k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.invert(iplot=False)
 #k.showResults()
 #k.surveys[0].dca()

@@ -5,8 +5,8 @@ Created on Fri Jun  1 11:21:54 2018
 
 @author: jkl
 """
-import sys
-import os
+#import sys
+#import os
 #sys.path.append(os.path.relpath('../api'))
 
 import numpy as np
@@ -30,7 +30,6 @@ class Survey(object):
         
         self.df = data
         self.dfphasereset = pd.DataFrame() #for preserving phase reset ability
-        self.dfg = pd.DataFrame() # df with mean of resistivity
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -178,20 +177,12 @@ class Survey(object):
         ibad = reciprocalErrRel > 0.2
         print(str(np.sum(ibad)) + ' measurements error > 20 %')
         
-        irecip = Ri
-        ie = irecip > 0
+        irecip = Ri        
         
-        
-        self.dfg['a'] = array[ie,0]
-        self.dfg['b'] = array[ie,1]
-        self.dfg['m'] = array[ie,2]
-        self.dfg['n'] = array[ie,3]
-        self.dfg['recipMean'] = reciprocalMean[ie]
-        self.dfg['recipError'] = np.abs(reciprocalErr[ie])
         self.df['irecip'] = irecip
         self.df['reciprocalErrRel'] = reciprocalErrRel
-        self.df['reciprocalErr'] = reciprocalErr
-        self.df['reciprocalMean'] = reciprocalMean
+        self.df['recipError'] = reciprocalErr
+        self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
         
         return Ri
@@ -271,8 +262,8 @@ class Survey(object):
     def plotError(self, ax=None): 
         if ax is None:
             fig, ax = plt.subplots()
-        reciprocalMean = self.df['reciprocalMean'].values
-        reciprocalErr = self.df['reciprocalErr'].values
+        reciprocalMean = self.df['recipMean'].values
+        reciprocalErr = self.df['recipError'].values
         ax.loglog(np.abs(reciprocalMean), reciprocalErr, 'o')
 #        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
 #        ax.set_ylabel('Reciprocal Error [$\Omega$]')
@@ -285,7 +276,7 @@ class Survey(object):
     def phaseplotError(self, ax=None): #plotting phase discrepancies over R
         if ax is None:
             fig, ax = plt.subplots()
-        reciprocalMean = np.abs(self.df['reciprocalMean'].values)
+        reciprocalMean = np.abs(self.df['recipMean'].values)
         phase = np.abs(-1.2*self.df['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
@@ -342,10 +333,11 @@ class Survey(object):
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
-        if 'recipMean' not in self.dfg.columns:
+        if 'recipMean' not in self.df.columns:
             self.reciprocal()
-        binsize = int(len(self.dfg['recipMean'])/numbins) 
-        error_input = np.abs(self.dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        dfg = self.df[self.df['irecip'] > 0]
+        binsize = int(len(dfg['recipMean'])/numbins) 
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -354,7 +346,7 @@ class Survey(object):
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
-        ax.loglog(np.abs(self.dfg['recipMean']),np.abs(self.dfg['recipError']), '+', label = "Raw")
+        ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
         ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
         ax.plot(bins[:,0],R_error_predict,'r', label="Power law fit")
         ax.set_ylabel(r'$R_{error} [\Omega]$')
@@ -367,7 +359,7 @@ class Survey(object):
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))           
-        self.dfg['pwlError'] = a1*(np.abs(self.dfg['recipMean'])**a2)
+        self.df['pwlError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
@@ -417,10 +409,11 @@ class Survey(object):
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
-        if 'recipMean' not in self.dfg.columns:
+        if 'recipMean' not in self.df.columns:
             self.reciprocal()
-        binsize = int(len(self.dfg['recipMean'])/numbins) 
-        error_input = np.abs(self.dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        dfg = self.df[self.df['irecip'] > 0]
+        binsize = int(len(dfg['recipMean'])/numbins) 
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -429,7 +422,7 @@ class Survey(object):
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
         coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
-        ax.loglog(np.abs(self.dfg['recipMean']),np.abs(self.dfg['recipError']), '+', label = "Raw")
+        ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
         ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
         ax.loglog(bins[:,0],R_error_predict,'r', label="Linear fit")
         ax.set_ylabel(r'$R_{error} [\Omega]$')
@@ -442,7 +435,7 @@ class Survey(object):
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin Linear plot\n' + r'$m =  %s, b = %s$ (R$^2$ = %s)' % (a1,a2,R2))     
-        self.dfg['linError'] = a1*(np.abs(self.dfg['recipMean']))+a2
+        self.df['linError'] = a1*(np.abs(self.df['recipMean']))+a2
         self.errorModel = lambda x : a1*(np.abs(x))+a2
         if ax is None:
             return fig                  
@@ -730,21 +723,22 @@ class Survey(object):
 #            if errTypIP == '':
 #                errTypIP == self.errTypIP
         if haveReciprocal == False: # so we have reciprocals
-            protocol['R'] = self.dfg['recipMean'].values    
+            dfg = self.df[self.df['irecip'] > 0]    
+            protocol['R'] = dfg['recipMean'].values    
             if ip == True:
-                self.dfg['Phase'] = self.df['ip'].values[ie]
+                dfg['Phase'] = dfg['ip']
 #                if 'Phase' not in self.dfg.columns: # TO BE DELETED
 #                    self.dfg['Phase'] = 0 # TO BE DELETED
-                protocol['Phase'] = self.dfg['Phase'].values
+                protocol['Phase'] = dfg['Phase'].values
             if errTyp != 'none':
                 if errTyp == 'obs':
-                    protocol['error'] = self.df['reciprocalErr'].values[ie]
+                    protocol['error'] = self.df['recipError'].values[ie]
                 if errTyp =='lme':
-                    protocol['error'] = self.dfg['lmeError'].values
+                    protocol['error'] = dfg['lmeError'].values
                 if errTyp == 'lin':
-                    protocol['error'] = self.dfg['linError'].values
+                    protocol['error'] = dfg['linError'].values
                 if errTyp == 'pwl':
-                    protocol['error'] = self.dfg['pwlError'].values
+                    protocol['error'] = dfg['pwlError'].values
         #            error = self.linStdError
                 if errTot == True:
                     if len(self.modError) == 0:
@@ -752,8 +746,8 @@ class Survey(object):
                     else:
                         protocol['error'] = np.sqrt(protocol['error']**2 + self.modError[ie]**2)
             if errTypIP != 'none':  # or == 'pwlip'
-                if 'PhaseError' not in self.dfg.columns: # TO BE DELETED
-                    self.dfg['PhaseError'] = 0.1 # TO BE DELTED
+                if 'PhaseError' not in self.df.columns: # TO BE DELETED
+                    dfg['PhaseError'] = 0.1 # TO BE DELTED
                 protocol['ipError'] = self.df['PhaseError'].values[ie]
                 
         else: # why don't they have reciprocals my god !!
@@ -769,8 +763,8 @@ class Survey(object):
 
     def manualFilter(self, ax=None):
         array = self.df[['a','b','m','n']].values
-        if 'reciprocalErr' in self.df.columns:
-            resist = self.df['reciprocalErr'].values
+        if 'recipError' in self.df.columns:
+            resist = self.df['recipError'].values
             print('set to reciprocal')
         else:
             resist = np.ones(self.df.shape[0])
@@ -1291,8 +1285,8 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 
         
 #%% test code
-#s = Survey('test/syscalFile.csv', ftype='Syscal')
-#s = Survey('test/rifleday8.csv', ftype='Syscal')
+#s = Survey('api/test/syscalFile.csv', ftype='Syscal')
+#s = Survey('api/test/rifleday8.csv', ftype='Syscal')
 #s.dca()
 #s.addFilteredIP()
 #s.pwlfit()
@@ -1304,10 +1298,10 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
 #s.manualFilter()
-#s.pseudo(contour=True, ax=ax)
+#s.pseudo(contour=True)
 #s.linfit()
 #s.pwlfit()
 #s.plotIPFit()
-#s.write2protocol('test/protocol.dat', errTyp='lin', ip=True, errTypIP='pwl')
+#s.write2protocol('api/test/protocol.dat', errTyp='lin', ip=True, errTypIP='pwl')
 #s.dca()
         
