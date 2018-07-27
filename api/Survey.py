@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from api.parsers import syscalParser
+from api.parsers import syscalParser, protocolParser
 from api.DCA import DCA
 
 class Survey(object):
@@ -25,6 +25,8 @@ class Survey(object):
         
         if ftype == 'Syscal':
             elec, data = syscalParser(fname, spacing=spacing)
+         elif ftype =='Protocol':
+            elec, data = protocolParser(fname)
         else:
             raise Exception('Sorry this file type is not implemented yet')
         

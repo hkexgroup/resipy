@@ -57,6 +57,22 @@ def syscalParser(fname, spacing=None):
 #test code
 #elec, df = syscalParser('test/syscalFile.csv')
 
+
+#%% protocol.dat forward modelling parser
+
+def protocolParser(fname):
+    x = np.genfromtxt(fname, skip_header=1)
+    df = pd.DataFrame(x, columns=['index','a','b','m','n','appResist','resist'])
+    df['ip'] = np.nan
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return elec, df
+
+# test code
+#protocolParser('test/protocolFile.dat')
+    
+    
 #%% parse input for res2inv (.dat file) - Jimmy B. 
 #jamyd91@bgs.ac.uk
 def res2invInputParser(file_path):
