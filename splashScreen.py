@@ -5,49 +5,43 @@ Eli Bendersky (eliben@gmail.com)
 License: this code is in the public domain
 Last modified: 09.05.2009
 """
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QSplashScreen, QApplication
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+import zipfile
+import os
+import sys
 
 
-class Form(QDialog):
-    """ Just a simple dialog with a couple of widgets
-    """
-    def __init__(self, parent=None):
-        super(Form, self).__init__(parent)
-        self.browser = QTextBrowser()
-        self.setWindowTitle('Just a dialog')
-        self.lineedit = QLineEdit("Write something and press Enter")
-        self.lineedit.selectAll()
-        layout = QVBoxLayout()
-        layout.addWidget(self.browser)
-        layout.addWidget(self.lineedit)
-        self.setLayout(layout)
-        self.lineedit.setFocus()
-#        self.connect(self.lineedit, SIGNAL("returnPressed()"),
-#                     self.update_ui)
+frozen = 'not'
+if getattr(sys, 'frozen', False):
+        # we are running in a bundle
+        frozen = 'ever so'
+        bundle_dir = sys._MEIPASS
+else:
+        # we are running in a normal Python environment
+        bundle_dir = os.path.dirname(os.path.abspath(__file__))
+print( 'we are',frozen,'frozen')
+print( 'bundle dir is', bundle_dir )
 
-    def update_ui(self):
-        self.browser.append(self.lineedit.text())
 
 
 if __name__ == "__main__":
-    import sys, time
 
     app = QApplication(sys.argv)
 
-    # Create and display the splash screen
     splash_pix = QPixmap('logo.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
-#    splash.setMask(splash_pix.mask())
     splash.show()
 
     app.processEvents()
-    time.sleep(5)
-
-    # Simulate something that takes time
-
-    form = Form()
-    form.show()
-    splash.finish(form)
+    
+    zip_ref = zipfile.ZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
+#    os.mkdir(os.path.join(bundle_dir, 'pyR2'))
+    zip_ref.extractall(os.path.join(bundle_dir,'pyR2'))
+    zip_ref.close()
+    
+    splash.finish()
+#    os.popen(os.path.join(bundle_dir, 'pyR2', 'ui.exe'))
+    
     app.exec_()
