@@ -25,7 +25,7 @@ class Survey(object):
         
         if ftype == 'Syscal':
             elec, data = syscalParser(fname, spacing=spacing)
-         elif ftype =='Protocol':
+        elif ftype =='Protocol':
             elec, data = protocolParser(fname)
         else:
             raise Exception('Sorry this file type is not implemented yet')
