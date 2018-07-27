@@ -227,7 +227,7 @@ class App(QMainWindow):
         wd.clicked.connect(getwd)
         
         
-        sefl.ftype = 'Syscal' # by default
+        self.ftype = 'Syscal' # by default
         
         def fileTypeFunc(index):
             if index == 0:
