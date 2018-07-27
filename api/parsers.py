@@ -62,7 +62,7 @@ def syscalParser(fname, spacing=None):
 
 def protocolParser(fname):
     x = np.genfromtxt(fname, skip_header=1)
-    df = pd.DataFrame(x, columns=['index','a','b','m','n','appResist','resist'])
+    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','appResist'])
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
