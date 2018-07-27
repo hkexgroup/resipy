@@ -110,7 +110,6 @@ class R2(object): # R2 master class instanciated by the GUI
             isurveys = np.ones(len(self.surveys), dtype=bool)
         isurveys = np.where(isurveys)[0] # convert to indices
         df = self.bigSurvey.df.copy()
-        dfg = self.bigSurvey.dfg.copy()
         c = 0
         for i in isurveys:
             df2 = self.surveys[i].df
@@ -120,11 +119,9 @@ class R2(object): # R2 master class instanciated by the GUI
             df2.loc[ineg, 'irecip'] = df2[ineg]['irecip'] - c
             df = df.append(df2)
             c = c + df2.shape[0]
-            dfg = dfg.append(self.surveys[i].dfg)
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
-        self.bigSurvey.dfg = dfg
         self.pseudoCallback = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
