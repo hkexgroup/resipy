@@ -714,17 +714,11 @@ class Survey(object):
     
     def write2protocol(self, outputname='', errTyp='none', errTot=False, ip=False, errTypIP='none'):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
-        x = self.df[['a','b','m','n']].values[ie,:]
-        xx = np.c_[1+np.arange(len(x)), x]
-        protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         haveReciprocal = all(self.df['irecip'].values == 0)
-#        print('haveReciprocal = ', haveReciprocal)
-#        if errTyp == '':
-#            errTyp = self.errTyp
-#        if ip == True:
-#            if errTypIP == '':
-#                errTypIP == self.errTypIP
         if haveReciprocal == False: # so we have reciprocals
+            x = self.df[['a','b','m','n']].values[ie,:].astype(int)
+            xx = np.c_[1+np.arange(len(x)), x]
+            protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             dfg = self.df[self.df['irecip'] > 0]    
             protocol['R'] = dfg['recipMean'].values    
             if ip == True:
@@ -750,7 +744,9 @@ class Survey(object):
                 protocol['ipError'] = self.df['PhaseError'].values[ie]
                 
         else: # why don't they have reciprocals my god !!
-            ie = np.ones(len(self.df), dtype=bool)
+            x = self.df[['a','b','m','n']].values.astype(int)
+            xx = np.c_[1+np.arange(len(x)), x]
+            protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             protocol['R'] = self.df['resist'].values
         
         if outputname != '':
