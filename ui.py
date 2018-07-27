@@ -227,15 +227,15 @@ class App(QMainWindow):
         wd.clicked.connect(getwd)
         
         
-        ftype = 'Syscal' # by default
+        sefl.ftype = 'Syscal' # by default
         
         def fileTypeFunc(index):
             if index == 0:
-                ftype = 'Syscal'
+                self.ftype = 'Syscal'
             elif index == 1:
-                ftype = 'Protocol'
+                self.ftype = 'Protocol'
             else:
-                ftype = '' # let to be guessed
+                self.ftype = '' # let to be guessed
         fileType = QComboBox()
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
@@ -259,7 +259,7 @@ class App(QMainWindow):
                 plotError()
             
         def getfile():
-            print('ftype = ', ftype)
+            print('ftype = ', self.ftype)
             fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
@@ -270,7 +270,7 @@ class App(QMainWindow):
                     spacing = None
                 else:
                     spacing = float(spacingEdit.text())
-                self.r2.createSurvey(self.fname, ftype=ftype, spacing=spacing)
+                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing)
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     hbox4.addWidget(buttonfr)
                 else:
