@@ -232,10 +232,13 @@ class App(QMainWindow):
         def fileTypeFunc(index):
             if index == 0:
                 ftype = 'Syscal'
+            elif index == 1:
+                ftype = 'Protocol'
             else:
                 ftype = '' # let to be guessed
         fileType = QComboBox()
         fileType.addItem('Syscal')
+        fileType.addItem('Protocol')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         
         spacingEdit = QLineEdit()
