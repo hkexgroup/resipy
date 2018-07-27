@@ -712,7 +712,7 @@ class Survey(object):
         if ax is None:
             return fig
     
-     def write2protocol(self, outputname='', errTyp='none', errTot=False, ip=False, errTypIP='none'):
+    def write2protocol(self, outputname='', errTyp='none', errTot=False, ip=False, errTypIP='none'):
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         haveReciprocal = all(self.df['irecip'].values == 0)
         if haveReciprocal == False: # so we have reciprocals
