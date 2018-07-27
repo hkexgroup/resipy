@@ -726,10 +726,7 @@ class Survey(object):
             dfg = self.df[self.df['irecip'] > 0]    
             protocol['R'] = dfg['recipMean'].values    
             if ip == True:
-                dfg['Phase'] = dfg['ip']
-#                if 'Phase' not in self.dfg.columns: # TO BE DELETED
-#                    self.dfg['Phase'] = 0 # TO BE DELETED
-                protocol['Phase'] = dfg['Phase'].values
+                protocol['Phase'] = dfg['ip'].values
             if errTyp != 'none':
                 if errTyp == 'obs':
                     protocol['error'] = self.df['recipError'].values[ie]

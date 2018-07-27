@@ -67,7 +67,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
             # attribute method of Survey object to R2
             self.pseudoIP = self.surveys[0].pseudoIP
-            self.pseudo = self.surveys[0].pseudo
+            self.pseudoCallback = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
             self.linfit = self.surveys[0].linfit
             self.lmefit = self.surveys[0].lmefit
@@ -125,7 +125,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
         self.bigSurvey.dfg = dfg
-        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
+        self.pseudoCallback = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
         self.linfit = self.bigSurvey.linfit
@@ -133,7 +133,12 @@ class R2(object): # R2 master class instanciated by the GUI
         self.pwlfit = self.bigSurvey.pwlfit
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
-            
+    
+    def pseudo(self, **kwargs):
+        if self.iBorehole == True:
+            print('NOT PLOTTING PSEUDO FOR BOREHOLE FOR NOW')
+        else:
+            self.pseudoCallback(**kwargs)
     
     def createMesh(self, typ='default', **kwargs):
         ''' create a mesh object
@@ -318,8 +323,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.createMesh()
         
         # write configuration file
-        if self.configFile == '':
-            self.write2in(param=param)
+#        if self.configFile == '':
+        self.write2in(param=param)
         
         self.write2protocol()    
              
@@ -361,7 +366,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         if fname == '':
-            fname = os.path.join(self.dirname, 'f001_res.dat')
+            fname = os.path.join(self.dirname, 'f001.dat')
         res = pd.read_csv(fname, delimiter=' *', header=None, engine='python').values
         lenx = len(np.unique(res[:,0]))
         leny = len(np.unique(res[:,1]))

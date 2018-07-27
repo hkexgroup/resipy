@@ -4,7 +4,8 @@ print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-    QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar)
+    QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
+    QStackedLayout)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
@@ -19,7 +20,7 @@ import numpy as np
 print ('importing pandas')
 import pandas as pd
 print('importing python libraries')
-import random
+#import random
 import os
 import sys
 import shutil
@@ -217,9 +218,10 @@ class App(QMainWindow):
         # ask for working directory, and survey file to input
         def getwd():
             fdir = QFileDialog.getExistingDirectory(tab1, 'Choose Working Directory')
-            self.r2.setwd(fdir)
-            print('Working directory = ', fdir)
-            wd.setText(fdir)
+            if fdir != '':
+                self.r2.setwd(fdir)
+                print('Working directory = ', fdir)
+                wd.setText(fdir)
             
         wd = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
         wd.clicked.connect(getwd)
@@ -256,7 +258,7 @@ class App(QMainWindow):
         def getfile():
             print('ftype = ', ftype)
             fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
-            if len(self.r2.surveys) > 0: # will need to change this for time-lapse
+            if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
             if fname != '':
                 self.fname = fname
@@ -445,6 +447,9 @@ class App(QMainWindow):
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFilter)
         
+        def btnDoneFunc():
+            print('we are done, that is it !')
+            
         notice = QLabel('Press "Start" and then click on the dots to select them. Press "Done" to remove them.')
         manualLayout.addWidget(notice)
         
@@ -453,7 +458,7 @@ class App(QMainWindow):
         btnStart.clicked.connect(plotManualFiltering)
         btnLayout.addWidget(btnStart)
         btnDone = QPushButton('Done')
-        btnDone.clicked.connect(lambda x: print('TO BE IMPLEMENTED'))
+        btnDone.clicked.connect(btnDoneFunc)
         btnLayout.addWidget(btnDone)
         manualLayout.addLayout(btnLayout)
         
@@ -1083,6 +1088,8 @@ class App(QMainWindow):
         self.pindex = 0
         self.rms = []
         self.rmsIndex = []
+        self.rmsIP = []
+        self.rmsIndexIP = []
         self.inversionOutput = ''
         
         def parseRMS(ax):
@@ -1098,6 +1105,9 @@ class App(QMainWindow):
                                 self.rmsIndex.append(self.pindex)
                             except:
                                 pass
+                            if a[1] == 'Phase':
+                                self.rmsIP.append(float(a[4]))
+                                self.rmsIndexIP.append(self.pindex)
                         if a[0] == 'Processing':
 #                            print('new processing detected')
                             self.pindex = self.pindex + 1
@@ -1111,6 +1121,18 @@ class App(QMainWindow):
                     for ii in iindex:
                         ie = rmsIndex == ii
                         ax.plot(xx[ie], rms[ie], 'o-')
+                if len(self.rmsIP) > 0:
+                    rms = np.array(self.rmsIP)
+                    rmsIndex = np.array(self.rmsIndexIP)
+                    xx = np.arange(len(rms))
+                    iindex = np.unique(rmsIndex)
+#                    print('iidnex', iindex)
+#                    ax.axvline(xx[0]-0.5)
+                    ax.set_prop_cycle(None)
+                    for ii in iindex:
+                        ie = rmsIndex == ii
+                        ax.plot(xx[ie], rms[ie], '*--')
+                        
             ax.set_xticks([])
             ax.set_xticklabels([],[])
             ax.set_xlabel('Iterations', fontsize=8)
@@ -1170,9 +1192,21 @@ class App(QMainWindow):
                 QApplication.processEvents()
                 
             self.r2.invert(iplot=False, dump=func)
-            plotSection()
-            for i in range(len(self.r2.meshResults)):
-                sectionId.addItem(str(i))
+            try:
+                plotSection()
+                for i in range(len(self.r2.meshResults)):
+                    sectionId.addItem(str(i))
+                outStackLayout.setCurrentIndex(0)
+#                invLayout.addLayout(resultLayout, 70)
+            except:
+                print('--------INVERSION FAILED--------')
+#                invLayout.removeItem(invLayout.itemAt(1))
+#                invLayout.addLayout(r2outLayout, 70)
+                outStackLayout.setCurrentIndex(1)
+                with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
+                    text = f.read()
+                r2outEdit.setText(text)
+           
             
 #        def logInversion2():
 ##            self.r2.invert(callback=dataReady)
@@ -1209,7 +1243,10 @@ class App(QMainWindow):
 #            self.r2.showResults()
 #            try:
 #            mwInvResult.plot(self.r2.showResults)
-            mwInvResult.setCallback(self.r2.showResults)
+            if self.r2.typ == 'cR2': # TODO remove that when Andy implement vtk output
+                mwInvResult.setCallback(self.r2.showSection)
+            else:
+                mwInvResult.setCallback(self.r2.showResults)
             plotInvError()
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':'Resistivity(log10)'}
@@ -1218,7 +1255,7 @@ class App(QMainWindow):
             # graph will be plotted because changeSection will be called
             sectionId.currentIndexChanged.connect(changeSection)
             attributeName.currentIndexChanged.connect(changeAttribute)
-
+                
         
         def replotSection():
             index = self.displayParams['index']
@@ -1329,10 +1366,35 @@ class App(QMainWindow):
         sensCheck.stateChanged.connect(showSens)
         displayOptions.addWidget(sensCheck)
         
-        invLayout.addLayout(displayOptions, 10)
+        resultLayout = QVBoxLayout()
+        resultLayout.addLayout(displayOptions, 20)
         
         mwInvResult = MatplotlibWidget(navi=True)
-        invLayout.addWidget(mwInvResult, 60)
+        resultLayout.addWidget(mwInvResult, 80)
+        
+#        invLayout.addLayout(resultLayout, 70)
+        
+        # in case of error, display R2.out
+        r2outLayout = QVBoxLayout()
+
+        r2outTitle = QLabel('<b>The Inversion did not succeeded. Please see below for more details.</b>')
+        r2outLayout.addWidget(r2outTitle)
+        
+        r2outEdit = QTextEdit()
+        r2outEdit.setReadOnly(True)
+        r2outLayout.addWidget(r2outEdit)
+        
+        r2outWidget = QWidget()
+        r2outWidget.setLayout(r2outLayout)
+        resultWidget = QWidget()
+        resultWidget.setLayout(resultLayout)
+        
+        outStackLayout  = QStackedLayout()
+        outStackLayout.addWidget(resultWidget)
+        outStackLayout.addWidget(r2outWidget)
+        outStackLayout.setCurrentIndex(0)
+        
+        invLayout.addLayout(outStackLayout, 70)
         
         
         tabInversion.setLayout(invLayout)

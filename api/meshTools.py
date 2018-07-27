@@ -21,8 +21,8 @@ Dependencies:
     tkinter (python standard)- used to open 
 """
 #import standard python packages
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 #import anaconda libraries
 import numpy as np
 import matplotlib.pyplot as plt
