@@ -597,7 +597,7 @@ class Survey(object):
     def pseudo(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
         '''
-        array = self.df[['a','b','m','n']].values
+        array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
         resist = self.df['resist'].values
         
