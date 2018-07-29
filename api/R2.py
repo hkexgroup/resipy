@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Wed May 30 16:48:54 2018
@@ -218,10 +217,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 os.mkdir(refdir)
             param = self.param
             param['num_xy_poly'] = 0
+            param['reg_mode'] = 2 # set by default in ui.py too
             self.configFile = write2in(param, refdir, typ=typ)
             param = self.param
             param['num_regions'] = 0
-            param['regularization_type'] = 2
+            param['reg_mode'] = 0
             param['timeLapse'] = 'Start_res.dat'
             write2in(param, self.dirname, typ=typ)
         else:
@@ -252,15 +252,16 @@ class R2(object): # R2 master class instanciated by the GUI
             allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
             # let's assume it's False all the time for now
             content = ''
-            for i, s in enumerate(self.surveys):
+            for i, s in enumerate(self.surveys[1:]):
                 content = content + str(len(s.df)) + '\n'
+                s.df['resist0'] = self.surveys[0].df['resist']
                 if errTyp != 'none': # there is an error model
                     s.df['error'] = self.bigSurvey.errorModel(s.df['resist'].values)
                     s.df['index'] = np.arange(1, len(s.df)+1)
-                    content = content + s.df[['index','a','b','m','n','resist','error']].to_csv(sep='\t', header=False, index=False)
+                    content = content + s.df[['index','a','b','m','n','resist', 'resist0','error']].to_csv(sep='\t', header=False, index=False)
                 else:
                     s.df['index'] = np.arange(1, len(s.df)+1)
-                    content = content + s.df[['index','a','b','m','n','resist']].to_csv(sep='\t', header=False, index=False)
+                    content = content + s.df[['index','a','b','m','n','resist', 'resist0']].to_csv(sep='\t', header=False, index=False)
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
@@ -350,8 +351,16 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def getResults(self):
+        if self.iTimeLapse == True:
+            fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
+            print('reading ', fresults)
+            mesh = mt.vtk_import(fresults)
+            mesh.elec_x = self.elec[:,0]
+            mesh.elec_y = self.elec[:,1]
+            self.meshResults.append(mesh)
         for i in range(100):
             fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
+            print('reading ', fresults)
             if os.path.exists(fresults):
                 mesh = mt.vtk_import(fresults)
                 mesh.elec_x = self.elec[:,0]
@@ -511,10 +520,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% test for timelapse inversion
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test/')
-#k.createTimeLapseSurvey(os.path.join(k.dirname, 'testTimelapse'))
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k.createTimeLapseSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.linfit()
-#k.write2protocol('kk.txt')
+#k.write2protocol()
 #k.invert(iplot=False)
 #k.showResults(index=0)
 #k.showResults(index=1)
