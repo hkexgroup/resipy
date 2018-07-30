@@ -351,13 +351,13 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def getResults(self):
-        if self.iTimeLapse == True:
-            fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
-            print('reading ', fresults)
-            mesh = mt.vtk_import(fresults)
-            mesh.elec_x = self.elec[:,0]
-            mesh.elec_y = self.elec[:,1]
-            self.meshResults.append(mesh)
+#        if self.iTimeLapse == True:
+#            fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
+#            print('reading ', fresults)
+#            mesh = mt.vtk_import(fresults)
+#            mesh.elec_x = self.elec[:,0]
+#            mesh.elec_y = self.elec[:,1]
+#            self.meshResults.append(mesh)
         for i in range(100):
             fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             print('reading ', fresults)
