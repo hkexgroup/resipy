@@ -181,17 +181,17 @@ class App(QMainWindow):
         
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
-                 self.r2.iTimeLapse = True
-                 buttonf.setText('Import Data Directory')
-                 buttonf.clicked.disconnect()
-                 buttonf.clicked.connect(getdir)
-#                 reg_mode.setCurrentIndex(2)
+                self.r2.iTimeLapse = True
+                buttonf.setText('Import Data Directory')
+                buttonf.clicked.disconnect()
+                buttonf.clicked.connect(getdir)
+                reg_mode.setCurrentIndex(2)
             else:
                 self.r2.iTimeLapse = False
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
-#                reg_mode.setCurrentIndex(0)
+                reg_mode.setCurrentIndex(0)
                 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)

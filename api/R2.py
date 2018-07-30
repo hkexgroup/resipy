@@ -217,11 +217,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 os.mkdir(refdir)
             param = self.param
             param['num_xy_poly'] = 0
-            param['reg_mode'] = 2 # set by default in ui.py too
+            param['reg_mode'] = 0 # set by default in ui.py too
             self.configFile = write2in(param, refdir, typ=typ)
             param = self.param
             param['num_regions'] = 0
-            param['reg_mode'] = 0
+            param['reg_mode'] = 2
             param['timeLapse'] = 'Start_res.dat'
             write2in(param, self.dirname, typ=typ)
         else:
