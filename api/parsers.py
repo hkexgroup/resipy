@@ -55,7 +55,7 @@ def syscalParser(fname, spacing=None):
         return elec, df
     
 #test code
-#elec, df = syscalParser('test/syscalFile.csv')
+elec, df = syscalParser('test/syscalFile.csv')
 
 
 #%% protocol.dat forward modelling parser
@@ -82,15 +82,15 @@ def res2invInputParser(file_path):
     
 #INPUT:
     #file_path - string mapping to the res2inv input file 
+    #return_protocal - boolian, if true function returns protocal.dat string 
 #OUTPUT:
     #string which is the protocal.dat information. 
 ## TODO : add capacity to recognise errors in the input file (not currently read in)
-## TODO : Return electrode coordinates (code already finds the coordinates they just need to be returned)
 ## TODO : add capacity to read in borehole surveys 
 ###############################################################################
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
-    fh.close()#close gile handle, free up RAM
+    fh.close()#close file handle, free up resources
     
     #first find loke's General array format information in the file (which is all we need for R2/3)
     fmt_flag = False # format flag 
@@ -126,10 +126,12 @@ def res2invInputParser(file_path):
         num_elec =  int(dump[topo_flag_idx+1])
         ex_pos=[0]*num_elec
         ey_pos=[0]*num_elec
+        ez_pos=[0]*num_elec # actaully we can't have a z coordinate for 2d data so these will remain as zero
         for i in range(num_elec):
             ex_pos[i] = float(dump[topo_flag_idx+2+i].strip().split(',')[0])
             ey_pos[i] = float(dump[topo_flag_idx+2+i].strip().split(',')[1])
         #print(ex_pos,ey_pos)
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
               
     #since we dont always have all the electrode indexes we need to determine this
     #idea here is to extract all the x locations from the general array format
@@ -138,28 +140,66 @@ def res2invInputParser(file_path):
     for k in range(num_meas):
         line = dump[k+idx_oi]
         vals = line.strip().split()
-        x_dump = [float(vals[1:5][i].split(',')[0]) for i in range(4)]
+        x_dump = [float(vals[1:5][i].split(',')[0]) for i in range(4)] # extract x locations
         total_x = np.append(total_x,x_dump) # this caches all the x locations 
     #extract the unique x values using numpy
     ex_pos = np.unique(total_x)
     #now we have indexed electrode coordinates in ex_pos :) 
+    if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
+        ey_pos=[0]*num_elec
+        ez_pos=[0]*num_elec  
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
     
     #were having to assume the format of loke's file to be in the forM:
     #no.electrodes | C1 | C2 | P1 | P2 | apparent.resistivity
     #print('computing transfer resistances and reading in electrode indexes')
-    protocal = '%i\n'%num_meas # string which holds protocal.dat needed for r2
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[]}
     for k in range(num_meas):
         line = dump[k+idx_oi]
         vals = line.strip().split()
         x_dump = [float(vals[1:5][i].split(',')[0]) for i in range(4)]
         #convert the x electrode coordinates into indexes?
         e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
+        #add the electrode indexes to the dictionary which will be turned into a dataframe
+        data_dict['a'].append(e_idx[0]+1)
+        data_dict['b'].append(e_idx[1]+1)
+        data_dict['m'].append(e_idx[2]+1)
+        data_dict['n'].append(e_idx[3]+1)
         #convert apparent resistivity back in to transfer resistance
         K = geom_fac(x_dump[0],x_dump[1],x_dump[2],x_dump[3])
         Pa = float(vals[5]) # apparent resistivity value
         Pt = Pa/K # transfer resistance
-        protocal += '{}\t{}\t{}\t{}\t'.format(e_idx[0],e_idx[1],e_idx[2],e_idx[3])
-        protocal += '{}\n'.format(Pt)
+        #add apparent and transfer resistances to dictionary
+        data_dict['Rho'].append(Pa)
+        data_dict['resist'].append(Pt)
+        data_dict['ip'].append(0)
     
-    return protocal
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','ip','resist']] # reorder columns to be consistent with the syscal parser
+    
+    return elec,df
 
+#%% convert a dataframe output by the parsers into a simple protocal.dat file    
+def dataframe2dat(df,save_path='default'):
+#INPUT:
+    #df - dataframe output by a r2gui parsers
+    #save_path - file path to save location, if left default 'protocal.dat' is written to the working directory 
+#OUTPUT: 
+    #protocal.dat written to specificied folder
+###############################################################################
+    num_meas = len(df)
+    
+    if save_path == 'default':
+        save_path = 'protocal.dat'
+        
+    fh = open(save_path,'w')
+    fh.write("%i\n"%num_meas)
+    for i in range(num_meas):
+        fh.write('{}\t{}\t{}\t{}\t{}\n'.format(
+                 df['a'][i],
+                 df['b'][i],
+                 df['m'][i],
+                 df['n'][i],
+                 df['resist'][i]))
+        
+    fh.close()
