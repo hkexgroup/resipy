@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Apr 10 14:32:14 2018
-Simple wrapper for creating 2d triangular meshes with gmsh and converting it 
-into a mesh.dat format for R2. The code tri_mesh ()expects a directory "Executables"
-exists within the working directory with a gmsh.exe inside it! 
+Wrapper for creating 2d triangular meshes with gmsh and converting it 
+into a mesh.dat format for R2. The program tri_mesh () expects a directory "exe"
+to be within the api (or working) directory with a gmsh.exe inside it. 
 
-@author: jamyd91
+@author: jimmy Boyd - jamyd91@bgs.ac.uk
 Programs:
     arange () - creates a list of values like np.arange does
     ccw() - checks cartesian points are oreintated clockwise 
-    GenGeoFile () - generates a .geo file for gmsh
+    genGeoFile () - generates a .geo file for gmsh
+    genGeoFile_adv () - more advanced version of genGeoFile which allows for greater flexiblity 
     gmsh2R2mesh () - converts a gmsh.msh file to a mesh.dat file readable by R2
     tri_mesh () - combines GenGeoFile and gmsh2R2msh functions into one function, returns a mesh object 
 
 Dependencies: 
     numpy (conda library)
-    tkinter (python standard)
-    os (python standard)
+    os, subprocess(python standard)
     meshTools (this project)
 
 """
 #python standard libraries 
 import os, platform
 from subprocess import PIPE, Popen, call
-#anaconda libraries
+#general 3rd party libraries
 import numpy as np
 #import R2gui API package 
 if __name__ =="__main__" or __name__=="gmshWrap":
@@ -47,11 +47,21 @@ def arange(start,incriment,stop,endpoint=0):#create a list with a range without 
     return cache
 
 def ccw(p,q,r):#code expects points as p=(x,y) and so on ... 
+    #checks if points in a triangle are ordered counter clockwise. When using R2,
+    #mesh nodes should be given in a counter clockwise order otherwise you'll get negative 
+    #apparent resistivities. 
+#INPUT:
+    #p - tuple or list with the x y coordinates of the point/vertex ie. (x,y)
+    #q - " 
+    #r - " 
+#OUTPUT:
+    #0 if colinear points, 1 if counter clockwise order, 2 if points are ordered clockwise
+###############################################################################
     val=((q[1]-p[1])*(r[0]-q[0]))-((q[0]-p[0])*(r[1]-q[1]))
     if val==0:
         return 0 # lines are colinear
     elif val>0:
-        return 1 # porints are oreintated counter clockwise 
+        return 1 # points are oreintated counter clockwise 
     elif val<0:
         return 2 # points are counter clockwise
 
@@ -204,24 +214,51 @@ def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
     #doi - depth of investigation (optional)
     #cl - characteristic length (optional)
     #path - directory to save the .geo file 
+
+    """ geom_input format:
+        the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
+        currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
+        the first borehole string should be given the key 'borehole1' and so on. The code stops
+        searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
+        and polygons to the mesh. See below example:
+            
+            geom_input = {'surface': [surf_x,surf_y],
+              'electrode':[elec_x,elec_y],
+              'borehole1':[string1x,string1y],
+              'borehole2':[string2x,string2y],
+              'boundary1':[bound1x,bound1y],
+              'polygon1':[poly1x,poly1y]} """ 
 #OUTPUT:
     #gmsh . geo file which can be ran in gmsh
+#### TODO: search through each set of points and check for repeats 
+#### TODO: change nuemon boundary distance to be based on the survey extent
 ###############################################################################
     #formalities and error checks
+    if not isinstance(geom_input,dict):
+        raise TypeError ("'geom_input' is not a dictionary type object. Dict type is expected for the first argument of genGeoFile_adv")
+    
     topo_x = geom_input['surface'][0]
     topo_y = geom_input['surface'][1]
     elec_x = geom_input['electrode'][0]
     elec_y = geom_input['electrode'][1]
-    if doi == -1:
-        doi = abs(np.max(elec_x) - np.min(elec_x))/2
+    
+    if doi == -1:#then set to a default 
+        if 'borehole1' in geom_input:
+            doi = min(geom_input['borehole1'][1]) + 0.05*min(geom_input['borehole1'][1])
+        else:
+            doi = abs(np.max(elec_x) - np.min(elec_x))/2
     if cl == -1:
-        cl = np.mean(np.diff(elec_x))/2
+        if 'borehole1' in geom_input:
+            cl = abs(np.mean(np.diff(geom_input['borehole1'][1]))/2)
+        else:
+            cl = np.mean(np.diff(elec_x))/2
     if len(topo_x) != len(topo_y):
-        raise ValueError("topograpghy x and y arrays are not the same length!")
+        raise ValueError("topography x and y arrays are not the same length!")
     if len(elec_x) != len(elec_y):
         raise ValueError("electrode x and y arrays are not the same length!")
     if file_name.find('.geo')==-1:
         file_name=file_name+'.geo'#add file extension if not specified already
+    
     #start to write the file
     if path=='default':#written to working directory 
         fh=open(file_name,'w')
@@ -242,7 +279,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode location']*len(elec_x))
     flag_sort=[flag[i] for i in idx]
-#we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
+    #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
     cache_idx=[]
     for i in range(len(x_pts)-1):
         if x_pts[i]==x_pts[i+1] and y_pts[i]==y_pts[i+1]:
@@ -281,7 +318,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
     fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+3,tot_pnts+2,tot_pnts))#line going bottom to last electrode point
     #now extend boundaries beyond flanks of slope(so generate your Neummon boundary)
     fh.write("//Add background region (Neumann boundary) points\n")
-    cl_factor=150#characteristic length multipleier for Nuemon boundary 
+    cl_factor=50#characteristic length multipleier for Nuemon boundary 
     cl2=cl*cl_factor#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
@@ -324,61 +361,119 @@ def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
     fh.write("//Make a physical surface\n")
     fh.write("Physical Surface(1) = {1, 2};\n")
     
-    fh.write("//Adding boreholes? \n")
+    #add borehole vertices and line segments to the survey mesh
+    fh.write("\n//Adding boreholes? \n")
     no_lin=tot_lins+10
     no_pts=tot_pnts+6
     #add borehole electrode strings
-    for i in range(10):
-        key = 'borehole'+str(i+1)
+    count = 0
+    while True:
+        count += 1
+        key = 'borehole'+str(count)#count through the borehole keys
         try:
-            bhx = geom_input[key][0]
+            bhx = geom_input[key][0]#get borehole coordinate information
             bhy = geom_input[key][1]
             try:
-                bhz = geom_input[key][2]
+                bhz = geom_input[key][2]#allows for future 3d capacity 
             except IndexError:
                 bhz = [0]*len(bhx)
             e_pt_idx = [0] *len(bhx)
-            fh.write("// %s string electrodes\n"%key)
+            fh.write("// string electrodes for borehole %i\n"%count)
             for k in range(len(bhx)):
                 no_pts += 1 
-                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};\n"%(no_pts,bhx[k],bhy[k],bhz[k]))
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//borehole %i electrode\n"%(no_pts,bhx[k],bhy[k],bhz[k],count))
                 e_pt_idx[k] = no_pts
             fh.write("//put lines between each electrode\n")
             line_idx = []
             for i in range(len(e_pt_idx)-1):
                 idx = e_pt_idx[i]
                 no_lin += 1
+                fh.write("Line (%i) = {%i,%i};//borehole %i segment\n"%(no_lin,idx,idx+1,count))
+                line_idx.append(no_lin)
+            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+                
+        except KeyError:#run out of borehole keys 
+            fh.write("//no more borehole strings to add.\n")
+            break
+    no_plane = 2 # number of plane surfaces so far
+    fh.write("\n//Adding polygons?\n")
+    count = 0    
+    while True: 
+        count += 1
+        key = 'polygon'+str(count)
+        try:
+            plyx = geom_input[key][0]
+            plyy = geom_input[key][1]
+            try:
+                plyz = geom_input[key][2]
+            except IndexError:
+                plyz = [0]*len(plyx)
+            pt_idx = [0] *len(plyx)
+            fh.write("//polygon vertices for polygon %i\n"%count)
+            for k in range(len(plyx)):
+                no_pts += 1
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//polygon vertex \n"%(no_pts,plyx[k],plyy[k],plyz[k]))
+                pt_idx[k] = no_pts
+            fh.write("//put lines between each vertex\n")
+            line_idx = []
+            for i in range(len(pt_idx)):
+                idx = pt_idx[i]
+                no_lin += 1
+                if i == len(pt_idx)-1:
+                    fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,pt_idx[0]))
+                else:
+                    fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
+                line_idx.append(no_lin)
+            #make line loop out of polygon
+            fh.write("//make lines forming polygon into a line loop? - current inactive due to unexpected behaviour in gmsh\n")
+            no_lin += 1
+            fh.write("//Line Loop(%i) = {%s};\n"%(no_lin,str(line_idx).strip('[').strip(']')))
+            no_plane +=1
+            fh.write("//Plane Surface(%i) = {%i};\n"%(no_plane,no_lin))
+            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+            
+        except KeyError:
+            fh.write("//no more polygons to add.\n")
+            break  
+
+    fh.write("\n//Adding boundaries?\n")
+    count = 0   
+    while True:
+        count += 1
+        key = 'boundary'+str(count)
+        try:
+            bdx = geom_input[key][0]
+            bdy = geom_input[key][1]
+            try:
+                bdz = geom_input[key][2]
+            except IndexError:
+                bdz = [0]*len(bdx)
+            pt_idx = [0] *len(bdx)
+            fh.write("// vertices for boundary line %i\n"%count)
+            for k in range(len(bdx)):
+                no_pts += 1 
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//boundary vertex \n"%(no_pts,bdx[k],bdy[k],bdz[k]))
+                pt_idx[k] = no_pts
+            fh.write("//put lines between each vertex\n")
+            line_idx = []
+            for i in range(len(pt_idx)-1):
+                idx = pt_idx[i]
+                no_lin += 1
                 fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
                 line_idx.append(no_lin)
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
                 
         except KeyError:
-            break
-        
-    fh.write("//j'ai fini!")
+            fh.write("//no more boundaries to add.\n")
+            break              
+                    
+    fh.write("\n//j'ai fini!\n")
     fh.close()
     print("writing .geo to file completed\n")
-   #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
-   #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
+    #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
+    #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
     node_pos=[i+1 for i, j in enumerate(flag_sort) if j == 'electrode location']
     return node_pos,file_name
-    
-#%% test    
-surf_x = [-1,10]
-surf_y = [0,0]
-elec_x = np.linspace(2,7,5)
-elec_y = [0]*5
-string1x = [1]*10
-string1y = np.linspace(-1,-10,10)
-string2x = [8]*10
-string2y = np.linspace(-1,-10,10)
-
-geom_input = {'surface': [surf_x,surf_y],
-              'electrode':[elec_x,elec_y],
-              'borehole1':[string1x,string1y],
-              'borehole2':[string2x,string2y]}
-
-nodes,file_name = genGeoFile_adv(geom_input, doi = 11)
 
 #%% convert gmsh 2d mesh to R2
 def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
