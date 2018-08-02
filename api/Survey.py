@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from api.parsers import syscalParser, protocolParser
+from api.parsers import syscalParser, protocolParser, res2invInputParser
 from api.DCA import DCA
 
 class Survey(object):
@@ -27,6 +27,8 @@ class Survey(object):
             elec, data = syscalParser(fname, spacing=spacing)
         elif ftype =='Protocol':
             elec, data = protocolParser(fname)
+        elif ftype == 'Res2Dinv':
+            elec, data = res2invInputParser(fname)
         else:
             raise Exception('Sorry this file type is not implemented yet')
         
