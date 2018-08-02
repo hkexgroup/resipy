@@ -21,7 +21,9 @@ Dependencies:
 
 """
 #python standard libraries 
-import os, platform
+import tkinter as tk
+from tkinter import filedialog
+import os, platform, warnings
 from subprocess import PIPE, Popen, call
 #general 3rd party libraries
 import numpy as np
@@ -205,7 +207,7 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
     return node_pos,file_name
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
+def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
 #writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
 #INPUT:
     #geom_input - a dictionary of electrode coordinates, surface topography, 
@@ -241,6 +243,8 @@ def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
     topo_y = geom_input['surface'][1]
     elec_x = geom_input['electrode'][0]
     elec_y = geom_input['electrode'][1]
+    
+    #cycle through each key and check for repeated points 
     
     if doi == -1:#then set to a default 
         if 'borehole1' in geom_input:
@@ -476,7 +480,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=20,cl=-1,path='default'):
     return node_pos,file_name
 
 #%% convert gmsh 2d mesh to R2
-def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
+def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
     #Converts a gmsh mesh file into a mesh.dat file needed for R2. 
 #INPUT:
     #file_path - file path to mesh file. note that a error will occur if the file format is not as expected
@@ -554,9 +558,14 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             ignored_elements += 1
     print("ignoring %i non-triangle elements in the mesh file, as they are not required for R2\n"%ignored_elements)
     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
+    
+    ##clock wise correction and area / centre computations 
     #make sure in nodes in triangle are counterclockwise as this is waht r2 expects
     c_triangles=[]#'corrected' triangles 
     num_corrected=0#number of elements that needed 'correcting'
+    centriod_x=[]
+    centriod_y=[]
+    areas=[]
     for i in range(real_no_elements):
         n1=(x_coord[node1[i]-1],y_coord[node1[i]-1])#define node coordinates
         n2=(x_coord[node2[i]-1],y_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
@@ -568,6 +577,19 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
             num_corrected=num_corrected+1
         else:
             c_triangles.append((node1[i],node2[i],node3[i]))
+        #compute triangle centre
+        xy_tuple=mt.tri_cent(n1,n2,n3)#actual calculation
+        centriod_x.append(xy_tuple[0])
+        centriod_y.append(xy_tuple[1])
+        #compute area (for a triangle this is 0.5*base*height)
+        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+        areas.append(0.5*base*height)
+        
+    #print warning if areas of zero found, this will cuase problems in R2
+    if min(areas)==0:
+        warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
             
     #TODO add element area and centre calculation method 
     print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
@@ -608,7 +630,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
     fid.close()#close the file 
     print('finished converting mesh')
     #### find and return some useful information
-    if return_mesh=='yes':
+    if return_mesh:
         no_regions=max(elem_entity)#number of regions in the mesh
         regions=arange(1,1,no_regions,1)
         assctns=[]
@@ -643,8 +665,8 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh='no'):
                 'elm_id':np.arange(1,real_no_elements,1),#element id number 
                 'num_elm_nodes':3,#number of points which make an element
                 'node_data':node_dump,#nodes of element vertices
-                'elm_centre':'NA',#centre of elements (x,y)
-                'elm_area':'NA',
+                'elm_centre':(centriod_x,centriod_y),#centre of elements (x,y)
+                'elm_area':areas,
                 'cell_type':[5],
                 'parameters':elem_entity,#the values of the attributes given to each cell 
                 'parameter_title':'material',
@@ -705,7 +727,7 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
-    mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh='yes', save_path=save_path)
+    mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
     #change back to orginal working directory
