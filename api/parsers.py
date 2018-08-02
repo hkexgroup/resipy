@@ -12,6 +12,7 @@ Currently supports:
 
 import numpy as np
 import pandas as pd
+import os 
 
 #%% function to compute geometric factor - Jimmy B 
 def geom_fac(C1,C2,P1,P2):
@@ -55,7 +56,7 @@ def syscalParser(fname, spacing=None):
         return elec, df
     
 #test code
-elec, df = syscalParser('test/syscalFile.csv')
+#elec, df = syscalParser('test/syscalFile.csv')
 
 
 #%% protocol.dat forward modelling parser
@@ -150,8 +151,10 @@ def res2invInputParser(file_path):
         ez_pos=[0]*num_elec  
         elec = np.column_stack((ex_pos,ey_pos,ez_pos))
     
-    #were having to assume the format of loke's file to be in the forM:
-    #no.electrodes | C1 | C2 | P1 | P2 | apparent.resistivity
+    # loke's general array format is in the form:
+    #no.electrodes | C+ | C- | P+ | P- | apparent.resistivity. 
+    #Note R2 expects the electrode format in the form:
+    #meas.no | P+ | P- | C+ | C- | transfer resistance
     #print('computing transfer resistances and reading in electrode indexes')
     data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[]}
     for k in range(num_meas):
@@ -161,10 +164,10 @@ def res2invInputParser(file_path):
         #convert the x electrode coordinates into indexes?
         e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
         #add the electrode indexes to the dictionary which will be turned into a dataframe
-        data_dict['a'].append(e_idx[0]+1)
-        data_dict['b'].append(e_idx[1]+1)
-        data_dict['m'].append(e_idx[2]+1)
-        data_dict['n'].append(e_idx[3]+1)
+        data_dict['a'].append(e_idx[2]+1)
+        data_dict['b'].append(e_idx[3]+1)
+        data_dict['m'].append(e_idx[0]+1)
+        data_dict['n'].append(e_idx[1]+1)
         #convert apparent resistivity back in to transfer resistance
         K = geom_fac(x_dump[0],x_dump[1],x_dump[2],x_dump[3])
         Pa = float(vals[5]) # apparent resistivity value
@@ -185,21 +188,27 @@ def dataframe2dat(df,save_path='default'):
     #df - dataframe output by a r2gui parsers
     #save_path - file path to save location, if left default 'protocal.dat' is written to the working directory 
 #OUTPUT: 
-    #protocal.dat written to specificied folder
+    #protocal.dat written to specificied folder/directory
 ###############################################################################
     num_meas = len(df)
     
     if save_path == 'default':
-        save_path = 'protocal.dat'
+        save_path = 'protocol.dat'
+    else:
+        print(os.path.join(save_path,'protocol.dat'))
+        save_path=os.path.join(save_path,'protocol.dat')
         
     fh = open(save_path,'w')
+    
     fh.write("%i\n"%num_meas)
     for i in range(num_meas):
-        fh.write('{}\t{}\t{}\t{}\t{}\n'.format(
+        fh.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
+                 i+1, #measurement number 
                  df['a'][i],
                  df['b'][i],
                  df['m'][i],
                  df['n'][i],
-                 df['resist'][i]))
+                 df['resist'][i],
+                 df['Rho'][i]))
         
     fh.close()
