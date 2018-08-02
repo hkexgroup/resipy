@@ -166,8 +166,8 @@ def res2invInputParser(file_path):
         #add the electrode indexes to the dictionary which will be turned into a dataframe
         data_dict['a'].append(e_idx[2]+1)
         data_dict['b'].append(e_idx[3]+1)
-        data_dict['m'].append(e_idx[0]+1)
-        data_dict['n'].append(e_idx[1]+1)
+        data_dict['m'].append(e_idx[1]+1)
+        data_dict['n'].append(e_idx[0]+1)
         #convert apparent resistivity back in to transfer resistance
         K = geom_fac(x_dump[0],x_dump[1],x_dump[2],x_dump[3])
         Pa = float(vals[5]) # apparent resistivity value
