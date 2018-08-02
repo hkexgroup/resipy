@@ -591,7 +591,6 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
     if min(areas)==0:
         warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
             
-    #TODO add element area and centre calculation method 
     print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
     fid.close()
     ##### write data to mesh.dat kind of file
@@ -603,8 +602,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
         root.withdraw()
         save_path=filedialog.asksaveasfilename(title='Select save path',filetypes=(("data files","*.dat"),("all files","*.*")))
     else:
-        if save_path.find('.dat')==-1:
-            save_path=save_path+'.dat'#add file extension if not specified already 
+        save_path = os.path.join(save_path,'mesh.dat')
     #open mesh.dat for input      
     fid=open(save_path, 'w')
     #write to mesh.dat total num of elements and nodes
@@ -675,8 +673,8 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
             #the information here is returned as a mesh dictionary because it much easier to debug 
         
 #%% gmsh wrapper
-def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = False, path='exe', save_path='default',
-             bh_flag=False,surf_elec_x=None,surf_elec_y=None):
+def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=-1,keep_files=True, show_output = False, path='exe', save_path='default',
+             adv_flag=False,geom_input=None):
     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function will only work if current working directory has path: exe/gmsh.exe"""
 #INPUT: 
@@ -704,12 +702,12 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,doi=50,keep_files=True, show_output = F
     
     #make .geo file
     file_name="temp"
-    if bh_flag:
-        if surf_elec_x is None:
-            raise ValueError("no surface electrode x coordinates have been given")
-        node_pos = genGeoFile_bh(surf_x,surf_y,elec_x,elec_y,surf_elec_x,surf_elec_y,file_name=file_name,path=ewd)
+    if adv_flag:
+        if not isinstance(geom_input,dict):
+            raise ValueError("geom_input has been given!")
+        node_pos,_ = genGeoFile_adv(geom_input,doi=doi,file_name=file_name,path=ewd)
     else:
-        node_pos,_=genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd)
+        node_pos,_ = genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd)
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
