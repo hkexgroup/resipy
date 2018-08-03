@@ -21,8 +21,9 @@ Dependencies:
     tkinter (python standard)- used to open 
 """
 #import standard python packages
-#import tkinter as tk
-#from tkinter import filedialog
+import tkinter as tk
+from tkinter import filedialog
+import warnings 
 #import anaconda libraries
 import numpy as np
 import matplotlib.pyplot as plt
@@ -550,7 +551,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             areas.append(elm_len*elm_width*elm_thick)
             
         else: 
-            print("WARNING: unkown cell type encountered!")
+            warnings.warn("WARNING: unkown cell type encountered!")
             ignored_cells+=1
     #compile some information        
     
@@ -589,7 +590,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
             attr_title = line_info.split()[1]
             #check look up table
             if cell_attr_dump[i+1].split()[1] != "default":
-                print("WARNING: unrecognised lookup table type")
+                warnings.warn("unrecognised lookup table type")
             values=[float(k) for k in cell_attr_dump[i+2].split()]
             attr_dict[attr_title] = values
             if num_attr ==0:# primary attribute defaults to the first attribute found
