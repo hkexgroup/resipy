@@ -439,7 +439,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
                 
         except KeyError:#run out of borehole keys 
             fh.write("//no more borehole strings to add.\n")
-            print('%i boreholes added to input file'%count)
+            print('%i boreholes added to input file'%count-1)
             break
     no_plane = 2 # number of plane surfaces so far
     fh.write("\n//Adding polygons?\n")
@@ -480,7 +480,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
             
         except KeyError:
             fh.write("//no more polygons to add.\n")
-            print('%i polygons added to input file'%count)
+            print('%i polygons added to input file'%count-1)
             break  
 
     fh.write("\n//Adding boundaries?\n")
@@ -512,7 +512,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
                 
         except KeyError:
             fh.write("//no more boundaries to add.\n")
-            print('%i boundary(ies) added to input file'%count)
+            print('%i boundary(ies) added to input file'%count-1)
             break              
                     
     fh.write("\n//j'ai fini!\n")
@@ -792,6 +792,109 @@ def tri_mesh(surf_x,surf_y,elec_x,elec_y,keep_files=True, show_output = False, p
     mesh.add_e_nodes(np.array(node_pos)-1)
     
     return mesh, mesh_dict['element_ranges']
+
+
+#%% is in polygon code - originally developed as part of jamyd's slope stability code project. 
+def LineEq(x,y):
+    #finds the equation of a line using an inverse operation given an array of
+    # x and y data points
+    if len(x)==1:#few if statements to check the input is as expected
+        raise ValueError ("cant find the equation of a line from a single point!")
+    elif len(x)!=len(y):
+        raise ValueError ("x and y inputs must be of the same length")
+    #now to find the equation of the line
+    if sum(np.diff(x))==0:
+        #there can be no y intercept the equation of the line takes the form X=constant
+        #print("infinite slope detected!")
+        return 0,0
+    else:
+        mat=np.matrix(np.ones((len(x),1)))#vector of ones used in the inverse operator
+        x=np.reshape(np.matrix(x),(len(x),1))
+        y=np.reshape(np.matrix(y),(len(y),1))#make data into row vectors
+        #invert to find model parameters
+        G=np.concatenate((x,mat),axis=1)#inverse operator
+        mod=((np.transpose(G)*G)**-1)*np.transpose(G)*y#inverse operation to find model
+        return float(mod[0]),float(mod[1])#out put is in the form "m,c"
+
+#do the lines then intersect?
+def intersect(A,B,C,D,coord=0):
+    #check if line AB intersects line CD. Each coordinate should be passed as a tuple ie. (x,y)
+    #pass an extra argment in the function coord==1 if you want to find the intersection of 2 points
+    #output is in the form "binary-t/f,(x intercept,y intercept)" 
+    if ccw(A,B,C) != ccw(A,B,D) and ccw(C,D,A) != ccw(C,D,B):
+        dump=1
+    else:
+        dump=0
+# returns binary (dump) if lines overlap
+# see link above for full explanation of the above, note that the code cannot deal with the colinear case
+# we may also want to find the intersection point of the 2 lines if they do intersect
+    if coord==1 and dump==0:
+        return dump,('n/a','n/a')
+    elif coord==0:
+        return dump
+    elif coord==1 and dump==1:
+        x_a=(A[0],B[0])#define x and y coordinates 
+        y_a=(A[1],B[1])
+        x_b=(C[0],D[0])
+        y_b=(C[1],D[1])
+        #if there is a horizontal and vertical line then we have a special case where we dont need to solve
+        #the equations of the lines, we already know the relevant coordinates, also the 
+        #LineEq code (above) doesnt deal well with vertical lines
+        if np.diff(y_a)==0  and np.diff(x_b)==0:
+            return dump,(x_b[0],y_a[0])
+        elif np.diff(y_b)==0  and np.diff(x_a)==0:
+            return dump,(x_a[0],y_b[0])
+        else:
+            #if the lines are not both vertical and horizontal we need to solve the 
+            #equations of the lines then substitute values in order to find x and y intercept
+            m_a,c_a=LineEq(x_a,y_a)
+            m_b,c_b=LineEq(x_b,y_b)
+            x_int=(c_b-c_a)/(m_a-m_b)
+            y_int=(m_a*x_int)+c_a
+        return dump,(x_int,y_int)  
+
+# "Is point inside region?" code
+    #following solution posted at:
+    # https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/
+def isinpolygon(x,y,polydata,*args):
+#INPUT:
+    # x - x coordinate of query point
+    # y - y coordinate of query point 
+    # poly data - a list of polygon data in the form
+                #| x coordinates | y coordinates
+    # optional argument changes the distance to which the point is ray casted to the right
+#OUTPUT:
+    #1 for true, 0 for false  
+############################################################################
+    polyx=polydata[0]#polygon x coordinates
+    polyy=polydata[1]#polygon y coordinates
+    if len(polyx)!=len(polyy):
+        raise ValueError('polygon vertices, xy coordinate, arrays are not the same length, check polygon generation scheme!')
+    if len(args)==1:
+        B=(x+args[0],y)
+    else:
+        B=(x+10000,y)
+    #line AB is the coordinate and raycasted coordinate (B)
+    A=(x,y)
+    #line CD will represent a segment from the polygon
+    count=0#number of times an intersection has been detected 
+    for i in range(len(polyx)):
+        if i==len(polyx)-1:#its the last iteration
+            C=(polyx[-1],polyy[-1])#take last and first polygon point
+            D=(polyx[0],polyy[0])
+        else:
+            C=(polyx[i],polyy[i])
+            D=(polyx[i+1],polyy[i+1])
+        if intersect(A,B,C,D)==1:
+            count=count+1
+    if count==1:
+        return True#returns 1 if point is inside polygon 
+    elif count==0 or count ==2:
+        return False#point must be outside of polygon
+    else:
+        #this last option shouldnt be possible unless something has gone wrong
+        print("something may have gone wrong in the 'isinpolygon' algorithm")
+        return 0
 
 
 #%% test code
