@@ -15,21 +15,22 @@ Functions:
     readR2_resdat () - reads resistivity values from a R2 file. 
     quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates 
                  (returns info needed for R2in)   
-Dependencies: 
-    matplotlib
-    numpy
-    tkinter (python standard)- used to open 
+
+Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
 import tkinter as tk
 from tkinter import filedialog
-import warnings 
-#import anaconda libraries
+import os, platform, warnings
+from subprocess import PIPE, Popen, call
+import time
+#import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
-import time
+#R2gui packages
+import gmshWrap as gw
 
 #%% create mesh object
 class Mesh_obj: 
@@ -383,9 +384,52 @@ class Mesh_obj:
         #finish writing
         fh.write("POINT_DATA %i"%self.num_nodes)        
         fh.close()
+    
+    def asgn_atbrte_ID(self,poly_data):
+        #assign material/region assocations with certain elements in the mesh 
+        #say if you have an area you'd like to forward model. 
+    #INPUT: ####2D ONLY #### 
+        #poly_data - dictionary with the vertices (x,y) of each point in the polygon
+    #OUTPUT: 
+        #a list of element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
+        #second region defined and so on. If the element cant be assigned to a region then it'll be left at 0. 
+    ###############################################################################    
+        no_elms=self.num_elms#number of elements 
+        elm_xy=self.elm_centre#centriods of mesh elements 
+        material_no=[0]*no_elms#attribute number
+        
+        if not isinstance(poly_data,dict):
+            raise Exception("poly_data input is not a dictionary")
+        
+        #now on to extracting the data of interest
+        dodgey=0#this will be used as a check to make sure elements havent been overwritten
+        print('Assigning element attribute IDs...')
+        
+        for i,key in enumerate(poly_data):
+            poly_x=poly_data[key][0]#polygon x coordinates
+            poly_y=poly_data[key][1]#polygon y coordinates
+            for k in range(no_elms):
+                if gw.isinpolygon(elm_xy[0][k],elm_xy[1][k],(poly_x,poly_y)):#then the centriod of the element must be inside region of interest
+                    if material_no[k]!=0:#then we must be overwriting a previously assigned element
+                        dodgey=dodgey+1 
+                    material_no[k]=i+1
+        
+        if dodgey>0:
+            warnings.warn('%i elements attributes were overwritten into previously assigned attributes, check that polygons do not overlap.'%dodgey) 
+        if min(material_no)==0:
+            warnings.warn('Some elements still have the default attribute of zero, which suggests they are not recognised as being part of a region and will be assigned a default value later in the workflow')                
+        return material_no
+
                  
 #%% triangle centriod 
-def tri_cent(p,q,r):#code expects points as p=(x,y) and so on ... (counter clockwise prefered)
+def tri_cent(p,q,r):
+    #compute the centre coordinates for a 2d triangle given the x,y coordinates 
+    #of the vertices.
+#INPUT:
+    #code expects points as p=(x,y) and so on (counter clockwise prefered)
+#OUTPUT:
+    # (x,y) tuple    
+###############################################################################
     Xm=(p[0]+q[0])/2
     Ym=(p[1]+q[1])/2
     k=2/3
@@ -401,7 +445,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     #save_path - leave this as default to save the file in the working directory, make this 'ask_to_open' to open a dialogue box, else enter a custom file path.
     #parameter_title - name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
 #OUTPUT: 
-    #dictionary with some 'useful' info about the mesh, which can be converted in to a mesh object 
+    #A mesh object 
 ###############################################################################
     if file_path=='ask_to_open':#use a dialogue box to open a file
         print("please select the vtk file to import using the pop up dialogue box. \n")
@@ -660,7 +704,7 @@ def readR2_sensdat(file_path):
 #INPUT:
     #file_path - string which maps to the _res.dat file
 #OUTPUT:
-    #res_values - resistivity values returned from the .dat file 
+    #res_values - resistivity values returned from the .dat file [list]
 ################################################################################
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
@@ -816,6 +860,72 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
     Mesh.add_e_nodes(elec_node2)
     
     return Mesh,meshx,meshy,topo,elec_node
+
+#%% build a triangle mesh - using the gmsh wrapper
+def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe', 
+             save_path='default',**kwargs):
+    """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+    this function will only work if current working directory has path: exe/gmsh.exe"""
+#INPUT: 
+    #keep_files - True if the gmsh input and output file is to be stored in the exe directory
+    #show_ouput - True if gmsh output is to be printed to console 
+    #path - path to exe folder (leave default unless you know what you are doing)
+    #save_path - directory to save 'mesh.dat'
+    #adv_flag - True if using the genGeoFile_adv, if this is the case then geom_input MUST BE GIVEN
+    #geom_input - dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
+        #nb: if adv_flag is true then the first 4 arguments are ignored, so just enter empty objects for each. 
+    #**kwargs - key word arguments to be passed to genGeoFile. 
+#OUTPUT: 
+    #mesh.dat in the Executables directory
+###############################################################################
+    #check directories 
+    if path == "exe":
+        ewd = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                path)
+        #print(ewd) #ewd - exe working directory 
+    else:
+        ewd = path
+        # else its assumed a custom directory has been given to the gmsh.exe
+    cwd=os.getcwd()#get current working directory 
+    
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
+        raise EnvironmentError("No gmsh.exe exists in the exe directory!")
+    
+    #make .geo file
+    file_name="temp"
+    if not isinstance(geom_input,dict):
+        raise ValueError("geom_input has not been given!")
+    node_pos,_ = gw.genGeoFile_adv(geom_input,file_name=file_name,path=ewd,**kwargs)
+    
+    # handling gmsh
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+        cmd_line = 'gmsh.exe '+file_name+'.geo -2'
+    elif platform.system() == "Linux":
+        cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
+        
+    os.chdir(ewd)
+    
+    if show_output: 
+        p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            print(line.decode('utf-8'))
+    else:
+        call(cmd_line)#run gmsh 
+        
+    #convert into mesh.dat 
+    mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
+    if keep_files is False: 
+        os.remove("temp.geo");os.remove("temp.msh")
+    #change back to orginal working directory
+    os.chdir(cwd)
+    
+    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
+    
+    mesh.add_e_nodes(np.array(node_pos)-1)
+    
+    return mesh, mesh_dict['element_ranges']
 
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
