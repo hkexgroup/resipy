@@ -29,8 +29,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
-#R2gui packages
-import gmshWrap as gw
+#import R2gui API package 
+if __name__ =="__main__" or __name__=="meshTools":
+    import gmshWrap as gw 
+else:
+    import api.gmshWrap as gw
 
 #%% create mesh object
 class Mesh_obj: 
@@ -890,7 +893,7 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     cwd=os.getcwd()#get current working directory 
     
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-        raise EnvironmentError("No gmsh.exe exists in the exe directory!")
+        raise Exception("No gmsh.exe exists in the exe directory!")
     
     #make .geo file
     file_name="temp"
