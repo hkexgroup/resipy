@@ -28,10 +28,11 @@ from subprocess import PIPE, Popen, call
 #general 3rd party libraries
 import numpy as np
 #import R2gui API package 
-if __name__ =="__main__" or __name__=="gmshWrap":
-    import meshTools as mt 
-else:
-    import api.meshTools as mt
+import meshTools as mt
+#if __name__ =="__main__" or __name__=="gmshWrap":
+#    import meshTools as mt 
+#else:
+#    import api.meshTools as mt
     #the if statement in here is being used a quick fix becuase the module wont work with ui.py in the parent directory 
     # if it is imported as "import meshTools as mt" despite being in the same directory. I dont know why this is.... 
 
@@ -276,7 +277,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
   
     if doi == -1:#then set to a default 
         if bh_flag:
-            doi = min(geom_input['borehole1'][1]) + 0.05*min(geom_input['borehole1'][1])
+            doi = abs(min(geom_input['borehole1'][1])) + abs(0.05*min(geom_input['borehole1'][1]))
         else:
             doi = abs(np.max(elec_x) - np.min(elec_x))/2
     if cl == -1:
@@ -350,8 +351,8 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
         tot_lins=tot_lins+1
     
     fh.write("//add points below surface to make a polygon\n")#okay so we want to add in the lines which make up the base of the slope
-    max_depth=min(y_pts)-doi
-    cl_factor = 2
+    max_depth=-doi
+    cl_factor = 2  
     if bh_flag:
         cl_factor = 1       
     fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%f};\n"%(tot_pnts+1,x_pts[0],max_depth,z_pts[0],cl_factor))#point below left hand side of sudy area
@@ -413,8 +414,8 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     print('probing for boundaries and other additions to the mesh')
     count = 0
     while True:
-        key = 'borehole'+str(count)#count through the borehole keys
         count += 1
+        key = 'borehole'+str(count)#count through the borehole keys
         try:
             bhx = geom_input[key][0]#get borehole coordinate information
             bhy = geom_input[key][1]
@@ -439,14 +440,15 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
                 
         except KeyError:#run out of borehole keys 
             fh.write("//no more borehole strings to add.\n")
-            print('%i boreholes added to input file'%count-1)
+            print('%i boreholes added to input file'%(count-1))
             break
     no_plane = 2 # number of plane surfaces so far
     fh.write("\n//Adding polygons?\n")
     count = 0    
-    while True:      
-        key = 'polygon'+str(count)
+    while True:  
         count += 1
+        key = 'polygon'+str(count)
+
         try:
             plyx = geom_input[key][0]
             plyy = geom_input[key][1]
@@ -480,14 +482,15 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
             
         except KeyError:
             fh.write("//no more polygons to add.\n")
-            print('%i polygons added to input file'%count-1)
+            print('%i polygons added to input file'%(count-1))
             break  
 
     fh.write("\n//Adding boundaries?\n")
     count = 0   
     while True:
+        count += 1        
         key = 'boundary'+str(count)
-        count += 1
+
         try:
             bdx = geom_input[key][0]
             bdy = geom_input[key][1]
@@ -512,7 +515,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
                 
         except KeyError:
             fh.write("//no more boundaries to add.\n")
-            print('%i boundary(ies) added to input file'%count-1)
+            print('%i boundary(ies) added to input file'%(count-1))
             break              
                     
     fh.write("\n//j'ai fini!\n")
