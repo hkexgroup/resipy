@@ -663,6 +663,10 @@ class App(QMainWindow):
         manualWidget = QWidget()
         manualWidget.setLayout(manualLayout)
         tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
+        ipfiltWidget = QWidget()
+#        ipfiltWidget.setVisible(False)
+        ipfiltWidget.setLayout(phasefiltlayout)
+        tabPreProcessing.addTab(ipfiltWidget, 'Phase Filtering')
         errorWidget = QWidget()
         errorWidget.setLayout(errorLayout)
         tabPreProcessing.addTab(errorWidget, 'Resistance Error Model')
@@ -671,10 +675,6 @@ class App(QMainWindow):
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
 
-        ipfiltWidget = QWidget()
-#        ipfiltWidget.setVisible(False)
-        ipfiltWidget.setLayout(phasefiltlayout)
-        tabPreProcessing.addTab(ipfiltWidget, 'Phase Filtering')
         
         tabPreProcessing.setTabEnabled(3, False)
         tabPreProcessing.setTabEnabled(2, False)
