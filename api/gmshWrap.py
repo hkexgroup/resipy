@@ -21,8 +21,8 @@ Dependencies:
 
 """
 #python standard libraries 
-#import tkinter as tk
-#from tkinter import filedialog
+import tkinter as tk
+from tkinter import filedialog
 import os, platform, warnings
 #general 3rd party libraries
 import numpy as np
@@ -368,7 +368,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+1,1,tot_pnts+1))#line from first point on surface to depth
     fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+2,tot_pnts+1,tot_pnts+2))#line going from the 2 new points
     fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+3,tot_pnts+2,tot_pnts))#line going bottom to last electrode point
-    #now extend boundaries beyond flanks of slope(so generate your Neummon boundary)
+    #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
     fh.write("//Add background region (Neumann boundary) points\n")
     cl_factor=50#characteristic length multipleier for Nuemon boundary 
     cl2=cl*cl_factor#assign new cl, this is so mesh elements get larger from the main model
@@ -413,6 +413,11 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     fh.write("//Make a physical surface\n")
     fh.write("Physical Surface(1) = {1, 2};\n")
     
+    #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
+    #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
+    node_pos=[i+1 for i, j in enumerate(flag_sort) if j == 'electrode location']
+    node_pos = np.array(node_pos)
+    
     #add borehole vertices and line segments to the survey mesh
     fh.write("\n//Adding boreholes? \n")
     no_lin=tot_lins+10
@@ -438,6 +443,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
                 e_pt_idx[k] = no_pts
             fh.write("//put lines between each electrode\n")
             line_idx = []
+            node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
             for i in range(len(e_pt_idx)-1):
                 idx = e_pt_idx[i]
                 no_lin += 1
@@ -528,9 +534,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     fh.write("\n//j'ai fini!\n")
     fh.close()
     print("writing .geo to file completed, save location:\n%s\n"%file_path)
-    #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
-    #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
-    node_pos=[i+1 for i, j in enumerate(flag_sort) if j == 'electrode location']
+
     return node_pos,file_name
 
 #%% convert gmsh 2d mesh to R2
@@ -910,6 +914,11 @@ def isinpolygon(x,y,polydata,*args):
         print("something may have gone wrong in the 'isinpolygon' algorithm")
         return 0
 
+
+#%% test code
+#mesh, element_ranges = tri_mesh(np.arange(10), np.zeros(10),
+#                np.arange(10), np.zeros(10), keep_files=True, save_path='../test/mesh.dat')
+#mesh.show()
 
 
 
