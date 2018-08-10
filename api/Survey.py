@@ -273,7 +273,7 @@ class Survey(object):
 #        ax.set_ylabel('Reciprocal Error [$\Omega$]')
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')  
-        ax.set_title('Observed Discrepancies\n')
+        ax.set_title('Observed Errors\n')
         if ax is None:
             return fig
 
@@ -285,6 +285,7 @@ class Survey(object):
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
         ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_title('Observed Discrepancies\n')
         if ax is None:
             return fig
         
