@@ -24,17 +24,8 @@ Dependencies:
 import tkinter as tk
 from tkinter import filedialog
 import os, platform, warnings
-from subprocess import PIPE, Popen, call
 #general 3rd party libraries
 import numpy as np
-#import R2gui API package 
-import meshTools as mt
-#if __name__ =="__main__" or __name__=="gmshWrap":
-#    import meshTools as mt 
-#else:
-#    import api.meshTools as mt
-    #the if statement in here is being used a quick fix becuase the module wont work with ui.py in the parent directory 
-    # if it is imported as "import meshTools as mt" despite being in the same directory. I dont know why this is.... 
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -67,6 +58,22 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
         return 1 # points are oreintated counter clockwise 
     elif val<0:
         return 2 # points are counter clockwise
+    
+# triangle centriod 
+def tri_cent(p,q,r):
+    #compute the centre coordinates for a 2d triangle given the x,y coordinates 
+    #of the vertices.
+#INPUT:
+    #code expects points as p=(x,y) and so on (counter clockwise prefered)
+#OUTPUT:
+    # (x,y) tuple    
+###############################################################################
+    Xm=(p[0]+q[0])/2
+    Ym=(p[1]+q[1])/2
+    k=2/3
+    Xc=r[0]+(k*(Xm-r[0]))
+    Yc=r[1]+(k*(Ym-r[1]))
+    return(Xc,Yc)
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path='default',
@@ -628,7 +635,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
         else:
             c_triangles.append((node1[i],node2[i],node3[i]))
         #compute triangle centre
-        xy_tuple=mt.tri_cent(n1,n2,n3)#actual calculation
+        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
         centriod_x.append(xy_tuple[0])
         centriod_y.append(xy_tuple[1])
         #compute area (for a triangle this is 0.5*base*height)
@@ -723,78 +730,82 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
                 'dict_type':'mesh_info',
                 'original_file_path':file_path} 
             #the information here is returned as a mesh dictionary because it much easier to debug 
-        
-#%% gmsh wrapper
-def tri_mesh(surf_x,surf_y,elec_x,elec_y,keep_files=True, show_output = False, path='exe', save_path='default',
-             adv_flag=False,geom_input=None,**kwargs):
-    """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-    this function will only work if current working directory has path: exe/gmsh.exe"""
-#INPUT: 
-    #surf_x - surface topography x coordinates
-    #surf_y - surface topography y coordinates
-    #elec_x - electrode x location 
-    #elec_y - electrode y location 
-    #keep_files - True if the gmsh input and output file is to be stored in the exe directory
-    #show_ouput - True if gmsh output is to be printed to console 
-    #path - path to exe folder (leave default unless you know what you are doing)
-    #save_path - directory to save 'mesh.dat'
-    #adv_flag - True if using the genGeoFile_adv, if this is the case then geom_input MUST BE GIVEN
-    #geom_input - dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
-        #nb: if adv_flag is true then the first 4 arguments are ignored, so just enter empty objects for each. 
-    #**kwargs - key word arguments to be passed to genGeoFile. 
-#OUTPUT: 
-    #mesh.dat in the Executables directory
-###############################################################################
-    #check directories 
-    if path == "exe":
-        ewd = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)),
-                path)
-        #print(ewd) #ewd - exe working directory 
-    else:
-        ewd = path
-        # else its assumed a custom directory has been given to the gmsh.exe
-    cwd=os.getcwd()#get current working directory 
-    
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-        raise EnvironmentError("No gmsh.exe exists in the exe directory!")
-    
-    #make .geo file
-    file_name="temp"
-    if adv_flag:
-        if not isinstance(geom_input,dict):
-            raise ValueError("geom_input has not been given!")
-        node_pos,_ = genGeoFile_adv(geom_input,file_name=file_name,path=ewd,**kwargs)
-    else:
-        node_pos,_ = genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd,**kwargs)
-    # handling gmsh
-    if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = 'gmsh.exe '+file_name+'.geo -2'
-    elif platform.system() == "Linux":
-        cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
-        
-    os.chdir(ewd)
-    
-    if show_output: 
-        p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        while p.poll() is None:
-            line = p.stdout.readline().rstrip()
-            print(line.decode('utf-8'))
-    else:
-        call(cmd_line)#run gmsh 
-        
-    #convert into mesh.dat 
-    mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
-    if keep_files is False: 
-        os.remove("temp.geo");os.remove("temp.msh")
-    #change back to orginal working directory
-    os.chdir(cwd)
-    
-    mesh = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
-    
-    mesh.add_e_nodes(np.array(node_pos)-1)
-    
-    return mesh, mesh_dict['element_ranges']
+
+
+#%% gmsh wrapper    - moved to MeshTools    
+# =============================================================================
+# 
+# def tri_mesh(surf_x,surf_y,elec_x,elec_y,keep_files=True, show_output = False, path='exe', save_path='default',
+#              adv_flag=False,geom_input=None,**kwargs):
+#     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+#     this function will only work if current working directory has path: exe/gmsh.exe"""
+# #INPUT: 
+#     #surf_x - surface topography x coordinates
+#     #surf_y - surface topography y coordinates
+#     #elec_x - electrode x location 
+#     #elec_y - electrode y location 
+#     #keep_files - True if the gmsh input and output file is to be stored in the exe directory
+#     #show_ouput - True if gmsh output is to be printed to console 
+#     #path - path to exe folder (leave default unless you know what you are doing)
+#     #save_path - directory to save 'mesh.dat'
+#     #adv_flag - True if using the genGeoFile_adv, if this is the case then geom_input MUST BE GIVEN
+#     #geom_input - dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
+#         #nb: if adv_flag is true then the first 4 arguments are ignored, so just enter empty objects for each. 
+#     #**kwargs - key word arguments to be passed to genGeoFile. 
+# #OUTPUT: 
+#     #mesh.dat in the Executables directory
+# ###############################################################################
+#     #check directories 
+#     if path == "exe":
+#         ewd = os.path.join(
+#                 os.path.dirname(os.path.realpath(__file__)),
+#                 path)
+#         #print(ewd) #ewd - exe working directory 
+#     else:
+#         ewd = path
+#         # else its assumed a custom directory has been given to the gmsh.exe
+#     cwd=os.getcwd()#get current working directory 
+#     
+#     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
+#         raise EnvironmentError("No gmsh.exe exists in the exe directory!")
+#     
+#     #make .geo file
+#     file_name="temp"
+#     if adv_flag:
+#         if not isinstance(geom_input,dict):
+#             raise ValueError("geom_input has not been given!")
+#         node_pos,_ = genGeoFile_adv(geom_input,file_name=file_name,path=ewd,**kwargs)
+#     else:
+#         node_pos,_ = genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd,**kwargs)
+#     # handling gmsh
+#     if platform.system() == "Windows":#command line input will vary slighty by system 
+#         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
+#     elif platform.system() == "Linux":
+#         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
+#         
+#     os.chdir(ewd)
+#     
+#     if show_output: 
+#         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+#         while p.poll() is None:
+#             line = p.stdout.readline().rstrip()
+#             print(line.decode('utf-8'))
+#     else:
+#         call(cmd_line)#run gmsh 
+#         
+#     #convert into mesh.dat 
+#     mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
+#     if keep_files is False: 
+#         os.remove("temp.geo");os.remove("temp.msh")
+#     #change back to orginal working directory
+#     os.chdir(cwd)
+#     
+#     mesh = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
+#     
+#     mesh.add_e_nodes(np.array(node_pos)-1)
+#     
+#     return mesh, mesh_dict['element_ranges']
+# =============================================================================
 
 
 #%% is in polygon code - originally developed as part of jamyd's slope stability code project. 
