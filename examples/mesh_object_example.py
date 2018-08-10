@@ -27,7 +27,9 @@ xlim=(min(surf_x),max(surf_x))
 ylim=(40,110)
 
 #%% generate a triagnular mesh of the slope 
-tri_mesh = gw.tri_mesh(surf_x,surf_y,elec_x,elec_y)
+geom_input = {'surface':[surf_x,surf_y],
+              'electrode':[elec_x,elec_y]}
+tri_mesh,_ = mt.tri_mesh(geom_input)
 
 # show something about the mesh 
 tri_mesh.summary()
@@ -47,10 +49,37 @@ qmesh.show(xlim=xlim,ylim=ylim)
 
 #%% importing a vtk file 
 
-mesh_dict = mt.vtk_import()
-
-mesh_obj = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
+mesh_obj = mt.vtk_import()
 
 #show info about mesh 
 mesh_obj.summary()
 mesh_obj.show()
+
+#%% mesh with boreholes 
+# import gmshWrap as gw
+# 
+surf_x = [-1,10]
+surf_y = [0,0]
+elec_x = np.linspace(2,7,5)
+elec_y = [0]*5
+string1x = [1]*10
+string1y = np.linspace(-1,-10,10)
+string2x = [8]*10
+string2y = np.linspace(-1,-10,10)
+poly1x = [3,3,6,6]
+poly1y = [-2,-5,-5,-2]
+bound1x = [3.5,4.5,5.5]
+bound1y = [-6,-7,-8]
+ 
+geom_input = {'surface': [surf_x,surf_y],
+              'electrode':[elec_x,elec_y],
+              'borehole1':[string1x,string1y],
+              'borehole2':[string2x,string2y],
+              'boundary1':[bound1x,bound1y],
+              'polygon1':[poly1x,poly1y]}
+
+bh_mesh,_ = mt.tri_mesh(geom_input)
+
+bh_mesh.show()
+
+
