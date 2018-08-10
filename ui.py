@@ -255,7 +255,7 @@ class App(QMainWindow):
             if all(self.r2.surveys[0].df['irecip'].values == 0):
                 pass
             else:
-                tabPreProcessing.setTabEnabled(1, True)
+                tabPreProcessing.setTabEnabled(2, True)
                 plotError()
             
         def getfile():
@@ -274,7 +274,7 @@ class App(QMainWindow):
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     hbox4.addWidget(buttonfr)
                 else:
-                    tabPreProcessing.setTabEnabled(1, True)
+                    tabPreProcessing.setTabEnabled(2, True)
                     plotError()
 #                generateMesh()
                 plotPseudo()
@@ -292,7 +292,7 @@ class App(QMainWindow):
                 spacing = float(spacingEdit.text())
             self.r2.surveys[0].addData(fnameRecip, ftype=ftype, spacing=spacing)
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
-                tabPreProcessing.setTabEnabled(1, True) # no point in doing error processing if there is no reciprocal
+                tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                 plotError()
 
         buttonfr = QPushButton('If you have reciprocals upload them here') 
@@ -318,7 +318,7 @@ class App(QMainWindow):
                 phaseplotError()
                 showIpOptions(True)
                 mwPseudoIP.setVisible(True)
-                tabPreProcessing.setTabEnabled(2, True)
+                tabPreProcessing.setTabEnabled(1, True)
                 tabPreProcessing.setTabEnabled(3, True)
                 heatRaw()
 #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
