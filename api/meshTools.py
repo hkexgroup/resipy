@@ -747,7 +747,7 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
 #     topo - topography for R2in file
 #     elec_node - x columns where the electrodes are 
 ###############################################################################
-    ###
+
     elec = np.c_[elec_x, elec_y]
     
     # create meshx
@@ -933,7 +933,7 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     
     mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
     
-    mesh.add_e_nodes(np.array(node_pos)-1)
+    mesh.add_e_nodes(node_pos-1)
     
     return mesh#, mesh_dict['element_ranges']
 
