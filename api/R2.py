@@ -160,6 +160,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['topo'] = topo
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
+            
         if typ == 'trian':
             mesh = tri_mesh({'electrode':[self.elec[:,0], self.elec[:,1]]}, path=os.path.join(self.cwd, 'api', 'exe'), save_path=self.dirname)
             self.param['mesh_type'] = 3
@@ -288,11 +289,12 @@ class R2(object): # R2 master class instanciated by the GUI
         if ~os.path.exists(targetName):
             shutil.copy(os.path.join(actualPath, 'api', 'exe', exeName), targetName)  
         
-        if OS == 'Linux':
-            cmd = ['wine',exeName]
+            
         if OS == 'Windows':
             cmd = [exeName]
-        
+        else:
+            cmd = ['wine',exeName]
+            
 #        p = Popen(cmd, stdout=PIPE, shell=False)
 #        while p.poll() is None:
 #            line = p.stdout.readline().rstrip()

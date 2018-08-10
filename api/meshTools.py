@@ -911,7 +911,7 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
-    elif platform.system() == "Linux":
+    else:
         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
         
     os.chdir(ewd)
