@@ -20,8 +20,7 @@ sys.path.append(os.path.relpath('..'))
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
-from api.meshTools import Mesh_obj
-from api.gmshWrap import tri_mesh
+from api.meshTools import Mesh_obj, tri_mesh
 
 
 class R2(object): # R2 master class instanciated by the GUI
