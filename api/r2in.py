@@ -108,7 +108,8 @@ def write2in(param, dirname, typ='R2'):
             len(meshy)-1,
             param['resistst'],
             param['phasest'])
-    content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
+    if param['mesh_type'] == 4:
+        content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
     if param['job_type'] == 1 & param['mesh_type'] == 4|5:
         content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
                 param['patchx'], param['patchy'])

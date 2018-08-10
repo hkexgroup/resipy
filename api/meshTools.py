@@ -966,3 +966,8 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 
 
 
+#%% test code
+#mesh, element_ranges = tri_mesh({'electrodes':[np.arange(10), np.zeros(10)]},
+#                keep_files=True, save_path='api/test/mesh.dat')
+#mesh.show()
+

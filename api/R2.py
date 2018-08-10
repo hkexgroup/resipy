@@ -161,7 +161,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         if typ == 'trian':
-            mesh, e_ranges = tri_mesh([],[], self.elec[:,0], self.elec[:,1], path=os.path.join(self.cwd, 'api', 'exe'), save_path=os.path.join(self.dirname, 'mesh.dat'))
+            mesh, e_ranges = tri_mesh({'electrode':[self.elec[:,0], self.elec[:,1]]}, path=os.path.join(self.cwd, 'api', 'exe'), save_path=self.dirname)
             self.param['mesh_type'] = 3
             self.param['num_regions'] = len(e_ranges)
             self.param['regions'] = np.array(e_ranges)
@@ -471,10 +471,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
         
 #%% test code
-#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+os.chdir('/media/jkl/data/phd/tmp/r2gui/')
+k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
 #k.typ = 'cR2'
-#k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
+k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.invert(iplot=False)
 #k.showResults()
@@ -485,7 +485,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.errTyp='obs'
 #k.lmefit(iplot=True)
 #k.createMesh(typ='quad')
-#k.createMesh(typ='trian')
+k.createMesh(typ='trian')
 #k.mesh.show()
 #fig, ax = plt.subplots()
 #fig.suptitle('kkk')
@@ -494,12 +494,12 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.plotIPFit()
 #k.errTyp = 'pwl'
 #k.errTypIP = 'pwl'
-#k.invert(iplot=False)
+k.invert(iplot=False)
 #k.pseudoError()
 #k.showSection()
 #fig, ax = plt.subplots()
 #fig.suptitle('hkk')
-#k.showResults()
+k.showResults()
 #k.showResults(edge_color='none', sens=True)
 #k.showResults(attr=attr[0])
 #fig, ax = plt.subplots()

@@ -21,8 +21,8 @@ Dependencies:
 
 """
 #python standard libraries 
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, platform, warnings
 #general 3rd party libraries
 import numpy as np
@@ -910,11 +910,6 @@ def isinpolygon(x,y,polydata,*args):
         print("something may have gone wrong in the 'isinpolygon' algorithm")
         return 0
 
-
-#%% test code
-#mesh, element_ranges = tri_mesh(np.arange(10), np.zeros(10),
-#                np.arange(10), np.zeros(10), keep_files=True, save_path='../test/mesh.dat')
-#mesh.show()
 
 
 
