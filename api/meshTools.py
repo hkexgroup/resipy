@@ -55,7 +55,8 @@ class Mesh_obj:
                  cell_type,#according to vtk format
                  cell_attributes,#the values of the attributes given to each cell 
                  atribute_title,#what is the attribute? we may use conductivity instead of resistivity for example
-                 original_file_path='N/A') :
+                 original_file_path='N/A',
+                 regions=None) :
         #assign varaibles to the mesh object 
         self.num_nodes=num_nodes
         self.num_elms=num_elms
@@ -73,6 +74,7 @@ class Mesh_obj:
         self.original_file_path=original_file_path
         self.mesh_title = "not_given"
         self.no_attributes = 1
+        self.regions = regions
         #decide if mesh is 3D or not 
         if max(node_z) - min(node_z) == 0: # mesh is probably 2D 
             self.ndims=2
@@ -305,7 +307,7 @@ class Mesh_obj:
     
     @classmethod # creates a mesh object from a mesh dictionary
     def mesh_dict2obj(cls,mesh_info):
-        #converts a mesh dictionary produced by the vtk import function into a 
+        #converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
         #mesh object, its an alternative way to make a mesh object. 
     #INPUT: mesh_info - dictionary type mesh
     #OUTPUT: mesh obj
@@ -335,6 +337,11 @@ class Mesh_obj:
             obj.add_attr_dict(mesh_info['cell_attributes'])
         except KeyError:
             pass
+        try:
+            obj.regions = mesh_info['element_ranges']
+        except KeyError:
+            pass
+                
         return (obj)
     
     @staticmethod
@@ -928,7 +935,7 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     
     mesh.add_e_nodes(np.array(node_pos)-1)
     
-    return mesh, mesh_dict['element_ranges']
+    return mesh#, mesh_dict['element_ranges']
 
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
@@ -965,9 +972,4 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 
 
-
-#%% test code
-#mesh, element_ranges = tri_mesh({'electrodes':[np.arange(10), np.zeros(10)]},
-#                keep_files=True, save_path='api/test/mesh.dat')
-#mesh.show()
 
