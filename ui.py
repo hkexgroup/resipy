@@ -1071,7 +1071,8 @@ class App(QMainWindow):
         #%% tab 5 INVERSION
         
         tabInversion = QWidget()
-        tabs.addTab(tabInversion, 'Inversion')
+#        tabInversion.setStyleSheet('background-color:red')
+        tabs.addTab(tabInversion, '&Inversion')
         invLayout = QVBoxLayout()
 
 #        def callback(ax):
@@ -1257,17 +1258,19 @@ class App(QMainWindow):
             displayAttribute()
             # graph will be plotted because changeSection will be called
             sectionId.currentIndexChanged.connect(changeSection)
-            attributeName.currentIndexChanged.connect(changeAttribute)
+#            attributeName.currentIndexChanged.connect(changeAttribute)
                 
         
         def replotSection():
+#            print('replotSection')
             index = self.displayParams['index']
             edge_color = self.displayParams['edge_color']
             sens = self.displayParams['sens']
             attr = self.displayParams['attr']
-            print(edge_color, sens, attr)
+#            print(edge_color, sens, attr)
             mwInvResult.replot(index=index, edge_color=edge_color, sens=sens, attr=attr)
-        
+            setCBarLimit()
+            
         def msgBox(text):
             msg = QMessageBox()
             msg.setText(text)
@@ -1309,15 +1312,29 @@ class App(QMainWindow):
         invLayout.addLayout(logLayout, 30)
         
         # option for display
-        def displayAttribute():
-            self.attr = list(self.r2.meshResults[-1].attr_cache)
+        def displayAttribute(arg='Resistivity(log10)'):
+#            print('displayAttribute arg = ', arg)
+            self.attr = list(self.r2.meshResults[self.displayParams['index']].attr_cache)
             resistIndex = 0
+            c = -1
+            try:
+                attributeName.currentIndexChanged.disconnect() # avoid unwanted plotting
+            except:
+                print('no method connected yet to attribute name')
+                pass
+            attributeName.clear() # delete all items (after disconnect otherwise it triggers it !)
             for i in range(len(self.attr)):
                 if self.attr[i] == 'Resistivity(log10)':
                     resistIndex = i
+                if self.attr[i] == arg:
+                    c = i
                 attributeName.addItem(self.attr[i])
+            if c != -1: # we found the same attribute
+                resistIndex = c
             attributeName.setCurrentIndex(resistIndex)
-            sectionId.setCurrentIndex(0)
+            attributeName.currentIndexChanged.connect(changeAttribute)
+            #sectionId.setCurrentIndex(0)
+#            print('end of displayAttribute')
         
         def changeAttribute(index):
 #            print('changeAttribute', index)
@@ -1330,6 +1347,7 @@ class App(QMainWindow):
         def changeSection(index):
 #            print('changeSection')
             self.displayParams['index'] = index
+            displayAttribute(arg=self.displayParams['attr'])
             replotSection()
             # find a way to keep the current display settings between section
             # without just replotting it here
