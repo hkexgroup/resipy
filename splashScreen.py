@@ -11,7 +11,7 @@ from PyQt5.QtCore import *
 import zipfile
 import os
 import sys
-
+import time
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -32,16 +32,21 @@ if __name__ == "__main__":
 
     splash_pix = QPixmap('logo.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.setEnabled(False)
     splash.show()
 
-    app.processEvents()
-    
-    zip_ref = zipfile.ZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
+#    app.processEvents()
+    time.sleep(5)
+#    zip_ref = zipfile.ZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
 #    os.mkdir(os.path.join(bundle_dir, 'pyR2'))
-    zip_ref.extractall(os.path.join(bundle_dir,'pyR2'))
-    zip_ref.close()
+#    zip_ref.extractall(os.path.join(bundle_dir,'pyR2'))
+#    zip_ref.close()
+        
     
-    splash.finish()
+#    splash.hide()
 #    os.popen(os.path.join(bundle_dir, 'pyR2', 'ui.exe'))
     
-    app.exec_()
+    splash.hide()
+
+    sys.exit(app.exec_())

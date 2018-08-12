@@ -1,7 +1,12 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+import os
+import sys
+import time
+
+#a = time.time()
 print('importing pyqt')
-from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget, 
+from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
     QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
@@ -9,35 +14,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QWidget,
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
-
-print('importing matplotlib')
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
-print('importing numpy')
-import numpy as np
-print ('importing pandas')
-import pandas as pd
-print('importing python libraries')
-#import random
-import os
-import sys
-import shutil
-import platform
-OS = platform.system()
-from datetime import datetime
-
-from matplotlib import rcParams
-rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
-
-#sys.path.append(os.path.relpath('../api')) # not needed anymore
-
-#from mesh_class import mesh_obj
-#import meshTools as mt
-#from meshTools import Mesh_obj
-from api.R2 import R2
-from api.r2help import r2help
+#print('elpased', time.time()-a)
 
 # small code to see where are all the directories
 frozen = 'not'
@@ -1487,7 +1464,86 @@ class MyTableWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+
+    splash_pix = QPixmap('logo.png')
+    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.setEnabled(False)
+    # splash = QSplashScreen(splash_pix)
+    # adding progress bar
+    progressBar = QProgressBar(splash)
+    progressBar.setMaximum(10)
+    progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
+
+    # splash.setMask(splash_pix.mask())
+
+    splash.show()
+#    splash.showMessage("Loading python libraries...", Qt.AlignTop | Qt.AlignCenter, Qt.black)
+    app.processEvents()
+#    for i in range(1, 11):
+#        progressBar.setValue(i)
+#        t = time.time()
+#        app.processEvents()
+#        while time.time() < t + 0.1:
+#           app.processEvents()
+
+    # Simulate something that takes time
+#    time.sleep(4)
+    
+
+#    print('importing pyqt')
+#    from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
+#        QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
+#        QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
+#        QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
+#        QStackedLayout)
+#    from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
+#    from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
+#    from PyQt5.QtCore import Qt
+    
+    progressBar.setValue(1)    
+    app.processEvents()
+
+    print('importing matplotlib')
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+    from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
+    from matplotlib.figure import Figure
+    import matplotlib.pyplot as plt
+    progressBar.setValue(2)
+    app.processEvents()
+
+    print('importing numpy')
+    import numpy as np
+    progressBar.setValue(4)
+    app.processEvents()
+    print ('importing pandas')
+    import pandas as pd
+    progressBar.setValue(6)
+    app.processEvents()
+    print('importing python libraries')
+    import shutil
+    import platform
+    OS = platform.system()
+    from datetime import datetime
+    progressBar.setValue(8)
+    app.processEvents()
+    from matplotlib import rcParams
+    rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+
+    #sys.path.append(os.path.relpath('../api')) # not needed anymore
+    
+    #from mesh_class import mesh_obj
+    #import meshTools as mt
+    #from meshTools import Mesh_obj
+    from api.R2 import R2
+    from api.r2help import r2help
+    progressBar.setValue(10)
+    app.processEvents()
+    
     ex = App()
+    splash.hide()
+    
+    
     sys.exit(app.exec_())
 
 
