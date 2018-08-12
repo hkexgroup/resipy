@@ -5,13 +5,15 @@ Eli Bendersky (eliben@gmail.com)
 License: this code is in the public domain
 Last modified: 09.05.2009
 """
-from PyQt5.QtWidgets import QSplashScreen, QApplication
+from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import *
 import zipfile
+from subprocess import Popen
 import os
 import sys
 import time
+import shutil
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -34,19 +36,59 @@ if __name__ == "__main__":
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
-    splash.show()
+    # splash = QSplashScreen(splash_pix)
+    # adding progress bar
+    progressBar = QProgressBar(splash)
+    progressBar.setMaximum(10)
+    progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
 
+    # splash.setMask(splash_pix.mask())
+
+    splash.show()
+    splash.showMessage("Uncompressin app", Qt.AlignBottom, Qt.white)
+    app.processEvents()
+#    app.processEvents()    
+#    progressBar.setValue(1)
 #    app.processEvents()
-    time.sleep(5)
-#    zip_ref = zipfile.ZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
-#    os.mkdir(os.path.join(bundle_dir, 'pyR2'))
-#    zip_ref.extractall(os.path.join(bundle_dir,'pyR2'))
-#    zip_ref.close()
-        
+#    app.processEvents()
+#    app.processEvents()
+#    time.sleep(4)
+##    progressBar.setValue(8)
+#    app.processEvents()
+#    time.sleep(4) # here insert the code to unzip the file
+#    progressBar.setValue(10)
+#    app.processEvents()
     
-#    splash.hide()
-#    os.popen(os.path.join(bundle_dir, 'pyR2', 'ui.exe'))
+#    for i in range(1, 11):
+#        progressBar.setValue(i)
+#        t = time.time()
+#        app.processEvents()
+#    t = time.time()
+#    while time.time() < t + 4:
+#       app.processEvents()
+
+    zf = zipfile.ZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
+    extractDir = os.path.join(bundle_dir, 'pyR2')
+    if os.path.exists(extractDir):
+        shutil.rmtree(extractDir)
+    os.mkdir(extractDir)
+    uncompress_size = sum((file.file_size for file in zf.infolist()))
+    extracted_size = 0
+
+    for file in zf.infolist():
+        extracted_size += file.file_size
+        percentage = extracted_size * 100/uncompress_size
+        progressBar.setValue(percentage/10)
+        app.processEvents()
+        zf.extract(file, extractDir)
+    zf.close()
+
     
     splash.hide()
+#    os.chdir(os.path.join(bundle_dir, 'pyR2', 'ui'))
+#    Popen(['python3', 'ui.py']) # or the exe file is compiled 
+    print(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui'))
+    Popen(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui'))
 
-    sys.exit(app.exec_())
+#    sys.exit()
+#    sys.exit(app.exec_()) # TODO solve that !

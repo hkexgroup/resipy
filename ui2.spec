@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['ui.py'],
-             pathex=['C:\\Users\\blanchy\\Downloads\\r2gui-master'],
+             pathex=[],
              binaries=[],
              datas=[('./api/exe/R2.exe','./api/exe'),
 					('./api/exe/gmsh.exe','./api/exe'),

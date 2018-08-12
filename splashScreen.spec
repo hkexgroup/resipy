@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['splashScreen.py'],
-             pathex=['C:\\Users\\blanchy\\Downloads\\r2gui-master'],
+             pathex=[],
              binaries=[],
              datas=[('./dist/ui.zip','./pyR2.zip'),
                      ('./logo.png','./logo.png')],

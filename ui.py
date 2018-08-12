@@ -1478,7 +1478,7 @@ if __name__ == '__main__':
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-#    splash.showMessage("Loading python libraries...", Qt.AlignTop | Qt.AlignCenter, Qt.black)
+    splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
     app.processEvents()
 #    for i in range(1, 11):
 #        progressBar.setValue(i)
