@@ -1178,6 +1178,12 @@ class App(QMainWindow):
                 
             self.r2.invert(iplot=False, dump=func)
             try:
+                sectionId.currentIndexChanged.disconnect()
+                sectionId.clear()
+            except:
+                print('no method connected to sectionId yet')
+                pass
+            try:
                 plotSection()
                 for i in range(len(self.r2.meshResults)):
                     sectionId.addItem(str(i))

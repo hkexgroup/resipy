@@ -769,7 +769,7 @@ class Survey(object):
         spacing = np.mean(np.diff(self.elec[:,0]))
         pseudo(array, resist, spacing, ax=ax, label='Reciprocal Error [Ohm.m]')
         
-    def dca(self, dump=print): # TO BE IMPLEMENTED
+    def dca(self, dump=print):
         ''' execute DCA filtering
         '''
         if self.filterDataIP.empty:
