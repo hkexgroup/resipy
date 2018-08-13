@@ -347,7 +347,11 @@ class R2(object): # R2 master class instanciated by the GUI
             self.showSection() # TODO need to debug that for timelapse and even for normal !
             # pass an index for inverted survey time
     
-    def showResults(self, index=0, ax=None, edge_color='none', attr='Resistivity(log10)', sens=True, color_map='viridis', **kwargs):
+    def showResults(self, index=0, ax=None, edge_color='none', attr='', sens=True, color_map='viridis', **kwargs):
+        if (attr == '') & (self.typ == 'R2'):
+            attr = 'Resistivity(log10)'
+        if (attr == '') & (self.typ == 'cR2'):
+            attr = 'Sigma_real(log10)'
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
@@ -357,23 +361,31 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def getResults(self):
-        if self.iTimeLapse == True:
-            fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
+        if self.typ == 'R2':
+            if self.iTimeLapse == True:
+                fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
+                print('reading ref', fresults)
+                mesh = mt.vtk_import(fresults)
+                mesh.elec_x = self.elec[:,0]
+                mesh.elec_y = self.elec[:,1]
+                self.meshResults.append(mesh)
+            for i in range(100):
+                fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
+                if os.path.exists(fresults):
+                    print('reading ', fresults)
+                    mesh = mt.vtk_import(fresults)
+                    mesh.elec_x = self.elec[:,0]
+                    mesh.elec_y = self.elec[:,1]
+                    self.meshResults.append(mesh)
+                else:
+                    break
+        if self.typ == 'cR2':
+            fresults = os.path.join(self.dirname, 'f001.vtk')
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,1]
             self.meshResults.append(mesh)
-        for i in range(100):
-            fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
-            if os.path.exists(fresults):
-                print('reading ', fresults)
-                mesh = mt.vtk_import(fresults)
-                mesh.elec_x = self.elec[:,0]
-                mesh.elec_y = self.elec[:,1]
-                self.meshResults.append(mesh)
-            else:
-                break
 
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
@@ -479,7 +491,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
         
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/test')
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
 #k.typ = 'cR2'
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')

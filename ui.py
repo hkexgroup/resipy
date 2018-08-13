@@ -1179,8 +1179,9 @@ class App(QMainWindow):
                     sectionId.addItem(str(i))
                 outStackLayout.setCurrentIndex(0)
 #                invLayout.addLayout(resultLayout, 70)
-            except:
+            except ValueError as e:
                 print('--------INVERSION FAILED--------')
+                print(e)
 #                invLayout.removeItem(invLayout.itemAt(1))
 #                invLayout.addLayout(r2outLayout, 70)
                 outStackLayout.setCurrentIndex(1)
@@ -1224,15 +1225,20 @@ class App(QMainWindow):
 #            self.r2.showResults()
 #            try:
 #            mwInvResult.plot(self.r2.showResults)
-            if self.r2.typ == 'cR2': # TODO remove that when Andy implement vtk output
-                mwInvResult.setCallback(self.r2.showSection)
-            else:
-                mwInvResult.setCallback(self.r2.showResults)
-            plotInvError()
+#            if self.r2.typ == 'cR2': # TODO remove that when Andy implement vtk output
+#                mwInvResult.setCallback(self.r2.showSection)
+#            else:
+            mwInvResult.setCallback(self.r2.showResults)
+            if self.r2.typ == 'R2':
+                plotInvError()
+            if self.r2.typ == 'R2':
+                defaultAttr = 'Resistivity(log10)'
+            if self.r2.typ == 'cR2':
+                defaultAttr = 'Sigma_real(log10)'
             self.displayParams = {'index':0,'edge_color':'none',
-                                  'sens':True, 'attr':'Resistivity(log10)'}
+                                  'sens':True, 'attr':defaultAttr}
             self.r2.getResults()
-            displayAttribute()
+            displayAttribute(arg=defaultAttr)
             # graph will be plotted because changeSection will be called
             sectionId.currentIndexChanged.connect(changeSection)
 #            attributeName.currentIndexChanged.connect(changeAttribute)

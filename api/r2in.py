@@ -142,23 +142,23 @@ def write2in(param, dirname, typ='R2'):
             param['d_wgt'],
             param['rho_min'],
             param['rho_max'])
-    if typ == 'R2':
-        if param['num_xy_poly'] == -1:
-            leftx = param['meshx'][param['node_elec'][0,1]-4]
-            rightx = param['meshx'][param['node_elec'][-1,1]+4]
-            lefty = param['topo'][param['node_elec'][0,1]-4]
-            righty = param['topo'][param['node_elec'][-1,1]+4]
-            dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
-            param['xy_poly_table'] = np.array([[leftx, lefty],
-                                              [rightx, righty],
-                                              [rightx, -dist],
-                                              [leftx, -dist],
-                                              [leftx, lefty]])
-            param['num_xy_poly'] = param['xy_poly_table'].shape[0]
-        content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
-        if param['num_xy_poly'] != 0:
-            content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
-                    *param['xy_poly_table'].flatten())
+#    if typ == 'R2':
+    if param['num_xy_poly'] == -1:
+        leftx = param['meshx'][param['node_elec'][0,1]-4]
+        rightx = param['meshx'][param['node_elec'][-1,1]+4]
+        lefty = param['topo'][param['node_elec'][0,1]-4]
+        righty = param['topo'][param['node_elec'][-1,1]+4]
+        dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
+        param['xy_poly_table'] = np.array([[leftx, lefty],
+                                          [rightx, righty],
+                                          [rightx, -dist],
+                                          [leftx, -dist],
+                                          [leftx, lefty]])
+        param['num_xy_poly'] = param['xy_poly_table'].shape[0]
+    content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
+    if param['num_xy_poly'] != 0:
+        content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
+                *param['xy_poly_table'].flatten())
     param['num_elec'] = param['node_elec'].shape[0]
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
     content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(

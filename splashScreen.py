@@ -88,7 +88,8 @@ if __name__ == "__main__":
 #    os.chdir(os.path.join(bundle_dir, 'pyR2', 'ui'))
 #    Popen(['python3', 'ui.py']) # or the exe file is compiled 
     print(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui'))
-    Popen(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui'))
+    Popen(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui')) # permission denied because the zip
+    # doesn't keep the permission
 
 #    sys.exit()
 #    sys.exit(app.exec_()) # TODO solve that !
