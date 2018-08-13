@@ -163,12 +163,14 @@ class App(QMainWindow):
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
                 reg_mode.setCurrentIndex(2)
+                ipCheck.setEnabled(False)
             else:
                 self.r2.iTimeLapse = False
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
                 reg_mode.setCurrentIndex(0)
+                ipCheck.setEnabled(True)
                 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -291,6 +293,7 @@ class App(QMainWindow):
         def diplayPseudoIP(state):
             if state  == Qt.Checked:
                 self.r2.typ = 'cR2'
+#                timeLapseCheck.setEnabled(False)
                 plotPseudoIP()
                 phaseplotError()
                 showIpOptions(True)
@@ -304,6 +307,7 @@ class App(QMainWindow):
             else:
                 self.r2.typ = 'R2'
                 showIpOptions(False)
+#                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
                 tabPreProcessing.setTabEnabled(2, False)
                 tabPreProcessing.setTabEnabled(3, False)
