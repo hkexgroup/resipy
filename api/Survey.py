@@ -725,7 +725,7 @@ class Survey(object):
             dfg = self.df[self.df['irecip'] > 0]    
             protocol['R'] = dfg['recipMean'].values    
             if ip == True:
-                protocol['Phase'] = dfg['ip'].values
+                protocol['Phase'] = -1.2*dfg['ip'].values # "-1.2" factor is for IRIS syscal instrument
             if errTyp != 'none':
                 if errTyp == 'obs':
                     protocol['error'] = self.df['recipError'].values[ie]
