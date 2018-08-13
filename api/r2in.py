@@ -39,7 +39,7 @@ def write2in(param, dirname, typ='R2'):
             'target_decrease':0,    
             'data_type':0,
             'reg_mode':0,
-            'tol':1,
+            'tolerance':1,
             'max_iter':10,
             'error_mod':2,
             'alpha_aniso':1,
@@ -124,7 +124,7 @@ def write2in(param, dirname, typ='R2'):
         content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
     
     content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
-            param['tol'],
+            param['tolerance'],
             param['max_iter'],
             param['error_mod'],
             param['alpha_aniso'])
