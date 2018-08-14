@@ -1261,6 +1261,10 @@ class App(QMainWindow):
                 defaultAttr = 'Sigma_real(log10)'
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr}
+            sensCheck.setChecked(True)
+            edgeCheck.setChecked(False)
+            vminEdit.setText('')
+            vmaxEdit.setText('')
             self.r2.getResults()
             displayAttribute(arg=defaultAttr)
             # graph will be plotted because changeSection will be called
