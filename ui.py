@@ -715,9 +715,13 @@ class App(QMainWindow):
         meshOptionLayout.addWidget(nnodesLabel)
         nnodesEdit = QLineEdit()
         nnodesEdit.setValidator(QIntValidator())
-        nnodesEdit.setText('8')
-        nnodesEdit.editingFinished.connect(updateMesh)
+        nnodesEdit.setText('4')
+#        nnodesEdit.editingFinished.connect(updateMesh)
         meshOptionLayout.addWidget(nnodesEdit)
+        
+        meshBtn = QPushButton('Apply')
+        meshBtn.clicked.connect(updateMesh)
+        meshOptionLayout.addWidget(meshBtn)
         
         meshLayout.addLayout(meshOptionLayout)
         

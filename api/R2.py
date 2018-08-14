@@ -160,7 +160,10 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['topo'] = topo
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
-            
+            if 'regions' in self.param: # alow to create a new mesh then rerun inversion
+                del self.param['regions']
+            if 'num_regions' in self.param:
+                del self.param['num_regions']
         if typ == 'trian':
             mesh = tri_mesh({'electrode':[self.elec[:,0], self.elec[:,1]]}, path=os.path.join(self.cwd, 'api', 'exe'), save_path=self.dirname)
             self.param['mesh_type'] = 3
@@ -503,7 +506,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.pwlfit()
 #k.errTyp='obs'
 #k.lmefit(iplot=True)
-#k.createMesh(typ='quad')
+#k.createMesh(typ='quad', elemx=8)
 #k.createMesh(typ='trian')
 #k.mesh.show()
 #fig, ax = plt.subplots()
@@ -514,6 +517,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.errTyp = 'pwl'
 #k.errTypIP = 'pwl'
 #k.invert(iplot=False)
+#k.showResults(edge_color='k')
 #k.pseudoError()
 #k.showSection()
 #fig, ax = plt.subplots()

@@ -959,8 +959,8 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     fh.close()
     
 #%% test code
-mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=3)
-mesh.show(color_bar=False)
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=3)
+#mesh.show(color_bar=False)
 #
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
