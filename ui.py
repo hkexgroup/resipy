@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
     QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
     QStackedLayout)
-from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
+from PyQt5.QtGui import QIcon, QKeySequence, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
 #print('elpased', time.time()-a)
@@ -339,7 +339,17 @@ class App(QMainWindow):
                 header = self.horizontalHeader()
                 header.setSectionResizeMode(QHeaderView.Stretch)
             
+#            def eventFilter(self, source, event):
+#                if (event == QKeySequence.Copy):
+##                    self.copySelection()
+#                    print('hello')
+#                    return True
+#                return super().eventFilter(source, event)
+                
             def keyPressEvent(self, e):
+                print(e.modifiers(), 'and', e.key())
+                if e.modifiers() == Qt.Key_Insert:
+                    print('insertion but I wont happen')
                 if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
                     print('paste')
                     # get clipboard
@@ -1308,6 +1318,7 @@ class App(QMainWindow):
         def displayAttribute(arg='Resistivity(log10)'):
 #            print('displayAttribute arg = ', arg)
             self.attr = list(self.r2.meshResults[self.displayParams['index']].attr_cache)
+#            print('list of attributes availables', self.attr)
             resistIndex = 0
             c = -1
             try:
@@ -1321,9 +1332,13 @@ class App(QMainWindow):
                     resistIndex = i
                 if self.attr[i] == arg:
                     c = i
+#                    print('found attribute ', arg)
                 attributeName.addItem(self.attr[i])
             if c != -1: # we found the same attribute
                 resistIndex = c
+#            else:
+#                print('sorry same attribute not found')
+            self.displayParams['attr'] = self.attr[resistIndex]
             attributeName.setCurrentIndex(resistIndex)
             attributeName.currentIndexChanged.connect(changeAttribute)
             #sectionId.setCurrentIndex(0)

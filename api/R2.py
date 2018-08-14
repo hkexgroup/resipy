@@ -217,11 +217,13 @@ class R2(object): # R2 master class instanciated by the GUI
             refdir = os.path.join(self.dirname, 'ref')
             if os.path.exists(refdir) == False:
                 os.mkdir(refdir)
-            param = self.param
+            param = self.param.copy()
+            param['a_wgt'] = 0.01
+            param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
             param['reg_mode'] = 0 # set by default in ui.py too
             self.configFile = write2in(param, refdir, typ=typ)
-            param = self.param
+            param = self.param.copy()
             param['num_regions'] = 0
             param['reg_mode'] = 2
             param['timeLapse'] = 'Start_res.dat'
@@ -338,9 +340,7 @@ class R2(object): # R2 master class instanciated by the GUI
             print('----------- finished inverting reference model ------------')
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                     os.path.join(self.dirname, 'Start_res.dat'))
-            self.runR2(dump=dump)
-        else:
-            self.runR2(dump=dump)
+        self.runR2(dump=dump)
         
         if iplot is True:
 #            self.showResults()
@@ -541,6 +541,12 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
 #k.createTimeLapseSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.linfit()
+#k.pwlfit()
+#k.errTyp = 'pwl'
+#k.param['a_wgt'] = 0
+#k.param['b_wgt'] = 0
+#k.createMesh()
+#k.write2in()
 #k.write2protocol()
 #k.invert(iplot=False)
 #k.showResults(index=0)
