@@ -1355,6 +1355,8 @@ class App(QMainWindow):
         def changeAttribute(index):
 #            print('changeAttribute', index)
             self.displayParams['attr'] = self.attr[index]
+            vminEdit.setText('')
+            vmaxEdit.setText('')
             replotSection()
 
             
