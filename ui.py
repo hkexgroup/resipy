@@ -226,7 +226,7 @@ class App(QMainWindow):
         
         
         def getdir():
-            fdir = QFileDialog.getExistingDirectory(tab1, 'Choose the directory containing the data')
+            fdir = QFileDialog.getExistingDirectory(tab1, 'Choose the directory containing the data', directory=self.r2.dirname)
             self.r2.createTimeLapseSurvey(fdir)
             buttonf.setText(fdir + ' (Press to change)')
             plotPseudo()
