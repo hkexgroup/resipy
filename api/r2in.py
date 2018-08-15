@@ -88,7 +88,9 @@ def write2in(param, dirname, typ='R2'):
         content = content + ' '.join(['{:.4f}']*len(topo)).format(*topo) + '\t<< topo \n\n'        
         content = content + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '\t<< yy \n\n'
     elif param['mesh_type'] == 3:
-        content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
+        if typ == 'R2':
+            content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
+        # not scaling for cR2
     else:
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])

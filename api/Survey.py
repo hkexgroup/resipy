@@ -722,9 +722,10 @@ class Survey(object):
             x = self.df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            dfg = self.df[self.df['irecip'] > 0]    
-            protocol['R'] = dfg['recipMean'].values    
+            dfg = self.df[self.df['irecip'] > 0] 
+            protocol['R'] = dfg['recipMean'].values
             if ip == True:
+#                protocol['R'] = np.abs(protocol['R'])
                 protocol['Phase'] = -1.2*dfg['ip'].values # "-1.2" factor is for IRIS syscal instrument
             if errTyp != 'none':
                 if errTyp == 'obs':

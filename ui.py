@@ -227,15 +227,17 @@ class App(QMainWindow):
         
         def getdir():
             fdir = QFileDialog.getExistingDirectory(tab1, 'Choose the directory containing the data', directory=self.r2.dirname)
-            self.r2.createTimeLapseSurvey(fdir)
-            buttonf.setText(fdir + ' (Press to change)')
-            plotPseudo()
-            elecTable.iniTable(self.r2.elec)
-            if all(self.r2.surveys[0].df['irecip'].values == 0):
-                pass
-            else:
-                tabPreProcessing.setTabEnabled(2, True)
-                plotError()
+            if fdir != '':
+                topoCheck.setEnabled(True)
+                self.r2.createTimeLapseSurvey(fdir)
+                buttonf.setText(fdir + ' (Press to change)')
+                plotPseudo()
+                elecTable.iniTable(self.r2.elec)
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    pass
+                else:
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
             
         def getfile():
             print('ftype = ', self.ftype)
@@ -243,6 +245,8 @@ class App(QMainWindow):
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
             if fname != '':
+                ipCheck.setEnabled(True)
+                topoCheck.setEnabled(True)
                 self.fname = fname
                 buttonf.setText(self.fname + ' (Press to change)')
                 if float(spacingEdit.text()) == -1:
@@ -269,7 +273,7 @@ class App(QMainWindow):
                 spacing = None
             else:
                 spacing = float(spacingEdit.text())
-            self.r2.surveys[0].addData(fnameRecip, ftype=ftype, spacing=spacing)
+            self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing)
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                 tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                 plotError()
@@ -316,8 +320,10 @@ class App(QMainWindow):
 
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(diplayPseudoIP)
+        ipCheck.setEnabled(False)
         topoCheck = QCheckBox('Topography')
         topoCheck.stateChanged.connect(diplayTopo)
+        topoCheck.setEnabled(False)
         hbox5 = QHBoxLayout()
         hbox5.addWidget(ipCheck)
         hbox5.addWidget(topoCheck)
@@ -349,23 +355,19 @@ class App(QMainWindow):
 #                return super().eventFilter(source, event)
                 
             def keyPressEvent(self, e):
-                print(e.modifiers(), 'and', e.key())
-                # TODO we need to prevent "Ctrl" to insert in the cell when pressed on a non-empty cell
-                # -> like e.preventDefaults()
-#                if e.modifiers() == Qt.Key_Insert:
-#                    print('insertion but I wont happen')
+#                print(e.modifiers(), 'and', e.key())
                 if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
                     cell = self.selectedIndexes()[0]
                     c0, r0 = cell.column(), cell.row()
                     self.paste(c0, r0)
                 elif e.modifiers() != Qt.ControlModifier: # start editing
-                    print('start editing...')
+#                    print('start editing...')
                     cell = self.selectedIndexes()[0]
                     c0, r0 = cell.column(), cell.row()
                     self.editItem(self.item(r0,c0))
                     
             def paste(self, c0=0, r0=0):
-                print('paste')
+#                print('paste')
                 # get clipboard
                 text = QApplication.clipboard().text()
                 # parse clipboard
@@ -375,7 +377,7 @@ class App(QMainWindow):
                     if len(trow) > 0:
                         tt.append(trow)
                 tt = np.array(tt)
-                print('tt = ', tt)
+#                print('tt = ', tt)
 #                    self.setItem(0,0,QTableWidgetItem('hlo'))
                 if np.sum(tt.shape) > 0:
                     # get max row/columns
@@ -393,11 +395,11 @@ class App(QMainWindow):
                 
             def setTable(self, tt, c0=0, r0=0):
                 # paste clipboard to qtableView
-                print('set table', self.nrow, self.ncol, tt.shape)
+#                print('set table', self.nrow, self.ncol, tt.shape)
                 for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
                     for j in range(r0, min([self.nrow, r0+tt.shape[0]])):
                         self.setItem(j,i,QTableWidgetItem(str(tt[j-r0, i-c0])))
-                        print('item just ste', self.item(j,i).text())
+#                        print('item just ste', self.item(j,i).text())
                     
             def getTable(self):
                 table = np.zeros((self.nrow, self.ncol))

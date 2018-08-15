@@ -85,7 +85,7 @@ def DCA(data_in, dump=print): #(Reference: Flores Orozco, A., Gallistl, J., Büc
             appended_groups.append(group)
             percent_progress = i*100/len(filtered_R_IP.groupby(['An','Bn']))
             dump(percent_progress)
-            print('%s%s -Done' % (int(percent_progress),'%'))
+            print('%s%s -Done' % (int(percent_progress),'%'), end='\r')
         print('100% -Done - finished!')
         appended_groups = pd.concat(appended_groups)
         K_std = np.std(appended_groups['K'])

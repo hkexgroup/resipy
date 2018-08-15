@@ -554,6 +554,14 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #
 
 
+#%% test for IP
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
+#k.typ = 'cR2'
+#k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
+#k.invert()
+
+
 #%% test for timelapse inversion
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
