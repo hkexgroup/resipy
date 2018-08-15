@@ -45,6 +45,18 @@ class R2(object): # R2 master class instanciated by the GUI
     def setwd(self, dirname):
         ''' set the working directory
         '''
+        # get rid of some stuff
+        files = os.listdir(dirname)
+        if 'ref' in files: # only for timelapse survey
+            shutil.rmtree(os.path.join(dirname, 'ref'))
+        if 'R2.exe' in files:
+            os.remove(os.path.join(dirname, 'R2.exe'))
+        if 'cR2.exe' in files:
+            os.remove(os.path.join(dirname, 'cR2.exe'))
+        if 'mesh.dat' in files:
+            os.remove(os.path.join(dirname, 'mesh.dat'))
+        if 'Start_res.dat' in files:
+            os.remove(os.path.join(dirname, 'Start_res.dat'))
         self.dirname = dirname
     
     
@@ -169,7 +181,10 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['mesh_type'] = 3
             self.param['num_regions'] = len(mesh.regions)
             regs = np.array(np.array(mesh.regions))[:,1:]
-            regions = np.c_[regs, np.ones(regs.shape[0])*50]
+            if self.typ == 'R2':
+                regions = np.c_[regs, np.ones(regs.shape[0])*50]
+            if self.typ == 'cR2':
+                regions = np.c_[regs, np.ones(regs.shape[0])*50, np.ones(regs.shape[0])*-0.1]
             self.param['regions'] = regions
             self.param['num_xy_poly'] = 0
             e_nodes = np.arange(len(self.elec))+1
@@ -233,7 +248,6 @@ class R2(object): # R2 master class instanciated by the GUI
             write2in(param, self.dirname, typ=typ)
         else:
             self.configFile = write2in(self.param, self.dirname, typ=typ)
-        
         
 
     def write2protocol(self, errTyp='', errTypIP='', **kwargs):

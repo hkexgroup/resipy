@@ -31,10 +31,10 @@ def write2in(param, dirname, typ='R2'):
             'regions':None, # should be defined by the number of element in the mesh
             'patch_x':1,
             'patch_y':1,
-            'nx1':1,
-            'nz1':1,
-            'resistst':1,
-            'phasest':-0.1,
+#            'nx1':1,
+#            'nz1':1,
+#            'resistst':1, # default in R2.createMesh()
+#            'phasest':-0.1, # default in R2.createMesh()
             'inverse_type':1,
             'target_decrease':0,    
             'data_type':0,
@@ -60,7 +60,6 @@ def write2in(param, dirname, typ='R2'):
     for a in dparam:
         if a not in param: # parameter missing
             param[a] = dparam[a]
-    
     
     # create text for R2.in
     content = ''
@@ -96,18 +95,18 @@ def write2in(param, dirname, typ='R2'):
     if param['num_regions'] == 0:
         content = content + param['timeLapse'] + '\n'
     if param['regions'] is None:
-        if param['mesh_type'] == 4:
+        if (param['mesh_type'] == 4) & (typ == 'R2'):
             param['regions'] = np.array([[1, (len(meshx)-1)*(len(meshy)-1), 50]])
+        if (param['mesh_type'] == 4) & (typ == 'cR2'):
+            param['regions'] = np.array([[1, len(meshx)-1, 1, len(meshy)-1, 1, -0.1]])
     if param['num_regions'] > 0:
         if typ == 'R2':            
             content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
         elif typ =='cR2':
-            content = content + '{}\t{}\t{}\t{}\t{}\t{} << nx1, nx2, nz1, nz2, resis, phase\n'.format(param['nx1'],
-            len(meshx)-1,
-            param['nz1'],
-            len(meshy)-1,
-            param['resistst'],
-            param['phasest'])
+            if param['mesh_type'] == 4:
+                content = content + ''.join(['\t{:.0f}\t{:.0f}\t{:.0f}\t{:.0f}\t{}\t{} << nx1, nx2, nz1, nz2, resis, phase\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
+            if param['mesh_type'] == 3:
+                content = content + ''.join(['\t{:.0f}\t{:.0f}\t{}\t{} << elem_1, elem_2, resist, phase\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
     if param['mesh_type'] == 4:
         content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
     if param['job_type'] == 1 & param['mesh_type'] == 4|5:

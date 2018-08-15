@@ -286,9 +286,11 @@ class App(QMainWindow):
             if state  == Qt.Checked:
                 elecLabel.setVisible(True)
                 elecTable.setVisible(True)
+                elecButton.setVisible(True)
             else:
                 elecLabel.setVisible(False)
                 elecTable.setVisible(False)
+                elecButton.setVisible(False)
         
         def diplayPseudoIP(state):
             if state  == Qt.Checked:
@@ -348,31 +350,40 @@ class App(QMainWindow):
                 
             def keyPressEvent(self, e):
                 print(e.modifiers(), 'and', e.key())
-                if e.modifiers() == Qt.Key_Insert:
-                    print('insertion but I wont happen')
+                # TODO we need to prevent "Ctrl" to insert in the cell when pressed on a non-empty cell
+                # -> like e.preventDefaults()
+#                if e.modifiers() == Qt.Key_Insert:
+#                    print('insertion but I wont happen')
                 if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
-                    print('paste')
-                    # get clipboard
-                    text = QApplication.clipboard().text()
-                    # parse clipboard
-                    tt = []
-                    for row in text.split('\n'):
-                        trow = row.split()
-                        if len(trow) > 0:
-                            tt.append(trow)
-                    tt = np.array(tt)
-#                    self.setItem(0,0,QTableWidgetItem('hlo'))
-                    if np.sum(tt.shape) > 0:
-                        # get max row/columns
-                        cell = self.selectedIndexes()[0]
-                        c0, r0 = cell.column(), cell.row()
-                        self.setTable(tt, c0, r0)
-                else: # start editing
+                    cell = self.selectedIndexes()[0]
+                    c0, r0 = cell.column(), cell.row()
+                    self.paste(c0, r0)
+                elif e.modifiers() != Qt.ControlModifier: # start editing
+                    print('start editing...')
                     cell = self.selectedIndexes()[0]
                     c0, r0 = cell.column(), cell.row()
                     self.editItem(self.item(r0,c0))
                     
-                        
+            def paste(self, c0=0, r0=0):
+                print('paste')
+                # get clipboard
+                text = QApplication.clipboard().text()
+                # parse clipboard
+                tt = []
+                for row in text.split('\n'):
+                    trow = row.split()
+                    if len(trow) > 0:
+                        tt.append(trow)
+                tt = np.array(tt)
+                print('tt = ', tt)
+#                    self.setItem(0,0,QTableWidgetItem('hlo'))
+                if np.sum(tt.shape) > 0:
+                    # get max row/columns
+#                    cell = self.selectedIndexes()[0]
+#                    c0, r0 = cell.column(), cell.row()
+                    self.setTable(tt, c0, r0)
+                    
+                    
             def iniTable(self, tt):
                 self.setRowCount(tt.shape[0])
                 self.setColumnCount(tt.shape[1])
@@ -382,10 +393,11 @@ class App(QMainWindow):
                 
             def setTable(self, tt, c0=0, r0=0):
                 # paste clipboard to qtableView
-                for i in range(c0, min([self.ncol, tt.shape[1]])):
-                    for j in range(r0, min([self.nrow, tt.shape[0]])):
+                print('set table', self.nrow, self.ncol, tt.shape)
+                for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
+                    for j in range(r0, min([self.nrow, r0+tt.shape[0]])):
                         self.setItem(j,i,QTableWidgetItem(str(tt[j-r0, i-c0])))
-#                        print('item just ste', self.item(j,i).text())
+                        print('item just ste', self.item(j,i).text())
                     
             def getTable(self):
                 table = np.zeros((self.nrow, self.ncol))
@@ -398,9 +410,13 @@ class App(QMainWindow):
             
         elecTable = ElecTable(visible=False)
         elecLayout = QVBoxLayout()
-        elecLabel = QLabel('<i>Copy-Paste electrode here, or use Tab to edit</i>')
+        elecLabel = QLabel('<i>Press button to paste, or use Tab to edit</i>')
         elecLabel.setVisible(False)
+        elecButton = QPushButton('Paste from clipboard')
+        elecButton.clicked.connect(elecTable.paste)
+        elecButton.setVisible(False)
         elecLayout.addWidget(elecLabel)
+        elecLayout.addWidget(elecButton)
         elecLayout.addWidget(elecTable, 35)
         topLayout.addLayout(elecLayout)
         gridImport.addLayout(topLayout, 0, 0)        
@@ -1234,7 +1250,6 @@ class App(QMainWindow):
 #            def timeLapseMainRun():
 #                print('----------- finished inverting reference model ------------')
 #                shutil.copy(os.path.join(self.refdir, 'f001_res.dat'),
-#                            os.path.join(self.r2.dirname, 'Start_res.dat'))
 #                runMainInversion()
 #            
 #            if self.r2.iTimeLapse == True:
