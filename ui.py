@@ -1477,6 +1477,24 @@ class App(QMainWindow):
         # add Jimmy graph
         
         
+        #%% About tab
+        
+        tabAbout = QTabWidget()
+        tabs.addTab(tabAbout, 'About')
+        
+        infoLayout = QVBoxLayout()
+        aboutText = QLabel()
+#        aboutText.openExternalLinks(True)
+        aboutText.setText('<p>If you encouter issues or would like to submit a feature request, please raise an issue on gitlab:</p> \
+                              <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
+                              <p>pyR2 uses R2 and cR2 code from Andrey Binley:</p> \
+                              <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
+                              <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
+                              <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>')
+#        aboutText.setReadOnly(True)
+        infoLayout.addWidget(aboutText)
+        
+        tabAbout.setLayout(infoLayout)
         
         #%%
         layout.addWidget(tabs)
