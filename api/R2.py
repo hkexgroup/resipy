@@ -287,6 +287,9 @@ class R2(object): # R2 master class instanciated by the GUI
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
                         os.mkdir(refdir)
+                    if 'mesh.dat' in os.listdir(self.dirname):
+                        shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+                                os.path.join(self.dirname, 'ref', 'mesh.dat'))
                     with open(os.path.join(refdir, 'protocol.dat'), 'w') as f:
                         f.write(content) # write the protocol for the reference file
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:

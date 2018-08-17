@@ -777,8 +777,10 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
             meshx = np.r_[meshx, xx2, xx3]
     
     # create e_nodes
-    elec_node = np.arange(pad*2*(elemx-1), 2*pad*(elemx-1)+len(elec)*elemx, elemx)
-
+    print(len(xx2))
+    print(len(xx3))
+    elec_node = np.arange(len(xx3)+len(xx2), 2*pad*(elemx-1)+len(elec)*elemx, elemx)
+    print(elec_node)
     #TODO make sure it's dividable by patchx and patch y
     
     # create meshy
@@ -961,7 +963,7 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=3)
 #mesh.show(color_bar=False)
-#
+
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
 
