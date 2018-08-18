@@ -179,10 +179,10 @@ class App(QMainWindow):
             phivminEdit.setText('')
             phivmaxEdit.setText('')
             dcaProgress.setValue(0)
-            tabPreProcessing.setTabEnabled(1, True)
-            tabPreProcessing.setTabEnabled(2, True)
+            tabPreProcessing.setTabEnabled(0, True)
+            tabPreProcessing.setTabEnabled(1, False)
+            tabPreProcessing.setTabEnabled(2, False)
             tabPreProcessing.setTabEnabled(3, False)
-            tabPreProcessing.setTabEnabled(4, False)
 
             
             # mesh
