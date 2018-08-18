@@ -55,17 +55,19 @@ class MatplotlibWidget(QWidget):
             self.layoutVertical.addWidget(self.navi_toolbar)
     
     
-    def setMinMax(self, vmin, vmax):
+    def setMinMax(self, vmin=None, vmax=None):
         coll = self.axis.collections[0]
-        oldLimits = coll.get_clim() # first limit of the object should be saved
+#        print('->', vmin, vmax)
+#        print('array ', coll.get_array())
         if vmin == '':
-            vmin = oldLimits[1]
+            vmin = np.nanmin(coll.get_array())
         else:
             vmin = float(vmin)
         if vmax == '':
-            vmax = oldLimits[0]
+            vmax = np.nanmax(coll.get_array())
         else:
             vmax = float(vmax)
+#        print(vmin, vmax)
         coll.set_clim(vmin, vmax)
         self.canvas.draw()
 
@@ -1393,8 +1395,9 @@ class App(QMainWindow):
             msg.setText(text)
             
         def setCBarLimit():
-            print(vmaxEdit.text())
-            mwInvResult.setMinMax(vmaxEdit.text(), vminEdit.text())
+            vmax = vmaxEdit.text()
+            vmin = vminEdit.text()
+            mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
             
         def showEdges(status):
             if status == Qt.Checked:
@@ -1486,10 +1489,10 @@ class App(QMainWindow):
         vminLabel = QLabel('Min:')
         vminEdit = QLineEdit()
         vminEdit.setValidator(QDoubleValidator())
-        vminEdit.editingFinished.connect(setCBarLimit)
+        vminEdit.textChanged.connect(setCBarLimit)
         vmaxLabel = QLabel('Max:')
         vmaxEdit = QLineEdit()
-        vmaxEdit.editingFinished.connect(setCBarLimit)
+        vmaxEdit.textChanged.connect(setCBarLimit)
         vmaxEdit.setValidator(QDoubleValidator())
         displayOptions.addWidget(vminLabel)
         displayOptions.addWidget(vminEdit)
