@@ -7,6 +7,7 @@ Created on Wed May 30 16:46:04 2018
 """
 
 r2help = {
+  'flux_type': "<p>Define the flux type to be used (either 2D or 3D)</p>",
   'res_matrix' : "<p><code>res_matrix</code> is 1 if a 'sensitivity' matrix is required for the converged solution. This matrix is not the Jacobian but is the diagonal of [J^T.W^T.W.J] which gives an idea of the mesh sensitivity (see equation 5.20 of Binley and Kemna, 2005)</p><p>Set <code>res_matrix</code> to 2 if the true resolution matrix is computed for a converged solution and the diagonal is stored (see equation 5.18 of Binley and Kemna,  2005), note that this calculation is more time consuming than the ‘sensitivity matrix’ option.</p><p>Set <code>res_matrix</code> to 3 if the sensitivity map is required and an out put of the jacobian matrix and roughness matrix.</p><p>If neither sensitivity map or resolution matrix is required then set <code>res_matrix</code> to 0.</p>",
   'singular_type' : "<p>Note that singularity removal can only be applied is (a) the boundaries are infinite and (b) the y=0 plane defines the upper boundary. </p>",
   'inverse_type' : "<p>where <code>inverse_type</code> is 0 for pseudo-Marquardt solution or 1 for regularised solution with linear filter (usual mode) or 2 for regularised type with quadratic filter or 3 for qualitative solution or 4 for blocked linear regularised type. Note that the blocking defined here is only for a quadrilateral mesh – for blocking within a triangular mesh see the details for preparing <code>mesh.dat</code></p>",

@@ -57,7 +57,7 @@ class MatplotlibWidget(QWidget):
     
     def setMinMax(self, vmin, vmax):
         coll = self.axis.collections[0]
-        oldLimits = coll.get_clim()
+        oldLimits = coll.get_clim() # first limit of the object should be saved
         if vmin == '':
             vmin = oldLimits[1]
         else:
@@ -93,6 +93,11 @@ class MatplotlibWidget(QWidget):
         self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
         self.figure.tight_layout()
+        self.canvas.draw()
+    
+    def clear(self):
+#        print('clearing figure')
+        self.axis.clear()
         self.canvas.draw()
         
 #
@@ -150,9 +155,77 @@ class App(QMainWindow):
         # restart all new survey
         def restartFunc():
             self.r2 = R2(newwd) # create new R2 instance
-            # reset QPushButton
-            # all preprocessing tabs
-            # all mesh tabs ...
+            # importing
+            wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
+            buttonf.setText('Import Data')
+            timeLapseCheck.setChecked(False)
+            boreholeCheck.setChecked(False)
+            ipCheck.setChecked(False)
+            ipCheck.setEnabled(False)
+            topoCheck.setChecked(False)
+            topoCheck.setEnabled(False)
+            mwPseudo.clear() # clearing figure
+            
+            # pre-processing
+            mwManualFiltering.clear()
+            errFitType.currentIndexChanged.disconnect()
+            errFitType.setCurrentIndex(0)
+            errFitType.currentIndexChanged.connect(errFitTypeFunc)
+            mwFitError.clear()
+            mwIPFiltering.clear()
+            iperrFitType.currentIndexChanged.disconnect()
+            iperrFitType.setCurrentIndex(0)
+            iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
+            phivminEdit.setText('')
+            phivmaxEdit.setText('')
+            dcaProgress.setValue(0)
+            tabPreProcessing.setTabEnabled(1, True)
+            tabPreProcessing.setTabEnabled(2, True)
+            tabPreProcessing.setTabEnabled(3, False)
+            tabPreProcessing.setTabEnabled(4, False)
+
+            
+            # mesh
+            meshType.currentIndexChanged.disconnect()
+            meshType.setCurrentIndex(0)
+            meshType.currentIndexChanged.connect(meshTypeFunc)
+            mwMesh.clear()
+            
+            # inversion options
+            flux_type.setCurrentIndex(0)
+            singular_type.setChecked(False)
+            res_matrix.setCurrentIndex(1)
+            scale.setText('1.0')
+            patch_size_x.setText('1')
+            patch_size_y.setText('1')
+            inv_type.setCurrentIndex(0)
+            data_type.setCurrentIndex(0)
+            reg_mode.setCurrentIndex(0)
+            max_iterations.setText('10')
+            error_mod.setCurrentIndex(1)
+            alpha_aniso.setText('1.0')
+            a_wgt.setText('0.01')
+            b_wgt.setText('0.02')
+            c_wgt.setText('1')
+            d_wgt.setText('2')
+            rho_min.setText('-1000')
+            rho_max.setText('1000')
+            target_decrease.setText('0')
+            helpSection2.setText('Click on the labels and help will be displayed here')
+            
+            # inversion
+            self.pindex = 0
+            self.rms = []
+            self.rmsIndex = []
+            self.rmsIP = []
+            self.rmsIndexIP = []
+            self.inversionOutput = ''
+            logText.setText('')
+            mwRMS.clear()
+            mwInvResult.clear()
+            mwInvError.clear()
+
+            
         restartBtn = QPushButton('Reset UI')
         restartBtn.clicked.connect(restartFunc)
 
@@ -211,10 +284,10 @@ class App(QMainWindow):
             if fdir != '':
                 self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
-                wd.setText(fdir)
+                wdBtn.setText(fdir)
             
-        wd = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
-        wd.clicked.connect(getwd)
+        wdBtn = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
+        wdBtn.clicked.connect(getwd)
         
         
         self.ftype = 'Syscal' # by default
@@ -342,7 +415,7 @@ class App(QMainWindow):
         metaLayout = QVBoxLayout()
         metaLayout.addLayout(hbox1)
         metaLayout.addLayout(hbox2)
-        metaLayout.addWidget(wd)
+        metaLayout.addWidget(wdBtn)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         topLayout.addLayout(metaLayout, 60)
@@ -502,29 +575,33 @@ class App(QMainWindow):
             mwFitError.plot(self.r2.plotError)
             self.r2.errTyp = 'none'
             
-        def fitLinError():
-            mwFitError.plot(self.r2.linfit)
-            self.r2.errTyp = 'lin'
-            
-        def fitLmeError():
-            print('NOT READY YET')
-            mwFitError.plot(self.r2.lmefit)
-            self.r2.errTyp = 'lme'
-        
-        def fitpwl():
-            mwFitError.plot(self.r2.pwlfit)
-            self.r2.errTyp = 'pwl'
+#        def fitLinError():
+#            mwFitError.plot(self.r2.linfit)
+#            self.r2.errTyp = 'lin'
+#            
+#        def fitLmeError():
+#            print('NOT READY YET')
+#            mwFitError.plot(self.r2.lmefit)
+#            self.r2.errTyp = 'lme'
+#        
+#        def fitpwl():
+#            mwFitError.plot(self.r2.pwlfit)
+#            self.r2.errTyp = 'pwl'
 
-        def fitModel(index):
-            print(index)
+        def errFitTypeFunc(index):
+#            print(index)
             if index == 0:
                 plotError()
             elif index == 1:
-                fitLinError()
+                mwFitError.plot(self.r2.linfit)
+                self.r2.errTyp = 'lin'
             elif index == 2:
-                fitpwl()
+                mwFitError.plot(self.r2.pwlfit)
+                self.r2.errTyp = 'pwl'
             elif index == 3:
-                fitLmeError()
+                print('NOT READY YET')
+                mwFitError.plot(self.r2.lmefit)
+                self.r2.errTyp = 'lme'
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -543,7 +620,7 @@ class App(QMainWindow):
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
         errFitType.addItem('Linear Mixed Effect')
-        errFitType.currentIndexChanged.connect(fitModel)
+        errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errorLayout.addWidget(errFitType)
         
         mwFitError = MatplotlibWidget(navi=True)
@@ -555,16 +632,17 @@ class App(QMainWindow):
         def phaseplotError():
             mwIPFiltering.plot(self.r2.phaseplotError)
         
-        def phasePLerr():
-            mwIPFiltering.plot(self.r2.plotIPFit)
-            self.r2.errTypIP = 'pwlip'
+#        def phasePLerr():
+#            mwIPFiltering.plot(self.r2.plotIPFit)
+#            self.r2.errTypIP = 'pwlip'
             
-        def ipfitModel(index):
-            print(index)
+        def iperrFitTypeFunc(index):
+#            print(index)
             if index == 0:
                 phaseplotError()
             elif index == 1:
-                phasePLerr()
+                mwIPFiltering.plot(self.r2.plotIPFit)
+                self.r2.errTypIP = 'pwlip'
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -584,7 +662,7 @@ class App(QMainWindow):
         iperrFitType = QComboBox()
         iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
         iperrFitType.addItem('Power law')
-        iperrFitType.currentIndexChanged.connect(ipfitModel)
+        iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
         ipLayout.addWidget(iperrFitType)
         
         mwIPFiltering = MatplotlibWidget(navi=True)
@@ -710,7 +788,7 @@ class App(QMainWindow):
             ax.plot(np.random.randn(20,5), '+--')
             ax.set_title('Random data nnnnndfghdfh')
 
-        def generateMesh(index=1):
+        def meshTypeFunc(index=1):
             self.r2.elec = elecTable.getTable()
             if index == 1:
                 self.r2.createMesh(typ='quad')
@@ -728,10 +806,10 @@ class App(QMainWindow):
         
         
         meshType = QComboBox()
-        meshType.addItem('')
+        meshType.addItem('Please choose a mesh...')
         meshType.addItem('Quadrilateral Mesh')
         meshType.addItem('Triangular Mesh')
-        meshType.currentIndexChanged.connect(generateMesh)
+        meshType.currentIndexChanged.connect(meshTypeFunc)
         meshLayout.addWidget(meshType)
         
         meshOptionLayout = QHBoxLayout()
@@ -1509,7 +1587,7 @@ class App(QMainWindow):
         
         tabAbout.setLayout(infoLayout)
         
-        #%%
+        #%% general Ctrl+Q shortcut + general tab layout
         layout.addWidget(tabs)
         self.table_widget.setLayout(layout)
         self.setCentralWidget(self.table_widget)
@@ -1521,6 +1599,7 @@ class App(QMainWindow):
             self.close()
         if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_W):
             self.close()
+    
     
 ''' 
 class MyTableWidget(QWidget):        
