@@ -149,8 +149,12 @@ class App(QMainWindow):
         self.setWindowIcon(QIcon('logo.png')) ### change this to change the icon of the window. 
         
         #%% tab 1 importing data
-        tab1 = QWidget()
-        tabs.addTab(tab1, 'Importing')
+        tabImporting = QTabWidget()
+        tabs.addTab(tabImporting, 'Importing')
+        
+        tabImportingData = QWidget()
+        tabImporting.addTab(tabImportingData, 'Data')
+        
         gridImport = QGridLayout()
         topLayout = QHBoxLayout()
         
@@ -282,7 +286,7 @@ class App(QMainWindow):
         
         # ask for working directory, and survey file to input
         def getwd():
-            fdir = QFileDialog.getExistingDirectory(tab1, 'Choose Working Directory')
+            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose Working Directory')
             if fdir != '':
                 self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
@@ -312,7 +316,7 @@ class App(QMainWindow):
         
         
         def getdir():
-            fdir = QFileDialog.getExistingDirectory(tab1, 'Choose the directory containing the data', directory=self.r2.dirname)
+            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.r2.dirname)
             if fdir != '':
                 topoCheck.setEnabled(True)
                 self.r2.createTimeLapseSurvey(fdir)
@@ -327,7 +331,7 @@ class App(QMainWindow):
             
         def getfile():
             print('ftype = ', self.ftype)
-            fname, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
             if fname != '':
@@ -353,7 +357,7 @@ class App(QMainWindow):
         buttonf.clicked.connect(getfile)
         
         def getfileR():
-            fnameRecip, _ = QFileDialog.getOpenFileName(tab1,'Open File', directory=self.r2.dirname)
+            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
             buttonfr.setText(fnameRecip)
             if float(spacingEdit.text()) == -1:
                 spacing = None
@@ -422,6 +426,39 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox5)
         topLayout.addLayout(metaLayout, 60)
 
+        
+#        topLayout.addLayout(topoLayout)
+        gridImport.addLayout(topLayout, 0, 0)        
+        
+        def plotPseudo():
+            mwPseudo.plot(self.r2.pseudo)
+        
+        def plotPseudoIP():
+            mwPseudoIP.plot(self.r2.pseudoIP)
+        
+        pseudoLayout = QHBoxLayout()
+
+        mwPseudo = MatplotlibWidget(navi=True)
+        pseudoLayout.addWidget(mwPseudo)
+                
+        mwPseudoIP = MatplotlibWidget(navi=True)
+        mwPseudoIP.setVisible(False)
+        pseudoLayout.addWidget(mwPseudoIP)
+        
+        gridImport.addLayout(pseudoLayout, 1, 0)
+        
+#        def plotError():
+#            mwError.plot(self.r2.surveys[0].plotError)
+#            
+#        mwError = MatplotlibWidget()
+#        grid.addWidget(mwError, 4, 1)
+        
+        tabImportingData.setLayout(gridImport)
+        
+        # topo informations
+        tabImportingTopo = QWidget()
+        tabImporting.addTab(tabImportingTopo, 'Topography')
+        
         # electrode table
         class ElecTable(QTableWidget):
             def __init__(self, nrow=10, ncol=3, visible=True):
@@ -495,46 +532,25 @@ class App(QMainWindow):
 #                print('table = ', table)
                 return table
                     
-            
-        elecTable = ElecTable(visible=False)
-        elecLayout = QVBoxLayout()
+        
+        topoLayout = QVBoxLayout()
+        
+        elecTable = ElecTable(visible=True)
         elecLabel = QLabel('<i>Press button to paste, or use Tab to edit</i>')
         elecLabel.setVisible(False)
         elecButton = QPushButton('Paste from clipboard')
         elecButton.clicked.connect(elecTable.paste)
         elecButton.setVisible(False)
-        elecLayout.addWidget(elecLabel)
-        elecLayout.addWidget(elecButton)
-        elecLayout.addWidget(elecTable, 35)
-        topLayout.addLayout(elecLayout)
-        gridImport.addLayout(topLayout, 0, 0)        
+        topoLayout.addWidget(elecLabel)
+        topoLayout.addWidget(elecButton)
+        topoLayout.addWidget(elecTable, 35)
         
-        def plotPseudo():
-            mwPseudo.plot(self.r2.pseudo)
+        topoTable = ElecTable(visible=True)
+        topoLabel = QLabel('<i>Add additional surface points. You can use <code>Ctrl+V</code> to paste directly into a cell.</i>')
+        topoLayout.addWidget(topoLabel)
+        topoLayout.addWidget(topoTable)
         
-        def plotPseudoIP():
-            mwPseudoIP.plot(self.r2.pseudoIP)
-        
-        pseudoLayout = QHBoxLayout()
-
-        mwPseudo = MatplotlibWidget(navi=True)
-        pseudoLayout.addWidget(mwPseudo)
-                
-        mwPseudoIP = MatplotlibWidget(navi=True)
-        mwPseudoIP.setVisible(False)
-        pseudoLayout.addWidget(mwPseudoIP)
-        
-        gridImport.addLayout(pseudoLayout, 1, 0)
-        
-#        def plotError():
-#            mwError.plot(self.r2.surveys[0].plotError)
-#            
-#        mwError = MatplotlibWidget()
-#        grid.addWidget(mwError, 4, 1)
-        
-        tab1.setLayout(gridImport)
-        
-    
+        tabImportingTopo.setLayout(topoLayout)
         
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
