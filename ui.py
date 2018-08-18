@@ -147,6 +147,15 @@ class App(QMainWindow):
         gridImport = QGridLayout()
         topLayout = QHBoxLayout()
         
+        # restart all new survey
+        def restartFunc():
+            self.r2 = R2(newwd) # create new R2 instance
+            # reset QPushButton
+            # all preprocessing tabs
+            # all mesh tabs ...
+        restartBtn = QPushButton('Reset UI')
+        restartBtn.clicked.connect(restartFunc)
+
         # meta data (title and date of survey)
         title = QLabel('Title')
         titleEdit = QLineEdit()
@@ -155,6 +164,7 @@ class App(QMainWindow):
         date = QLabel('Date')
         dateEdit = QLineEdit()
         dateEdit.setText(datetime.now().strftime('%Y-%m-%d')) # get today date
+        
         
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
@@ -185,6 +195,7 @@ class App(QMainWindow):
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
         
         hbox1 = QHBoxLayout()
+        hbox1.addWidget(restartBtn)
         hbox1.addWidget(title)
         hbox1.addWidget(titleEdit)
         hbox1.addWidget(timeLapseCheck)
