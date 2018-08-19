@@ -409,6 +409,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
+        print('showSection called')
         if fname == '':
             fname = os.path.join(self.dirname, 'f001.dat')
         res = pd.read_csv(fname, delimiter=' *', header=None, engine='python').values
@@ -461,13 +462,18 @@ class R2(object): # R2 master class instanciated by the GUI
         files = os.listdir(self.dirname)
         fs = []
         for f in files:
-            if f[-8:] == '_res.dat':
+            if (f[-8:] == '_res.dat') & (len(f) == 16):
                 fs.append(f)
         fs = sorted(fs)
         print(fs)
-        if len(fs) > 1:
-            self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
-    
+        if len(fs) > 0:
+            if self.param['mesh_type'] == 4:
+                self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
+            else:
+                x = np.genfromtxt(os.path.join(self.dirname, fs[-1]))
+                self.mesh.add_attr_dict({'iter':x[:,-2]})
+                self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
+                
     def pseudoError(self, ax=None):
         ''' plot pseudo section of errors from file f001_err.dat
         '''
@@ -556,6 +562,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.errTyp = 'pwl'
 #k.errTypIP = 'pwl'
 #k.invert(iplot=False)
+#k.showIter()
 #k.showResults(edge_color='k')
 #k.pseudoError()
 #k.showSection()

@@ -335,7 +335,8 @@ class Mesh_obj:
                      mesh_info['original_file_path'])
         try:
             obj.add_attr_dict(mesh_info['cell_attributes'])
-        except KeyError:
+        except KeyError as e:
+            print('error in add_attr_dict', e)
             pass
         try:
             obj.regions = mesh_info['element_ranges']

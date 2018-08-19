@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
     QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
-    QStackedLayout)
+    QStackedLayout, QRadioButton)
 from PyQt5.QtGui import QIcon, QKeySequence, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
@@ -75,6 +75,7 @@ class MatplotlibWidget(QWidget):
     def plot(self, callback):
         ''' call a callback plot function and give it the ax to plot to
         '''
+        print('plot is called')
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         self.axis = ax
@@ -134,7 +135,7 @@ class App(QMainWindow):
  
     def __init__(self, parent=None):
         super().__init__()
-        self.setWindowTitle('R2 GUI')
+        self.setWindowTitle('pyR2')
         self.setGeometry(100,100,1000,600)
         newwd = os.path.join(bundle_dir, 'api', 'invdir')
         if os.path.exists(newwd):
@@ -233,6 +234,29 @@ class App(QMainWindow):
             
         restartBtn = QPushButton('Reset UI')
         restartBtn.clicked.connect(restartFunc)
+        
+        def dimSurvey():
+            if dimRadio2D.isChecked():
+                self.r2.typ = self.r2.typ.replace('3','2')
+                elecTable.initTable(headers=['x','z','Buried'])
+                topoTable.initTable(headers=['x','z'])
+                print(self.r2.typ)
+            else:
+                self.r2.typ = self.r2.typ.replace('2','3')
+                elecTable.initTable(headers=['x','y','z','Buried'])
+                topoTable.initTable(headers=['x','y','z'])
+                print(self.r2.typ)
+                
+        dimRadio2D = QRadioButton('2D')
+        dimRadio2D.setChecked(True)
+        dimRadio2D.toggled.connect(dimSurvey)
+        dimRadio3D = QRadioButton('3D')
+        dimRadio3D.setChecked(False)
+        dimRadio3D.setEnabled(False)
+#        dimRadio3D.stateChanged.connect(dimSurvey)
+        dimLayout = QHBoxLayout()
+        dimLayout.addWidget(dimRadio2D)
+        dimLayout.addWidget(dimRadio3D)
 
         # meta data (title and date of survey)
         title = QLabel('Title')
@@ -273,15 +297,16 @@ class App(QMainWindow):
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
         
         hbox1 = QHBoxLayout()
-        hbox1.addWidget(restartBtn)
-        hbox1.addWidget(title)
-        hbox1.addWidget(titleEdit)
-        hbox1.addWidget(timeLapseCheck)
+        hbox1.addWidget(restartBtn, 10)
+        hbox1.addWidget(title, 5)
+        hbox1.addWidget(titleEdit, 85)
+        hbox1.addWidget(timeLapseCheck, 10)
         
         hbox2 = QHBoxLayout()
-        hbox2.addWidget(date)
-        hbox2.addWidget(dateEdit)
-        hbox2.addWidget(boreholeCheck)
+        hbox2.addLayout(dimLayout, 10)
+        hbox2.addWidget(date, 5)
+        hbox2.addWidget(dateEdit, 85)
+        hbox2.addWidget(boreholeCheck, 10)
         
         # ask for working directory, and survey file to input
         def getwd():
@@ -320,7 +345,7 @@ class App(QMainWindow):
                 self.r2.createTimeLapseSurvey(fdir)
                 buttonf.setText(fdir + ' (Press to change)')
                 plotPseudo()
-                elecTable.iniTable(self.r2.elec)
+                elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     pass
@@ -349,7 +374,7 @@ class App(QMainWindow):
                     plotError()
 #                generateMesh()
                 plotPseudo()
-                elecTable.iniTable(self.r2.elec)
+                elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
         
         buttonf = QPushButton('Import Data') 
@@ -446,18 +471,19 @@ class App(QMainWindow):
         
         # electrode table
         class ElecTable(QTableWidget):
-            def __init__(self, nrow=10, headers=['x','y','z','Buried'], visible=True):
+            def __init__(self, nrow=10, headers=['x','z','Buried'], visible=True):
                 ncol = len(headers)
                 super(ElecTable, self).__init__(nrow, ncol)
                 self.setVisible(visible)
                 self.nrow = nrow
                 self.ncol = ncol
-                self.headers = np.array(headers)
-                self.setHorizontalHeaderLabels(headers)
-                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                if 'Buried' in self.headers:
-                    self.setBuried()
-                    self.ncol = ncol-1
+                self.initTable(np.zeros((nrow, ncol)), headers=headers)
+#                self.headers = np.array(headers)
+#                self.setHorizontalHeaderLabels(headers)
+#                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+#                if 'Buried' in self.headers:
+#                    self.setBuried()
+#                    self.ncol = ncol-1
             
             def setBuried(self, vals=None):
                 if vals is None:
@@ -508,11 +534,21 @@ class App(QMainWindow):
 #                    c0, r0 = cell.column(), cell.row()
                     self.setTable(tt, c0, r0)
                     
-                    
-            def iniTable(self, tt):
+            
+            def initTable(self, tt=None, headers=None):
+                self.clear()
+                if headers is not None:
+                    self.headers = np.array(headers)
+                    self.ncol = len(self.headers)
+                    self.setColumnCount(len(headers)) # +1 for buried check column
+                    self.setHorizontalHeaderLabels(self.headers)
+                    self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                    if 'Buried' in self.headers:
+                        self.ncol = self.ncol - 1
+                if tt is None:
+                    tt = np.zeros((10,len(self.headers)-1))
                 self.setRowCount(tt.shape[0])
 #                self.setColumnCount(tt.shape[1]) # +1 for buried check column
-                self.ncol = tt.shape[1]
                 self.nrow = tt.shape[0]
                 self.setTable(tt)
                 if 'Buried' in self.headers:
@@ -551,7 +587,7 @@ class App(QMainWindow):
         
         topoLayout = QVBoxLayout()
         
-        elecTable = ElecTable(visible=True, headers=['x','y','z','Buried'])
+        elecTable = ElecTable(visible=True, headers=['x','z','Buried'])
         elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).</i>')
         elecButton = QPushButton('Import from CSV files (no headers)')
@@ -560,7 +596,7 @@ class App(QMainWindow):
         topoLayout.addWidget(elecButton)
         topoLayout.addWidget(elecTable)
         
-        topoTable = ElecTable(visible=True, headers=['x','y','z'])
+        topoTable = ElecTable(visible=True, headers=['x','z'])
         topoLabel = QLabel('<i>Add additional surface points. You can use <code>Ctrl+V</code> to paste directly into a cell.</i>')
         topoButton = QPushButton('Import from CSV files (no headers)')
         topoButton.clicked.connect(topoTable.readTable)
@@ -569,7 +605,7 @@ class App(QMainWindow):
         topoLayout.addWidget(topoTable)
         
         tabImportingTopo.setLayout(topoLayout)
-        tabImporting.setTabEnabled(1, False)
+#        tabImporting.setTabEnabled(1, False)
         
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
@@ -1242,13 +1278,13 @@ class App(QMainWindow):
                 for i in range(len(tt)):
                     a = tt[i].split()
                     if len(a) > 0:
-#                        if a[0] == 'Iteration':
-#                            mwInvResult.plot(self.r2.showIter)
                         if a[0] == 'Initial':
                             try:
+                                mwInvResult.plot(self.r2.showIter)
                                 self.rms.append(float(a[3]))
                                 self.rmsIndex.append(self.pindex)
-                            except:
+                            except ValueError as e:
+                                print('parseRMS error:', e)
                                 pass
                             if a[1] == 'Phase':
                                 self.rmsIP.append(float(a[4]))
@@ -1281,7 +1317,7 @@ class App(QMainWindow):
             ax.set_xticks([])
             ax.set_xticklabels([],[])
             ax.set_xlabel('Iterations', fontsize=8)
-            ax.tick_params(axis='both',which='major', labelsize=8)
+            ax.tick_params(axis='both', which='major', labelsize=8)
             ax.set_ylabel('RMS Misfit', fontsize=8)
             ax.figure.tight_layout()
                 
