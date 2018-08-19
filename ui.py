@@ -168,8 +168,6 @@ class App(QMainWindow):
             boreholeCheck.setChecked(False)
             ipCheck.setChecked(False)
             ipCheck.setEnabled(False)
-            topoCheck.setChecked(False)
-            topoCheck.setEnabled(False)
             mwPseudo.clear() # clearing figure
             
             # pre-processing
@@ -318,11 +316,11 @@ class App(QMainWindow):
         def getdir():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.r2.dirname)
             if fdir != '':
-                topoCheck.setEnabled(True)
                 self.r2.createTimeLapseSurvey(fdir)
                 buttonf.setText(fdir + ' (Press to change)')
                 plotPseudo()
                 elecTable.iniTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     pass
                 else:
@@ -336,7 +334,6 @@ class App(QMainWindow):
                 self.r2.surveys = []
             if fname != '':
                 ipCheck.setEnabled(True)
-                topoCheck.setEnabled(True)
                 self.fname = fname
                 buttonf.setText(self.fname + ' (Press to change)')
                 if float(spacingEdit.text()) == -1:
@@ -352,6 +349,7 @@ class App(QMainWindow):
 #                generateMesh()
                 plotPseudo()
                 elecTable.iniTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
@@ -375,16 +373,6 @@ class App(QMainWindow):
         hbox4.addWidget(fileType, 15)
         hbox4.addWidget(spacingEdit, 10)
         hbox4.addWidget(buttonf, 70)
-        
-        def diplayTopo(state):
-            if state  == Qt.Checked:
-                elecLabel.setVisible(True)
-                elecTable.setVisible(True)
-                elecButton.setVisible(True)
-            else:
-                elecLabel.setVisible(False)
-                elecTable.setVisible(False)
-                elecButton.setVisible(False)
         
         def diplayPseudoIP(state):
             if state  == Qt.Checked:
@@ -411,12 +399,8 @@ class App(QMainWindow):
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(diplayPseudoIP)
         ipCheck.setEnabled(False)
-        topoCheck = QCheckBox('Topography')
-        topoCheck.stateChanged.connect(diplayTopo)
-        topoCheck.setEnabled(False)
         hbox5 = QHBoxLayout()
         hbox5.addWidget(ipCheck)
-        hbox5.addWidget(topoCheck)
         
         metaLayout = QVBoxLayout()
         metaLayout.addLayout(hbox1)
@@ -461,21 +445,36 @@ class App(QMainWindow):
         
         # electrode table
         class ElecTable(QTableWidget):
-            def __init__(self, nrow=10, ncol=3, visible=True):
+            def __init__(self, nrow=10, headers=['x','y','z','Buried'], visible=True):
+                ncol = len(headers)
                 super(ElecTable, self).__init__(nrow, ncol)
                 self.setVisible(visible)
                 self.nrow = nrow
                 self.ncol = ncol
-                self.setHorizontalHeaderLabels(['x','y','z'])
-                header = self.horizontalHeader()
-                header.setSectionResizeMode(QHeaderView.Stretch)
+                self.headers = np.array(headers)
+                self.setHorizontalHeaderLabels(headers)
+                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                if 'Buried' in self.headers:
+                    self.setBuried()
+                    self.ncol = ncol-1
             
-#            def eventFilter(self, source, event):
-#                if (event == QKeySequence.Copy):
-##                    self.copySelection()
-#                    print('hello')
-#                    return True
-#                return super().eventFilter(source, event)
+            def setBuried(self, vals=None):
+                if vals is None:
+                    vals = np.zeros(self.nrow, dtype=bool)
+                j = np.where(np.array(self.headers) == 'Buried')[0][0]
+                for i in range(len(vals)):
+                    buriedCheck = QCheckBox()
+                    buriedCheck.setChecked(bool(vals[i]))
+                    self.setCellWidget(i, j, buriedCheck)
+            
+            def getBuried(self):
+                j = np.where(self.headers == 'Buried')[0][0]
+                self.buried = np.zeros(len(self.nrow), dtype=bool)
+                for i in range(self.nrow):
+                    buriedCheck = self.cellWidget(i, j)
+                    if buriedCheck.state == Qt.Checked:
+                        self.buried[i] = True
+                return self.buried
                 
             def keyPressEvent(self, e):
 #                print(e.modifiers(), 'and', e.key())
@@ -511,10 +510,12 @@ class App(QMainWindow):
                     
             def iniTable(self, tt):
                 self.setRowCount(tt.shape[0])
-                self.setColumnCount(tt.shape[1])
+#                self.setColumnCount(tt.shape[1]) # +1 for buried check column
                 self.ncol = tt.shape[1]
                 self.nrow = tt.shape[0]
                 self.setTable(tt)
+                if 'Buried' in self.headers:
+                    self.setBuried()
                 
             def setTable(self, tt, c0=0, r0=0):
                 # paste clipboard to qtableView
@@ -531,26 +532,43 @@ class App(QMainWindow):
                         table[j,i] = float(self.item(j,i).text())
 #                print('table = ', table)
                 return table
-                    
+            
+            def readTable(self):
+                fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
+                if fname != '':
+                    df = pd.read_csv(fname)
+                    tt = df.values
+                    if 'Buried' in self.headers:
+                        if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
+                            self.setTable(tt[:,:-1])
+                            self.setBuried(tt[:,-1])
+                        else:
+                            self.setTable(tt)
+                    else:
+                        self.setTable(tt)    
+        
         
         topoLayout = QVBoxLayout()
         
-        elecTable = ElecTable(visible=True)
-        elecLabel = QLabel('<i>Press button to paste, or use Tab to edit</i>')
-        elecLabel.setVisible(False)
-        elecButton = QPushButton('Paste from clipboard')
-        elecButton.clicked.connect(elecTable.paste)
-        elecButton.setVisible(False)
+        elecTable = ElecTable(visible=True, headers=['x','y','z','Buried'])
+        elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
+                           The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).</i>')
+        elecButton = QPushButton('Import from CSV files (no headers)')
+        elecButton.clicked.connect(elecTable.readTable)
         topoLayout.addWidget(elecLabel)
         topoLayout.addWidget(elecButton)
-        topoLayout.addWidget(elecTable, 35)
+        topoLayout.addWidget(elecTable)
         
-        topoTable = ElecTable(visible=True)
+        topoTable = ElecTable(visible=True, headers=['x','y','z'])
         topoLabel = QLabel('<i>Add additional surface points. You can use <code>Ctrl+V</code> to paste directly into a cell.</i>')
+        topoButton = QPushButton('Import from CSV files (no headers)')
+        topoButton.clicked.connect(topoTable.readTable)
         topoLayout.addWidget(topoLabel)
+        topoLayout.addWidget(topoButton)
         topoLayout.addWidget(topoTable)
         
         tabImportingTopo.setLayout(topoLayout)
+        tabImporting.setTabEnabled(1, False)
         
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
