@@ -37,6 +37,7 @@ cd r2gui
 python ui.py
 ```
 You can then test the GUI by first setting a working directory (./api/test) and specifying a survey file (./api/test/syscalFile.csv).
+*Check out the tutorial with examples*: ![pyR2-workshop.pdf](./examples/workshop/pyR2-workshop.pdf)
 
 
 Try the Jupyter Notebook
