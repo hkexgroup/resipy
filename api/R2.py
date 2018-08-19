@@ -172,7 +172,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['topo'] = topo
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
-            if 'regions' in self.param: # alow to create a new mesh then rerun inversion
+            if 'regions' in self.param: # allow to create a new mesh then rerun inversion
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
@@ -457,6 +457,17 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
+    def showIter(self, ax=None):
+        files = os.listdir(self.dirname)
+        fs = []
+        for f in files:
+            if f[-8:] == '_res.dat':
+                fs.append(f)
+        fs = sorted(fs)
+        print(fs)
+        if len(fs) > 1:
+            self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
+    
     def pseudoError(self, ax=None):
         ''' plot pseudo section of errors from file f001_err.dat
         '''
@@ -465,6 +476,15 @@ class R2(object): # R2 master class instanciated by the GUI
         errors = err[:,0]
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
+    
+#    def showOnMesh(self, fname=''):
+#        if fname == '':
+#            fname = os.path.join(self.dirname, 'f001_res.dat')
+#        x = np.genfromtxt(fname)
+#        self.mesh.add_attribute(x[:,3], 'iter')
+#        self.mesh.show(attr='iter')
+
+
 
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
@@ -515,7 +535,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.typ = 'cR2'
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
+#k.pwlfit()
 #k.invert(iplot=False)
+#k.showIter()
 #k.showResults()
 #k.surveys[0].dca()
 #k.pseudo(contour=True)

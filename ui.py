@@ -168,6 +168,7 @@ class App(QMainWindow):
             boreholeCheck.setChecked(False)
             ipCheck.setChecked(False)
             ipCheck.setEnabled(False)
+            tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
             
             # pre-processing
@@ -1241,6 +1242,8 @@ class App(QMainWindow):
                 for i in range(len(tt)):
                     a = tt[i].split()
                     if len(a) > 0:
+#                        if a[0] == 'Iteration':
+#                            mwInvResult.plot(self.r2.showIter)
                         if a[0] == 'Initial':
                             try:
                                 self.rms.append(float(a[3]))
