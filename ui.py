@@ -605,7 +605,7 @@ class App(QMainWindow):
         topoLayout.addWidget(topoTable)
         
         tabImportingTopo.setLayout(topoLayout)
-#        tabImporting.setTabEnabled(1, False)
+        tabImporting.setTabEnabled(1, False)
         
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
