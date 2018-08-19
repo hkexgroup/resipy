@@ -19,14 +19,15 @@ Functions:
 Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, platform, warnings
 from subprocess import PIPE, Popen, call
 import time
 #import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import griddata
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 #import R2gui API package 
@@ -136,6 +137,7 @@ class Mesh_obj:
              electrodes = True,
              sens = False,
              edge_color = 'k',
+             contour=False,
              vmin=None,
              vmax=None,
              attr=None):
@@ -155,6 +157,7 @@ class Mesh_obj:
             #electrodes - Boolian, enter true to add electrodes to plot
             #sens - Boolian, enter true to plot sensitivities 
             #edge_color - color of the cell edges, set to None if you dont want an edge
+            #contour - if True, plot filled contours
             #vmin - minimum limit for the color bar scale 
             #vmax- maximum limit for the color bar scale 
             #attr - which attribute in the mesh to plot, ### add more info here ### 
@@ -208,9 +211,21 @@ class Mesh_obj:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
-        coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color)
-        coll.set_clim(vmin=vmin, vmax=vmax)
-        ax.add_collection(coll)#blit polygons to axis
+        if contour is False:
+            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color)
+            coll.set_clim(vmin=vmin, vmax=vmax)
+            ax.add_collection(coll)#blit polygons to axis
+            cax = coll
+        elif contour is True:
+            x = np.array(self.elm_centre[0])
+            y = np.array(self.elm_centre[1])
+            z = np.array(X)
+            xi, yi = np.meshgrid(np.linspace(np.min(x), np.max(x), 30),
+                                 np.linspace(np.min(y), np.max(y), 30))
+            zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
+            zi = zi.reshape(xi.shape)
+            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
+        
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
         ax.set_ylim(ylim)
@@ -219,7 +234,7 @@ class Mesh_obj:
         ax.set_ylabel('Elevation')
         
         if color_bar:#add the color bar 
-            cbar = plt.colorbar(coll, ax=ax)#add colorbar
+            cbar = plt.colorbar(cax, ax=ax)#add colorbar
             cbar.set_label(color_bar_title) #set colorbar title      
         
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
@@ -970,9 +985,29 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 
 #mesh = vtk_import('test/test.vtk')
 #attrs = list(mesh.attr_cache)
-#mesh.show(attr=attrs[0])
+#mesh.show(attr=attrs[0], contour=True)
 #mesh.show(attr=attrs[2])
 #mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 
+
+#%%
+#x = np.random.randn(100)
+#y = np.random.randn(100)
+#z = np.random.randn(100)
+## TODO 2D invertpolation
+#from scipy.interpolate import griddata
+
+#x = np.array(mesh.elm_centre[0])
+#y = np.array(mesh.elm_centre[1])
+#z = np.random.randn(len(x))
+#
+#xi, yi = np.meshgrid(np.arange(np.min(x), np.max(x)),
+#                     np.arange(np.min(y), np.max(y)))
+#zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
+#zi = zi.reshape(xi.shape)
+#
+#fig, ax = plt.subplots()
+#ax.contourf(xi, yi, zi)
+#fig.show()
 
 
