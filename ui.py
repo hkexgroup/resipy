@@ -148,6 +148,13 @@ class App(QMainWindow):
         layout = QVBoxLayout()
         tabs = QTabWidget()
         self.setWindowIcon(QIcon('logo.png')) ### change this to change the icon of the window. 
+        def errorDump(text, flag=1):
+            if flag == 1: # error in red
+                col = 'red'
+            else:
+                col = 'black'
+            errorLabel.setText('<i style="color:'+col+'">'+text+'</i>')
+        errorLabel = QLabel('<i style="color:black">Error message will be display here</i>')
         
         #%% tab 1 importing data
         tabImporting = QTabWidget()
@@ -342,16 +349,19 @@ class App(QMainWindow):
         def getdir():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.r2.dirname)
             if fdir != '':
-                self.r2.createTimeLapseSurvey(fdir)
-                buttonf.setText(fdir + ' (Press to change)')
-                plotPseudo()
-                elecTable.initTable(self.r2.elec)
-                tabImporting.setTabEnabled(1,True)
-                if all(self.r2.surveys[0].df['irecip'].values == 0):
-                    pass
-                else:
-                    tabPreProcessing.setTabEnabled(2, True)
-                    plotError()
+                try:
+                    self.r2.createTimeLapseSurvey(fdir)
+                    buttonf.setText(fdir + ' (Press to change)')
+                    plotPseudo()
+                    elecTable.initTable(self.r2.elec)
+                    tabImporting.setTabEnabled(1,True)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                        pass
+                    else:
+                        tabPreProcessing.setTabEnabled(2, True)
+                        plotError()
+                except:
+                    errorDump('File format not recognize or directory contains other files than .dat files')
             
         def getfile():
             print('ftype = ', self.ftype)
@@ -359,23 +369,26 @@ class App(QMainWindow):
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
             if fname != '':
-                ipCheck.setEnabled(True)
-                self.fname = fname
-                buttonf.setText(self.fname + ' (Press to change)')
-                if float(spacingEdit.text()) == -1:
-                    spacing = None
-                else:
-                    spacing = float(spacingEdit.text())
-                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing)
-                if all(self.r2.surveys[0].df['irecip'].values == 0):
-                    hbox4.addWidget(buttonfr)
-                else:
-                    tabPreProcessing.setTabEnabled(2, True)
-                    plotError()
-#                generateMesh()
-                plotPseudo()
-                elecTable.initTable(self.r2.elec)
-                tabImporting.setTabEnabled(1,True)
+                try:
+                    ipCheck.setEnabled(True)
+                    self.fname = fname
+                    buttonf.setText(self.fname + ' (Press to change)')
+                    if float(spacingEdit.text()) == -1:
+                        spacing = None
+                    else:
+                        spacing = float(spacingEdit.text())
+                    self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                        hbox4.addWidget(buttonfr)
+                    else:
+                        tabPreProcessing.setTabEnabled(2, True)
+                        plotError()
+    #                generateMesh()
+                    plotPseudo()
+                    elecTable.initTable(self.r2.elec)
+                    tabImporting.setTabEnabled(1,True)
+                except:
+                    errorDump('File not recognized.')
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
@@ -1271,9 +1284,8 @@ class App(QMainWindow):
         self.rmsIndexIP = []
         self.inversionOutput = ''
         
-        def parseRMS(ax):
-            text = self.inversionOutput
-            tt = text.split('\n')
+        def parseRMS(tt):
+            newFlag = False
             if len(tt) > 1:
                 for i in range(len(tt)):
                     a = tt[i].split()
@@ -1281,6 +1293,7 @@ class App(QMainWindow):
                         if a[0] == 'Initial':
                             try:
                                 mwInvResult.plot(self.r2.showIter)
+                                newFlag = True
                                 self.rms.append(float(a[3]))
                                 self.rmsIndex.append(self.pindex)
                             except ValueError as e:
@@ -1293,26 +1306,29 @@ class App(QMainWindow):
 #                            print('new processing detected')
                             self.pindex = self.pindex + 1
 #                            print('index = ', self.pindex)
-                if len(self.rms) > 0:
-                    rms = np.array(self.rms)
-                    rmsIndex = np.array(self.rmsIndex)
-                    xx = np.arange(len(rms))
-                    iindex = np.unique(rmsIndex)
+            return newFlag
+
+        def plotRMS(ax):
+            if len(self.rms) > 0:
+                rms = np.array(self.rms)
+                rmsIndex = np.array(self.rmsIndex)
+                xx = np.arange(len(rms))
+                iindex = np.unique(rmsIndex)
 #                    print('iidnex', iindex)
-                    for ii in iindex:
-                        ie = rmsIndex == ii
-                        ax.plot(xx[ie], rms[ie], 'o-')
-                if len(self.rmsIP) > 0:
-                    rms = np.array(self.rmsIP)
-                    rmsIndex = np.array(self.rmsIndexIP)
-                    xx = np.arange(len(rms))
-                    iindex = np.unique(rmsIndex)
+                for ii in iindex:
+                    ie = rmsIndex == ii
+                    ax.plot(xx[ie], rms[ie], 'o-')
+            if len(self.rmsIP) > 0:
+                rms = np.array(self.rmsIP)
+                rmsIndex = np.array(self.rmsIndexIP)
+                xx = np.arange(len(rms))
+                iindex = np.unique(rmsIndex)
 #                    print('iidnex', iindex)
 #                    ax.axvline(xx[0]-0.5)
-                    ax.set_prop_cycle(None)
-                    for ii in iindex:
-                        ie = rmsIndex == ii
-                        ax.plot(xx[ie], rms[ie], '*--')
+                ax.set_prop_cycle(None)
+                for ii in iindex:
+                    ie = rmsIndex == ii
+                    ax.plot(xx[ie], rms[ie], '*--')
                         
             ax.set_xticks([])
             ax.set_xticklabels([],[])
@@ -1322,17 +1338,21 @@ class App(QMainWindow):
             ax.figure.tight_layout()
                 
         # run R2
-        def dataReady():
-            cursor = logText.textCursor()
-            cursor.movePosition(cursor.End)
-            text = str(self.processes[-1].readAll(), 'utf-8')
-            cursor.insertText(text)
-            logText.ensureCursorVisible()
-
-            # plot RMS graph
-            mwRMS.plot(parseRMS)
-        
-        self.processes = []
+#        def dataReady():
+#            cursor = logText.textCursor()
+#            cursor.movePosition(cursor.End)
+#            text = str(self.processes[-1].readAll(), 'utf-8')
+#            cursor.insertText(text)
+#            logText.ensureCursorVisible()
+#
+#            # plot RMS graph
+#            text = self.inversionOutput
+#            tt = text.split('\n')
+#            newFlag = parseRMS(tt)
+#            if newFlag:
+#                mwRMS.plot(plotRMS)
+#        
+#        self.processes = []
         
 #        def runR2(dirname=''):
 #            # run R2
@@ -1369,7 +1389,12 @@ class App(QMainWindow):
                 cursor.movePosition(cursor.End)
                 cursor.insertText(text+'\n')
                 logText.ensureCursorVisible()
-                mwRMS.plot(parseRMS)
+                # plot RMS graph
+                text = self.inversionOutput
+                tt = text.split('\n')
+                newFlag = parseRMS(tt)
+                if newFlag:
+                    mwRMS.plot(plotRMS)
                 QApplication.processEvents()
                 
             self.r2.invert(iplot=False, dump=func)
@@ -1441,7 +1466,8 @@ class App(QMainWindow):
             if self.r2.typ == 'cR2':
                 defaultAttr = 'Sigma_real(log10)'
             self.displayParams = {'index':0,'edge_color':'none',
-                                  'sens':True, 'attr':defaultAttr}
+                                  'sens':True, 'attr':defaultAttr,
+                                  'contour':False}
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
             vminEdit.setText('')
@@ -1459,8 +1485,9 @@ class App(QMainWindow):
             edge_color = self.displayParams['edge_color']
             sens = self.displayParams['sens']
             attr = self.displayParams['attr']
+            contour = self.displayParams['contour']
 #            print(edge_color, sens, attr)
-            mwInvResult.replot(index=index, edge_color=edge_color, sens=sens, attr=attr)
+            mwInvResult.replot(index=index, edge_color=edge_color, contour=contour, sens=sens, attr=attr)
             setCBarLimit()
             
         def msgBox(text):
@@ -1472,20 +1499,6 @@ class App(QMainWindow):
             vmin = vminEdit.text()
             mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
             
-        def showEdges(status):
-            if status == Qt.Checked:
-                self.displayParams['edge_color'] = 'k'
-            else:
-                self.displayParams['edge_color'] = 'none'
-            replotSection()
-        
-        def showSens(status):
-            if status == Qt.Checked:
-                self.displayParams['sens'] = True
-            else:
-                self.displayParams['sens'] = False
-            replotSection()
-
 
         btn = QPushButton('Invert')
         btn.clicked.connect(logInversion)
@@ -1572,16 +1585,33 @@ class App(QMainWindow):
         displayOptions.addWidget(vmaxLabel)
         displayOptions.addWidget(vmaxEdit)
         
+        def showEdges(status):
+            if status == Qt.Checked:
+                self.displayParams['edge_color'] = 'k'
+            else:
+                self.displayParams['edge_color'] = 'none'
+            replotSection()
         edgeCheck= QCheckBox('Show edges')
         edgeCheck.setChecked(False)
         edgeCheck.stateChanged.connect(showEdges)
         displayOptions.addWidget(edgeCheck)
         
-        #TODO to be implemented
-#        contour = QCheckBox('Contour')
-#        contour.stateChanged.connect(lambda x : print(x))
-#        displayOptions.addWidget(contour)
+        def contourFunc(state):
+            if state == Qt.Checked:
+                self.displayParams['contour'] = True
+            else:
+                self.displayParams['contour'] = False
+            replotSection()
+        contour = QCheckBox('Contour')
+        contour.stateChanged.connect(contourFunc)
+        displayOptions.addWidget(contour)
         
+        def showSens(status):
+            if status == Qt.Checked:
+                self.displayParams['sens'] = True
+            else:
+                self.displayParams['sens'] = False
+            replotSection()
         sensCheck = QCheckBox('Sensitivity overlay')
         sensCheck.setChecked(True)
         sensCheck.stateChanged.connect(showSens)
@@ -1665,6 +1695,7 @@ class App(QMainWindow):
         
         #%% general Ctrl+Q shortcut + general tab layout
         layout.addWidget(tabs)
+        layout.addWidget(errorLabel)
         self.table_widget.setLayout(layout)
         self.setCentralWidget(self.table_widget)
         self.show()

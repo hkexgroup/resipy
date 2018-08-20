@@ -747,15 +747,17 @@ def readR2_sensdat(file_path):
         
 #%% build a quad mesh        
 def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
-              elemx=4, xgf=1.5, elemy=20, yf=1.1, ygf=1.5, doi=-1):
+              elemx=4, xgf=1.5, elemy=20, yf=1.1, ygf=1.5, doi=-1, pad=2):
 # creates a quaderlateral mesh given the electrode x and y positions. Function
 # relies heavily on the numpy package.
 # INPUT: 
 #     elec_y - electrode x coordinates 
-#     elec_y - electrode y coordinates 
+#     elec_y - electrode y coordinates
+#     elemy - number of elements in the fine y region
+#     yf - y factor multiplier in the fine zone
+#     ygf - y factor multiplier in the coarse zone
 #     doi - depth of investigation (if left as -1 = half survey width)
-#     cell_height - cell thicknesses in the mesh (if left as -1 = 1/4 electrode spacing)
-#     nbe - number of element nodes in between each electrode (if left as -1 = 3)
+#     pad - x padding outside the fine area (tipicaly twice the number of elements between electrodes)
 # OUTPUT: 
 #     Mesh - mesh object 
 #     meshx - mesh x locations for R2in file 
@@ -763,9 +765,11 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
 #     topo - topography for R2in file
 #     elec_node - x columns where the electrodes are 
 ###############################################################################
-
+    if elemx < 4:
+        print('elemx too small, set up to 4 at least')
+        elemx = 4
     elec = np.c_[elec_x, elec_y]
-    pad = 1 # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
+    pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
     meshx = np.array([])
     for i in range(len(elec)-1):
@@ -793,10 +797,9 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
             meshx = np.r_[meshx, xx2, xx3]
     
     # create e_nodes
-    print(len(xx2))
-    print(len(xx3))
-    elec_node = np.arange(len(xx3)+len(xx2), 2*pad*(elemx-1)+len(elec)*elemx, elemx)
-    print(elec_node)
+    print(len(xx2), len(xx3))
+    elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
+    print(len(elec_node))
     #TODO make sure it's dividable by patchx and patch y
     
     # create meshy
@@ -977,7 +980,7 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     fh.close()
     
 #%% test code
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=3)
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=4)
 #mesh.show(color_bar=False)
 
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)

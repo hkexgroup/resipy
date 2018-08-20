@@ -6,7 +6,7 @@ Created on Fri Jun  1 11:21:54 2018
 @author: jkl
 """
 #import sys
-#import os
+import os
 #sys.path.append(os.path.relpath('../api'))
 
 import numpy as np
@@ -780,7 +780,7 @@ class Survey(object):
         self.addFilteredIP()
         dump(100)
         
-  
+#TODO put this in function as Survey.manualFilter() ? or make it more general
 def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
     #figsize=(12,3)
     """ create true pseudo graph with points and no interpolation
@@ -866,6 +866,8 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #    y = np.array(line.get_ydata())
     x = line.get_offsets()[:,0]
     y = line.get_offsets()[:,1]
+    
+    # TODO we need to get those variables out of the function
     iselect = np.zeros(len(y),dtype=bool)
     eselect = np.zeros(len(elecpos), dtype=bool)
     
@@ -1284,6 +1286,7 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 
         
 #%% test code
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #s = Survey('api/test/syscalFile.csv', ftype='Syscal')
 #s = Survey('api/test/rifleday8.csv', ftype='Syscal')
 #s.dca()
