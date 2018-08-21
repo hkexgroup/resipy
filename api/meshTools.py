@@ -220,9 +220,13 @@ class Mesh_obj:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[1])
             z = np.array(X)
-            print(np.min(x), np.max(x), np.min(y), np.max(y))
-            xi, yi = np.meshgrid(np.linspace(np.min(x), np.max(x), 30),
-                                 np.linspace(np.min(y), np.max(y), 30))
+            xmin, xmax = np.min(x), np.max(x)
+            ymin, ymax = np.min(y), np.max(y)
+            dx = (xmax-xmin)/40
+            dy = (ymax-ymin)/40
+            xi, yi = np.meshgrid(np.linspace(xmin-dx, xmax+dx, 40),
+                                 np.linspace(ymin-dy, ymax+dy, 40))
+            print(np.min(xi), np.max(xi), np.min(yi), np.max(yi))
             zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
             zi = zi.reshape(xi.shape)
             cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
@@ -798,9 +802,7 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
             meshx = np.r_[meshx, xx2, xx3]
     
     # create e_nodes
-    print(len(xx2), len(xx3))
     elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
-    print(len(elec_node))
     #TODO make sure it's dividable by patchx and patch y
     
     # create meshy
