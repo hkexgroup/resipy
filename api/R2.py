@@ -187,6 +187,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 regions = np.c_[regs, np.ones(regs.shape[0])*50, np.ones(regs.shape[0])*-0.1]
             self.param['regions'] = regions
             self.param['num_xy_poly'] = 0
+            # define xy_poly_table
             e_nodes = np.arange(len(self.elec))+1
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh

@@ -216,10 +216,11 @@ class Mesh_obj:
             coll.set_clim(vmin=vmin, vmax=vmax)
             ax.add_collection(coll)#blit polygons to axis
             cax = coll
-        elif contour is True:
+        else:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[1])
             z = np.array(X)
+            print(np.min(x), np.max(x), np.min(y), np.max(y))
             xi, yi = np.meshgrid(np.linspace(np.min(x), np.max(x), 30),
                                  np.linspace(np.min(y), np.max(y), 30))
             zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
@@ -987,8 +988,9 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh.show(color_bar=False)
 
 #mesh = vtk_import('test/test.vtk')
+#mesh = vtk_import('invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
-#mesh.show(attr=attrs[0], contour=True)
+#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis')
 #mesh.show(attr=attrs[2])
 #mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 
