@@ -748,7 +748,7 @@ def readR2_sensdat(file_path):
         
 #%% build a quad mesh        
 def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
-              elemx=4, xgf=1.5, elemy=20, yf=1.1, ygf=1.5, doi=-1, pad=2):
+              elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
 # creates a quaderlateral mesh given the electrode x and y positions. Function
 # relies heavily on the numpy package.
 # INPUT: 
@@ -804,12 +804,17 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
     #TODO make sure it's dividable by patchx and patch y
     
     # create meshy
-    meshy = np.zeros(elemy)
+    if doi == -1:
+        doi = np.abs(elec[0,0]-elec[-1,0])/2
 #    dyy = espacing/(elemx*4)
+    meshy = [0]
     dyy = 0.05
-    for i in range(1, elemy):
-        meshy[i] = meshy[i-1]+dyy*yf
+    for i in range(100):
+        meshy.append(meshy[-1]+dyy*yf)
         dyy = dyy*yf
+        if meshy[-1] > doi:
+            break
+    elemy = len(meshy)
     elemy2 = int(elemy/2)
     yy = np.ones(elemy2)*meshy[-1]
     for i in range(1, elemy2):
