@@ -211,10 +211,15 @@ class Mesh_obj:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
+        
+        if edge_color == None:
+            edge_color='face'#set the edge colours to the colours of the polygon patches
+
         if contour is False:
-            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color)
+            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
             coll.set_clim(vmin=vmin, vmax=vmax)
             ax.add_collection(coll)#blit polygons to axis
+            
             cax = coll
         else:
             x = np.array(self.elm_centre[0])
