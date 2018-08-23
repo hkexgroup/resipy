@@ -548,6 +548,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
 #k.typ = 'cR2'
+#k.createSurvey('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', spacing=0.5)
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.pwlfit()
