@@ -311,6 +311,25 @@ class Mesh_obj:
         #return new_para
         
     def assign_material_attribute(self,material_no,attr_list,new_key):
+        """
+        Asssigns values to the mesh which depend on region / material only. E.G 
+        a single resistivity value 
+        
+        Parameters 
+        -----------
+        material_no : array or list
+        integers starting at 0 or 1, and ascend in intervals of 1, which 
+        correspond to a material in the mesh returned from assign_attr_ID. 
+        attr_list : list
+        list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
+        [resistivity1,resistivity2,resistivity3]
+        new_key: string
+        key identifier assigned to the attribute in the attr_cache. 
+        
+        Returns 
+        ----------
+        mesh object will now have the new attribute added. Use the mesh.show() function to see the result. 
+        """ 
         if len(material_no) != self.num_elms:
             raise ValueError("Mismatch between the number of elements and material propeties")
         
@@ -349,11 +368,13 @@ class Mesh_obj:
     
     @classmethod # creates a mesh object from a mesh dictionary
     def mesh_dict2obj(cls,mesh_info):
+        """
         #converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
         #mesh object, its an alternative way to make a mesh object. 
     #INPUT: mesh_info - dictionary type mesh
     #OUTPUT: mesh obj
     ###########################################################################
+    """
         #check the dictionary is a mesh
         try: 
             if mesh_info['dict_type']!='mesh_info':
@@ -397,6 +418,21 @@ class Mesh_obj:
         print("_______________________________________________________")
         
     def write_vtk(self,file_path='default', title=None):
+        """
+        writes a vtk file
+        
+        Parameters
+        ------------
+        #file_path : string 
+        maps where python will write the file. if left as default then mesh.vtk
+        will be written the current working directory. 
+        #title: string
+        header string written at the top of the vtk file 
+        
+        Returns
+        ----------
+        N/A
+        """
         #decide where to save the file 
         if file_path == "default":
             file_path = "mesh.vtk"
