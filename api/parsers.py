@@ -44,20 +44,23 @@ def syscalParser(fname, spacing=None):
                                 'Sp':'sp'})
         
         array = df[['a','b','m','n']].values
-        if spacing == None:
-            spacing = np.unique(np.sort(array.flatten()))[1]
-        array = np.round(array/spacing+1).astype(int)
+        espacing = np.unique(np.sort(array.flatten()))[1]
+        array = np.round(array/espacing+1).astype(int)
         df[['a','b','m','n']] = array
         df['resist'] = df['vp']/df['i']
         imax = int(np.max(array))
         elec = np.zeros((imax,3))
+        if spacing is None:
+            spacing = espacing
         elec[:,0] = np.arange(0,imax)*spacing
                 
         return elec, df
     
 #test code
 #elec, df = syscalParser('test/syscalFile.csv')
-
+#elec, df = syscalParser('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', 0.5)
+#print(df[['a','b','m','n']])
+#print(elec)
 
 #%% protocol.dat forward modelling parser
 
