@@ -76,22 +76,29 @@ def protocolParser(fname):
 # test code
 #protocolParser('test/protocolFile.dat')
     
-    
 #%% parse input for res2inv (.dat file) - Jimmy B. 
 #jamyd91@bgs.ac.uk
 def res2invInputParser(file_path):
-    #biulds an R2 protocal.dat from a res2dinv input . dat file. It looks for the general
-    #array format in the .dat file. Note you'll need to do some extra work if you want 
-    #to extract the electrode locations as well as the program/schedule information
+    """
+    Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+    It looks for the general array format in the .dat file. 
     
-#INPUT:
-    #file_path - string mapping to the res2inv input file 
-    #return_protocal - boolian, if true function returns protocal.dat string 
-#OUTPUT:
-    #string which is the protocal.dat information. 
-## TODO : add capacity to recognise errors in the input file (not currently read in)
+    Parameters
+    -----------
+    #file_path : string 
+     string mapping to the res2inv input file 
+    
+    Returns
+    ----------
+    #elec : np array
+    electrode coordinate matrix in the form | x | y | z |
+    #df: pandas dataframe
+    dataframe which holds the electrode numbers for in feild measurements and 
+    apparent resistivities (Rho) and transfer resistances 
+    
 ## TODO : add capacity to read in borehole surveys 
 ###############################################################################
+    """
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
     fh.close()#close file handle, free up resources
@@ -109,7 +116,7 @@ def res2invInputParser(file_path):
         #find if errors are present 
         if line.strip() == "Error estimate for data present":
             err_flag = True
-            print('errors estimates found in file but are not currently supported')
+            print('errors estimates found in file and will be converted into transfer resistance error estimates')
         
     #add some protection against a dodgey file 
     if fmt_flag is False:
@@ -159,7 +166,7 @@ def res2invInputParser(file_path):
     #Note R2 expects the electrode format in the form:
     #meas.no | P+ | P- | C+ | C- | transfer resistance
     #print('computing transfer resistances and reading in electrode indexes')
-    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[]}
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
     for k in range(num_meas):
         line = dump[k+idx_oi]
         vals = line.strip().split()
@@ -179,20 +186,38 @@ def res2invInputParser(file_path):
         data_dict['Rho'].append(Pa)
         data_dict['resist'].append(Pt)
         data_dict['ip'].append(0)
+        if err_flag:
+            err_Pa = float(vals[6])
+            err_Pt = err_Pa/K
+            data_dict['dev'].append(abs(err_Pt))
+        else:
+            data_dict['dev'].append(0)
     
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
-    df = df[['a','b','m','n','Rho','ip','resist']] # reorder columns to be consistent with the syscal parser
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     return elec,df
 
 #%% convert a dataframe output by the parsers into a simple protocal.dat file    
-def dataframe2dat(df,save_path='default'):
-#INPUT:
+def dataframe2dat(df,save_path='default',
+                  typ='R2',
+                  ref_flag=False,
+                  err_flag=False):
+    """
+    converts a pandas dataframe into a protocol.dat file for R2.exe. 
+    
+    Parameters
+    -----------
     #df - dataframe output by a r2gui parsers
     #save_path - file path to save location, if left default 'protocal.dat' is written to the working directory 
-#OUTPUT: 
+    ref_flag - not working currently. if a reference set of transfer resistances is to be used then set to true
+    err_flag - if errors are going to be written to the r2 file. Currently uses 'dev' key in the pandas dataframe
+    
+    Returns
+    -----------
     #protocal.dat written to specificied folder/directory
 ###############################################################################
+    """
     num_meas = len(df)
     
     if save_path == 'default':
@@ -201,17 +226,35 @@ def dataframe2dat(df,save_path='default'):
         print(os.path.join(save_path,'protocol.dat'))
         save_path=os.path.join(save_path,'protocol.dat')
         
+    #the contents of the last 3 columns will depend on survey type and regularisation mode. 
+    if typ=='R2':
+        column6=df['resist']
+    else:
+        column6=df['ip']
+    
+    if ref_flag:
+        column7=[0]*len(column6)# placeholder -- need to identify what jkl calls his reference values 
+        print("ref flag argument currently not supported and has been ignored")
+    else:
+        column7=[0]*len(column6)
+    
+    if err_flag:
+        column8=df['dev']
+    else:
+        column8=[0]*len(column6)
+     
     fh = open(save_path,'w')
     
     fh.write("%i\n"%num_meas)
     for i in range(num_meas):
-        fh.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
+        fh.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
                  i+1, #measurement number 
                  df['a'][i],
                  df['b'][i],
                  df['m'][i],
                  df['n'][i],
-                 df['resist'][i],
-                 df['Rho'][i]))
+                 column6[i],
+                 column7[i],
+                 column8[i]))
         
     fh.close()

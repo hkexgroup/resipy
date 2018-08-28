@@ -23,7 +23,7 @@ Dependencies:
 #python standard libraries 
 import tkinter as tk
 from tkinter import filedialog
-import os, platform, warnings
+import os, warnings
 #general 3rd party libraries
 import numpy as np
 
@@ -41,6 +41,7 @@ def arange(start,incriment,stop,endpoint=0):#create a list with a range without 
     return cache
 
 def ccw(p,q,r):#code expects points as p=(x,y) and so on ... 
+    """
     #checks if points in a triangle are ordered counter clockwise. When using R2,
     #mesh nodes should be given in a counter clockwise order otherwise you'll get negative 
     #apparent resistivities. 
@@ -51,6 +52,7 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
 #OUTPUT:
     #0 if colinear points, 1 if counter clockwise order, 2 if points are ordered clockwise
 ###############################################################################
+    """
     val=((q[1]-p[1])*(r[0]-q[0]))-((q[0]-p[0])*(r[1]-q[1]))
     if val==0:
         return 0 # lines are colinear
@@ -61,6 +63,7 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
     
 # triangle centriod 
 def tri_cent(p,q,r):
+    """
     #compute the centre coordinates for a 2d triangle given the x,y coordinates 
     #of the vertices.
 #INPUT:
@@ -68,6 +71,7 @@ def tri_cent(p,q,r):
 #OUTPUT:
     # (x,y) tuple    
 ###############################################################################
+    """
     Xm=(p[0]+q[0])/2
     Ym=(p[1]+q[1])/2
     k=2/3
@@ -78,6 +82,8 @@ def tri_cent(p,q,r):
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path='default',
                bh_survey=False):
+    """
+    DEPRECIATED
 #writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
 #INPUT:
     #topo_x - x coordinates of the surface
@@ -92,6 +98,7 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
 #OUTPUT:
     #gmsh . geo file which can be run / loaded into gmsh
 ###############################################################################
+    """
     #at some point were looking to change genGeoFile_adv to the main 2d gmsh
     #input generator, so warn the user. 
     warnings.warn("Deprecaition warning: genGeoFile will be changing in the future to require a dictionary as input")
@@ -220,16 +227,25 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
+    """
 #writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
-#INPUT:
+    
+    Parameters
+    --------------
     #geom_input - a dictionary of electrode coordinates, surface topography, 
                     #borehole electrode coordinates, and boundaries 
     #file_name - name of the generated gmsh file (can include file path also) (optional)
-    #doi - depth of investigation (optional)
-    #cl - characteristic length (optional)
-    #path - directory to save the .geo file 
+    #doi - depth of investigation (optional) (in meters)
+    #cl - characteristic length (optional), essentially describes how big the nodes assocaited elements will be. 
+    #path - directory to save the .geo file
+    
+    Returns
+    -------------
+    #gmsh . geo file which can be ran in gmsh
 
-    """ geom_input format:
+    NOTES
+    ------------
+     geom_input format:
         the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
         currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
         the first borehole string should be given the key 'borehole1' and so on. The code stops
@@ -241,13 +257,19 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
               'borehole1':[string1x,string1y],
               'borehole2':[string2x,string2y],
               'boundary1':[bound1x,bound1y],
-              'polygon1':[poly1x,poly1y]} """ 
-#OUTPUT:
-    #gmsh . geo file which can be ran in gmsh
+              'polygon1':[poly1x,poly1y],
+              'buried1:[x_coord,y_coord]} 
+            
+    The code expects that all polygons, boundaries and electrodes fall within x values 
+    of the actaul survey area. So make sure your topography / surface electrode points cover 
+    the area you are surveying, otherwise some funky errors will occur in the mesh. 
+
 #### TODO: search through each set of points and check for repeats 
+#### TODO: check with some real data
 #### TODO: change nuemon boundary distance to be based on the survey extent
 #### TODO: add points around the survey to provide some sort of padding? 
 ###############################################################################
+    """
     print('Generating gmsh input file...\n')
     #formalities and error checks
     if not isinstance(geom_input,dict):
@@ -278,9 +300,15 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
         
     if 'borehole1' in geom_input: # do we have boreholes ? 
         bh_flag = True
-        print('buried electrodes detected!')
+        print('Borehole electrodes present!')
     else: 
         bh_flag = False
+        
+    if 'buried1' in geom_input: # do we have boreholes ? 
+        bu_flag = True
+        print('Buried electrodes present!')
+    else: 
+        bu_flag = False
   
     if doi == -1:#then set to a default 
         if bh_flag:
@@ -323,6 +351,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode location']*len(elec_x))
     flag_sort=[flag[i] for i in idx]
+    
     #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
     cache_idx=[]
     for i in range(len(x_pts)-1):
@@ -455,6 +484,34 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
             fh.write("//no more borehole strings to add.\n")
             print('%i boreholes added to input file'%(count-1))
             break
+    
+    fh.write("\n//Adding buried electrodes? \n")  
+    count = 0
+    while True:
+        count += 1
+        key = 'buried'+str(count)#count through the buried keys
+        try:
+            bhx = geom_input[key][0]#get buried electrode coordinate information
+            bhy = geom_input[key][1]
+            try:
+                bhz = geom_input[key][2]#allows for future 3d capacity 
+            except IndexError:
+                bhz = [0]*len(bhx)
+            e_pt_idx = [0] *len(bhx)
+            fh.write("// string electrodes for buried string %i\n"%count)
+            for k in range(len(bhx)):
+                no_pts += 1 
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,bhx[k],bhy[k],bhz[k],k+1))
+                e_pt_idx[k] = no_pts
+            node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
+            fh.write("Point{%s} In Surface{1};\n"%str(e_pt_idx).strip('[').strip(']'))
+                
+        except KeyError:#run out of keys 
+            fh.write("//no more buried electrode strings to add.\n")
+            if bu_flag:
+                print('buried electrodes added to input file')
+            break
+        
     no_plane = 2 # number of plane surfaces so far
     fh.write("\n//Adding polygons?\n")
     count = 0    
@@ -539,6 +596,7 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
 
 #%% convert gmsh 2d mesh to R2
 def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
+    """
     #Converts a gmsh mesh file into a mesh.dat file needed for R2. 
 #INPUT:
     #file_path - file path to mesh file. note that a error will occur if the file format is not as expected
@@ -547,6 +605,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
 #OUTPUT: 
     #dictionary with some 'useful' info about the mesh
 ###############################################################################
+    """
     if file_path=='ask_to_open':#use a dialogue box to open a file
         print("please select the gmsh mesh file you want to convert.\n")
         root=tk.Tk()
@@ -737,80 +796,6 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
 
 
 #%% gmsh wrapper    - moved to MeshTools    
-# =============================================================================
-# 
-# def tri_mesh(surf_x,surf_y,elec_x,elec_y,keep_files=True, show_output = False, path='exe', save_path='default',
-#              adv_flag=False,geom_input=None,**kwargs):
-#     """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-#     this function will only work if current working directory has path: exe/gmsh.exe"""
-# #INPUT: 
-#     #surf_x - surface topography x coordinates
-#     #surf_y - surface topography y coordinates
-#     #elec_x - electrode x location 
-#     #elec_y - electrode y location 
-#     #keep_files - True if the gmsh input and output file is to be stored in the exe directory
-#     #show_ouput - True if gmsh output is to be printed to console 
-#     #path - path to exe folder (leave default unless you know what you are doing)
-#     #save_path - directory to save 'mesh.dat'
-#     #adv_flag - True if using the genGeoFile_adv, if this is the case then geom_input MUST BE GIVEN
-#     #geom_input - dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
-#         #nb: if adv_flag is true then the first 4 arguments are ignored, so just enter empty objects for each. 
-#     #**kwargs - key word arguments to be passed to genGeoFile. 
-# #OUTPUT: 
-#     #mesh.dat in the Executables directory
-# ###############################################################################
-#     #check directories 
-#     if path == "exe":
-#         ewd = os.path.join(
-#                 os.path.dirname(os.path.realpath(__file__)),
-#                 path)
-#         #print(ewd) #ewd - exe working directory 
-#     else:
-#         ewd = path
-#         # else its assumed a custom directory has been given to the gmsh.exe
-#     cwd=os.getcwd()#get current working directory 
-#     
-#     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-#         raise EnvironmentError("No gmsh.exe exists in the exe directory!")
-#     
-#     #make .geo file
-#     file_name="temp"
-#     if adv_flag:
-#         if not isinstance(geom_input,dict):
-#             raise ValueError("geom_input has not been given!")
-#         node_pos,_ = genGeoFile_adv(geom_input,file_name=file_name,path=ewd,**kwargs)
-#     else:
-#         node_pos,_ = genGeoFile(surf_x,surf_y,elec_x,elec_y,file_name=file_name,path=ewd,**kwargs)
-#     # handling gmsh
-#     if platform.system() == "Windows":#command line input will vary slighty by system 
-#         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
-#     elif platform.system() == "Linux":
-#         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
-#         
-#     os.chdir(ewd)
-#     
-#     if show_output: 
-#         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-#         while p.poll() is None:
-#             line = p.stdout.readline().rstrip()
-#             print(line.decode('utf-8'))
-#     else:
-#         call(cmd_line)#run gmsh 
-#         
-#     #convert into mesh.dat 
-#     mesh_dict=gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
-#     if keep_files is False: 
-#         os.remove("temp.geo");os.remove("temp.msh")
-#     #change back to orginal working directory
-#     os.chdir(cwd)
-#     
-#     mesh = mt.Mesh_obj.mesh_dict2obj(mesh_dict)
-#     
-#     mesh.add_e_nodes(np.array(node_pos)-1)
-#     
-#     return mesh, mesh_dict['element_ranges']
-# =============================================================================
-
 
 #%% is in polygon code - originally developed as part of jamyd's slope stability code project. 
 def LineEq(x,y):

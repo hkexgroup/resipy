@@ -179,6 +179,104 @@ def write2in(param, dirname, typ='R2'):
     
     return content
 
+#%% forward modelling config file 
+def write2in_forward(param, dirname, typ='R2'):
+    """
+    #write a configuration file for a forward model (future update might put this all into one function??)
+    Parameters
+    ----------
+    param : dictionary
+    keys refer to specific settings in R2.exe. The user must provide the number of electrodes
+    and their corresponding nodes. 
+    
+    dirname: string
+    working directory to which the configuration file is saved to
+    
+    typ: string
+    references the which .exe to run. R2 (for resistivity inversion) or cR2 (for
+    induced polarisation inversion)
+    
+    Returns
+    ----------
+    content : string
+    raw text of the configuration file
+    
+    R2.in/cR2.in : file written in directory as flagged by dirname. 
+    
+    """
+    if typ == 'cR2':
+        print('Currently only R2 is supported for write2in_forward')
+    
+    dparam = {
+            'lineTitle':'My beautiful synthetic survey',
+            'job_type':0,
+            'file_name':'_res.dat',#this is the file with the forward model resistivities 
+            'mesh_type':3, # meshx, meshy, topo should be defined
+            'flux_type':3,
+            'singular_type':0,
+            'res_matrix':0,
+            'scale':1, # only used for triangular mesh
+            'num_regions':1,
+            'regions':0, # should be defined by the number of element in the mesh
+            'patch_x':1,
+            'patch_y':1, 
+            'data_type':0,
+            'reg_mode':0,
+            'error_mod':2,
+            'alpha_aniso':1,
+            'num_xy_poly':-1,
+            'xy_poly_table':np.zeros((5,2)),
+            'elec_num':None, #should be define when importing data
+            'elec_node':None, # should be define when building the mesh
+            }
+    
+    for a in dparam:
+        if a not in param: # parameter missing
+            param[a] = dparam[a]
+            
+    if param['job_type']==1:
+        raise Exception ("Use write2in for inverse job r2 configuration files")
+        
+    content = ''
+    content += '{}\n\n'.format(param['lineTitle'])
+    
+    content += '\t{}\t{}\t{:2.1f}\t{}\t{}\n\n'.format(
+                            param['job_type'],
+                            param['mesh_type'],
+                            param['flux_type'],
+                            param['singular_type'],
+                            param['res_matrix'])
+    
+    if param['mesh_type'] == 3:
+        content += '\t{} << vessel_dia\n\n'.format(param['scale'])
+    
+    #input resistivity values to the mesh using the regions tag     
+    if param['num_regions'] >= 1:
+        if typ == 'R2': #code stolen from write2in           
+            content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
+    elif param['num_regions']==0:
+        content += '\t{} << num_regions\n'.format(param['regions'])
+        content += '{:15s}\n\n'.format(param['file_name'])
+    
+    #insert section here to allow for truncation of the returned mesh? 
+    content += '    0  << num_poly\n\n'
+    
+    #now add the electrodes to the file 
+    content += ' {}  << num_electrodes\n'.format(param['elec_num'])
+    
+    for i in range(len(param['elec_node'])):
+        content += '{}\t{}\n'.format(i+1,param['elec_node'][i])
+    
+    # write configuration file
+    if typ == 'R2':
+        fname = 'R2.in'
+    elif typ == 'cR2':
+        fname = 'cR2.in'
+    with open(os.path.join(dirname,fname),'w') as f:
+        f.write(content)
+        f.close()
+    
+    return content
 
 #%% test code
 #import meshTools as mt
