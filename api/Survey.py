@@ -19,6 +19,21 @@ from api.DCA import DCA
 
 class Survey(object):
     def __init__(self, fname, ftype='', name='', spacing=None):
+        """ Create a Survey object, that contains the data and some basic 
+        procedures.
+        
+        Parameters
+        ----------
+        fname : str
+            Name of the file where the data are.
+        ftype : str
+            Type of the data file.
+        name : str
+            A personal name for the survey.
+        spacing : float, optional
+            This will be passed to the parser function to determine the
+            electrode positions.
+        """
         self.elec = []
         self.df = pd.DataFrame()
         self.name = name
@@ -39,8 +54,6 @@ class Survey(object):
         self.ndata = len(data)
         self.filt_typ = None
         self.cbar = True
-        self.phimin = ''
-        self.phimax = ''
         self.filterDataIP = pd.DataFrame()
 #        self.filterDataIP_plotOrig = data[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
 #        self.typ = 'R2'
@@ -65,8 +78,8 @@ class Survey(object):
             
     
     def basicFilter(self):
-        ''' perform basic filtering on the data
-        '''
+        """ Remove NaN and Inf values in the data.
+        """
         resist = self.df['resist'].values
         irecip = self.df['irecip'].values
         iout = np.isnan(resist) | np.isinf(resist)
@@ -78,9 +91,9 @@ class Survey(object):
     
     
     def addData(self, fname, ftype='Syscal'):
-        ''' add data to the actual survey (for instance the reciprocal if they
-        are not in the same file)
-        '''
+        """ Add data to the actual survey (for instance the reciprocal if they
+        are not in the same file).
+        """
         if ftype == 'Syscal':
             elec, data = syscalParser(fname)
         else:
@@ -93,13 +106,21 @@ class Survey(object):
         
     
     def filterData(self, i2keep):
+        """ Filter out the data not retained in `i2keep`.
+        
+        Parameters
+        ----------
+        i2keep : ndarray of bool
+            Index where all measurement to be retained are `True` and the
+            others `False`.
+        """
         self.ndata = len(i2keep)
         self.df = self.df[i2keep]
     
     
     def inferType(self):
-        ''' define the type of the survey
-        '''
+        """ define the type of the survey
+        """
         if self.elec[:,2].sum() == 0:
             stype = '2d'
         else:
@@ -111,8 +132,14 @@ class Survey(object):
     
     
     def setType(self, stype=None):
-        ''' set survey type
-        '''
+        """ Set the type of the survey.
+        
+        Parameters
+        ----------
+        stype : str
+            Type of the survey. Could also be infered using 
+            `Survey.inferType()`.
+        """
         if stype == None:
             self.stype = self.inferType()
         else:
@@ -120,8 +147,16 @@ class Survey(object):
 
         
     def reciprocal(self):
-        '''compute reciprocal measurments
-        '''
+        """Compute reciprocal measurements.
+        
+        Notes
+        -----
+        The methods create an array where all positive index are normal
+        measurements and the reciprocal measurements are their negative
+        counterparts. This array is stored in the main dataframe `Survey.df`
+        in the columns `irecip`. Measurements with `ìrecip=0` are measurements
+        without reciprocal.
+        """
         resist = self.df['resist'].values
         phase = -1.2*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
@@ -193,6 +228,8 @@ class Survey(object):
     
     
     def addFilteredIP(self):
+        """ Add filtered IP data after IP filtering and pre-processing.
+        """
         self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
         # add Survey.filterDataIP to Survey.df and Survey.dfg
 #        self.df['ip'] = np.nan # remove all IP from Survey.df
@@ -238,8 +275,30 @@ class Survey(object):
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None):
-        """ perform a log class of datay based on datay and applied function
-        func to each bin
+        """ Perform a log class of datay based on datay and applied function
+        func to each bin.
+        
+        Parameters
+        ----------
+        datax : array
+            x values to be from which the log-classes will be made.
+        datay : array
+            y values to which the function `func` will be applied inside each
+            log-class
+        func : function
+            Function to be applied to the y value of each log class.
+        class1 : array, optional
+            Array of values for the log classes. If given, the limit of the 
+            classes will be computed as 10**class1
+        
+        Returns
+        -------
+        mbins : array
+            x-means of each bin.
+        vbins : array
+            Value of each bin (output of the function `func`).
+        nbins : array
+            Number of measurements in each bin.
         """
         if class1 is not None:
             bins = 10.0**class1
@@ -263,7 +322,19 @@ class Survey(object):
         # note : all data might not be in the bins, check with sum(nbins)
         return mbins, vbins, nbins
     
-    def plotError(self, ax=None): 
+    def plotError(self, ax=None):
+        """ Plot the reciprocal errors.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
         if ax is None:
             fig, ax = plt.subplots()
         reciprocalMean = self.df['recipMean'].values
@@ -278,6 +349,18 @@ class Survey(object):
             return fig
 
     def phaseplotError(self, ax=None): #plotting phase discrepancies over R
+        """ Plot the reciprocal phase discrepancies.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
         if ax is None:
             fig, ax = plt.subplots()
         reciprocalMean = np.abs(self.df['recipMean'].values)
@@ -299,6 +382,18 @@ class Survey(object):
         return R2
         
     def plotIPFit(self, ax=None):
+        """ Plot the reciprocal phase errors.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
         if ax is None:
             fig, ax = plt.subplots()        
         numbins_ip = 16
@@ -333,7 +428,19 @@ class Survey(object):
         if ax is None:
             return fig   
 
-    def pwlfit(self, ax = None):
+    def pwlfit(self, ax=None):
+        """ Fit an power law to the resistivity data.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
 #        self.errTyp = 'pwl'
         if ax is None:
             fig, ax = plt.subplots()        
@@ -369,7 +476,19 @@ class Survey(object):
         if ax is None:
             return fig
 
-    def linfit(self, iplot=True, ax=None):
+    def linfit(self, ax=None):
+        """ Fit a linear relationship to the resistivity data.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
 #        self.errTyp = 'lin'
         # # linear fit
         # if 'recipMean' not in self.dfg.columns:
@@ -528,7 +647,20 @@ class Survey(object):
 #            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
 #            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
 
-    def heatmap(self,ax=None): # (Reference: Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+    def heatmap(self,ax=None):
+        """ Plot a heatmap based on 
+        Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
         filterDataIP_plotOrig = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
         if self.filt_typ == 'Raw':
             temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
@@ -562,11 +694,20 @@ class Survey(object):
         if ax is None:
             return fig
     
-    def iprangefilt(self):
+    def iprangefilt(self, phimin, phimax):
+        """ Filter IP data according to a specified range.
+        
+        Parameters
+        ----------
+        phimin : float
+            Minimium phase angle [mrad].
+        phimax : float
+            Maximum phase angle [mrad].
+        """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (self.phimin/1.2, self.phimax/1.2))
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/1.2, phimax/1.2))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (self.phimin/1.2, self.phimax/1.2))
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/1.2, phimax/1.2))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -575,6 +716,7 @@ class Survey(object):
 #        self.filterDataIP_plot = temp_data
         
     def removerecip(self):
+        
         if self.filterDataIP.empty:
             self.filterDataIP = self.df.query('irecip>=0')
         else:
@@ -665,8 +807,20 @@ class Survey(object):
             return fig
     
     def pseudoIP(self, ax=None, contour=False): #IP pseudo section
-        ''' create true pseudo graph with points and no interpolation
-        '''
+        """ Create pseudo section of IP data with points (default)
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, the graph is plotted along this axis.
+        contour : bool
+            If True, use filled contour instead of points in the pseudosection.
+        
+        Returns
+        -------
+        fig : matplotlib figure
+            If `ax` is not specified, the method returns a figure.
+        """
         array = self.df[['a','b','m','n']].values
         elecpos = self.elec[:,0]
         ip = self.df['ip'].values            
@@ -716,6 +870,24 @@ class Survey(object):
             return fig
     
     def write2protocol(self, outputname='', errTyp='none', errTot=False, ip=False, errTypIP='none'):
+        """ Write a protocol.dat file for R2 or cR2.
+        
+        Parameters
+        ----------
+        outputname : str, optional
+            Path of the output file.
+        errTyp : str, optional
+            If `none` no error columns will be added. Other options are : 
+                'lin','lme','pwl'or 'obs'.
+        errTot : bool, optional
+            If `True`, the modelling error will be added to the error from the
+            error model to form the *total error*.
+        ip : bool, optional
+            If `True` and IP columns will be added to the file.
+        errTypIP : str, optional
+            Needs `ip=True` to be taken into account. Specify the string of
+            the error model to apply for IP data.
+        """
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         haveReciprocal = all(self.df['irecip'].values == 0)
         if haveReciprocal == False: # so we have reciprocals
@@ -761,6 +933,17 @@ class Survey(object):
                 
 
     def manualFilter(self, ax=None):
+        """ Manually filters the data visually.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, the graph is plotted along the axis.
+        
+        Returns
+        -------
+            If `ax` is not None, a matplotlib figure is returned.
+        """
         array = self.df[['a','b','m','n']].values
         if 'recipError' in self.df.columns:
             resist = self.df['recipError'].values

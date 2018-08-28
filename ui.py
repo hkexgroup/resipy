@@ -757,15 +757,16 @@ class App(QMainWindow):
         phasefiltlayout = QVBoxLayout()
         
         def phirange():
-            self.r2.surveys[0].phimin = float(phivminEdit.text())
-            self.r2.surveys[0].phimax = float(phivmaxEdit.text())
-            self.r2.surveys[0].iprangefilt()
+            self.r2.iprangefilt(float(phivminEdit.text()),
+                                float(phivmaxEdit.text()))
             heatFilter()
+            
         def removerecip():
-            self.r2.surveys[0].removerecip()
+            self.r2.removerecip()
             heatFilter()
+        
         def removenested():
-            self.r2.surveys[0].removenested()
+            self.r2.removenested()
             heatFilter()
 
         phitoplayout = QHBoxLayout()
@@ -799,6 +800,7 @@ class App(QMainWindow):
         def filt_reset():
             self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfphasereset.copy()
             heatFilter()
+            dcaProgress.setValue(0)
         
         resetlayout = QVBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
