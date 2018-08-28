@@ -24,7 +24,16 @@ from api.meshTools import Mesh_obj, tri_mesh
 
 
 class R2(object): # R2 master class instanciated by the GUI
+    """ Master class to handle all processing around the inversion codes.
+    """
     def __init__(self, dirname=''):
+        """ Create an R2 object.
+        
+        Parameters
+        ----------
+        dirnaname : str, optional
+            Path of the working directory. Can also be set using `R2.setwd()`.
+        """
         if dirname == '':
             dirname = os.getcwd()
             print('using the current directory:', dirname)
@@ -43,8 +52,13 @@ class R2(object): # R2 master class instanciated by the GUI
         self.meshResults = [] # contains vtk mesh object of inverted section
         
     def setwd(self, dirname):
-        ''' set the working directory
-        '''
+        """ Set the working directory.
+        
+        Parameters
+        ----------
+        dirname : str
+            Path of the working directory.
+        """
         # get rid of some stuff
         files = os.listdir(dirname)
         if 'ref' in files: # only for timelapse survey
@@ -61,13 +75,20 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def createSurvey(self, fname, ftype='Syscal', info={}, spacing=None):
-        ''' read electrode and quadrupoles data and return 
-        a survey object
+        """ Read electrodes and quadrupoles data and return 
+        a survey object.
         
-        fname : filename to be parsed
-        ftype : type of file to be parsed
-        info : dict of info about the survey
-        '''    
+        Parameters
+        ----------
+        fname : str
+            Filename to be parsed.
+        ftype : str, optional
+            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+        info : dict, optional
+            Dictionnary of info about the survey.
+        spacing : float, optional
+            Electrode spacing to be passed to the parser function.
+        """    
         self.surveys.append(Survey(fname, ftype, spacing=spacing))
         self.surveysInfo.append(info)
         
@@ -91,13 +112,23 @@ class R2(object): # R2 master class instanciated by the GUI
             
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
-        ''' read electrode and quadrupoles data and return 
-        a survey object
+        """ Read electrodes and quadrupoles data and return 
+        a survey object.
         
-        fname : filename to be parsed
-        ftype : type of file to be parsed
-        info : dict of info about the survey
-        '''
+        Parameters
+        ----------
+        fname : str
+            Filename to be parsed.
+        ftype : str, optional
+            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+        info : dict, optional
+            Dictionnary of info about the survey.
+        spacing : float, optional
+            Electrode spacing to be passed to the parser function.
+        isurveys : list
+            List of surveys index that will be used for error modelling and so
+            reciprocal measurements. By default all surveys are used.
+        """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
@@ -146,17 +177,27 @@ class R2(object): # R2 master class instanciated by the GUI
         self.plotIPFit = self.bigSurvey.plotIPFit
     
     def pseudo(self, **kwargs):
+        """ Create a pseudo section.
+        
+        Parameters
+        ----------
+        **kwargs :
+            To be passed to `R2.pseudoCallback()`.
+        """
         if self.iBorehole == True:
             print('NOT PLOTTING PSEUDO FOR BOREHOLE FOR NOW')
         else:
             self.pseudoCallback(**kwargs)
     
     def createMesh(self, typ='default', **kwargs):
-        ''' create a mesh object
-        typ:
-            quad : quadrilateral mesh
-            triang : triangular mesh
-        '''
+        """ Create a mesh.
+        
+        Parameters
+        ----------
+        typ : str, optional
+            Type of mesh. Eithter 'quad' or 'trian'. If no topography, 'quad'
+            mesh will be chosen.
+        """
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
                 typ = 'quad'
@@ -207,6 +248,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def showMesh(self, ax=None):
+        """ Display the mesh.
+        """
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
@@ -216,8 +259,15 @@ class R2(object): # R2 master class instanciated by the GUI
             self.mesh.show(ax=ax, color_bar=False)
     
     def write2in(self, param={}, typ=''):
-        ''' create configuration file for inversion
-        '''
+        """ Create configuration file for inversion.
+        
+        Parameters
+        ----------
+        param : dict
+            Dictionnary of parameters and values for the inversion settings.
+        typ : str, optional
+            Type of inversion. By default given by `R2.typ`.
+        """
         if typ == '':
             typ = self.typ
         if all(self.surveys[0].df['irecip'].values == 0):
@@ -264,6 +314,15 @@ class R2(object): # R2 master class instanciated by the GUI
         
 
     def write2protocol(self, errTyp='', errTypIP='', **kwargs):
+        """ Write a protocol.dat file for the inversion code.
+        
+        Parameters
+        ----------
+        errTyp : str
+            Type of the DC error. Either 'pwl', 'lin', 'obs'.
+        errTypIP : str
+            Type of the IP error. Eigther 'pwl'
+        """
         if self.typ == 'R2':
             ipBool = False
         elif self.typ == 'cR2':
@@ -310,6 +369,15 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def runR2(self, dirname='', dump=print):
+        """ Run the executable in charge of the inversion.
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the directory where to run the inversion code.
+        dump : function, optional
+            Function to print the output of the invrsion code while running.
+        """
         # run R2.exe
         exeName = self.typ + '.exe'
         cwd = os.getcwd()
@@ -351,9 +419,21 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def invert(self, param={}, iplot=True, dump=print):
-        ''' invert the data, first generate R2.in file, then run
-        inversion using appropriate wrapper, then return results
-        '''
+        """ Invert the data, first generate R2.in file, then run
+        inversion using appropriate wrapper, then return results.
+        
+        Parameters
+        ----------
+        param : dict, optional
+            Dictionary of parameters for inversion. Will be passed to
+            `R2.write2in()`.
+        iplot : bool, optional
+            If `True`, will plot the results of the inversion using
+            `R2.showResults()`.
+        dump : function, optinal
+            Function to print the output of the inversion. To be passed to 
+            `R2.runR2()`.
+        """
         # clean meshResults list
         self.meshResults = []
         
@@ -381,6 +461,25 @@ class R2(object): # R2 master class instanciated by the GUI
             # pass an index for inverted survey time
     
     def showResults(self, index=0, ax=None, edge_color='none', attr='', sens=True, color_map='viridis', **kwargs):
+        """ Show the inverteds section.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the inverted section (mainly in the case of time-lapse
+            inversion)
+        ax : matplotlib axis, optional
+            If specified, the inverted graph will be plotted agains `ax`.
+        edge_color : str, optional
+            Color of the edges of the mesh.
+        attr : str, optional
+            Name of the attribute to be plotted.
+        sens : bool, optional
+            If `True` and if sensitivity is available, it will be plotted as
+            a white transparent shade on top of the inverted section.
+        color_map : str, optional
+            Name of the colormap to be used.
+        """
         if (attr == '') & (self.typ == 'R2'):
             attr = 'Resistivity(log10)'
         if (attr == '') & (self.typ == 'cR2'):
@@ -394,6 +493,9 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def getResults(self):
+        """ Collect inverted results after running the inversion and adding
+        them to `R2.meshResults` list.
+        """
         if self.typ == 'R2':
             if self.iTimeLapse == True:
                 fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
@@ -422,6 +524,23 @@ class R2(object): # R2 master class instanciated by the GUI
 
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
+        """ Show inverted section based on the `_res.dat``file instead of the
+        `.vtk`.
+        
+        Parameters
+        ----------
+        fname : str, optional
+            Name of the inverted `.dat` file produced by the inversion.
+        ax : matplotlib axis, optional
+            If specified, the graph will be plotted along `ax`.
+        ilog10 : bool, optional
+            If `True`, the log10 of the resistivity will be used.
+        isen : bool, optional
+            If `True`, sensitivity will be displayed as white transparent
+            shade on top of the inverted section.
+        figsize : tuple, optional
+            Size of the figure.
+        """
         print('showSection called')
         if fname == '':
             fname = os.path.join(self.dirname, 'f001.dat')
@@ -472,6 +591,13 @@ class R2(object): # R2 master class instanciated by the GUI
 #        return fig
     
     def showIter(self, ax=None):
+        """ Dispay temporary inverted section after each iteration.
+        
+        Parameters
+        ----------
+        ax : matplotib axis, optional
+            If specified, the graph will be plotted along `ax`.
+        """
         files = os.listdir(self.dirname)
         fs = []
         for f in files:
@@ -488,8 +614,13 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
                 
     def pseudoError(self, ax=None):
-        ''' plot pseudo section of errors from file f001_err.dat
-        '''
+        """ Plot pseudo section of errors from file `f001_err.dat`.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis
+            If specified, the graph will be plotted against `ax`.
+        """
         err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)
         array = err[:,[-2,-1,-4,-3]].astype(int)
         errors = err[:,0]
