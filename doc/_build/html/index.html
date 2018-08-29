@@ -383,6 +383,416 @@ shade on top of the inverted section.</p>
 
 <span class="target" id="module-api.Survey"></span><p>Created on Fri Jun  1 11:21:54 2018</p>
 <p>&#64;author: jkl</p>
+<dl class="class">
+<dt id="api.Survey.Survey">
+<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class that handles geophysical data and some basic functions. One 
+instance is created for each survey.</p>
+<dl class="method">
+<dt id="api.Survey.Survey.addData">
+<code class="descname">addData</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add data to the actual survey (for instance the reciprocal if they
+are not in the same file).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.addFilteredIP">
+<code class="descname">addFilteredIP</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addFilteredIP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add filtered IP data after IP filtering and pre-processing.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.basicFilter">
+<code class="descname">basicFilter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.basicFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove NaN and Inf values in the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.dca">
+<code class="descname">dca</code><span class="sig-paren">(</span><em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.dca" title="Permalink to this definition">¶</a></dt>
+<dd><p>execute DCA filtering</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.filterData">
+<code class="descname">filterData</code><span class="sig-paren">(</span><em>i2keep</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.filterData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter out the data not retained in <cite>i2keep</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>i2keep</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ndarray of bool</span></dt>
+<dd><p class="first last">Index where all measurement to be retained are <cite>True</cite> and the
+others <cite>False</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.heatmap">
+<code class="descname">heatmap</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.heatmap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a heatmap based on 
+Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
+<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.inferType">
+<code class="descname">inferType</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.inferType" title="Permalink to this definition">¶</a></dt>
+<dd><p>define the type of the survey</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.iprangefilt">
+<code class="descname">iprangefilt</code><span class="sig-paren">(</span><em>phimin</em>, <em>phimax</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.iprangefilt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter IP data according to a specified range.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>phimin</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Minimium phase angle [mrad].</p>
+</dd>
+<dt><strong>phimax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Maximum phase angle [mrad].</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.linfit">
+<code class="descname">linfit</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.linfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit a linear relationship to the resistivity data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
+<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="api.Survey.Survey.logClasses3">
+<em class="property">static </em><code class="descname">logClasses3</code><span class="sig-paren">(</span><em>datax</em>, <em>datay</em>, <em>func</em>, <em>class1=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.logClasses3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a log class of datay based on datay and applied function
+func to each bin.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>datax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
+<dd><p class="first last">x values to be from which the log-classes will be made.</p>
+</dd>
+<dt><strong>datay</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
+<dd><p class="first last">y values to which the function <cite>func</cite> will be applied inside each
+log-class</p>
+</dd>
+<dt><strong>func</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
+<dd><p class="first last">Function to be applied to the y value of each log class.</p>
+</dd>
+<dt><strong>class1</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array, optional</span></dt>
+<dd><p class="first last">Array of values for the log classes. If given, the limit of the 
+classes will be computed as 10**class1</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>mbins</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
+<dd><p class="first last">x-means of each bin.</p>
+</dd>
+<dt><strong>vbins</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
+<dd><p class="first last">Value of each bin (output of the function <cite>func</cite>).</p>
+</dd>
+<dt><strong>nbins</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
+<dd><p class="first last">Number of measurements in each bin.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.manualFilter">
+<code class="descname">manualFilter</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.manualFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manually filters the data visually.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, the graph is plotted along the axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>If `ax` is not None, a matplotlib figure is returned.</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.phaseplotError">
+<code class="descname">phaseplotError</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.phaseplotError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the reciprocal phase discrepancies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
+<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.plotError">
+<code class="descname">plotError</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.plotError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the reciprocal errors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
+<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.plotIPFit">
+<code class="descname">plotIPFit</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.plotIPFit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the reciprocal phase errors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
+<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.pseudo">
+<code class="descname">pseudo</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
+<dd><p>create true pseudo graph with points and no interpolation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.pseudoIP">
+<code class="descname">pseudoIP</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudoIP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create pseudo section of IP data with points (default)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, the graph is plotted along this axis.</p>
+</dd>
+<dt><strong>contour</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">If True, use filled contour instead of points in the pseudosection.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure</span></dt>
+<dd><p class="first last">If <cite>ax</cite> is not specified, the method returns a figure.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.pwlfit">
+<code class="descname">pwlfit</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pwlfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit an power law to the resistivity data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
+<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.reciprocal">
+<code class="descname">reciprocal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.reciprocal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute reciprocal measurements.</p>
+<p class="rubric">Notes</p>
+<p>The methods create an array where all positive index are normal
+measurements and the reciprocal measurements are their negative
+counterparts. This array is stored in the main dataframe <cite>Survey.df</cite>
+in the columns <cite>irecip</cite>. Measurements with <cite>ìrecip=0</cite> are measurements
+without reciprocal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.setType">
+<code class="descname">setType</code><span class="sig-paren">(</span><em>stype=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.setType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the type of the survey.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>stype</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Type of the survey. Could also be infered using 
+<cite>Survey.inferType()</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.write2protocol">
+<code class="descname">write2protocol</code><span class="sig-paren">(</span><em>outputname=''</em>, <em>errTyp='none'</em>, <em>errTot=False</em>, <em>ip=False</em>, <em>errTypIP='none'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.write2protocol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a protocol.dat file for R2 or cR2.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>outputname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Path of the output file.</p>
+</dd>
+<dt><strong>errTyp</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><dl class="first last docutils">
+<dt>If <cite>none</cite> no error columns will be added. Other options are <span class="classifier-delimiter">:</span> <span class="classifier"></span></dt>
+<dd><p class="first last">‘lin’,’lme’,’pwl’or ‘obs’.</p>
+</dd>
+</dl>
+</dd>
+<dt><strong>errTot</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite>, the modelling error will be added to the error from the
+error model to form the <em>total error</em>.</p>
+</dd>
+<dt><strong>ip</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite> and IP columns will be added to the file.</p>
+</dd>
+<dt><strong>errTypIP</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Needs <cite>ip=True</cite> to be taken into account. Specify the string of
+the error model to apply for IP data.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="function">
 <dt id="api.Survey.pseudo">
 <code class="descclassname">api.Survey.</code><code class="descname">pseudo</code><span class="sig-paren">(</span><em>array</em>, <em>resist</em>, <em>spacing</em>, <em>name=''</em>, <em>ax=None</em>, <em>figsize=(12</em>, <em>3)</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=False</em>, <em>label=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.pseudo" title="Permalink to this definition">¶</a></dt>

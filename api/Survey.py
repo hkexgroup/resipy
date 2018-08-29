@@ -18,6 +18,9 @@ from api.parsers import syscalParser, protocolParser, res2invInputParser
 from api.DCA import DCA
 
 class Survey(object):
+    """ Class that handles geophysical data and some basic functions. One 
+    instance is created for each survey.
+    """
     def __init__(self, fname, ftype='', name='', spacing=None):
         """ Create a Survey object, that contains the data and some basic 
         procedures.
