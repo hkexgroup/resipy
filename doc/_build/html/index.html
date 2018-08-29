@@ -411,8 +411,138 @@ quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates<
 <dl class="class">
 <dt id="api.meshTools.Mesh_obj">
 <em class="property">class </em><code class="descclassname">api.meshTools.</code><code class="descname">Mesh_obj</code><span class="sig-paren">(</span><em>num_nodes</em>, <em>num_elms</em>, <em>node_x</em>, <em>node_y</em>, <em>node_z</em>, <em>node_id</em>, <em>elm_id</em>, <em>node_data</em>, <em>elm_centre</em>, <em>elm_area</em>, <em>cell_type</em>, <em>cell_attributes</em>, <em>atribute_title</em>, <em>original_file_path='N/A'</em>, <em>regions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj" title="Permalink to this definition">¶</a></dt>
-<dd><p>create a mesh class
-put class variables here</p>
+<dd><p>creates a mesh class</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>num_nodes: int</strong></dt>
+<dd><p class="first last">number of nodes</p>
+</dd>
+<dt><strong>num_elms: int</strong></dt>
+<dd><p class="first last">number of elements</p>
+</dd>
+<dt><strong>node_x: list, 1d numpy array</strong></dt>
+<dd><p class="first last">x coordinates of nodes</p>
+</dd>
+<dt><strong>node_y: list, 1d numpy array</strong></dt>
+<dd><p class="first last">coordinates of nodes</p>
+</dd>
+<dt><strong>node_z: list, 1d numpy array</strong></dt>
+<dd><p class="first last">z coordinates of nodes</p>
+</dd>
+<dt><strong>node_id: list</strong></dt>
+<dd><p class="first last">node id number (ie 1,2,3,4,…)</p>
+</dd>
+<dt><strong>elm_id: list</strong></dt>
+<dd><p class="first last">element id number</p>
+</dd>
+<dt><strong>node_data: list of lists of ints</strong></dt>
+<dd><p class="first last">nodes of element vertices in the form [[node1],[node2],[node3],…], each
+node id should be an integer type.</p>
+</dd>
+<dt><strong>elm_centre: list of lists of floats</strong></dt>
+<dd><p class="first last">centre of elements (x,y)</p>
+</dd>
+<dt><strong>elm_area: list</strong></dt>
+<dd><p class="first last">area of each element</p>
+</dd>
+<dt><strong>cell_type: list of ints</strong></dt>
+<dd><p class="first last">code referencing cell geometry (e.g. triangle) according to vtk format</p>
+</dd>
+<dt><strong>cell_attributes: list of floats</strong></dt>
+<dd><p class="first last">the values of the attributes given to each cell</p>
+</dd>
+<dt><strong>atribute_title: string</strong></dt>
+<dd><p class="first last">what is the attribute? we may use conductivity instead of resistivity for example</p>
+</dd>
+<dt><strong>original_file_path: string, optional</strong></dt>
+<dd><p class="first last">file path to where the mesh file was originally imported</p>
+</dd>
+<dt><strong>regions: optional</strong></dt>
+<dd><p class="first last">element indexes for a material in the mesh (needs further explanation)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>Mesh_obj: object</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="api.meshTools.Mesh_obj.apply_func">
+<code class="descname">apply_func</code><span class="sig-paren">(</span><em>mesh_paras</em>, <em>material_no</em>, <em>new_key</em>, <em>function</em>, <em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.apply_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>applys a function to a mesh by material number and mesh parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>mesh_paras:</strong></dt>
+<dd><p class="first last">mesh parameters from which new parameters are calculated</p>
+</dd>
+<dt><strong>material_no: list of ints</strong></dt>
+<dd><p class="first last">material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
+…ie if you have 2 materials in the mesh then pass an array of ones and twos.</p>
+</dd>
+<dt><strong>new_key: string</strong></dt>
+<dd><p class="first last">key assigned to the parameter in the attr_cache. DOES NOT default</p>
+</dd>
+<dt><strong>function: function</strong></dt>
+<dd><p class="first last">function to be applied to mesh attributes, first argument must be the mesh parameter</p>
+</dd>
+<dt><strong>args: [see function info]</strong></dt>
+<dd><p class="first last">all arguments to be passed through function after to modify the mesh parameter,
+… argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
+… where letters are the material, numbers refer to the argument number</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>new parameters added to Mesh_obj.attr_dict</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh_obj.asgn_atbrte_ID">
+<code class="descname">asgn_atbrte_ID</code><span class="sig-paren">(</span><em>poly_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.asgn_atbrte_ID" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign material/region assocations with certain elements in the mesh 
+say if you have an area you’d like to forward model. 
+<strong>*2D ONLY*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>poly_data: dictionary</strong></dt>
+<dd><p class="first last">with the vertices (x,y) of each point in the polygon</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>a list of element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the</strong></dt>
+<dd></dd>
+<dt><strong>second region defined and so on. If the element cant be assigned to a region then it’ll be left at 0.</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="api.meshTools.Mesh_obj.assign_material_attribute">
 <code class="descname">assign_material_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_material_attribute" title="Permalink to this definition">¶</a></dt>
@@ -424,21 +554,16 @@ a single resistivity value</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
 <dt><strong>material_no</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array or list</span></dt>
-<dd></dd>
-<dt><strong>integers starting at 0 or 1, and ascend in intervals of 1, which</strong></dt>
-<dd></dd>
-<dt><strong>correspond to a material in the mesh returned from assign_attr_ID.</strong></dt>
-<dd></dd>
+<dd><p class="first last">integers starting at 0 or 1, and ascend in intervals of 1, which 
+correspond to a material in the mesh returned from assign_attr_ID.</p>
+</dd>
 <dt><strong>attr_list</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
-<dd></dd>
-<dt><strong>list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give</strong></dt>
-<dd></dd>
-<dt><strong>[resistivity1,resistivity2,resistivity3]</strong></dt>
-<dd></dd>
+<dd><p class="first last">list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
+[resistivity1,resistivity2,resistivity3]</p>
+</dd>
 <dt><strong>new_key: string</strong></dt>
-<dd></dd>
-<dt><strong>key identifier assigned to the attribute in the attr_cache.</strong></dt>
-<dd></dd>
+<dd><p class="first last">key identifier assigned to the attribute in the attr_cache.</p>
+</dd>
 </dl>
 </td>
 </tr>
@@ -455,34 +580,80 @@ a single resistivity value</p>
 <dl class="classmethod">
 <dt id="api.meshTools.Mesh_obj.mesh_dict2obj">
 <em class="property">classmethod </em><code class="descname">mesh_dict2obj</code><span class="sig-paren">(</span><em>mesh_info</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.mesh_dict2obj" title="Permalink to this definition">¶</a></dt>
-<dd><blockquote>
-<div>#converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
-#mesh object, its an alternative way to make a mesh object.</div></blockquote>
-<p>#INPUT: mesh_info - dictionary type mesh
-#OUTPUT: mesh obj
-###########################################################################</p>
+<dd><p>converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
+mesh object, its an alternative way to make a mesh object. 
+<strong>*Intended for development use*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>mesh_info: dictionary</strong></dt>
+<dd><p class="first last">mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>mesh class object</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="api.meshTools.Mesh_obj.show">
 <code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>ylim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.show" title="Permalink to this definition">¶</a></dt>
-<dd><p>#color_map : string, color map reference 
-#color_bar : Boolian, True to plot colorbar 
-#xlim -  axis x limits as (ymin, ymax)
-#ylim - axis y limits as (ymin, ymax)
-#ax - axis handle if preexisting (error will thrown up if not)
-#electrodes - Boolian, enter true to add electrodes to plot
-#sens - Boolian, enter true to plot sensitivities 
-#edge_color - color of the cell edges, set to None if you dont want an edge
-#contour - if True, plot filled contours
-#vmin - minimum limit for the color bar scale 
-#vmax- maximum limit for the color bar scale 
-#attr - which attribute in the mesh to plot, ### add more info here ###</p>
+<dd><p>displays a 2d mesh and attribute</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>color_map</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string,</span></dt>
+<dd><p class="first last">color map reference</p>
+</dd>
+<dt><strong>color_bar</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Boolian,</span></dt>
+<dd><p class="first last">True to plot colorbar</p>
+</dd>
+<dt><strong>xlim: tuple</strong></dt>
+<dd><p class="first last">axis x limits as (xmin, xmax)</p>
+</dd>
+<dt><strong>ylim: tuple</strong></dt>
+<dd><p class="first last">axis y limits as (ymin, ymax)</p>
+</dd>
+<dt><strong>ax: matplotlib axis handle,</strong></dt>
+<dd><p class="first last">axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
+</dd>
+<dt><strong>electrodes: Boolian</strong></dt>
+<dd><p class="first last">enter true to add electrodes to plot</p>
+</dd>
+<dt><strong>sens: Boolian,</strong></dt>
+<dd><p class="first last">enter true to plot sensitivities</p>
+</dd>
+<dt><strong>edge_color: string</strong></dt>
+<dd><p class="first last">color of the cell edges, set to None if you dont want an edge</p>
+</dd>
+<dt><strong>contour: boolian</strong></dt>
+<dd><p class="first last">if True, plot filled contours</p>
+</dd>
+<dt><strong>vmin: float</strong></dt>
+<dd><p class="first last">minimum limit for the color bar scale</p>
+</dd>
+<dt><strong>vmax: float</strong></dt>
+<dd><p class="first last">maximum limit for the color bar scale</p>
+</dd>
+<dt><strong>attr: string</strong></dt>
+<dd><p class="first last">which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+as the key for this dictionary</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
 <dt><strong>matplotlib figure with mesh</strong></dt>
 <dd></dd>
 </dl>
@@ -501,16 +672,21 @@ matplotlib package can be used to display the mesh here also. See:
 <dl class="method">
 <dt id="api.meshTools.Mesh_obj.write_attr">
 <code class="descname">write_attr</code><span class="sig-paren">(</span><em>attr_key</em>, <em>file_name='_res.dat'</em>, <em>file_path='defualt'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_attr" title="Permalink to this definition">¶</a></dt>
-<dd><p>#writes a attribute to a _res.dat type file. file_name entered seperately 
-#becuase it will be needed for the R2 config file. The reason for this function
-#is so you can write a forward model parameter input file. 
+<dd><p>writes a attribute to a _res.dat type file. file_name entered seperately 
+becuase it will be needed for the R2 config file. The reason for this function
+is so you can write a forward model parameter input file. 
 Parameters
 ———
-#attr_key - key identifying the attr to be written in the mesh object attr_cache
-#file_name - name of the _res.dat type file
-#file_path - directory to which the file will be saved in, if left as none then the</p>
+attr_key: string</p>
 <blockquote>
-<div>#file will be written in the current working directory</div></blockquote>
+<div>key identifying the attr to be written in the mesh object attr_cache</div></blockquote>
+<dl class="docutils">
+<dt>file_name: string</dt>
+<dd>name of the _res.dat type file</dd>
+<dt>file_path: string</dt>
+<dd>directory to which the file will be saved in, if left as none then the
+file will be written in the current working directory</dd>
+</dl>
 <p>#_res.dat type file</p>
 </dd></dl>
 
@@ -523,21 +699,18 @@ Parameters
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>#file_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
-<dd></dd>
-<dt><strong>maps where python will write the file. if left as default then mesh.vtk</strong></dt>
-<dd></dd>
-<dt><strong>will be written the current working directory.</strong></dt>
-<dd></dd>
-<dt><strong>#title: string</strong></dt>
-<dd></dd>
-<dt><strong>header string written at the top of the vtk file</strong></dt>
-<dd></dd>
+<dt><strong>file_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
+<dd><p class="first last">maps where python will write the file. if left as default then mesh.vtk
+will be written the current working directory.</p>
+</dd>
+<dt><strong>title: string</strong></dt>
+<dd><p class="first last">header string written at the top of the vtk file</p>
+</dd>
 </dl>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>N/A</strong></dt>
+<dt><strong>vtk file written to specified directory</strong></dt>
 <dd></dd>
 </dl>
 </td>
@@ -549,10 +722,66 @@ Parameters
 </dd></dl>
 
 <dl class="function">
+<dt id="api.meshTools.tri_cent">
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_cent</code><span class="sig-paren">(</span><em>p</em>, <em>q</em>, <em>r</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_cent" title="Permalink to this definition">¶</a></dt>
+<dd><p>#compute the centre coordinates for a 2d triangle given the x,y coordinates 
+#of the vertices.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>#code expects points as p=(x,y) and so on (counter clockwise prefered)</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>coordinates: tuple</strong></dt>
+<dd><p class="first last">in the format (x,y)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="api.meshTools.tri_mesh">
 <code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>save_path='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
 this function will only work if current working directory has path: exe/gmsh.exe</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="api.meshTools.vtk_import">
+<code class="descclassname">api.meshTools.</code><code class="descname">vtk_import</code><span class="sig-paren">(</span><em>file_path='ask_to_open'</em>, <em>parameter_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.vtk_import" title="Permalink to this definition">¶</a></dt>
+<dd><p>#imports a 2d mesh file into the python workspace, can have triangular or quad type elements</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>file_path: string</strong></dt>
+<dd><p class="first last">file path to mesh file. note that a error will occur if the file format is not as expected</p>
+</dd>
+<dt><strong>parameter_title: string</strong></dt>
+<dd><p class="first last">name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
+also note that all parameters will be imported. just the title highlights which one the mesh object will use as 
+default.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>mesh object</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
