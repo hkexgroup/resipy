@@ -39,8 +39,46 @@ else:
 #%% create mesh object
 class Mesh_obj: 
     """
-    create a mesh class
-    put class variables here 
+    creates a mesh class
+    
+    Parameters
+    ----------
+    num_nodes: int
+        number of nodes
+    num_elms: int 
+        number of elements 
+    node_x: list, 1d numpy array
+        x coordinates of nodes 
+    node_y: list, 1d numpy array
+        coordinates of nodes
+    node_z: list, 1d numpy array
+        z coordinates of nodes 
+    node_id: list
+        node id number (ie 1,2,3,4,...)
+    elm_id: list
+        element id number 
+    node_data: list of lists of ints 
+        nodes of element vertices in the form [[node1],[node2],[node3],...], each
+        node id should be an integer type. 
+    elm_centre: list of lists of floats
+        centre of elements (x,y)
+    elm_area: list 
+        area of each element
+    cell_type: list of ints
+        code referencing cell geometry (e.g. triangle) according to vtk format
+    cell_attributes: list of floats
+        the values of the attributes given to each cell 
+    atribute_title: string 
+        what is the attribute? we may use conductivity instead of resistivity for example
+    original_file_path: string, optional
+        file path to where the mesh file was originally imported
+    regions: optional
+        element indexes for a material in the mesh (needs further explanation)
+        
+    Returns
+    ----------
+    Mesh_obj: object
+        
     """    
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
@@ -143,27 +181,42 @@ class Mesh_obj:
              vmax=None,
              attr=None):
         """
+        displays a 2d mesh and attribute 
+        
         Parameters
-        ---------
-        #color_map : string, color map reference 
-        #color_bar : Boolian, True to plot colorbar 
-        #xlim -  axis x limits as (ymin, ymax)
-        #ylim - axis y limits as (ymin, ymax)
-        #ax - axis handle if preexisting (error will thrown up if not)
-        #electrodes - Boolian, enter true to add electrodes to plot
-        #sens - Boolian, enter true to plot sensitivities 
-        #edge_color - color of the cell edges, set to None if you dont want an edge
-        #contour - if True, plot filled contours
-        #vmin - minimum limit for the color bar scale 
-        #vmax- maximum limit for the color bar scale 
-        #attr - which attribute in the mesh to plot, ### add more info here ### 
+        ----------
+        color_map : string, 
+            color map reference 
+        color_bar : Boolian, 
+            True to plot colorbar 
+        xlim: tuple
+            axis x limits as (xmin, xmax)
+        ylim: tuple
+            axis y limits as (ymin, ymax)
+        ax: matplotlib axis handle,
+            axis handle if preexisting (error will thrown up if not) figure is to be cast to.
+        electrodes: Boolian 
+            enter true to add electrodes to plot
+        sens: Boolian, 
+            enter true to plot sensitivities 
+        edge_color: string
+            color of the cell edges, set to None if you dont want an edge
+        contour: boolian
+            if True, plot filled contours
+        vmin: float
+            minimum limit for the color bar scale 
+        vmax: float
+            maximum limit for the color bar scale 
+        attr: string
+            which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+            as the key for this dictionary
         
         Returns
-        --------
+        ----------
         matplotlib figure with mesh 
         
         Notes
-        --------
+        ----------
         Show a mesh object using matplotlib. The color map variable should be 
         a string refering to the color map you want (default is "jet").
         As we're using the matplotlib package here any color map avialable within 
@@ -218,7 +271,7 @@ class Mesh_obj:
         if vmax is None:
             vmax = np.max(X)
         
-        if edge_color == None:
+        if edge_color == None or edge_color=='none' or edge_color=='None':
             edge_color='face'#set the edge colours to the colours of the polygon patches
 
         if contour is False:
@@ -278,22 +331,29 @@ class Mesh_obj:
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))
         
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
-#    """applys a function to a mesh by material number and mesh parameter
-#    Parameters
-#    ---------
-#    #mesh_paras - mesh parameters from which new parameters are calculated 
-#    #material_no - material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
-#                    #...ie if you have 2 materials in the mesh then pass an array of ones and twos.
-#    #new_key - key assigned to the parameter in the attr_cache. DOES NOT default
-#    #function - function to applied to mesh, first argument must be the mesh parameter
-#    #args - all arguments to be passed through function after to modify the mesh parameter,
-#            #... argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
-#            #... where letters are the material, numbers refer to the argument number
-#    
-#    Returns
-#    ---------
-#    new parameters 
-#    """
+        """
+        applys a function to a mesh by material number and mesh parameter
+        
+        Parameters
+        ----------
+        mesh_paras: 
+            mesh parameters from which new parameters are calculated 
+        material_no: list of ints
+            material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
+            ...ie if you have 2 materials in the mesh then pass an array of ones and twos.
+        new_key: string
+            key assigned to the parameter in the attr_cache. DOES NOT default
+        function: function
+            function to be applied to mesh attributes, first argument must be the mesh parameter
+        args: [see function info]
+            all arguments to be passed through function after to modify the mesh parameter,
+            ... argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
+            ... where letters are the material, numbers refer to the argument number
+        
+        Returns
+        ----------
+        new parameters added to Mesh_obj.attr_dict
+        """
     
         if len(material_no)!=len(mesh_paras):
             raise ValueError('Mismatch between the number of material propeties (for the mesh) and parameters to be converted')
@@ -314,17 +374,17 @@ class Mesh_obj:
         """
         Asssigns values to the mesh which depend on region / material only. E.G 
         a single resistivity value 
-        
-        Parameters 
-        -----------
+            
+        Parameters
+        ----------
         material_no : array or list
-        integers starting at 0 or 1, and ascend in intervals of 1, which 
-        correspond to a material in the mesh returned from assign_attr_ID. 
+            integers starting at 0 or 1, and ascend in intervals of 1, which 
+            correspond to a material in the mesh returned from assign_attr_ID. 
         attr_list : list
-        list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
-        [resistivity1,resistivity2,resistivity3]
+            list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
+            [resistivity1,resistivity2,resistivity3]
         new_key: string
-        key identifier assigned to the attribute in the attr_cache. 
+            key identifier assigned to the attribute in the attr_cache. 
         
         Returns 
         ----------
@@ -369,11 +429,18 @@ class Mesh_obj:
     @classmethod # creates a mesh object from a mesh dictionary
     def mesh_dict2obj(cls,mesh_info):
         """
-        #converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
-        #mesh object, its an alternative way to make a mesh object. 
-    #INPUT: mesh_info - dictionary type mesh
-    #OUTPUT: mesh obj
-    ###########################################################################
+        converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
+        mesh object, its an alternative way to make a mesh object. 
+        ***Intended for development use***
+            
+        Parameters
+        ----------
+        mesh_info: dictionary 
+            mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers
+            
+        Returns
+        ---------- 
+        mesh class object
     """
         #check the dictionary is a mesh
         try: 
@@ -423,15 +490,15 @@ class Mesh_obj:
         
         Parameters
         ------------
-        #file_path : string 
-        maps where python will write the file. if left as default then mesh.vtk
-        will be written the current working directory. 
-        #title: string
-        header string written at the top of the vtk file 
+        file_path : string 
+            maps where python will write the file. if left as default then mesh.vtk
+            will be written the current working directory. 
+        title: string
+            header string written at the top of the vtk file 
         
         Returns
         ----------
-        N/A
+        vtk file written to specified directory
         """
         #decide where to save the file 
         if file_path == "default":
@@ -476,15 +543,18 @@ class Mesh_obj:
     
     def write_attr(self,attr_key,file_name='_res.dat',file_path='defualt'):
         """
-        #writes a attribute to a _res.dat type file. file_name entered seperately 
-        #becuase it will be needed for the R2 config file. The reason for this function
-        #is so you can write a forward model parameter input file. 
+        writes a attribute to a _res.dat type file. file_name entered seperately 
+        becuase it will be needed for the R2 config file. The reason for this function
+        is so you can write a forward model parameter input file. 
         Parameters
         ---------
-        #attr_key - key identifying the attr to be written in the mesh object attr_cache
-        #file_name - name of the _res.dat type file
-        #file_path - directory to which the file will be saved in, if left as none then the
-                    #file will be written in the current working directory 
+        attr_key: string
+            key identifying the attr to be written in the mesh object attr_cache
+        file_name: string
+            name of the _res.dat type file
+        file_path: string
+            directory to which the file will be saved in, if left as none then the
+            file will be written in the current working directory 
         Returns
         ---------
         #_res.dat type file 
@@ -517,14 +587,21 @@ class Mesh_obj:
         
     
     def asgn_atbrte_ID(self,poly_data):
-        #assign material/region assocations with certain elements in the mesh 
-        #say if you have an area you'd like to forward model. 
-    #INPUT: ####2D ONLY #### 
-        #poly_data - dictionary with the vertices (x,y) of each point in the polygon
-    #OUTPUT: 
-        #a list of element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
-        #second region defined and so on. If the element cant be assigned to a region then it'll be left at 0. 
-    ###############################################################################    
+        """
+        Assign material/region assocations with certain elements in the mesh 
+        say if you have an area you'd like to forward model. 
+        ***2D ONLY***
+            
+        Parameters
+        ----------
+        poly_data: dictionary 
+            with the vertices (x,y) of each point in the polygon
+            
+        Returns
+        ---------- 
+        a list of element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
+        second region defined and so on. If the element cant be assigned to a region then it'll be left at 0. 
+        """   
         no_elms=self.num_elms#number of elements 
         elm_xy=self.elm_centre#centriods of mesh elements 
         material_no=[0]*no_elms#attribute number
@@ -554,13 +631,19 @@ class Mesh_obj:
                  
 #%% triangle centriod 
 def tri_cent(p,q,r):
+    """
     #compute the centre coordinates for a 2d triangle given the x,y coordinates 
     #of the vertices.
-#INPUT:
+            
+    Parameters
+    ----------
     #code expects points as p=(x,y) and so on (counter clockwise prefered)
-#OUTPUT:
-    # (x,y) tuple    
-###############################################################################
+            
+    Returns
+    ----------
+    coordinates: tuple
+        in the format (x,y)    
+    """
     Xm=(p[0]+q[0])/2
     Ym=(p[1]+q[1])/2
     k=2/3
@@ -570,13 +653,22 @@ def tri_cent(p,q,r):
     
 #%% import a vtk file 
 def vtk_import(file_path='ask_to_open',parameter_title='default'):
+    """
     #imports a 2d mesh file into the python workspace, can have triangular or quad type elements 
-#INPUT:
-    #file_path - file path to mesh file. note that a error will occur if the file format is not as expected
-    #parameter_title - name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
-#OUTPUT: 
-    #A mesh object 
-###############################################################################
+            
+    Parameters
+    ----------
+    file_path: string
+        file path to mesh file. note that a error will occur if the file format is not as expected
+    parameter_title: string
+        name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
+        also note that all parameters will be imported. just the title highlights which one the mesh object will use as 
+        default. 
+            
+    Returns
+    ----------
+    mesh object 
+    """
     if file_path=='ask_to_open':#use a dialogue box to open a file
         print("please select the vtk file to import using the pop up dialogue box. \n")
         root=tk.Tk()
