@@ -1,0 +1,620 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to pyR2’s documentation! &#8212; pyR2 v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">pyR2 v0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-pyr2-s-documentation">
+<h1>Welcome to pyR2’s documentation!<a class="headerlink" href="#welcome-to-pyr2-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-api.R2"></span><p>Created on Wed May 30 16:48:54 2018</p>
+<p>&#64;author: jkl</p>
+<dl class="class">
+<dt id="api.R2.R2">
+<em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Master class to handle all processing around the inversion codes.</p>
+<dl class="method">
+<dt id="api.R2.R2.createMesh">
+<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Type of mesh. Eithter ‘quad’ or ‘trian’. If no topography, ‘quad’
+mesh will be chosen.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.createSurvey">
+<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read electrodes and quadrupoles data and return 
+a survey object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Filename to be parsed.</p>
+</dd>
+<dt><strong>ftype</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
+</dd>
+<dt><strong>info</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
+<dd><p class="first last">Dictionnary of info about the survey.</p>
+</dd>
+<dt><strong>spacing</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Electrode spacing to be passed to the parser function.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.createTimeLapseSurvey">
+<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>isurveys=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read electrodes and quadrupoles data and return 
+a survey object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Filename to be parsed.</p>
+</dd>
+<dt><strong>ftype</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
+</dd>
+<dt><strong>info</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
+<dd><p class="first last">Dictionnary of info about the survey.</p>
+</dd>
+<dt><strong>spacing</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Electrode spacing to be passed to the parser function.</p>
+</dd>
+<dt><strong>isurveys</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">List of surveys index that will be used for error modelling and so
+reciprocal measurements. By default all surveys are used.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.getResults">
+<code class="descname">getResults</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.getResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collect inverted results after running the inversion and adding
+them to <cite>R2.meshResults</cite> list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.invert">
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=True</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<dd><p>Invert the data, first generate R2.in file, then run
+inversion using appropriate wrapper, then return results.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>param</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
+<dd><p class="first last">Dictionary of parameters for inversion. Will be passed to
+<cite>R2.write2in()</cite>.</p>
+</dd>
+<dt><strong>iplot</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite>, will plot the results of the inversion using
+<cite>R2.showResults()</cite>.</p>
+</dd>
+<dt><strong>dump</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function, optinal</span></dt>
+<dd><p class="first last">Function to print the output of the inversion. To be passed to 
+<cite>R2.runR2()</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.pseudo">
+<code class="descname">pseudo</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.pseudo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a pseudo section.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>**kwargs :</strong></dt>
+<dd><p class="first last">To be passed to <cite>R2.pseudoCallback()</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.pseudoError">
+<code class="descname">pseudoError</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.pseudoError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot pseudo section of errors from file <cite>f001_err.dat</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis</span></dt>
+<dd><p class="first last">If specified, the graph will be plotted against <cite>ax</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.runR2">
+<code class="descname">runR2</code><span class="sig-paren">(</span><em>dirname=''</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runR2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the executable in charge of the inversion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dirname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Path of the directory where to run the inversion code.</p>
+</dd>
+<dt><strong>dump</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function, optional</span></dt>
+<dd><p class="first last">Function to print the output of the invrsion code while running.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.setwd">
+<code class="descname">setwd</code><span class="sig-paren">(</span><em>dirname</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setwd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the working directory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>dirname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Path of the working directory.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showIter">
+<code class="descname">showIter</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showIter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dispay temporary inverted section after each iteration.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotib axis, optional</span></dt>
+<dd><p class="first last">If specified, the graph will be plotted along <cite>ax</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showMesh">
+<code class="descname">showMesh</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showResults">
+<code class="descname">showResults</code><span class="sig-paren">(</span><em>index=0</em>, <em>ax=None</em>, <em>edge_color='none'</em>, <em>attr=''</em>, <em>sens=True</em>, <em>color_map='viridis'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the inverteds section.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>index</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">Index of the inverted section (mainly in the case of time-lapse
+inversion)</p>
+</dd>
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, the inverted graph will be plotted agains <cite>ax</cite>.</p>
+</dd>
+<dt><strong>edge_color</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Color of the edges of the mesh.</p>
+</dd>
+<dt><strong>attr</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Name of the attribute to be plotted.</p>
+</dd>
+<dt><strong>sens</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite> and if sensitivity is available, it will be plotted as
+a white transparent shade on top of the inverted section.</p>
+</dd>
+<dt><strong>color_map</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Name of the colormap to be used.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showSection">
+<code class="descname">showSection</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ax=None</em>, <em>ilog10=True</em>, <em>isen=False</em>, <em>figsize=(8</em>, <em>3)</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show inverted section based on the <cite>_res.dat``file instead of the
+`.vtk</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Name of the inverted <cite>.dat</cite> file produced by the inversion.</p>
+</dd>
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
+<dd><p class="first last">If specified, the graph will be plotted along <cite>ax</cite>.</p>
+</dd>
+<dt><strong>ilog10</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite>, the log10 of the resistivity will be used.</p>
+</dd>
+<dt><strong>isen</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite>, sensitivity will be displayed as white transparent
+shade on top of the inverted section.</p>
+</dd>
+<dt><strong>figsize</strong> <span class="classifier-delimiter">:</span> <span class="classifier">tuple, optional</span></dt>
+<dd><p class="first last">Size of the figure.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.write2in">
+<code class="descname">write2in</code><span class="sig-paren">(</span><em>param={}</em>, <em>typ=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2in" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create configuration file for inversion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>param</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">Dictionnary of parameters and values for the inversion settings.</p>
+</dd>
+<dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
+<dd><p class="first last">Type of inversion. By default given by <cite>R2.typ</cite>.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.write2protocol">
+<code class="descname">write2protocol</code><span class="sig-paren">(</span><em>errTyp=''</em>, <em>errTypIP=''</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2protocol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a protocol.dat file for the inversion code.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>errTyp</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Type of the DC error. Either ‘pwl’, ‘lin’, ‘obs’.</p>
+</dd>
+<dt><strong>errTypIP</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Type of the IP error. Eigther ‘pwl’</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-api.Survey"></span><p>Created on Fri Jun  1 11:21:54 2018</p>
+<p>&#64;author: jkl</p>
+<dl class="function">
+<dt id="api.Survey.pseudo">
+<code class="descclassname">api.Survey.</code><code class="descname">pseudo</code><span class="sig-paren">(</span><em>array</em>, <em>resist</em>, <em>spacing</em>, <em>name=''</em>, <em>ax=None</em>, <em>figsize=(12</em>, <em>3)</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=False</em>, <em>label=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
+<dd><p>create true pseudo graph with points and no interpolation</p>
+</dd></dl>
+
+<span class="target" id="module-api.meshTools"></span><p>Created on Wed May 30 10:19:09 2018, python 3.6.5
+&#64;author: jamyd91
+Import a vtk file with an unstructured grid (triangular/quad elements) and 
+creates a mesh object (with associated functions). The mesh object can have quad or
+triangular elements. It is assigned a cell type according the convention in vtk files. 
+(ie. cell type 9 &lt;- quad, cell type 5 &lt;- triangle)</p>
+<dl class="docutils">
+<dt>Classes: </dt>
+<dd>mesh_obj</dd>
+<dt>Functions: </dt>
+<dd><p class="first">tri_cent() - computes the centre point for a 2d triangular element
+vtk_import() - imports a triangular / quad unstructured grid from a vtk file
+readR2_resdat () - reads resistivity values from a R2 file. 
+quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates</p>
+<blockquote class="last">
+<div>(returns info needed for R2in)</div></blockquote>
+</dd>
+</dl>
+<p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
+<dl class="class">
+<dt id="api.meshTools.Mesh_obj">
+<em class="property">class </em><code class="descclassname">api.meshTools.</code><code class="descname">Mesh_obj</code><span class="sig-paren">(</span><em>num_nodes</em>, <em>num_elms</em>, <em>node_x</em>, <em>node_y</em>, <em>node_z</em>, <em>node_id</em>, <em>elm_id</em>, <em>node_data</em>, <em>elm_centre</em>, <em>elm_area</em>, <em>cell_type</em>, <em>cell_attributes</em>, <em>atribute_title</em>, <em>original_file_path='N/A'</em>, <em>regions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a mesh class
+put class variables here</p>
+<dl class="method">
+<dt id="api.meshTools.Mesh_obj.assign_material_attribute">
+<code class="descname">assign_material_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_material_attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asssigns values to the mesh which depend on region / material only. E.G 
+a single resistivity value</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>material_no</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array or list</span></dt>
+<dd></dd>
+<dt><strong>integers starting at 0 or 1, and ascend in intervals of 1, which</strong></dt>
+<dd></dd>
+<dt><strong>correspond to a material in the mesh returned from assign_attr_ID.</strong></dt>
+<dd></dd>
+<dt><strong>attr_list</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd></dd>
+<dt><strong>list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give</strong></dt>
+<dd></dd>
+<dt><strong>[resistivity1,resistivity2,resistivity3]</strong></dt>
+<dd></dd>
+<dt><strong>new_key: string</strong></dt>
+<dd></dd>
+<dt><strong>key identifier assigned to the attribute in the attr_cache.</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>mesh object will now have the new attribute added. Use the mesh.show() function to see the result.</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="api.meshTools.Mesh_obj.mesh_dict2obj">
+<em class="property">classmethod </em><code class="descname">mesh_dict2obj</code><span class="sig-paren">(</span><em>mesh_info</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.mesh_dict2obj" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div>#converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
+#mesh object, its an alternative way to make a mesh object.</div></blockquote>
+<p>#INPUT: mesh_info - dictionary type mesh
+#OUTPUT: mesh obj
+###########################################################################</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh_obj.show">
+<code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>ylim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>#color_map : string, color map reference 
+#color_bar : Boolian, True to plot colorbar 
+#xlim -  axis x limits as (ymin, ymax)
+#ylim - axis y limits as (ymin, ymax)
+#ax - axis handle if preexisting (error will thrown up if not)
+#electrodes - Boolian, enter true to add electrodes to plot
+#sens - Boolian, enter true to plot sensitivities 
+#edge_color - color of the cell edges, set to None if you dont want an edge
+#contour - if True, plot filled contours
+#vmin - minimum limit for the color bar scale 
+#vmax- maximum limit for the color bar scale 
+#attr - which attribute in the mesh to plot, ### add more info here ###</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>matplotlib figure with mesh</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Show a mesh object using matplotlib. The color map variable should be 
+a string refering to the color map you want (default is “jet”).
+As we’re using the matplotlib package here any color map avialable within 
+matplotlib package can be used to display the mesh here also. See: 
+<a class="reference external" href="https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html">https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html</a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh_obj.write_attr">
+<code class="descname">write_attr</code><span class="sig-paren">(</span><em>attr_key</em>, <em>file_name='_res.dat'</em>, <em>file_path='defualt'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_attr" title="Permalink to this definition">¶</a></dt>
+<dd><p>#writes a attribute to a _res.dat type file. file_name entered seperately 
+#becuase it will be needed for the R2 config file. The reason for this function
+#is so you can write a forward model parameter input file. 
+Parameters
+———
+#attr_key - key identifying the attr to be written in the mesh object attr_cache
+#file_name - name of the _res.dat type file
+#file_path - directory to which the file will be saved in, if left as none then the</p>
+<blockquote>
+<div>#file will be written in the current working directory</div></blockquote>
+<p>#_res.dat type file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh_obj.write_vtk">
+<code class="descname">write_vtk</code><span class="sig-paren">(</span><em>file_path='default'</em>, <em>title=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_vtk" title="Permalink to this definition">¶</a></dt>
+<dd><p>writes a vtk file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>#file_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
+<dd></dd>
+<dt><strong>maps where python will write the file. if left as default then mesh.vtk</strong></dt>
+<dd></dd>
+<dt><strong>will be written the current working directory.</strong></dt>
+<dd></dd>
+<dt><strong>#title: string</strong></dt>
+<dd></dd>
+<dt><strong>header string written at the top of the vtk file</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>N/A</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="api.meshTools.tri_mesh">
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>save_path='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+this function will only work if current working directory has path: exe/gmsh.exe</p>
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to pyR2’s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">pyR2 v0.1 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018, G. Blanchy, S. Saneiyan, J. Boyd.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.7.
+    </div>
+  </body>
+</html>
