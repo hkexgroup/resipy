@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 10 14:32:14 2018
+Created on Tue Apr 10 14:32:14 2018 in python 3.6.5
 Wrapper for creating 2d triangular meshes with gmsh and converting it 
 into a mesh.dat format for R2. The program tri_mesh () expects a directory "exe"
 to be within the api (or working) directory with a gmsh.exe inside it. 
@@ -13,12 +13,11 @@ Programs:
     genGeoFile_adv () - more advanced version of genGeoFile which allows for greater flexiblity 
     gmsh2R2mesh () - converts a gmsh.msh file to a mesh.dat file readable by R2
     tri_mesh () - combines GenGeoFile and gmsh2R2msh functions into one function, returns a mesh object 
+    isinpolygon () - checks to see if a point lies inside a polygon
 
 Dependencies: 
     numpy (conda library)
-    os, subprocess(python standard)
-    meshTools (this project)
-
+    python3 standard libs
 """
 #python standard libraries 
 import tkinter as tk
@@ -42,16 +41,20 @@ def arange(start,incriment,stop,endpoint=0):#create a list with a range without 
 
 def ccw(p,q,r):#code expects points as p=(x,y) and so on ... 
     """
-    #checks if points in a triangle are ordered counter clockwise. When using R2,
-    #mesh nodes should be given in a counter clockwise order otherwise you'll get negative 
-    #apparent resistivities. 
-#INPUT:
-    #p - tuple or list with the x y coordinates of the point/vertex ie. (x,y)
-    #q - " 
-    #r - " 
-#OUTPUT:
-    #0 if colinear points, 1 if counter clockwise order, 2 if points are ordered clockwise
-###############################################################################
+    checks if points in a triangle are ordered counter clockwise. When using R2,
+    mesh nodes should be given in a counter clockwise order otherwise you'll get negative 
+    apparent resistivities. 
+    
+    Parameters
+    ----------
+    p - tuple, list,
+        The x y coordinates of the point/vertex ie. (x,y) in desired order
+    q - " 
+    r - " 
+    
+    Returns
+    ----------
+    0 if colinear points, 1 if counter clockwise order, 2 if points are ordered clockwise
     """
     val=((q[1]-p[1])*(r[0]-q[0]))-((q[0]-p[0])*(r[1]-q[1]))
     if val==0:
@@ -64,13 +67,21 @@ def ccw(p,q,r):#code expects points as p=(x,y) and so on ...
 # triangle centriod 
 def tri_cent(p,q,r):
     """
-    #compute the centre coordinates for a 2d triangle given the x,y coordinates 
-    #of the vertices.
-#INPUT:
-    #code expects points as p=(x,y) and so on (counter clockwise prefered)
-#OUTPUT:
-    # (x,y) tuple    
-###############################################################################
+    Compute the centre coordinates for a 2d triangle given the x,y coordinates 
+    of the vertices.
+    program code expects points as p=(x,y) and so on (counter clockwise prefered)
+    
+    Parameters
+    ----------
+    
+    p - tuple, list,
+        The x y coordinates of the point/vertex ie. (x,y) in desired order
+    q - " 
+    r - " 
+    
+    Returns
+    ----------
+    (x,y): tuple    
     """
     Xm=(p[0]+q[0])/2
     Ym=(p[1]+q[1])/2
@@ -228,23 +239,29 @@ def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     """
-#writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
+    writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
     Parameters
-    --------------
-    #geom_input - a dictionary of electrode coordinates, surface topography, 
+    ----------
+    geom_input: dict
+        a dictionary of electrode coordinates, surface topography, 
                     #borehole electrode coordinates, and boundaries 
-    #file_name - name of the generated gmsh file (can include file path also) (optional)
-    #doi - depth of investigation (optional) (in meters)
-    #cl - characteristic length (optional), essentially describes how big the nodes assocaited elements will be. 
-    #path - directory to save the .geo file
+    file_name: string
+        name of the generated gmsh file (can include file path also) (optional)
+    doi: float
+        depth of investigation (optional) (in meters)
+    cl: float
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5
+    path: string
+        directory to save the .geo file
     
     Returns
-    -------------
-    #gmsh . geo file which can be ran in gmsh
+    ----------
+    gmsh .geo file which can be ran in gmsh
 
     NOTES
-    ------------
+    ----------
      geom_input format:
         the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
         currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
@@ -264,11 +281,10 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     of the actaul survey area. So make sure your topography / surface electrode points cover 
     the area you are surveying, otherwise some funky errors will occur in the mesh. 
 
-#### TODO: search through each set of points and check for repeats 
-#### TODO: check with some real data
-#### TODO: change nuemon boundary distance to be based on the survey extent
-#### TODO: add points around the survey to provide some sort of padding? 
-###############################################################################
+    #### TODO: search through each set of points and check for repeats 
+    #### TODO: check with some real data
+    #### TODO: change nuemon boundary distance to be based on the survey extent
+    #### TODO: add points around the survey to provide some sort of padding? 
     """
     print('Generating gmsh input file...\n')
     #formalities and error checks
@@ -597,14 +613,21 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
 #%% convert gmsh 2d mesh to R2
 def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
     """
-    #Converts a gmsh mesh file into a mesh.dat file needed for R2. 
-#INPUT:
-    #file_path - file path to mesh file. note that a error will occur if the file format is not as expected
-    #save_path - leave this as default to save the file in the working directory, make this 'ask_to_open' to open a dialogue box, else enter a custom file path.
-    #return_info - make this 'yes' if you want to return information from the mesh conversion
-#OUTPUT: 
-    #dictionary with some 'useful' info about the mesh
-###############################################################################
+    Converts a gmsh mesh file into a mesh.dat file needed for R2. 
+    
+    Parameters
+    ----------
+    file_path: string
+        file path to mesh file. note that a error will occur if the file format is not as expected
+    save_path: string
+        leave this as default to save the file in the working directory, make this 'ask_to_open' to open a dialogue box, else enter a custom file path.
+    return_info:
+        make this 'yes' if you want to return information from the mesh conversion
+    
+    Returns
+    ----------
+    mesh_info: dict
+        dictionary with some 'useful' info about the mesh
     """
     if file_path=='ask_to_open':#use a dialogue box to open a file
         print("please select the gmsh mesh file you want to convert.\n")
@@ -798,7 +821,7 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
 #%% gmsh wrapper    - moved to MeshTools    
 
 #%% is in polygon code - originally developed as part of jamyd's slope stability code project. 
-def LineEq(x,y):
+def __LineEq(x,y):
     #finds the equation of a line using an inverse operation given an array of
     # x and y data points
     if len(x)==1:#few if statements to check the input is as expected
@@ -820,7 +843,7 @@ def LineEq(x,y):
         return float(mod[0]),float(mod[1])#out put is in the form "m,c"
 
 #do the lines then intersect?
-def intersect(A,B,C,D,coord=0):
+def __intersect(A,B,C,D,coord=0):
     #check if line AB intersects line CD. Each coordinate should be passed as a tuple ie. (x,y)
     #pass an extra argment in the function coord==1 if you want to find the intersection of 2 points
     #output is in the form "binary-t/f,(x intercept,y intercept)" 
@@ -850,25 +873,36 @@ def intersect(A,B,C,D,coord=0):
         else:
             #if the lines are not both vertical and horizontal we need to solve the 
             #equations of the lines then substitute values in order to find x and y intercept
-            m_a,c_a=LineEq(x_a,y_a)
-            m_b,c_b=LineEq(x_b,y_b)
+            m_a,c_a=__LineEq(x_a,y_a)
+            m_b,c_b=__LineEq(x_b,y_b)
             x_int=(c_b-c_a)/(m_a-m_b)
             y_int=(m_a*x_int)+c_a
         return dump,(x_int,y_int)  
 
-# "Is point inside region?" code
-    #following solution posted at:
-    # https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/
+
 def isinpolygon(x,y,polydata,*args):
-#INPUT:
-    # x - x coordinate of query point
-    # y - y coordinate of query point 
-    # poly data - a list of polygon data in the form
+    """
+     "Is point inside region?" code
+    following solution posted at:
+    https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/
+    
+    Parameters
+    ----------
+    x: float
+        x coordinate of query point
+    y: float
+        y coordinate of query point 
+    poly data: list
+        a list of polygon data in the form
                 #| x coordinates | y coordinates
-    # optional argument changes the distance to which the point is ray casted to the right
-#OUTPUT:
-    #1 for true, 0 for false  
-############################################################################
+    *args: optional
+        first optional argument changes the distance to which the point is ray casted to the right
+    
+    Returns
+    ----------
+    ans: binary 
+        1 for true, 0 for false  
+    """
     polyx=polydata[0]#polygon x coordinates
     polyy=polydata[1]#polygon y coordinates
     if len(polyx)!=len(polyy):
@@ -888,7 +922,7 @@ def isinpolygon(x,y,polydata,*args):
         else:
             C=(polyx[i],polyy[i])
             D=(polyx[i+1],polyy[i+1])
-        if intersect(A,B,C,D)==1:
+        if __intersect(A,B,C,D)==1:
             count=count+1
     if count==1:
         return True#returns 1 if point is inside polygon 
