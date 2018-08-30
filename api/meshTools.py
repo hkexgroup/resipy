@@ -4,8 +4,8 @@ Created on Wed May 30 10:19:09 2018, python 3.6.5
 @author: jamyd91
 Import a vtk file with an unstructured grid (triangular/quad elements) and 
 creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. It is assigned a cell type according the convention in vtk files. 
-(ie. cell type 9 <- quad, cell type 5 <- triangle)
+triangular elements. module has capacity to show meshes, inverted results, apply a function 
+to mesh parameters. 
 
 Classes: 
     mesh_obj
@@ -14,8 +14,15 @@ Functions:
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
     readR2_resdat () - reads resistivity values from a R2 file. 
     quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates 
-                 (returns info needed for R2in)   
+                 (returns info needed for R2in) 
+    tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh
 
+Dependencies: 
+    numpy (conda lib)
+    matplotlib (conda lib)
+    scipy (conda lib)
+    gmshWrap(pyR2 api module)
+    python3 standard libaries
 Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
@@ -903,12 +910,19 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
-    #reads resistivity values in f00#_res.dat file output from R2, 
-#INPUT:
-    #file_path - string which maps to the _res.dat file
-#OUTPUT:
-    #res_values - resistivity values returned from the .dat file 
-################################################################################
+    """
+    reads resistivity values in f00#_res.dat file output from R2, 
+            
+    Parameters
+    ----------
+    file_path: string
+        maps to the _res.dat file
+            
+    Returns
+    ----------
+    res_values: list of floats
+        resistivity values returned from the .dat file 
+    """
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
     fh=open(file_path,'r')
@@ -922,12 +936,19 @@ def readR2_resdat(file_path):
 
 #%% read in sensitivity values 
 def readR2_sensdat(file_path):
-    #reads resistivity values in f00#_res.dat file output from R2, 
-#INPUT:
-    #file_path - string which maps to the _res.dat file
-#OUTPUT:
-    #res_values - resistivity values returned from the .dat file [list]
-################################################################################
+    """
+    reads sensitivity values in f00#_res.dat file output from R2, 
+            
+    Parameters
+    ----------
+    file_path: string
+        maps to the _sens.dat file
+            
+    Returns
+    ----------
+    res_values: list of floats
+        sensitivity values returned from the .dat file (not log10!)
+    """
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
     fh=open(file_path,'r')
@@ -942,25 +963,41 @@ def readR2_sensdat(file_path):
 
         
 #%% build a quad mesh        
-def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
-              elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
-# creates a quaderlateral mesh given the electrode x and y positions. Function
-# relies heavily on the numpy package.
-# INPUT: 
-#     elec_y - electrode x coordinates 
-#     elec_y - electrode y coordinates
-#     elemy - number of elements in the fine y region
-#     yf - y factor multiplier in the fine zone
-#     ygf - y factor multiplier in the coarse zone
-#     doi - depth of investigation (if left as -1 = half survey width)
-#     pad - x padding outside the fine area (tipicaly twice the number of elements between electrodes)
-# OUTPUT: 
-#     Mesh - mesh object 
-#     meshx - mesh x locations for R2in file 
-#     meshy - mesh y locations for R2in file (ie node depths)
-#     topo - topography for R2in file
-#     elec_node - x columns where the electrodes are 
-###############################################################################
+def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
+    """
+    creates a quaderlateral mesh given the electrode x and y positions. Function
+    relies heavily on the numpy package.
+            
+    Parameters
+    ----------
+    elec_x: list, np array
+        electrode x coordinates 
+    elec_y: list, np array
+        electrode y coordinates
+    elemy: int
+        number of elements in the fine y region
+    yf: float
+         y factor multiplier in the fine zone
+    ygf: float
+         y factor multiplier in the coarse zone
+    doi: float (m)
+         depth of investigation (if left as -1 = half survey width)
+    pad:
+         x padding outside the fine area (tipicaly twice the number of elements between electrodes)
+            
+    Returns
+    ----------
+    Mesh: class
+        mesh object 
+    meshx: np array
+        mesh x locations for R2in file 
+    meshy: np array
+        mesh y locations for R2in file (ie node depths)
+    topo: np array
+        topography for R2in file
+    elec_node: np array
+        x columns where the electrodes are 
+    """
     if elemx < 4:
         print('elemx too small, set up to 4 at least')
         elemx = 4
@@ -1094,20 +1131,29 @@ def quad_mesh(elec_x,elec_y,#doi=-1,nbe=-1,cell_height=-1,
 #%% build a triangle mesh - using the gmsh wrapper
 def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe', 
              save_path='default',**kwargs):
-    """ generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-    this function will only work if current working directory has path: exe/gmsh.exe"""
-#INPUT: 
-    #keep_files - True if the gmsh input and output file is to be stored in the exe directory
-    #show_ouput - True if gmsh output is to be printed to console 
-    #path - path to exe folder (leave default unless you know what you are doing)
-    #save_path - directory to save 'mesh.dat'
-    #adv_flag - True if using the genGeoFile_adv, if this is the case then geom_input MUST BE GIVEN
-    #geom_input - dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
-        #nb: if adv_flag is true then the first 4 arguments are ignored, so just enter empty objects for each. 
-    #**kwargs - key word arguments to be passed to genGeoFile. 
-#OUTPUT: 
-    #mesh.dat in the Executables directory
-###############################################################################
+    """ 
+    Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+    this function expects the current working directory has path: exe/gmsh.exe
+            
+    Parameters
+    ---------- 
+    keep_files: boolian
+        True if the gmsh input and output file is to be stored in the exe directory
+    show_ouput: boolian
+        True if gmsh output is to be printed to console 
+    path: string
+        path to exe folder (leave default unless you know what you are doing)
+    save_path: string
+        directory to save 'mesh.dat'
+    geom_input:
+        dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
+    **kwargs: optional
+        key word arguments to be passed to genGeoFile. 
+            
+    Returns
+    ----------
+    mesh.dat in the Executables directory
+    """
     #check directories 
     if path == "exe":
         ewd = os.path.join(
@@ -1159,10 +1205,28 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
 
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
-    #function makes a .vtk file for some xyz coordinates. optional argument
-    #renames the name of the file (needs file path also) (default is "points.vtk"). 
-    #title is the name of the vtk file
-    
+    """
+    function makes a .vtk file for some xyz coordinates. optional argument
+    renames the name of the file (needs file path also) (default is "points.vtk"). 
+    title is the name of the vtk file
+            
+    Parameters
+    ----------
+    x: list, tuple, np array
+        x coordinates of points
+    y: list, tuple, np array
+        y coordinates of points
+    z: list, tuple, np array
+        z coordinates of points
+    file_name: string, optional
+        path to saved file, defualts to 'points.vtk' in current working directory
+    title: string, optional
+        title of vtk file
+            
+    Returns
+    ----------
+    ~.vtk file
+    """
     #error check
     if len(x) != len(y) or len(x) != len(z):
         raise ValueError('mis-match between vector lengths')
