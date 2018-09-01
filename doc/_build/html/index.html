@@ -45,6 +45,49 @@
 <em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Master class to handle all processing around the inversion codes.</p>
 <dl class="method">
+<dt id="api.R2.R2.addRegion">
+<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add region according to a polyline defined by <cite>xy</cite> and assign it
+the starting resistivity <cite>res0</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>xy</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
+<dd><p class="first last">Array with two columns for the x and y coordinates.</p>
+</dd>
+<dt><strong>res0</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">Resistivity values of the defined area.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.assignRes0">
+<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign starting resitivity values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>regionValues</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd><p class="first last">Dictionnary with key beeing the region number and the value beeing
+the resistivity in [Ohm.m].</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.createMesh">
 <code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a mesh.</p>
@@ -56,6 +99,64 @@
 <dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
 <dd><p class="first last">Type of mesh. Eithter ‘quad’ or ‘trian’. If no topography, ‘quad’
 mesh will be chosen.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.createModel">
+<code class="descname">createModel</code><span class="sig-paren">(</span><em>ax=None</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>typ='rect'</em>, <em>callback=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Interactive model creation for forward modelling.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib.axes.Axes, optional</span></dt>
+<dd><p class="first last">Axes to which the graph will be plotted.</p>
+</dd>
+<dt><strong>dump</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function, optional</span></dt>
+<dd><p class="first last">Function that outputs messages from the interactive model creation.</p>
+</dd>
+<dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Type of selection either <cite>poly</cite> for polyline or <cite>rect</cite> for
+rectangle.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib.figure</span></dt>
+<dd><p class="first last">If <cite>ax</cite> is <cite>None</cite>, will return a figure.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.createSequence">
+<code class="descname">createSequence</code><span class="sig-paren">(</span><em>nelec=48, spacing=0.25, skipDepths=[(0, 10)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a dipole-dipole sequence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>nelec</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd><p class="first last">Number of electrodes.</p>
+</dd>
+<dt><strong>spacing</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd><p class="first last">Spacing between two electrodes.</p>
+</dd>
+<dt><strong>skipDepths</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple, optional</span></dt>
+<dd><p class="first last">Each tuple in the list is of the form <cite>(skip, depths)</cite>. The <cite>skip</cite> is the number of electrode between the A B and M N electrode. The <cite>depths</cite> is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.</p>
 </dd>
 </dl>
 </td>
@@ -127,10 +228,67 @@ reciprocal measurements. By default all surveys are used.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Operates forward modelling.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>noise</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional 0 &lt;= noise &lt;= 1</span></dt>
+<dd><p class="first last">Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.getResults">
 <code class="descname">getResults</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.getResults" title="Permalink to this definition">¶</a></dt>
 <dd><p>Collect inverted results after running the inversion and adding
 them to <cite>R2.meshResults</cite> list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.importElec">
+<code class="descname">importElec</code><span class="sig-paren">(</span><em>fname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.importElec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import electrodes positions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.importSequence">
+<code class="descname">importSequence</code><span class="sig-paren">(</span><em>fname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.importSequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import sequence for forward modelling.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">Path of the CSV file to be imported. The file shouldn’t have any headers just 4 columns with the 4 electrodes numbers.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -803,8 +961,8 @@ the error model to apply for IP data.</p>
 &#64;author: jamyd91
 Import a vtk file with an unstructured grid (triangular/quad elements) and 
 creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. It is assigned a cell type according the convention in vtk files. 
-(ie. cell type 9 &lt;- quad, cell type 5 &lt;- triangle)</p>
+triangular elements. module has capacity to show meshes, inverted results, apply a function 
+to mesh parameters.</p>
 <dl class="docutils">
 <dt>Classes: </dt>
 <dd>mesh_obj</dd>
@@ -813,9 +971,16 @@ triangular elements. It is assigned a cell type according the convention in vtk 
 vtk_import() - imports a triangular / quad unstructured grid from a vtk file
 readR2_resdat () - reads resistivity values from a R2 file. 
 quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates</p>
-<blockquote class="last">
+<blockquote>
 <div>(returns info needed for R2in)</div></blockquote>
+<p class="last">tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</p>
 </dd>
+<dt>Dependencies: </dt>
+<dd>numpy (conda lib)
+matplotlib (conda lib)
+scipy (conda lib)
+gmshWrap(pyR2 api module)
+python3 standard libaries</dd>
 </dl>
 <p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
 <dl class="class">
@@ -1132,6 +1297,154 @@ will be written the current working directory.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="api.meshTools.points2vtk">
+<code class="descclassname">api.meshTools.</code><code class="descname">points2vtk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em>, <em>file_name='points.vtk'</em>, <em>title='points'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.points2vtk" title="Permalink to this definition">¶</a></dt>
+<dd><p>function makes a .vtk file for some xyz coordinates. optional argument
+renames the name of the file (needs file path also) (default is “points.vtk”). 
+title is the name of the vtk file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>x: list, tuple, np array</strong></dt>
+<dd><p class="first last">x coordinates of points</p>
+</dd>
+<dt><strong>y: list, tuple, np array</strong></dt>
+<dd><p class="first last">y coordinates of points</p>
+</dd>
+<dt><strong>z: list, tuple, np array</strong></dt>
+<dd><p class="first last">z coordinates of points</p>
+</dd>
+<dt><strong>file_name: string, optional</strong></dt>
+<dd><p class="first last">path to saved file, defualts to ‘points.vtk’ in current working directory</p>
+</dd>
+<dt><strong>title: string, optional</strong></dt>
+<dd><p class="first last">title of vtk file</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>~.vtk file</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="api.meshTools.quad_mesh">
+<code class="descclassname">api.meshTools.</code><code class="descname">quad_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elemx=4</em>, <em>xgf=1.5</em>, <em>yf=1.1</em>, <em>ygf=1.5</em>, <em>doi=-1</em>, <em>pad=2</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.quad_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>creates a quaderlateral mesh given the electrode x and y positions. Function
+relies heavily on the numpy package.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>elec_x: list, np array</strong></dt>
+<dd><p class="first last">electrode x coordinates</p>
+</dd>
+<dt><strong>elec_y: list, np array</strong></dt>
+<dd><p class="first last">electrode y coordinates</p>
+</dd>
+<dt><strong>elemy: int</strong></dt>
+<dd><p class="first last">number of elements in the fine y region</p>
+</dd>
+<dt><strong>yf: float</strong></dt>
+<dd><p class="first last">y factor multiplier in the fine zone</p>
+</dd>
+<dt><strong>ygf: float</strong></dt>
+<dd><p class="first last">y factor multiplier in the coarse zone</p>
+</dd>
+<dt><strong>doi: float (m)</strong></dt>
+<dd><p class="first last">depth of investigation (if left as -1 = half survey width)</p>
+</dd>
+<dt><strong>pad:</strong></dt>
+<dd><p class="first last">x padding outside the fine area (tipicaly twice the number of elements between electrodes)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>Mesh: class</strong></dt>
+<dd><p class="first last">mesh object</p>
+</dd>
+<dt><strong>meshx: np array</strong></dt>
+<dd><p class="first last">mesh x locations for R2in file</p>
+</dd>
+<dt><strong>meshy: np array</strong></dt>
+<dd><p class="first last">mesh y locations for R2in file (ie node depths)</p>
+</dd>
+<dt><strong>topo: np array</strong></dt>
+<dd><p class="first last">topography for R2in file</p>
+</dd>
+<dt><strong>elec_node: np array</strong></dt>
+<dd><p class="first last">x columns where the electrodes are</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="api.meshTools.readR2_resdat">
+<code class="descclassname">api.meshTools.</code><code class="descname">readR2_resdat</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.readR2_resdat" title="Permalink to this definition">¶</a></dt>
+<dd><p>reads resistivity values in f00#_res.dat file output from R2,</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>file_path: string</strong></dt>
+<dd><p class="first last">maps to the _res.dat file</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>res_values: list of floats</strong></dt>
+<dd><p class="first last">resistivity values returned from the .dat file</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="api.meshTools.readR2_sensdat">
+<code class="descclassname">api.meshTools.</code><code class="descname">readR2_sensdat</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.readR2_sensdat" title="Permalink to this definition">¶</a></dt>
+<dd><p>reads sensitivity values in f00#_res.dat file output from R2,</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>file_path: string</strong></dt>
+<dd><p class="first last">maps to the _sens.dat file</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>res_values: list of floats</strong></dt>
+<dd><p class="first last">sensitivity values returned from the .dat file (not log10!)</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="api.meshTools.tri_cent">
 <code class="descclassname">api.meshTools.</code><code class="descname">tri_cent</code><span class="sig-paren">(</span><em>p</em>, <em>q</em>, <em>r</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_cent" title="Permalink to this definition">¶</a></dt>
 <dd><p>#compute the centre coordinates for a 2d triangle given the x,y coordinates 
@@ -1160,8 +1473,42 @@ will be written the current working directory.</p>
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
 <code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>save_path='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-this function will only work if current working directory has path: exe/gmsh.exe</p>
+<dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+this function expects the current working directory has path: exe/gmsh.exe</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt><strong>keep_files: boolian</strong></dt>
+<dd><p class="first last">True if the gmsh input and output file is to be stored in the exe directory</p>
+</dd>
+<dt><strong>show_ouput: boolian</strong></dt>
+<dd><p class="first last">True if gmsh output is to be printed to console</p>
+</dd>
+<dt><strong>path: string</strong></dt>
+<dd><p class="first last">path to exe folder (leave default unless you know what you are doing)</p>
+</dd>
+<dt><strong>save_path: string</strong></dt>
+<dd><p class="first last">directory to save ‘mesh.dat’</p>
+</dd>
+<dt><strong>geom_input:</strong></dt>
+<dd><p class="first last">dictionary used to generate survey geometry in genGeoFile_adv (see notes there),</p>
+</dd>
+<dt><strong>**kwargs: optional</strong></dt>
+<dd><p class="first last">key word arguments to be passed to genGeoFile.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
+<dt><strong>mesh.dat in the Executables directory</strong></dt>
+<dd></dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
