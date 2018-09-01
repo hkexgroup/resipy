@@ -85,19 +85,18 @@ def res2invInputParser(file_path):
     
     Parameters
     -----------
-    #file_path : string 
+    file_path : string 
      string mapping to the res2inv input file 
     
     Returns
     ----------
-    #elec : np array
-    electrode coordinate matrix in the form | x | y | z |
-    #df: pandas dataframe
-    dataframe which holds the electrode numbers for in feild measurements and 
-    apparent resistivities (Rho) and transfer resistances 
+    elec : np array
+        electrode coordinate matrix in the form | x | y | z |
+    df: pandas dataframe
+        dataframe which holds the electrode numbers for in feild measurements and 
+        apparent resistivities (Rho) and transfer resistances 
     
-## TODO : add capacity to read in borehole surveys 
-###############################################################################
+    ## TODO : add capacity to read in borehole surveys 
     """
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
@@ -208,15 +207,18 @@ def dataframe2dat(df,save_path='default',
     
     Parameters
     -----------
-    #df - dataframe output by a r2gui parsers
-    #save_path - file path to save location, if left default 'protocal.dat' is written to the working directory 
-    ref_flag - not working currently. if a reference set of transfer resistances is to be used then set to true
-    err_flag - if errors are going to be written to the r2 file. Currently uses 'dev' key in the pandas dataframe
+    df: pandas dataframe
+        dataframe output by a r2gui parsers
+    save_path: string
+        file path to save location, if left default 'protocal.dat' is written to the working directory 
+    ref_flag: boolian
+        not working currently. if a reference set of transfer resistances is to be used then set to true
+    err_flag: boolian
+        if errors are going to be written to the r2 file. Currently uses 'dev' key in the pandas dataframe
     
     Returns
     -----------
-    #protocal.dat written to specificied folder/directory
-###############################################################################
+    protocal.dat written to specificied folder/directory
     """
     num_meas = len(df)
     
