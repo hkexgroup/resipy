@@ -31,10 +31,10 @@ from scipy.interpolate import griddata
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 #import R2gui API package 
-if __name__ =="__main__" or __name__=="meshTools":
-    import gmshWrap as gw 
-else:
-    import api.gmshWrap as gw
+#if __name__ =="__main__" or __name__=="meshTools":
+#    import gmshWrap as gw 
+#else:
+import api.gmshWrap as gw
 
 #%% create mesh object
 class Mesh_obj: 
@@ -1181,6 +1181,18 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=4)
 #mesh.show(color_bar=False)
+
+
+# testing automatic selection
+#plt.ion()
+#from api.SelectPoints import SelectPoints
+#from matplotlib.patches import Rectangle
+#fig, ax = plt.subplots()
+#mesh.show(ax=ax)
+#rect = Rectangle([0,0], 1,-2, alpha=0.3, color='red')
+#ax.add_artist(rect)
+#selector = SelectPoints(ax, np.array(mesh.elm_centre).T, typ='rect')
+
 
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)

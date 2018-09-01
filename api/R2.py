@@ -21,6 +21,8 @@ from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
 from api.meshTools import Mesh_obj, tri_mesh
+from api.sequenceHelper import ddskip
+from api.SelectPoints import SelectPoints
 
 
 class R2(object): # R2 master class instanciated by the GUI
@@ -245,6 +247,10 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
+        
+        self.regid = 0
+        self.regions = np.zeros(len(self.mesh.elm_centre[0]))
+        self.resist0 = np.ones(len(self.regions))*100
         
         
     def showMesh(self, ax=None):
@@ -590,6 +596,180 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
+    def addRegion(self, xy, res0, ax=None):
+        """ Add region according to a polyline defined by `xy` and assign it
+        the starting resistivity `res0`.
+        
+        Parameters
+        ----------
+        xy : array
+            Array with two columns for the x and y coordinates.
+        res0 : float
+            Resistivity values of the defined area.
+        """
+        
+        if ax is None:
+            fig, ax = plt.subplots()
+        self.mesh.show(ax=ax)
+        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T,
+                                typ='poly')
+        selector.setVertices(xy)
+        selector.getPointsInside()
+        idx = selector.iselect
+        self.regid = self.regid + 1
+        self.regions[idx] = self.regid
+        self.resist0[idx] = res0
+        
+
+    def createModel(self, ax=None, dump=print, typ='rect', callback=None):
+        """ Interactive model creation for forward modelling.
+        
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Axes to which the graph will be plotted.
+        dump : function, optional
+            Function that outputs messages from the interactive model creation.
+        typ : str
+            Type of selection either `poly` for polyline or `rect` for
+            rectangle.
+        
+        Returns
+        -------
+        fig : matplotlib.figure
+            If `ax` is `None`, will return a figure.
+        """
+        if self.mesh is None:
+            print('will create a mesh before')
+            self.createMesh()
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+        # regions definition
+#        self.mesh.add_attribute()
+        if callback is None:
+            def callback(idx):
+                print('nb elements selected:', np.sum(idx))
+#                res = input('Input the resistivity [Ohm.m] of the section:')
+#                print(res)
+                self.regid = self.regid + 1
+                self.regions[idx] = self.regid
+        self.mesh.show(ax=ax)
+        # we need to assign a selector to self otherwise it's not used
+        self.selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T,
+                                     typ=typ, callback=callback)
+        if ax is None:
+            return fig
+            
+        
+    def assignRes0(self, regionValues={}):
+        """ Assign starting resitivity values.
+        
+        Parameters
+        ----------
+        regionValues : dict
+            Dictionnary with key beeing the region number and the value beeing
+            the resistivity in [Ohm.m].
+        """
+        for key in regionValues.keys():
+            self.resist0[self.regions == key] = regionValues[key]
+        
+        
+    def createSequence(self, nelec=48, spacing=0.25, skipDepths=[(0, 10)]):
+        """ Create a dipole-dipole sequence.
+        
+        Parameters
+        ----------
+        nelec : int, optional
+            Number of electrodes.
+        spacing : float, optional
+            Spacing between two electrodes.
+        skipDepths : list of tuple, optional
+            Each tuple in the list is of the form `(skip, depths)`. The `skip` is the number of electrode between the A B and M N electrode. The `depths` is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.
+        """
+        qs = []
+        for sd in skipDepths:
+            elec, quad = ddskip(nelec, spacing, skip=sd[0], depth=sd[1])
+            qs.append(quad)
+        qs = np.vstack(qs)
+        self.sequence = qs
+        self.elec = elec
+    
+    
+    def importElec(self, fname=''):
+        """ Import electrodes positions.
+        
+        Parameters
+        ----------
+        fname : str
+            Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
+        """
+        elec = pd.read_csv(fname)
+        if elec.shape[1] > 3:
+            raise ValueError('The file should have no more than 3 columsn')
+        else:
+            self.elec = elec
+            
+    
+    def importSequence(self, fname=''):
+        """ Import sequence for forward modelling.
+        
+        Parameters
+        ----------
+        fname : str
+            Path of the CSV file to be imported. The file shouldn't have any headers just 4 columns with the 4 electrodes numbers.
+        """
+        seq = pd.read_csv(fname)
+        if seq.shape[1] != 4:
+            raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
+        else:
+            self.sequence = seq
+    
+    
+    def forward(self, noise=0):
+        """ Operates forward modelling.
+        
+        Parameters
+        ----------
+        noise : float, optional 0 <= noise <= 1
+            Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained. 
+        """
+        fwdDir = os.path.join(self.dirname, 'fwd')
+        if os.path.exists(fwdDir):
+            shutil.rmtree(fwdDir)
+        os.mkdir(fwdDir)
+        
+        # write the resistivity.dat
+        centroids = np.array(self.mesh.elm_centre).T
+        resFile = np.zeros((centroids.shape[0],4)) # centroix x, y, z, res0
+        resFile[:,:centroids.shape[1]] = centroids
+        resFile[:,-1] = self.resist0
+        np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
+                   fmt='%.3f')
+        shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+                    os.path.join(fwdDir, 'mesh.dat'))
+        
+        # write the forward .in file
+        content = 'Forward model\n'
+        content = content + '0 0 << job_type, singularity_type\n'
+        content = content + '0 << num_regions\nresistivity.dat\n'
+        param = self.param.copy()
+        param['num_elec'] = param['node_elec'].shape[0]
+        content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
+        content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
+            *param['node_elec'].flatten())
+        
+        with open(os.path.join(fwdDir, 'R2.in'), 'w') as f:
+            f.write(content)
+            
+        # operate inversion and create a Survey object
+        self.runR2(fwdDir) # this will copy the R2.exe inside as well
+        
+        
+        
+        
+    
     def showIter(self, ax=None):
         """ Dispay temporary inverted section after each iteration.
         
@@ -756,3 +936,19 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showResults(index=1)
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
 #k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))
+
+
+#%% forward modelling
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k.elec = np.c_[np.arange(24), np.zeros((24, 2))]
+#k.createMesh(typ='trian')
+#
+## full API function
+#k.addRegion(np.array([[2,0],[3,0],[3,-1],[2,-1],[2,0]]), 40)
+#
+## full GUI function
+##k.createModel()
+##k.assignRes0({1:30,2:30,3:40,4:120})
+#
+#k.forward()
