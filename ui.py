@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
     QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
     QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
-    QStackedLayout, QRadioButton)
+    QStackedLayout, QRadioButton, QGroupBox, QButtonGroup)
 from PyQt5.QtGui import QIcon, QKeySequence, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
@@ -136,7 +136,7 @@ class App(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
         self.setWindowTitle('pyR2')
-        self.setGeometry(100,100,1000,600)
+        self.setGeometry(100,100,1100,600)
         newwd = os.path.join(bundle_dir, 'api', 'invdir')
         if os.path.exists(newwd):
             shutil.rmtree(newwd)
@@ -154,7 +154,7 @@ class App(QMainWindow):
             else:
                 col = 'black'
             errorLabel.setText('<i style="color:'+col+'">'+text+'</i>')
-        errorLabel = QLabel('<i style="color:black">Error message will be display here</i>')
+        errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
         
         #%% tab 1 importing data
         tabImporting = QTabWidget()
@@ -162,9 +162,7 @@ class App(QMainWindow):
         
         tabImportingData = QWidget()
         tabImporting.addTab(tabImportingData, 'Data')
-        
-        gridImport = QGridLayout()
-        topLayout = QHBoxLayout()
+        tabImportingDataLayout = QVBoxLayout()
         
         # restart all new survey
         def restartFunc():
@@ -242,16 +240,18 @@ class App(QMainWindow):
         restartBtn = QPushButton('Reset UI')
         restartBtn.clicked.connect(restartFunc)
         
-        def dimSurvey():
+        def dimSurvey():                
             if dimRadio2D.isChecked():
                 self.r2.typ = self.r2.typ.replace('3','2')
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
+                elecDy.setEnabled(False)
                 print(self.r2.typ)
             else:
                 self.r2.typ = self.r2.typ.replace('2','3')
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
+                elecDy.setEnabled(True)
                 print(self.r2.typ)
                 
         dimRadio2D = QRadioButton('2D')
@@ -260,10 +260,16 @@ class App(QMainWindow):
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
         dimRadio3D.setEnabled(False)
-#        dimRadio3D.stateChanged.connect(dimSurvey)
+        dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
         dimLayout.addWidget(dimRadio3D)
+        dimGroup = QGroupBox()
+        dimGroup.setLayout(dimLayout)
+        dimGroup.setFlat(True)
+        dimGroup.setStyleSheet('QGroupBox{border: 1px;'
+                        'padding: 0 0 0 0;'
+                        'margin:0 0 0 0}')
 
         # meta data (title and date of survey)
         title = QLabel('Title')
@@ -302,18 +308,102 @@ class App(QMainWindow):
                 
         boreholeCheck = QCheckBox('Borehole Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
+
+        # select inverse or forward model
+        def dimForwardFunc():
+            print('forward')
+            fileType.setEnabled(False)
+            spacingEdit.setReadOnly(True)
+            dimInverse.setChecked(False)
+            tabs.setTabEnabled(1,False)
+            tabs.setTabEnabled(3, True)
+            tabImporting.setTabEnabled(1, True)
+            buttonf.setEnabled(False)
+        def dimInverseFunc():
+            fileType.setEnabled(True)
+            dimForward.setChecked(False)
+            spacingEdit.setReadOnly(False)
+            tabs.setTabEnabled(1,True)
+            tabs.setTabEnabled(3, False)
+            tabImporting.setTabEnabled(1, False)
+            buttonf.setEnabled(True)
+        dimForward = QRadioButton('Forward')
+        dimForward.setChecked(False)
+        dimForward.toggled.connect(dimForwardFunc)
+        dimInverse = QRadioButton('Inverse')
+        dimInverse.setChecked(True)
+        dimInverse.toggled.connect(dimInverseFunc)
+        dimInvLayout = QHBoxLayout()
+        dimInvLayout.addWidget(dimForward)
+        dimInvLayout.addWidget(dimInverse)
+        dimInvGroup = QGroupBox()
+        dimInvGroup.setLayout(dimInvLayout)
+        dimInvGroup.setFlat(True)
+        dimInvGroup.setStyleSheet('QGroupBox{border: 5px;'
+                                'border-style:inset;'
+                                'padding:0px;'
+                                'margin:0px;}'
+                                  'QGroupBox:title{'
+                                  'border:2px;'
+                                  'border-color:red;'
+                                  'padding:0px;'
+                                  'margin:0px;'
+                                  'subcontrol-origin: margin;'
+                                  'subcontrol-position: top center;};')
+        
+        
         
         hbox1 = QHBoxLayout()
-        hbox1.addWidget(restartBtn, 10)
+        hbox1.addWidget(restartBtn, 4)
+#        hbox1.addWidget(dimRadio2D, 6)
+#        hbox1.addWidget(dimRadio3D, 6)
+#        rs0 = QWidget()
+#        r0 = QRadioButton('a', rs0)
+#        r1 = QRadioButton('b', rs0)
+#        rs1 = QWidget()
+#        r2 = QRadioButton('c', rs1)
+#        r3 = QRadioButton('d', rs1)
+#        gr1 = QGroupBox()
+#        gr1.addButton(r0)
+#        gr1.addButton(r1)
+#        gr1.addButton(r0)
+#        r0.setChecked(True)
+#        gr1.addButton(r1)
+#        gr2 = QButtonGroup()
+#        gr2.addButton(r2)
+#        r2.setChecked(True)
+#        gr2.addButton(r3)
+#        hbox1.addWidget(r0)
+#        hbox1.addWidget(r1)
+#        hbox1.addWidget(r2)
+#        hbox1.addWidget(r3)
+        hbox1.addWidget(dimGroup, 20)
         hbox1.addWidget(title, 5)
-        hbox1.addWidget(titleEdit, 85)
-        hbox1.addWidget(timeLapseCheck, 10)
+        hbox1.addWidget(titleEdit, 60)
+        hbox1.addWidget(timeLapseCheck, 15)
         
         hbox2 = QHBoxLayout()
-        hbox2.addLayout(dimLayout, 10)
+#        hbox2.addWidget(dimForward, 10)
+#        hbox2.addWidget(dimInverse, 10)
+        hbox2.addWidget(dimInvGroup, 20)
         hbox2.addWidget(date, 5)
-        hbox2.addWidget(dateEdit, 85)
-        hbox2.addWidget(boreholeCheck, 10)
+        hbox2.addWidget(dateEdit, 60)
+        hbox2.addWidget(boreholeCheck, 15)
+        
+#        gridLayout = QGridLayout()
+#        gridLayout.addWidget(title, 0, 0)
+#        gridLayout.addWidget(titleEdit, 0, 1)
+#        gridLayout.addWidget(timeLapseCheck, 0, 2)
+#        gridLayout.addWidget(date, 1, 0)
+#        gridLayout.addWidget(dateEdit, 1, 1)
+#        gridLayout.addWidget(boreholeCheck, 1, 2)
+#        
+#        topLayout = QHBoxLayout()
+#        topLayout.addWidget(restartBtn, 5)
+#        topLayout.addWidget(dimGroup, 5)
+#        topLayout.addLayout(gridLayout, 90)
+#        
+
         
         # ask for working directory, and survey file to input
         def getwd():
@@ -409,9 +499,9 @@ class App(QMainWindow):
         buttonfr.clicked.connect(getfileR)
         
         hbox4 = QHBoxLayout()
-        hbox4.addWidget(fileType, 15)
+        hbox4.addWidget(fileType, 10)
         hbox4.addWidget(spacingEdit, 10)
-        hbox4.addWidget(buttonf, 70)
+        hbox4.addWidget(buttonf, 80)
         
         def diplayPseudoIP(state):
             if state  == Qt.Checked:
@@ -442,16 +532,14 @@ class App(QMainWindow):
         hbox5.addWidget(ipCheck)
         
         metaLayout = QVBoxLayout()
+#        metaLayout.addLayout(topLayout)
         metaLayout.addLayout(hbox1)
         metaLayout.addLayout(hbox2)
         metaLayout.addWidget(wdBtn)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
-        topLayout.addLayout(metaLayout, 60)
+        tabImportingDataLayout.addLayout(metaLayout, 40)
 
-        
-#        topLayout.addLayout(topoLayout)
-        gridImport.addLayout(topLayout, 0, 0)        
         
         def plotPseudo():
             mwPseudo.plot(self.r2.pseudo)
@@ -468,15 +556,8 @@ class App(QMainWindow):
         mwPseudoIP.setVisible(False)
         pseudoLayout.addWidget(mwPseudoIP)
         
-        gridImport.addLayout(pseudoLayout, 1, 0)
-        
-#        def plotError():
-#            mwError.plot(self.r2.surveys[0].plotError)
-#            
-#        mwError = MatplotlibWidget()
-#        grid.addWidget(mwError, 4, 1)
-        
-        tabImportingData.setLayout(gridImport)
+        tabImportingDataLayout.addLayout(pseudoLayout, 60)
+        tabImportingData.setLayout(tabImportingDataLayout)
         
         # topo informations
         tabImportingTopo = QWidget()
@@ -602,15 +683,59 @@ class App(QMainWindow):
         
         elecTable = ElecTable(visible=True, headers=['x','z','Buried'])
         elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
-                           The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).</i>')
+                           The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
+                           You can also use the form below to generate \
+                           regular electrode spacing.</i>')
+        elecLabel.setWordWrap(True)
         elecButton = QPushButton('Import from CSV files (no headers)')
         elecButton.clicked.connect(elecTable.readTable)
+        nbElecEdit = QLineEdit()
+        nbElecEdit.setValidator(QIntValidator())
+        nbElecLabel = QLabel('Number of electrodes:')
+        elecDx = QLineEdit('0.0')
+        elecDx.setValidator(QDoubleValidator())
+        elecDxLabel = QLabel('X spacing:')
+        elecDy = QLineEdit('0.0')
+        elecDy.setValidator(QDoubleValidator())
+        elecDy.setEnabled(False)
+        elecDyLabel = QLabel('Y spacing:')
+        elecDz = QLineEdit('0.0')
+        elecDz.setValidator(QDoubleValidator())
+        elecDzLabel = QLabel('Z spacing:')
+        def elecGenButtonFunc():
+            nbElec = int(nbElecEdit.text())
+            dx = float(elecDx.text())
+            dy = float(elecDy.text())
+            dz = float(elecDz.text())
+            if 'y' in elecTable.headers: # 3D case
+                electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
+                              np.linspace(0.0, (nbElec-1)*dy, nbElec),
+                              np.linspace(0.0, (nbElec-1)*dz, nbElec)]
+            else:
+                electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
+                              np.linspace(0.0, (nbElec-1)*dz, nbElec)]
+            elecTable.initTable(electrodes, elecTable.headers)
+        elecGenButton = QPushButton('Generate')
+        elecGenButton.clicked.connect(elecGenButtonFunc)
+        elecGenLayout = QHBoxLayout()
+        elecGenLayout.addWidget(nbElecLabel)
+        elecGenLayout.addWidget(nbElecEdit)
+        elecGenLayout.addWidget(elecDxLabel)
+        elecGenLayout.addWidget(elecDx)
+        elecGenLayout.addWidget(elecDyLabel)
+        elecGenLayout.addWidget(elecDy)
+        elecGenLayout.addWidget(elecDzLabel)
+        elecGenLayout.addWidget(elecDz)
+        elecGenLayout.addWidget(elecGenButton)
         topoLayout.addWidget(elecLabel)
+        topoLayout.addLayout(elecGenLayout)
         topoLayout.addWidget(elecButton)
         topoLayout.addWidget(elecTable)
         
         topoTable = ElecTable(visible=True, headers=['x','z'])
-        topoLabel = QLabel('<i>Add additional surface points. You can use <code>Ctrl+V</code> to paste directly into a cell.</i>')
+        topoLabel = QLabel('<i>Add additional surface points. \
+                           You can use <code>Ctrl+V</code> to paste directly \
+                           into a cell.</i>')
         topoButton = QPushButton('Import from CSV files (no headers)')
         topoButton.clicked.connect(topoTable.readTable)
         topoLayout.addWidget(topoLabel)
@@ -630,7 +755,7 @@ class App(QMainWindow):
             mwManualFiltering.plot(self.r2.surveys[0].manualFilter)
         
         def btnDoneFunc():
-            print('we are done, that is it !')
+            print('Data have been manually filtered')
             
         notice = QLabel('Press "Start" and then click on the dots to select them. Press "Done" to remove them.')
         manualLayout.addWidget(notice)
@@ -886,12 +1011,16 @@ class App(QMainWindow):
                 scale.setVisible(True)
                 scaleLabel.setVisible(True)
                 self.r2.createMesh(typ='trian')
-                # TODO to implemente the triangular mesh
             else:
                 print('NOT IMPLEMENTED')
             print(self.r2.mesh.summary())
-            mwMesh.plot(self.r2.mesh.show) # mesh.show() is the callback function to be called with ax
-        
+            regionTable.reset()
+            def func(ax):
+                self.r2.createModel(ax=ax, addAction=regionTable.addRow)
+            mwMesh.plot(func)
+            mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
+            mwMesh.canvas.setFocus() # set focus on the canvas
+            
         
         meshType = QComboBox()
         meshType.addItem('Please choose a mesh...')
@@ -905,7 +1034,14 @@ class App(QMainWindow):
         def updateMesh():
             nnodes = int(nnodesEdit.text())
             self.r2.createMesh(typ='quad', elemx=nnodes)
-            mwMesh.plot(self.r2.mesh.show)
+#            mwMesh.plot(self.r2.mesh.show)
+            regionTable.reset()
+            def func(ax):
+                self.r2.createModel(ax=ax, addAction=regionTable.addRow)
+            mwMesh.plot(func)
+            mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
+            mwMesh.canvas.setFocus() # set focus on the canvas
+            
         nnodesLabel = QLabel('Number of nodes between electrode:')
         meshOptionLayout.addWidget(nnodesLabel)
         nnodesEdit = QLineEdit()
@@ -920,8 +1056,58 @@ class App(QMainWindow):
         
         meshLayout.addLayout(meshOptionLayout)
         
+        
+        class RegionTable(QTableWidget):
+            def __init__(self):
+                nrow, ncol = 1, 1
+                super(RegionTable, self).__init__(nrow, ncol)
+                self.nrow = nrow
+                self.ncol = ncol
+                self.setColumnCount(self.ncol)
+                self.setRowCount(self.nrow)
+                self.headers = ['Resistivity [Ohm.m]']
+                self.setHorizontalHeaderLabels(self.headers)
+                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                self.setItem(0,0,QTableWidgetItem('100.0'))
+
+            
+            def addRow(self):
+                print('row added')
+                self.nrow = self.nrow + 1
+                self.setRowCount(self.nrow)
+                
+            def getTable(self):
+                table = np.zeros((self.nrow, self.ncol))
+                for i in range(self.ncol):
+                    for j in range(self.nrow):
+                        table[j,i] = float(self.item(j,i).text())
+                return table
+            
+            def reset(self):
+                self.nrow = 1
+                self.setRowCount(1)
+        
+                
         mwMesh = MatplotlibWidget(navi=True)
-        meshLayout.addWidget(mwMesh)
+        
+
+        def regionButtonFunc():
+            print('he eh clicked')
+            self.r2.selector.connect() # reconnect the selector
+            # TODO activate other selection of region
+        regionButton = QPushButton('New Region')
+        regionButton.clicked.connect(regionButtonFunc)
+        regionTable = RegionTable()
+        regionLayout = QVBoxLayout()
+        regionLayout.addWidget(regionButton)
+        regionLayout.addWidget(regionTable)
+        
+        meshPlotLayout = QHBoxLayout()
+        meshPlotLayout.addWidget(mwMesh, 85)
+        meshPlotLayout.addLayout(regionLayout, 15)
+        meshLayout.addLayout(meshPlotLayout)
+        
+        
         
         '''
         def changeValue(value):
@@ -951,6 +1137,92 @@ class App(QMainWindow):
        
         tabMesh.setLayout(meshLayout)
         
+        #%% tab Forward model
+        tabForward = QWidget()
+        tabs.addTab(tabForward, 'Forward model')
+        tabs.setTabEnabled(3, False)
+        
+        
+        # add table for sequence generation
+        seqLabel = QLabel('Define the number of skip and levels in the table.'
+                          'Take into account the specifications of your instrument to'
+                          'obtain realistic simulation results.')
+        seqLabel.setWordWrap(True)
+        
+        class SequenceTable(QTableWidget):
+            def __init__(self):
+                nrow, ncol = 1, 2
+                super(SequenceTable, self).__init__(nrow, ncol)
+                self.nrow = nrow
+                self.ncol = ncol
+                self.setColumnCount(self.ncol)
+                self.setRowCount(self.nrow)
+                self.headers = ['Skip', 'Levels']
+                self.setHorizontalHeaderLabels(self.headers)
+                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                self.setItem(0,0,QTableWidgetItem('0'))
+                self.setItem(0,1,QTableWidgetItem('10'))
+
+            
+            def addRow(self):
+                self.nrow = self.nrow + 1
+                self.setRowCount(self.nrow)
+                
+            def getTable(self):
+                table = np.zeros((self.nrow, self.ncol))
+                for i in range(self.ncol):
+                    for j in range(self.nrow):
+                        table[j,i] = int(self.item(j,i).text())
+                return table
+            
+            def reset(self):
+                self.nrow = 1
+                self.setRowCount(1)
+        
+        seqTable = SequenceTable()
+        seqReset = QPushButton('Reset')
+        seqReset.clicked.connect(seqTable.reset)
+        seqAddRow = QPushButton('Add Row')
+        seqAddRow.clicked.connect(seqTable.addRow)
+        def seqCreateFunc():
+            skipDepths = [tuple(a) for a in list(seqTable.getTable())]
+            print(skipDepths)
+            self.r2.createSequence(skipDepths=skipDepths)
+        seqCreate = QPushButton('Create Sequence')
+        seqCreate.clicked.connect(seqCreateFunc)
+    
+        
+        # add a forward button
+        def forwardBtnFunc():
+            print('run forward modelling and write protocol.dat')
+            self.r2.forward(noise=0.05)
+            forwardLabel.setText('Forward model finished.')
+        forwardBtn = QPushButton('Forward Modelling')
+        forwardBtn.clicked.connect(forwardBtnFunc)
+        
+        forwardLabel = QLabel('Clicked to make the forward model.')
+        
+        # layout
+        forwardLayout = QVBoxLayout()
+        seqLayout = QHBoxLayout()
+        seqBtnLayout = QVBoxLayout()
+        seqBtnLayoutH = QHBoxLayout()
+        
+        seqBtnLayoutH.addWidget(seqAddRow)
+        seqBtnLayoutH.addWidget(seqReset)
+        
+        seqBtnLayout.addLayout(seqBtnLayoutH)
+        seqBtnLayout.addWidget(seqCreate)
+        
+        seqLayout.addWidget(seqTable)
+        seqLayout.addLayout(seqBtnLayout)
+        
+        forwardLayout.addWidget(seqLabel)
+        forwardLayout.addLayout(seqLayout)
+        forwardLayout.addWidget(forwardBtn)
+        forwardLayout.addWidget(forwardLabel)
+        
+        tabForward.setLayout(forwardLayout)
         
         #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()

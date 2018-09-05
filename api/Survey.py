@@ -36,6 +36,12 @@ class Survey(object):
         spacing : float, optional
             This will be passed to the parser function to determine the
             electrode positions.
+        elec : array
+            Array with 3 columsn with the electrodes position in X, Y and Z.
+        data : pandas.DataFrame
+            Dataframe containing the 'a','b','m','n','resist' columns. Note
+            that  `resist` is the *transfer resistance* not the apparent
+            resistivity.
         """
         self.elec = []
         self.df = pd.DataFrame()
@@ -47,6 +53,9 @@ class Survey(object):
             elec, data = protocolParser(fname)
         elif ftype == 'Res2Dinv':
             elec, data = res2invInputParser(fname)
+#        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
+#            pass # manual set up
+#            print('Manual set up, no data will be imported')
         else:
             raise Exception('Sorry this file type is not implemented yet')
         

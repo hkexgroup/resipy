@@ -52,6 +52,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iBorehole = False
         self.iTimeLapse = False
         self.meshResults = [] # contains vtk mesh object of inverted section
+        self.sequence = None # quadrupoles sequence if forward model
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -76,7 +77,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = dirname
     
     
-    def createSurvey(self, fname, ftype='Syscal', info={}, spacing=None):
+    def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -424,7 +425,7 @@ class R2(object): # R2 master class instanciated by the GUI
         os.chdir(cwd)
         
         
-    def invert(self, param={}, iplot=True, dump=print):
+    def invert(self, param={}, iplot=False, dump=print):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -451,7 +452,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #        if self.configFile == '':
         self.write2in(param=param)
         
-        self.write2protocol()    
+        self.write2protocol()
              
         if self.iTimeLapse == True:
             refdir = os.path.join(self.dirname, 'ref')
@@ -621,7 +622,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0[idx] = res0
         
 
-    def createModel(self, ax=None, dump=print, typ='rect', callback=None):
+    def createModel(self, ax=None, dump=print, typ='poly', addAction=None):
         """ Interactive model creation for forward modelling.
         
         Parameters
@@ -648,13 +649,14 @@ class R2(object): # R2 master class instanciated by the GUI
             fig = ax.figure
         # regions definition
 #        self.mesh.add_attribute()
-        if callback is None:
-            def callback(idx):
-                print('nb elements selected:', np.sum(idx))
+        def callback(idx):
+            print('nb elements selected:', np.sum(idx))
 #                res = input('Input the resistivity [Ohm.m] of the section:')
 #                print(res)
-                self.regid = self.regid + 1
-                self.regions[idx] = self.regid
+            self.regid = self.regid + 1
+            self.regions[idx] = self.regid
+            if addAction is not None:
+                addAction()
         self.mesh.show(ax=ax)
         # we need to assign a selector to self otherwise it's not used
         self.selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T,
@@ -676,7 +678,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.resist0[self.regions == key] = regionValues[key]
         
         
-    def createSequence(self, nelec=48, spacing=0.25, skipDepths=[(0, 10)]):
+    def createSequence(self, skipDepths=[(0, 10)]):
         """ Create a dipole-dipole sequence.
         
         Parameters
@@ -689,12 +691,12 @@ class R2(object): # R2 master class instanciated by the GUI
             Each tuple in the list is of the form `(skip, depths)`. The `skip` is the number of electrode between the A B and M N electrode. The `depths` is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.
         """
         qs = []
+        nelec = len(self.elec)
         for sd in skipDepths:
-            elec, quad = ddskip(nelec, spacing, skip=sd[0], depth=sd[1])
+            elec, quad = ddskip(nelec, spacing=1, skip=int(sd[0]), depth=int(sd[1]))
             qs.append(quad)
         qs = np.vstack(qs)
         self.sequence = qs
-        self.elec = elec
     
     
     def importElec(self, fname=''):
@@ -727,7 +729,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0):
+    def forward(self, noise=0.05):
         """ Operates forward modelling.
         
         Parameters
@@ -751,23 +753,58 @@ class R2(object): # R2 master class instanciated by the GUI
                     os.path.join(fwdDir, 'mesh.dat'))
         
         # write the forward .in file
-        content = 'Forward model\n'
-        content = content + '0 0 << job_type, singularity_type\n'
-        content = content + '0 << num_regions\nresistivity.dat\n'
-        param = self.param.copy()
-        param['num_elec'] = param['node_elec'].shape[0]
-        content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
-        content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
-            *param['node_elec'].flatten())
+        fparam = self.param.copy()
+        fparam['job_type'] = 0
+        write2in(fparam, fwdDir, typ=self.typ)
         
-        with open(os.path.join(fwdDir, 'R2.in'), 'w') as f:
-            f.write(content)
-            
-        # operate inversion and create a Survey object
+        # write the protocol.dat (that contains the sequence)
+        if self.sequence is None:
+            self.createSequence()
+        seq = self.sequence
+        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        outputname = os.path.join(fwdDir, 'protocol.dat')
+        with open(outputname, 'w') as f:
+            f.write(str(len(protocol)) + '\n')
+        with open(outputname, 'a') as f:
+            protocol.to_csv(f, sep='\t', header=False, index=False)
+    
+        # fun the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
         
+        # create a protocol.dat file (overwrite the method)
+        def addnoise(x, level=0.05):
+            return np.random.normal(x,level,1)
+        addnoise = np.vectorize(addnoise)
+        self.noise = noise
         
+#        def func():
+#            x = np.genfromtxt(os.path.join(fwdDir, 'R2_forward.dat'), skip_header=1)
+#            x[:,5] = addnoise(x[:,5], self.noise)
+#            df = pd.DataFrame(x[:,:-1])
+#            invName = os.path.join(self.dirname, 'protocol.dat')
+#            with open(invName, 'w') as f:
+#                f.write(str(len(df)) + '\n')
+#            with open(invName, 'a') as f:
+#                df.to_csv(f, sep='\t', header=False, index=False)
+#        
+#        self.write2protocol = func # OVERWRITE R2.write2protocol()
+#        self.write2protocol()        
         
+#        x = np.genfromtxt(os.path.join(fwdDir, 'R2_forward.dat'), skip_header=1)
+#        x[:,5] = addnoise(x[:,5], self.noise)
+#        df = pd.DataFrame(x[:,1:-1], columns=['a','b','m','n','forward'])
+    
+        elec = self.elec.copy()
+        self.createSurvey(os.path.join(fwdDir, 'R2_forward.dat'), ftype='Protocol')
+        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], noise)
+        self.elec = elec
+        
+#        data = df.copy()
+#        data['irecip'] = 0
+#        s = Survey(elec=elec, data=data)
+#        self.surveys.append(s)
+        
+        self.write2protocol()
         
     
     def showIter(self, ax=None):
@@ -948,7 +985,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.addRegion(np.array([[2,0],[3,0],[3,-1],[2,-1],[2,0]]), 40)
 #
 ## full GUI function
-##k.createModel()
-##k.assignRes0({1:30,2:30,3:40,4:120})
+#k.createModel()
+#k.assignRes0({1:30,2:30,3:40,4:120})
 #
 #k.forward()
+#k.invert()

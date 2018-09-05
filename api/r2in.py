@@ -90,7 +90,7 @@ def write2in(param, dirname, typ='R2'):
     elif param['mesh_type'] == 3:
         if typ == 'R2':
             content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
-        # not scaling for cR2
+        # no scaling for cR2
     else:
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])
@@ -103,7 +103,7 @@ def write2in(param, dirname, typ='R2'):
             param['regions'] = np.array([[1, len(meshx)-1, 1, len(meshy)-1, 1, -0.1]])
     if param['num_regions'] > 0:
         if typ == 'R2':            
-            content = content + ''.join(['\t{}\t{}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
+            content = content + ''.join(['\t{:.0f}\t{:.0f}\t{} << elem_1, elem_2, value\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
         elif typ =='cR2':
             if param['mesh_type'] == 4:
                 content = content + ''.join(['\t{:.0f}\t{:.0f}\t{:.0f}\t{:.0f}\t{}\t{} << nx1, nx2, nz1, nz2, resis, phase\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
@@ -111,38 +111,41 @@ def write2in(param, dirname, typ='R2'):
                 content = content + ''.join(['\t{:.0f}\t{:.0f}\t{}\t{} << elem_1, elem_2, resist, phase\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
     if param['mesh_type'] == 4:
         content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
-    if param['job_type'] == 1 & param['mesh_type'] == 4|5:
-        content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
-                param['patchx'], param['patchy'])
-    if typ == 'R2':
-        content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
-                param['inverse_type'],
-                param['target_decrease'])    
-        content = content + '{}\t{}\t<< data type (0=normal;1=log), regularization type\n\n'.format(
-                param['data_type'],
-                param['reg_mode'])
-    elif typ == 'cR2':
-        content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
-    
-    content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
-            param['tolerance'],
-            param['max_iter'],
-            param['error_mod'],
-            param['alpha_aniso'])
-    if typ == 'R2':
-        content = content + '{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+    if param['job_type'] == 1:
+        if param['mesh_type'] == 4|5:
+            content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
+                    param['patchx'], param['patchy'])
+        if typ == 'R2':
+            content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
+                    param['inverse_type'],
+                    param['target_decrease'])    
+            content = content + '{}\t{}\t<< data type (0=normal;1=log), regularization type\n\n'.format(
+                    param['data_type'],
+                    param['reg_mode'])
+        elif typ == 'cR2':
+            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
+        
+        content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
+                param['tolerance'],
+                param['max_iter'],
+                param['error_mod'],
+                param['alpha_aniso'])
+        if typ == 'R2':
+            content = content + '{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+                    param['a_wgt'],
+                    param['b_wgt'],
+                    param['rho_min'],
+                    param['rho_max'])
+        elif typ == 'cR2':
+                content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, c_wgt, d_wgt, rho_min, rho_max\n\n'.format(
                 param['a_wgt'],
                 param['b_wgt'],
+                param['c_wgt'],
+                param['d_wgt'],
                 param['rho_min'],
                 param['rho_max'])
-    elif typ == 'cR2':
-            content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, c_wgt, d_wgt, rho_min, rho_max\n\n'.format(
-            param['a_wgt'],
-            param['b_wgt'],
-            param['c_wgt'],
-            param['d_wgt'],
-            param['rho_min'],
-            param['rho_max'])
+                
+    # define polyline
 #    if typ == 'R2':
     if param['num_xy_poly'] == -1:
         leftx = param['meshx'][param['node_elec'][0,1]-4]
@@ -162,13 +165,14 @@ def write2in(param, dirname, typ='R2'):
     if param['num_xy_poly'] != 0:
         content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
                 *param['xy_poly_table'].flatten())
+        
+    # define nodes for electrodes
     param['num_elec'] = param['node_elec'].shape[0]
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
     content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
             *param['node_elec'].flatten())
     content = content + '\n'
     
-
     # write configuration file
     if typ == 'R2':
         fname = 'R2.in'
