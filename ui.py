@@ -1078,6 +1078,7 @@ class App(QMainWindow):
                 print('row added')
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
+                self.setItem(0, self.nrow-1, QTableWidgetItem('100.0'))
                 
             def getTable(self):
                 table = np.zeros((self.nrow, self.ncol))
@@ -1096,9 +1097,12 @@ class App(QMainWindow):
 
         def regionButtonFunc():
             print('he eh clicked')
-            self.r2.selector.connect() # reconnect the selector
             # TODO activate other selection of region
-        regionButton = QPushButton('New Region')
+            x = regionTable.getTable().flatten()
+            regid = np.arange(len(x))
+            print(dict(zip(regid, x)))
+            self.r2.assignRes0(dict(zip(regid, x)))
+        regionButton = QPushButton('Apply regions')
         regionButton.clicked.connect(regionButtonFunc)
         regionTable = RegionTable()
         regionLayout = QVBoxLayout()
