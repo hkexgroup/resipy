@@ -109,7 +109,7 @@ mesh will be chosen.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createModel">
-<code class="descname">createModel</code><span class="sig-paren">(</span><em>ax=None</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>typ='rect'</em>, <em>callback=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createModel" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createModel</code><span class="sig-paren">(</span><em>ax=None</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>typ='poly'</em>, <em>addAction=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createModel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Interactive model creation for forward modelling.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -142,19 +142,13 @@ rectangle.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createSequence">
-<code class="descname">createSequence</code><span class="sig-paren">(</span><em>nelec=48, spacing=0.25, skipDepths=[(0, 10)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSequence</code><span class="sig-paren">(</span><em>skipDepths=[(0, 10)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a dipole-dipole sequence.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>nelec</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
-<dd><p class="first last">Number of electrodes.</p>
-</dd>
-<dt><strong>spacing</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
-<dd><p class="first last">Spacing between two electrodes.</p>
-</dd>
 <dt><strong>skipDepths</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple, optional</span></dt>
 <dd><p class="first last">Each tuple in the list is of the form <cite>(skip, depths)</cite>. The <cite>skip</cite> is the number of electrode between the A B and M N electrode. The <cite>depths</cite> is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.</p>
 </dd>
@@ -167,7 +161,7 @@ rectangle.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createSurvey">
-<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -229,7 +223,7 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
+<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.05</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Operates forward modelling.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -293,7 +287,7 @@ them to <cite>R2.meshResults</cite> list.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.invert">
-<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=True</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Invert the data, first generate R2.in file, then run
 inversion using appropriate wrapper, then return results.</p>
 <table class="docutils field-list" frame="void" rules="none">

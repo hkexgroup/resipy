@@ -683,10 +683,6 @@ class R2(object): # R2 master class instanciated by the GUI
         
         Parameters
         ----------
-        nelec : int, optional
-            Number of electrodes.
-        spacing : float, optional
-            Spacing between two electrodes.
         skipDepths : list of tuple, optional
             Each tuple in the list is of the form `(skip, depths)`. The `skip` is the number of electrode between the A B and M N electrode. The `depths` is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.
         """
