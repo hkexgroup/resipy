@@ -14,6 +14,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
 from PyQt5.QtGui import QIcon, QKeySequence, QPixmap, QIntValidator, QDoubleValidator
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
+
+QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
+
 #print('elpased', time.time()-a)
 
 # small code to see where are all the directories
