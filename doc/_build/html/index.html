@@ -60,6 +60,9 @@ the starting resistivity <cite>res0</cite>.</p>
 <dt><strong>res0</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
 <dd><p class="first last">Resistivity values of the defined area.</p>
 </dd>
+<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib.axes.Axes</span></dt>
+<dd><p class="first last">If not <cite>None</cite>, the region will be plotted against this axes.</p>
+</dd>
 </dl>
 </td>
 </tr>
@@ -125,6 +128,10 @@ mesh will be chosen.</p>
 <dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
 <dd><p class="first last">Type of selection either <cite>poly</cite> for polyline or <cite>rect</cite> for
 rectangle.</p>
+</dd>
+<dt><strong>addAction</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
+<dd><p class="first last">Function to be called once the selection is finished (design for
+GUI purpose).</p>
 </dd>
 </dl>
 </td>
@@ -223,7 +230,7 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.05</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
+<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.05</em>, <em>iplot=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Operates forward modelling.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -232,6 +239,9 @@ reciprocal measurements. By default all surveys are used.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
 <dt><strong>noise</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional 0 &lt;= noise &lt;= 1</span></dt>
 <dd><p class="first last">Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained.</p>
+</dd>
+<dt><strong>iplot</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd><p class="first last">If <cite>True</cite> will plot the pseudo section after the forward modelling.</p>
 </dd>
 </dl>
 </td>

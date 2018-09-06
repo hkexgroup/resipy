@@ -607,6 +607,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Array with two columns for the x and y coordinates.
         res0 : float
             Resistivity values of the defined area.
+        ax : matplotlib.axes.Axes
+            If not `None`, the region will be plotted against this axes.
         """
         
         if ax is None:
@@ -634,6 +636,9 @@ class R2(object): # R2 master class instanciated by the GUI
         typ : str
             Type of selection either `poly` for polyline or `rect` for
             rectangle.
+        addAction : function
+            Function to be called once the selection is finished (design for
+            GUI purpose).
         
         Returns
         -------
@@ -736,6 +741,8 @@ class R2(object): # R2 master class instanciated by the GUI
         ----------
         noise : float, optional 0 <= noise <= 1
             Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained. 
+        iplot : bool, optional
+            If `True` will plot the pseudo section after the forward modelling.
         """
         fwdDir = os.path.join(self.dirname, 'fwd')
         if os.path.exists(fwdDir):
