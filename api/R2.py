@@ -320,7 +320,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.configFile = write2in(self.param, self.dirname, typ=typ)
         
 
-    def write2protocol(self, errTyp='', errTypIP='', **kwargs):
+    def write2protocol(self, errTyp='', errTypIP='', errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
         
         Parameters
@@ -328,7 +328,7 @@ class R2(object): # R2 master class instanciated by the GUI
         errTyp : str
             Type of the DC error. Either 'pwl', 'lin', 'obs'.
         errTypIP : str
-            Type of the IP error. Eigther 'pwl'
+            Type of the IP error. Either 'pwl'.
         """
         if self.typ == 'R2':
             ipBool = False
@@ -339,17 +339,17 @@ class R2(object): # R2 master class instanciated by the GUI
 
         if errTyp == '':
             errTyp = self.errTyp
-        if ipBool == True:
-            if errTypIP == '':
-                errTypIP = self.errTypIP
+#        if ipBool == True:
+        if errTypIP == '':
+            errTypIP = self.errTypIP
         
         
         if self.iTimeLapse == False:
             self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                        errTyp=self.errTyp, ip=ipBool, errTypIP=self.errTypIP)
+                        errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)
         else:
             # a bit simplistic but assign error to all based on Transfer resistance
-            allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
+#            allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
             # let's assume it's False all the time for now
             content = ''
             for i, s in enumerate(self.surveys[1:]):
@@ -425,7 +425,7 @@ class R2(object): # R2 master class instanciated by the GUI
         os.chdir(cwd)
         
         
-    def invert(self, param={}, iplot=False, dump=print):
+    def invert(self, param={}, iplot=False, dump=print, modErr=False):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -448,11 +448,18 @@ class R2(object): # R2 master class instanciated by the GUI
         if 'mesh' not in self.param:
             self.createMesh()
         
+        # compute modelling error if selected
+        if modErr is True:
+            self.computeModelError()
+            errTot = True
+        else:
+            errTot = False
+        
         # write configuration file
 #        if self.configFile == '':
         self.write2in(param=param)
         
-        self.write2protocol()
+        self.write2protocol(errTot=errTot)
              
         if self.iTimeLapse == True:
             refdir = os.path.join(self.dirname, 'ref')
@@ -466,6 +473,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.showResults()
             self.showSection() # TODO need to debug that for timelapse and even for normal !
             # pass an index for inverted survey time
+
     
     def showResults(self, index=0, ax=None, edge_color='none', attr='', sens=True, color_map='viridis', **kwargs):
         """ Show the inverteds section.
@@ -789,35 +797,68 @@ class R2(object): # R2 master class instanciated by the GUI
         addnoise = np.vectorize(addnoise)
         self.noise = noise
         
-#        def func():
-#            x = np.genfromtxt(os.path.join(fwdDir, 'R2_forward.dat'), skip_header=1)
-#            x[:,5] = addnoise(x[:,5], self.noise)
-#            df = pd.DataFrame(x[:,:-1])
-#            invName = os.path.join(self.dirname, 'protocol.dat')
-#            with open(invName, 'w') as f:
-#                f.write(str(len(df)) + '\n')
-#            with open(invName, 'a') as f:
-#                df.to_csv(f, sep='\t', header=False, index=False)
-#        
-#        self.write2protocol = func # OVERWRITE R2.write2protocol()
-#        self.write2protocol()        
-        
-#        x = np.genfromtxt(os.path.join(fwdDir, 'R2_forward.dat'), skip_header=1)
-#        x[:,5] = addnoise(x[:,5], self.noise)
-#        df = pd.DataFrame(x[:,1:-1], columns=['a','b','m','n','forward'])
-    
         elec = self.elec.copy()
         self.createSurvey(os.path.join(fwdDir, 'R2_forward.dat'), ftype='Protocol')
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], noise)
         self.elec = elec
         
-#        data = df.copy()
-#        data['irecip'] = 0
-#        s = Survey(elec=elec, data=data)
-#        self.surveys.append(s)
-        
         self.write2protocol()
         self.pseudo()
+        
+        
+    def computeModelError(self):
+        """ Compute modelling error due to the mesh.
+        """
+        if self.mesh is None:
+            raise ValueError('You fist need to generate a mesh to compute the modelling error.')
+            return
+        fwdDir = os.path.join(self.dirname, 'err')
+        if os.path.exists(fwdDir):
+            shutil.rmtree(fwdDir)
+        os.mkdir(fwdDir)
+        
+        # write the resistivity.dat and fparam
+        fparam = self.param.copy()
+        fparam['job_type'] = 0
+        centroids = np.array(self.mesh.elm_centre).T
+        if self.param['mesh_type'] == 4:
+            fparam['num_regions'] = 1
+            maxElem = centroids.shape[0]
+            fparam['regions'] = np.array([[1, maxElem, 100]])
+        else:
+            if '2' in self.typ:
+                n = 2
+            else:
+                n = 3
+            resFile = np.zeros((centroids.shape[0],n+1)) # centroix x, y, z, res0
+            resFile[:,-1] = 100
+            np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
+                       fmt='%.3f')
+            shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+                        os.path.join(fwdDir, 'mesh.dat'))
+            fparam['num_regions'] = 0
+            fparam['timeLapse'] = 'resistivity.dat'
+        write2in(fparam, fwdDir, typ=self.typ)
+        
+        # write the protocol.dat based on measured sequence
+        seq = self.surveys[0].df[['a','b','m','n']].values
+        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        outputname = os.path.join(fwdDir, 'protocol.dat')
+        with open(outputname, 'w') as f:
+            f.write(str(len(protocol)) + '\n')
+        with open(outputname, 'a') as f:
+            protocol.to_csv(f, sep='\t', header=False, index=False)
+    
+        # fun the inversion
+        self.runR2(fwdDir) # this will copy the R2.exe inside as well
+        
+        # get error model
+        x = np.genfromtxt(os.path.join(fwdDir, 'R2_forward.dat'), skip_header=1)
+        modErr = np.abs(100-x[:,-1])/100
+        self.surveys[0].df['modErr'] = modErr
+        
+        # eventually delete the directory to space space
+        
         
     
     def showIter(self, ax=None):
@@ -915,6 +956,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.typ = 'cR2'
 #k.createSurvey('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', spacing=0.5)
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
+#k.createMesh(typ='trian')
+#k.computeModelError()
+#k.pwlfit()
+#k.write2protocol(errTyp='pwl', errTot=True)
+#k.invert(modErr=True)
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.pwlfit()
 #k.invert(iplot=False)

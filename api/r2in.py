@@ -109,7 +109,7 @@ def write2in(param, dirname, typ='R2'):
                 content = content + ''.join(['\t{:.0f}\t{:.0f}\t{:.0f}\t{:.0f}\t{}\t{} << nx1, nx2, nz1, nz2, resis, phase\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
             if param['mesh_type'] == 3:
                 content = content + ''.join(['\t{:.0f}\t{:.0f}\t{}\t{} << elem_1, elem_2, resist, phase\n']*param['regions'].shape[0]).format(*param['regions'].flatten())
-    if param['mesh_type'] == 4:
+    if (param['mesh_type'] == 4) & (param['job_type'] == 1):
         content = content + '{}\t{}\t<< no. patches in x, no. patches in z\n'.format(param['patch_x'], param['patch_y'])
     if param['job_type'] == 1:
         if param['mesh_type'] == 4|5:

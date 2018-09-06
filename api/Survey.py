@@ -922,10 +922,11 @@ class Survey(object):
                     protocol['error'] = dfg['pwlError'].values
         #            error = self.linStdError
                 if errTot == True:
-                    if len(self.modError) == 0:
+                    print('Using total error')
+                    if 'modErr' not in self.df.columns:
                         print('ERROR : you must specify a modelling error')
                     else:
-                        protocol['error'] = np.sqrt(protocol['error']**2 + self.modError[ie]**2)
+                        protocol['error'] = np.sqrt(protocol['error']**2 + self.df[ie]['modErr'].values**2)
             if errTypIP != 'none':  # or == 'pwlip'
                 if 'PhaseError' not in self.df.columns: # TO BE DELETED
                     dfg['PhaseError'] = 0.1 # TO BE DELTED

@@ -1299,6 +1299,17 @@ class App(QMainWindow):
         job_type.currentIndexChanged.connect(job_typeFunc)
         invForm.addRow(QLabel('Job Type:'), job_type)
         
+        def modErrFunc(state):
+            if state == Qt.Checked:
+                self.modErr = True
+            else:
+                self.modErr = False
+        modErrLabel = QLabel('Compute Modelling Error')
+        modErr = QCheckBox()
+        modErr.stateChanged.connect(modErrFunc)
+        invForm.addRow(modErrLabel, modErr)
+        self.modErr = False
+        
         def flux_typeFunc(index):
             if index == 0:
                 self.r2.param['flux_type'] = 3
@@ -1703,7 +1714,7 @@ class App(QMainWindow):
                     mwRMS.plot(plotRMS)
                 QApplication.processEvents()
                 
-            self.r2.invert(iplot=False, dump=func)
+            self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
             try:
                 sectionId.currentIndexChanged.disconnect()
                 sectionId.clear()
