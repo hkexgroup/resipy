@@ -91,6 +91,12 @@ the resistivity in [Ohm.m].</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.computeModelError">
+<code class="descname">computeModelError</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.computeModelError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute modelling error due to the mesh.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.createMesh">
 <code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a mesh.</p>
@@ -297,7 +303,7 @@ them to <cite>R2.meshResults</cite> list.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.invert">
-<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Invert the data, first generate R2.in file, then run
 inversion using appropriate wrapper, then return results.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -521,7 +527,7 @@ shade on top of the inverted section.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.write2protocol">
-<code class="descname">write2protocol</code><span class="sig-paren">(</span><em>errTyp=''</em>, <em>errTypIP=''</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2protocol" title="Permalink to this definition">¶</a></dt>
+<code class="descname">write2protocol</code><span class="sig-paren">(</span><em>errTyp=''</em>, <em>errTypIP=''</em>, <em>errTot=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2protocol" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a protocol.dat file for the inversion code.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -532,7 +538,7 @@ shade on top of the inverted section.</p>
 <dd><p class="first last">Type of the DC error. Either ‘pwl’, ‘lin’, ‘obs’.</p>
 </dd>
 <dt><strong>errTypIP</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Type of the IP error. Eigther ‘pwl’</p>
+<dd><p class="first last">Type of the IP error. Either ‘pwl’.</p>
 </dd>
 </dl>
 </td>
