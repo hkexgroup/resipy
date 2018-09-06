@@ -1091,23 +1091,31 @@ class App(QMainWindow):
                 self.nrow = 1
                 self.setRowCount(1)
         
-                
+        
+        instructionLabel = QLabel('To define a region, just click on the mesh'
+           'to draw a polygone. Close the polygon using a left click. Once done'
+           ', you can define the region resistivity in the table. To define a'
+           ' new region, just press \'e\'')
+        instructionLabel.setWordWrap(True)
+        meshLayout.addWidget(instructionLabel)
+        
         mwMesh = MatplotlibWidget(navi=True)
         
 
         def regionButtonFunc():
-            print('he eh clicked')
-            # TODO activate other selection of region
             x = regionTable.getTable().flatten()
             regid = np.arange(len(x))
-            print(dict(zip(regid, x)))
             self.r2.assignRes0(dict(zip(regid, x)))
+            regionLabel.setText('Regions applied.')
         regionButton = QPushButton('Apply regions')
         regionButton.clicked.connect(regionButtonFunc)
         regionTable = RegionTable()
+        regionLabel = QLabel('')
+        
         regionLayout = QVBoxLayout()
         regionLayout.addWidget(regionButton)
         regionLayout.addWidget(regionTable)
+        regionLayout.addWidget(regionLabel)
         
         meshPlotLayout = QHBoxLayout()
         meshPlotLayout.addWidget(mwMesh, 85)
@@ -1148,7 +1156,6 @@ class App(QMainWindow):
         tabForward = QWidget()
         tabs.addTab(tabForward, 'Forward model')
         tabs.setTabEnabled(3, False)
-        
         
         # add table for sequence generation
         seqLabel = QLabel('Define the number of skip and levels in the table.'
@@ -1195,39 +1202,57 @@ class App(QMainWindow):
             skipDepths = [tuple(a) for a in list(seqTable.getTable())]
             print(skipDepths)
             self.r2.createSequence(skipDepths=skipDepths)
+            seqOutputLabel.setText(str(len(self.r2.sequence)) + ' quadrupoles generated')
         seqCreate = QPushButton('Create Sequence')
         seqCreate.clicked.connect(seqCreateFunc)
+        seqOutputLabel = QLabel('')
     
+        # add noise possibility
+        noiseLabel = QLabel('Guassian noise to be added to the simulated data:')
+        noiseEdit = QLineEdit('0.05')
+        noiseEdit.setValidator(QDoubleValidator())
         
         # add a forward button
         def forwardBtnFunc():
             print('run forward modelling and write protocol.dat')
-            self.r2.forward(noise=0.05)
+            noise = float(noiseEdit.text())
+            self.r2.forward(noise=noise, iplot=False)
             forwardLabel.setText('Forward model finished.')
+            forwardPseudo.plot(self.r2.surveys[0].pseudo)
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.clicked.connect(forwardBtnFunc)
         
         forwardLabel = QLabel('Clicked to make the forward model.')
+        
+        forwardPseudo = MatplotlibWidget(navi=True)
+
         
         # layout
         forwardLayout = QVBoxLayout()
         seqLayout = QHBoxLayout()
         seqBtnLayout = QVBoxLayout()
         seqBtnLayoutH = QHBoxLayout()
+        noiseLayout = QHBoxLayout()
         
         seqBtnLayoutH.addWidget(seqAddRow)
         seqBtnLayoutH.addWidget(seqReset)
         
         seqBtnLayout.addLayout(seqBtnLayoutH)
         seqBtnLayout.addWidget(seqCreate)
+        seqBtnLayout.addWidget(seqOutputLabel)
         
         seqLayout.addWidget(seqTable)
         seqLayout.addLayout(seqBtnLayout)
         
-        forwardLayout.addWidget(seqLabel)
-        forwardLayout.addLayout(seqLayout)
-        forwardLayout.addWidget(forwardBtn)
-        forwardLayout.addWidget(forwardLabel)
+        noiseLayout.addWidget(noiseLabel)
+        noiseLayout.addWidget(noiseEdit)
+        
+        forwardLayout.addWidget(seqLabel, 5)
+        forwardLayout.addLayout(seqLayout, 15)
+        forwardLayout.addLayout(noiseLayout, 5)
+        forwardLayout.addWidget(forwardBtn, 5)
+        forwardLayout.addWidget(forwardLabel, 5)
+        forwardLayout.addWidget(forwardPseudo, 65)
         
         tabForward.setLayout(forwardLayout)
         

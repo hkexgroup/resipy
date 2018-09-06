@@ -655,6 +655,10 @@ class R2(object): # R2 master class instanciated by the GUI
 #                print(res)
             self.regid = self.regid + 1
             self.regions[idx] = self.regid
+            self.mesh.cell_attributes = list(self.regions)
+#            self.mesh.show(ax=ax)
+            # TODO change the collection of the cells impacted and update canvas
+            # or just use cross of different colors
             if addAction is not None:
                 addAction()
         self.mesh.show(ax=ax)
@@ -725,7 +729,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.05):
+    def forward(self, noise=0.05, iplot=False):
         """ Operates forward modelling.
         
         Parameters
@@ -740,8 +744,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # write the resistivity.dat
         centroids = np.array(self.mesh.elm_centre).T
-        resFile = np.zeros((centroids.shape[0],4)) # centroix x, y, z, res0
-        resFile[:,:centroids.shape[1]] = centroids
+        resFile = np.zeros((centroids.shape[0],3)) # centroix x, y, z, res0
+#        resFile[:,:centroids.shape[1]] = centroids
         resFile[:,-1] = self.resist0
         np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                    fmt='%.3f')
@@ -751,6 +755,11 @@ class R2(object): # R2 master class instanciated by the GUI
         # write the forward .in file
         fparam = self.param.copy()
         fparam['job_type'] = 0
+        if fparam['mesh_type'] == 3:
+            fparam['num_regions'] = 0
+            fparam['timeLapse'] = 'resistivity.dat' # just starting resistivity
+        else:
+            raise ValueError('For now you need to use a triangular mesh for forward modelling')
         write2in(fparam, fwdDir, typ=self.typ)
         
         # write the protocol.dat (that contains the sequence)
@@ -801,6 +810,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #        self.surveys.append(s)
         
         self.write2protocol()
+        self.pseudo()
         
     
     def showIter(self, ax=None):
@@ -978,11 +988,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createMesh(typ='trian')
 #
 ## full API function
-#k.addRegion(np.array([[2,0],[3,0],[3,-1],[2,-1],[2,0]]), 40)
+#k.addRegion(np.array([[2,0],[8,0],[8,-8],[2,-8],[2,0]]), 10)
 #
 ## full GUI function
 #k.createModel()
 #k.assignRes0({1:30,2:30,3:40,4:120})
 #
-#k.forward()
+#k.forward(iplot=True, noise=0)
 #k.invert()
