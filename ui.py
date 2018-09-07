@@ -2020,13 +2020,14 @@ class App(QMainWindow):
         infoLayout = QVBoxLayout()
         aboutText = QLabel()
         aboutText.setText('<h1>About pyR2</h1> \
-                          <p><i>pyR2 is a free and open source software for inversion of geophysical data (DC and IP)</i></p> \
+                          <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (DC and IP)</i></p> \
                           <p>If you encouter issues or would like to submit a feature request, please raise an issue on gitlab:</p> \
-                              <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
-                              <p>pyR2 uses R2 and cR2 code from Andrey Binley:</p> \
-                              <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
-                              <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
-                              <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>')
+                          <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
+                          <p>pyR2 uses R2 and cR2 code from Andrew Binley:</p> \
+                          <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
+                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
+                          <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
+                          <p>Authors: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd.</p>')
         aboutText.setOpenExternalLinks(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         infoLayout.addWidget(aboutText)
