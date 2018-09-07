@@ -758,11 +758,12 @@ class App(QMainWindow):
         
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
-        
+            
         def btnDoneFunc():
             self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
             print('Data have been manually filtered')
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+            plotError()
             
         notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
         manualLayout.addWidget(notice)
