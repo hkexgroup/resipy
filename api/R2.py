@@ -53,6 +53,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = False
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.sequence = None # quadrupoles sequence if forward model
+        self.resist0 = None # initial resistivity
         
     def setwd(self, dirname):
         """ Set the working directory.

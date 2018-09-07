@@ -1103,19 +1103,22 @@ class App(QMainWindow):
         
 
         def regionButtonFunc():
-            x = regionTable.getTable().flatten()
-            regid = np.arange(len(x))
-            self.r2.assignRes0(dict(zip(regid, x)))
-            regionLabel.setText('Regions applied.')
-        regionButton = QPushButton('Apply regions')
+            self.r2.regid = 0
+            self.r2.regions.fill(0)
+            regionTable.reset()
+#            x = regionTable.getTable().flatten()
+#            regid = np.arange(len(x))
+#            self.r2.assignRes0(dict(zip(regid, x)))
+#            regionLabel.setText('Regions applied.')
+        regionButton = QPushButton('Reset')
         regionButton.clicked.connect(regionButtonFunc)
         regionTable = RegionTable()
-        regionLabel = QLabel('')
+#        regionLabel = QLabel('')
         
         regionLayout = QVBoxLayout()
         regionLayout.addWidget(regionButton)
         regionLayout.addWidget(regionTable)
-        regionLayout.addWidget(regionLabel)
+#        regionLayout.addWidget(regionLabel)
         
         meshPlotLayout = QHBoxLayout()
         meshPlotLayout.addWidget(mwMesh, 85)
@@ -1278,33 +1281,34 @@ class App(QMainWindow):
             [o.setVisible(io) for o, io in zip(opts, iopts)]
         
         # help sections
-        def showHelp(arg):
+        def showHelp(arg): # for general tab
             if arg not in r2help:
                 helpSection.setText('SORRY NOT IN HELP')
             else:
                 helpSection.setHtml(r2help[arg])
         
-        def showHelp2(arg):
+        def showHelp2(arg): # for advanced tab
             if arg not in r2help:
                 helpSection2.setText('SORRY NOT IN HELP')
             else:
                 helpSection2.setHtml(r2help[arg])
         
         
-        def job_typeFunc(index):
-            self.r2.param['job_type'] = index
-        job_type = QComboBox()
-        job_type.addItem('Inversion [1]')
-        job_type.addItem('Forward [0]')
-        job_type.currentIndexChanged.connect(job_typeFunc)
-        invForm.addRow(QLabel('Job Type:'), job_type)
+#        def job_typeFunc(index):
+#            self.r2.param['job_type'] = index
+#        job_type = QComboBox()
+#        job_type.addItem('Inversion [1]')
+#        job_type.addItem('Forward [0]')
+#        job_type.currentIndexChanged.connect(job_typeFunc)
+#        invForm.addRow(QLabel('Job Type:'), job_type)
         
         def modErrFunc(state):
             if state == Qt.Checked:
                 self.modErr = True
             else:
                 self.modErr = False
-        modErrLabel = QLabel('Compute Modelling Error')
+        modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
+        modErrLabel.linkActivated.connect(showHelp)
         modErr = QCheckBox()
         modErr.stateChanged.connect(modErrFunc)
         invForm.addRow(modErrLabel, modErr)
@@ -1382,7 +1386,7 @@ class App(QMainWindow):
         advForm.addRow(patch_size_yLabel, patch_size_y)
         
         def inv_typeFunc(index):
-            self.r2.param['inversion_type'] = index
+            self.r2.param['inverse_type'] = index
             opts = [data_typeLabel, data_type,
                     reg_modeLabel, reg_mode,
                     toleranceLabel, tolerance,
@@ -1600,6 +1604,7 @@ class App(QMainWindow):
         self.rmsIP = []
         self.rmsIndexIP = []
         self.inversionOutput = ''
+        self.end = False
         
         def parseRMS(tt):
             newFlag = False
@@ -1623,6 +1628,8 @@ class App(QMainWindow):
 #                            print('new processing detected')
                             self.pindex = self.pindex + 1
 #                            print('index = ', self.pindex)
+                        if a[0] == 'End':
+                            self.end = True
             return newFlag
 
         def plotRMS(ax):
@@ -1699,6 +1706,10 @@ class App(QMainWindow):
 #            self.processes.append(process)
         
         def logInversion():
+            self.end = False
+            outStackLayout.setCurrentIndex(0)
+            mwInvResult.clear()
+
             def func(text):
 #                print('t', text)
                 self.inversionOutput = text + '\n'
@@ -1714,6 +1725,13 @@ class App(QMainWindow):
                     mwRMS.plot(plotRMS)
                 QApplication.processEvents()
                 
+            # apply region for initial model
+            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
+                self.r2.createMesh()
+            x = regionTable.getTable().flatten()
+            regid = np.arange(len(x))
+            self.r2.assignRes0(dict(zip(regid, x)))
+            
             self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
             try:
                 sectionId.currentIndexChanged.disconnect()
@@ -1721,15 +1739,16 @@ class App(QMainWindow):
             except:
                 print('no method connected to sectionId yet')
                 pass
-            try:
+            
+            # displaying results or error
+            if self.end is True:
                 plotSection()
                 for i in range(len(self.r2.meshResults)):
                     sectionId.addItem(str(i))
                 outStackLayout.setCurrentIndex(0)
 #                invLayout.addLayout(resultLayout, 70)
-            except ValueError as e:
+            else:
                 print('--------INVERSION FAILED--------')
-                print(e)
 #                invLayout.removeItem(invLayout.itemAt(1))
 #                invLayout.addLayout(r2outLayout, 70)
                 outStackLayout.setCurrentIndex(1)
