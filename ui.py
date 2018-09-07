@@ -646,13 +646,16 @@ class App(QMainWindow):
             def initTable(self, tt=None, headers=None):
                 self.clear()
                 if headers is not None:
-                    self.headers = np.array(headers)
-                    self.ncol = len(self.headers)
-                    self.setColumnCount(len(headers)) # +1 for buried check column
-                    self.setHorizontalHeaderLabels(self.headers)
-                    self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                    if 'Buried' in self.headers:
-                        self.ncol = self.ncol - 1
+#                    print('rename headers = ', headers)
+                    self.headers = headers
+                else:
+#                    print('will use ', self.headers)
+                self.ncol = len(self.headers)
+                self.setColumnCount(len(self.headers)) # +1 for buried check column
+                self.setHorizontalHeaderLabels(self.headers)
+                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                if 'Buried' in self.headers:
+                    self.ncol = self.ncol - 1
                 if tt is None:
                     tt = np.zeros((10,len(self.headers)-1))
                 self.setRowCount(tt.shape[0])
@@ -728,7 +731,7 @@ class App(QMainWindow):
             else:
                 electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
                               np.linspace(0.0, (nbElec-1)*dz, nbElec)]
-            elecTable.initTable(electrodes, headers=elecTable.headers)
+            elecTable.initTable(electrodes)
         elecGenButton = QPushButton('Generate')
         elecGenButton.clicked.connect(elecGenButtonFunc)
         elecGenLayout = QHBoxLayout()
