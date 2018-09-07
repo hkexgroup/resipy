@@ -37,6 +37,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
+import matplotlib.tri as tri
 #import R2gui API package 
 #if __name__ =="__main__" or __name__=="meshTools":
 #    import gmshWrap as gw 
@@ -290,17 +291,19 @@ class Mesh_obj:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[1])
             z = np.array(X)
-            xmin, xmax = np.min(x), np.max(x)
-            ymin, ymax = np.min(y), np.max(y)
-            dx = (xmax-xmin)/40
-            dy = (ymax-ymin)/40
-            xi, yi = np.meshgrid(np.linspace(xmin-dx, xmax+dx, 40),
-                                 np.linspace(ymin-dy, ymax+dy, 40))
-            print(np.min(xi), np.max(xi), np.min(yi), np.max(yi))
-            zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
-            zi = zi.reshape(xi.shape)
-            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
-        
+#            xmin, xmax = np.min(x), np.max(x)
+#            ymin, ymax = np.min(y), np.max(y)
+#            dx = (xmax-xmin)/40
+#            dy = (ymax-ymin)/40
+#            xi, yi = np.meshgrid(np.linspace(xmin-dx, xmax+dx, 40),
+#                                 np.linspace(ymin-dy, ymax+dy, 40))
+#            print(np.min(xi), np.max(xi), np.min(yi), np.max(yi))
+#            zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
+#            zi = zi.reshape(xi.shape)
+#            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
+            triang = tri.Triangulation(x,y)
+            cax = ax.tricontourf(triang, z)
+            
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
         ax.set_ylim(ylim)
@@ -1261,33 +1264,56 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
 
-#mesh = vtk_import('test/test.vtk')
-#mesh = vtk_import('invdir/f001_res.vtk')
+#mesh = vtk_import('api/test/test.vtk')
+#mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
-#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis')
+#fig, ax = plt.subplots()
+#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis', ax=ax)
 #mesh.show(attr=attrs[2])
 #mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
+#fig.show()
+
+#%%
+#x = np.random.randn(100)+10
+#y = np.random.randn(100)+10
+#z = np.random.randn(100)
+#
+#triang = tri.Triangulation(x,y)
+#fig, ax = plt.subplots()
+#ax.tricontourf(triang, z)
+#fig.show()
 
 
 #%%
-#x = np.random.randn(100)
-#y = np.random.randn(100)
-#z = np.random.randn(100)
-## TODO 2D invertpolation
-#from scipy.interpolate import griddata
-
-#x = np.array(mesh.elm_centre[0])
-#y = np.array(mesh.elm_centre[1])
-#z = np.random.randn(len(x))
+## First create the x and y coordinates of the points.
+#n_angles = 48
+#n_radii = 8
+#min_radius = 0.25
+#radii = np.linspace(min_radius, 0.95, n_radii)
 #
-#xi, yi = np.meshgrid(np.arange(np.min(x), np.max(x)),
-#                     np.arange(np.min(y), np.max(y)))
-#zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
-#zi = zi.reshape(xi.shape)
+#angles = np.linspace(0, 2 * np.pi, n_angles, endpoint=False)
+#angles = np.repeat(angles[..., np.newaxis], n_radii, axis=1)
+#angles[:, 1::2] += np.pi / n_angles
 #
-#fig, ax = plt.subplots()
-#ax.contourf(xi, yi, zi)
-#fig.show()
-    
+#x = (radii * np.cos(angles)).flatten()
+#y = (radii * np.sin(angles)).flatten()
+#z = (np.cos(radii) * np.cos(3 * angles)).flatten()
+#
+## Create the Triangulation; no triangles so Delaunay triangulation created.
+#triang = tri.Triangulation(x, y)
+#
+## Mask off unwanted triangles.
+#triang.set_mask(np.hypot(x[triang.triangles].mean(axis=1),
+#                         y[triang.triangles].mean(axis=1))
+#                < min_radius)
+#
+#fig1, ax1 = plt.subplots()
+#ax1.set_aspect('equal')
+#tcf = ax1.tricontourf(triang, z)
+#fig1.colorbar(tcf)
+#ax1.tricontour(triang, z, colors='k')
+#ax1.set_title('Contour plot of Delaunay triangulation')
+#fig1.show()
+#
 
 
