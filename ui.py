@@ -312,6 +312,14 @@ class App(QMainWindow):
         boreholeCheck = QCheckBox('Borehole Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
 
+        def batchCheckFunc(state):
+            if state == Qt.Checked:
+                print('checked for batch')
+            else:
+                print('not checked')
+        batchCheck = QCheckBox('Batch Inversion')
+        batchCheck.stateChanged.connect(batchCheckFunc)
+        
         # select inverse or forward model
         def dimForwardFunc():
             print('forward')
@@ -357,7 +365,7 @@ class App(QMainWindow):
         
         
         hbox1 = QHBoxLayout()
-        hbox1.addWidget(restartBtn, 4)
+        hbox1.addWidget(restartBtn)
 #        hbox1.addWidget(dimRadio2D, 6)
 #        hbox1.addWidget(dimRadio3D, 6)
 #        rs0 = QWidget()
@@ -380,18 +388,19 @@ class App(QMainWindow):
 #        hbox1.addWidget(r1)
 #        hbox1.addWidget(r2)
 #        hbox1.addWidget(r3)
-        hbox1.addWidget(dimGroup, 20)
-        hbox1.addWidget(title, 5)
-        hbox1.addWidget(titleEdit, 60)
-        hbox1.addWidget(timeLapseCheck, 15)
+        hbox1.addWidget(dimGroup)
+        hbox1.addWidget(title)
+        hbox1.addWidget(titleEdit)
+        hbox1.addWidget(date)
+        hbox1.addWidget(dateEdit)
         
         hbox2 = QHBoxLayout()
 #        hbox2.addWidget(dimForward, 10)
 #        hbox2.addWidget(dimInverse, 10)
-        hbox2.addWidget(dimInvGroup, 20)
-        hbox2.addWidget(date, 5)
-        hbox2.addWidget(dateEdit, 60)
-        hbox2.addWidget(boreholeCheck, 15)
+        hbox2.addWidget(dimInvGroup)
+        hbox2.addWidget(timeLapseCheck)
+        hbox2.addWidget(batchCheck)
+        hbox2.addWidget(boreholeCheck)
         
 #        gridLayout = QGridLayout()
 #        gridLayout.addWidget(title, 0, 0)
