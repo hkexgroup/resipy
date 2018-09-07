@@ -681,7 +681,7 @@ class App(QMainWindow):
             def readTable(self):
                 fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
                 if fname != '':
-                    df = pd.read_csv(fname)
+                    df = pd.read_csv(fname, header=None)
                     tt = df.values
                     if 'Buried' in self.headers:
                         if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
@@ -728,7 +728,7 @@ class App(QMainWindow):
             else:
                 electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
                               np.linspace(0.0, (nbElec-1)*dz, nbElec)]
-            elecTable.initTable(electrodes, elecTable.headers)
+            elecTable.initTable(electrodes, headers=elecTable.headers)
         elecGenButton = QPushButton('Generate')
         elecGenButton.clicked.connect(elecGenButtonFunc)
         elecGenLayout = QHBoxLayout()
