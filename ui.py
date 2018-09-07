@@ -478,6 +478,7 @@ class App(QMainWindow):
                         plotError()
     #                generateMesh()
                     plotPseudo()
+                    plotManualFiltering()
                     elecTable.initTable(self.r2.elec)
                     tabImporting.setTabEnabled(1,True)
                 except:
@@ -497,6 +498,7 @@ class App(QMainWindow):
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                 tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                 plotError()
+            plotManualFiltering()
 
         buttonfr = QPushButton('If you have reciprocals upload them here') 
         buttonfr.clicked.connect(getfileR)
@@ -755,19 +757,21 @@ class App(QMainWindow):
         manualLayout = QVBoxLayout()
         
         def plotManualFiltering():
-            mwManualFiltering.plot(self.r2.surveys[0].manualFilter)
+            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
         
         def btnDoneFunc():
+            self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
             print('Data have been manually filtered')
+            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
             
-        notice = QLabel('Press "Start" and then click on the dots to select them. Press "Done" to remove them.')
+        notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
         manualLayout.addWidget(notice)
         
         btnLayout = QHBoxLayout()
-        btnStart = QPushButton('Start')
-        btnStart.clicked.connect(plotManualFiltering)
-        btnLayout.addWidget(btnStart)
-        btnDone = QPushButton('Done')
+#        btnStart = QPushButton('Reset')
+#        btnStart.clicked.connect(plotManualFiltering)
+#        btnLayout.addWidget(btnStart)
+        btnDone = QPushButton('Apply')
         btnDone.clicked.connect(btnDoneFunc)
         btnLayout.addWidget(btnDone)
         manualLayout.addLayout(btnLayout)

@@ -944,8 +944,19 @@ class Survey(object):
             with open(outputname, 'a') as f:
                 protocol.to_csv(f, sep='\t', header=False, index=False)
                 
-
-    def manualFilter(self, ax=None):
+                
+    def dca(self, dump=print):
+        ''' execute DCA filtering
+        '''
+        if self.filterDataIP.empty:
+            self.filterDataIP = DCA(self.df, dump=dump)
+        else:
+            self.filterDataIP = DCA(self.filterDataIP, dump=dump)
+        self.addFilteredIP()
+        dump(100)
+        
+        
+    def manualFiltering(self, ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
         """ Manually filters the data visually.
         
         Parameters
@@ -964,110 +975,93 @@ class Survey(object):
         else:
             resist = np.ones(self.df.shape[0])
         spacing = np.mean(np.diff(self.elec[:,0]))
-        pseudo(array, resist, spacing, ax=ax, label='Reciprocal Error [Ohm.m]')
         
-    def dca(self, dump=print):
-        ''' execute DCA filtering
-        '''
-        if self.filterDataIP.empty:
-            self.filterDataIP = DCA(self.df, dump=dump)
+        nelec = np.max(array)
+        elecpos = np.arange(0, spacing*nelec, spacing)
+        
+        if geom: # compute and applied geometric factor
+            apos = elecpos[array[:,0]-1]
+            bpos = elecpos[array[:,1]-1]
+            mpos = elecpos[array[:,2]-1]
+            npos = elecpos[array[:,3]-1]
+            AM = np.abs(apos-mpos)
+            BM = np.abs(bpos-mpos)
+            AN = np.abs(apos-npos)
+            BN = np.abs(bpos-npos)
+            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            resist = resist*K
+            
+        if log:
+            resist = np.sign(resist)*np.log10(np.abs(resist))
+    #        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+    #    else:
+    #        label = r'$\rho_a$ [$\Omega.m$]'
+        
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        
+        def onpick(event):
+            # TODO single doesn't want to change the electrode selection
+            if lines[event.artist] == 'data':
+                print('onpick event', event.ind[0])
+                print(self.iselect[event.ind[0]])
+                xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
+                isame = (xpos == xid) & (ypos == yid)
+                if (self.iselect[isame] == True).all():
+                    print('set to false')
+                    self.iselect[isame] = False
+                else:
+                    self.iselect[isame] = True
+            
+            if lines[event.artist] == 'elec':
+                print('onpick2', event.ind[0])
+                ie = (array == (event.ind[0]+1)).any(-1)
+                if all(self.iselect[ie] == True):
+                    self.iselect[ie] = False
+                else:
+                    self.iselect[ie] = True
+                if eselect[event.ind[0]] == True:
+                    eselect[event.ind[0]] = False
+                else:
+                    eselect[event.ind[0]] = True
+                elecKilled.set_xdata(elecpos[eselect])
+                elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
+            print('update canvas')
+            killed.set_xdata(x[self.iselect])
+            killed.set_ydata(y[self.iselect])
+            killed.figure.canvas.draw()
+                
+                
+        if ax is None:
+            fig, ax = plt.subplots()
         else:
-            self.filterDataIP = DCA(self.filterDataIP, dump=dump)
-        self.addFilteredIP()
-        dump(100)
+            fig = ax.figure
+        caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
+        cbar = fig.colorbar(cax, ax=ax)
+        cbar.set_label(label)
+        cax.figure.canvas.mpl_connect('pick_event', onpick)
+        #for i in range(int(len(array)/2)):
+        #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
         
-#TODO put this in function as Survey.manualFilter() ? or make it more general
-def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
-    #figsize=(12,3)
-    """ create true pseudo graph with points and no interpolation
-    """
-    geom = False
-    log = False
-    nelec = np.max(array)
-    elecpos = np.arange(0, spacing*nelec, spacing)
-    resist = resist
-    
-    if geom: # compute and applied geometric factor
-        apos = elecpos[array[:,0]-1]
-        bpos = elecpos[array[:,1]-1]
-        mpos = elecpos[array[:,2]-1]
-        npos = elecpos[array[:,3]-1]
-        AM = np.abs(apos-mpos)
-        BM = np.abs(bpos-mpos)
-        AN = np.abs(apos-npos)
-        BN = np.abs(bpos-npos)
-        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-        resist = resist*K
+        line = cax
+        killed, = line.axes.plot([],[],'rx')
+        elecKilled, = line.axes.plot([],[],'rx')
+    #    x = np.array(line.get_xdata())
+    #    y = np.array(line.get_ydata())
+        x = line.get_offsets()[:,0]
+        y = line.get_offsets()[:,1]
         
-    if log:
-        resist = np.sign(resist)*np.log10(np.abs(resist))
-#        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
-#    else:
-#        label = r'$\rho_a$ [$\Omega.m$]'
-    
-    cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-        + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-    pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-        + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
-    xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-    ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-    
-    
-    def onpick(event):
-        # TODO single doesn't want to change the electrode selection
-        if lines[event.artist] == 'data':
-            print('onpick event', event.ind[0])
-            print(iselect[event.ind[0]])
-            if iselect[event.ind[0]] == True:
-                print('set to false')
-                iselect[event.ind[0]] = False
-            else:
-                iselect[event.ind[0]] = True
+        # TODO we need to get those variables out of the function
+        self.iselect = np.zeros(len(y),dtype=bool)
+        eselect = np.zeros(len(elecpos), dtype=bool)
         
-        if lines[event.artist] == 'elec':
-            print('onpick2', event.ind[0])
-            ie = (array == (event.ind[0]+1)).any(-1)
-            if all(iselect[ie] == True):
-                iselect[ie] = False
-            else:
-                iselect[ie] = True
-            if eselect[event.ind[0]] == True:
-                eselect[event.ind[0]] = False
-            else:
-                eselect[event.ind[0]] = True
-            elecKilled.set_xdata(elecpos[eselect])
-            elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
-        print('update canvas')
-        killed.set_xdata(x[iselect])
-        killed.set_ydata(y[iselect])
-        killed.figure.canvas.draw()
-            
-            
-    if ax is None:
-        fig, ax = plt.subplots()
-    else:
-        fig = ax.figure
-    caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
-    cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
-    cbar = fig.colorbar(cax, ax=ax)
-    cbar.set_label(label)
-    cax.figure.canvas.mpl_connect('pick_event', onpick)
-    #for i in range(int(len(array)/2)):
-    #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
-    
-    line = cax
-    killed, = line.axes.plot([],[],'rx')
-    elecKilled, = line.axes.plot([],[],'rx')
-#    x = np.array(line.get_xdata())
-#    y = np.array(line.get_ydata())
-    x = line.get_offsets()[:,0]
-    y = line.get_offsets()[:,1]
-    
-    # TODO we need to get those variables out of the function
-    iselect = np.zeros(len(y),dtype=bool)
-    eselect = np.zeros(len(elecpos), dtype=bool)
-    
-    lines = {line:'data',caxElec:'elec',killed:'killed'}
+        lines = {line:'data',caxElec:'elec',killed:'killed'}
 
 
 
@@ -1485,6 +1479,7 @@ def pseudo(array, resist, spacing, name='', ax=None, figsize=(12,3), contour=Fal
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #s = Survey('api/test/syscalFile.csv', ftype='Syscal')
 #s = Survey('api/test/rifleday8.csv', ftype='Syscal')
+#s.manualFiltering()
 #s.dca()
 #s.addFilteredIP()
 #s.pwlfit()
