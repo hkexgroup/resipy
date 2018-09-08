@@ -267,12 +267,13 @@ class App(QMainWindow):
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
         dimLayout.addWidget(dimRadio3D)
+        dimLayout.setContentsMargins(0,0,0,0)
         dimGroup = QGroupBox()
         dimGroup.setLayout(dimLayout)
         dimGroup.setFlat(True)
-        dimGroup.setStyleSheet('QGroupBox{border: 1px;'
-                        'padding: 0 0 0 0;'
-                        'margin:0 0 0 0}')
+        dimGroup.setContentsMargins(0,0,0,0)
+        dimGroup.setStyleSheet('QGroupBox{border: 0px;'
+                                'border-style:inset;}')
 
         # meta data (title and date of survey)
         title = QLabel('Title')
@@ -347,21 +348,13 @@ class App(QMainWindow):
         dimInvLayout = QHBoxLayout()
         dimInvLayout.addWidget(dimForward)
         dimInvLayout.addWidget(dimInverse)
+        dimInvLayout.setContentsMargins(0,0,0,0)
         dimInvGroup = QGroupBox()
         dimInvGroup.setLayout(dimInvLayout)
         dimInvGroup.setFlat(True)
-        dimInvGroup.setStyleSheet('QGroupBox{border: 5px;'
-                                'border-style:inset;'
-                                'padding:0px;'
-                                'margin:0px;}'
-                                  'QGroupBox:title{'
-                                  'border:2px;'
-                                  'border-color:red;'
-                                  'padding:0px;'
-                                  'margin:0px;'
-                                  'subcontrol-origin: margin;'
-                                  'subcontrol-position: top center;};')
-        
+        dimInvGroup.setContentsMargins(0,0,0,0)
+        dimInvGroup.setStyleSheet('QGroupBox{border: 0px;'
+                                'border-style:inset;}')
         
         
         hbox1 = QHBoxLayout()
@@ -648,7 +641,7 @@ class App(QMainWindow):
                 if headers is not None:
 #                    print('rename headers = ', headers)
                     self.headers = headers
-                else:
+#                else:
 #                    print('will use ', self.headers)
                 self.ncol = len(self.headers)
                 self.setColumnCount(len(self.headers)) # +1 for buried check column
