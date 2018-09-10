@@ -1227,11 +1227,17 @@ class App(QMainWindow):
         
         # add a forward button
         def forwardBtnFunc():
-            print('run forward modelling and write protocol.dat')
+            forwardLabel.setText('Forward model running.')
+            # apply region for initial model
+            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
+                self.r2.createMesh()
+            x = regionTable.getTable().flatten()
+            regid = np.arange(len(x))
+            self.r2.assignRes0(dict(zip(regid, x)))
             noise = float(noiseEdit.text())
             self.r2.forward(noise=noise, iplot=False)
-            forwardLabel.setText('Forward model finished.')
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
+            forwardLabel.setText('Forward model finished.')
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.clicked.connect(forwardBtnFunc)
         

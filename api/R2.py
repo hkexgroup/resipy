@@ -799,6 +799,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.noise = noise
         
         elec = self.elec.copy()
+        self.surveys = [] # need to flush it (so no timeLapse forward)
         self.createSurvey(os.path.join(fwdDir, 'R2_forward.dat'), ftype='Protocol')
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], noise)
         self.elec = elec
