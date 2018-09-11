@@ -249,8 +249,9 @@ class Mesh_obj:
             except (KeyError, AttributeError):
                 raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
 
-
+        iplot = False
         if ax is None:
+            iplot = True
             fig,ax=plt.subplots()
         #if no dimensions are given then set the plot limits to edge of mesh
         try: 
@@ -339,6 +340,9 @@ class Mesh_obj:
             except AttributeError:
                 print("no electrodes in mesh object to plot")
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))
+        
+        if iplot == True:
+            return fig
         
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
         """

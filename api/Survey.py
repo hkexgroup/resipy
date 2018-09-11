@@ -102,12 +102,12 @@ class Survey(object):
         self.dfphasereset = self.df.copy()
     
     
-    def addData(self, fname, ftype='Syscal'):
+    def addData(self, fname, ftype='Syscal', spacing=None):
         """ Add data to the actual survey (for instance the reciprocal if they
         are not in the same file).
         """
         if ftype == 'Syscal':
-            elec, data = syscalParser(fname)
+            elec, data = syscalParser(fname, spacing=spacing)
         else:
             raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
@@ -126,8 +126,13 @@ class Survey(object):
             Index where all measurement to be retained are `True` and the
             others `False`.
         """
-        self.ndata = len(i2keep)
-        self.df = self.df[i2keep]
+        if len(i2keep) != self.df.shape[0]:
+            raise ValueError('The length of index to be kept (', len(i2keep), ')\
+                             does not match the length of the data (', self.df.shape[0],').')
+            return
+        else:
+            self.ndata = len(i2keep)
+            self.df = self.df[i2keep]
     
     
     def inferType(self):

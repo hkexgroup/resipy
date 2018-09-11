@@ -765,8 +765,9 @@ class R2(object): # R2 master class instanciated by the GUI
         resFile[:,-1] = self.resist0
         np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                    fmt='%.3f')
-        shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
-                    os.path.join(fwdDir, 'mesh.dat'))
+        if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
+            shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+                        os.path.join(fwdDir, 'mesh.dat'))
         
         # write the forward .in file
         fparam = self.param.copy()
@@ -774,8 +775,10 @@ class R2(object): # R2 master class instanciated by the GUI
         if fparam['mesh_type'] == 3:
             fparam['num_regions'] = 0
             fparam['timeLapse'] = 'resistivity.dat' # just starting resistivity
-        else:
-            raise ValueError('For now you need to use a triangular mesh for forward modelling')
+        elif fparam['mesh_type'] == 4:
+            # let the default
+            pass
+            print('Note that region definition on quadrilateral mesh is not implemented yet.')
         write2in(fparam, fwdDir, typ=self.typ)
         
         # write the protocol.dat (that contains the sequence)
