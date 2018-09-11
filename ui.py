@@ -491,16 +491,17 @@ class App(QMainWindow):
         
         def getfileR():
             fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
-            buttonfr.setText(fnameRecip)
-            if float(spacingEdit.text()) == -1:
-                spacing = None
-            else:
-                spacing = float(spacingEdit.text())
-            self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing)
-            if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
-                tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
-                plotError()
-            plotManualFiltering()
+            if fnameRecip != '':
+                buttonfr.setText(fnameRecip)
+                if float(spacingEdit.text()) == -1:
+                    spacing = None
+                else:
+                    spacing = float(spacingEdit.text())
+                self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing)
+                if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                    tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
+                    plotError()
+                plotManualFiltering()
 
         buttonfr = QPushButton('If you have reciprocals upload them here') 
         buttonfr.clicked.connect(getfileR)
