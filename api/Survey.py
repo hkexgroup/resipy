@@ -92,16 +92,37 @@ class Survey(object):
     def basicFilter(self):
         """ Remove NaN and Inf values in the data.
         """
+        # remove Inf and NaN
         resist = self.df['resist'].values
-        irecip = self.df['irecip'].values
         iout = np.isnan(resist) | np.isinf(resist)
         if np.sum(iout) > 0:
-            print('BAD transfer resistance data : ', np.sum(iout))
+            print('Number of BAD transfer resistance data (Inf or NaN) : ', np.sum(iout))
         self.filterData(~iout)
+        
+        # remove duplicates
+        shapeBefore = self.df.shape[0]
+        self.df = self.df.drop_duplicates(subset=['a','m'], keep = 'first')
+        ndup = shapeBefore - self.df.shape[0]
+        if ndup > 0:
+            print(ndup, 'duplicates removed.')
+        
+        # remove quadrupoles were A or B are also potential electrodes
+        ie1 = self.df['a'].values == self.df['m'].values
+        ie2 = self.df['a'].values == self.df['n'].values
+        ie3 = self.df['b'].values == self.df['m'].values
+        ie4 = self.df['b'].values == self.df['n'].values
+#        ie2 = self.df['b'] == (self.df['m'] | self.df['n'])
+        ie = ie1 | ie2 | ie3 | ie4
+        if np.sum(ie) > 0:
+            print(np.sum(ie), 'measurements with A or B == M or N')
+        self.filterData(~ie)
+        
+        # remove measurement without reciprocal
+        irecip = self.df['irecip'].values
         self.filterData(irecip != 0) # filter out dummy and non reciprocal
         self.dfphasereset = self.df.copy()
-    
-    
+        
+        
     def addData(self, fname, ftype='Syscal', spacing=None):
         """ Add data to the actual survey (for instance the reciprocal if they
         are not in the same file).
@@ -127,8 +148,8 @@ class Survey(object):
             others `False`.
         """
         if len(i2keep) != self.df.shape[0]:
-            raise ValueError('The length of index to be kept (', len(i2keep), ')\
-                             does not match the length of the data (', self.df.shape[0],').')
+            raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\
+                             does not match the length of the data (' + str(self.df.shape[0]) +').')
             return
         else:
             self.ndata = len(i2keep)

@@ -1054,3 +1054,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #
 #k.forward(iplot=True, noise=0)
 #k.invert()
+
+#%% test Sina
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k.createSurvey('/home/jkl/Downloads/D10_N.csv')
+#k.surveys[0].addData('/home/jkl/Downloads/D10_R.csv')
+#k.invert()
