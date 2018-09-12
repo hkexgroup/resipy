@@ -212,7 +212,7 @@ class App(QMainWindow):
             scale.setText('1.0')
             patch_size_x.setText('1')
             patch_size_y.setText('1')
-            inv_type.setCurrentIndex(0)
+            inv_type.setCurrentIndex(1)
             data_type.setCurrentIndex(0)
             reg_mode.setCurrentIndex(0)
             max_iterations.setText('10')
@@ -236,6 +236,10 @@ class App(QMainWindow):
             self.inversionOutput = ''
             logText.setText('')
             mwRMS.clear()
+            sectionId.currentIndexChanged.disconnect()
+            sectionId.clear()
+            attributeName.currentIndexChanged.disconnect()
+            attributeName.clear()
             mwInvResult.clear()
             mwInvError.clear()
 
@@ -1761,7 +1765,7 @@ class App(QMainWindow):
             if self.end is True:
                 plotSection()
                 for i in range(len(self.r2.meshResults)):
-                    sectionId.addItem(str(i))
+                    sectionId.addItem(self.r2.surveys[i].name)
                 outStackLayout.setCurrentIndex(0)
 #                invLayout.addLayout(resultLayout, 70)
             else:
@@ -1920,7 +1924,7 @@ class App(QMainWindow):
 #            mwInvResult.replot()
             
         sectionId = QComboBox()
-        displayOptions.addWidget(sectionId)
+        displayOptions.addWidget(sectionId, 10)
         
         attributeName = QComboBox()
         displayOptions.addWidget(attributeName, 20)

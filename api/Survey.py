@@ -45,6 +45,8 @@ class Survey(object):
         """
         self.elec = []
         self.df = pd.DataFrame()
+        if name == '':
+            name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
         
         if ftype == 'Syscal':
