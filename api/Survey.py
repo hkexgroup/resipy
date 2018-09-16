@@ -927,6 +927,11 @@ class Survey(object):
         errTypIP : str, optional
             Needs `ip=True` to be taken into account. Specify the string of
             the error model to apply for IP data.
+            
+        Returns
+        -------
+        protocol : pandas.DataFrame
+            Dataframe which contains the data for the `protocol.dat`. 
         """
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         haveReciprocal = all(self.df['irecip'].values == 0)
@@ -971,7 +976,8 @@ class Survey(object):
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
                 protocol.to_csv(f, sep='\t', header=False, index=False)
-                
+        
+        return protocol
                 
     def dca(self, dump=print):
         ''' execute DCA filtering

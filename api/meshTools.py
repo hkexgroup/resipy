@@ -309,7 +309,10 @@ class Mesh_obj:
                 vmin = np.nanmin(z)
             if vmax is None:
                 vmax = np.nanmax(z)
-            levels = np.linspace(vmin, vmax, 7)
+            if vmax > vmin:
+                levels = np.linspace(vmin, vmax, 7)
+            else:
+                levels = None
             cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()

@@ -49,8 +49,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.typ = 'R2' # or cR2 or R3, cR3
         self.errTyp = 'none' # type of error to add for DC
         self.errTypIP = 'none' # type of error to add for IP phase
-        self.iBorehole = False
-        self.iTimeLapse = False
+        self.iBorehole = False # to tell the software to not plot pseudoSection
+        self.iTimeLapse = False # to enable timelapse inversion
+        self.iBatch = False # to enable batch inversion
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
@@ -113,7 +114,27 @@ class R2(object): # R2 master class instanciated by the GUI
             self.iprangefilt = self.surveys[0].iprangefilt
             self.removerecip = self.surveys[0].removerecip
             self.removenested = self.surveys[0].removenested
-            
+        
+    def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
+        """ Read multiples files from a folders (sorted by alphabetical order).
+        
+        Parameters
+        ----------
+        fname : str
+            Filename to be parsed.
+        ftype : str, optional
+            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+        info : dict, optional
+            Dictionnary of info about the survey.
+        spacing : float, optional
+            Electrode spacing to be passed to the parser function.
+        isurveys : list
+            List of surveys index that will be used for error modelling and so
+            reciprocal measurements. By default all surveys are used.
+        """  
+        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info, spacing=spacing, isurveys=isurveys)
+        self.iTimeLapse = False
+        self.iBatch = True
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
         """ Read electrodes and quadrupoles data and return 
@@ -344,11 +365,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if errTypIP == '':
             errTypIP = self.errTypIP
         
-        
-        if self.iTimeLapse == False:
-            self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                        errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)
-        else:
+
+        if self.iTimeLapse is True:
             # a bit simplistic but assign error to all based on Transfer resistance
 #            allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
             # let's assume it's False all the time for now
@@ -374,6 +392,34 @@ class R2(object): # R2 master class instanciated by the GUI
                         f.write(content) # write the protocol for the reference file
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
+                
+        elif self.iBatch is True:
+            print('print in iBatch format')
+            content = ''
+            for i, s in enumerate(self.surveys):
+                if self.errTyp != 'none':
+                    s.df[self.errTyp+'Error'] = self.bigSurvey.errorModel(s.df['resist'].values)
+                df = s.write2protocol(outputname='',
+                    errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)
+                content = content + str(len(df)) + '\n'
+                content = content + df.to_csv(sep='\t', header=False, index=False)
+#            content = ''
+#            for i, s in enumerate(self.surveys[0:]):
+#                #TODO only take mean of reciprocal no ?
+#                content = content + str(len(s.df)) + '\n'
+#                if errTyp != 'none': # there is an error model
+#                    s.df['error'] = self.bigSurvey.errorModel(s.df['resist'].values)
+#                    s.df['index'] = np.arange(1, len(s.df)+1)
+#                    content = content + s.df[['index','a','b','m','n','resist','error']].to_csv(sep='\t', header=False, index=False)
+#                else:
+#                    s.df['index'] = np.arange(1, len(s.df)+1)
+#                    content = content + s.df[['index','a','b','m','n','resist']].to_csv(sep='\t', header=False, index=False)
+            with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
+                f.write(content)
+        
+        else:
+            self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
+                    errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)
         
         
     def runR2(self, dirname='', dump=print):
@@ -1024,6 +1070,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
 #k.createTimeLapseSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
+#k.createBatchSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.linfit()
 #k.pwlfit()
 #k.errTyp = 'pwl'

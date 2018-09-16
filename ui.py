@@ -246,6 +246,7 @@ class App(QMainWindow):
             
         restartBtn = QPushButton('Reset UI')
         restartBtn.clicked.connect(restartFunc)
+        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
         
         def dimSurvey():                
             if dimRadio2D.isChecked():
@@ -297,6 +298,7 @@ class App(QMainWindow):
                 buttonf.clicked.connect(getdir)
                 reg_mode.setCurrentIndex(2)
                 ipCheck.setEnabled(False)
+                batchCheck.setEnabled(False)
             else:
                 self.r2.iTimeLapse = False
                 buttonf.setText('Import Data')
@@ -304,6 +306,7 @@ class App(QMainWindow):
                 buttonf.clicked.connect(getfile)
                 reg_mode.setCurrentIndex(0)
                 ipCheck.setEnabled(True)
+                batchCheck.setEnabled(True)
                 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
@@ -319,9 +322,17 @@ class App(QMainWindow):
 
         def batchCheckFunc(state):
             if state == Qt.Checked:
-                print('checked for batch')
+                self.r2.iBatch = True
+                buttonf.setText('Import Data Directory')
+                buttonf.clicked.disconnect()
+                buttonf.clicked.connect(getdir)
+                timeLapseCheck.setEnabled(False)
             else:
-                print('not checked')
+                self.r2.iBatch = False
+                buttonf.setText('Import Data')
+                buttonf.clicked.disconnect()
+                buttonf.clicked.connect(getfile)
+                timeLapseCheck.setEnabled(True)
         batchCheck = QCheckBox('Batch Inversion')
         batchCheck.stateChanged.connect(batchCheckFunc)
         
@@ -335,6 +346,9 @@ class App(QMainWindow):
             tabs.setTabEnabled(3, True)
             tabImporting.setTabEnabled(1, True)
             buttonf.setEnabled(False)
+            timeLapseCheck.setEnabled(False)
+            batchCheck.setEnabled(False)
+            boreholeCheck.setEnabled(False)
         def dimInverseFunc():
             fileType.setEnabled(True)
             dimForward.setChecked(False)
@@ -343,6 +357,9 @@ class App(QMainWindow):
             tabs.setTabEnabled(3, False)
             tabImporting.setTabEnabled(1, False)
             buttonf.setEnabled(True)
+            timeLapseCheck.setEnabled(True)
+            batchCheck.setEnabled(True)
+            boreholeCheck.setEnabled(True)
         dimForward = QRadioButton('Forward')
         dimForward.setChecked(False)
         dimForward.toggled.connect(dimForwardFunc)
@@ -363,28 +380,6 @@ class App(QMainWindow):
         
         hbox1 = QHBoxLayout()
         hbox1.addWidget(restartBtn)
-#        hbox1.addWidget(dimRadio2D, 6)
-#        hbox1.addWidget(dimRadio3D, 6)
-#        rs0 = QWidget()
-#        r0 = QRadioButton('a', rs0)
-#        r1 = QRadioButton('b', rs0)
-#        rs1 = QWidget()
-#        r2 = QRadioButton('c', rs1)
-#        r3 = QRadioButton('d', rs1)
-#        gr1 = QGroupBox()
-#        gr1.addButton(r0)
-#        gr1.addButton(r1)
-#        gr1.addButton(r0)
-#        r0.setChecked(True)
-#        gr1.addButton(r1)
-#        gr2 = QButtonGroup()
-#        gr2.addButton(r2)
-#        r2.setChecked(True)
-#        gr2.addButton(r3)
-#        hbox1.addWidget(r0)
-#        hbox1.addWidget(r1)
-#        hbox1.addWidget(r2)
-#        hbox1.addWidget(r3)
         hbox1.addWidget(dimGroup)
         hbox1.addWidget(title)
         hbox1.addWidget(titleEdit)
@@ -392,28 +387,12 @@ class App(QMainWindow):
         hbox1.addWidget(dateEdit)
         
         hbox2 = QHBoxLayout()
-#        hbox2.addWidget(dimForward, 10)
-#        hbox2.addWidget(dimInverse, 10)
         hbox2.addWidget(dimInvGroup)
         hbox2.addWidget(timeLapseCheck)
         hbox2.addWidget(batchCheck)
         hbox2.addWidget(boreholeCheck)
         
-#        gridLayout = QGridLayout()
-#        gridLayout.addWidget(title, 0, 0)
-#        gridLayout.addWidget(titleEdit, 0, 1)
-#        gridLayout.addWidget(timeLapseCheck, 0, 2)
-#        gridLayout.addWidget(date, 1, 0)
-#        gridLayout.addWidget(dateEdit, 1, 1)
-#        gridLayout.addWidget(boreholeCheck, 1, 2)
-#        
-#        topLayout = QHBoxLayout()
-#        topLayout.addWidget(restartBtn, 5)
-#        topLayout.addWidget(dimGroup, 5)
-#        topLayout.addLayout(gridLayout, 90)
-#        
 
-        
         # ask for working directory, and survey file to input
         def getwd():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose Working Directory')
@@ -424,7 +403,7 @@ class App(QMainWindow):
             
         wdBtn = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
         wdBtn.clicked.connect(getwd)
-        
+        wdBtn.setToolTip('The working directory will contains all files for the inversion (R2.in, R2.exe, protocol.dat, f001_res.vtk, ...)')
         
         self.ftype = 'Syscal' # by default
         
@@ -449,7 +428,10 @@ class App(QMainWindow):
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.r2.dirname)
             if fdir != '':
                 try:
-                    self.r2.createTimeLapseSurvey(fdir)
+                    if self.r2.iBatch is False:
+                        self.r2.createTimeLapseSurvey(fdir)
+                    else:
+                        self.r2.createBatchSurvey(fdir)
                     buttonf.setText(fdir + ' (Press to change)')
                     plotPseudo()
                     elecTable.initTable(self.r2.elec)
@@ -1860,14 +1842,6 @@ class App(QMainWindow):
             # ternary operations
             vmax = None if vmax == '' else float(vmax)
             vmin = None if vmin == '' else float(vmin)
-#            if vmax == '':
-#                vmax = None
-#            else: 
-#                vmax = float(vmax)
-#            if vmin == '':
-#                vmin = None
-#            else:
-#                vmin = float(vmin)
             self.displayParams['vmin'] = vmin
             self.displayParams['vmax'] = vmax
             if contour.isChecked() is True:
@@ -1951,15 +1925,19 @@ class App(QMainWindow):
         vminLabel = QLabel('Min:')
         vminEdit = QLineEdit()
         vminEdit.setValidator(QDoubleValidator())
-        vminEdit.textChanged.connect(setCBarLimit)
+#        vminEdit.textChanged.connect(setCBarLimit)
         vmaxLabel = QLabel('Max:')
         vmaxEdit = QLineEdit()
-        vmaxEdit.textChanged.connect(setCBarLimit)
+#        vmaxEdit.textChanged.connect(setCBarLimit)
         vmaxEdit.setValidator(QDoubleValidator())
+        vMinMaxApply = QPushButton('Apply')
+        vMinMaxApply.clicked.connect(setCBarLimit)
+        
         displayOptions.addWidget(vminLabel)
         displayOptions.addWidget(vminEdit)
         displayOptions.addWidget(vmaxLabel)
         displayOptions.addWidget(vmaxEdit)
+        displayOptions.addWidget(vMinMaxApply)
         
         def showEdges(status):
             if status == Qt.Checked:
