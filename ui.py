@@ -62,11 +62,11 @@ class MatplotlibWidget(QWidget):
         coll = self.axis.collections[0]
 #        print('->', vmin, vmax)
 #        print('array ', coll.get_array())
-        if vmin == '':
+        if vmin is None:
             vmin = np.nanmin(coll.get_array())
         else:
             vmin = float(vmin)
-        if vmax == '':
+        if vmax is None:
             vmax = np.nanmax(coll.get_array())
         else:
             vmax = float(vmax)
@@ -1824,7 +1824,7 @@ class App(QMainWindow):
                 defaultAttr = 'Sigma_real(log10)'
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
-                                  'contour':False}
+                                  'contour':False, 'vmin':None, 'vmax':None}
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
             vminEdit.setText('')
@@ -1843,18 +1843,37 @@ class App(QMainWindow):
             sens = self.displayParams['sens']
             attr = self.displayParams['attr']
             contour = self.displayParams['contour']
-#            print(edge_color, sens, attr)
-            mwInvResult.replot(index=index, edge_color=edge_color, contour=contour, sens=sens, attr=attr)
-            setCBarLimit()
+            vmin = self.displayParams['vmin']
+            vmax = self.displayParams['vmax']
+            mwInvResult.replot(index=index, edge_color=edge_color,
+                               contour=contour, sens=sens, attr=attr,
+                               vmin=vmin, vmax=vmax)
             
         def msgBox(text):
             msg = QMessageBox()
             msg.setText(text)
             
         def setCBarLimit():
+#            print('setCBarLimit')
             vmax = vmaxEdit.text()
             vmin = vminEdit.text()
-            mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
+            # ternary operations
+            vmax = None if vmax == '' else float(vmax)
+            vmin = None if vmin == '' else float(vmin)
+#            if vmax == '':
+#                vmax = None
+#            else: 
+#                vmax = float(vmax)
+#            if vmin == '':
+#                vmin = None
+#            else:
+#                vmin = float(vmin)
+            self.displayParams['vmin'] = vmin
+            self.displayParams['vmax'] = vmax
+            if contour.isChecked() is True:
+                replotSection()
+            else:
+                mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
             
 
         btn = QPushButton('Invert')
@@ -1954,6 +1973,7 @@ class App(QMainWindow):
         displayOptions.addWidget(edgeCheck)
         
         def contourFunc(state):
+            print('contour')
             if state == Qt.Checked:
                 self.displayParams['contour'] = True
             else:

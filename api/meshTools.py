@@ -218,7 +218,7 @@ class Mesh_obj:
         attr: string
             which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
             as the key for this dictionary
-        
+
         Returns
         ----------
         matplotlib figure with mesh 
@@ -303,7 +303,14 @@ class Mesh_obj:
 #            zi = zi.reshape(xi.shape)
 #            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
             triang = tri.Triangulation(x,y)
-            cax = ax.tricontourf(triang, z)
+#            z[z<=vmin] = vmin
+#            z[z>=vmax] = vmax
+            if vmin is None:
+                vmin = np.nanmin(z)
+            if vmax is None:
+                vmax = np.nanmax(z)
+            levels = np.linspace(vmin, vmax, 7)
+            cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
@@ -313,9 +320,9 @@ class Mesh_obj:
         ax.set_ylabel('Elevation')
         
         if color_bar:#add the color bar 
-            cbar = plt.colorbar(cax, ax=ax)#add colorbar
-            cbar.set_label(color_bar_title) #set colorbar title      
-        
+            cbar = plt.colorbar(cax, ax=ax, format='%.1f')
+            cbar.set_label(color_bar_title) #set colorbar title
+
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
 
         #biuld alpha channel if we have sensitivities 
@@ -1269,12 +1276,12 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh.show(color_bar=False)
 
 #mesh = vtk_import('api/test/test.vtk')
-#mesh = vtk_import('api/invdir/f001_res.vtk')
+##mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()
-#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis', ax=ax)
-#mesh.show(attr=attrs[2])
-#mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
+#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
+##mesh.show(attr=attrs[2])
+##mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 #fig.show()
 
 #%%
@@ -1311,13 +1318,27 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #                         y[triang.triangles].mean(axis=1))
 #                < min_radius)
 #
+#import matplotlib as mpl
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
+#from matplotlib import ticker
 #fig1, ax1 = plt.subplots()
 #ax1.set_aspect('equal')
-#tcf = ax1.tricontourf(triang, z)
-#fig1.colorbar(tcf)
-#ax1.tricontour(triang, z, colors='k')
+#vmin, vmax = -1, 0.5
+#z[z<vmin] = vmin
+#z[z>vmax] = vmax
+#tcf = ax1.tricontourf(triang, z, levels=np.linspace(vmin, vmax, 10), extend='both')
+##divider = make_axes_locatable(ax1)
+##cax = divider.append_axes("right", size="3%", pad=0.05)
+##cbar = fig1.colorbar(tcf, cax=cax)
+##tick_locator = ticker.MaxNLocator(nbins=5)
+##cbar.locator = tick_locator
+##cbar.update_ticks()
+#cbar = fig1.colorbar(tcf)
+#ax1.tricontour(triang, z, levels=np.linspace(vmin, vmax, 10), colors='k')
 #ax1.set_title('Contour plot of Delaunay triangulation')
 #fig1.show()
-#
 
-
+""" two solutions:
+    ax1.collections[0].facecolors contains the assigned color for each contour
+    tcf (output of ax.tricontourf) takes tcf.set_clim()
+"""
