@@ -7,7 +7,6 @@ Created on Wed May 30 16:48:54 2018
 
 import numpy as np
 import pandas as pd
-import re
 import os
 import sys
 import shutil
@@ -108,7 +107,7 @@ class R2(object): # R2 master class instanciated by the GUI
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
         """    
-        self.surveys.append(Survey(fname, ftype, spacing=spacing))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser))
         self.surveysInfo.append(info)
         
         # define electrode position according to first survey
@@ -148,7 +147,7 @@ class R2(object): # R2 master class instanciated by the GUI
             List of surveys index that will be used for error modelling and so
             reciprocal measurements. By default all surveys are used.
         """  
-        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info, spacing=spacing, isurveys=isurveys)
+        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info, spacing=spacing, isurveys=isurveys, parser=parser)
         self.iTimeLapse = False
         self.iBatch = True
 
@@ -176,7 +175,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
         for f in files:
-            self.createSurvey(os.path.join(dirname, f))
+            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             print('---------', f, 'imported')

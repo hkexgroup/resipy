@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-#import time
+import time
 
 #a = time.time()
 print('importing pyqt')
@@ -146,18 +146,22 @@ class App(QMainWindow):
         os.mkdir(newwd)
         self.r2 = R2(newwd)
         self.r2.cwd = bundle_dir
+        self.parser = None
  
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
         self.setWindowIcon(QIcon('logo.png')) ### change this to change the icon of the window. 
+        
         def errorDump(text, flag=1):
+            timeStamp = time.strftime('%H:%M:%S')
             if flag == 1: # error in red
                 col = 'red'
             else:
                 col = 'black'
-            errorLabel.setText('<i style="color:'+col+'">'+text+'</i>')
+            errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
+        
         
         #%% tab 1 importing data
         tabImporting = QTabWidget()
@@ -240,6 +244,8 @@ class App(QMainWindow):
             sectionId.clear()
             attributeName.currentIndexChanged.disconnect()
             attributeName.clear()
+            vminEdit.setText('')
+            vmaxEdit.setText('')
             mwInvResult.clear()
             mwInvError.clear()
 
@@ -412,11 +418,15 @@ class App(QMainWindow):
                 self.ftype = 'Syscal'
             elif index == 1:
                 self.ftype = 'Protocol'
+            elif index == 2:
+                self.ftype = 'Custom'
+                tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
                 self.ftype = '' # let to be guessed
         fileType = QComboBox()
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
+        fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         
         spacingEdit = QLineEdit()
@@ -447,30 +457,37 @@ class App(QMainWindow):
         def getfile():
             print('ftype = ', self.ftype)
             fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
+            if fname != '':
+                importFile(fname)
+        
+        def importFile(fname):            
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
-            if fname != '':
-                try:
-                    ipCheck.setEnabled(True)
-                    self.fname = fname
-                    buttonf.setText(self.fname + ' (Press to change)')
-                    if float(spacingEdit.text()) == -1:
-                        spacing = None
-                    else:
-                        spacing = float(spacingEdit.text())
-                    self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing)
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        hbox4.addWidget(buttonfr)
-                    else:
-                        tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
-    #                generateMesh()
-                    plotPseudo()
-                    plotManualFiltering()
-                    elecTable.initTable(self.r2.elec)
-                    tabImporting.setTabEnabled(1,True)
-                except:
-                    errorDump('File not recognized.')
+            try:
+                ipCheck.setEnabled(True)
+                self.fname = fname
+                buttonf.setText(self.fname + ' (Press to change)')
+                if float(spacingEdit.text()) == -1:
+                    spacing = None
+                else:
+                    spacing = float(spacingEdit.text())
+                print('all ok')
+                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                                     parser=self.parser)
+                print('ok passed import')
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    hbox4.addWidget(buttonfr)
+                else:
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+#                generateMesh()
+                plotPseudo()
+                plotManualFiltering()
+                elecTable.initTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
+            except ValueError as e:
+                print(e)
+                errorDump('File not recognized.')
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
@@ -777,16 +794,16 @@ class App(QMainWindow):
         parseBtn.clicked.connect(parseBtnFunc)
             
         # have qcombobox to be read for each columns
-        aBoxLabel = QLabel('A (or C1)')
-        bBoxLabel = QLabel('B (or C2)')
-        mBoxLabel = QLabel('M (or P1)')
-        nBoxLabel = QLabel('N (or P2)')
-        vpBoxLabel = QLabel('Vp Potential Difference')
-        InBoxLabel = QLabel('In Current')
+        aBoxLabel = QLabel('A (or C1)*')
+        bBoxLabel = QLabel('B (or C2)*')
+        mBoxLabel = QLabel('M (or P1)*')
+        nBoxLabel = QLabel('N (or P2)*')
+        vpBoxLabel = QLabel('Vp Potential Difference*')
+        InBoxLabel = QLabel('In Current*')
         resistBoxLabel = QLabel('Transfer Resistance')
         ipStartBoxLabel = QLabel('IP start column')
         ipEndBoxLabel = QLabel('IP end column')
-        chargeabilityBoxLabel = QLabel('Chargeability')
+        chargeabilityBoxLabel = QLabel('Chargeability*')
         elecSpacingLabel = QLabel('Electrode spacing')
        
         boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
@@ -802,9 +819,9 @@ class App(QMainWindow):
         ipStartBox = QComboBox()
         ipEndBox = QComboBox()
         chargeabilityBox = QComboBox()
-        elecSpacingEdit = QLineEdit('1')
-        elecSpacingEdit.setValidator(QIntValidator())
-        elecSpacingEdit.setFixedWidth(50)
+        elecSpacingEdit = QLineEdit('')
+        elecSpacingEdit.setValidator(QDoubleValidator())
+        elecSpacingEdit.setFixedWidth(80)
         elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
         
         boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
@@ -860,7 +877,7 @@ class App(QMainWindow):
             colIndex = []
             newHeaders = []
             vals = getBoxes([aBox,bBox,mBox,nBox])
-            if (all(vals > 0) is True) & (len(np.unique(vals) == 4)):
+            if (np.sum(vals > 0) == 4) & (len(np.unique(vals)) == 4):
                 colIndex.append(vals)
                 newHeaders.append(['a','b','m','n'])
             else:
@@ -877,11 +894,15 @@ class App(QMainWindow):
                 else:
                     errorDump('Please select columns for Vp, In or Resist.')
                     return
+            vals = getBoxes([chargeabilityBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['ip'])
             # TODO need to import the IP coluns as well
             
             colIndex = np.hstack(colIndex)
             newHeaders = np.hstack(newHeaders)
-            print(colIndex, newHeaders)
+#            print(colIndex, newHeaders)
 
             def parserFunc(fname):
                 # retrieve usefull values
@@ -889,7 +910,7 @@ class App(QMainWindow):
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
-                espacing = float(elecSpacingEdit.text())
+                espacing = None if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
                 df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows)
@@ -897,17 +918,29 @@ class App(QMainWindow):
                 df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
                 if 'resist' not in df.columns:
                     df['resist'] = df['vp']/df['i']
-                array = df[['a','b','m','n']].values
+                if 'ip' not in df.columns:
+                    df['ip'] = 0
+                array = df[['a','b','m','n']].values.copy()
+                if espacing is None:
+                    espacing = np.unique(np.sort(array.flatten()))[1]
+                array = np.round(array/espacing+1).astype(int)
+                df[['a','b','m','n']] = array
                 imax = int(np.max(array))
                 elec = np.zeros((imax,3))
                 elec[:,0] = np.arange(0,imax)*espacing
-                
                 return elec, df
+
+            self.parser = parserFunc
             
+            # test            
             elec, df = parserFunc(self.fnameManual)
-            print(elec.shape)
-            print(df.shape)
+#            print(elec.shape, df.shape)
                 
+            
+            if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
+                importFile(self.fnameManual)
+            
+            tabImporting.setCurrentIndex(0)
                 
                 
         importBtn = QPushButton('Import Dataset')
