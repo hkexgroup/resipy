@@ -6,7 +6,7 @@ provides a standalone graphical user interface (GUI) along with a python API* fo
 
 *API = Application Programming Interface
 
-
+THIS IS A GREAT PROJECT
 Project structure
 -----------------
 
