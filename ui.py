@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import time
+#import time
 
 #a = time.time()
 print('importing pyqt')
@@ -744,48 +744,103 @@ class App(QMainWindow):
         
         
         #%% sub tab for custom importing
-        # TODO
         customParser = QWidget()
+        tabImporting.addTab(customParser, 'Custom Parser')
+        
+        delimiterLabel = QLabel('Delimiter')
+        delimiterEdit = QLineEdit('')
+        skipRowsLabel = QLabel('Number of rows to skip')
+        skipRowsEdit = QLineEdit('0')
+        skipRowsEdit.setValidator(QIntValidator())
         
         def openFileBtnFunc(file):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
             if fname != '':
+                self.fnameManual = fname
                 openFileBtn.setText(fname + ' (Click to change)')
-                print('opening file')
         openFileBtn = QPushButton('Open File')
         openFileBtn.clicked.connect(openFileBtnFunc)
+
+        def parseBtnFunc():
+            try:
+                delimiter = delimiterEdit.text()
+                delimiter = None if delimiter == '' else delimiter
+                skipRows = skipRowsEdit.text()
+                skipRows = None if skipRows == '' else int(skipRows)
+                parserTable.readTable(self.fnameManual, delimiter=delimiter,
+                                          skiprows=skipRows)
+                fillBoxes(boxes[:-1]) # last one is elecSpacingEdit
+            except ValueError as e:
+                errorDump('Import error:', e)
+
+        parseBtn = QPushButton('Import')
+        parseBtn.clicked.connect(parseBtnFunc)
+            
+        # have qcombobox to be read for each columns
+        aBoxLabel = QLabel('A (or C1)')
+        bBoxLabel = QLabel('B (or C2)')
+        mBoxLabel = QLabel('M (or P1)')
+        nBoxLabel = QLabel('N (or P2)')
+        vpBoxLabel = QLabel('Vp Potential Difference')
+        InBoxLabel = QLabel('In Current')
+        resistBoxLabel = QLabel('Transfer Resistance')
+        ipStartBoxLabel = QLabel('IP start column')
+        ipEndBoxLabel = QLabel('IP end column')
+        chargeabilityBoxLabel = QLabel('Chargeability')
+        elecSpacingLabel = QLabel('Electrode spacing')
+       
+        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
+                 ipEndBoxLabel, chargeabilityBoxLabel, elecSpacingLabel]
+        
+        aBox = QComboBox()
+        bBox = QComboBox()
+        mBox = QComboBox()
+        nBox = QComboBox()
+        vpBox = QComboBox()
+        InBox = QComboBox()
+        resistBox = QComboBox()
+        ipStartBox = QComboBox()
+        ipEndBox = QComboBox()
+        chargeabilityBox = QComboBox()
+        elecSpacingEdit = QLineEdit('1')
+        elecSpacingEdit.setValidator(QIntValidator())
+        elecSpacingEdit.setFixedWidth(50)
+        elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
+        
+        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
+                 ipEndBox, chargeabilityBox, elecSpacingEdit]
+                
+        def fillBoxes(bs):
+            for b in bs:
+                b.clear()
+                choices = parserTable.headers
+                for i, choice in enumerate(choices):
+                    if i == 0:
+                        b.addItem('Select if available')
+                    b.addItem(str(choice))
+                    
+        def getBoxes(bs):
+            cols = []
+            for b in bs:
+                cols.append(b.currentIndex()-1) # -1 because of 1st item
+            return np.array(cols)
         
         # add a qtableview or create a custom class
         class ParserTable(QTableWidget):
             def __init__(self, nrow=10, ncol=10):
-                super(ElecTable, self).__init__(nrow, ncol)
+                super(ParserTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
+                self.headers = []
+#                self.horizontalHeader.hide()
             
-            def readTable(self, fname='', header=None, delimiter='infer', skip_rows=0):
+            def readTable(self, fname='', delimiter=None, skiprows=None):
                 if fname != '':
-                    df = pd.read_csv(fname, header=None)
+                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows)
+                    self.headers = df.columns.values
+                    self.setHorizontalHeaderLabels(self.headers)
                     tt = df.values
                     self.setTable(tt)            
-                   
-            def initTable(self, tt=None, headers=None):
-                self.clear()
-                if headers is not None:
-#                    print('rename headers = ', headers)
-                    self.headers = headers
-#                else:
-#                    print('will use ', self.headers)
-                self.ncol = len(self.headers)
-                if 'Buried' in self.headers:
-                    self.ncol = self.ncol - 1
-                if tt is None:
-                    tt = np.zeros((10,len(self.headers)-1))
-                self.setRowCount(tt.shape[0])
-#                self.setColumnCount(tt.shape[1]) # +1 for buried check column
-                self.nrow = tt.shape[0]
-                self.setTable(tt)
-                if 'Buried' in self.headers:
-                    self.setBuried()
                 
             def setTable(self, tt):
                 # paste clipboard to qtableView
@@ -793,25 +848,96 @@ class App(QMainWindow):
                 self.setColumnCount(tt.shape[1])
 #                self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                
                 for i in range(tt.shape[1]):
                     for j in range(tt.shape[0]):
                         self.setItem(j,i,QTableWidgetItem(str(tt[j, i])))
-                    
-            def getTable(self):
-                table = np.zeros((self.nrow, self.ncol))
-                for i in range(self.ncol):
-                    for j in range(self.nrow):
-                        table[j,i] = float(self.item(j,i).text())
-#                print('table = ', table)
-                return table
-            
-            
-            
         
-        parserLayout = QHBoxLayout()
+            
+        parserTable = ParserTable()
+        
+        def importBtnFunc():
+            print('importing data')
+            colIndex = []
+            newHeaders = []
+            vals = getBoxes([aBox,bBox,mBox,nBox])
+            if (all(vals > 0) is True) & (len(np.unique(vals) == 4)):
+                colIndex.append(vals)
+                newHeaders.append(['a','b','m','n'])
+            else:
+                errorDump('Please select columns for electrodes.')
+                return
+            vals = getBoxes([resistBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+            else:
+                vals = getBoxes([vpBox,InBox])
+                if all(vals > 0) is True:
+                    colIndex.append(vals)
+                    newHeaders.append(['vp','i'])
+                else:
+                    errorDump('Please select columns for Vp, In or Resist.')
+                    return
+            # TODO need to import the IP coluns as well
+            
+            colIndex = np.hstack(colIndex)
+            newHeaders = np.hstack(newHeaders)
+            print(colIndex, newHeaders)
+
+            def parserFunc(fname):
+                # retrieve usefull values
+                delimiter = delimiterEdit.text()
+                delimiter = None if delimiter == '' else delimiter
+                skipRows = skipRowsEdit.text()
+                skipRows = None if skipRows == '' else int(skipRows)
+                espacing = float(elecSpacingEdit.text())
+                
+                # parse
+                df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows)
+                oldHeaders = df.columns.values[colIndex]
+                df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
+                if 'resist' not in df.columns:
+                    df['resist'] = df['vp']/df['i']
+                array = df[['a','b','m','n']].values
+                imax = int(np.max(array))
+                elec = np.zeros((imax,3))
+                elec[:,0] = np.arange(0,imax)*espacing
+                
+                return elec, df
+            
+            elec, df = parserFunc(self.fnameManual)
+            print(elec.shape)
+            print(df.shape)
+                
+                
+                
+        importBtn = QPushButton('Import Dataset')
+        importBtn.clicked.connect(importBtnFunc)
+        
+        
+        # layout
+        parserLayout = QVBoxLayout()
+        parserOptions = QHBoxLayout()
+        columnsAssign = QGridLayout()
+        
         parserLayout.addWidget(openFileBtn)
+        parserOptions.addWidget(delimiterLabel)
+        parserOptions.addWidget(delimiterEdit)
+        parserOptions.addWidget(skipRowsLabel)
+        parserOptions.addWidget(skipRowsEdit)
+        parserOptions.addWidget(parseBtn)
+        parserLayout.addLayout(parserOptions)
         
+        parserLayout.addWidget(parserTable)
+        for i in range(len(boxes)):
+            c = (i % 3)*2 # in 2*3 columns (with labels)
+            r = int(i/3) 
+            columnsAssign.addWidget(boxesLabels[i], r, c)
+            columnsAssign.addWidget(boxes[i], r, c+1)
+        parserLayout.addLayout(columnsAssign)
+        parserLayout.addWidget(importBtn)
+        
+        customParser.setLayout(parserLayout)
+
         
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
@@ -1862,12 +1988,6 @@ class App(QMainWindow):
 #                runMainInversion()
         
         def plotSection():
-#            self.r2.showResults()
-#            try:
-#            mwInvResult.plot(self.r2.showResults)
-#            if self.r2.typ == 'cR2': # TODO remove that when Andy implement vtk output
-#                mwInvResult.setCallback(self.r2.showSection)
-#            else:
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.typ == 'R2':
                 plotInvError()
@@ -2210,7 +2330,7 @@ if __name__ == '__main__':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
-    import matplotlib.pyplot as plt
+#    import matplotlib.pyplot as plt
     progressBar.setValue(2)
     app.processEvents()
 

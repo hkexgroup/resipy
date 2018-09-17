@@ -21,7 +21,7 @@ class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
     """
-    def __init__(self, fname, ftype='', name='', spacing=None):
+    def __init__(self, fname, ftype='', name='', spacing=None, parser=None):
         """ Create a Survey object, that contains the data and some basic 
         procedures.
         
@@ -30,18 +30,17 @@ class Survey(object):
         fname : str
             Name of the file where the data are.
         ftype : str
-            Type of the data file.
+            Type of the data file. This setting is not read if a `parser` is
+            not `None`.
         name : str
             A personal name for the survey.
         spacing : float, optional
             This will be passed to the parser function to determine the
             electrode positions.
-        elec : array
-            Array with 3 columsn with the electrodes position in X, Y and Z.
-        data : pandas.DataFrame
-            Dataframe containing the 'a','b','m','n','resist' columns. Note
-            that  `resist` is the *transfer resistance* not the apparent
-            resistivity.
+        parser : function, optional
+            If provided, it should return tuple containing `elec` a 3 columns
+            array containing electrodes position and `data` a pandas.DataFrame
+            with the `a,b,m,n,resist` columns at least and `ip` if present.
         """
         self.elec = []
         self.df = pd.DataFrame()
@@ -49,17 +48,20 @@ class Survey(object):
             name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
         
-        if ftype == 'Syscal':
-            elec, data = syscalParser(fname, spacing=spacing)
-        elif ftype =='Protocol':
-            elec, data = protocolParser(fname)
-        elif ftype == 'Res2Dinv':
-            elec, data = res2invInputParser(fname)
-#        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
-#            pass # manual set up
-#            print('Manual set up, no data will be imported')
+        if parser is not None:
+            elec, data = parser(fname)
         else:
-            raise Exception('Sorry this file type is not implemented yet')
+            if ftype == 'Syscal':
+                elec, data = syscalParser(fname, spacing=spacing)
+            elif ftype =='Protocol':
+                elec, data = protocolParser(fname)
+            elif ftype == 'Res2Dinv':
+                elec, data = res2invInputParser(fname)
+    #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
+    #            pass # manual set up
+    #            print('Manual set up, no data will be imported')
+            else:
+                raise Exception('Sorry this file type is not implemented yet')
         
         self.df = data
         self.dfphasereset = pd.DataFrame() #for preserving phase reset ability

@@ -91,7 +91,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = dirname
     
     
-    def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None):
+    def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, parser=None):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -105,6 +105,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Dictionnary of info about the survey.
         spacing : float, optional
             Electrode spacing to be passed to the parser function.
+        parser : function, optional
+            A parser function to be passed to `Survey` constructor.
         """    
         self.surveys.append(Survey(fname, ftype, spacing=spacing))
         self.surveysInfo.append(info)
@@ -127,7 +129,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removerecip = self.surveys[0].removerecip
             self.removenested = self.surveys[0].removenested
         
-    def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
+    def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[]):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -140,6 +142,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Dictionnary of info about the survey.
         spacing : float, optional
             Electrode spacing to be passed to the parser function.
+        parser : function, optional
+            A parser function to be passed to `Survey` constructor.
         isurveys : list
             List of surveys index that will be used for error modelling and so
             reciprocal measurements. By default all surveys are used.
@@ -148,7 +152,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = False
         self.iBatch = True
 
-    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, isurveys=[]):
+    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[]):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -162,6 +166,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Dictionnary of info about the survey.
         spacing : float, optional
             Electrode spacing to be passed to the parser function.
+        parser : function, optional
+            A parser function to be passed to `Survey` constructor.
         isurveys : list
             List of surveys index that will be used for error modelling and so
             reciprocal measurements. By default all surveys are used.
