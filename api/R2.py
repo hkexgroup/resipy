@@ -7,6 +7,7 @@ Created on Wed May 30 16:48:54 2018
 
 import numpy as np
 import pandas as pd
+import re
 import os
 import sys
 import shutil
@@ -39,7 +40,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if dirname == '':
             dirname = os.getcwd()
             print('using the current directory:', dirname)
-        self.dirname = dirname # working directory (for the datas)
+        self.setwd(dirname) # working directory (for the datas)
         self.cwd = os.getcwd() # directory of the code
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
@@ -68,6 +69,8 @@ class R2(object): # R2 master class instanciated by the GUI
         files = os.listdir(dirname)
         if 'ref' in files: # only for timelapse survey
             shutil.rmtree(os.path.join(dirname, 'ref'))
+        if 'err' in files: # only for error modelling
+            shutil.rmtree(os.path.join(dirname, 'err'))
         if 'R2.exe' in files:
             os.remove(os.path.join(dirname, 'R2.exe'))
         if 'cR2.exe' in files:
@@ -76,6 +79,15 @@ class R2(object): # R2 master class instanciated by the GUI
             os.remove(os.path.join(dirname, 'mesh.dat'))
         if 'Start_res.dat' in files:
             os.remove(os.path.join(dirname, 'Start_res.dat'))
+        def isNumber(x):
+            try:
+                float(x)
+                return True
+            except:
+                return False
+        for f in files:
+            if (f[0] == 'f') & (isNumber(f[1:3]) is True):
+                os.remove(os.path.join(dirname, f))
         self.dirname = dirname
     
     

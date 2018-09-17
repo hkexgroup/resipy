@@ -742,6 +742,77 @@ class App(QMainWindow):
         tabImportingTopo.setLayout(topoLayout)
         tabImporting.setTabEnabled(1, False)
         
+        
+        #%% sub tab for custom importing
+        # TODO
+        customParser = QWidget()
+        
+        def openFileBtnFunc(file):
+            fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
+            if fname != '':
+                openFileBtn.setText(fname + ' (Click to change)')
+                print('opening file')
+        openFileBtn = QPushButton('Open File')
+        openFileBtn.clicked.connect(openFileBtnFunc)
+        
+        # add a qtableview or create a custom class
+        class ParserTable(QTableWidget):
+            def __init__(self, nrow=10, ncol=10):
+                super(ElecTable, self).__init__(nrow, ncol)
+                self.nrow = nrow
+                self.ncol = ncol
+            
+            def readTable(self, fname='', header=None, delimiter='infer', skip_rows=0):
+                if fname != '':
+                    df = pd.read_csv(fname, header=None)
+                    tt = df.values
+                    self.setTable(tt)            
+                   
+            def initTable(self, tt=None, headers=None):
+                self.clear()
+                if headers is not None:
+#                    print('rename headers = ', headers)
+                    self.headers = headers
+#                else:
+#                    print('will use ', self.headers)
+                self.ncol = len(self.headers)
+                if 'Buried' in self.headers:
+                    self.ncol = self.ncol - 1
+                if tt is None:
+                    tt = np.zeros((10,len(self.headers)-1))
+                self.setRowCount(tt.shape[0])
+#                self.setColumnCount(tt.shape[1]) # +1 for buried check column
+                self.nrow = tt.shape[0]
+                self.setTable(tt)
+                if 'Buried' in self.headers:
+                    self.setBuried()
+                
+            def setTable(self, tt):
+                # paste clipboard to qtableView
+                self.setRowCount(tt.shape[0])
+                self.setColumnCount(tt.shape[1])
+#                self.setHorizontalHeaderLabels(self.headers)
+                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                
+                for i in range(tt.shape[1]):
+                    for j in range(tt.shape[0]):
+                        self.setItem(j,i,QTableWidgetItem(str(tt[j, i])))
+                    
+            def getTable(self):
+                table = np.zeros((self.nrow, self.ncol))
+                for i in range(self.ncol):
+                    for j in range(self.nrow):
+                        table[j,i] = float(self.item(j,i).text())
+#                print('table = ', table)
+                return table
+            
+            
+            
+        
+        parserLayout = QHBoxLayout()
+        parserLayout.addWidget(openFileBtn)
+        
+        
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
         tabs.addTab(tabPreProcessing, 'Pre-processing')
