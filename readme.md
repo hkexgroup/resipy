@@ -1,7 +1,6 @@
 GUI for R2 family code
 ======================
 
-Amaizine !!!!!!!!!!!!!!sfqslmkfqmsefq
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
 provides a standalone graphical user interface (GUI) along with a python API* for use in jupyter notebook.
 
@@ -74,6 +73,29 @@ If there is a feature you would like to see in the API or the GUI or if there is
  please raise an issue on Gitlab describing it.
 The issue will then be assigned to someone to be addressed. This will allow to spread the workload and avoid
 two people doing the same work in parallel.
+
+
+Use of git (for developers)
+----------------------------
+
+Below is the usual commands you are likely to go through if you contribute to this project.
+
+First ensure you have cloned the project and are in the main project directory.
+```
+git clone git@gitlab.com:sagitta1618/r2gui.git
+cd r2gui
+```
+
+The typical workflow is as following:
+1. Check you are up to date with the master branch using : `git checkout master`
+2. Create a new branch to which you can push you changes to. This branch will then be merge to `master` in a merge request : `git checkout -b newbranch`
+3. Operates your changes in the files
+4. Use `git status` to see which file need to be added to the reposity and which files have just been changed.
+5. Use `git add newfile` to add new files
+6. Use `git commit -a` to add a commit messages to the changes you are about to push
+7. Use `git push origin newbranch` to push your changes to the repository
+8. Go on gitlab and on the project page you will see an invitation to create a merge request from the branch you have just push to.
+
 
 
 
