@@ -88,6 +88,7 @@ class Mesh_obj:
     Mesh_obj: object
         
     """    
+    cax = None 
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
                  num_elms,#number of elements 
@@ -140,15 +141,6 @@ class Mesh_obj:
         if len(values)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.sensitivities = values
-        
-    def add_conductivities(self,values):
-        if len(values)!=self.num_elms:
-            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        self.conductivities = values
-        
-    def log10(self):#adds a log 10 (resistivity) to the mesh
-        Mesh_obj.no_attributes += 1
-        self.log_attribute=np.log10(self.cell_attributes)
         
     def file_path(self):#returns the file path from where the mesh was imported
         return(format(self.original_file_path))
@@ -257,6 +249,11 @@ class Mesh_obj:
         if ax is None:
             iplot = True
             fig,ax=plt.subplots()
+            self.fig = fig
+            self.ax = ax
+        else:
+            self.fig = ax.figure
+            self.ax = ax
         #if no dimensions are given then set the plot limits to edge of mesh
         try: 
             if xlim=="default":
@@ -291,7 +288,7 @@ class Mesh_obj:
             coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
             coll.set_clim(vmin=vmin, vmax=vmax)
             ax.add_collection(coll)#blit polygons to axis
-            cax = coll
+            self.cax = coll
         else:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[1])
@@ -317,7 +314,7 @@ class Mesh_obj:
                 levels = np.linspace(vmin, vmax, 7)
             else:
                 levels = None
-            cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+            self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
@@ -327,8 +324,8 @@ class Mesh_obj:
         ax.set_ylabel('Elevation')
         
         if color_bar:#add the color bar 
-            cbar = plt.colorbar(cax, ax=ax, format='%.1f')
-            cbar.set_label(color_bar_title) #set colorbar title
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
+            self.cbar.set_label(color_bar_title) #set colorbar title
 
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
 
@@ -357,7 +354,56 @@ class Mesh_obj:
         
         if iplot == True:
             return fig
+    
+    def draw(self, 
+             attr=None,
+             edge_color = 'k',
+             color_map = None,
+             color_bar = False,
+             vmin= None, vmax = None):
+        """
+        some explanation
+        """
+        if self.cax == None :
+            raise Exception ("mesh canvas variable has not been assigned! Use mesh.show() first")
+            
+        if attr is None: 
+            #plots default attribute
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        else:
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except (KeyError, AttributeError):
+                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+                
+        a = time.time() #start timer on how long it takes to plot the mesh
         
+        if edge_color == None or edge_color=='none' or edge_color=='None':
+            edge_color='face'#set the edge colours to the colours of the polygon patches
+            
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
+            
+        if color_map != None :
+            self.cax.set_cmap(color_map) # change the color map if the user wants to 
+        
+        #following block of code redraws figure 
+        self.cax.set_array(X) # set the array of the polygon collection to the new attribute 
+        self.cax.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
+        self.ax.add_collection(self.cax)#blit polygons to axis
+        self.cbar.set_label(color_bar_title) # change the color bar title 
+        self.fig.canvas.draw() # redraw figure canvas (does not make a new figure it is faster fig.show())
+
+        if color_bar:#add the color bar 
+           print("you should have decided you wanted a color bar when using the mesh.show function")
+            
+        print('Mesh plotted in %6.5f seconds'%(time.time()-a))
+        
+    
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
         """
         applys a function to a mesh by material number and mesh parameter
@@ -421,19 +467,21 @@ class Mesh_obj:
         if len(material_no) != self.num_elms:
             raise ValueError("Mismatch between the number of elements and material propeties")
         
-        new_para=[0]*self.num_elms
+        new_para=np.array([0]*self.num_elms)
         
         if min(material_no)==1:#cor_fac allows for compatability with an index system starting at 1 or 0 
             cor_fac=1
         else:
             cor_fac=0
-       
-        for i in range(self.num_elms):
-            new_para[i] = attr_list[int(material_no[i]) - cor_fac]
+            
+        material_no = np.array(material_no) - cor_fac
+        
+        for i in range(len(attr_list)):
+            idx = material_no == i
+            new_para[idx] = attr_list[i]
         
         self.attr_cache[new_key] = new_para
         self.no_attributes += 1
-
             
     def add_attribute(self,values,key):
         #add a new attribute to mesh 
@@ -502,15 +550,6 @@ class Mesh_obj:
             pass
                 
         return (obj)
-    
-    @staticmethod
-    def help_me():#a basic help me file, needs fleshing out
-        available_functions=["show","summary","show_mesh","log10","add_attribute","mesh_dict2obj","Type2VertsNo"]
-        print("\n_______________________________________________________")#add some lines, make info look pretty
-        print("available functions within the mesh_obj class: \n")
-        for i in range(len(available_functions)):
-            print("%s"%available_functions[i])
-        print("_______________________________________________________")
         
     def write_vtk(self,file_path='default', title=None):
         """
