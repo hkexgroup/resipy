@@ -176,6 +176,10 @@ class Mesh_obj:
         print("original file path: %s"%self.file_path())
         print("\n")
 
+    def __str__(self):
+        #returns the summary function if the object is printed
+        self.summary()
+
     def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
              xlim = "default",
