@@ -276,12 +276,14 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['num_xy_poly'] = 5
             # define xy_poly_table
             doi = np.abs(self.elec[0,0]-self.elec[-1,0])*2/3
+            ymax = np.max(self.elec[:,1])
+            ymin = np.min(self.elec[:,1])-doi
             xy_poly_table = np.array([
-            [self.elec[0,0], self.elec[0,1]],
-            [self.elec[-1,0], self.elec[-1,1]],
-            [self.elec[-1,0], self.elec[-1,1]-doi],
-            [self.elec[0,0], self.elec[0,1]-doi],
-            [self.elec[0,0], self.elec[0,1]]])
+            [self.elec[0,0], ymax],
+            [self.elec[-1,0], ymax],
+            [self.elec[-1,0], ymin],
+            [self.elec[0,0], ymin],
+            [self.elec[0,0], ymax]])
             self.param['xy_poly_table'] = xy_poly_table
             e_nodes = np.arange(len(self.elec))+1
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
@@ -733,7 +735,9 @@ class R2(object): # R2 master class instanciated by the GUI
             self.regid = self.regid + 1
             self.regions[idx] = self.regid
             self.mesh.cell_attributes = list(self.regions)
-#            self.mesh.show(ax=ax)
+            res0list = np.unique(self.regions) # TODO ask for resistvity in the table
+            self.mesh.assign_material_attribute(self.regions,res0list,'res0')
+            self.mesh.draw(attr='res0')
             # TODO change the collection of the cells impacted and update canvas
             # or just use cross of different colors
             if addAction is not None:
@@ -947,10 +951,16 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(fs) > 0:
             if self.param['mesh_type'] == 4:
                 self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
+                # TODO change that to full meshTools
             else:
                 x = np.genfromtxt(os.path.join(self.dirname, fs[-1]))
+#                iterNumber = fs[-1].split('_')[0].split('.')[1]
+#                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
+#                print('iterNumber = ', iterNumber, 'name=', attrName)
                 self.mesh.add_attr_dict({'iter':x[:,-2]})
                 self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
+#                self.mesh.add_attr(x[:,-2], attrName)
+#                self.mesh.draw(attr=attrName)
                 
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
@@ -1022,7 +1032,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
 #k.typ = 'cR2'
-#k.createSurvey('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', spacing=0.5)
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createMesh(typ='trian')
 #k.computeModelError()
@@ -1050,7 +1059,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.plotIPFit()
 #k.errTyp = 'pwl'
 #k.errTypIP = 'pwl'
-#k.invert(iplot=False)
+#k.invert(iplot=True)
 #k.showIter()
 #k.showResults(edge_color='k')
 #k.pseudoError()

@@ -472,8 +472,12 @@ class App(QMainWindow):
                 else:
                     spacing = float(spacingEdit.text())
                 print('all ok')
-                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
-                                     parser=self.parser)
+                try:
+                    self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                                         parser=self.parser)
+                except:
+                    errorDump('File not recognized.')
+                    pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     hbox4.addWidget(buttonfr)
@@ -487,7 +491,8 @@ class App(QMainWindow):
                 tabImporting.setTabEnabled(1,True)
             except ValueError as e:
                 print(e)
-                errorDump('File not recognized.')
+                errorDump('Importation failed. File might not be recognized.')
+                pass
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
