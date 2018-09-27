@@ -419,6 +419,8 @@ class App(QMainWindow):
             elif index == 1:
                 self.ftype = 'Protocol'
             elif index == 2:
+                self.ftype = 'Res2Dinv'
+            elif index == 3:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -426,6 +428,7 @@ class App(QMainWindow):
         fileType = QComboBox()
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
+        fileType.addItem('Res2Dinv')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         
@@ -1335,8 +1338,7 @@ class App(QMainWindow):
         
 
         def regionButtonFunc():
-            self.r2.regid = 0
-            self.r2.regions.fill(0)
+            self.r2.resetRegions()
             regionTable.reset()
 #            x = regionTable.getTable().flatten()
 #            regid = np.arange(len(x))
@@ -2146,7 +2148,7 @@ class App(QMainWindow):
 #            mwInvResult.replot()
             
         sectionId = QComboBox()
-        displayOptions.addWidget(sectionId, 10)
+        displayOptions.addWidget(sectionId, 20)
         
         attributeName = QComboBox()
         displayOptions.addWidget(attributeName, 20)

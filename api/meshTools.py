@@ -553,7 +553,8 @@ class Mesh_obj:
         ----------
         material_no : array or list
             Integers starting at 0 or 1, and ascend in intervals of 1, which 
-            correspond to a material in the mesh returned from assign_attr_ID. 
+            correspond to a material in the mesh returned from assign_attr_ID.
+            Should have the same length as the number of elements in the mesh.
         attr_list : list
             Values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
             `[resistivity1,resistivity2,resistivity3]`.
@@ -1363,15 +1364,17 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
-
+#
 #mesh = vtk_import('api/test/test.vtk')
 ##mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()
-#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
+#mesh.show(attr=attrs[0], contour=False, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
 ##mesh.show(attr=attrs[2])
 ##mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 #fig.show()
+##mesh.write_attr(attrs[0], file_name='test_res.dat', file_path='api/test/')
+
 
 #%%
 #x = np.random.randn(100)+10
