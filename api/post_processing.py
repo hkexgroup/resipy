@@ -5,18 +5,18 @@ post processing errors in r2gui
 @author: jamyd91
 """
 #import python standard libraries
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 #import conda libraries
 import matplotlib.pyplot as plt
 import numpy as np 
 
 #return file path string 
-def find_file_path():
-    root=tk.Tk()
-    root.withdraw()
-    file_path=filedialog.askopenfilename(title='Select file',filetypes=(("data files","*.dat"),("all files","*.*")))
-    return file_path
+#def find_file_path():
+#    root=tk.Tk()
+#    root.withdraw()
+#    file_path=filedialog.askopenfilename(title='Select file',filetypes=(("data files","*.dat"),("all files","*.*")))
+#    return file_path
 
 #%% open file 
 def import_R2_err_dat(file_path):
@@ -68,7 +68,8 @@ def import_R2_err_dat(file_path):
 
 def disp_R2_errors(error_dict, ax=None):
     """
-    Displays the errors associated with the inversion. 
+    Displays the normalised errors associated with the inversion. 
+    
     Parameters
     ---------
     error_dict: dictionary
@@ -79,7 +80,10 @@ def disp_R2_errors(error_dict, ax=None):
     # plot normalised errors
     measurement_no = np.arange(1,len(error_dict["Normalised_Error"])+1)
     #make figure
-    plt.figure()    
+    if ax is None: 
+        fig, ax = plt.subplots()    
+    
+    plt.sca(ax)    #set the current axis to the ax argument 
     plt.scatter(measurement_no,error_dict["Normalised_Error"])
     plt.ylabel("normalised error")
     plt.xlabel("measurement number")
@@ -94,9 +98,11 @@ def disp_R2_errors(error_dict, ax=None):
     
     
 #%% test block 
-#open errors from r2 output file
-file_path = find_file_path()
-
-error_info = import_R2_err_dat(file_path)
-#%%
-disp_R2_errors(error_info)
+# =============================================================================
+# #open errors from r2 output file
+# file_path = find_file_path()
+# 
+# error_info = import_R2_err_dat(file_path)
+# 
+# disp_R2_errors(error_info)
+# =============================================================================
