@@ -2030,7 +2030,9 @@ class App(QMainWindow):
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.typ == 'R2':
-                plotInvError()
+                if self.r2.iBorehole is False:
+                    plotInvError()
+                plotInvError2()
             if self.r2.typ == 'R2':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ == 'cR2':
@@ -2242,7 +2244,7 @@ class App(QMainWindow):
         tabs.addTab(tabPostProcessing, 'Post-processing')
         
         invError = QWidget()
-        tabPostProcessing.addTab(invError, 'Inversion Errors')
+        tabPostProcessing.addTab(invError, 'Inversion Errors (1)')
         invErrorLayout = QVBoxLayout()
         
         def plotInvError():
@@ -2250,12 +2252,18 @@ class App(QMainWindow):
             
         mwInvError = MatplotlibWidget(navi=True)
         invErrorLayout.addWidget(mwInvError)
-        
-        
         invError.setLayout(invErrorLayout)
+
         
+        invError2 = QWidget()
+        tabPostProcessing.addTab(invError2, 'Inversion Errors (2)')
+        invErrorLayout2 = QVBoxLayout()
         
-        # add Jimmy graph
+        def plotInvError2():
+            mwInvError2.plot(self.r2.showInversionErrors)
+        mwInvError2 = MatplotlibWidget(navi=True)
+        invErrorLayout2.addWidget(mwInvError2)
+        invError2.setLayout(invErrorLayout2)
         
         
         #%% About tab

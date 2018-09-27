@@ -23,6 +23,7 @@ import api.meshTools as mt
 from api.meshTools import Mesh_obj, tri_mesh
 from api.sequenceHelper import ddskip
 from api.SelectPoints import SelectPoints
+from api.post_processing import import_R2_err_dat, disp_R2_errors
 
 
 class R2(object): # R2 master class instanciated by the GUI
@@ -275,16 +276,17 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.param['regions'] = regions
             self.param['num_xy_poly'] = 5
             # define xy_poly_table
-            doi = np.abs(self.elec[0,0]-self.elec[-1,0])*2/3
-            ymax = np.max(self.elec[:,1])
-            ymin = np.min(self.elec[:,1])-doi
-            xy_poly_table = np.array([
-            [self.elec[0,0], ymax],
-            [self.elec[-1,0], ymax],
-            [self.elec[-1,0], ymin],
-            [self.elec[0,0], ymin],
-            [self.elec[0,0], ymax]])
-            self.param['xy_poly_table'] = xy_poly_table
+#            doi = np.abs(self.elec[0,0]-self.elec[-1,0])*2/3
+#            ymax = np.max(self.elec[:,1])
+#            ymin = np.min(self.elec[:,1])-doi
+#            xy_poly_table = np.array([
+#            [self.elec[0,0], ymax],
+#            [self.elec[-1,0], ymax],
+#            [self.elec[-1,0], ymin],
+#            [self.elec[0,0], ymin],
+#            [self.elec[0,0], ymax]])
+#            self.param['xy_poly_table'] = xy_poly_table
+            self.param['topo'] = self.elec[:,1] # may need to change this if other topo
             e_nodes = np.arange(len(self.elec))+1
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
@@ -996,13 +998,12 @@ class R2(object): # R2 master class instanciated by the GUI
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
-#    def showOnMesh(self, fname=''):
-#        if fname == '':
-#            fname = os.path.join(self.dirname, 'f001_res.dat')
-#        x = np.genfromtxt(fname)
-#        self.mesh.add_attribute(x[:,3], 'iter')
-#        self.mesh.show(attr='iter')
-
+    def showInversionErrors(self, ax=None):
+        """ Display inversion error by measurment numbers.
+        """
+        file_path = os.path.join(self.dirname, 'f001_err.dat')
+        error_info = import_R2_err_dat(file_path)
+        disp_R2_errors(error_info, ax=ax)
 
 
 

@@ -20,8 +20,8 @@ import numpy as np
 
 #%% open file 
 def import_R2_err_dat(file_path):
-    """
-    Imports _err.dat file produced by R2.exe after inversion. 
+    """ Imports _err.dat file produced by R2.exe after inversion.
+    
     Parameters
     ---------
     file_path: string
@@ -30,7 +30,7 @@ def import_R2_err_dat(file_path):
     Returns
     ---------
     error_dict: dictionary
-        a dictionary containing lists of each of the different parameters
+        A dictionary containing lists of each of the different parameters.
     """
     
     fh = open(file_path,'r')
@@ -73,9 +73,9 @@ def disp_R2_errors(error_dict, ax=None):
     Parameters
     ---------
     error_dict: dictionary
-            varaible returned from import_R2_err_dat
+        Varaible returned from import_R2_err_dat.
     ax: matplotlib axis handle, optional
-        resulting figure plots on to this axis
+        Resulting figure plots on to this axis.
     """
     # plot normalised errors
     measurement_no = np.arange(1,len(error_dict["Normalised_Error"])+1)
@@ -83,26 +83,20 @@ def disp_R2_errors(error_dict, ax=None):
     if ax is None: 
         fig, ax = plt.subplots()    
     
-    plt.sca(ax)    #set the current axis to the ax argument 
-    plt.scatter(measurement_no,error_dict["Normalised_Error"])
-    plt.ylabel("normalised error")
-    plt.xlabel("measurement number")
+    ax.scatter(measurement_no,error_dict["Normalised_Error"])
+    ax.set_ylabel("Normalised Error")
+    ax.set_xlabel("Measurement Number")
     #add diagnositic lines
     y_pos_limit = (3,3)
     y_neg_limit = (-3,-3)
     baseline = (0,0)
-    plt.plot((1,measurement_no[-1]),y_pos_limit,'r--')
-    plt.plot((1,measurement_no[-1]),y_neg_limit,'r--')
-    plt.plot((1,measurement_no[-1]),baseline,'k--')
+    ax.plot((1,measurement_no[-1]),y_pos_limit,'r--')
+    ax.plot((1,measurement_no[-1]),y_neg_limit,'r--')
+    ax.plot((1,measurement_no[-1]),baseline,'k--')
     
     
     
 #%% test block 
-# =============================================================================
-# #open errors from r2 output file
-# file_path = find_file_path()
-# 
-# error_info = import_R2_err_dat(file_path)
-# 
-# disp_R2_errors(error_info)
-# =============================================================================
+#file_path = 'api/invdir/f001_err.dat'
+#error_info = import_R2_err_dat(file_path)
+#disp_R2_errors(error_info)

@@ -150,15 +150,14 @@ def write2in(param, dirname, typ='R2'):
     if param['num_xy_poly'] == -1:
         leftx = param['meshx'][param['node_elec'][0,1]-4]
         rightx = param['meshx'][param['node_elec'][-1,1]+4]
-#        lefty = param['topo'][param['node_elec'][0,1]-4]
         lefty = np.max(param['topo'])
-#        righty = param['topo'][param['node_elec'][-1,1]+4]
         righty = lefty
         dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
+        bottom = np.min(param['topo']) - dist
         param['xy_poly_table'] = np.array([[leftx, lefty],
                                           [rightx, righty],
-                                          [rightx, -dist],
-                                          [leftx, -dist],
+                                          [rightx, bottom],
+                                          [leftx, bottom],
                                           [leftx, lefty]])
         param['num_xy_poly'] = param['xy_poly_table'].shape[0]
     content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
