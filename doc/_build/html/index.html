@@ -81,7 +81,7 @@ the starting resistivity <cite>res0</cite>.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>regionValues</strong> : dict</p>
 <blockquote class="last">
-<div><p>Dictionnary with key beeing the region number and the value beeing
+<div><p>Dictionnary with key being the region number and the value beeing
 the resistivity in [Ohm.m].</p>
 </div></blockquote>
 </td>
@@ -417,6 +417,12 @@ inversion using appropriate wrapper, then return results.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.resetRegions">
+<code class="descname">resetRegions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.resetRegions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Just reset all regions already draw.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.runR2">
 <code class="descname">runR2</code><span class="sig-paren">(</span><em>dirname=''</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runR2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run the executable in charge of the inversion.</p>
@@ -454,6 +460,12 @@ inversion using appropriate wrapper, then return results.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showInversionErrors">
+<code class="descname">showInversionErrors</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInversionErrors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display inversion error by measurment numbers.</p>
 </dd></dl>
 
 <dl class="method">
@@ -1017,14 +1029,11 @@ to mesh parameters.</p>
 <dt>Classes: </dt>
 <dd>mesh_obj</dd>
 <dt>Functions: </dt>
-<dd><p class="first">tri_cent() - computes the centre point for a 2d triangular element
+<dd>tri_cent() - computes the centre point for a 2d triangular element
 vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-readR2_resdat () - reads resistivity values from a R2 file. 
-quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates</p>
-<blockquote>
-<div>(returns info needed for R2in)</div></blockquote>
-<p class="last">tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</p>
-</dd>
+readR2_resdat () - reads resistivity values from a R2 file
+quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
+tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</dd>
 <dt>Dependencies: </dt>
 <dd>numpy (conda lib)
 matplotlib (conda lib)
@@ -1188,7 +1197,8 @@ a single resistivity value.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>material_no</strong> : array or list</p>
 <blockquote>
 <div><p>Integers starting at 0 or 1, and ascend in intervals of 1, which 
-correspond to a material in the mesh returned from assign_attr_ID.</p>
+correspond to a material in the mesh returned from assign_attr_ID.
+Should have the same length as the number of elements in the mesh.</p>
 </div></blockquote>
 <p><strong>attr_list</strong> : list</p>
 <blockquote>
@@ -1359,25 +1369,31 @@ matplotlib package can be used to display the mesh here also. See:
 <dl class="method">
 <dt id="api.meshTools.Mesh_obj.write_attr">
 <code class="descname">write_attr</code><span class="sig-paren">(</span><em>attr_key</em>, <em>file_name='_res.dat'</em>, <em>file_path='defualt'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_attr" title="Permalink to this definition">¶</a></dt>
-<dd><p>Writes a attribute to a _res.dat type file. file_name entered seperately 
-becuase it will be needed for the R2 config file. The reason for this function
-is so you can write a forward model parameter input file. 
-Parameters
-———
-attr_key: string</p>
+<dd><p>Writes a attribute to a _res.dat type file. file_name entered
+seperately because it will be needed for the R2 config file.
+The reason for this function is so you can write a forward model 
+parameter input file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr_key: string</strong></p>
 <blockquote>
-<div>Key identifying the attr to be written in the mesh object attr_cache.</div></blockquote>
-<dl class="docutils">
-<dt>file_name: string</dt>
-<dd>Name of the _res.dat type file.</dd>
-<dt>file_path: string</dt>
-<dd>Directory to which the file will be saved in, if left as none then the
-file will be written in the current working directory.</dd>
-</dl>
-<dl class="docutils">
-<dt>.dat: file</dt>
-<dd>#_res.dat type file</dd>
-</dl>
+<div><p>Key identifying the attr to be written in the mesh object attr_cache.</p>
+</div></blockquote>
+<p><strong>file_name: string</strong></p>
+<blockquote>
+<div><p>Name of the _res.dat type file.</p>
+</div></blockquote>
+<p><strong>file_path: string</strong></p>
+<blockquote class="last">
+<div><p>Directory to which the file will be saved in, if left as none then the
+file will be written in the current working directory.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">

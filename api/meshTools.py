@@ -12,9 +12,8 @@ Classes:
 Functions: 
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-    readR2_resdat () - reads resistivity values from a R2 file. 
-    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates 
-                 (returns info needed for R2in) 
+    readR2_resdat () - reads resistivity values from a R2 file
+    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
     tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh
 
 Dependencies: 
@@ -23,6 +22,7 @@ Dependencies:
     scipy (conda lib)
     gmshWrap(pyR2 api module)
     python3 standard libaries
+
 Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
@@ -690,12 +690,13 @@ class Mesh_obj:
     
 
     def write_attr(self,attr_key,file_name='_res.dat',file_path='defualt'):
-        """
-        Writes a attribute to a _res.dat type file. file_name entered seperately 
-        becuase it will be needed for the R2 config file. The reason for this function
-        is so you can write a forward model parameter input file. 
+        """ Writes a attribute to a _res.dat type file. file_name entered
+        seperately because it will be needed for the R2 config file.
+        The reason for this function is so you can write a forward model 
+        parameter input file. 
+        
         Parameters
-        ---------
+        ----------
         attr_key: string
             Key identifying the attr to be written in the mesh object attr_cache.
         file_name: string
@@ -703,10 +704,6 @@ class Mesh_obj:
         file_path: string
             Directory to which the file will be saved in, if left as none then the
             file will be written in the current working directory.
-        Returns
-        ---------
-        .dat: file
-            #_res.dat type file 
         """
         #formality checks 
         if len(file_name)>15:
