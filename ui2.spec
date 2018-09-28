@@ -1,4 +1,6 @@
 # -*- mode: python -*-
+# this file is used by pyinstaller to generate a zip file that would 
+# then be uncompressed by the splashScreen.spec
 
 block_cipher = None
 

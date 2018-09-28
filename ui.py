@@ -489,7 +489,7 @@ class App(QMainWindow):
                     plotError()
 #                generateMesh()
                 plotPseudo()
-                plotManualFiltering()
+#                plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
             except ValueError as e:
@@ -512,7 +512,7 @@ class App(QMainWindow):
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                     tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                     plotError()
-                plotManualFiltering()
+#                plotManualFiltering()
 
         buttonfr = QPushButton('If you have reciprocals upload them here') 
         buttonfr.clicked.connect(getfileR)
@@ -988,20 +988,20 @@ class App(QMainWindow):
         
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
-            
+        
         def btnDoneFunc():
             self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
             print('Data have been manually filtered')
-            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+            plotManualFiltering()
             plotError()
             
         notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
         manualLayout.addWidget(notice)
         
         btnLayout = QHBoxLayout()
-#        btnStart = QPushButton('Reset')
-#        btnStart.clicked.connect(plotManualFiltering)
-#        btnLayout.addWidget(btnStart)
+        btnStart = QPushButton('Start')
+        btnStart.clicked.connect(plotManualFiltering)
+        btnLayout.addWidget(btnStart)
         btnDone = QPushButton('Apply')
         btnDone.clicked.connect(btnDoneFunc)
         btnLayout.addWidget(btnDone)

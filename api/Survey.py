@@ -1006,10 +1006,13 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values
         if 'recipError' in self.df.columns:
-            resist = self.df['recipError'].values
+            resist = self.df['recipError'].values # some nan here are not plotted !!!
             print('set to reciprocal')
         else:
             resist = np.ones(self.df.shape[0])
+        # TODO find a way to get rid of the NaN before plotting them but still
+        # keeping the index to be able to filter out the data ... maybe add
+        # a third class of empty points just for NaN
         spacing = np.mean(np.diff(self.elec[:,0]))
         
         nelec = np.max(array)
@@ -1078,26 +1081,30 @@ class Survey(object):
         else:
             fig = ax.figure
         caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+        print('xpos = ', len(xpos))
+        print('info', np.min(resist), np.max(resist), np.sum(np.isnan(resist)), np.sum(np.isinf(resist)))
         cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
+        print('offset=,', cax.get_offsets().shape) # TODO it's automatically deleting stuff !
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
         cax.figure.canvas.mpl_connect('pick_event', onpick)
         #for i in range(int(len(array)/2)):
         #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
         
-        line = cax
-        killed, = line.axes.plot([],[],'rx')
-        elecKilled, = line.axes.plot([],[],'rx')
+        killed, = cax.axes.plot([],[],'rx')
+        elecKilled, = cax.axes.plot([],[],'rx')
     #    x = np.array(line.get_xdata())
     #    y = np.array(line.get_ydata())
-        x = line.get_offsets()[:,0]
-        y = line.get_offsets()[:,1]
+        x = cax.get_offsets()[:,0]
+        y = cax.get_offsets()[:,1]
         
         # TODO we need to get those variables out of the function
+        print('len(array)', len(array))
+        print('len(y)', len(y), len(xpos), len(ypos), len(resist))
         self.iselect = np.zeros(len(y),dtype=bool)
         eselect = np.zeros(len(elecpos), dtype=bool)
         
-        lines = {line:'data',caxElec:'elec',killed:'killed'}
+        lines = {cax:'data',caxElec:'elec',killed:'killed'}
 
 
 
@@ -1514,7 +1521,7 @@ class Survey(object):
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #s = Survey('api/test/syscalFile.csv', ftype='Syscal')
-#s = Survey('api/test/rifleday8.csv', ftype='Syscal')
+s = Survey('api/test/rifleday8.csv', ftype='Syscal')
 #s.manualFiltering()
 #s.dca()
 #s.addFilteredIP()
@@ -1526,7 +1533,7 @@ class Survey(object):
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
-#s.manualFilter()
+s.manualFiltering()
 #s.pseudo(contour=True)
 #s.linfit()
 #s.pwlfit()
