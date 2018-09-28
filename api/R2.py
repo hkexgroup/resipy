@@ -276,17 +276,16 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.param['regions'] = regions
             self.param['num_xy_poly'] = 5
             # define xy_poly_table
-#            doi = np.abs(self.elec[0,0]-self.elec[-1,0])*2/3
-#            ymax = np.max(self.elec[:,1])
-#            ymin = np.min(self.elec[:,1])-doi
-#            xy_poly_table = np.array([
-#            [self.elec[0,0], ymax],
-#            [self.elec[-1,0], ymax],
-#            [self.elec[-1,0], ymin],
-#            [self.elec[0,0], ymin],
-#            [self.elec[0,0], ymax]])
-#            self.param['xy_poly_table'] = xy_poly_table
-            self.param['topo'] = self.elec[:,1] # may need to change this if other topo
+            doi = np.abs(self.elec[0,0]-self.elec[-1,0])/2
+            ymax = np.max(self.elec[:,1])
+            ymin = np.min(self.elec[:,1])-doi
+            xy_poly_table = np.array([
+            [self.elec[0,0], ymax],
+            [self.elec[-1,0], ymax],
+            [self.elec[-1,0], ymin],
+            [self.elec[0,0], ymin],
+            [self.elec[0,0], ymax]])
+            self.param['xy_poly_table'] = xy_poly_table
             e_nodes = np.arange(len(self.elec))+1
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
@@ -1055,6 +1054,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.typ = 'cR2'
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createMesh(typ='trian')
+#k.write2in()
 #k.computeModelError()
 #k.pwlfit()
 #k.write2protocol(errTyp='pwl', errTot=True)
