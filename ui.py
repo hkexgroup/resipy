@@ -504,9 +504,10 @@ class App(QMainWindow):
 #                plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
-            except ValueError as e:
+            except Exception as e:
                 print(e)
-                errorDump('Importation failed. File might not be recognized.')
+                errorDump('Importation failed. File is not being recognized. \
+                          Mare sure you selected the right file type.')
                 pass
         
         buttonf = QPushButton('Import Data') 
