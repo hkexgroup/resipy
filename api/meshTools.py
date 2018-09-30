@@ -26,8 +26,8 @@ Dependencies:
 Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, platform, warnings
 from subprocess import PIPE, Popen, call
 import time
