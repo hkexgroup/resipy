@@ -1,15 +1,15 @@
-#Building Instructions
+Building Instructions
 =====================
 
 2018-09-30
 
 
-##1. Virtual Environment
+1. Virtual Environment
 ----------------------
 You need to work inside a python virtual environment. Use the `virtualenv` command to create a new one. Use python 3.X
 
 
-##2. Pyinstaller and packages
+2. Pyinstaller and packages
 ---------------------------
 See doc online. Inside this environnement install only the packages needed (see list below) and the *last development* version of pyinstaller.
 
@@ -20,7 +20,7 @@ Packages needed:
 - pandas
 
 
-##3. Buidling (3 ways)
+3. Buidling (3 ways)
 --------------------
 There are 3 ways of building pyR2:
     - single zip file
