@@ -1,13 +1,18 @@
-# -*- mode: python -*-
-
+## -*- mode: python -*-
+import sys
+sys.setrecursionlimit(1500)
 block_cipher = None
 
 
-a = Analysis(['splashScreen.py'],
+a = Analysis(['ui.py'],
              pathex=[],
              binaries=[],
-             datas=[('./pyR2.zip','./pyR2.zip'),
-                     ('./logo.png','./logo.png')],
+             datas=[('./api/exe/R2.exe','./api/exe'),
+                    ('./api/exe/gmsh.exe','./api/exe'),
+                    ('./api/exe/cR2.exe', './api/exe'),
+                    ('./api/test/*','./api/test'),
+                    ('./logo.png', '.'),
+                    ('./r2icon.ico', '.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -22,9 +27,11 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='splashScreen',
+          name='pyR2',
           debug=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True )
+          console=True,
+		 icon='r2icon.ico')
+

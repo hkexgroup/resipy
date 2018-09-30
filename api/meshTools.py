@@ -417,7 +417,7 @@ class Mesh_obj:
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(self.elec_x,self.elec_y,'go')
+                ax.plot(self.elec_x,self.elec_y,'ko')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))

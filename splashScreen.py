@@ -86,10 +86,10 @@ if __name__ == "__main__":
 #    while time.time() < t + 4:
 #       app.processEvents()
 
-    zf = MyZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
-    extractDir = os.path.join(bundle_dir, 'pyR2')
+    zf = MyZipFile(os.path.join(bundle_dir, 'ui.zip'),'r')
+    extractDir = os.path.join(bundle_dir, 'ui')
     if os.path.exists(extractDir):
-        print('overwritting pyR2 dir')
+#        print('overwritting pyR2 dir')
         shutil.rmtree(extractDir)
     os.mkdir(extractDir)
     uncompress_size = sum((file.file_size for file in zf.infolist()))
@@ -102,15 +102,22 @@ if __name__ == "__main__":
         app.processEvents()
         zf.extract(file, extractDir)
     zf.close()
-
+    print('finished unzipping')
     
     splash.hide()
-    appDir = os.path.join(bundle_dir, 'pyR2', 'ui')
-#    print('appDir = ', appDir)
+    appDir = os.path.join(bundle_dir, 'ui', 'ui') # zip always putting a double dir ... don't know why
+    print('Main app will be run in appDir = ', appDir)
     os.chdir(appDir)
-#    Popen(['python3', 'ui.py']) # this work fine
-    os.system(os.path.join(appDir, 'ui')) # this works now as well !
+#    os.system(['python3', 'ui.py']) # this work fine
+    os.system(os.path.join(appDir, 'pyR2')) # this works now as well !
 
 #  need to comment the following lines as the exit signal is given by the main app
 #    sys.exit()
 #    sys.exit(app.exec_()) 
+    
+""" NOTE
+This approach increase significantly the size of the package from 150 to 210 MB
+Another approach would be to load all modules in this script and just unzip the
+sources and run `python ui.py`.
+"""
+
