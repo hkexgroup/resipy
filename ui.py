@@ -151,7 +151,9 @@ class App(QMainWindow):
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
-        self.setWindowIcon(QIcon('logo.png')) ### change this to change the icon of the window. 
+        
+        # app icon
+        self.setWindowIcon(QIcon('logo.png'))
         
         def errorDump(text, flag=1):
             timeStamp = time.strftime('%H:%M:%S')
@@ -584,12 +586,17 @@ class App(QMainWindow):
         
         # electrode table
         class ElecTable(QTableWidget):
-            def __init__(self, nrow=10, headers=['x','z','Buried'], visible=True):
+            def __init__(self, nrow=10, headers=['x','z','Buried'],
+                         visible=True, selfInit=False):
+                """ if selfInit is true, it will automatically add rows if tt
+                is bigger than the actual rows
+                """
                 ncol = len(headers)
                 super(ElecTable, self).__init__(nrow, ncol)
                 self.setVisible(visible)
                 self.nrow = nrow
                 self.ncol = ncol
+                self.selfInit = selfInit
                 self.initTable(np.zeros((nrow, ncol)), headers=headers)
 #                self.headers = np.array(headers)
 #                self.setHorizontalHeaderLabels(headers)
@@ -609,10 +616,10 @@ class App(QMainWindow):
             
             def getBuried(self):
                 j = np.where(self.headers == 'Buried')[0][0]
-                self.buried = np.zeros(len(self.nrow), dtype=bool)
+                self.buried = np.zeros(self.nrow, dtype=bool)
                 for i in range(self.nrow):
                     buriedCheck = self.cellWidget(i, j)
-                    if buriedCheck.state == Qt.Checked:
+                    if buriedCheck.isChecked() is True:
                         self.buried[i] = True
                 return self.buried
                 
@@ -645,14 +652,17 @@ class App(QMainWindow):
                     # get max row/columns
 #                    cell = self.selectedIndexes()[0]
 #                    c0, r0 = cell.column(), cell.row()
-                    self.setTable(tt, c0, r0)
+                    if self.selfInit is True:
+                        self.initTable(tt)
+                    else:
+                        self.setTable(tt, c0, r0)
                     
             
             def initTable(self, tt=None, headers=None):
                 self.clear()
                 if headers is not None:
 #                    print('rename headers = ', headers)
-                    self.headers = headers
+                    self.headers = np.array(headers)
 #                else:
 #                    print('will use ', self.headers)
                 self.ncol = len(self.headers)
@@ -679,10 +689,12 @@ class App(QMainWindow):
 #                        print('item just ste', self.item(j,i).text())
                     
             def getTable(self):
-                table = np.zeros((self.nrow, self.ncol))
+                table = np.zeros((self.nrow, self.ncol))*np.nan
                 for i in range(self.ncol):
                     for j in range(self.nrow):
-                        table[j,i] = float(self.item(j,i).text())
+                        item = self.item(j,i).text()
+                        if item != '':
+                            table[j,i] = float(item)
 #                print('table = ', table)
                 return table
             
@@ -698,7 +710,10 @@ class App(QMainWindow):
                         else:
                             self.setTable(tt)
                     else:
-                        self.setTable(tt)    
+                        if self.selfInit is True:
+                            self.initTable(tt)
+                        else:
+                            self.setTable(tt)    
         
         
         topoLayout = QVBoxLayout()
@@ -754,7 +769,8 @@ class App(QMainWindow):
         topoLayout.addWidget(elecButton)
         topoLayout.addWidget(elecTable)
         
-        topoTable = ElecTable(visible=True, headers=['x','z'])
+        topoTable = ElecTable(visible=True, headers=['x','z'], selfInit=True)
+        topoTable.initTable(np.array([['',''],['','']]))
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
                            into a cell.</i>')
@@ -1241,6 +1257,13 @@ class App(QMainWindow):
 
         def meshTypeFunc(index=1):
             self.r2.elec = elecTable.getTable()
+            buried = elecTable.getBuried()
+            surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
+            if np.sum(inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
             if index == 1:
                 self.r2.createMesh(typ='quad')
                 scale.setVisible(False)
@@ -1248,7 +1271,7 @@ class App(QMainWindow):
             elif index == 2:
                 scale.setVisible(True)
                 scaleLabel.setVisible(True)
-                self.r2.createMesh(typ='trian')
+                self.r2.createMesh(typ='trian', buried=buried, surface=surface)
             else:
                 print('NOT IMPLEMENTED')
             print(self.r2.mesh.summary())
@@ -1340,6 +1363,7 @@ class App(QMainWindow):
         def regionButtonFunc():
             self.r2.resetRegions()
             regionTable.reset()
+            self.r2.mesh.draw(attr='res0')
 #            x = regionTable.getTable().flatten()
 #            regid = np.arange(len(x))
 #            self.r2.assignRes0(dict(zip(regid, x)))
@@ -2334,6 +2358,7 @@ class MyTableWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon('logo.png')) # that's the true app icon
 
     splash_pix = QPixmap('logo.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
@@ -2349,27 +2374,9 @@ if __name__ == '__main__':
 
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
-    app.processEvents()
-#    for i in range(1, 11):
-#        progressBar.setValue(i)
-#        t = time.time()
-#        app.processEvents()
-#        while time.time() < t + 0.1:
-#           app.processEvents()
+    app.processEvents()    
 
-    # Simulate something that takes time
-#    time.sleep(4)
-    
-
-#    print('importing pyqt')
-#    from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
-#        QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-#        QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-#        QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
-#        QStackedLayout)
-#    from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
-#    from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
-#    from PyQt5.QtCore import Qt
+    # in this section all import are made except the one for pyQt
     
     progressBar.setValue(1)    
     app.processEvents()
@@ -2378,7 +2385,6 @@ if __name__ == '__main__':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
-#    import matplotlib.pyplot as plt
     progressBar.setValue(2)
     app.processEvents()
 
@@ -2399,20 +2405,14 @@ if __name__ == '__main__':
     app.processEvents()
     from matplotlib import rcParams
     rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
-
-    #sys.path.append(os.path.relpath('../api')) # not needed anymore
     
-    #from mesh_class import mesh_obj
-    #import meshTools as mt
-    #from meshTools import Mesh_obj
     from api.R2 import R2
     from api.r2help import r2help
     progressBar.setValue(10)
     app.processEvents()
     
     ex = App()
-    splash.hide()
-    
+    splash.hide() # hiding the splash screen when finished
     
     sys.exit(app.exec_())
 

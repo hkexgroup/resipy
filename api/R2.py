@@ -232,7 +232,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             self.pseudoCallback(**kwargs)
     
-    def createMesh(self, typ='default', **kwargs):
+    def createMesh(self, typ='default', buried=None, surface=None, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -265,7 +265,22 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'num_regions' in self.param:
                 del self.param['num_regions']
         if typ == 'trian':
-            mesh = tri_mesh({'electrode':[self.elec[:,0], self.elec[:,1]]}, path=os.path.join(self.cwd, 'api', 'exe'), save_path=self.dirname)
+            elec = self.elec.copy()
+            geom_input = {}
+            if buried is not None and elec.shape[0] == len(buried):
+                iburied = buried == True
+                geom_input['electrode'] = [self.elec[~iburied, 0],
+                                           self.elec[~iburied, 1]]
+                geom_input['buried1'] = [self.elec[iburied, 0],
+                                       self.elec[iburied, 1]]
+            else:
+                geom_input['electrode'] = [self.elec[:,0],
+                                           self.elec[:,1]]
+            if surface is not None:
+                geom_input['surface'] = [surface[:,0], surface[:,1]]
+            mesh = tri_mesh(geom_input,
+                             path=os.path.join(self.cwd, 'api', 'exe'),
+                             save_path=self.dirname)
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
@@ -275,7 +290,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                regions = np.c_[regs, np.ones(regs.shape[0])*50, np.ones(regs.shape[0])*-0.1]
 #            self.param['regions'] = regions
             self.param['num_xy_poly'] = 5
-            # define xy_poly_table
+            # define xy_poly_table (still need to do it here because param['meshx'] is undefined if triangular mesh)
             doi = np.abs(self.elec[0,0]-self.elec[-1,0])/2
             ymax = np.max(self.elec[:,1])
             ymin = np.min(self.elec[:,1])-doi
@@ -756,8 +771,6 @@ class R2(object): # R2 master class instanciated by the GUI
             res0list = np.unique(self.regions) # TODO ask for resistvity in the table
             self.mesh.assign_material_attribute(self.regions,res0list,'res0')
             self.mesh.draw(attr='res0')
-            # TODO change the collection of the cells impacted and update canvas
-            # or just use cross of different colors
             if addAction is not None:
                 addAction()
         self.mesh.show(ax=ax)
