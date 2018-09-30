@@ -1024,6 +1024,7 @@ class App(QMainWindow):
         btnLayout.addWidget(btnStart)
         btnDone = QPushButton('Apply')
         btnDone.clicked.connect(btnDoneFunc)
+        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
         btnLayout.addWidget(btnDone)
         manualLayout.addLayout(btnLayout)
         

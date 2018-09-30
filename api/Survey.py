@@ -1008,8 +1008,12 @@ class Survey(object):
         if 'recipError' in self.df.columns:
             resist = self.df['recipError'].values # some nan here are not plotted !!!
             print('set to reciprocal')
+            clabel = 'Reciprocal Error'
         else:
             resist = np.ones(self.df.shape[0])
+            clabel = 'Resistivity [Ohm.m]'
+        if label == '':
+            label = clabel
         inan = np.isnan(resist)
         resist = resist.copy()[~inan]
         array = array.copy()[~inan]
@@ -1055,18 +1059,18 @@ class Survey(object):
         def onpick(event):
             # TODO single doesn't want to change the electrode selection
             if lines[event.artist] == 'data':
-                print('onpick event', event.ind[0])
-                print(ipoints[event.ind[0]])
+#                print('onpick event', event.ind[0])
+#                print(ipoints[event.ind[0]])
                 xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
                 isame = (xpos == xid) & (ypos == yid)
                 if (ipoints[isame] == True).all():
-                    print('set to false')
+#                    print('set to false')
                     setSelect(isame, False)
                 else:
                     setSelect(isame, True)
             
             if lines[event.artist] == 'elec':
-                print('onpick2', event.ind[0])
+#                print('onpick2', event.ind[0])
                 ie = (array == (event.ind[0]+1)).any(-1)
                 if all(ipoints[ie] == True):
                     setSelect(ie, False)
@@ -1078,7 +1082,7 @@ class Survey(object):
                     eselect[event.ind[0]] = True
                 elecKilled.set_xdata(elecpos[eselect])
                 elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
-            print('update canvas')
+#            print('update canvas')
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
@@ -1089,10 +1093,7 @@ class Survey(object):
         else:
             fig = ax.figure
         caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
-        print('xpos = ', len(xpos))
-        print('info', np.min(resist), np.max(resist), np.sum(np.isnan(resist)), np.sum(np.isinf(resist)))
         cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
-        print('offset=,', cax.get_offsets().shape) # TODO it's automatically deleting stuff !
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
         cax.figure.canvas.mpl_connect('pick_event', onpick)
@@ -1106,9 +1107,6 @@ class Survey(object):
         x = cax.get_offsets()[:,0]
         y = cax.get_offsets()[:,1]
         
-        # TODO we need to get those variables out of the function
-        print('len(array)', len(array))
-        print('len(y)', len(y), len(xpos), len(ypos), len(resist))
         ipoints = np.zeros(len(y),dtype=bool)
         eselect = np.zeros(len(elecpos), dtype=bool)
         
