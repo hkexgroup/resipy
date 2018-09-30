@@ -267,7 +267,9 @@ class R2(object): # R2 master class instanciated by the GUI
         if typ == 'trian':
             elec = self.elec.copy()
             geom_input = {}
-            if buried is not None and elec.shape[0] == len(buried):
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
                 iburied = buried == True
                 geom_input['electrode'] = [self.elec[~iburied, 0],
                                            self.elec[~iburied, 1]]
