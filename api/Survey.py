@@ -47,6 +47,7 @@ class Survey(object):
         if name == '':
             name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
+        self.iBorehole = False # True is it's a borehole
         
         if parser is not None:
             elec, data = parser(fname)
@@ -781,7 +782,24 @@ class Survey(object):
             self.filterDataIP = temp_data.dropna()
         self.addFilteredIP()
 
-    def pseudo(self, ax=None, contour=False, log=True, geom=True):
+
+    def pseudo(self, ax=None, bx=None, **kwargs):
+        """ Plot pseudo section if 2D survey or just quadrupoles transfer
+        resistance otherwise.
+        """
+        if bx is None:
+            bx = self.iBorehole
+        if bx is False:
+            self.pseudoSection(ax=ax, **kwargs)
+        else:
+            if ax is None:
+                fig, ax = plt.subplots()
+            ax.plot(self.df['resist'].values, '.')
+            ax.set_xlabel('Measurements')
+            ax.set_ylabel('Transfert Resistance [Ohm]')
+            
+
+    def pseudoSection(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
         '''
         array = self.df[['a','b','m','n']].values.astype(int)
@@ -837,16 +855,9 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, resist)
             if ax is None:
                 fig, ax = plt.subplots()
-            figsize=(10,6)
             cax = ax.contourf(X,Y,Z)
-#            cbar = fig.colorbar(cax, ax=ax)
-#            cbar.set_label(label)
             ax.set_title('Pseudo Section')
-#            fig.suptitle(self.name, x= 0.2)
-#            fig.tight_layout()
 
-        if ax is None:
-            return fig
     
     def pseudoIP(self, ax=None, contour=False): #IP pseudo section
         """ Create pseudo section of IP data with points (default)

@@ -147,6 +147,7 @@ class App(QMainWindow):
         self.r2 = R2(newwd)
         self.r2.cwd = bundle_dir
         self.parser = None
+        self.fname = None
  
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -325,10 +326,11 @@ class App(QMainWindow):
         
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
-                self.r2.iBorehole = True
+                self.r2.setBorehole(True)
             else:
-                self.r2.iBorehole = False
-                
+                self.r2.setBorehole(False)
+            if self.fname is not None:
+                    plotPseudo()
         boreholeCheck = QCheckBox('Borehole Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
 
@@ -494,6 +496,10 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
 #                generateMesh()
+                if boreholeCheck.isChecked() is True:
+                    self.r2.setBorehole(True)
+                else:
+                    self.r2.setBorehole(False)
                 plotPseudo()
 #                plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
@@ -2053,7 +2059,7 @@ class App(QMainWindow):
 #                runR2(self.refdir)
 #                self.processes[-1].finished.connect(timeLapseMainRun)
 #                print('ok ip')
-#            else:
+#            else:<<<<<<<<
 #                runMainInversion()
         
         def plotSection():

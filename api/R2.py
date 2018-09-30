@@ -91,6 +91,14 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = dirname
     
     
+    def setBorehole(self, val=False):
+        """ Set all surveys in borehole type if `True` is passed.
+        """
+        self.iBorehole = val
+        for s in self.surveys:
+            s.iBorehole = val
+    
+    
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, parser=None):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
@@ -117,7 +125,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
             # attribute method of Survey object to R2
             self.pseudoIP = self.surveys[0].pseudoIP
-            self.pseudoCallback = self.surveys[0].pseudo
+            self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
             self.linfit = self.surveys[0].linfit
             self.lmefit = self.surveys[0].lmefit
@@ -210,7 +218,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
-        self.pseudoCallback = self.surveys[0].pseudo # just display first pseudo section
+        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
         self.linfit = self.bigSurvey.linfit
@@ -219,18 +227,18 @@ class R2(object): # R2 master class instanciated by the GUI
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
     
-    def pseudo(self, **kwargs):
-        """ Create a pseudo section.
-        
-        Parameters
-        ----------
-        **kwargs :
-            To be passed to `R2.pseudoCallback()`.
-        """
-        if self.iBorehole == True:
-            print('NOT PLOTTING PSEUDO FOR BOREHOLE FOR NOW')
-        else:
-            self.pseudoCallback(**kwargs)
+#    def pseudo(self, **kwargs):
+#        """ Create a pseudo section.
+#        
+#        Parameters
+#        ----------
+#        **kwargs :
+#            To be passed to `R2.pseudoCallback()`.
+#        """
+#        if self.iBorehole == True:
+#            print('NOT PLOTTING PSEUDO FOR BOREHOLE FOR NOW')
+#        else:
+#            self.pseudoCallback(**kwargs)
     
     def createMesh(self, typ='default', buried=None, surface=None, **kwargs):
         """ Create a mesh.
