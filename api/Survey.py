@@ -1010,6 +1010,14 @@ class Survey(object):
             print('set to reciprocal')
         else:
             resist = np.ones(self.df.shape[0])
+        inan = np.isnan(resist)
+        resist = resist.copy()[~inan]
+        array = array.copy()[~inan]
+        self.iselect = np.zeros(len(inan), dtype=bool)
+        
+        def setSelect(ie, boolVal):
+            ipoints[ie] = boolVal
+            self.iselect[~inan] = ipoints
         # TODO find a way to get rid of the NaN before plotting them but still
         # keeping the index to be able to filter out the data ... maybe add
         # a third class of empty points just for NaN
@@ -1048,22 +1056,22 @@ class Survey(object):
             # TODO single doesn't want to change the electrode selection
             if lines[event.artist] == 'data':
                 print('onpick event', event.ind[0])
-                print(self.iselect[event.ind[0]])
+                print(ipoints[event.ind[0]])
                 xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
                 isame = (xpos == xid) & (ypos == yid)
-                if (self.iselect[isame] == True).all():
+                if (ipoints[isame] == True).all():
                     print('set to false')
-                    self.iselect[isame] = False
+                    setSelect(isame, False)
                 else:
-                    self.iselect[isame] = True
+                    setSelect(isame, True)
             
             if lines[event.artist] == 'elec':
                 print('onpick2', event.ind[0])
                 ie = (array == (event.ind[0]+1)).any(-1)
-                if all(self.iselect[ie] == True):
-                    self.iselect[ie] = False
+                if all(ipoints[ie] == True):
+                    setSelect(ie, False)
                 else:
-                    self.iselect[ie] = True
+                    setSelect(ie, True)
                 if eselect[event.ind[0]] == True:
                     eselect[event.ind[0]] = False
                 else:
@@ -1071,8 +1079,8 @@ class Survey(object):
                 elecKilled.set_xdata(elecpos[eselect])
                 elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
             print('update canvas')
-            killed.set_xdata(x[self.iselect])
-            killed.set_ydata(y[self.iselect])
+            killed.set_xdata(x[ipoints])
+            killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
                 
                 
@@ -1101,7 +1109,7 @@ class Survey(object):
         # TODO we need to get those variables out of the function
         print('len(array)', len(array))
         print('len(y)', len(y), len(xpos), len(ypos), len(resist))
-        self.iselect = np.zeros(len(y),dtype=bool)
+        ipoints = np.zeros(len(y),dtype=bool)
         eselect = np.zeros(len(elecpos), dtype=bool)
         
         lines = {cax:'data',caxElec:'elec',killed:'killed'}

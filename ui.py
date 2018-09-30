@@ -242,10 +242,14 @@ class App(QMainWindow):
             self.inversionOutput = ''
             logText.setText('')
             mwRMS.clear()
-            sectionId.currentIndexChanged.disconnect()
-            sectionId.clear()
-            attributeName.currentIndexChanged.disconnect()
-            attributeName.clear()
+            try: # try because maybe the user hasn't inverted yet
+                sectionId.currentIndexChanged.disconnect()
+                sectionId.clear()
+                attributeName.currentIndexChanged.disconnect()
+                attributeName.clear()
+            except:
+                pass
+
             vminEdit.setText('')
             vmaxEdit.setText('')
             mwInvResult.clear()
