@@ -25,6 +25,8 @@ from api.sequenceHelper import ddskip
 from api.SelectPoints import SelectPoints
 from api.post_processing import import_R2_err_dat, disp_R2_errors
 
+apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
+print('API path = ', apiPath)
 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
@@ -37,11 +39,11 @@ class R2(object): # R2 master class instanciated by the GUI
         dirnaname : str, optional
             Path of the working directory. Can also be set using `R2.setwd()`.
         """
+        self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
-            dirname = os.getcwd()
-            print('using the current directory:', dirname)
+            dirname = os.path.join(self.apiPath, 'invdir')
+        print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
-        self.cwd = os.getcwd() # directory of the code
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
@@ -289,7 +291,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if surface is not None:
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
-                             path=os.path.join(self.cwd, 'api', 'exe'),
+                             path=os.path.join(self.apiPath, 'exe'),
                              save_path=self.dirname)
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
@@ -492,12 +494,10 @@ class R2(object): # R2 master class instanciated by the GUI
             dirname = self.dirname
         os.chdir(dirname)
         targetName = os.path.join(dirname, exeName)
-        actualPath = self.cwd
-#        actualPath = os.path.dirname(os.path.relpath(__file__))
         
         # copy R2.exe
         if ~os.path.exists(targetName):
-            shutil.copy(os.path.join(actualPath, 'api', 'exe', exeName), targetName)  
+            shutil.copy(os.path.join(self.apiPath, 'exe', exeName), targetName)  
         
             
         if OS == 'Windows':
