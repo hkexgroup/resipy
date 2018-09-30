@@ -2371,8 +2371,8 @@ class MyTableWidget(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
-
-    splash_pix = QPixmap('logo.png')
+    print(os.path.join(bundle_dir, 'logo.png'))
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
