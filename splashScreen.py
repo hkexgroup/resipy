@@ -6,10 +6,9 @@ License: this code is in the public domain
 Last modified: 09.05.2009
 """
 from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import *
-import zipfile
-from subprocess import Popen
+from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtCore import Qt
+from zipfile import ZipFile, ZipInfo
 import os
 import sys
 import time
@@ -27,12 +26,32 @@ print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
 
 
+""" PERMISSION ISSUE WITH ZIPFILE MODULE
+https://stackoverflow.com/questions/39296101/python-zipfile-removes-execute-permissions-from-binaries
+by default zipfile does not umpack any binary bit to say executable or not
+Below is a way to do it
+"""
+
+class MyZipFile(ZipFile):
+    def extract(self, member, path=None, pwd=None):
+        if not isinstance(member, ZipInfo):
+            member = self.getinfo(member)
+
+        if path is None:
+            path = os.getcwd()
+
+        ret_val = self._extract_member(member, path, pwd)
+        attr = member.external_attr >> 16
+        os.chmod(ret_val, attr)
+        return ret_val
+
 
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
+#    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png')))
 
-    splash_pix = QPixmap('logo.png')
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
@@ -45,7 +64,7 @@ if __name__ == "__main__":
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-    splash.showMessage("Uncompressin app", Qt.AlignBottom, Qt.white)
+    splash.showMessage("Expanding app", Qt.AlignBottom, Qt.white)
     app.processEvents()
 #    app.processEvents()    
 #    progressBar.setValue(1)
@@ -67,9 +86,10 @@ if __name__ == "__main__":
 #    while time.time() < t + 4:
 #       app.processEvents()
 
-    zf = zipfile.ZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
+    zf = MyZipFile(os.path.join(bundle_dir, 'pyR2.zip'),'r')
     extractDir = os.path.join(bundle_dir, 'pyR2')
     if os.path.exists(extractDir):
+        print('overwritting pyR2 dir')
         shutil.rmtree(extractDir)
     os.mkdir(extractDir)
     uncompress_size = sum((file.file_size for file in zf.infolist()))
@@ -85,11 +105,12 @@ if __name__ == "__main__":
 
     
     splash.hide()
-#    os.chdir(os.path.join(bundle_dir, 'pyR2', 'ui'))
-#    Popen(['python3', 'ui.py']) # or the exe file is compiled 
-    print(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui'))
-    Popen(os.path.join(bundle_dir, 'pyR2', 'ui', 'ui')) # permission denied because the zip
-    # doesn't keep the permission
+    appDir = os.path.join(bundle_dir, 'pyR2', 'ui')
+#    print('appDir = ', appDir)
+    os.chdir(appDir)
+#    Popen(['python3', 'ui.py']) # this work fine
+    os.system(os.path.join(appDir, 'ui')) # this works now as well !
 
+#  need to comment the following lines as the exit signal is given by the main app
 #    sys.exit()
-#    sys.exit(app.exec_()) # TODO solve that !
+#    sys.exit(app.exec_()) 
