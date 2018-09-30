@@ -154,7 +154,7 @@ class App(QMainWindow):
         tabs = QTabWidget()
         
         # app icon
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
         
         def errorDump(text, flag=1):
             timeStamp = time.strftime('%H:%M:%S')
@@ -2370,7 +2370,7 @@ class MyTableWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon('logo.png')) # that's the true app icon
+    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
 
     splash_pix = QPixmap('logo.png')
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
