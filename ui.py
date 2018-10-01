@@ -716,15 +716,15 @@ class App(QMainWindow):
                     tt = df.values
                     if 'Buried' in self.headers:
                         if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
-                            self.setTable(tt[:,:-1])
+                            self.initTable(tt[:,:-1])
                             self.setBuried(tt[:,-1])
                         else:
-                            self.setTable(tt)
-                    else:
-                        if self.selfInit is True:
                             self.initTable(tt)
-                        else:
-                            self.setTable(tt)    
+#                    else:
+#                        if self.selfInit is True:
+#                            self.initTable(tt)
+#                        else:
+#                            self.setTable(tt)    
         
         
         topoLayout = QVBoxLayout()

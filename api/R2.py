@@ -58,6 +58,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
+        self.iForward = False # if True, it will use the output of the forward
+        # to run an inversion (and so need to reset the regions before this)
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -394,7 +396,14 @@ class R2(object): # R2 master class instanciated by the GUI
             self.configFile = write2in(self.param, self.dirname, typ=typ)
         
         # write the res0.dat needed for starting resistivity
-        self.mesh.write_attr('res0', 'res0.dat', self.dirname)
+        if self.iForward is True: # we will invert results from forward
+            # inversion so we need to start from a homogeneous model
+            res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
+            self.mesh.add_attribute(res0, 'r100')
+            self.mesh.write_attr('r100', 'res0.dat', self.dirname)
+        else: # if we invert field data, we allow the user to define prior
+            # knowledge of the resistivity structure
+            self.mesh.write_attr('res0', 'res0.dat', self.dirname)
         
 
     def write2protocol(self, errTyp='', errTypIP='', errTot=False, **kwargs):
@@ -856,7 +865,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.05, iplot=False):
+    def forward(self, noise=0.00, iplot=False):
         """ Operates forward modelling.
         
         Parameters
@@ -905,6 +914,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
         # fun the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
+        self.iForward = True
         
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
