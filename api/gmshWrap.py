@@ -39,6 +39,28 @@ def arange(start,incriment,stop,endpoint=0):#create a list with a range without 
         cache.append(stop)
     return cache
 
+def moving_average(array,N=3):
+    """compute the moving average for a list/array. N is the number
+    of elements averaged over, it always uses the quiered element as the central
+    point and hence must be an odd number""" 
+    if not isinstance(N,int) or N%2==0:
+        raise Exception("N must be an odd integer")
+    idx = round(N/2)-1
+    length = len(array)
+    out = [0]*length
+    for i in range(len(array)):
+        if i<idx:#cap minimum index
+            a = 0
+            b = i + idx + 1
+        elif length-i<idx: # cap maximum index
+            a = i - idx
+            b = len(array)-1
+        else:
+            a = i - idx
+            b = i + idx + 1            
+        out[i] = sum(array[a:b])/len(array[a:b])
+    return out
+
 def ccw(p,q,r):#code expects points as p=(x,y) and so on ... 
     """
     checks if points in a triangle are ordered counter clockwise. When using R2,
@@ -91,153 +113,7 @@ def tri_cent(p,q,r):
     return(Xc,Yc)
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile(topo_x,topo_y,elec_x,elec_y,file_name="default",doi=-1,cl=-1,path='default',
-               bh_survey=False):
-    """
-    DEPRECIATED
-#writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
-#INPUT:
-    #topo_x - x coordinates of the surface
-    #topo_y - y coordinates of the surface 
-    #elec_x - x coordinates of the electrodes 
-    #elec_y - y coordinates of the electrodes
-    #file_name - name of the generated gmsh file (optional)
-    #doi - depth of investigation (optional)
-    #cl - characteristic length (optional)
-    #path - directory to save the .geo file 
-    #bh_flag = False
-#OUTPUT:
-    #gmsh . geo file which can be run / loaded into gmsh
-###############################################################################
-    """
-    #at some point were looking to change genGeoFile_adv to the main 2d gmsh
-    #input generator, so warn the user. 
-    warnings.warn("Deprecaition warning: genGeoFile will be changing in the future to require a dictionary as input")
-    
-    #formalities and error checks
-    if doi == -1:
-        doi = abs(np.max(elec_x) - np.min(elec_x))/2
-        # print(doi)
-        # TODO very rough, better to consider 2/3 of the longest dipole
-    if cl == -1:
-        cl = np.mean(np.diff(elec_x))/2
-    if len(topo_x) != len(topo_y):
-        raise ValueError("topograpghy x and y arrays are not the same length!")
-    if len(elec_x) != len(elec_y):
-        raise ValueError("electrode x and y arrays are not the same length!")
-    if file_name.find('.geo')==-1:
-        file_name=file_name+'.geo'#add file extension if not specified already
-    #start to write the file
-    if path=='default':#written to working directory 
-        fh=open(file_name,'w')
-    else:
-        fh=open(os.path.join(path,file_name),'w')#file handle
-    fh.write("//Jamyd91's gmsh wrapper code version 0.1 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
-    fh.write("//2D mesh coordinates\n")
-    fh.write("cl=%.2f;//define characteristic length\n" %cl)
-    fh.write("//Define surface points\n")
-    #we have surface topograpghy, and electrode positions to make use of here:
-    x_pts=np.append(topo_x,elec_x)#append our electrode positions to our topograpghy 
-    y_pts=np.append(topo_y,elec_y)
-    idx=np.argsort(x_pts)#now resort the x positions in ascending order
-    x_pts=x_pts[idx]#compute sorted arrays
-    y_pts=y_pts[idx]
-    z_pts=np.zeros((len(x_pts),1))#for now let z = 0 
-    #add flags which distinguish what each point is 
-    flag=['topography point']*len(topo_x)
-    flag=flag+(['electrode location']*len(elec_x))
-    flag_sort=[flag[i] for i in idx]
-    #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
-    cache_idx=[]
-    for i in range(len(x_pts)-1):
-        if x_pts[i]==x_pts[i+1] and y_pts[i]==y_pts[i+1]:
-            cache_idx.append(i)
-    #if duplicated points were dectected we should remove them
-    if len(cache_idx)>0:
-        x_pts=np.delete(x_pts,cache_idx)#deletes first instance of the duplicate       
-        y_pts=np.delete(y_pts,cache_idx)
-        print("%i duplicated coordinate(s) were deleted" %len(cache_idx))
-        for k in range(len(cache_idx)):#what are we actually deleting?
-            if flag_sort[cache_idx[k]] == 'electrode location':
-                flag_sort[cache_idx[k]+1] = 'electrode location'
-                #this overwrites the flag string to say that this point is an electrode
-                #otherwise we'll get a mismatch between the number of electrodes and mesh nodes assigned to the electrodes
-        flag_sort=np.delete(flag_sort,cache_idx).tolist()
-    #now add the surface points to the file
-    tot_pnts=0#setup a rolling total
-    for i in range(len(x_pts)):
-        val=i+1
-        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(val,x_pts[i],y_pts[i],z_pts[i],flag_sort[i]))
-        tot_pnts=tot_pnts+1
-    #make the lines between each point
-    fh.write("//construct lines between each surface point\n")
-    tot_lins=0
-    for i in range(len(x_pts)-1):
-        val=i+1
-        fh.write("Line(%i) = {%i,%i};\n"%(val,val,val+1))
-        tot_lins=tot_lins+1
-    fh.write("//add points below surface to make a polygon\n")#okay so we want to add in the lines which make up the base of the slope
-    max_depth=min(y_pts)-doi
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*1.5};\n"%(tot_pnts+1,x_pts[0],max_depth,z_pts[0]))#point below left hand side of sudy area
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*1.5};\n"%(tot_pnts+2,x_pts[-1],max_depth,z_pts[-1]))#point below right hand side of sudy area
-    fh.write("//make a polygon by defining lines between points just made\n")
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+1,1,tot_pnts+1))#line from first point on surface to depth
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+2,tot_pnts+1,tot_pnts+2))#line going from the 2 new points
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+3,tot_pnts+2,tot_pnts))#line going bottom to last electrode point
-    #now extend boundaries beyond flanks of slope(so generate your Neummon boundary)
-    fh.write("//Add background region (Neumann boundary) points\n")
-    cl_factor=150#characteristic length multipleier for Nuemon boundary 
-    cl2=cl*cl_factor#assign new cl, this is so mesh elements get larger from the main model
-    fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
-    #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
-    e_spacing=np.mean(np.diff(elec_x))
-    flank=e_spacing*100
-    b_max_depth=max_depth-flank#background max depth
-    #add nuemon boundaries on left hand side
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+3,x_pts[0]-flank,y_pts[0],z_pts[0]))
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+4,x_pts[0]-flank,b_max_depth,z_pts[0]))
-    #add nuemon boundary points on right hand side
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+6,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+5,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
-    #make lines encompassing all the points - counter clock wise fashion
-    fh.write("//make lines encompassing all the background points - counter clock wise fashion\n")
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+4,1,tot_pnts+3))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+5,tot_pnts+3,tot_pnts+4))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+6,tot_pnts+4,tot_pnts+5))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+7,tot_pnts+5,tot_pnts+6))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+8,tot_pnts+6,tot_pnts))
-    fh.write("//Add line loops and plane surfaces to mesh\n")
-    #make first line loop refering to the model region
-    fh.write("Line Loop(%i) = {"%(tot_lins+9))
-    for i in np.arange(1,tot_lins,1):
-        val=i+1
-        fh.write("%i, "%val)
-    fh.write("%i, %i, %i, 1};\n"%(-(tot_lins+3),-(tot_lins+2),-(tot_lins+1)))
-        #now add background region line loop (cos this be made more efficent?)
-    fh.write("Line Loop(%i) = {%i ,%i ,%i ,%i ,%i ,%i ,%i ,%i};\n"%(tot_lins+10,
-             tot_lins+1,
-             tot_lins+2,
-             tot_lins+3,
-             -(tot_lins+8),
-             -(tot_lins+7),
-             -(tot_lins+6),
-             -(tot_lins+5),
-             -(tot_lins+4)))
-    fh.write("//Assign plane surfaces to be meshed\n")
-    fh.write("Plane Surface(1) = {%i};\n"%(tot_lins+9))
-    fh.write("Plane Surface(2) = {%i};\n"%(tot_lins+10))
-    fh.write("//Finally make a physical surface\n")
-    fh.write("Physical Surface(1) = {1, 2};\n")
-    fh.write("//j'ai fini!")
-    fh.close()
-    print("writing .geo to file completed\n")
-   #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
-   #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
-    node_pos=[i+1 for i, j in enumerate(flag_sort) if j == 'electrode location']
-    return node_pos,file_name
-
-#%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
+def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='default'):
     """
     writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
@@ -246,13 +122,18 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     geom_input: dict
         a dictionary of electrode coordinates, surface topography, 
                     #borehole electrode coordinates, and boundaries 
-    file_name: string
+    file_name: string, optional 
         name of the generated gmsh file (can include file path also) (optional)
-    doi: float
+    doi: float, optional 
         depth of investigation (optional) (in meters)
-    cl: float
+    cl: float, optional
         characteristic length (optional), essentially describes how big the nodes 
-        assocaited elements will be. Usually no bigger than 5
+        assocaited elements will be. Usually no bigger than 5. 
+    cl_factor: float, optional 
+        This allows for tuning of the incrimental size increase with depth in the 
+        mesh, usually set to 2 such that the elements at the DOI are twice as big as those
+        at the surface. The reasoning for this is becuase the sensitivity of ERT drops
+        off with depth. 
     path: string
         directory to save the .geo file
     
@@ -269,8 +150,8 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
         searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
         and polygons to the mesh. See below example:
             
-            geom_input = {'surface': [surf_x,surf_y],
-              'electrode':[elec_x,elec_y],
+            geom_input = {'surface': [surf_x,surf_z],
+              'electrode':[elec_x,elec_z],
               'borehole1':[string1x,string1y],
               'borehole2':[string2x,string2y],
               'boundary1':[bound1x,bound1y],
@@ -299,20 +180,22 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     #determine     
     if 'electrode' not in geom_input:
         elec_x=[]
-        elec_y=[]
+        elec_z=[]
         topo_x = geom_input['surface'][0]
-        topo_y = geom_input['surface'][1]
+        topo_z = geom_input['surface'][1]
     elif 'surface' not in geom_input:
+        print("surface not in geom_input")
         elec_x = geom_input['electrode'][0]
-        elec_y = geom_input['electrode'][1]
+        elec_z = geom_input['electrode'][1]
         topo_x = [elec_x[0] - 5*np.mean(np.diff(elec_x)),
                   elec_x[-1] + 5*np.mean(np.diff(elec_x))]
-        topo_y = [elec_y[0],elec_y[-1]]
+        topo_z = [elec_z[0],elec_z[-1]]
     else:
         topo_x = geom_input['surface'][0]
-        topo_y = geom_input['surface'][1]       
+        topo_z = geom_input['surface'][1]       
         elec_x = geom_input['electrode'][0]
-        elec_y = geom_input['electrode'][1]
+        elec_z = geom_input['electrode'][1]
+    
         
     if 'borehole1' in geom_input: # do we have boreholes ? 
         bh_flag = True
@@ -337,9 +220,9 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
         else:
             cl = np.mean(np.diff(elec_x))/2
             
-    if len(topo_x) != len(topo_y):
+    if len(topo_x) != len(topo_z):
         raise ValueError("topography x and y arrays are not the same length!")
-    if len(elec_x) != len(elec_y):
+    if len(elec_x) != len(elec_z):
         raise ValueError("electrode x and y arrays are not the same length!")
     if file_name.find('.geo')==-1:
         file_name=file_name+'.geo'#add file extension if not specified already
@@ -358,14 +241,24 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     fh.write("//Define surface points\n")
     #we have surface topograpghy, and electrode positions to make use of here:
     x_pts=np.append(topo_x,elec_x)#append our electrode positions to our topograpghy 
-    y_pts=np.append(topo_y,elec_y)
+    y_pts=np.append(topo_z,elec_z)
+    flag=['topography point']*len(topo_x)
+    flag=flag+(['electrode location']*len(elec_x))   
+    #deal with end case electrodes 
+    if min(elec_x) == min(x_pts):
+        x_pts = np.append(x_pts,elec_x[0] - 5*np.mean(np.diff(elec_x)))
+        y_pts = np.append(y_pts,elec_z[0])
+        flag.append('topography point')
+    if max(elec_x) == max(x_pts):
+        x_pts = np.append(x_pts,elec_x[-1] + 5*np.mean(np.diff(elec_x)))
+        y_pts = np.append(y_pts,elec_z[-1])
+        flag.append('topography point')
+     
     idx=np.argsort(x_pts)#now resort the x positions in ascending order
     x_pts=x_pts[idx]#compute sorted arrays
     y_pts=y_pts[idx]
     z_pts=np.zeros((len(x_pts),1))#for now let z = 0 
     #add flags which distinguish what each point is 
-    flag=['topography point']*len(topo_x)
-    flag=flag+(['electrode location']*len(elec_x))
     flag_sort=[flag[i] for i in idx]
     
     #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
@@ -389,73 +282,100 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     #now add the surface points to the file
     print('adding surface points and electrodes to input file...')
     tot_pnts=0#setup a rolling total for points numbering
+    sur_pnt_cache=[] # surface points cache 
     for i in range(len(x_pts)):
-        val=i+1
-        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(val,x_pts[i],y_pts[i],z_pts[i],flag_sort[i]))
         tot_pnts=tot_pnts+1
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],y_pts[i],z_pts[i],flag_sort[i]))
+        sur_pnt_cache.append(tot_pnts)
     
     #make the lines between each point
     fh.write("//construct lines between each surface point\n")
     tot_lins=0
+    sur_ln_cache = []
     for i in range(len(x_pts)-1):
-        val=i+1
-        fh.write("Line(%i) = {%i,%i};\n"%(val,val,val+1))
         tot_lins=tot_lins+1
+        fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[i],sur_pnt_cache[i+1]))
+        sur_ln_cache.append(tot_lins)
+        
+    fh.write("//add points below surface to make a fine mesh region\n")#okay so we want to add in the lines which make up the base of the survey area
+    if bh_flag: #not allowing mesh refinement for boreholes currently
+        cl_factor = 1   
     
-    fh.write("//add points below surface to make a polygon\n")#okay so we want to add in the lines which make up the base of the slope
-    max_depth=-doi
-    cl_factor = 2  
-    if bh_flag:
-        cl_factor = 1       
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%f};\n"%(tot_pnts+1,x_pts[0],max_depth,z_pts[0],cl_factor))#point below left hand side of sudy area
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%f};\n"%(tot_pnts+2,x_pts[-1],max_depth,z_pts[-1],cl_factor))#point below right hand side of sudy area
-    fh.write("//make a polygon by defining lines between points just made\n")
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+1,1,tot_pnts+1))#line from first point on surface to depth
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+2,tot_pnts+1,tot_pnts+2))#line going from the 2 new points
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+3,tot_pnts+2,tot_pnts))#line going bottom to last electrode point
+    #reflect surface topography at base of fine mesh area. 
+    z_base = moving_average(y_pts[::2] - abs(doi),N=5) # compute the depth to the points at the base of the survey, + downsample
+    # a smoothed version of the topography ... 
+    x_base = x_pts[::2]
+    basal_pnt_cache = []
+    for i in range(len(x_base)):
+        tot_pnts=tot_pnts+1
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//%s\n"%(tot_pnts,x_base[i],z_base[i],0,cl_factor,
+                 'base of smoothed mesh region'))
+        basal_pnt_cache.append(tot_pnts)
+    
+    fh.write("//make a polygon by defining lines between points just made.\n")
+    basal_ln_cache=[]
+    for i in range(len(x_base)-1):
+        tot_lins=tot_lins+1
+        fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,basal_pnt_cache[i],basal_pnt_cache[i+1]))
+        basal_ln_cache.append(tot_lins)
+    
+    fh.write("//Add lines at the end points of each of the fine mesh region.\n")
+    tot_lins=tot_lins+1;# add to the number of lines rolling total 
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[0],basal_pnt_cache[0]))#line from first point on surface to depth
+    tot_lins=tot_lins+1
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[-1],basal_pnt_cache[-1]))#line going bottom to last electrode point
+    end_ln_cache=[tot_lins-1,tot_lins]
+    
+    #compile line numbers into a line loop.
+    fh.write("//compile lines into a line loop for a mesh surface/region.\n")
+    sur_ln_cache_flipped = list(np.flipud(np.array(sur_ln_cache))*-1)
+    fine_msh_loop = [end_ln_cache[0]] + basal_ln_cache + [-1*end_ln_cache[1]] + sur_ln_cache_flipped
+    fh.write("Line Loop(1) = {%s};\n"%str(fine_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
+    fh.write("Plane Surface(1) = {1};//Fine mesh region surface\n")
+    
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
-    fh.write("//Add background region (Neumann boundary) points\n")
-    cl_factor=50#characteristic length multipleier for Nuemon boundary 
-    cl2=cl*cl_factor#assign new cl, this is so mesh elements get larger from the main model
+    fh.write("\n//Add background region (Neumann boundary) points\n")
+    cl_factor2=50#characteristic length multipleier for Nuemon boundary 
+    cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
     e_spacing=np.mean(np.diff(elec_x))
     flank=e_spacing*100
-    b_max_depth=max_depth-flank#background max depth
+    b_max_depth=-abs(doi)-flank#background max depth
     #add nuemon boundaries on left hand side
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+3,x_pts[0]-flank,y_pts[0],z_pts[0]))
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+4,x_pts[0]-flank,b_max_depth,z_pts[0]))
+    n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
+    tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
+    tot_pnts=tot_pnts+1;n_pnt_cache[1]=tot_pnts
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
     #add nuemon boundary points on right hand side
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+6,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};\n"%(tot_pnts+5,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
+    tot_pnts=tot_pnts+1;n_pnt_cache[2]=tot_pnts
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
+    tot_pnts=tot_pnts+1;n_pnt_cache[3]=tot_pnts
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
     #make lines encompassing all the points - counter clock wise fashion
     fh.write("//make lines encompassing all the background points - counter clock wise fashion\n")
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+4,1,tot_pnts+3))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+5,tot_pnts+3,tot_pnts+4))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+6,tot_pnts+4,tot_pnts+5))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+7,tot_pnts+5,tot_pnts+6))
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins+8,tot_pnts+6,tot_pnts))
-    fh.write("//Add line loops and plane surfaces to mesh\n")
-    #make first line loop refering to the model region
-    fh.write("Line Loop(%i) = {"%(tot_lins+9))
-    for i in np.arange(1,tot_lins,1):
-        val=i+1
-        fh.write("%i, "%val)
-    fh.write("%i, %i, %i, 1};\n"%(-(tot_lins+3),-(tot_lins+2),-(tot_lins+1)))
-        #now add background region line loop (cos this be made more efficent?)
-    fh.write("Line Loop(%i) = {%i ,%i ,%i ,%i ,%i ,%i ,%i ,%i};\n"%(tot_lins+10,
-             tot_lins+1,
-             tot_lins+2,
-             tot_lins+3,
-             -(tot_lins+8),
-             -(tot_lins+7),
-             -(tot_lins+6),
-             -(tot_lins+5),
-             -(tot_lins+4)))
-    fh.write("//Assign plane surfaces to be meshed\n")
-    fh.write("Plane Surface(1) = {%i};\n"%(tot_lins+9))
-    fh.write("Plane Surface(2) = {%i};\n"%(tot_lins+10))
-    fh.write("//Make a physical surface\n")
+    
+    n_ln_cache=[0,0,0,0,0]
+    tot_lins=tot_lins+1;n_ln_cache[0]=tot_lins
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[0],n_pnt_cache[0]))
+    tot_lins=tot_lins+1;n_ln_cache[1]=tot_lins
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,n_pnt_cache[0],n_pnt_cache[1]))
+    tot_lins=tot_lins+1;n_ln_cache[2]=tot_lins
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,n_pnt_cache[1],n_pnt_cache[3]))
+    tot_lins=tot_lins+1;n_ln_cache[3]=tot_lins
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,n_pnt_cache[3],n_pnt_cache[2]))
+    tot_lins=tot_lins+1;n_ln_cache[4]=tot_lins
+    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,n_pnt_cache[2],sur_pnt_cache[-1]))
+    
+    fh.write("//Add line loops and plane surfaces to for nuemon region\n")
+    #now add background region line loop (cos this be made more efficent?)
+    basal_ln_cache_flipped = list(np.flipud(np.array(basal_ln_cache))*-1)
+    coarse_msh_loop = n_ln_cache + [end_ln_cache[1]] + basal_ln_cache_flipped + [-1*end_ln_cache[0]]
+    fh.write("Line Loop(2) = {%s};\n"%str(coarse_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
+    fh.write("Plane Surface(2) = {2};//Fine mesh region surface\n")
+    
+    fh.write("\n//Make a physical surface\n")
     fh.write("Physical Surface(1) = {1, 2};\n")
     
     #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
@@ -465,8 +385,8 @@ def genGeoFile_adv(geom_input,file_name="default",doi=-1,cl=-1,path='default'):
     
     #add borehole vertices and line segments to the survey mesh
     fh.write("\n//Adding boreholes? \n")
-    no_lin=tot_lins+10
-    no_pts=tot_pnts+6
+    no_lin=tot_lins+1
+    no_pts=tot_pnts+1
     #add borehole electrode strings
     print('probing for boundaries and other additions to the mesh')
     count = 0
@@ -817,9 +737,6 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False):
                 'original_file_path':file_path} 
             #the information here is returned as a mesh dictionary because it much easier to debug 
 
-
-#%% gmsh wrapper    - moved to MeshTools    
-
 #%% is in polygon code - originally developed as part of jamyd's slope stability code project. 
 def __LineEq(x,y):
     #finds the equation of a line using an inverse operation given an array of
@@ -932,12 +849,24 @@ def isinpolygon(x,y,polydata,*args):
         #this last option shouldnt be possible unless something has gone wrong
         print("something may have gone wrong in the 'isinpolygon' algorithm")
         return 0
-
-
-#%% test code
-#mesh, element_ranges = tri_mesh(np.arange(10), np.zeros(10),
-#                np.arange(10), np.zeros(10), keep_files=True, save_path='../test/mesh.dat')
-#mesh.show()
-
-
+    
+#%% test block 
+#import parsers as prs     
+##import survey 
+#elec, df = prs.res2invInputParser(r'C:\Users\jamyd91\Documents\2PhD_projects\Hollin_Hill\Models\res2d_forward_error.dat')
+##elec, df = prs.syscalParser(r'C:\Users\jamyd91\Documents\2PhD_projects\R2gui\Data\example_feild_data.txt')
+##slope geometry 
+#width=170;#width of slope:
+#top=100;#top of slope: 100m above datum
+#bottom=50;#base of slope 50m ODM;
+#ends_addon=40;# how much to add to the width of the slope
+#bottom_addon=10;#how much to add to the bottom of the model 
+#X=np.array([-ends_addon,0,width,width+ends_addon]);#compile geometry into arrays
+#Y=np.array([bottom,bottom,top,top])
+#
+##%triangular mesh - create geometry and run gmsh wrapper
+#geom_input = {'electrode':[elec.T[0],elec.T[1]]}#,
+#              #'surface':[X,Y]}
+#
+#genGeoFile(geom_input)
 
