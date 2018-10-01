@@ -720,7 +720,8 @@ class App(QMainWindow):
                             self.setBuried(tt[:,-1])
                         else:
                             self.initTable(tt)
-#                    else:
+                    else:
+                        self.initTable(tt)
 #                        if self.selfInit is True:
 #                            self.initTable(tt)
 #                        else:
