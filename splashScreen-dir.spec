@@ -6,7 +6,7 @@ block_cipher = None
 a = Analysis(['splashScreen.py'],
              pathex=['/media/jkl/data/phd/tmp/r2gui'],
              binaries=[],
-             datas=[('./dist/ui.zip','.'),
+             datas=[('./ui.zip','.'),
                     ('./logo.png','.')],
              hiddenimports=[],
              hookspath=[],
