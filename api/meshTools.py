@@ -85,7 +85,7 @@ class Mesh_obj:
         
     Returns
     ----------
-    Mesh_obj: object
+    Mesh_obj: class
         
     """    
     cax = None 
@@ -144,7 +144,7 @@ class Mesh_obj:
             
         Returns
         ---------- 
-        mesh class object
+        Mesh: class 
     """
         #check the dictionary is a mesh
         try: 
@@ -1273,7 +1273,7 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     file_name="temp"
     if not isinstance(geom_input,dict):
         raise ValueError("geom_input has not been given!")
-    node_pos,_ = gw.genGeoFile_adv(geom_input,file_name=file_name,path=ewd,**kwargs)
+    node_pos,_ = gw.genGeoFile(geom_input,file_name=file_name,path=ewd,**kwargs)
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
