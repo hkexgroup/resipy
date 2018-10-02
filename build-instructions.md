@@ -3,17 +3,28 @@
 
 
 # 1. Virtual Environment
-You need to work inside a python virtual environment. Use the `virtualenv` command to create a new one. Use python 3.X
+You need to work inside a python virtual environment. Use the `virtualenv` command to create a new one. Use python 3.X.
+Create it using:
+```command line
+cd my_directory
+virtualenv <my_virtual_env>
+<my_virtual_env>\Scripts\activate.bat #windows version
+source <my_virtual_env>\bin\activate #linux version
+```
+
 
 
 # 2. Pyinstaller and packages
-See doc online. Inside this environnement install only the packages needed (see list below) and the *last development* version of pyinstaller.
+See doc online. Activate your virtual environment (as above). Inside this environnement install only the packages needed (see list below) and the *lastest* version of pyinstaller 3.4 using pip. 
+`pip install <package_name>`
 
 Packages needed:
 - numpy
 - scipy
 - matplotlib
 - pandas
+- pyinstaller
+- PyQt5
 
 
 # 3. Buidling (3 ways)
