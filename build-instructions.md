@@ -15,8 +15,8 @@ source <my_virtual_env>\bin\activate #linux version
 
 
 # 2. Pyinstaller and packages
-See doc online. Inside this environnement install only the packages needed (see list below) and the *last development* version of pyinstaller.
-
+See doc online. Activate your virtual environment (as above). Inside this environnement install only the packages needed (see list below) and the *lastest* version of pyinstaller 3.4 using pip. 
+`pip install <package_name>`
 Packages needed:
 - numpy
 - scipy
