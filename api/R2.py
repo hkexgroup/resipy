@@ -244,7 +244,8 @@ class R2(object): # R2 master class instanciated by the GUI
 #        else:
 #            self.pseudoCallback(**kwargs)
     
-    def createMesh(self, typ='default', buried=None, surface=None, **kwargs):
+    def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
+                   cl=-1, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -252,6 +253,17 @@ class R2(object): # R2 master class instanciated by the GUI
         typ : str, optional
             Type of mesh. Eithter 'quad' or 'trian'. If no topography, 'quad'
             mesh will be chosen.
+        buried : numpy.array, optional
+            Boolean array of electrodes that are buried. Should be the same
+            length as `R2.elec`
+        surface : numpy.array, optional
+            Array with two columns x and y for additional surface points.
+        cl_factor : float, optional
+            Characteristic length factor. Only used for triangular mesh to allow
+            mesh to be refined close the electrodes and then expand.
+        cl : float, optional
+            Characteristic length that define the mesh size around the
+            electrodes.
         """
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
@@ -294,7 +306,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
-                             save_path=self.dirname)
+                             save_path=self.dirname, cl_factor=cl_factor,
+                             cl=cl)
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
@@ -1148,7 +1161,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% test for timelapse inversion
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k = R2()
 #k.createTimeLapseSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.createBatchSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.linfit()
@@ -1156,7 +1169,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.errTyp = 'pwl'
 #k.param['a_wgt'] = 0
 #k.param['b_wgt'] = 0
-#k.createMesh()
+#k.createMesh(typ='trian', cl_factor=5, cl=0.05)
+#k.showMesh()
 #k.write2in()
 #k.write2protocol()
 #k.invert(iplot=False)

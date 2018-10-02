@@ -211,6 +211,7 @@ class App(QMainWindow):
             meshType.setCurrentIndex(0)
             meshType.currentIndexChanged.connect(meshTypeFunc)
             mwMesh.clear()
+            regionTable.reset()
             
             # inversion options
             flux_type.setCurrentIndex(0)
@@ -507,7 +508,7 @@ class App(QMainWindow):
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
-                          Mare sure you selected the right file type.')
+                          Make sure you selected the right file type.')
                 pass
         
         buttonf = QPushButton('Import Data') 
@@ -1263,10 +1264,6 @@ class App(QMainWindow):
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
         meshLayout = QVBoxLayout()
-                
-        def callback2(ax):
-            ax.plot(np.random.randn(20,5), '+--')
-            ax.set_title('Random data nnnnndfghdfh')
 
         def meshTypeFunc(index=1):
             self.r2.elec = elecTable.getTable()
@@ -1281,13 +1278,18 @@ class App(QMainWindow):
                 self.r2.createMesh(typ='quad')
                 scale.setVisible(False)
                 scaleLabel.setVisible(False)
+                meshOptionLayout.setCurrentIndex(0)
             elif index == 2:
                 scale.setVisible(True)
                 scaleLabel.setVisible(True)
+                meshOptionLayout.setCurrentIndex(1)
                 self.r2.createMesh(typ='trian', buried=buried, surface=surface)
             else:
                 print('NOT IMPLEMENTED')
             print(self.r2.mesh.summary())
+            replotMesh()
+        
+        def replotMesh():
             regionTable.reset()
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=regionTable.addRow)
@@ -1302,31 +1304,58 @@ class App(QMainWindow):
         meshType.addItem('Triangular Mesh')
         meshType.currentIndexChanged.connect(meshTypeFunc)
         meshLayout.addWidget(meshType)
-        
-        meshOptionLayout = QHBoxLayout()
-        
-        def updateMesh():
+                
+        def updateQuadMesh():
             nnodes = int(nnodesEdit.text())
             self.r2.createMesh(typ='quad', elemx=nnodes)
-#            mwMesh.plot(self.r2.mesh.show)
-            regionTable.reset()
-            def func(ax):
-                self.r2.createModel(ax=ax, addAction=regionTable.addRow)
-            mwMesh.plot(func)
-            mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
-            mwMesh.canvas.setFocus() # set focus on the canvas
-            
+            replotMesh()
+        
+        def updateTrianMesh():
+            cl = float(clEdit.text())
+            cl_factor = float(cl_factorEdit.text())
+            self.r2.createMesh(typ='trian', cl=cl, cl_factor=cl_factor)
+            replotMesh()
+        
+        # additional options for quadrilateral mesh
         nnodesLabel = QLabel('Number of nodes between electrode:')
-        meshOptionLayout.addWidget(nnodesLabel)
         nnodesEdit = QLineEdit()
         nnodesEdit.setValidator(QIntValidator())
         nnodesEdit.setText('4')
-#        nnodesEdit.editingFinished.connect(updateMesh)
-        meshOptionLayout.addWidget(nnodesEdit)
+        meshBtnQuad = QPushButton('Apply')
+        meshBtnQuad.clicked.connect(updateQuadMesh)
+
+        # additional options for triangular mesh
+        clLabel = QLabel('Characteristic Length:')
+        clEdit = QLineEdit()
+        clEdit.setValidator(QDoubleValidator())
+        clEdit.setText('-1')
+        cl_factorLabel = QLabel('Growth factor:')
+        cl_factorEdit = QLineEdit()
+        cl_factorEdit.setValidator(QDoubleValidator())
+        cl_factorEdit.setText('2')
+        meshBtnTrian = QPushButton('Apply')
+        meshBtnTrian.clicked.connect(updateTrianMesh)
         
-        meshBtn = QPushButton('Apply')
-        meshBtn.clicked.connect(updateMesh)
-        meshOptionLayout.addWidget(meshBtn)
+        meshOptionQuadLayout = QHBoxLayout()
+        meshOptionQuadLayout.addWidget(nnodesLabel)
+        meshOptionQuadLayout.addWidget(nnodesEdit)
+        meshOptionQuadLayout.addWidget(meshBtnQuad)
+        
+        meshOptionTrianLayout = QHBoxLayout()
+        meshOptionTrianLayout.addWidget(clLabel)
+        meshOptionTrianLayout.addWidget(clEdit)
+        meshOptionTrianLayout.addWidget(cl_factorLabel)
+        meshOptionTrianLayout.addWidget(cl_factorEdit)
+        meshOptionTrianLayout.addWidget(meshBtnTrian)
+        
+        meshOptionLayout = QStackedLayout()
+        meshOptionQuadWidget = QWidget()
+        meshOptionQuadWidget.setLayout(meshOptionQuadLayout)
+        meshOptionLayout.addWidget(meshOptionQuadWidget)
+        meshOptionTrianWidget = QWidget()
+        meshOptionTrianWidget.setLayout(meshOptionTrianLayout)
+        meshOptionLayout.addWidget(meshOptionTrianWidget)
+        meshOptionLayout.setCurrentIndex(0)
         
         meshLayout.addLayout(meshOptionLayout)
         
