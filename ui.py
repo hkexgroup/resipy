@@ -204,7 +204,6 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
             tabPreProcessing.setTabEnabled(3, False)
-
             
             # mesh
             meshType.currentIndexChanged.disconnect()

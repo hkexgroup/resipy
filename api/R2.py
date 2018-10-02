@@ -568,28 +568,35 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create mesh if not already done
         if 'mesh' not in self.param:
+            dump('Create Rectangular mesh...')
             self.createMesh()
-        
+            dump('done\n')
+            
         # compute modelling error if selected
         if modErr is True:
+            dump('Computing error model ...')
             self.computeModelError()
+            dump('done\n')
             errTot = True
         else:
             errTot = False
         
         # write configuration file
+        dump('Writing .in file and protocol.dat ...')
         self.write2in(param=param) # R2.in
         self.write2protocol(errTot=errTot) # protocol.dat
-            
+        dump('done\n')
+        
         # runs inversion
         if self.iTimeLapse == True:
+            dump('---------- Inverting background/reference model ---------\n')
             refdir = os.path.join(self.dirname, 'ref')
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
             self.runR2(refdir, dump=dump)
-            print('----------- finished inverting reference model ------------')
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                     os.path.join(self.dirname, 'Start_res.dat'))
+        dump('-------- Main inversion ---------------\n')
         self.runR2(dump=dump)
         
         if iplot is True:
@@ -878,15 +885,18 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.00, iplot=False):
+    def forward(self, noise=0.00, iplot=False, dump=print):
         """ Operates forward modelling.
         
         Parameters
         ----------
         noise : float, optional 0 <= noise <= 1
-            Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained. 
+            Noise level from a Gaussian distribution that should be applied
+            on the forward apparent resistivities obtained. 
         iplot : bool, optional
             If `True` will plot the pseudo section after the forward modelling.
+        dump : function, optional
+            Function to print information messages when running the forward model.
         """
         fwdDir = os.path.join(self.dirname, 'fwd')
         if os.path.exists(fwdDir):
@@ -908,15 +918,20 @@ class R2(object): # R2 master class instanciated by the GUI
                         os.path.join(fwdDir, 'mesh.dat'))
         
         # write the forward .in file
+        dump('Writing .in file...')
         fparam = self.param.copy()
         fparam['job_type'] = 0
         fparam['num_regions'] = 0
         fparam['res0File'] = 'resistivity.dat' # just starting resistivity
         write2in(fparam, fwdDir, typ=self.typ)
+        dump('done\n')
         
         # write the protocol.dat (that contains the sequence)
         if self.sequence is None:
+            dump('Creating sequence ...')
             self.createSequence()
+            dump('done\n')
+        dump('Writing protocol.dat ...')
         seq = self.sequence
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
         outputname = os.path.join(fwdDir, 'protocol.dat')
@@ -924,8 +939,10 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
-    
+        dump('done\n')
+        
         # fun the inversion
+        dump('Running forward model')
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
         self.iForward = True
         
@@ -943,6 +960,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         self.write2protocol()
         self.pseudo()
+        dump('done\n')
+
         
         
     def computeModelError(self):
