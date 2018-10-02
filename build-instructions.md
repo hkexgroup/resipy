@@ -31,6 +31,11 @@ The advantage of the splash screen is that it allows the user to see what is goi
 
 Also for now there is still the console that is shown when starting the app. But for release it will be hidden.
 
+**notes: 
+- we used pyinstaller version 3.4 and,
+- pyqt 5.9.x
+- for windows there is a bug with pyinstaller and the conda version of pyqt. liklehood is it wont compile. We suggest using winpython to build pyR2 on windows. 
+
 
 
 
