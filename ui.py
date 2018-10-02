@@ -2339,7 +2339,7 @@ class App(QMainWindow):
         
         infoLayout = QVBoxLayout()
         aboutText = QLabel()
-        aboutText.setText('<h1>About pyR2</h1> \
+        aboutText.setText('''<h1>About pyR2</h1> \
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (DC and IP)</i></p> \
                           <p>If you encouter issues or would like to submit a feature request, please raise an issue on gitlab:</p> \
                           <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
@@ -2347,8 +2347,33 @@ class App(QMainWindow):
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
                           <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
                           <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-                          <p>Authors: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd.</p>')
+                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+<ul>
+<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
+<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
+<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
+</li>
+<li>
+ Wes McKinney.
+<strong>Data Structures for Statistical Computing in Python</strong>,
+Proceedings of the 9th Python in Science Conference, 51-56 (2010)
+(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
+</li>
+<li>
+John D. Hunter.
+<strong>Matplotlib: A 2D Graphics Environment</strong>,
+Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
+<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a> 
+</li>
+<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
+USA: Trelgol Publishing, (2006).
+</li>
+</ul>
+</p>
+<br/>
+                          <p><strong>pyR2's core developpers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>''')
         aboutText.setOpenExternalLinks(True)
+        aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         infoLayout.addWidget(aboutText)
         
