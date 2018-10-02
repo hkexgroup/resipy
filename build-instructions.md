@@ -24,6 +24,7 @@ Packages needed:
 - matplotlib
 - pandas
 - pyinstaller
+- PyQt5
 
 
 # 3. Buidling (3 ways)
