@@ -8,7 +8,7 @@ triangular elements. module has capacity to show meshes, inverted results, apply
 to mesh parameters. 
 
 Classes: 
-    mesh_obj
+    Mesh_obj
 Functions: 
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
@@ -1003,7 +1003,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     try:
         Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
     except:
-        print('no sensitivity')
+        #print('no sensitivity') # not forced to have a sensitivity attribute
         pass
     Mesh.mesh_title = title
     return Mesh
