@@ -302,9 +302,13 @@ def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='def
         cl_factor = 1   
     
     #reflect surface topography at base of fine mesh area. 
-    z_base = moving_average(y_pts[::2] - abs(doi),N=5) # compute the depth to the points at the base of the survey, + downsample
-    # a smoothed version of the topography ... 
     x_base = x_pts[::2]
+    z_base = moving_average(y_pts[::2] - abs(doi),N=5) # compute the depth to the points at the base of the survey, + downsample
+    if len(x_pts)%2 == 0:#bug fix
+        z_base = np.append(z_base,y_pts[-1]- abs(doi))#puts in extra point at base underneath last x and y point
+        x_base = np.append(x_base,x_pts[-1])
+    # a smoothed version of the topography ... 
+    
     basal_pnt_cache = []
     for i in range(len(x_base)):
         tot_pnts=tot_pnts+1
