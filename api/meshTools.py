@@ -8,7 +8,7 @@ triangular elements. module has capacity to show meshes, inverted results, apply
 to mesh parameters. 
 
 Classes: 
-    Mesh_obj
+    mesh_obj
 Functions: 
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
@@ -41,8 +41,10 @@ import matplotlib.tri as tri
 #import R2gui API package - uncomment the below code for testing purposes 
 #if __name__ =="__main__" or __name__=="meshTools":
 #    import gmshWrap as gw 
+#    from isinpolygon import isinpolygon
 #else:
 import api.gmshWrap as gw
+from api.isinpolygon import isinpolygon
 
 #%% create mesh object
 class Mesh_obj: 
@@ -519,28 +521,21 @@ class Mesh_obj:
         """   
         no_elms=self.num_elms#number of elements 
         elm_xy=self.elm_centre#centriods of mesh elements 
-        material_no=[0]*no_elms#attribute number
+        material_no=np.zeros(no_elms,dtype=int)#attribute number
         
         if not isinstance(poly_data,dict):
             raise Exception("poly_data input is not a dictionary")
         
         #now on to extracting the data of interest
-        dodgey=0#this will be used as a check to make sure elements havent been overwritten
         print('Assigning element attribute IDs...')
-        
-        for i,key in enumerate(poly_data):
+        for i, key in enumerate(poly_data):
             poly_x=poly_data[key][0]#polygon x coordinates
             poly_y=poly_data[key][1]#polygon y coordinates
-            for k in range(no_elms):
-                if gw.isinpolygon(elm_xy[0][k],elm_xy[1][k],(poly_x,poly_y)):#then the centriod of the element must be inside region of interest
-                    if material_no[k]!=0:#then we must be overwriting a previously assigned element
-                        dodgey=dodgey+1 
-                    material_no[k]=i+1
-        
-        if dodgey>0:
-            warnings.warn('%i elements attributes were overwritten into previously assigned attributes, check that polygons do not overlap.'%dodgey) 
-        if min(material_no)==0:
-            warnings.warn('Some elements still have the default attribute of zero, which suggests they are not recognised as being part of a region and will be assigned a default value later in the workflow')                
+            inside = isinpolygon(np.array(elm_xy[0]),
+                                 np.array(elm_xy[1]),
+                                 (poly_x,poly_y))
+            material_no[inside]=i+1
+                            
         return material_no
         
         
@@ -1003,7 +998,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     try:
         Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
     except:
-        #print('no sensitivity') # not forced to have a sensitivity attribute
+        print('no sensitivity')
         pass
     Mesh.mesh_title = title
     return Mesh
@@ -1292,7 +1287,16 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
-    mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
+    poly_data = {}
+    trigger = False
+    for i,key in enumerate(geom_input):#find if polygons are present, this will be used to zone the mesh.dat file 
+        if key.find('polygon')==0:
+            poly_data[key]=geom_input[key]
+            trigger=True
+    if not trigger:
+        poly_data = None
+    
+    mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path, poly_data = poly_data)
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
     #change back to orginal working directory
