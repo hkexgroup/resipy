@@ -5,8 +5,10 @@ Example of how to use mesh object
 @author: jamyd91
 """
 #import conda libraries 
-import numpy as np 
-#import R API libraries
+import numpy as np
+import sys 
+#import R2 API libraries
+sys.path.append(r"..")
 import meshTools as mt
 import gmshWrap as gw
 import matplotlib.pyplot as plt
@@ -29,7 +31,7 @@ ylim=(40,110)
 #%% generate a triagnular mesh of the slope 
 geom_input = {'surface':[surf_x,surf_y],
               'electrode':[elec_x,elec_y]}
-tri_mesh,_ = mt.tri_mesh(geom_input)
+tri_mesh= mt.tri_mesh(geom_input)
 
 # show something about the mesh 
 tri_mesh.summary()
@@ -70,15 +72,18 @@ poly1x = [3,3,6,6]
 poly1y = [-2,-5,-5,-2]
 bound1x = [3.5,4.5,5.5]
 bound1y = [-6,-7,-8]
+buried1x = elec_x
+buried1y = np.array(elec_y) - 10
  
 geom_input = {'surface': [surf_x,surf_y],
               'electrode':[elec_x,elec_y],
               'borehole1':[string1x,string1y],
               'borehole2':[string2x,string2y],
               'boundary1':[bound1x,bound1y],
-              'polygon1':[poly1x,poly1y]}
+              'polygon1':[poly1x,poly1y],
+              'buried1':[buried1x,buried1y]}
 
-bh_mesh,_ = mt.tri_mesh(geom_input)
+bh_mesh = mt.tri_mesh(geom_input)
 
 bh_mesh.show()
 
