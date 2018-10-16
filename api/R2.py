@@ -335,8 +335,12 @@ class R2(object): # R2 master class instanciated by the GUI
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
-        res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
-        self.mesh.add_attribute(res0, 'res0')
+        
+        numel = self.mesh.num_elms
+        self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
+        self.mesh.add_attribute(np.ones(numel, dtype=bool), 'fixed')
+        
         
         self.regid = 0
         self.regions = np.zeros(len(self.mesh.elm_centre[0]))
@@ -384,7 +388,11 @@ class R2(object): # R2 master class instanciated by the GUI
                     self.param['c_wgt'] = 1 # better if set by user !!
                 if 'd_wgt' not in self.param:
                     self.param['d_wgt'] = 2
-                
+        
+        if param['mesh_type'] == 4:
+            param['zones'] = self.mesh.attr_cache['zones']
+            #TODO reshape it to the form of the mesh
+            
         # all those parameters are default but the user can change them and call
         # write2in again
         for p in param:
@@ -418,6 +426,21 @@ class R2(object): # R2 master class instanciated by the GUI
             # knowledge of the resistivity structure
             self.mesh.write_attr('res0', 'res0.dat', self.dirname)
         
+        # write zone and fixed for triangular mesh
+#        if param['mesh_type'] == 3:
+#            meshFile = os.path.join(self.dirname, 'mesh.dat')
+#            nnode = self.mesh.num_nodes
+#            x = np.genfromtxt(meshFile)
+#            x[:,5] = self.mesh.attr_cache['zones']
+#            ifixed = self.mesh.attr_cache['fixed'] == True
+#            fixed = x[:,4].copy()
+#            fixed[ifixed] = 0
+#            x[:,4] = fixed
+#            np.savetxt(x)
+        # TODO find a way to read first the nodes then the elements
+        # TODO maybe implement that directly in the function which write mesh.dat ?
+        # TODO still need to pass that to write2in in case of rectangular mesh
+
 
     def write2protocol(self, errTyp='', errTypIP='', errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
@@ -820,14 +843,22 @@ class R2(object): # R2 master class instanciated by the GUI
             return fig
             
         
-    def assignRes0(self, regionValues={}):
+    def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}):
         """ Assign starting resitivity values.
         
         Parameters
         ----------
         regionValues : dict
-            Dictionnary with key being the region number and the value beeing
+            Dictionnary with key being the region number and the value being
             the resistivity in [Ohm.m].
+        zoneValues : dict
+            Dictionnary with key being the region number and the zone number.
+            There would be no smoothing between the zones if 'block inversion'
+            is selected (`inversion_type` = 4).
+        fixedValues : dict
+            Dictionnary with key being the region number and a boolean value if
+            we want to fix the resistivity of the zone to the starting one.
+            Note that it only works for triangular mesh for now.
         """
         res0list = []
         for key in regionValues.keys():
@@ -835,9 +866,28 @@ class R2(object): # R2 master class instanciated by the GUI
                 res0list.append(regionValues[key])
             else:
                 res0list.append(100) # default resistivity
+
+        zoneList = []
+        for key in regionValues.keys():
+            if key in self.regions:
+                zoneList.append(zoneValues[key])
+            else:
+                zoneList.append(1) # default zone
+        
+        fixedList = []
+        for key in regionValues.keys():
+            if key in self.regions:
+                fixedList.append(fixedValues[key])
+            else:
+                fixedList.append(False) # default fixed
+                
         self.mesh.assign_material_attribute(self.regions, res0list, 'res0')
-        
-        
+        self.mesh.assign_material_attribute(self.regions, zoneList, 'zones')
+        if self.param['mesh_type'] == 3:
+            self.mesh.assign_material_attribute(self.regions, fixedList, 'fixed')
+
+
+
     def createSequence(self, skipDepths=[(0, 10)]):
         """ Create a dipole-dipole sequence.
         
@@ -1198,6 +1248,14 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
 #k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))
 
+#%% test mesh
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
+#buried = np.zeros(k.elec.shape[0], dtype=bool)
+#buried[5] = True
+#k.createMesh(typ='trian', buried=buried) # works well
+#k.showMesh()
 
 #%% forward modelling
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')

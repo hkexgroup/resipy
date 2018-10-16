@@ -1312,7 +1312,10 @@ class App(QMainWindow):
         def updateTrianMesh():
             cl = float(clEdit.text())
             cl_factor = float(cl_factorEdit.text())
-            self.r2.createMesh(typ='trian', cl=cl, cl_factor=cl_factor)
+            buried = elecTable.getBuried()
+            surface = topoTable.getTable()
+            self.r2.createMesh(typ='trian', buried=buried, surface=surface,
+                               cl=cl, cl_factor=cl_factor)
             replotMesh()
         
         # additional options for quadrilateral mesh
@@ -1360,31 +1363,35 @@ class App(QMainWindow):
         
         
         class RegionTable(QTableWidget):
-            def __init__(self):
-                nrow, ncol = 1, 1
+            def __init__(self, nrow=1, ncol=3):
                 super(RegionTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['Resistivity [Ohm.m]']
+                self.headers = ['Resistivity [Ohm.m]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0'))
-
-            
+                self.setItem(0,1,QTableWidgetItem('1'))
+                self.setCellWidget(0,2, QCheckBox())
+                    
             def addRow(self):
-                print('row added')
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
-                self.setItem(0, self.nrow-1, QTableWidgetItem('100.0'))
+                self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
+                self.setItem(self.nrow-1, 1, QTableWidgetItem('1'))
+                self.setCellWidget(self.nrow-1, 2, QCheckBox())
                 
             def getTable(self):
-                table = np.zeros((self.nrow, self.ncol))
-                for i in range(self.ncol):
-                    for j in range(self.nrow):
-                        table[j,i] = float(self.item(j,i).text())
-                return table
+                res0 = np.zeros(self.nrow)
+                zones = np.zeros(self.nrow, dtype=int)
+                fixed = np.zeros(self.nrow, dtype=bool)
+                for j in range(self.nrow):
+                    res0[j] = float(self.item(j,0).text())
+                    zones[j] = int(self.item(j,1).text())
+                    fixed[j] = self.cellWidget(j,2).isChecked()
+                return res0, zones, fixed
             
             def reset(self):
                 self.nrow = 1
@@ -1520,9 +1527,11 @@ class App(QMainWindow):
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
-            x = regionTable.getTable().flatten()
+            x, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x))
-            self.r2.assignRes0(dict(zip(regid, x)))
+            self.r2.assignRes0(dict(zip(regid, x)),
+                               dict(zip(regid, zones)),
+                               dict(zip(regid, fixed)))
             noise = float(noiseEdit.text())
             self.r2.forward(noise=noise, iplot=False)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
@@ -2033,9 +2042,11 @@ class App(QMainWindow):
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
-            x = regionTable.getTable().flatten()
+            x, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x))
-            self.r2.assignRes0(dict(zip(regid, x)))
+            self.r2.assignRes0(dict(zip(regid, x)),
+                               dict(zip(regid, zones)),
+                               dict(zip(regid, fixed)))
             
             self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
             try:
