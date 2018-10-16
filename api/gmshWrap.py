@@ -393,8 +393,8 @@ def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='def
     
     #add borehole vertices and line segments to the survey mesh
     fh.write("\n//Adding boreholes? \n")
-    no_lin=tot_lins+1
-    no_pts=tot_pnts+1
+    no_lin=tot_lins#+1
+    no_pts=tot_pnts#+1
     #add borehole electrode strings
     print('probing for boundaries and other additions to the mesh')
     count = 0
