@@ -88,7 +88,7 @@ cd r2gui
 
 The typical workflow is as following:
 1. Check you are up to date with the master branch using : `git checkout master`
-2. Create a new branch to which you can push you changes to. This branch will then be merge to `master` in a merge request : `git checkout -b newbranch`
+2. Create a new branch to which you can push you changes to. This branch will then be merge to `master` in a merge request : `git checkout -b newbranch`. Note that you can check in which branch you are using the `git branch`.
 3. Operates your changes in the files
 4. Use `git status` to see which file need to be added to the reposity and which files have just been changed.
 5. Use `git add newfile` to add new files
