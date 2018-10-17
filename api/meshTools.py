@@ -91,6 +91,10 @@ class Mesh_obj:
         
     """    
     cax = None 
+    zone = None
+    attr_cache={}
+    mesh_title = "not_given"
+    no_attributes = 1
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
                  num_elms,#number of elements 
@@ -122,10 +126,7 @@ class Mesh_obj:
         self.cell_attributes=cell_attributes 
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
-        self.mesh_title = "not_given"
-        self.no_attributes = 1
         self.regions = regions
-        self.attr_cache={}
         #decide if mesh is 3D or not 
         if max(node_z) - min(node_z) == 0: # mesh is probably 2D 
             self.ndims=2
@@ -147,7 +148,7 @@ class Mesh_obj:
         Returns
         ---------- 
         Mesh: class 
-    """
+        """
         #check the dictionary is a mesh
         try: 
             if mesh_info['dict_type']!='mesh_info':
@@ -332,7 +333,7 @@ class Mesh_obj:
                 xlim=[min(self.elec_x),max(self.elec_x)]
             if ylim=="default":
                 doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
-                print(doiEstimate)
+                #print(doiEstimate)
                 ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
         except AttributeError:
             if xlim=="default":
@@ -502,7 +503,7 @@ class Mesh_obj:
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
     
 
-    def asgn_atbrte_ID(self,poly_data):
+    def assign_zone(self,poly_data):
         """
         Assign material/region assocations with certain elements in the mesh 
         say if you have an area you'd like to forward model. 
@@ -515,7 +516,7 @@ class Mesh_obj:
             
         Returns
         ---------- 
-        material_no: list
+        material_no: np array
             element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
             second region defined and so on. If the element cant be assigned to a region then it'll be left at 0. 
         """   
@@ -536,10 +537,11 @@ class Mesh_obj:
                                  (poly_x,poly_y))
             material_no[inside]=i+1
                             
+        self.zone = material_no
         return material_no
         
         
-    def assign_material_attribute(self,material_no,attr_list,new_key):
+    def assign_zone_attribute(self,material_no,attr_list,new_key):
         """
         Asssigns values to the mesh which depend on region / material only. E.G 
         a single resistivity value.
@@ -583,7 +585,7 @@ class Mesh_obj:
 
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
         """
-        Applys a function to a mesh by material number and mesh parameter.
+        Applys a function to a mesh by zone number and mesh parameter.
         
         Parameters
         ----------
@@ -591,7 +593,7 @@ class Mesh_obj:
             Mesh parameters from which new parameters are calculated 
         material_no: list of ints
             Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
-            ...ie if you have 2 materials in the mesh then pass an array of ones and twos.
+            ...ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored. 
         new_key: string
             Key assigned to the parameter in the attr_cache. DOES NOT default.
         function: function
@@ -622,6 +624,66 @@ class Mesh_obj:
         self.no_attributes += 1
         #return new_para
         
+    def write_dat(self,file_path='mesh.dat', zone = None):
+        """
+        Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
+        input file for triangle meshes, so this function is only relevant for
+        triangle meshes.
+        Parameters
+        ------------
+        file_name : string 
+            name of the file
+        save_path: string, optional
+            directory to save the file 
+        zone: array like, optional
+            An array of integers which are assocaited with regions/materials in the mesh. 
+            Useful in the case of an inversion which has a boundary constraint. 
+            You can use assignAttributeID to give a material to the mesh, and pass that 
+            as the zone argument. 
+        
+        Returns
+        ----------
+        vtk: file 
+            vtk file written to specified directory
+        """
+        if not isinstance(file_path,str):
+            raise TypeError("expected string argument for file_path")
+        ### write data to mesh.dat kind of file ###
+        #open mesh.dat for input      
+        fid=open(file_path, 'w')
+        #write to mesh.dat total num of elements and nodes
+        fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
+        
+        #compute zones if present 
+        if zone  is None:
+            zone = np.ones(self.num_elms, dtype=int) # default zone = 1 
+        else:
+            if len(zone) != self.num_elms:
+                raise IndexError("the number of zone parameters does not match the number of elements")
+            elif min(zone) == 0:
+                zone = np.array(zone,dtype=int)+1 # as fortran indexing starts at 1, not 0 we must add one to the array if min ==0 
+                
+        #add element data following the R2 format
+        for i in range(self.num_elms):
+            elm_no=i+1
+            fid.write("%i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, parameter,zone.
+                      (elm_no,
+                       self.con_matrix[0][i],#node 1
+                       self.con_matrix[1][i],#node 2
+                       self.con_matrix[2][i],#node 3
+                       elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                       zone[i]))
+        #now add nodes
+        x_coord = self.elm_centre[0]
+        y_coord = self.elm_centre[1]
+        for i in range(self.num_nodes):
+            ni_no=i+1
+            fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
+                      (ni_no,
+                       x_coord[i],
+                       y_coord[i]))
+        fid.close()#close the file 
+        print('written mesh.dat file to \n%s'%file_path)
 
     def write_vtk(self,file_path='default', title=None):
         """
@@ -752,7 +814,7 @@ def tri_cent(p,q,r):
     return(Xc,Yc)
     
 #%% import a vtk file 
-def vtk_import(file_path='ask_to_open',parameter_title='default'):
+def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     """
     Imports a 2d mesh file into the python workspace, can have triangular or quad type elements. 3D meshes 
     are still a work in progress. 
@@ -771,11 +833,6 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     mesh: class 
         a pyR2 mesh class 
     """
-    if file_path=='ask_to_open':#use a dialogue box to open a file
-        print("please select the vtk file to import using the pop up dialogue box. \n")
-        root=tk.Tk()
-        root.withdraw()
-        file_path=filedialog.askopenfilename(title='Select mesh file',filetypes=(("VTK files","*.vtk"),("all files","*.*")))#
     #open the selected file for reading
     fid=open(file_path,'r')
     #print("importing vtk mesh file into python workspace...")
@@ -792,7 +849,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         raise ImportError("expected ASCII type file format, not binary")
     dataset_type=fid.readline().strip().split()#read line 4
     if dataset_type[1]!='UNSTRUCTURED_GRID':
-        print("Warning: code intended to deal with an 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
+        print("Warning: code is built to parse a vtk 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
     
     #read node data
     #print("importing mesh nodes...")
@@ -952,7 +1009,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     #find scalar values in the vtk file
     num_attr = 0
     attr_dict = {}
-    found = False # boolian if we have found the parameter of interest
+    #found = False # boolian if we have found the parameter of interest
     for i,line_info in enumerate(cell_attr_dump):
         if line_info.find("SCALARS") == 0:
             attr_title = line_info.split()[1]
@@ -965,7 +1022,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
                 parameter_title = attr_title
                 values_oi = values
             if attr_title == parameter_title:#then its the parameter of interest that the user was trying extract
-                found = True
+                #found = True
                 values_oi = values        
             num_attr += 1
     
@@ -998,7 +1055,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     try:
         Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
     except:
-        print('no sensitivity')
+        #print('no sensitivity')
         pass
     Mesh.mesh_title = title
     return Mesh
@@ -1224,8 +1281,7 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe', 
-             save_path='default',**kwargs):
+def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function expects the current working directory has path: exe/gmsh.exe.
@@ -1238,8 +1294,6 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
         `True` if gmsh output is to be printed to console. 
     path: string
         Path to exe folder (leave default unless you know what you are doing).
-    save_path: string
-        Directory to save 'mesh.dat'.
     geom_input:
         Dictionary used to generate survey geometry in genGeoFile_adv (see notes there). 
     **kwargs: optional
@@ -1287,22 +1341,16 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
-    poly_data = {}
-    trigger = False
-    for i,key in enumerate(geom_input):#find if polygons are present, this will be used to zone the mesh.dat file 
-        if key.find('polygon')==0:
-            poly_data[key]=geom_input[key]
-            trigger=True
-    if not trigger:
-        poly_data = None
     
-    mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path, poly_data = poly_data)
+    ###old code ### : mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path, poly_data = poly_data)
+    mesh_dict = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
+    mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
+    mesh.write_dat(file_path='mesh.dat') # write mesh.dat
+    
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
     #change back to orginal working directory
     os.chdir(cwd)
-    
-    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
     
     mesh.add_e_nodes(node_pos-1)
     
