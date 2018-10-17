@@ -664,17 +664,30 @@ class Mesh_obj:
                 raise IndexError("the number of zone parameters does not match the number of elements")
             elif min(zone) == 0:
                 zone = np.array(zone,dtype=int)+1 # as fortran indexing starts at 1, not 0 we must add one to the array if min ==0 
-                
+        #check if we have quad type mesh
+
+        if self.Type2VertsNo() == 3:
         #add element data following the R2 format
-        for i in range(self.num_elms):
-            elm_no=i+1
-            fid.write("%i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, parameter,zone.
-                      (elm_no,
-                       self.con_matrix[0][i],#node 1
-                       self.con_matrix[1][i],#node 2
-                       self.con_matrix[2][i],#node 3
-                       elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
-                       zone[i]))
+            for i in range(self.num_elms):
+                elm_no=i+1
+                fid.write("%i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, parameter,zone.
+                          (elm_no,
+                           self.con_matrix[0][i],#node 1
+                           self.con_matrix[1][i],#node 2
+                           self.con_matrix[2][i],#node 3
+                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                           zone[i]))
+        elif self.Type2VertsNo() == 4:#if for some reason you want make a mesh.dat file for a quad mesh, you can, using the exact same format. 
+            for i in range(self.num_elms):
+                elm_no=i+1
+                fid.write("%i %i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, nd4, parameter,zone.
+                          (elm_no,
+                           self.con_matrix[0][i],#node 1
+                           self.con_matrix[1][i],#node 2
+                           self.con_matrix[2][i],#node 3
+                           self.con_matrix[3][i],#node 4
+                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                           zone[i]))
         #now add nodes
         x_coord = self.elm_centre[0]
         y_coord = self.elm_centre[1]
