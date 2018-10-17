@@ -1314,6 +1314,11 @@ class App(QMainWindow):
             cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
+            if np.sum(inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
             self.r2.createMesh(typ='trian', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor)
             replotMesh()

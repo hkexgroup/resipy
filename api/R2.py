@@ -389,8 +389,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 if 'd_wgt' not in self.param:
                     self.param['d_wgt'] = 2
         
-        if param['mesh_type'] == 4:
-            param['zones'] = self.mesh.attr_cache['zones']
+        if self.param['mesh_type'] == 4:
+            self.param['zones'] = self.mesh.attr_cache['zones']
             #TODO reshape it to the form of the mesh
             
         # all those parameters are default but the user can change them and call
@@ -1254,8 +1254,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #buried = np.zeros(k.elec.shape[0], dtype=bool)
 #buried[5] = True
-#k.createMesh(typ='trian', buried=buried) # works well
+#k.elec[5,1] = -1
+#k.createMesh(typ='trian', buried=buried, cl=0.05, cl_factor=5) # works well
 #k.showMesh()
+#k.invert()
 
 #%% forward modelling
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
