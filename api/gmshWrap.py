@@ -559,6 +559,8 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False,po
     mesh_info: dict
         dictionary with some 'useful' info about the mesh
     """
+    warnings.warn("gmsh2R2mesh will be depreciated in future versions of pyR2.")
+    
     if file_path=='ask_to_open':#use a dialogue box to open a file
         print("please select the gmsh mesh file you want to convert.\n")
         root=tk.Tk()
@@ -757,6 +759,176 @@ def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False,po
                 'dict_type':'mesh_info',
                 'original_file_path':file_path} 
             #the information here is returned as a mesh dictionary because it much easier to debug 
+            
+def msh_parse(file_path):
+    """
+    Converts a gmsh mesh file into a mesh class used in pyR2
+    
+    Parameters
+    ----------
+    file_path: string
+        file path to mesh file. note that a error will occur if the file format is not as expected
+   
+    Returns
+    ----------
+    Mesh class
+    """
+    if not isinstance(file_path,str):
+        raise Exception("expected a string argument for msh_parser")
+    if file_path=='ask_to_open':#use a dialogue box to open a file
+        print("please select the gmsh mesh file you want to convert.\n")
+        root=tk.Tk()
+        root.withdraw()
+        file_path=filedialog.askopenfilename(title='Select mesh file',filetypes=(("mesh files","*.msh"),("all files","*.*")))
+    # open file and read in header lines
+    print("parsing gmsh mesh...\n")
+    fid=open(file_path,'r')# Open text file
+    #Idea: Read Mesh format lines $MeshFormat until $Nodes
+    line1=fid.readline()
+    #check the file is a mesh format
+    if line1.strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
+        raise ImportError("unrecognised file type...")
+    mesh_format=fid.readline()#reads the next line
+    if mesh_format.strip() != '2.2 0 8':#warn people that the code was developed with this file format in mind
+        print('Warning: the mesh file type version is different to the mesh converter development version ... some errors may occur!\n')   
+    line3=fid.readline()#endofmeshformat
+    line4=fid.readline()#nodes
+    
+    print('importing node coordinates...')
+    #read in number of nodes - at line 5
+    no_nodes=int(fid.readline().strip())
+    #allocate lists for node numbers and coordinates
+    node_num=[0]*no_nodes
+    x_coord=[0]*no_nodes
+    y_coord=[0]*no_nodes
+    z_coord=[0]*no_nodes
+    #read in node information
+    for i in range(no_nodes):
+        line_info=fid.readline().split()
+        #convert string info into floats
+        data_dump=[float(k) for k in line_info]
+        node_num[i]=int(data_dump[0])
+        x_coord[i]=data_dump[1]
+        y_coord[i]=data_dump[2]
+        z_coord[i]=data_dump[3]
+    
+    #### read in elements   
+    print('reading connection matrix')
+    #read in two lines $EndNodes and $Elements
+    Endnodes=fid.readline()
+    Elements=fid.readline()
+    #number of elements
+    no_elements=int(fid.readline().strip())
+    #engage for loop - this time we want to filter out elements which are not triangles
+    #... looking at the gmsh docs its elements of type 2 we are after (R2 only needs this information) 
+    nat_elm_num = []#native element number to gmsh
+    elm_type = []#element type
+    number_of_tags = []
+    phys_entity = []#defines the physical entity type the element is assocaited with
+    elem_entity = []#which plane surface the element is assocaited with
+    node1 = []#first node of triangle 
+    node2 = []
+    node3 = []#last node of triangle 
+    ignored_elements=0#count the number of ignored elements
+    for i in range(no_elements):
+        line_info=fid.readline().split()
+        if line_info[1]=='2':# then its the right element type!
+        #convert string info into floats and cache data
+            data_dump=[int(k) for k in line_info]
+            nat_elm_num.append(data_dump[0])
+            elm_type.append(data_dump[1]) 
+            number_of_tags.append(data_dump[2]) 
+            phys_entity.append(data_dump[3]) 
+            elem_entity.append(data_dump[4]) 
+            node1.append(data_dump[5]) 
+            node2.append(data_dump[6]) 
+            node3.append(data_dump[7])
+        else:
+            ignored_elements += 1
+    print("ignoring %i non-triangle elements in the mesh file, as they are not required for R2\n"%ignored_elements)
+    real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
+    
+    ##clock wise correction and area / centre computations 
+    #make sure in nodes in triangle are counterclockwise as this is waht r2 expects
+    c_triangles=[]#'corrected' triangles 
+    num_corrected=0#number of elements that needed 'correcting'
+    centriod_x=[]
+    centriod_y=[]
+    areas=[]
+    for i in range(real_no_elements):
+        n1=(x_coord[node1[i]-1],y_coord[node1[i]-1])#define node coordinates
+        n2=(x_coord[node2[i]-1],y_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
+        n3=(x_coord[node3[i]-1],y_coord[node3[i]-1])
+        #see if triangle is counter-clockwise
+        if ccw(n1,n2,n3) == 1: #points are clockwise and therefore need swapping round
+            #exchange elements in rows 6 and 7 to change direction
+            c_triangles.append((node2[i],node1[i],node3[i]))
+            num_corrected=num_corrected+1
+        else:
+            c_triangles.append((node1[i],node2[i],node3[i]))
+        #compute triangle centre
+        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
+        centriod_x.append(xy_tuple[0])
+        centriod_y.append(xy_tuple[1])
+        #compute area (for a triangle this is 0.5*base*height)
+        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+        areas.append(0.5*base*height)
+        
+    #print warning if areas of zero found, this will cuase problems in R2
+    if min(areas)==0:
+        warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
+            
+    print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
+    fid.close()
+    
+    ### return dictionary which can be converted to mesh class ### 
+    no_regions=max(elem_entity)#number of regions in the mesh
+    regions=arange(1,1,no_regions,1)
+    assctns=[]
+    #following for loop finds the element number ranges assocaited with a distinct region in the mesh
+    for k in regions:
+        indx=[m for m in range(len(elem_entity)) if elem_entity[m]==k]
+        if len(indx) > 0:
+            assctns.append((k,min(indx)+1,max(indx)+1))
+    #create a dump of the mesh data incase the user wants to see it later on   
+    dump={'nat_elm_num':nat_elm_num,
+          'elm_type':elm_type,
+          'number_of_tags':number_of_tags,
+          'phys_entity':phys_entity,
+          'elem_entity':elem_entity,
+          'string_data':[line1,mesh_format,line3,line4,Endnodes,Elements]} 
+    #convert c_triangles into mesh object format for later recall
+    node_dump=[[],[],[]]
+    for i in range(real_no_elements):
+        node_dump[0].append(c_triangles[i][0]-1)#node 1
+        node_dump[1].append(c_triangles[i][1]-1)#node 2
+        node_dump[2].append(c_triangles[i][2]-1)#node 3
+    #return a dictionary detailing the mesh 
+    return {'num_elms':real_no_elements,
+            'num_nodes':no_nodes,
+            'num_regions':no_regions,
+            'element_ranges':assctns,
+            'dump':dump,      
+            'node_x':x_coord,#x coordinates of nodes 
+            'node_y':y_coord,#y coordinates of nodes
+            'node_z':z_coord,#z coordinates of nodes 
+            'node_id':node_num,#node id number 
+            'elm_id':np.arange(1,real_no_elements,1),#element id number 
+            'num_elm_nodes':3,#number of points which make an element
+            'node_data':node_dump,#nodes of element vertices
+            'elm_centre':(centriod_x,centriod_y),#centre of elements (x,y)
+            'elm_area':areas,
+            'cell_type':[5],
+            'parameters':phys_entity,#the values of the attributes given to each cell 
+            'parameter_title':'material',
+            'dict_type':'mesh_info',
+            'original_file_path':file_path} 
+    
+    #we could return a mesh object here, but a dictionary is easier to debug with spyder, 
+    #also we'd need to import the mesh class, and its not a good idea to have modules
+    #importing each other, as meshTools has a dependency on gmshWrap. 
     
 #%% test block 
 #import parsers as prs     
