@@ -209,20 +209,22 @@ class Mesh_obj:
             print("WARNING: unrecognised cell type")
             return 0
         
-    def summary(self):
-        #prints summary information about the mesh
-        print("\n_______mesh summary_______")
-        print("Number of elements: %i"%int(self.num_elms))
-        print("Number of nodes: %i"%int(self.num_nodes))
-        #print("Attribute title: %s"%self.atribute_title)
-        print("Number of cell vertices: %i"%self.Type2VertsNo())
-        print("Number of cell attributes: %i"%int(self.no_attributes))
-        print("original file path: %s"%self.file_path())
-        print("\n")
+    def summary(self,flag=True):
+        #returns summary information about the mesh, flagto print info, change to return string
+        out = "\n_______mesh summary_______\n"
+        out += "Number of elements: %i\n"%int(self.num_elms)
+        out += "Number of nodes: %i\n"%int(self.num_nodes)
+        out += "Number of cell vertices: %i\n"%self.Type2VertsNo()
+        out += "Number of cell attributes: %i\n"%int(self.no_attributes)
+        out += "original file path: %s\n"%self.file_path()
+        if flag==True:
+            print(out)
+        else:
+            return out
 
     def __str__(self):
         #returns the summary function if the object is printed
-        self.summary()
+        return self.summary(flag=False)
             
     def add_attribute(self,values,key):
         #add a new attribute to mesh 
