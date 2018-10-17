@@ -2062,21 +2062,24 @@ class App(QMainWindow):
                 pass
             
             # displaying results or error
-            if self.end is True:
-                plotSection()
-                for i in range(len(self.r2.meshResults)):
-                    sectionId.addItem(self.r2.surveys[i].name)
-                outStackLayout.setCurrentIndex(0)
-#                invLayout.addLayout(resultLayout, 70)
-            else:
+            def printR2out():
                 print('--------INVERSION FAILED--------')
-#                invLayout.removeItem(invLayout.itemAt(1))
-#                invLayout.addLayout(r2outLayout, 70)
                 outStackLayout.setCurrentIndex(1)
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
                 r2outEdit.setText(text)
            
+            if self.end is True:
+                try:
+                    plotSection()
+                    for i in range(len(self.r2.meshResults)):
+                        sectionId.addItem(self.r2.surveys[i].name)
+                    outStackLayout.setCurrentIndex(0)
+                except:
+                    pass
+                    printR2out()
+            else:
+                printR2out()
             
 #        def logInversion2():
 ##            self.r2.invert(callback=dataReady)

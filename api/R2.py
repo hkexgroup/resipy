@@ -419,6 +419,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # write the res0.dat needed for starting resistivity
         if self.iForward is True: # we will invert results from forward
             # inversion so we need to start from a homogeneous model
+            print('Setting a homogeneous background model as the survey to \
+                  be inverted is from a forward model already.')
             res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
             self.mesh.add_attribute(res0, 'r100')
             self.mesh.write_attr('r100', 'res0.dat', self.dirname)
@@ -1269,11 +1271,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.addRegion(np.array([[2,0],[8,0],[8,-8],[2,-8],[2,0]]), 10)
 #
 ## full GUI function
-#k.createModel()
-#k.assignRes0({0:100,1:500,2:10})
-
+##k.createModel()
+##k.assignRes0({0:100,1:500,2:10})
+#
 #k.forward(iplot=True, noise=0.0)
-#k.resetRegions() # you need to reset regions as they are used for starting model
+##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=True)
 
 #%% test Sina
