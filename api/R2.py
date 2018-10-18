@@ -1303,19 +1303,19 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% forward modelling
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
-k.elec = np.c_[np.arange(24), np.zeros((24, 2))]
-k.createMesh(typ='trian')
+#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k.elec = np.c_[np.arange(24), np.zeros((24, 2))]
+#k.createMesh(typ='trian')
 #
 ## full API function
-k.addRegion(np.array([[2,0],[6,0],[6,-4],[2,-4],[2,0]]), 10)
-k.addRegion(np.array([[10,0],[12,0],[12,-4],[10,-4],[10,0]]), 40, blocky=True, fixed=True)
+#k.addRegion(np.array([[2,0],[6,0],[6,-4],[2,-4],[2,0]]), 10)
+#k.addRegion(np.array([[10,0],[12,0],[12,-4],[10,-4],[10,0]]), 40, blocky=True, fixed=True)
 
 ## full GUI function
 ##k.createModel()
 ##k.assignRes0({0:100,1:500,2:10})
 #
-k.forward(iplot=True, noise=0.0)
+#k.forward(iplot=True, noise=0.0)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=True)
 
