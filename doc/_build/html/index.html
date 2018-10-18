@@ -46,7 +46,7 @@
 <dd><p>Master class to handle all processing around the inversion codes.</p>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
-<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add region according to a polyline defined by <cite>xy</cite> and assign it
 the starting resistivity <cite>res0</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -61,6 +61,16 @@ the starting resistivity <cite>res0</cite>.</p>
 <blockquote>
 <div><p>Resistivity values of the defined area.</p>
 </div></blockquote>
+<p><strong>blocky</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> the boundary of the region will be blocky if inversion
+is block inversion.</p>
+</div></blockquote>
+<p><strong>fixed</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, the inversion will keep the starting resistivity of this
+region.</p>
+</div></blockquote>
 <p><strong>ax</strong> : matplotlib.axes.Axes</p>
 <blockquote class="last">
 <div><p>If not <cite>None</cite>, the region will be plotted against this axes.</p>
@@ -73,16 +83,28 @@ the starting resistivity <cite>res0</cite>.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.assignRes0">
-<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
+<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em>, <em>zoneValues={}</em>, <em>fixedValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign starting resitivity values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>regionValues</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionnary with key being the region number and the value beeing
+<blockquote>
+<div><p>Dictionnary with key being the region number and the value being
 the resistivity in [Ohm.m].</p>
+</div></blockquote>
+<p><strong>zoneValues</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary with key being the region number and the zone number.
+There would be no smoothing between the zones if ‘block inversion’
+is selected (<cite>inversion_type</cite> = 4).</p>
+</div></blockquote>
+<p><strong>fixedValues</strong> : dict</p>
+<blockquote class="last">
+<div><p>Dictionnary with key being the region number and a boolean value if
+we want to fix the resistivity of the zone to the starting one.
+Note that it only works for triangular mesh for now.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -137,16 +159,35 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createMesh">
-<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a mesh.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>typ</strong> : str, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Type of mesh. Eithter ‘quad’ or ‘trian’. If no topography, ‘quad’
 mesh will be chosen.</p>
+</div></blockquote>
+<p><strong>buried</strong> : numpy.array, optional</p>
+<blockquote>
+<div><p>Boolean array of electrodes that are buried. Should be the same
+length as <cite>R2.elec</cite></p>
+</div></blockquote>
+<p><strong>surface</strong> : numpy.array, optional</p>
+<blockquote>
+<div><p>Array with two columns x and y for additional surface points.</p>
+</div></blockquote>
+<p><strong>cl_factor</strong> : float, optional</p>
+<blockquote>
+<div><p>Characteristic length factor. Only used for triangular mesh to allow
+mesh to be refined close the electrodes and then expand.</p>
+</div></blockquote>
+<p><strong>cl</strong> : float, optional</p>
+<blockquote class="last">
+<div><p>Characteristic length that define the mesh size around the
+electrodes.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -287,7 +328,7 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.05</em>, <em>iplot=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
+<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.0</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Operates forward modelling.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -295,11 +336,16 @@ reciprocal measurements. By default all surveys are used.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>noise</strong> : float, optional 0 &lt;= noise &lt;= 1</p>
 <blockquote>
-<div><p>Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained.</p>
+<div><p>Noise level from a Gaussian distribution that should be applied
+on the forward apparent resistivities obtained.</p>
 </div></blockquote>
 <p><strong>iplot</strong> : bool, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>If <cite>True</cite> will plot the pseudo section after the forward modelling.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>Function to print information messages when running the forward model.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -381,24 +427,6 @@ inversion using appropriate wrapper, then return results.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="api.R2.R2.pseudo">
-<code class="descname">pseudo</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.pseudo" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a pseudo section.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>**kwargs :</strong></p>
-<blockquote class="last">
-<div><p>To be passed to <cite>R2.pseudoCallback()</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
 <dt id="api.R2.R2.pseudoError">
 <code class="descname">pseudoError</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.pseudoError" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot pseudo section of errors from file <cite>f001_err.dat</cite>.</p>
@@ -419,7 +447,10 @@ inversion using appropriate wrapper, then return results.</p>
 <dl class="method">
 <dt id="api.R2.R2.resetRegions">
 <code class="descname">resetRegions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.resetRegions" title="Permalink to this definition">¶</a></dt>
-<dd><p>Just reset all regions already draw.</p>
+<dd><p>Just reset all regions already draw. Shouldn’t be needed as 
+the <cite>self.runR2()</cite> automatically use a homogenous model as starting
+for inversion. The only purpose of this is to use an inhomogeous
+starting model to invert data from forward modelling.</p>
 </dd></dl>
 
 <dl class="method">
@@ -442,6 +473,12 @@ inversion using appropriate wrapper, then return results.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.setBorehole">
+<code class="descname">setBorehole</code><span class="sig-paren">(</span><em>val=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setBorehole" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set all surveys in borehole type if <cite>True</cite> is passed.</p>
 </dd></dl>
 
 <dl class="method">
@@ -884,8 +921,9 @@ classes will be computed as 10**class1</p>
 
 <dl class="method">
 <dt id="api.Survey.Survey.pseudo">
-<code class="descname">pseudo</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
-<dd><p>create true pseudo graph with points and no interpolation</p>
+<code class="descname">pseudo</code><span class="sig-paren">(</span><em>ax=None</em>, <em>bx=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot pseudo section if 2D survey or just quadrupoles transfer
+resistance otherwise.</p>
 </dd></dl>
 
 <dl class="method">
@@ -914,6 +952,12 @@ classes will be computed as 10**class1</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.pseudoSection">
+<code class="descname">pseudoSection</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudoSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>create true pseudo graph with points and no interpolation</p>
 </dd></dl>
 
 <dl class="method">
@@ -1113,7 +1157,7 @@ node id should be an integer type.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Mesh_obj: object</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Mesh_obj: class</p>
 </td>
 </tr>
 </tbody>
@@ -1121,7 +1165,7 @@ node id should be an integer type.</p>
 <dl class="method">
 <dt id="api.meshTools.Mesh_obj.apply_func">
 <code class="descname">apply_func</code><span class="sig-paren">(</span><em>mesh_paras</em>, <em>material_no</em>, <em>new_key</em>, <em>function</em>, <em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.apply_func" title="Permalink to this definition">¶</a></dt>
-<dd><p>Applys a function to a mesh by material number and mesh parameter.</p>
+<dd><p>Applys a function to a mesh by zone number and mesh parameter.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1133,7 +1177,7 @@ node id should be an integer type.</p>
 <p><strong>material_no: list of ints</strong></p>
 <blockquote>
 <div><p>Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
-…ie if you have 2 materials in the mesh then pass an array of ones and twos.</p>
+…ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored.</p>
 </div></blockquote>
 <p><strong>new_key: string</strong></p>
 <blockquote>
@@ -1159,8 +1203,8 @@ Use the <cite>mesh.show()</cite> (or <cite>.draw()</cite>) function to see the r
 </dd></dl>
 
 <dl class="method">
-<dt id="api.meshTools.Mesh_obj.asgn_atbrte_ID">
-<code class="descname">asgn_atbrte_ID</code><span class="sig-paren">(</span><em>poly_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.asgn_atbrte_ID" title="Permalink to this definition">¶</a></dt>
+<dt id="api.meshTools.Mesh_obj.assign_zone">
+<code class="descname">assign_zone</code><span class="sig-paren">(</span><em>poly_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_zone" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign material/region assocations with certain elements in the mesh 
 say if you have an area you’d like to forward model. 
 <strong>*2D ONLY*</strong></p>
@@ -1174,7 +1218,7 @@ say if you have an area you’d like to forward model.
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">material_no: list</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">material_no: np array</p>
 <blockquote class="last">
 <div><p>element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
 second region defined and so on. If the element cant be assigned to a region then it’ll be left at 0.</p>
@@ -1186,8 +1230,8 @@ second region defined and so on. If the element cant be assigned to a region the
 </dd></dl>
 
 <dl class="method">
-<dt id="api.meshTools.Mesh_obj.assign_material_attribute">
-<code class="descname">assign_material_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_material_attribute" title="Permalink to this definition">¶</a></dt>
+<dt id="api.meshTools.Mesh_obj.assign_zone_attribute">
+<code class="descname">assign_zone_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_zone_attribute" title="Permalink to this definition">¶</a></dt>
 <dd><p>Asssigns values to the mesh which depend on region / material only. E.G 
 a single resistivity value.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1284,7 +1328,7 @@ mesh object, its an alternative way to make a mesh object.
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh class object</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Mesh: class</p>
 </td>
 </tr>
 </tbody>
@@ -1397,8 +1441,37 @@ file will be written in the current working directory.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.meshTools.Mesh_obj.write_dat">
+<code class="descname">write_dat</code><span class="sig-paren">(</span><em>file_path='mesh.dat'</em>, <em>param=None</em>, <em>zone=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_dat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
+input file for triangle meshes, so this function is only relevant for
+triangle meshes.
+Parameters
+————
+file_name : string</p>
+<blockquote>
+<div>name of the file</div></blockquote>
+<dl class="docutils">
+<dt>save_path: string, optional</dt>
+<dd>directory to save the file</dd>
+<dt>zone: array like, optional</dt>
+<dd>An array of integers which are assocaited with regions/materials in the mesh. 
+Useful in the case of an inversion which has a boundary constraint. 
+You can use assignAttributeID to give a material to the mesh, and pass that 
+as the zone argument.</dd>
+<dt>param <span class="classifier-delimiter">:</span> <span class="classifier">array-like, optional</span></dt>
+<dd>Array of parameter number. Set a parameter number to zero fixed its
+conductivity to the starting conductivity.</dd>
+</dl>
+<p>mesh.dat like file written to file path. 
+<strong>*IMPORTANT*</strong>
+R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
+so when writing mesh.dat we need to check that the node indexes match up correctly.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.meshTools.Mesh_obj.write_vtk">
-<code class="descname">write_vtk</code><span class="sig-paren">(</span><em>file_path='default'</em>, <em>title=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_vtk" title="Permalink to this definition">¶</a></dt>
+<code class="descname">write_vtk</code><span class="sig-paren">(</span><em>file_path='mesh.vtk'</em>, <em>title=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_vtk" title="Permalink to this definition">¶</a></dt>
 <dd><p>Writes a vtk file for the mesh object, everything in the attr_cache
 will be written to file as attributes. We suggest using Paraview 
 to display the mesh outside of PyR2. It’s fast and open source :).</p>
@@ -1616,7 +1689,7 @@ of the vertices.</p>
 
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>save_path='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
 this function expects the current working directory has path: exe/gmsh.exe.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1634,10 +1707,6 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 <p><strong>path: string</strong></p>
 <blockquote>
 <div><p>Path to exe folder (leave default unless you know what you are doing).</p>
-</div></blockquote>
-<p><strong>save_path: string</strong></p>
-<blockquote>
-<div><p>Directory to save ‘mesh.dat’.</p>
 </div></blockquote>
 <p><strong>geom_input:</strong></p>
 <blockquote>
@@ -1661,7 +1730,7 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 
 <dl class="function">
 <dt id="api.meshTools.vtk_import">
-<code class="descclassname">api.meshTools.</code><code class="descname">vtk_import</code><span class="sig-paren">(</span><em>file_path='ask_to_open'</em>, <em>parameter_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.vtk_import" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">vtk_import</code><span class="sig-paren">(</span><em>file_path='mesh.vtk'</em>, <em>parameter_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.vtk_import" title="Permalink to this definition">¶</a></dt>
 <dd><p>Imports a 2d mesh file into the python workspace, can have triangular or quad type elements. 3D meshes 
 are still a work in progress.</p>
 <table class="docutils field-list" frame="void" rules="none">
