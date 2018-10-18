@@ -339,7 +339,7 @@ class R2(object): # R2 master class instanciated by the GUI
         numel = self.mesh.num_elms
         self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
-        self.mesh.add_attribute(np.ones(numel, dtype=bool), 'fixed')
+        self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         #write mesh to working directory - edit by jamyd91 
         file_path = os.path.join(self.dirname,'mesh.dat')
         self.mesh.write_dat(file_path)
@@ -432,36 +432,45 @@ class R2(object): # R2 master class instanciated by the GUI
             self.mesh.write_attr('res0', 'res0.dat', self.dirname)
         
         # rewriting mesh.dat
-        paramFixed = 1 + np.arange(self.mesh.num_elms)
-        paramFixed[self.mesh.attr_cache['fixed']] = 0
+        paramFixed = 1+ np.arange(self.mesh.num_elms)
+        ifixed = np.array(self.mesh.attr_cache['fixed'])
+        paramFixed[ifixed] = 0
+        
+        print('SUM OF PARAMFIXED = ', np.sum(paramFixed == 0))
         self.mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'),
                             zone = self.mesh.attr_cache['zones'],
                             param = paramFixed)
 
-#        def readMeshDat(fname):
-#            with open(fname, 'r') as f:
-#                x = f.readline().split()
-#            numel = int(x[0])
-#            numnode = int(x[1])
-#            elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
-#            nodes = np.genfromtxt(fname, skip_header=numel+1)
-#            return elems, nodes
+        # NOTE if fixed elements, they need to be at the end !
+        def readMeshDat(fname):
+            with open(fname, 'r') as f:
+                x = f.readline().split()
+            numel = int(x[0])
+            elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
+            nodes = np.genfromtxt(fname, skip_header=numel+1)
+            return elems, nodes
         
-        # write zone and fixed for triangular mesh
-#        if param['mesh_type'] == 3:
-#            meshFile = os.path.join(self.dirname, 'mesh.dat')
-#            nnode = self.mesh.num_nodes
-#            x = np.genfromtxt(meshFile)
-#            x[:,5] = self.mesh.attr_cache['zones']
-#            ifixed = self.mesh.attr_cache['fixed'] == True
-#            fixed = x[:,4].copy()
-#            fixed[ifixed] = 0
-#            x[:,4] = fixed
-#            np.savetxt(x)
-        # TODO find a way to read first the nodes then the elements
-        # TODO maybe implement that directly in the function which write mesh.dat ?
-        # TODO still need to pass that to write2in in case of rectangular mesh
-
+        def writeMeshDat(fname, elems, nodes):
+            numel = len(elems)
+            nnodes = len(nodes)
+            with open(fname, 'w') as f:
+                f.write('{:.0f} {:.0f}\n'.format(numel, nnodes))
+            with open(fname, 'a') as f:
+                np.savetxt(f, elems, fmt='%.0f')
+                np.savetxt(f, nodes, fmt='%.0f %f %f')
+        
+        meshFile = os.path.join(self.dirname, 'mesh.dat')
+        elems, nodes = readMeshDat(meshFile)
+        ifixed = elems[:,-2] == 0
+        elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
+        elems2[:,0] = 1 + np.arange(elems2.shape[0])
+        ifixed2 = elems2[:,-2] == 0
+        elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
+        writeMeshDat(meshFile, elems2, nodes)
+        # We NEED parameter = elemement number if changed AND
+        # all fixed element (with parameter = 0) at the end of the element
+        # matrix. BOTH conditions needs to be filled.
+    
 
     def write2protocol(self, errTyp='', errTypIP='', errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
@@ -819,9 +828,11 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # define fixed area
         if fixed is True:
+            print('fixing')
             paramFixed = self.mesh.attr_cache['fixed'].copy()
-            paramFixed[idx] = 0
+            paramFixed[idx] = True
             self.mesh.attr_cache['fixed'] = paramFixed
+            print('sum = ', np.sum(paramFixed == True))
         
         
     def resetRegions(self):
@@ -871,10 +882,12 @@ class R2(object): # R2 master class instanciated by the GUI
 #                print(res)
             self.regid = self.regid + 1
             self.regions[idx] = self.regid
+            
             self.mesh.cell_attributes = list(self.regions) # overwritin regions
-            res0list = np.unique(self.regions) # TODO ask for resistvity in the table
-            self.mesh.assign_zone_attribute(self.regions,res0list,'res0')
-            self.mesh.draw(attr='res0')
+#            res0list = np.unique(self.regions) # TODO ask for resistvity in the table
+#            self.mesh.assign_zone_attribute(self.regions,res0list,'res0')
+            
+            self.mesh.draw()
             if addAction is not None:
                 addAction()
         self.mesh.show(ax=ax)
@@ -901,34 +914,56 @@ class R2(object): # R2 master class instanciated by the GUI
             Dictionnary with key being the region number and a boolean value if
             we want to fix the resistivity of the zone to the starting one.
             Note that it only works for triangular mesh for now.
-        """
-        res0list = []
-        for key in regionValues.keys():
-            if key in self.regions:
-                res0list.append(regionValues[key])
-            else:
-                res0list.append(100) # default resistivity
-
-        zoneList = []
-        for key in regionValues.keys():
-            if key in self.regions:
-                zoneList.append(zoneValues[key])
-            else:
-                zoneList.append(1) # default zone
         
-        fixedList = []
+        Note
+        ----
+        Region 0 is the background region. It has zone=1, and fixed=False
+        """
+        res0 = np.array(self.mesh.attr_cache['res0']).copy()
         for key in regionValues.keys():
-            if key in self.regions:
-                fixedList.append(fixedValues[key])
-            else:
-                fixedList.append(False) # default fixed
-
-        self.mesh.assign_zone_attribute(self.regions, res0list, 'res0')
-        self.mesh.assign_zone_attribute(self.regions, zoneList, 'zones')
-        #if self.param['mesh_type'] == 3:
-        self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
-
-
+            idx = self.regions == key
+            res0[idx] = regionValues[key]
+        self.mesh.attr_cache['res0'] = res0
+        
+        zones = np.array(self.mesh.attr_cache['zones']).copy()
+        for key in zoneValues.keys():
+            idx = self.regions == key
+            zones[idx] = zoneValues[key]
+        self.mesh.attr_cache['zones'] = zones
+        
+        fixed = np.array(self.mesh.attr_cache['fixed']).copy()
+        for key in fixedValues.keys():
+            idx = self.regions == key
+            fixed[idx] = fixedValues[key]
+        self.mesh.attr_cache['fixed'] = fixed
+        
+#        for key in regionValues.keys():
+#            if key in self.regions:
+#                res0list.append(regionValues[key])
+#            else:
+#                res0list.append(100) # default resistivity
+#
+#        zoneList = []
+#        for key in zoneValues.keys():
+#            if key in self.regions:
+#                zoneList.append(zoneValues[key])
+#            else:
+#                zoneList.append(1) # default zone
+#        
+#        fixedList = []
+#        for key in fixedValues.keys():
+#            if key in self.regions:
+#                fixedList.append(fixedValues[key])
+#            else:
+#                fixedList.append(False) # default fixed
+#
+#        self.mesh.assign_zone_attribute(self.regions, res0list, 'res0')
+#        self.mesh.assign_zone_attribute(self.regions, zoneList, 'zones')
+#        #if self.param['mesh_type'] == 3:
+#        
+#        print('fixed = in assignRes0', fixedList, zoneList)
+#        self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
+        
 
     def createSequence(self, skipDepths=[(0, 10)]):
         """ Create a dipole-dipole sequence.
@@ -1302,22 +1337,35 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.invert()
 
 #%% forward modelling
+#def readMeshDat(fname):
+#    with open(fname, 'r') as f:
+#        x = f.readline().split()
+#    numel = int(x[0])
+#    numnode = int(x[1])
+#    elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
+#    nodes = np.genfromtxt(fname, skip_header=numel+1)
+#    return elems, nodes
+
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
-#k.elec = np.c_[np.arange(24), np.zeros((24, 2))]
+#plt.close('all')
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv')
+#k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
 #
 ## full API function
-#k.addRegion(np.array([[2,0],[6,0],[6,-4],[2,-4],[2,0]]), 10)
-#k.addRegion(np.array([[10,0],[12,0],[12,-4],[10,-4],[10,0]]), 40, blocky=True, fixed=True)
+#k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10)
+#k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 50, blocky=True, fixed=True)
+#k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fixed=False)
 
 ## full GUI function
-##k.createModel()
-##k.assignRes0({0:100,1:500,2:10})
-#
+#k.createModel() # manually define 3 regions
+#k.assignRes0({1:500, 2:10, 3:50}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
+
 #k.forward(iplot=True, noise=0.0)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=True)
+
 
 #%% test Sina
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')

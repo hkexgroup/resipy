@@ -677,7 +677,7 @@ class Mesh_obj:
         else:
             if len(param) != self.num_elms:
                 raise IndexError("the number of parameters does not match the number of elements")
- 
+    
         if self.Type2VertsNo() == 3:
         #add element data following the R2 format - Note that indexing in FORTRAN starts at 1!!!!!
             for i in range(self.num_elms):
@@ -687,7 +687,7 @@ class Mesh_obj:
                            self.con_matrix[0][i]+1,#node 1 - add 1 
                            self.con_matrix[1][i]+1,#node 2
                            self.con_matrix[2][i]+1,#node 3
-                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
+                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
                            #this will be enabled in a future update 
                            zone[i]))
         elif self.Type2VertsNo() == 4:#if for some reason you want make a mesh.dat file for a quad mesh, you can, using the exact same format. 
@@ -699,7 +699,7 @@ class Mesh_obj:
                            self.con_matrix[1][i]+1,#node 2
                            self.con_matrix[2][i]+1,#node 3
                            self.con_matrix[3][i]+1,#node 4
-                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned
                            zone[i]))
         #now add nodes
         x_coord = self.node_x
