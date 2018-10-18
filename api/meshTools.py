@@ -645,6 +645,12 @@ class Mesh_obj:
         param : array-like, optional
             Array of parameter number. Set a parameter number to zero fixed its
             conductivity to the starting conductivity.
+        Notes
+        ------------
+        mesh.dat like file written to file path. 
+        ***IMPORTANT***
+        R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
+        so when writing mesh.dat we need to check that the node indexes match up correctly.
         """
         if not isinstance(file_path,str):
             raise TypeError("expected string argument for file_path")
@@ -671,25 +677,26 @@ class Mesh_obj:
                 raise IndexError("the number of parameters does not match the number of elements")
  
         if self.Type2VertsNo() == 3:
-        #add element data following the R2 format
+        #add element data following the R2 format - Note that indexing in FORTRAN starts at 1!!!!!
             for i in range(self.num_elms):
                 elm_no=i+1
                 fid.write("%i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, parameter,zone.
                           (elm_no,
-                           self.con_matrix[0][i],#node 1
-                           self.con_matrix[1][i],#node 2
-                           self.con_matrix[2][i],#node 3
-                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                           self.con_matrix[0][i]+1,#node 1 - add 1 
+                           self.con_matrix[1][i]+1,#node 2
+                           self.con_matrix[2][i]+1,#node 3
+                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
+                           #this will be enabled in a future update 
                            zone[i]))
         elif self.Type2VertsNo() == 4:#if for some reason you want make a mesh.dat file for a quad mesh, you can, using the exact same format. 
             for i in range(self.num_elms):
                 elm_no=i+1
                 fid.write("%i %i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, nd4, parameter,zone.
                           (elm_no,
-                           self.con_matrix[0][i],#node 1
-                           self.con_matrix[1][i],#node 2
-                           self.con_matrix[2][i],#node 3
-                           self.con_matrix[3][i],#node 4
+                           self.con_matrix[0][i]+1,#node 1
+                           self.con_matrix[1][i]+1,#node 2
+                           self.con_matrix[2][i]+1,#node 3
+                           self.con_matrix[3][i]+1,#node 4
                            elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
                            zone[i]))
         #now add nodes
