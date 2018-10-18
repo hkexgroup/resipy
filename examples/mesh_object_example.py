@@ -9,8 +9,7 @@ import numpy as np
 import sys 
 #import R2 API libraries
 sys.path.append(r"..")
-import meshTools as mt
-import gmshWrap as gw
+import api.meshTools as mt
 import matplotlib.pyplot as plt
 
 plt.close('all')
@@ -51,7 +50,7 @@ qmesh.show(xlim=xlim,ylim=ylim)
 
 #%% importing a vtk file 
 
-mesh_obj = mt.vtk_import()
+mesh_obj = mt.vtk_import('mesh.vtk')
 
 #show info about mesh 
 mesh_obj.summary()
@@ -86,5 +85,8 @@ geom_input = {'surface': [surf_x,surf_y],
 bh_mesh = mt.tri_mesh(geom_input)
 
 bh_mesh.show()
+
+bh_mesh.write_vtk()
+bh_mesh.write_dat()
 
 

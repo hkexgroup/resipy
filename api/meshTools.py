@@ -689,8 +689,8 @@ class Mesh_obj:
                            elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
                            zone[i]))
         #now add nodes
-        x_coord = self.elm_centre[0]
-        y_coord = self.elm_centre[1]
+        x_coord = self.node_x
+        y_coord = self.node_y
         for i in range(self.num_nodes):
             ni_no=i+1
             fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
@@ -700,7 +700,7 @@ class Mesh_obj:
         fid.close()#close the file 
         print('written mesh.dat file to \n%s'%file_path)
 
-    def write_vtk(self,file_path='default', title=None):
+    def write_vtk(self,file_path="mesh.vtk", title=None):
         """
         Writes a vtk file for the mesh object, everything in the attr_cache
         will be written to file as attributes. We suggest using Paraview 
@@ -719,9 +719,6 @@ class Mesh_obj:
         vtk: file 
             vtk file written to specified directory
         """
-        #decide where to save the file 
-        if file_path == "default":
-            file_path = "mesh.vtk"
         #open file and write header information    
         fh = open(file_path,'w')
         fh.write("# vtk DataFile Version 3.0\n")
@@ -747,7 +744,7 @@ class Mesh_obj:
             fh.write("\n")
         #cell types
         fh.write("CELL_TYPES %i\n"%self.num_elms)
-        [fh.write("%i "%self.cell_type[i]) for i in range(self.num_elms)];fh.write("\n")
+        [fh.write("%i "%self.cell_type[0]) for i in range(self.num_elms)];fh.write("\n")
         #write out the data
         fh.write("CELL_DATA %i\n"%self.num_elms)
         for i,key in enumerate(self.attr_cache):
@@ -1045,7 +1042,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     if num_attr == 0:
         print("no cell attributes found")
         attr_dict = {"no attributes":float("nan")}
-        values = float("nan")
+        values_oi= float("nan")
         parameter_title = "n/a"
     #print("finished importing mesh.\n")
     #information in a dictionary, this is easier to debug than an object in spyder: 
@@ -1333,11 +1330,12 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwarg
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
         raise Exception("No gmsh.exe exists in the exe directory!")
     
+    os.chdir(ewd) # change to the executable directory 
     #make .geo file
     file_name="temp"
     if not isinstance(geom_input,dict):
         raise ValueError("geom_input has not been given!")
-    node_pos,_ = gw.genGeoFile(geom_input,file_name=file_name,path=ewd,**kwargs)
+    node_pos,_ = gw.genGeoFile(geom_input,file_path=file_name,**kwargs)
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
@@ -1345,8 +1343,6 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwarg
     else:
         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
         
-    os.chdir(ewd)
-    
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
@@ -1360,10 +1356,11 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwarg
     ###old code ### : mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path, poly_data = poly_data)
     mesh_dict = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
     mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
-    mesh.write_dat(file_path='mesh.dat') # write mesh.dat
+    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat -disabled as handled higher up 
     
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
+    
     #change back to orginal working directory
     os.chdir(cwd)
     

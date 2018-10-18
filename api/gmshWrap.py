@@ -117,7 +117,7 @@ def tri_cent(p,q,r):
     return(Xc,Yc)
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='default'):
+def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
     """
     writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
@@ -126,7 +126,7 @@ def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='def
     geom_input: dict
         a dictionary of electrode coordinates, surface topography, 
                     #borehole electrode coordinates, and boundaries 
-    file_name: string, optional 
+    file_path: string, optional 
         name of the generated gmsh file (can include file path also) (optional)
     doi: float, optional 
         depth of investigation (optional) (in meters)
@@ -138,8 +138,6 @@ def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='def
         mesh, usually set to 2 such that the elements at the DOI are twice as big as those
         at the surface. The reasoning for this is becuase the sensitivity of ERT drops
         off with depth. 
-    path: string
-        directory to save the .geo file
     
     Returns
     ----------
@@ -228,15 +226,11 @@ def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='def
         raise ValueError("topography x and y arrays are not the same length!")
     if len(elec_x) != len(elec_z):
         raise ValueError("electrode x and y arrays are not the same length!")
-    if file_name.find('.geo')==-1:
-        file_name=file_name+'.geo'#add file extension if not specified already
     
-    #start to write the file
-    if path=='default':#written to working directory 
-        file_path = file_name
-    else:
-        file_path = os.path.join(path,file_name)
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
     
+    #start to write the file  
     fh = open(file_path,'w') #file handle
     
     fh.write("//Jamyd91's gmsh wrapper code version 0.2 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
@@ -536,7 +530,7 @@ def genGeoFile(geom_input,file_name="default",doi=-1,cl=-1,cl_factor=2,path='def
     fh.close()
     print("writing .geo to file completed, save location:\n%s\n"%file_path)
 
-    return node_pos,file_name
+    return node_pos,file_path
 
 #%% convert gmsh 2d mesh to R2
 def gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=False,poly_data=None):

@@ -306,7 +306,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
-                             save_path=self.dirname, cl_factor=cl_factor,
+                             cl_factor=cl_factor,
                              cl=cl)
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
@@ -340,6 +340,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.ones(numel, dtype=bool), 'fixed')
+        #write mesh to working directory - edit by jamyd91 
+        file_path = os.path.join(self.dirname,'mesh.dat')
+        self.mesh.write_dat(file_path)
         
         
         self.regid = 0
@@ -833,7 +836,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.regions[idx] = self.regid
             self.mesh.cell_attributes = list(self.regions) # overwritin regions
             res0list = np.unique(self.regions) # TODO ask for resistvity in the table
-            self.mesh.assign_material_attribute(self.regions,res0list,'res0')
+            self.mesh.assign_zone_attribute(self.regions,res0list,'res0')
             self.mesh.draw(attr='res0')
             if addAction is not None:
                 addAction()
@@ -883,10 +886,10 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 fixedList.append(False) # default fixed
                 
-        self.mesh.assign_material_attribute(self.regions, res0list, 'res0')
-        self.mesh.assign_material_attribute(self.regions, zoneList, 'zones')
+        self.mesh.assign_zone_attribute(self.regions, res0list, 'res0')
+        self.mesh.assign_zone_attribute(self.regions, zoneList, 'zones')
         if self.param['mesh_type'] == 3:
-            self.mesh.assign_material_attribute(self.regions, fixedList, 'fixed')
+            self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
 
 
 
@@ -1169,6 +1172,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
 #k.typ = 'cR2'
+#k = R2
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createMesh(typ='trian')
 #k.write2in()
@@ -1220,7 +1224,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
 #    mesh.show()
 #
-
+k = R2()
+k.createSurvey('test/syscalFile.csv', ftype='Syscal')
+k.createMesh(typ='trian')
+k.invert(iplot=True)
 
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
