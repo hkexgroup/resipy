@@ -306,13 +306,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
-<<<<<<< HEAD
                              cl_factor=cl_factor,
                              cl=cl)
-=======
-                             cl_factor=cl_factor, cl=cl)
-            mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'))
->>>>>>> 73d162bde8a78497589850cd5a5d979a8a702e54
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
@@ -924,18 +919,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 fixedList.append(fixedValues[key])
             else:
                 fixedList.append(False) # default fixed
-                
-<<<<<<< HEAD
+
         self.mesh.assign_zone_attribute(self.regions, res0list, 'res0')
         self.mesh.assign_zone_attribute(self.regions, zoneList, 'zones')
-        if self.param['mesh_type'] == 3:
-            self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
-=======
-        self.mesh.assign_material_attribute(self.regions, res0list, 'res0')
-        self.mesh.assign_material_attribute(self.regions, zoneList, 'zones')
-#        if self.param['mesh_type'] == 3:
-        self.mesh.assign_material_attribute(self.regions, fixedList, 'fixed')
->>>>>>> 73d162bde8a78497589850cd5a5d979a8a702e54
+        #if self.param['mesh_type'] == 3:
+        self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
 
 
 

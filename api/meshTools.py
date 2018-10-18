@@ -693,17 +693,10 @@ class Mesh_obj:
                            elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
                            zone[i]))
         #now add nodes
-<<<<<<< HEAD
-        x_coord = self.node_x
-        y_coord = self.node_y
-=======
-#        x_coord = self.elm_centre[0]
-#        y_coord = self.elm_centre[1]
         x_coord = self.node_x
         y_coord = self.node_y
         if np.sum(self.node_z) != 0:
             z_coord = self.node_z # TODO then need to write it down below
->>>>>>> 73d162bde8a78497589850cd5a5d979a8a702e54
         for i in range(self.num_nodes):
             ni_no=i+1
             fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
