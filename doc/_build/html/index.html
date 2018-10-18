@@ -1086,455 +1086,39 @@ gmshWrap(pyR2 api module)
 python3 standard libaries</dd>
 </dl>
 <p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
-<dl class="class">
-<dt id="api.meshTools.Mesh_obj">
-<em class="property">class </em><code class="descclassname">api.meshTools.</code><code class="descname">Mesh_obj</code><span class="sig-paren">(</span><em>num_nodes</em>, <em>num_elms</em>, <em>node_x</em>, <em>node_y</em>, <em>node_z</em>, <em>node_id</em>, <em>elm_id</em>, <em>node_data</em>, <em>elm_centre</em>, <em>elm_area</em>, <em>cell_type</em>, <em>cell_attributes</em>, <em>atribute_title</em>, <em>original_file_path='N/A'</em>, <em>regions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj" title="Permalink to this definition">¶</a></dt>
-<dd><p>creates a mesh class</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_nodes: int</strong></p>
-<blockquote>
-<div><p>number of nodes</p>
-</div></blockquote>
-<p><strong>num_elms: int</strong></p>
-<blockquote>
-<div><p>number of elements</p>
-</div></blockquote>
-<p><strong>node_x: list, 1d numpy array</strong></p>
-<blockquote>
-<div><p>x coordinates of nodes</p>
-</div></blockquote>
-<p><strong>node_y: list, 1d numpy array</strong></p>
-<blockquote>
-<div><p>coordinates of nodes</p>
-</div></blockquote>
-<p><strong>node_z: list, 1d numpy array</strong></p>
-<blockquote>
-<div><p>z coordinates of nodes</p>
-</div></blockquote>
-<p><strong>node_id: list</strong></p>
-<blockquote>
-<div><p>node id number (ie 1,2,3,4,…)</p>
-</div></blockquote>
-<p><strong>elm_id: list</strong></p>
-<blockquote>
-<div><p>element id number</p>
-</div></blockquote>
-<p><strong>node_data: list of lists of ints</strong></p>
-<blockquote>
-<div><p>nodes of element vertices in the form [[node1],[node2],[node3],…], each
-node id should be an integer type.</p>
-</div></blockquote>
-<p><strong>elm_centre: list of lists of floats</strong></p>
-<blockquote>
-<div><p>centre of elements (x,y)</p>
-</div></blockquote>
-<p><strong>elm_area: list</strong></p>
-<blockquote>
-<div><p>area of each element</p>
-</div></blockquote>
-<p><strong>cell_type: list of ints</strong></p>
-<blockquote>
-<div><p>code referencing cell geometry (e.g. triangle) according to vtk format</p>
-</div></blockquote>
-<p><strong>cell_attributes: list of floats</strong></p>
-<blockquote>
-<div><p>the values of the attributes given to each cell</p>
-</div></blockquote>
-<p><strong>atribute_title: string</strong></p>
-<blockquote>
-<div><p>what is the attribute? we may use conductivity instead of resistivity for example</p>
-</div></blockquote>
-<p><strong>original_file_path: string, optional</strong></p>
-<blockquote>
-<div><p>file path to where the mesh file was originally imported</p>
-</div></blockquote>
-<p><strong>regions: optional</strong></p>
-<blockquote>
-<div><p>element indexes for a material in the mesh (needs further explanation)</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Mesh_obj: class</p>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.apply_func">
-<code class="descname">apply_func</code><span class="sig-paren">(</span><em>mesh_paras</em>, <em>material_no</em>, <em>new_key</em>, <em>function</em>, <em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.apply_func" title="Permalink to this definition">¶</a></dt>
-<dd><p>Applys a function to a mesh by zone number and mesh parameter.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mesh_paras:</strong></p>
-<blockquote>
-<div><p>Mesh parameters from which new parameters are calculated</p>
-</div></blockquote>
-<p><strong>material_no: list of ints</strong></p>
-<blockquote>
-<div><p>Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
-…ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored.</p>
-</div></blockquote>
-<p><strong>new_key: string</strong></p>
-<blockquote>
-<div><p>Key assigned to the parameter in the attr_cache. DOES NOT default.</p>
-</div></blockquote>
-<p><strong>function: function</strong></p>
-<blockquote>
-<div><p>Function to be applied to mesh attributes, first argument must be the mesh parameter.</p>
-</div></blockquote>
-<p><strong>args: [see function info]</strong></p>
-<blockquote class="last">
-<div><p>All arguments to be passed through function after to modify the mesh parameter,
-… argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
-… where letters are the material, numbers refer to the argument number</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>Mesh object will now have the new attribute added once the function is run.
-Use the <cite>mesh.show()</cite> (or <cite>.draw()</cite>) function to see the result.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.assign_zone">
-<code class="descname">assign_zone</code><span class="sig-paren">(</span><em>poly_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_zone" title="Permalink to this definition">¶</a></dt>
-<dd><p>Assign material/region assocations with certain elements in the mesh 
-say if you have an area you’d like to forward model. 
-<strong>*2D ONLY*</strong></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>poly_data: dictionary</strong></p>
-<blockquote>
-<div><p>with the vertices (x,y) of each point in the polygon</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">material_no: np array</p>
-<blockquote class="last">
-<div><p>element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
-second region defined and so on. If the element cant be assigned to a region then it’ll be left at 0.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.assign_zone_attribute">
-<code class="descname">assign_zone_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_zone_attribute" title="Permalink to this definition">¶</a></dt>
-<dd><p>Asssigns values to the mesh which depend on region / material only. E.G 
-a single resistivity value.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>material_no</strong> : array or list</p>
-<blockquote>
-<div><p>Integers starting at 0 or 1, and ascend in intervals of 1, which 
-correspond to a material in the mesh returned from assign_attr_ID.
-Should have the same length as the number of elements in the mesh.</p>
-</div></blockquote>
-<p><strong>attr_list</strong> : list</p>
-<blockquote>
-<div><p>Values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
-<cite>[resistivity1,resistivity2,resistivity3]</cite>.</p>
-</div></blockquote>
-<p><strong>new_key: string</strong></p>
-<blockquote class="last">
-<div><p>Key identifier assigned to the attribute in the attr_cache.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>mesh object will now have the new attribute added once the function is run.
-Use the <cite>mesh.show()</cite> (or <cite>.draw()</cite>) function to see the result.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.draw">
-<code class="descname">draw</code><span class="sig-paren">(</span><em>attr=None</em>, <em>edge_color='k'</em>, <em>color_map=None</em>, <em>color_bar=False</em>, <em>vmin=None</em>, <em>vmax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.draw" title="Permalink to this definition">¶</a></dt>
-<dd><p>Redraws a mesh over a prexisting figure canvas, this is intended for saving
-time when plotting each iteration of the resistivity inversion.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>color_map</strong> : string,</p>
-<blockquote>
-<div><p>color map reference</p>
-</div></blockquote>
-<p><strong>color_bar</strong> : Boolian,</p>
-<blockquote>
-<div><p><cite>True</cite> to plot colorbar</p>
-</div></blockquote>
-<p><strong>ax: matplotlib axis handle,</strong></p>
-<blockquote>
-<div><p>Axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
-</div></blockquote>
-<p><strong>edge_color: string</strong></p>
-<blockquote>
-<div><p>Color of the cell edges, set to <cite>None</cite> if you dont want an edge.</p>
-</div></blockquote>
-<p><strong>vmin: float</strong></p>
-<blockquote>
-<div><p>Minimum limit for the color bar scale.</p>
-</div></blockquote>
-<p><strong>vmax: float</strong></p>
-<blockquote>
-<div><p>Maximum limit for the color bar scale.</p>
-</div></blockquote>
-<p><strong>attr: string</strong></p>
-<blockquote>
-<div><p>Which attribute in the mesh to plot, references a dictionary of attributes. <cite>attr</cite> is passed 
-as the key for this dictionary.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">figure: matplotlib figure</p>
-<blockquote class="last">
-<div><p>Figure handle for the plotted mesh object.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="api.meshTools.Mesh_obj.mesh_dict2obj">
-<em class="property">classmethod </em><code class="descname">mesh_dict2obj</code><span class="sig-paren">(</span><em>mesh_info</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.mesh_dict2obj" title="Permalink to this definition">¶</a></dt>
-<dd><p>converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
-mesh object, its an alternative way to make a mesh object. 
-<strong>*Intended for development use*</strong></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mesh_info: dictionary</strong></p>
-<blockquote>
-<div><p>mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Mesh: class</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.show">
-<code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>ylim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.show" title="Permalink to this definition">¶</a></dt>
-<dd><p>Displays a 2d mesh and attribute.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>color_map</strong> : string,</p>
-<blockquote>
-<div><p>color map reference</p>
-</div></blockquote>
-<p><strong>color_bar</strong> : Boolian,</p>
-<blockquote>
-<div><p><cite>True</cite> to plot colorbar</p>
-</div></blockquote>
-<p><strong>xlim: tuple</strong></p>
-<blockquote>
-<div><p>Axis x limits as <cite>(xmin, xmax)</cite>.</p>
-</div></blockquote>
-<p><strong>ylim: tuple</strong></p>
-<blockquote>
-<div><p>Axis y limits as <cite>(ymin, ymax)</cite>.</p>
-</div></blockquote>
-<p><strong>ax: matplotlib axis handle,</strong></p>
-<blockquote>
-<div><p>Axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
-</div></blockquote>
-<p><strong>electrodes: Boolian</strong></p>
-<blockquote>
-<div><p>Enter true to add electrodes to plot.</p>
-</div></blockquote>
-<p><strong>sens: Boolian,</strong></p>
-<blockquote>
-<div><p>Enter true to plot sensitivities.</p>
-</div></blockquote>
-<p><strong>edge_color: string</strong></p>
-<blockquote>
-<div><p>Color of the cell edges, set to <cite>None</cite> if you dont want an edge.</p>
-</div></blockquote>
-<p><strong>contour: Boolian</strong></p>
-<blockquote>
-<div><p>If <cite>True</cite>, plot filled with contours instead of the mesh.</p>
-</div></blockquote>
-<p><strong>vmin: float</strong></p>
-<blockquote>
-<div><p>Minimum limit for the color bar scale.</p>
-</div></blockquote>
-<p><strong>vmax: float</strong></p>
-<blockquote>
-<div><p>Maximum limit for the color bar scale.</p>
-</div></blockquote>
-<p><strong>attr: string</strong></p>
-<blockquote>
-<div><p>Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
-as the key for this dictionary.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">figure: matplotlib figure</p>
-<blockquote class="last">
-<div><p>Figure handle for the plotted mesh object.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>Show a mesh object using matplotlib. The color map variable should be 
-a string refering to the color map you want (default is “jet”).
-As we’re using the matplotlib package here any color map avialable within 
-matplotlib package can be used to display the mesh here also. See: 
-<a class="reference external" href="https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html">https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html</a></p>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.write_attr">
-<code class="descname">write_attr</code><span class="sig-paren">(</span><em>attr_key</em>, <em>file_name='_res.dat'</em>, <em>file_path='defualt'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_attr" title="Permalink to this definition">¶</a></dt>
-<dd><p>Writes a attribute to a _res.dat type file. file_name entered
-seperately because it will be needed for the R2 config file.
-The reason for this function is so you can write a forward model 
-parameter input file.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr_key: string</strong></p>
-<blockquote>
-<div><p>Key identifying the attr to be written in the mesh object attr_cache.</p>
-</div></blockquote>
-<p><strong>file_name: string</strong></p>
-<blockquote>
-<div><p>Name of the _res.dat type file.</p>
-</div></blockquote>
-<p><strong>file_path: string</strong></p>
-<blockquote class="last">
-<div><p>Directory to which the file will be saved in, if left as none then the
-file will be written in the current working directory.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.write_dat">
-<code class="descname">write_dat</code><span class="sig-paren">(</span><em>file_path='mesh.dat'</em>, <em>param=None</em>, <em>zone=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_dat" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
-input file for triangle meshes, so this function is only relevant for
-triangle meshes.
-Parameters
-————
-file_name : string</p>
-<blockquote>
-<div>name of the file</div></blockquote>
-<dl class="docutils">
-<dt>save_path: string, optional</dt>
-<dd>directory to save the file</dd>
-<dt>zone: array like, optional</dt>
-<dd>An array of integers which are assocaited with regions/materials in the mesh. 
-Useful in the case of an inversion which has a boundary constraint. 
-You can use assignAttributeID to give a material to the mesh, and pass that 
-as the zone argument.</dd>
-<dt>param <span class="classifier-delimiter">:</span> <span class="classifier">array-like, optional</span></dt>
-<dd>Array of parameter number. Set a parameter number to zero fixed its
-conductivity to the starting conductivity.</dd>
-</dl>
-<p>mesh.dat like file written to file path. 
-<strong>*IMPORTANT*</strong>
-R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
-so when writing mesh.dat we need to check that the node indexes match up correctly.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.write_vtk">
-<code class="descname">write_vtk</code><span class="sig-paren">(</span><em>file_path='mesh.vtk'</em>, <em>title=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_vtk" title="Permalink to this definition">¶</a></dt>
-<dd><p>Writes a vtk file for the mesh object, everything in the attr_cache
-will be written to file as attributes. We suggest using Paraview 
-to display the mesh outside of PyR2. It’s fast and open source :).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string</p>
-<blockquote>
-<div><p>Maps where python will write the file, if left as <cite>default</cite> then mesh.vtk
-will be written the current working directory.</p>
-</div></blockquote>
-<p><strong>title: string</strong></p>
-<blockquote>
-<div><p>Header string written at the top of the vtk file .</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">vtk: file</p>
-<blockquote class="last">
-<div><p>vtk file written to specified directory</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
 <dl class="function">
 <dt id="api.meshTools.points2vtk">
 <code class="descclassname">api.meshTools.</code><code class="descname">points2vtk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em>, <em>file_name='points.vtk'</em>, <em>title='points'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.points2vtk" title="Permalink to this definition">¶</a></dt>
-<dd><p>function makes a .vtk file for some xyz coordinates. optional argument
+<dd><p>Function makes a .vtk file for some xyz coordinates. optional argument
 renames the name of the file (needs file path also) (default is “points.vtk”). 
-title is the name of the vtk file</p>
+title is the name of the vtk file.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x: list, tuple, np array</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : list, tuple, np array</p>
 <blockquote>
 <div><p>X coordinates of points.</p>
 </div></blockquote>
-<p><strong>y: list, tuple, np array</strong></p>
+<p><strong>y</strong> : list, tuple, np array</p>
 <blockquote>
 <div><p>Y coordinates of points.</p>
 </div></blockquote>
-<p><strong>z: list, tuple, np array</strong></p>
+<p><strong>z</strong> : list, tuple, np array</p>
 <blockquote>
 <div><p>Z coordinates of points.</p>
 </div></blockquote>
-<p><strong>file_name: string, optional</strong></p>
+<p><strong>file_name</strong> : string, optional</p>
 <blockquote>
 <div><p>Path to saved file, defualts to ‘points.vtk’ in current working directory.</p>
 </div></blockquote>
-<p><strong>title: string, optional</strong></p>
+<p><strong>title</strong> : string, optional</p>
 <blockquote>
 <div><p>Title of vtk file.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">~.vtk: file</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>~.vtk</strong> : file</p>
 </td>
 </tr>
 </tbody>
@@ -1550,53 +1134,53 @@ relies heavily on the numpy package.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec_x: list, np array</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec_x</strong> : list, np array</p>
 <blockquote>
 <div><p>Electrode x coordinates</p>
 </div></blockquote>
-<p><strong>elec_y: list, np array</strong></p>
+<p><strong>elec_y</strong> : list, np array</p>
 <blockquote>
 <div><p>Electrode y coordinates</p>
 </div></blockquote>
-<p><strong>elemy: int</strong></p>
+<p><strong>elemy</strong> : int</p>
 <blockquote>
 <div><p>Number of elements in the fine y region</p>
 </div></blockquote>
-<p><strong>yf: float</strong></p>
+<p><strong>yf</strong> : float</p>
 <blockquote>
 <div><p>Y factor multiplier in the fine zone.</p>
 </div></blockquote>
-<p><strong>ygf: float</strong></p>
+<p><strong>ygf</strong> : float</p>
 <blockquote>
 <div><p>Y factor multiplier in the coarse zone.</p>
 </div></blockquote>
-<p><strong>doi: float (m)</strong></p>
+<p><strong>doi</strong> : float (m)</p>
 <blockquote>
 <div><p>Depth of investigation (if left as -1 = half survey width).</p>
 </div></blockquote>
-<p><strong>pad:</strong></p>
+<p><strong>pad :</strong></p>
 <blockquote>
 <div><p>X padding outside the fine area (tipicaly twice the number of elements between electrodes).</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Mesh: class</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Mesh</strong> : class</p>
 <blockquote>
 <div><p>Mesh object</p>
 </div></blockquote>
-<p>meshx: np array</p>
+<p><strong>meshx</strong> : numpy.array</p>
 <blockquote>
 <div><p>Mesh x locations for R2in file.</p>
 </div></blockquote>
-<p>meshy: np array</p>
+<p><strong>meshy</strong> : numpy.array</p>
 <blockquote>
 <div><p>Mesh y locations for R2in file (ie node depths).</p>
 </div></blockquote>
-<p>topo: np array</p>
+<p><strong>topo</strong> : numpy.array</p>
 <blockquote>
 <div><p>Topography for R2in file.</p>
 </div></blockquote>
-<p>elec_node: np array</p>
+<p><strong>elec_node</strong> : numpy.array</p>
 <blockquote class="last">
 <div><p>x columns where the electrodes are.</p>
 </div></blockquote>
@@ -1614,15 +1198,15 @@ relies heavily on the numpy package.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: string</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string</p>
 <blockquote>
-<div><p>maps to the _res.dat file</p>
+<div><p>Maps to the _res.dat file.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">res_values: list of floats</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res_values</strong> : list of floats</p>
 <blockquote class="last">
-<div><p>resistivity values returned from the .dat file</p>
+<div><p>Resistivity values returned from the .dat file.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1638,15 +1222,15 @@ relies heavily on the numpy package.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: string</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string</p>
 <blockquote>
-<div><p>maps to the _sens.dat file</p>
+<div><p>Maps to the _sens.dat file.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">res_values: list of floats</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res_values</strong> : list of floats</p>
 <blockquote class="last">
-<div><p>sensitivity values returned from the .dat file (not log10!)</p>
+<div><p>Sensitivity values returned from the .dat file (not log10!).</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1663,23 +1247,23 @@ of the vertices.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>p: tuple,list,np array</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>p</strong> : tuple,list,np array</p>
 <blockquote>
 <div><p>Coordinates of triangle vertices in the form (x,y).</p>
 </div></blockquote>
-<p><strong>q: tuple,list,np array</strong></p>
+<p><strong>q</strong> : tuple,list,np array</p>
 <blockquote>
 <div><p>Coordinates of triangle vertices in the form (x,y).</p>
 </div></blockquote>
-<p><strong>r: tuple,list,np array</strong></p>
+<p><strong>r</strong> : tuple,list,np array</p>
 <blockquote>
 <div><p>Coordinates of triangle vertices in the form (x,y).</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">coordinates: tuple</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>coordinates</strong> : tuple</p>
 <blockquote class="last">
-<div><p>in the format (x,y)</p>
+<div><p>In the format (x,y).</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1696,29 +1280,29 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>keep_files: boolian</strong></p>
-<blockquote>
-<div><p><cite>True</cite> if the gmsh input and output file is to be stored in the exe directory.</p>
-</div></blockquote>
-<p><strong>show_ouput: boolian</strong></p>
-<blockquote>
-<div><p><cite>True</cite> if gmsh output is to be printed to console.</p>
-</div></blockquote>
-<p><strong>path: string</strong></p>
-<blockquote>
-<div><p>Path to exe folder (leave default unless you know what you are doing).</p>
-</div></blockquote>
-<p><strong>geom_input:</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>geom_input</strong> : dictionnary</p>
 <blockquote>
 <div><p>Dictionary used to generate survey geometry in genGeoFile_adv (see notes there).</p>
 </div></blockquote>
-<p><strong>**kwargs: optional</strong></p>
+<p><strong>keep_files</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> if the gmsh input and output file is to be stored in the exe directory.</p>
+</div></blockquote>
+<p><strong>show_ouput</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> if gmsh output is to be printed to console.</p>
+</div></blockquote>
+<p><strong>path</strong> : string, optional</p>
+<blockquote>
+<div><p>Path to exe folder (leave default unless you know what you are doing).</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : optional</p>
 <blockquote>
 <div><p>Key word arguments to be passed to genGeoFile.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh.dat: file</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh.dat</strong> : file</p>
 <blockquote class="last">
 <div><p>In the Executables directory.</p>
 </div></blockquote>
@@ -1737,11 +1321,11 @@ are still a work in progress.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: string</strong></p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string, optional</p>
 <blockquote>
 <div><p>File path to mesh file. Note that a error will occur if the file format is not as expected.</p>
 </div></blockquote>
-<p><strong>parameter_title: string</strong></p>
+<p><strong>parameter_title</strong> : string, optional</p>
 <blockquote>
 <div><p>Name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
 also note that all parameters will be imported. Just the title highlights which one the mesh object will use as 
@@ -1749,7 +1333,7 @@ default cell attribute.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh: class</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh</strong> : class</p>
 <blockquote class="last">
 <div><p>a pyR2 mesh class</p>
 </div></blockquote>
