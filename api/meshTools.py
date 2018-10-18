@@ -1432,7 +1432,8 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
 
-#mesh = vtk_import('api/test/test.vtk')
+#mesh = vtk_import('api/test/testQuadMesh.vtk')
+#mesh = vtk_import('api/test/testTrianMesh.vtk')
 #mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()

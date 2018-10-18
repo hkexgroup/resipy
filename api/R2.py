@@ -437,12 +437,15 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'),
                             zone = self.mesh.attr_cache['zones'],
                             param = paramFixed)
-#        with open(fname, 'r') as f:
-#            x = f.readline().split()
-#        numel = int(x[0])
-#        numnode = int(x[1])
-#        elems = np.genfromtxt(fname, skip_header=0, max_rows=numel)
-#        nodes = np.genfromtxt(fname, skip_header=numel+1)
+
+#        def readMeshDat(fname):
+#            with open(fname, 'r') as f:
+#                x = f.readline().split()
+#            numel = int(x[0])
+#            numnode = int(x[1])
+#            elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
+#            nodes = np.genfromtxt(fname, skip_header=numel+1)
+#            return elems, nodes
         
         # write zone and fixed for triangular mesh
 #        if param['mesh_type'] == 3:
