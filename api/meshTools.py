@@ -626,7 +626,7 @@ class Mesh_obj:
         self.no_attributes += 1
         #return new_para
         
-    def write_dat(self,file_path='mesh.dat', zone = None):
+    def write_dat(self,file_path='mesh.dat', param=None, zone = None):
         """
         Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
         input file for triangle meshes, so this function is only relevant for
@@ -642,11 +642,9 @@ class Mesh_obj:
             Useful in the case of an inversion which has a boundary constraint. 
             You can use assignAttributeID to give a material to the mesh, and pass that 
             as the zone argument. 
-        
-        Returns
-        ----------
-        vtk: file 
-            vtk file written to specified directory
+        param : array-like, optional
+            Array of parameter number. Set a parameter number to zero fixed its
+            conductivity to the starting conductivity.
         """
         if not isinstance(file_path,str):
             raise TypeError("expected string argument for file_path")
@@ -665,7 +663,13 @@ class Mesh_obj:
             elif min(zone) == 0:
                 zone = np.array(zone,dtype=int)+1 # as fortran indexing starts at 1, not 0 we must add one to the array if min ==0 
         #check if we have quad type mesh
-
+        
+        if param  is None:
+            param = 1 + np.arange(self.num_elms) # default one parameter per element
+        else:
+            if len(param) != self.num_elms:
+                raise IndexError("the number of parameters does not match the number of elements")
+ 
         if self.Type2VertsNo() == 3:
         #add element data following the R2 format
             for i in range(self.num_elms):
@@ -689,8 +693,17 @@ class Mesh_obj:
                            elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
                            zone[i]))
         #now add nodes
+<<<<<<< HEAD
         x_coord = self.node_x
         y_coord = self.node_y
+=======
+#        x_coord = self.elm_centre[0]
+#        y_coord = self.elm_centre[1]
+        x_coord = self.node_x
+        y_coord = self.node_y
+        if np.sum(self.node_z) != 0:
+            z_coord = self.node_z # TODO then need to write it down below
+>>>>>>> 73d162bde8a78497589850cd5a5d979a8a702e54
         for i in range(self.num_nodes):
             ni_no=i+1
             fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
@@ -1425,9 +1438,9 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
-#
+
 #mesh = vtk_import('api/test/test.vtk')
-##mesh = vtk_import('api/invdir/f001_res.vtk')
+#mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()
 #mesh.show(attr=attrs[0], contour=False, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)

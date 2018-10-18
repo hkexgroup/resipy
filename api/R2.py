@@ -306,8 +306,13 @@ class R2(object): # R2 master class instanciated by the GUI
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
+<<<<<<< HEAD
                              cl_factor=cl_factor,
                              cl=cl)
+=======
+                             cl_factor=cl_factor, cl=cl)
+            mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'))
+>>>>>>> 73d162bde8a78497589850cd5a5d979a8a702e54
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
@@ -430,6 +435,19 @@ class R2(object): # R2 master class instanciated by the GUI
         else: # if we invert field data, we allow the user to define prior
             # knowledge of the resistivity structure
             self.mesh.write_attr('res0', 'res0.dat', self.dirname)
+        
+        # rewriting mesh.dat
+        paramFixed = 1 + np.arange(self.mesh.num_elms)
+        paramFixed[self.mesh.attr_cache['fixed']] = 0
+        self.mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'),
+                            zone = self.mesh.attr_cache['zones'],
+                            param = paramFixed)
+#        with open(fname, 'r') as f:
+#            x = f.readline().split()
+#        numel = int(x[0])
+#        numnode = int(x[1])
+#        elems = np.genfromtxt(fname, skip_header=0, max_rows=numel)
+#        nodes = np.genfromtxt(fname, skip_header=numel+1)
         
         # write zone and fixed for triangular mesh
 #        if param['mesh_type'] == 3:
@@ -761,7 +779,7 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
-    def addRegion(self, xy, res0, ax=None):
+    def addRegion(self, xy, res0, blocky=False, fixed=False, ax=None):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -771,6 +789,12 @@ class R2(object): # R2 master class instanciated by the GUI
             Array with two columns for the x and y coordinates.
         res0 : float
             Resistivity values of the defined area.
+        blocky : bool, optional
+            If `True` the boundary of the region will be blocky if inversion
+            is block inversion.
+        fixed : bool, optional
+            If `True`, the inversion will keep the starting resistivity of this
+            region.
         ax : matplotlib.axes.Axes
             If not `None`, the region will be plotted against this axes.
         """
@@ -789,9 +813,24 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0[idx] = res0
         self.mesh.attr_cache['res0'] = self.resist0 # hard way to do it
         
+        # define zone
+        if blocky is True:
+            zones = self.mesh.attr_cache['zones'].copy()
+            zones[idx] = self.regid
+            self.mesh.attr_cache['zones'] = zones
+        
+        # define fixed area
+        if fixed is True:
+            paramFixed = self.mesh.attr_cache['fixed'].copy()
+            paramFixed[idx] = 0
+            self.mesh.attr_cache['fixed'] = paramFixed
+        
         
     def resetRegions(self):
-        """ Just reset all regions already draw.
+        """ Just reset all regions already draw. Shouldn't be needed as 
+        the `self.runR2()` automatically use a homogenous model as starting
+        for inversion. The only purpose of this is to use an inhomogeous
+        starting model to invert data from forward modelling.
         """
         self.regid = 0
         self.regions.fill(0)
@@ -886,10 +925,17 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 fixedList.append(False) # default fixed
                 
+<<<<<<< HEAD
         self.mesh.assign_zone_attribute(self.regions, res0list, 'res0')
         self.mesh.assign_zone_attribute(self.regions, zoneList, 'zones')
         if self.param['mesh_type'] == 3:
             self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
+=======
+        self.mesh.assign_material_attribute(self.regions, res0list, 'res0')
+        self.mesh.assign_material_attribute(self.regions, zoneList, 'zones')
+#        if self.param['mesh_type'] == 3:
+        self.mesh.assign_material_attribute(self.regions, fixedList, 'fixed')
+>>>>>>> 73d162bde8a78497589850cd5a5d979a8a702e54
 
 
 
@@ -1182,7 +1228,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.invert(modErr=True)
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.pwlfit()
-#k.invert(iplot=False)
+#k.invert(iplot=True)
 #k.showIter()
 #k.showResults()
 #k.surveys[0].dca()
@@ -1224,10 +1270,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
 #    mesh.show()
 #
-k = R2()
-k.createSurvey('test/syscalFile.csv', ftype='Syscal')
-k.createMesh(typ='trian')
-k.invert(iplot=True)
 
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
@@ -1275,8 +1317,9 @@ k.invert(iplot=True)
 #k.createMesh(typ='trian')
 #
 ## full API function
-#k.addRegion(np.array([[2,0],[8,0],[8,-8],[2,-8],[2,0]]), 10)
-#
+#k.addRegion(np.array([[2,0],[6,0],[6,-4],[2,-4],[2,0]]), 10)
+#k.addRegion(np.array([[10,0],[12,0],[12,-4],[10,-4],[10,0]]), 40, blocky=True, fixed=True)
+
 ## full GUI function
 ##k.createModel()
 ##k.assignRes0({0:100,1:500,2:10})
