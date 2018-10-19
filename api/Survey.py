@@ -106,7 +106,7 @@ class Survey(object):
         
         # remove duplicates
         shapeBefore = self.df.shape[0]
-        self.df = self.df.drop_duplicates(subset=['a','m'], keep = 'first')
+        self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0:
             print(ndup, 'duplicates removed.')
