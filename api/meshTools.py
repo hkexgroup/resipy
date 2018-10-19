@@ -12,9 +12,8 @@ Classes:
 Functions: 
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-    readR2_resdat () - reads resistivity values from a R2 file. 
-    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates 
-                 (returns info needed for R2in) 
+    readR2_resdat () - reads resistivity values from a R2 file
+    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
     tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh
 
 Dependencies: 
@@ -23,71 +22,37 @@ Dependencies:
     scipy (conda lib)
     gmshWrap(pyR2 api module)
     python3 standard libaries
+
 Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, platform, warnings
 from subprocess import PIPE, Popen, call
 import time
 #import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata
+#from scipy.interpolate import griddata
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
-#import R2gui API package 
+#import R2gui API package - uncomment the below code for testing purposes 
 #if __name__ =="__main__" or __name__=="meshTools":
 #    import gmshWrap as gw 
+#    from isinpolygon import isinpolygon
 #else:
 import api.gmshWrap as gw
+from api.isinpolygon import isinpolygon
 
 #%% create mesh object
-class Mesh_obj: 
-    """
-    creates a mesh class
-    
-    Parameters
-    ----------
-    num_nodes: int
-        number of nodes
-    num_elms: int 
-        number of elements 
-    node_x: list, 1d numpy array
-        x coordinates of nodes 
-    node_y: list, 1d numpy array
-        coordinates of nodes
-    node_z: list, 1d numpy array
-        z coordinates of nodes 
-    node_id: list
-        node id number (ie 1,2,3,4,...)
-    elm_id: list
-        element id number 
-    node_data: list of lists of ints 
-        nodes of element vertices in the form [[node1],[node2],[node3],...], each
-        node id should be an integer type. 
-    elm_centre: list of lists of floats
-        centre of elements (x,y)
-    elm_area: list 
-        area of each element
-    cell_type: list of ints
-        code referencing cell geometry (e.g. triangle) according to vtk format
-    cell_attributes: list of floats
-        the values of the attributes given to each cell 
-    atribute_title: string 
-        what is the attribute? we may use conductivity instead of resistivity for example
-    original_file_path: string, optional
-        file path to where the mesh file was originally imported
-    regions: optional
-        element indexes for a material in the mesh (needs further explanation)
-        
-    Returns
-    ----------
-    Mesh_obj: object
-        
-    """    
+class Mesh_obj:
+    cax = None 
+    zone = None
+    attr_cache={}
+    mesh_title = "not_given"
+    no_attributes = 1
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
                  num_elms,#number of elements 
@@ -104,6 +69,48 @@ class Mesh_obj:
                  atribute_title,#what is the attribute? we may use conductivity instead of resistivity for example
                  original_file_path='N/A',
                  regions=None) :
+        """
+        Creates mesh object.
+        
+        Parameters
+        ----------
+        num_nodes : int
+            number of nodes
+        num_elms : int 
+            number of elements 
+        node_x : list, 1d numpy array
+            x coordinates of nodes 
+        node_y : list, 1d numpy array
+            coordinates of nodes
+        node_z : list, 1d numpy array
+            z coordinates of nodes 
+        node_id : list
+            node id number (ie 1,2,3,4,...)
+        elm_id : list
+            element id number 
+        node_data : list of lists of ints 
+            nodes of element vertices in the form [[node1],[node2],[node3],...], each
+            node id should be an integer type. 
+        elm_centre : list of lists of floats
+            centre of elements (x,y)
+        elm_area : list 
+            area of each element
+        cell_type : list of ints
+            code referencing cell geometry (e.g. triangle) according to vtk format
+        cell_attributes : list of floats
+            the values of the attributes given to each cell 
+        atribute_title : string 
+            what is the attribute? we may use conductivity instead of resistivity for example
+        original_file_path : string, optional
+            file path to where the mesh file was originally imported
+        regions : optional
+            element indexes for a material in the mesh (needs further explanation)
+            
+        Returns
+        -------
+        Mesh_obj : class
+            
+        """
         #assign varaibles to the mesh object 
         self.num_nodes=num_nodes
         self.num_elms=num_elms
@@ -119,342 +126,18 @@ class Mesh_obj:
         self.cell_attributes=cell_attributes 
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
-        self.mesh_title = "not_given"
-        self.no_attributes = 1
         self.regions = regions
-        self.attr_cache={}
         #decide if mesh is 3D or not 
         if max(node_z) - min(node_z) == 0: # mesh is probably 2D 
             self.ndims=2
         else:
             self.ndims=3
     
-    
-    def add_e_nodes(self,e_nodes):
-        self.e_nodes = e_nodes
-        self.elec_x = np.array(self.node_x)[np.array(e_nodes)]
-        self.elec_y = np.array(self.node_y)[np.array(e_nodes)]
-    
-    #add some functions to allow adding some extra attributes to mesh 
-    def add_sensitivity(self,values):#sensitivity of the mesh
-        if len(values)!=self.num_elms:
-            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        self.sensitivities = values
-        
-    def add_conductivities(self,values):
-        if len(values)!=self.num_elms:
-            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        self.conductivities = values
-        
-    def log10(self):#adds a log 10 (resistivity) to the mesh
-        Mesh_obj.no_attributes += 1
-        self.log_attribute=np.log10(self.cell_attributes)
-        
-    def file_path(self):#returns the file path from where the mesh was imported
-        return(format(self.original_file_path))
-       
-    def Type2VertsNo(self):#converts vtk cell types into number of vertices each element has 
-        if int(self.cell_type[0])==5:#then elements are triangles
-            return 3
-        elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
-            return 4
-        elif int(self.cell_type[0]) == 11: # elements are voxels
-            return 8
-        #add element types as neccessary 
-        else:
-            print("WARNING: unrecognised cell type")
-            return 0
-        
-    def summary(self):
-        #prints summary information about the mesh
-        print("\n_______mesh summary_______")
-        print("Number of elements: %i"%int(self.num_elms))
-        print("Number of nodes: %i"%int(self.num_nodes))
-        #print("Attribute title: %s"%self.atribute_title)
-        print("Number of cell vertices: %i"%self.Type2VertsNo())
-        print("Number of cell attributes: %i"%int(self.no_attributes))
-        print("original file path: %s"%self.file_path())
-        print("\n")
-
-    def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
-             color_bar = True,
-             xlim = "default",
-             ylim = "default",
-             ax = None,
-             electrodes = True,
-             sens = False,
-             edge_color = 'k',
-             contour=False,
-             vmin=None,
-             vmax=None,
-             attr=None):
-        """
-        displays a 2d mesh and attribute 
-        
-        Parameters
-        ----------
-        color_map : string, 
-            color map reference 
-        color_bar : Boolian, 
-            True to plot colorbar 
-        xlim: tuple
-            axis x limits as (xmin, xmax)
-        ylim: tuple
-            axis y limits as (ymin, ymax)
-        ax: matplotlib axis handle,
-            axis handle if preexisting (error will thrown up if not) figure is to be cast to.
-        electrodes: Boolian 
-            enter true to add electrodes to plot
-        sens: Boolian, 
-            enter true to plot sensitivities 
-        edge_color: string
-            color of the cell edges, set to None if you dont want an edge
-        contour: boolian
-            if True, plot filled contours
-        vmin: float
-            minimum limit for the color bar scale 
-        vmax: float
-            maximum limit for the color bar scale 
-        attr: string
-            which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
-            as the key for this dictionary
-
-        Returns
-        ----------
-        matplotlib figure with mesh 
-        
-        Notes
-        ----------
-        Show a mesh object using matplotlib. The color map variable should be 
-        a string refering to the color map you want (default is "jet").
-        As we're using the matplotlib package here any color map avialable within 
-        matplotlib package can be used to display the mesh here also. See: 
-        https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html
-        """
-        #check color map argument is a string 
-        if not isinstance(color_map,str):#check the color map variable is a string
-            raise NameError('color_map variable is not a string')
-            #not currently checking if the passed variable is in the matplotlib library
-        
-        ### overall this code section needs prettying up to make it easier to change attributes ### 
-        #decide which attribute to plot, we may decide to have other attritbutes! 
-        if attr is None: 
-            #plots default attribute
-            X=np.array(self.cell_attributes) # maps resistivity values on the color map
-            color_bar_title = self.atribute_title
-        else:
-            try:
-                X = np.array(self.attr_cache[attr])
-                color_bar_title = attr
-            except (KeyError, AttributeError):
-                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
-
-        iplot = False
-        if ax is None:
-            iplot = True
-            fig,ax=plt.subplots()
-        #if no dimensions are given then set the plot limits to edge of mesh
-        try: 
-            if xlim=="default":
-                xlim=[min(self.elec_x),max(self.elec_x)]
-            if ylim=="default":
-                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
-                print(doiEstimate)
-                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
-        except AttributeError:
-            if xlim=="default":
-                xlim=[min(self.node_x),max(self.node_x)]
-            if ylim=="default":
-                ylim=[min(self.node_y),max(self.node_y)]
-                
-        ##plot mesh! ##
-        a = time.time() #start timer on how long it takes to plot the mesh
-        #compile mesh coordinates into polygon coordinates  
-        nodes = np.c_[self.node_x, self.node_y]
-        connection = np.array(self.con_matrix).T # connection matrix 
-        #compile polygons patches into a "patch collection"
-        ###X=np.array(self.cell_attributes) # maps resistivity values on the color map### <-- disabled 
-        coordinates = nodes[connection]
-        if vmin is None:
-            vmin = np.min(X)
-        if vmax is None:
-            vmax = np.max(X)
-        
-        if edge_color == None or edge_color=='none' or edge_color=='None':
-            edge_color='face'#set the edge colours to the colours of the polygon patches
-
-        if contour is False:
-            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
-            coll.set_clim(vmin=vmin, vmax=vmax)
-            ax.add_collection(coll)#blit polygons to axis
-            cax = coll
-        else:
-            x = np.array(self.elm_centre[0])
-            y = np.array(self.elm_centre[1])
-            z = np.array(X)
-#            xmin, xmax = np.min(x), np.max(x)
-#            ymin, ymax = np.min(y), np.max(y)
-#            dx = (xmax-xmin)/40
-#            dy = (ymax-ymin)/40
-#            xi, yi = np.meshgrid(np.linspace(xmin-dx, xmax+dx, 40),
-#                                 np.linspace(ymin-dy, ymax+dy, 40))
-#            print(np.min(xi), np.max(xi), np.min(yi), np.max(yi))
-#            zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
-#            zi = zi.reshape(xi.shape)
-#            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
-            triang = tri.Triangulation(x,y)
-#            z[z<=vmin] = vmin
-#            z[z>=vmax] = vmax
-            if vmin is None:
-                vmin = np.nanmin(z)
-            if vmax is None:
-                vmax = np.nanmax(z)
-            if vmax > vmin:
-                levels = np.linspace(vmin, vmax, 7)
-            else:
-                levels = None
-            cax = ax.tricontourf(triang, z, levels=levels, extend='both')
-            
-        ax.autoscale()
-        #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
-        ax.set_ylim(ylim)
-        ax.set_xlim(xlim)
-        ax.set_xlabel('Distance')
-        ax.set_ylabel('Elevation')
-        
-        if color_bar:#add the color bar 
-            cbar = plt.colorbar(cax, ax=ax, format='%.1f')
-            cbar.set_label(color_bar_title) #set colorbar title
-
-        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
-
-        #biuld alpha channel if we have sensitivities 
-        if sens:
-            try:
-                weights = np.array(self.sensitivities) #values assigned to alpha channels 
-                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
-                raw_alpha[..., -1] = alphas
-                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
-                #make alpha collection
-                alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors=None)
-                #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
-                #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
-                ax.add_collection(alpha_coll)
-            except AttributeError:
-                print("no sensitivities in mesh object to plot")
-        
-        if electrodes: #try add electrodes to figure if we have them 
-            try: 
-                ax.plot(self.elec_x,self.elec_y,'ko')
-            except AttributeError:
-                print("no electrodes in mesh object to plot")
-        print('Mesh plotted in %6.5f seconds'%(time.time()-a))
-        
-        if iplot == True:
-            return fig
-        
-    def apply_func(self,mesh_paras,material_no,new_key,function,*args):
-        """
-        applys a function to a mesh by material number and mesh parameter
-        
-        Parameters
-        ----------
-        mesh_paras: 
-            mesh parameters from which new parameters are calculated 
-        material_no: list of ints
-            material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
-            ...ie if you have 2 materials in the mesh then pass an array of ones and twos.
-        new_key: string
-            key assigned to the parameter in the attr_cache. DOES NOT default
-        function: function
-            function to be applied to mesh attributes, first argument must be the mesh parameter
-        args: [see function info]
-            all arguments to be passed through function after to modify the mesh parameter,
-            ... argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
-            ... where letters are the material, numbers refer to the argument number
-        
-        Returns
-        ----------
-        new parameters added to Mesh_obj.attr_dict
-        """
-    
-        if len(material_no)!=len(mesh_paras):
-            raise ValueError('Mismatch between the number of material propeties (for the mesh) and parameters to be converted')
-        new_para=[0]*self.num_elms
-        #iterate through each set of argument variables
-        for iteration in range(len(args[0])):
-            parameters=[items[iteration] for items in args]#return parameters 
-            parameters.insert(0,0)#this adds an element to the front of the parameters which can be swapped out resistivity
-            for i in range(self.num_elms):
-                if material_no[i]==iteration+1:#does the material match the iteration? 
-                    parameters[0]=mesh_paras[i]#change parameter value at start of variables list
-                    new_para[i]=function(*parameters)#compute new parameter   
-        self.attr_cache[new_key] = new_para
-        self.no_attributes += 1
-        #return new_para
-        
-    def assign_material_attribute(self,material_no,attr_list,new_key):
-        """
-        Asssigns values to the mesh which depend on region / material only. E.G 
-        a single resistivity value 
-            
-        Parameters
-        ----------
-        material_no : array or list
-            integers starting at 0 or 1, and ascend in intervals of 1, which 
-            correspond to a material in the mesh returned from assign_attr_ID. 
-        attr_list : list
-            list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
-            [resistivity1,resistivity2,resistivity3]
-        new_key: string
-            key identifier assigned to the attribute in the attr_cache. 
-        
-        Returns 
-        ----------
-        mesh object will now have the new attribute added. Use the mesh.show() function to see the result. 
-        """ 
-        if len(material_no) != self.num_elms:
-            raise ValueError("Mismatch between the number of elements and material propeties")
-        
-        new_para=[0]*self.num_elms
-        
-        if min(material_no)==1:#cor_fac allows for compatability with an index system starting at 1 or 0 
-            cor_fac=1
-        else:
-            cor_fac=0
-       
-        for i in range(self.num_elms):
-            new_para[i] = attr_list[int(material_no[i]) - cor_fac]
-        
-        self.attr_cache[new_key] = new_para
-        self.no_attributes += 1
-
-            
-    def add_attribute(self,values,key):
-        #add a new attribute to mesh 
-        if len(values)!=self.num_elms:
-            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        self.no_attributes += 1
-        self.attr_cache[key]=values #allows us to add an attributes to each element.
-        #this function needs fleshing out more to allow custom titles and attribute names
-    
-    def add_attr_dict(self,attr_dict):
-        self.attr_cache=attr_dict
-        self.no_attributes = len(attr_dict)
-    
-    def update_attribute(self,new_attributes,new_title='default'):
-        #allows you to reassign the cell attributes in the mesh object 
-        if len(new_attributes)!=self.num_elms:
-            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        self.cell_attributes=new_attributes
-        self.atribute_title=str(new_title)
-    
     @classmethod # creates a mesh object from a mesh dictionary
     def mesh_dict2obj(cls,mesh_info):
-        """
-        converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
-        mesh object, its an alternative way to make a mesh object. 
+        """ Converts a mesh dictionary produced by the gmsh2r2mesh and
+        vtk_import functions into a mesh object, its an alternative way to
+         make a mesh object. 
         ***Intended for development use***
             
         Parameters
@@ -464,8 +147,8 @@ class Mesh_obj:
             
         Returns
         ---------- 
-        mesh class object
-    """
+        Mesh: class 
+        """
         #check the dictionary is a mesh
         try: 
             if mesh_info['dict_type']!='mesh_info':
@@ -499,34 +182,558 @@ class Mesh_obj:
                 
         return (obj)
     
-    @staticmethod
-    def help_me():#a basic help me file, needs fleshing out
-        available_functions=["show","summary","show_mesh","log10","add_attribute","mesh_dict2obj","Type2VertsNo"]
-        print("\n_______________________________________________________")#add some lines, make info look pretty
-        print("available functions within the mesh_obj class: \n")
-        for i in range(len(available_functions)):
-            print("%s"%available_functions[i])
-        print("_______________________________________________________")
+
+    def add_e_nodes(self,e_nodes):
+        self.e_nodes = e_nodes
+        self.elec_x = np.array(self.node_x)[np.array(e_nodes)]
+        self.elec_y = np.array(self.node_y)[np.array(e_nodes)]
+    
+    #add some functions to allow adding some extra attributes to mesh 
+    def add_sensitivity(self,values):#sensitivity of the mesh
+        if len(values)!=self.num_elms:
+            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
+        self.sensitivities = values
         
-    def write_vtk(self,file_path='default', title=None):
+    def file_path(self):#returns the file path from where the mesh was imported
+        return(format(self.original_file_path))
+       
+    def Type2VertsNo(self):#converts vtk cell types into number of vertices each element has 
+        if int(self.cell_type[0])==5:#then elements are triangles
+            return 3
+        elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
+            return 4
+        elif int(self.cell_type[0]) == 11: # elements are voxels
+            return 8
+        #add element types as neccessary 
+        else:
+            print("WARNING: unrecognised cell type")
+            return 0
+        
+    def summary(self,flag=True):
+        #returns summary information about the mesh, flagto print info, change to return string
+        out = "\n_______mesh summary_______\n"
+        out += "Number of elements: %i\n"%int(self.num_elms)
+        out += "Number of nodes: %i\n"%int(self.num_nodes)
+        out += "Number of cell vertices: %i\n"%self.Type2VertsNo()
+        out += "Number of cell attributes: %i\n"%int(self.no_attributes)
+        out += "original file path: %s\n"%self.file_path()
+        if flag==True:
+            print(out)
+        else:
+            return out
+
+    def __str__(self):
+        #returns the summary function if the object is printed
+        return self.summary(flag=False)
+            
+    def add_attribute(self,values,key):
+        #add a new attribute to mesh 
+        if len(values)!=self.num_elms:
+            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
+        self.no_attributes += 1
+        self.attr_cache[key]=values #allows us to add an attributes to each element.
+        #this function needs fleshing out more to allow custom titles and attribute names
+    
+    def add_attr_dict(self,attr_dict):
+        self.attr_cache=attr_dict
+        self.no_attributes = len(attr_dict)
+    
+    def update_attribute(self,new_attributes,new_title='default'):
+        #allows you to reassign the cell attributes in the mesh object 
+        if len(new_attributes)!=self.num_elms:
+            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
+        self.cell_attributes=new_attributes
+        self.atribute_title=str(new_title)
+    
+
+    def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
+             color_bar = True,
+             xlim = "default",
+             ylim = "default",
+             ax = None,
+             electrodes = True,
+             sens = False,
+             edge_color = 'k',
+             contour=False,
+             vmin=None,
+             vmax=None,
+             attr=None):
+        """ Displays a 2d mesh and attribute.
+        
+        Parameters
+        ----------
+        color_map : string, optional
+            color map reference 
+        color_bar : Boolean, optional 
+            `True` to plot colorbar 
+        xlim : tuple, optional
+            Axis x limits as `(xmin, xmax)`.
+        ylim : tuple, optional
+            Axis y limits as `(ymin, ymax)`. 
+        ax : matplotlib axis handle, optional
+            Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
+        electrodes : boolean, optional
+            Enter true to add electrodes to plot.
+        sens : boolean, optional
+            Enter true to plot sensitivities. 
+        edge_color : string, optional
+            Color of the cell edges, set to `None` if you dont want an edge.
+        contour : boolean, optional
+            If `True`, plot filled with contours instead of the mesh.
+        vmin : float, optional
+            Minimum limit for the color bar scale.
+        vmax : float, optional
+            Maximum limit for the color bar scale.
+        attr : string, optional
+            Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+            as the key for this dictionary.
+
+        Returns
+        ----------
+        figure : matplotlib figure 
+            Figure handle for the plotted mesh object.
+        
+        Notes
+        ----------
+        Show a mesh object using matplotlib. The color map variable should be 
+        a string refering to the color map you want (default is "jet").
+        As we're using the matplotlib package here any color map avialable within 
+        matplotlib package can be used to display the mesh here also. See: 
+        https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html
         """
-        writes a vtk file
+        #check color map argument is a string 
+        if not isinstance(color_map,str):#check the color map variable is a string
+            raise NameError('color_map variable is not a string')
+            #not currently checking if the passed variable is in the matplotlib library
+        
+        ### overall this code section needs prettying up to make it easier to change attributes ### 
+        #decide which attribute to plot, we may decide to have other attritbutes! 
+        if attr is None: 
+            #plots default attribute
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        else:
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except (KeyError, AttributeError):
+                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+
+        iplot = False
+        if ax is None:
+            iplot = True
+            fig,ax=plt.subplots()
+            self.fig = fig
+            self.ax = ax
+        else:
+            self.fig = ax.figure
+            self.ax = ax
+        #if no dimensions are given then set the plot limits to edge of mesh
+        try: 
+            if xlim=="default":
+                xlim=[min(self.elec_x),max(self.elec_x)]
+            if ylim=="default":
+                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
+                #print(doiEstimate)
+                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
+        except AttributeError:
+            if xlim=="default":
+                xlim=[min(self.node_x),max(self.node_x)]
+            if ylim=="default":
+                ylim=[min(self.node_y),max(self.node_y)]
+                
+        ##plot mesh! ##
+        a = time.time() #start timer on how long it takes to plot the mesh
+        #compile mesh coordinates into polygon coordinates  
+        nodes = np.c_[self.node_x, self.node_y]
+        connection = np.array(self.con_matrix).T # connection matrix 
+        #compile polygons patches into a "patch collection"
+        ###X=np.array(self.cell_attributes) # maps resistivity values on the color map### <-- disabled 
+        coordinates = nodes[connection]
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
+        
+        if edge_color == None or edge_color=='none' or edge_color=='None':
+            edge_color='face'#set the edge colours to the colours of the polygon patches
+
+        if contour is False:
+            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
+            coll.set_clim(vmin=vmin, vmax=vmax)
+            ax.add_collection(coll)#blit polygons to axis
+            self.cax = coll
+        else:
+            x = np.array(self.elm_centre[0])
+            y = np.array(self.elm_centre[1])
+            z = np.array(X)
+#            xmin, xmax = np.min(x), np.max(x)
+#            ymin, ymax = np.min(y), np.max(y)
+#            dx = (xmax-xmin)/40
+#            dy = (ymax-ymin)/40
+#            xi, yi = np.meshgrid(np.linspace(xmin-dx, xmax+dx, 40),
+#                                 np.linspace(ymin-dy, ymax+dy, 40))
+#            print(np.min(xi), np.max(xi), np.min(yi), np.max(yi))
+#            zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
+#            zi = zi.reshape(xi.shape)
+#            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
+            triang = tri.Triangulation(x,y)
+#            z[z<=vmin] = vmin
+#            z[z>=vmax] = vmax
+            if vmin is None:
+                vmin = np.nanmin(z)
+            if vmax is None:
+                vmax = np.nanmax(z)
+            if vmax > vmin:
+                levels = np.linspace(vmin, vmax, 7)
+            else:
+                levels = None
+            self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+            
+        ax.autoscale()
+        #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
+        ax.set_ylim(ylim)
+        ax.set_xlim(xlim)
+        ax.set_xlabel('Distance')
+        ax.set_ylabel('Elevation')
+        
+        if color_bar:#add the color bar 
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
+            self.cbar.set_label(color_bar_title) #set colorbar title
+
+        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
+
+        #biuld alpha channel if we have sensitivities 
+        if sens:
+            try:
+                weights = np.array(self.sensitivities) #values assigned to alpha channels 
+                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
+                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                raw_alpha[..., -1] = alphas
+                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                #make alpha collection
+                alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors=None)
+                #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
+                #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
+                ax.add_collection(alpha_coll)
+            except AttributeError:
+                print("no sensitivities in mesh object to plot")
+        
+        if electrodes: #try add electrodes to figure if we have them 
+            try: 
+                ax.plot(self.elec_x,self.elec_y,'ko')
+            except AttributeError:
+                print("no electrodes in mesh object to plot")
+        print('Mesh plotted in %6.5f seconds'%(time.time()-a))
+        
+        if iplot == True:
+            return fig
+    
+    def draw(self, 
+             attr=None,
+             edge_color = 'k',
+             color_map = None,
+             color_bar = False,
+             vmin= None, vmax = None):
+        """
+        Redraws a mesh over a prexisting figure canvas, this is intended for saving
+        time when plotting each iteration of the resistivity inversion.
+        
+        Parameters
+        ----------
+        color_map : string, optional
+            color map reference 
+        color_bar : boolean, optional 
+            `True` to plot colorbar 
+        ax : matplotlib axis handle, optional
+            Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
+        edge_color : string, optional
+            Color of the cell edges, set to `None` if you dont want an edge.
+        vmin : float, optional
+            Minimum limit for the color bar scale.
+        vmax : float, optional
+            Maximum limit for the color bar scale.
+        attr : string, optional
+            Which attribute in the mesh to plot, references a dictionary of attributes. `attr` is passed 
+            as the key for this dictionary.
+
+        Returns
+        ----------
+        figure : matplotlib figure 
+            Figure handle for the plotted mesh object.
+        
+        """
+
+        if self.cax == None :
+            raise Exception ("mesh canvas variable has not been assigned! Use mesh.show() first")
+            
+        if attr is None: 
+            #plots default attribute
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        else:
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except (KeyError, AttributeError):
+                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+                
+        a = time.time() #start timer on how long it takes to plot the mesh
+        
+        if edge_color == None or edge_color=='none' or edge_color=='None':
+            edge_color='face'#set the edge colours to the colours of the polygon patches
+            
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
+            
+        if color_map != None :
+            self.cax.set_cmap(color_map) # change the color map if the user wants to 
+        
+        #following block of code redraws figure 
+        self.cax.set_array(X) # set the array of the polygon collection to the new attribute 
+        self.cax.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
+        self.ax.add_collection(self.cax)#blit polygons to axis
+        self.cbar.set_label(color_bar_title) # change the color bar title 
+        self.fig.canvas.draw() # redraw figure canvas (does not make a new figure it is faster fig.show())
+
+        if color_bar:#add the color bar 
+           print("you should have decided you wanted a color bar when using the mesh.show function")
+            
+        print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
+    
+
+    def assign_zone(self,poly_data):
+        """ Assign material/region assocations with certain elements in the mesh 
+        say if you have an area you'd like to forward model. 
+        ***2D ONLY***
+            
+        Parameters
+        ----------
+        poly_data : dictionary 
+            Dictionary with the vertices (x,y) of each point in the polygon.
+            
+        Returns
+        -------
+        material_no : numpy.array
+            Element associations starting at 1. So 1 for the first region 
+            defined in the region_data variable, 2 for the second region 
+            defined and so on. If the element can't be assigned to a region
+            then it'll be left at 0. 
+        """   
+        no_elms=self.num_elms#number of elements 
+        elm_xy=self.elm_centre#centriods of mesh elements 
+        material_no=np.zeros(no_elms,dtype=int)#attribute number
+        
+        if not isinstance(poly_data,dict):
+            raise Exception("poly_data input is not a dictionary")
+        
+        #now on to extracting the data of interest
+        print('Assigning element attribute IDs...')
+        for i, key in enumerate(poly_data):
+            poly_x=poly_data[key][0]#polygon x coordinates
+            poly_y=poly_data[key][1]#polygon y coordinates
+            inside = isinpolygon(np.array(elm_xy[0]),
+                                 np.array(elm_xy[1]),
+                                 (poly_x,poly_y))
+            material_no[inside]=i+1
+                            
+        self.zone = material_no
+        return material_no
+        
+        
+    def assign_zone_attribute(self,material_no,attr_list,new_key):
+        """
+        Asssigns values to the mesh which depend on region / material only. E.G 
+        a single resistivity value.
+            
+        Parameters
+        ----------
+        material_no : array or list
+            Integers starting at 0 or 1, and ascend in intervals of 1, which 
+            correspond to a material in the mesh returned from assign_attr_ID.
+            Should have the same length as the number of elements in the mesh.
+        attr_list : list
+            Values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
+            `[resistivity1,resistivity2,resistivity3]`.
+        new_key : string
+            Key identifier assigned to the attribute in the attr_cache. 
+        
+        Notes  
+        -----
+        Mesh object will now have the new attribute added once the function is run.
+        Use the `mesh.show()` (or `.draw()`) function to see the result. 
+        """ 
+        if len(material_no) != self.num_elms:
+            raise ValueError("Mismatch between the number of elements and material propeties")
+        
+        new_para=np.array([0]*self.num_elms)
+        
+        if min(material_no)==1:#cor_fac allows for compatability with an index system starting at 1 or 0 
+            cor_fac=1
+        else:
+            cor_fac=0
+            
+        material_no = np.array(material_no) - cor_fac
+        
+        for i in range(len(attr_list)):
+            idx = material_no == i
+            new_para[idx] = attr_list[i]
+        
+        self.attr_cache[new_key] = new_para
+        self.no_attributes += 1
+            
+
+    def apply_func(self,mesh_paras,material_no,new_key,function,*args):
+        """
+        Applies a function to a mesh by zone number and mesh parameter.
+        
+        Parameters
+        ----------
+        mesh_paras : list??
+            Mesh parameters from which new parameters are calculated.
+        material_no : list of ints
+            Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
+            ...ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored. 
+        new_key : string
+            Key assigned to the parameter in the attr_cache. DOES NOT default.
+        function : function
+            Function to be applied to mesh attributes, first argument must be the mesh parameter.
+        args : [see function info]
+            All arguments to be passed through function after to modify the mesh parameter,
+            ... argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
+            ... where letters are the material, numbers refer to the argument number
+        
+        Notes  
+        -----
+        Mesh object will now have the new attribute added once the function is run.
+        Use the `mesh.show()` (or `.draw()`) function to see the result. 
+        """
+    
+        if len(material_no)!=len(mesh_paras):
+            raise ValueError('Mismatch between the number of material propeties (for the mesh) and parameters to be converted')
+        new_para=[0]*self.num_elms
+        #iterate through each set of argument variables
+        for iteration in range(len(args[0])):
+            parameters=[items[iteration] for items in args]#return parameters 
+            parameters.insert(0,0)#this adds an element to the front of the parameters which can be swapped out resistivity
+            for i in range(self.num_elms):
+                if material_no[i]==iteration+1:#does the material match the iteration? 
+                    parameters[0]=mesh_paras[i]#change parameter value at start of variables list
+                    new_para[i]=function(*parameters)#compute new parameter   
+        self.attr_cache[new_key] = new_para
+        self.no_attributes += 1
+        #return new_para
+        
+    def write_dat(self,file_path='mesh.dat', param=None, zone = None):
+        """
+        Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
+        input file for triangle meshes, so this function is only relevant for
+        triangle meshes.
+        
+        Parameters
+        ----------
+        file_name : string 
+            Name of the file.
+        save_path : string, optional
+            Directory to save the file. 
+        zone : array like, optional
+            An array of integers which are assocaited with regions/materials in the mesh. 
+            Useful in the case of an inversion which has a boundary constraint. 
+            You can use assignAttributeID to give a material to the mesh, and pass that 
+            as the zone argument. 
+        param : array-like, optional
+            Array of parameter number. Set a parameter number to zero fixed its
+            conductivity to the starting conductivity.
+        
+        Notes
+        -----
+        mesh.dat like file written to file path. 
+        ***IMPORTANT***
+        R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
+        so when writing mesh.dat we need to check that the node indexes match up correctly.
+        """
+        if not isinstance(file_path,str):
+            raise TypeError("expected string argument for file_path")
+        ### write data to mesh.dat kind of file ###
+        #open mesh.dat for input      
+        fid=open(file_path, 'w')
+        #write to mesh.dat total num of elements and nodes
+        fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
+        
+        #compute zones if present 
+        if zone  is None:
+            zone = np.ones(self.num_elms, dtype=int) # default zone = 1 
+        else:
+            if len(zone) != self.num_elms:
+                raise IndexError("the number of zone parameters does not match the number of elements")
+            elif min(zone) == 0:
+                zone = np.array(zone,dtype=int)+1 # as fortran indexing starts at 1, not 0 we must add one to the array if min ==0 
+        #check if we have quad type mesh
+        
+        if param  is None:
+            param = 1 + np.arange(self.num_elms) # default one parameter per element
+        else:
+            if len(param) != self.num_elms:
+                raise IndexError("the number of parameters does not match the number of elements")
+    
+        if self.Type2VertsNo() == 3:
+        #add element data following the R2 format - Note that indexing in FORTRAN starts at 1!!!!!
+            for i in range(self.num_elms):
+                elm_no=i+1
+                fid.write("%i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, parameter,zone.
+                          (elm_no,
+                           self.con_matrix[0][i]+1,#node 1 - add 1 
+                           self.con_matrix[1][i]+1,#node 2
+                           self.con_matrix[2][i]+1,#node 3
+                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
+                           #this will be enabled in a future update 
+                           zone[i]))
+        elif self.Type2VertsNo() == 4:#if for some reason you want make a mesh.dat file for a quad mesh, you can, using the exact same format. 
+            for i in range(self.num_elms):
+                elm_no=i+1
+                fid.write("%i %i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, nd4, parameter,zone.
+                          (elm_no,
+                           self.con_matrix[0][i]+1,#node 1
+                           self.con_matrix[1][i]+1,#node 2
+                           self.con_matrix[2][i]+1,#node 3
+                           self.con_matrix[3][i]+1,#node 4
+                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                           zone[i]))
+        #now add nodes
+        x_coord = self.node_x
+        y_coord = self.node_y
+        if np.sum(self.node_z) != 0:
+            z_coord = self.node_z # TODO then need to write it down below
+        for i in range(self.num_nodes):
+            ni_no=i+1
+            fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
+                      (ni_no,
+                       x_coord[i],
+                       y_coord[i]))
+        fid.close()#close the file 
+        print('written mesh.dat file to \n%s'%file_path)
+
+    def write_vtk(self,file_path="mesh.vtk", title=None):
+        """
+        Writes a vtk file for the mesh object, everything in the attr_cache
+        will be written to file as attributes. We suggest using Paraview 
+        to display the mesh outside of PyR2. It's fast and open source :). 
         
         Parameters
         ------------
-        file_path : string 
-            maps where python will write the file. if left as default then mesh.vtk
+        file_path : string, optional
+            Maps where python will write the file, if left as `default` then mesh.vtk
             will be written the current working directory. 
-        title: string
-            header string written at the top of the vtk file 
+        title : string, optional
+            Header string written at the top of the vtk file .
         
         Returns
         ----------
-        vtk file written to specified directory
+        vtk: file 
+            vtk file written to specified directory.
         """
-        #decide where to save the file 
-        if file_path == "default":
-            file_path = "mesh.vtk"
         #open file and write header information    
         fh = open(file_path,'w')
         fh.write("# vtk DataFile Version 3.0\n")
@@ -552,7 +759,7 @@ class Mesh_obj:
             fh.write("\n")
         #cell types
         fh.write("CELL_TYPES %i\n"%self.num_elms)
-        [fh.write("%i "%self.cell_type[i]) for i in range(self.num_elms)];fh.write("\n")
+        [fh.write("%i "%self.cell_type[0]) for i in range(self.num_elms)];fh.write("\n")
         #write out the data
         fh.write("CELL_DATA %i\n"%self.num_elms)
         for i,key in enumerate(self.attr_cache):
@@ -565,23 +772,22 @@ class Mesh_obj:
         fh.write("POINT_DATA %i"%self.num_nodes)        
         fh.close()
     
+
     def write_attr(self,attr_key,file_name='_res.dat',file_path='defualt'):
-        """
-        writes a attribute to a _res.dat type file. file_name entered seperately 
-        becuase it will be needed for the R2 config file. The reason for this function
-        is so you can write a forward model parameter input file. 
+        """ Writes a attribute to a _res.dat type file. file_name entered
+        seperately because it will be needed for the R2 config file.
+        The reason for this function is so you can write a forward model 
+        parameter input file. 
+        
         Parameters
-        ---------
-        attr_key: string
-            key identifying the attr to be written in the mesh object attr_cache
-        file_name: string
-            name of the _res.dat type file
-        file_path: string
-            directory to which the file will be saved in, if left as none then the
-            file will be written in the current working directory 
-        Returns
-        ---------
-        #_res.dat type file 
+        ----------
+        attr_key : string
+            Key identifying the attr to be written in the mesh object attr_cache.
+        file_name : string, optional
+            Name of the _res.dat type file.
+        file_path : string, optional
+            Directory to which the file will be saved in, if left as none then the
+            file will be written in the current working directory.
         """
         #formality checks 
         if len(file_name)>15:
@@ -607,66 +813,25 @@ class Mesh_obj:
             
         fh.close()
         
-        
-        
-    
-    def asgn_atbrte_ID(self,poly_data):
-        """
-        Assign material/region assocations with certain elements in the mesh 
-        say if you have an area you'd like to forward model. 
-        ***2D ONLY***
-            
-        Parameters
-        ----------
-        poly_data: dictionary 
-            with the vertices (x,y) of each point in the polygon
-            
-        Returns
-        ---------- 
-        a list of element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
-        second region defined and so on. If the element cant be assigned to a region then it'll be left at 0. 
-        """   
-        no_elms=self.num_elms#number of elements 
-        elm_xy=self.elm_centre#centriods of mesh elements 
-        material_no=[0]*no_elms#attribute number
-        
-        if not isinstance(poly_data,dict):
-            raise Exception("poly_data input is not a dictionary")
-        
-        #now on to extracting the data of interest
-        dodgey=0#this will be used as a check to make sure elements havent been overwritten
-        print('Assigning element attribute IDs...')
-        
-        for i,key in enumerate(poly_data):
-            poly_x=poly_data[key][0]#polygon x coordinates
-            poly_y=poly_data[key][1]#polygon y coordinates
-            for k in range(no_elms):
-                if gw.isinpolygon(elm_xy[0][k],elm_xy[1][k],(poly_x,poly_y)):#then the centriod of the element must be inside region of interest
-                    if material_no[k]!=0:#then we must be overwriting a previously assigned element
-                        dodgey=dodgey+1 
-                    material_no[k]=i+1
-        
-        if dodgey>0:
-            warnings.warn('%i elements attributes were overwritten into previously assigned attributes, check that polygons do not overlap.'%dodgey) 
-        if min(material_no)==0:
-            warnings.warn('Some elements still have the default attribute of zero, which suggests they are not recognised as being part of a region and will be assigned a default value later in the workflow')                
-        return material_no
-
-                 
 #%% triangle centriod 
 def tri_cent(p,q,r):
     """
-    #compute the centre coordinates for a 2d triangle given the x,y coordinates 
-    #of the vertices.
+    Compute the centre coordinates for a 2d triangle given the x,y coordinates 
+    of the vertices.
             
     Parameters
     ----------
-    #code expects points as p=(x,y) and so on (counter clockwise prefered)
+    p : tuple,list,np array
+        Coordinates of triangle vertices in the form (x,y).
+    q : tuple,list,np array
+        Coordinates of triangle vertices in the form (x,y).
+    r : tuple,list,np array
+        Coordinates of triangle vertices in the form (x,y).
             
     Returns
     ----------
-    coordinates: tuple
-        in the format (x,y)    
+    coordinates : tuple
+        In the format (x,y).    
     """
     Xm=(p[0]+q[0])/2
     Ym=(p[1]+q[1])/2
@@ -676,28 +841,25 @@ def tri_cent(p,q,r):
     return(Xc,Yc)
     
 #%% import a vtk file 
-def vtk_import(file_path='ask_to_open',parameter_title='default'):
+def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     """
-    #imports a 2d mesh file into the python workspace, can have triangular or quad type elements 
+    Imports a 2d mesh file into the python workspace, can have triangular or quad type elements. 3D meshes 
+    are still a work in progress. 
             
     Parameters
     ----------
-    file_path: string
-        file path to mesh file. note that a error will occur if the file format is not as expected
-    parameter_title: string
-        name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
-        also note that all parameters will be imported. just the title highlights which one the mesh object will use as 
-        default. 
+    file_path : string, optional
+        File path to mesh file. Note that a error will occur if the file format is not as expected.
+    parameter_title : string, optional
+        Name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
+        also note that all parameters will be imported. Just the title highlights which one the mesh object will use as 
+        default cell attribute. 
             
     Returns
-    ----------
-    mesh object 
+    -------
+    mesh : class 
+        a pyR2 mesh class 
     """
-    if file_path=='ask_to_open':#use a dialogue box to open a file
-        print("please select the vtk file to import using the pop up dialogue box. \n")
-        root=tk.Tk()
-        root.withdraw()
-        file_path=filedialog.askopenfilename(title='Select mesh file',filetypes=(("VTK files","*.vtk"),("all files","*.*")))#
     #open the selected file for reading
     fid=open(file_path,'r')
     #print("importing vtk mesh file into python workspace...")
@@ -714,7 +876,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
         raise ImportError("expected ASCII type file format, not binary")
     dataset_type=fid.readline().strip().split()#read line 4
     if dataset_type[1]!='UNSTRUCTURED_GRID':
-        print("Warning: code intended to deal with an 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
+        print("Warning: code is built to parse a vtk 'UNSTRUCTURED_GRID' data type not %s"%dataset_type[1])
     
     #read node data
     #print("importing mesh nodes...")
@@ -874,7 +1036,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     #find scalar values in the vtk file
     num_attr = 0
     attr_dict = {}
-    found = False # boolian if we have found the parameter of interest
+    #found = False # boolian if we have found the parameter of interest
     for i,line_info in enumerate(cell_attr_dump):
         if line_info.find("SCALARS") == 0:
             attr_title = line_info.split()[1]
@@ -887,7 +1049,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
                 parameter_title = attr_title
                 values_oi = values
             if attr_title == parameter_title:#then its the parameter of interest that the user was trying extract
-                found = True
+                #found = True
                 values_oi = values        
             num_attr += 1
     
@@ -895,7 +1057,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     if num_attr == 0:
         print("no cell attributes found")
         attr_dict = {"no attributes":float("nan")}
-        values = float("nan")
+        values_oi= float("nan")
         parameter_title = "n/a"
     #print("finished importing mesh.\n")
     #information in a dictionary, this is easier to debug than an object in spyder: 
@@ -920,7 +1082,7 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
     try:
         Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
     except:
-        print('no sensitivity')
+        #print('no sensitivity')
         pass
     Mesh.mesh_title = title
     return Mesh
@@ -928,17 +1090,17 @@ def vtk_import(file_path='ask_to_open',parameter_title='default'):
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
     """
-    reads resistivity values in f00#_res.dat file output from R2, 
+    Reads resistivity values in f00#_res.dat file output from R2.
             
     Parameters
     ----------
-    file_path: string
-        maps to the _res.dat file
+    file_path : string
+        Maps to the _res.dat file.
             
     Returns
-    ----------
-    res_values: list of floats
-        resistivity values returned from the .dat file 
+    -------
+    res_values : list of floats
+        Resistivity values returned from the .dat file. 
     """
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
@@ -954,17 +1116,17 @@ def readR2_resdat(file_path):
 #%% read in sensitivity values 
 def readR2_sensdat(file_path):
     """
-    reads sensitivity values in f00#_res.dat file output from R2, 
+    Reads sensitivity values in _sens.dat file output from R2.
             
     Parameters
     ----------
-    file_path: string
-        maps to the _sens.dat file
+    file_path : string
+        Maps to the _sens.dat file.
             
     Returns
-    ----------
-    res_values: list of floats
-        sensitivity values returned from the .dat file (not log10!)
+    -------
+    res_values : list of floats
+        Sensitivity values returned from the .dat file (not log10!).
     """
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
@@ -982,38 +1144,38 @@ def readR2_sensdat(file_path):
 #%% build a quad mesh        
 def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     """
-    creates a quaderlateral mesh given the electrode x and y positions. Function
+    Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
             
     Parameters
     ----------
-    elec_x: list, np array
-        electrode x coordinates 
-    elec_y: list, np array
-        electrode y coordinates
-    elemy: int
-        number of elements in the fine y region
-    yf: float
-         y factor multiplier in the fine zone
-    ygf: float
-         y factor multiplier in the coarse zone
-    doi: float (m)
-         depth of investigation (if left as -1 = half survey width)
-    pad:
-         x padding outside the fine area (tipicaly twice the number of elements between electrodes)
+    elec_x : list, np array
+        Electrode x coordinates 
+    elec_y : list, np array
+        Electrode y coordinates
+    elemy : int
+        Number of elements in the fine y region
+    yf : float
+         Y factor multiplier in the fine zone.
+    ygf : float
+         Y factor multiplier in the coarse zone.
+    doi : float (m)
+         Depth of investigation (if left as -1 = half survey width).
+    pad :
+         X padding outside the fine area (tipicaly twice the number of elements between electrodes).
             
     Returns
-    ----------
-    Mesh: class
-        mesh object 
-    meshx: np array
-        mesh x locations for R2in file 
-    meshy: np array
-        mesh y locations for R2in file (ie node depths)
-    topo: np array
-        topography for R2in file
-    elec_node: np array
-        x columns where the electrodes are 
+    -------
+    Mesh : class
+        Mesh object 
+    meshx : numpy.array
+        Mesh x locations for R2in file.
+    meshy : numpy.array
+        Mesh y locations for R2in file (ie node depths).
+    topo : numpy.array
+        Topography for R2in file.
+    elec_node : numpy.array
+        x columns where the electrodes are. 
     """
     if elemx < 4:
         print('elemx too small, set up to 4 at least')
@@ -1146,30 +1308,28 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe', 
-             save_path='default',**kwargs):
+def tri_mesh(geom_input,keep_files=True, show_output=False, path='exe', **kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-    this function expects the current working directory has path: exe/gmsh.exe
+    this function expects the current working directory has path: exe/gmsh.exe.
             
     Parameters
     ---------- 
-    keep_files: boolian
-        True if the gmsh input and output file is to be stored in the exe directory
-    show_ouput: boolian
-        True if gmsh output is to be printed to console 
-    path: string
-        path to exe folder (leave default unless you know what you are doing)
-    save_path: string
-        directory to save 'mesh.dat'
-    geom_input:
-        dictionary used to generate survey geometry in genGeoFile_adv (see notes there), 
-    **kwargs: optional
-        key word arguments to be passed to genGeoFile. 
+    geom_input : dictionnary
+        Dictionary used to generate survey geometry in genGeoFile_adv (see notes there).
+    keep_files : boolean, optional
+        `True` if the gmsh input and output file is to be stored in the exe directory.
+    show_ouput : boolean, optional
+        `True` if gmsh output is to be printed to console. 
+    path : string, optional
+        Path to exe folder (leave default unless you know what you are doing).
+    **kwargs : optional
+        Key word arguments to be passed to genGeoFile. 
             
     Returns
-    ----------
-    mesh.dat in the Executables directory
+    -------
+    mesh.dat : file
+        In the Executables directory.
     """
     #check directories 
     if path == "exe":
@@ -1185,11 +1345,12 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
         raise Exception("No gmsh.exe exists in the exe directory!")
     
+    os.chdir(ewd) # change to the executable directory 
     #make .geo file
     file_name="temp"
     if not isinstance(geom_input,dict):
         raise ValueError("geom_input has not been given!")
-    node_pos,_ = gw.genGeoFile_adv(geom_input,file_name=file_name,path=ewd,**kwargs)
+    node_pos,_ = gw.genGeoFile(geom_input,file_path=file_name,**kwargs)
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
@@ -1197,8 +1358,6 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
     else:
         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
         
-    os.chdir(ewd)
-    
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
@@ -1208,13 +1367,17 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
-    mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path)
+    
+    ###old code ### : mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path, poly_data = poly_data)
+    mesh_dict = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
+    mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
+    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat -disabled as handled higher up 
+    
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
+    
     #change back to orginal working directory
     os.chdir(cwd)
-    
-    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
     
     mesh.add_e_nodes(node_pos-1)
     
@@ -1223,26 +1386,26 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     """
-    function makes a .vtk file for some xyz coordinates. optional argument
+    Function makes a .vtk file for some xyz coordinates. optional argument
     renames the name of the file (needs file path also) (default is "points.vtk"). 
-    title is the name of the vtk file
+    title is the name of the vtk file.
             
     Parameters
     ----------
-    x: list, tuple, np array
-        x coordinates of points
-    y: list, tuple, np array
-        y coordinates of points
-    z: list, tuple, np array
-        z coordinates of points
-    file_name: string, optional
-        path to saved file, defualts to 'points.vtk' in current working directory
-    title: string, optional
-        title of vtk file
+    x : list, tuple, np array
+        X coordinates of points.
+    y : list, tuple, np array
+        Y coordinates of points.
+    z : list, tuple, np array
+        Z coordinates of points.
+    file_name : string, optional
+        Path to saved file, defualts to 'points.vtk' in current working directory.
+    title : string, optional
+        Title of vtk file.
             
     Returns
-    ----------
-    ~.vtk file
+    -------
+    ~.vtk : file
     """
     #error check
     if len(x) != len(y) or len(x) != len(z):
@@ -1278,14 +1441,17 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
 #mesh.show(color_bar=False)
 
-#mesh = vtk_import('api/test/test.vtk')
-##mesh = vtk_import('api/invdir/f001_res.vtk')
+#mesh = vtk_import('api/test/testQuadMesh.vtk')
+#mesh = vtk_import('api/test/testTrianMesh.vtk')
+#mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()
-#mesh.show(attr=attrs[0], contour=True, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
+#mesh.show(attr=attrs[0], contour=False, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
 ##mesh.show(attr=attrs[2])
 ##mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 #fig.show()
+##mesh.write_attr(attrs[0], file_name='test_res.dat', file_path='api/test/')
+
 
 #%%
 #x = np.random.randn(100)+10

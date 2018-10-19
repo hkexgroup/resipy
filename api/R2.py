@@ -7,7 +7,6 @@ Created on Wed May 30 16:48:54 2018
 
 import numpy as np
 import pandas as pd
-import re
 import os
 import sys
 import shutil
@@ -24,7 +23,10 @@ import api.meshTools as mt
 from api.meshTools import Mesh_obj, tri_mesh
 from api.sequenceHelper import ddskip
 from api.SelectPoints import SelectPoints
+from api.post_processing import import_R2_err_dat, disp_R2_errors
 
+apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
+print('API path = ', apiPath)
 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
@@ -37,11 +39,11 @@ class R2(object): # R2 master class instanciated by the GUI
         dirnaname : str, optional
             Path of the working directory. Can also be set using `R2.setwd()`.
         """
+        self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
-            dirname = os.getcwd()
-            print('using the current directory:', dirname)
+            dirname = os.path.join(self.apiPath, 'invdir')
+        print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
-        self.cwd = os.getcwd() # directory of the code
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
@@ -56,6 +58,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
+        self.iForward = False # if True, it will use the output of the forward
+        # to run an inversion (and so need to reset the regions before this)
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -91,6 +95,14 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = dirname
     
     
+    def setBorehole(self, val=False):
+        """ Set all surveys in borehole type if `True` is passed.
+        """
+        self.iBorehole = val
+        for s in self.surveys:
+            s.iBorehole = val
+    
+    
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, parser=None):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
@@ -108,7 +120,7 @@ class R2(object): # R2 master class instanciated by the GUI
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
         """    
-        self.surveys.append(Survey(fname, ftype, spacing=spacing))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser))
         self.surveysInfo.append(info)
         
         # define electrode position according to first survey
@@ -117,7 +129,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
             # attribute method of Survey object to R2
             self.pseudoIP = self.surveys[0].pseudoIP
-            self.pseudoCallback = self.surveys[0].pseudo
+            self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
             self.linfit = self.surveys[0].linfit
             self.lmefit = self.surveys[0].lmefit
@@ -148,7 +160,7 @@ class R2(object): # R2 master class instanciated by the GUI
             List of surveys index that will be used for error modelling and so
             reciprocal measurements. By default all surveys are used.
         """  
-        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info, spacing=spacing, isurveys=isurveys)
+        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info, spacing=spacing, isurveys=isurveys, parser=parser)
         self.iTimeLapse = False
         self.iBatch = True
 
@@ -176,7 +188,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
         for f in files:
-            self.createSurvey(os.path.join(dirname, f))
+            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             print('---------', f, 'imported')
@@ -210,7 +222,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
-        self.pseudoCallback = self.surveys[0].pseudo # just display first pseudo section
+        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
         self.linfit = self.bigSurvey.linfit
@@ -219,20 +231,21 @@ class R2(object): # R2 master class instanciated by the GUI
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
     
-    def pseudo(self, **kwargs):
-        """ Create a pseudo section.
-        
-        Parameters
-        ----------
-        **kwargs :
-            To be passed to `R2.pseudoCallback()`.
-        """
-        if self.iBorehole == True:
-            print('NOT PLOTTING PSEUDO FOR BOREHOLE FOR NOW')
-        else:
-            self.pseudoCallback(**kwargs)
+#    def pseudo(self, **kwargs):
+#        """ Create a pseudo section.
+#        
+#        Parameters
+#        ----------
+#        **kwargs :
+#            To be passed to `R2.pseudoCallback()`.
+#        """
+#        if self.iBorehole == True:
+#            print('NOT PLOTTING PSEUDO FOR BOREHOLE FOR NOW')
+#        else:
+#            self.pseudoCallback(**kwargs)
     
-    def createMesh(self, typ='default', **kwargs):
+    def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
+                   cl=-1, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -240,6 +253,17 @@ class R2(object): # R2 master class instanciated by the GUI
         typ : str, optional
             Type of mesh. Eithter 'quad' or 'trian'. If no topography, 'quad'
             mesh will be chosen.
+        buried : numpy.array, optional
+            Boolean array of electrodes that are buried. Should be the same
+            length as `R2.elec`
+        surface : numpy.array, optional
+            Array with two columns x and y for additional surface points.
+        cl_factor : float, optional
+            Characteristic length factor. Only used for triangular mesh to allow
+            mesh to be refined close the electrodes and then expand.
+        cl : float, optional
+            Characteristic length that define the mesh size around the
+            electrodes.
         """
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
@@ -265,29 +289,61 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'num_regions' in self.param:
                 del self.param['num_regions']
         if typ == 'trian':
-            mesh = tri_mesh({'electrode':[self.elec[:,0], self.elec[:,1]]}, path=os.path.join(self.cwd, 'api', 'exe'), save_path=self.dirname)
+            elec = self.elec.copy()
+            geom_input = {}
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
+                iburied = buried == True
+                geom_input['electrode'] = [self.elec[~iburied, 0],
+                                           self.elec[~iburied, 1]]
+                geom_input['buried1'] = [self.elec[iburied, 0],
+                                       self.elec[iburied, 1]]
+            else:
+                geom_input['electrode'] = [self.elec[:,0],
+                                           self.elec[:,1]]
+            if surface is not None:
+                geom_input['surface'] = [surface[:,0], surface[:,1]]
+            mesh = tri_mesh(geom_input,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             cl_factor=cl_factor,
+                             cl=cl)
             self.param['mesh_type'] = 3
-            self.param['num_regions'] = len(mesh.regions)
-            regs = np.array(np.array(mesh.regions))[:,1:]
-            if self.typ == 'R2':
-                regions = np.c_[regs, np.ones(regs.shape[0])*50]
-            if self.typ == 'cR2':
-                regions = np.c_[regs, np.ones(regs.shape[0])*50, np.ones(regs.shape[0])*-0.1]
-            self.param['regions'] = regions
+#            self.param['num_regions'] = len(mesh.regions)
+#            regs = np.array(np.array(mesh.regions))[:,1:]
+#            if self.typ == 'R2':
+#                regions = np.c_[regs, np.ones(regs.shape[0])*50]
+#            if self.typ == 'cR2':
+#                regions = np.c_[regs, np.ones(regs.shape[0])*50, np.ones(regs.shape[0])*-0.1]
+#            self.param['regions'] = regions
             self.param['num_xy_poly'] = 5
-            # define xy_poly_table
-            doi = np.abs(self.elec[0,0]-self.elec[-1,0])*2/3
+            # define xy_poly_table (still need to do it here because param['meshx'] is undefined if triangular mesh)
+            doi = np.abs(self.elec[0,0]-self.elec[-1,0])/2
+            ymax = np.max(self.elec[:,1])
+            ymin = np.min(self.elec[:,1])-doi
             xy_poly_table = np.array([
-            [self.elec[0,0], self.elec[0,1]],
-            [self.elec[-1,0], self.elec[-1,1]],
-            [self.elec[-1,0], self.elec[-1,1]-doi],
-            [self.elec[0,0], self.elec[0,1]-doi],
-            [self.elec[0,0], self.elec[0,1]]])
+            [self.elec[0,0], ymax],
+            [self.elec[-1,0], ymax],
+            [self.elec[-1,0], ymin],
+            [self.elec[0,0], ymin],
+            [self.elec[0,0], ymax]])
             self.param['xy_poly_table'] = xy_poly_table
             e_nodes = np.arange(len(self.elec))+1
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
+        
+        self.param['num_regions'] = 0
+        self.param['res0File'] = 'res0.dat'
+        
+        numel = self.mesh.num_elms
+        self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
+        self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
+        #write mesh to working directory - edit by jamyd91 
+        file_path = os.path.join(self.dirname,'mesh.dat')
+        self.mesh.write_dat(file_path)
+        
         
         self.regid = 0
         self.regions = np.zeros(len(self.mesh.elm_centre[0]))
@@ -335,7 +391,11 @@ class R2(object): # R2 master class instanciated by the GUI
                     self.param['c_wgt'] = 1 # better if set by user !!
                 if 'd_wgt' not in self.param:
                     self.param['d_wgt'] = 2
-                
+        
+        if self.param['mesh_type'] == 4:
+            self.param['zones'] = self.mesh.attr_cache['zones']
+            #TODO reshape it to the form of the mesh
+            
         # all those parameters are default but the user can change them and call
         # write2in again
         for p in param:
@@ -354,11 +414,63 @@ class R2(object): # R2 master class instanciated by the GUI
             param = self.param.copy()
             param['num_regions'] = 0
             param['reg_mode'] = 2
-            param['timeLapse'] = 'Start_res.dat'
+            param['res0File'] = 'Start_res.dat'
             write2in(param, self.dirname, typ=typ)
         else:
             self.configFile = write2in(self.param, self.dirname, typ=typ)
         
+        # write the res0.dat needed for starting resistivity
+        if self.iForward is True: # we will invert results from forward
+            # inversion so we need to start from a homogeneous model
+            print('Setting a homogeneous background model as the survey to \
+                  be inverted is from a forward model already.')
+            res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
+            self.mesh.add_attribute(res0, 'r100')
+            self.mesh.write_attr('r100', 'res0.dat', self.dirname)
+        else: # if we invert field data, we allow the user to define prior
+            # knowledge of the resistivity structure
+            self.mesh.write_attr('res0', 'res0.dat', self.dirname)
+        
+        # rewriting mesh.dat
+        paramFixed = 1+ np.arange(self.mesh.num_elms)
+        ifixed = np.array(self.mesh.attr_cache['fixed'])
+        paramFixed[ifixed] = 0
+        
+        print('SUM OF PARAMFIXED = ', np.sum(paramFixed == 0))
+        self.mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'),
+                            zone = self.mesh.attr_cache['zones'],
+                            param = paramFixed)
+
+        # NOTE if fixed elements, they need to be at the end !
+        def readMeshDat(fname):
+            with open(fname, 'r') as f:
+                x = f.readline().split()
+            numel = int(x[0])
+            elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
+            nodes = np.genfromtxt(fname, skip_header=numel+1)
+            return elems, nodes
+        
+        def writeMeshDat(fname, elems, nodes):
+            numel = len(elems)
+            nnodes = len(nodes)
+            with open(fname, 'w') as f:
+                f.write('{:.0f} {:.0f}\n'.format(numel, nnodes))
+            with open(fname, 'a') as f:
+                np.savetxt(f, elems, fmt='%.0f')
+                np.savetxt(f, nodes, fmt='%.0f %f %f')
+        
+        meshFile = os.path.join(self.dirname, 'mesh.dat')
+        elems, nodes = readMeshDat(meshFile)
+        ifixed = elems[:,-2] == 0
+        elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
+        elems2[:,0] = 1 + np.arange(elems2.shape[0])
+        ifixed2 = elems2[:,-2] == 0
+        elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
+        writeMeshDat(meshFile, elems2, nodes)
+        # We NEED parameter = elemement number if changed AND
+        # all fixed element (with parameter = 0) at the end of the element
+        # matrix. BOTH conditions needs to be filled.
+    
 
     def write2protocol(self, errTyp='', errTypIP='', errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
@@ -457,12 +569,10 @@ class R2(object): # R2 master class instanciated by the GUI
             dirname = self.dirname
         os.chdir(dirname)
         targetName = os.path.join(dirname, exeName)
-        actualPath = self.cwd
-#        actualPath = os.path.dirname(os.path.relpath(__file__))
         
         # copy R2.exe
         if ~os.path.exists(targetName):
-            shutil.copy(os.path.join(actualPath, 'api', 'exe', exeName), targetName)  
+            shutil.copy(os.path.join(self.apiPath, 'exe', exeName), targetName)  
         
             
         if OS == 'Windows':
@@ -511,33 +621,39 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create mesh if not already done
         if 'mesh' not in self.param:
+            dump('Create Rectangular mesh...')
             self.createMesh()
-        
+            dump('done\n')
+            
         # compute modelling error if selected
         if modErr is True:
+            dump('Computing error model ...')
             self.computeModelError()
+            dump('done\n')
             errTot = True
         else:
             errTot = False
         
         # write configuration file
-#        if self.configFile == '':
-        self.write2in(param=param)
+        dump('Writing .in file and protocol.dat ...')
+        self.write2in(param=param) # R2.in
+        self.write2protocol(errTot=errTot) # protocol.dat
+        dump('done\n')
         
-        self.write2protocol(errTot=errTot)
-             
+        # runs inversion
         if self.iTimeLapse == True:
+            dump('---------- Inverting background/reference model ---------\n')
             refdir = os.path.join(self.dirname, 'ref')
+            shutil.move(os.path.join(self.dirname,'res0.dat'),
+                        os.path.join(refdir, 'res0.dat'))
             self.runR2(refdir, dump=dump)
-            print('----------- finished inverting reference model ------------')
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                     os.path.join(self.dirname, 'Start_res.dat'))
+        dump('-------- Main inversion ---------------\n')
         self.runR2(dump=dump)
         
         if iplot is True:
-#            self.showResults()
-            self.showSection() # TODO need to debug that for timelapse and even for normal !
-            # pass an index for inverted survey time
+            self.showResults()
 
     
     def showResults(self, index=0, ax=None, edge_color='none', attr='', sens=True, color_map='viridis', **kwargs):
@@ -670,7 +786,7 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
-    def addRegion(self, xy, res0, ax=None):
+    def addRegion(self, xy, res0, blocky=False, fixed=False, ax=None):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -680,6 +796,12 @@ class R2(object): # R2 master class instanciated by the GUI
             Array with two columns for the x and y coordinates.
         res0 : float
             Resistivity values of the defined area.
+        blocky : bool, optional
+            If `True` the boundary of the region will be blocky if inversion
+            is block inversion.
+        fixed : bool, optional
+            If `True`, the inversion will keep the starting resistivity of this
+            region.
         ax : matplotlib.axes.Axes
             If not `None`, the region will be plotted against this axes.
         """
@@ -694,9 +816,36 @@ class R2(object): # R2 master class instanciated by the GUI
         idx = selector.iselect
         self.regid = self.regid + 1
         self.regions[idx] = self.regid
+        self.mesh.cell_attributes = list(self.regions) # overwriting regions
         self.resist0[idx] = res0
+        self.mesh.attr_cache['res0'] = self.resist0 # hard way to do it
         
-
+        # define zone
+        if blocky is True:
+            zones = self.mesh.attr_cache['zones'].copy()
+            zones[idx] = self.regid
+            self.mesh.attr_cache['zones'] = zones
+        
+        # define fixed area
+        if fixed is True:
+            print('fixing')
+            paramFixed = self.mesh.attr_cache['fixed'].copy()
+            paramFixed[idx] = True
+            self.mesh.attr_cache['fixed'] = paramFixed
+            print('sum = ', np.sum(paramFixed == True))
+        
+        
+    def resetRegions(self):
+        """ Just reset all regions already draw. Shouldn't be needed as 
+        the `self.runR2()` automatically use a homogenous model as starting
+        for inversion. The only purpose of this is to use an inhomogeous
+        starting model to invert data from forward modelling.
+        """
+        self.regid = 0
+        self.regions.fill(0)
+        self.mesh.attr_cache['res0'] = np.ones(len(self.regions))*100 # set back as default
+        
+        
     def createModel(self, ax=None, dump=print, typ='poly', addAction=None):
         """ Interactive model creation for forward modelling.
         
@@ -733,10 +882,12 @@ class R2(object): # R2 master class instanciated by the GUI
 #                print(res)
             self.regid = self.regid + 1
             self.regions[idx] = self.regid
-            self.mesh.cell_attributes = list(self.regions)
-#            self.mesh.show(ax=ax)
-            # TODO change the collection of the cells impacted and update canvas
-            # or just use cross of different colors
+            
+            self.mesh.cell_attributes = list(self.regions) # overwritin regions
+#            res0list = np.unique(self.regions) # TODO ask for resistvity in the table
+#            self.mesh.assign_zone_attribute(self.regions,res0list,'res0')
+            
+            self.mesh.draw()
             if addAction is not None:
                 addAction()
         self.mesh.show(ax=ax)
@@ -747,19 +898,73 @@ class R2(object): # R2 master class instanciated by the GUI
             return fig
             
         
-    def assignRes0(self, regionValues={}):
+    def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}):
         """ Assign starting resitivity values.
         
         Parameters
         ----------
         regionValues : dict
-            Dictionnary with key beeing the region number and the value beeing
+            Dictionnary with key being the region number and the value being
             the resistivity in [Ohm.m].
+        zoneValues : dict
+            Dictionnary with key being the region number and the zone number.
+            There would be no smoothing between the zones if 'block inversion'
+            is selected (`inversion_type` = 4).
+        fixedValues : dict
+            Dictionnary with key being the region number and a boolean value if
+            we want to fix the resistivity of the zone to the starting one.
+            Note that it only works for triangular mesh for now.
+        
+        Note
+        ----
+        Region 0 is the background region. It has zone=1, and fixed=False
         """
+        res0 = np.array(self.mesh.attr_cache['res0']).copy()
         for key in regionValues.keys():
-            self.resist0[self.regions == key] = regionValues[key]
+            idx = self.regions == key
+            res0[idx] = regionValues[key]
+        self.mesh.attr_cache['res0'] = res0
         
+        zones = np.array(self.mesh.attr_cache['zones']).copy()
+        for key in zoneValues.keys():
+            idx = self.regions == key
+            zones[idx] = zoneValues[key]
+        self.mesh.attr_cache['zones'] = zones
         
+        fixed = np.array(self.mesh.attr_cache['fixed']).copy()
+        for key in fixedValues.keys():
+            idx = self.regions == key
+            fixed[idx] = fixedValues[key]
+        self.mesh.attr_cache['fixed'] = fixed
+        
+#        for key in regionValues.keys():
+#            if key in self.regions:
+#                res0list.append(regionValues[key])
+#            else:
+#                res0list.append(100) # default resistivity
+#
+#        zoneList = []
+#        for key in zoneValues.keys():
+#            if key in self.regions:
+#                zoneList.append(zoneValues[key])
+#            else:
+#                zoneList.append(1) # default zone
+#        
+#        fixedList = []
+#        for key in fixedValues.keys():
+#            if key in self.regions:
+#                fixedList.append(fixedValues[key])
+#            else:
+#                fixedList.append(False) # default fixed
+#
+#        self.mesh.assign_zone_attribute(self.regions, res0list, 'res0')
+#        self.mesh.assign_zone_attribute(self.regions, zoneList, 'zones')
+#        #if self.param['mesh_type'] == 3:
+#        
+#        print('fixed = in assignRes0', fixedList, zoneList)
+#        self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
+        
+
     def createSequence(self, skipDepths=[(0, 10)]):
         """ Create a dipole-dipole sequence.
         
@@ -807,15 +1012,18 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.05, iplot=False):
+    def forward(self, noise=0.00, iplot=False, dump=print):
         """ Operates forward modelling.
         
         Parameters
         ----------
         noise : float, optional 0 <= noise <= 1
-            Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained. 
+            Noise level from a Gaussian distribution that should be applied
+            on the forward apparent resistivities obtained. 
         iplot : bool, optional
             If `True` will plot the pseudo section after the forward modelling.
+        dump : function, optional
+            Function to print information messages when running the forward model.
         """
         fwdDir = os.path.join(self.dirname, 'fwd')
         if os.path.exists(fwdDir):
@@ -823,31 +1031,34 @@ class R2(object): # R2 master class instanciated by the GUI
         os.mkdir(fwdDir)
         
         # write the resistivity.dat
-        centroids = np.array(self.mesh.elm_centre).T
-        resFile = np.zeros((centroids.shape[0],3)) # centroix x, y, z, res0
-#        resFile[:,:centroids.shape[1]] = centroids
-        resFile[:,-1] = self.resist0
-        np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
-                   fmt='%.3f')
+#        centroids = np.array(self.mesh.elm_centre).T
+#        resFile = np.zeros((centroids.shape[0],3)) # centroix x, y, z, res0
+##        resFile[:,:centroids.shape[1]] = centroids
+#        resFile[:,-1] = self.resist0
+#        np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
+#                   fmt='%.3f')
+        
+        self.mesh.write_attr('res0', 'resistivity.dat', fwdDir)
+        
         if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
             shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
                         os.path.join(fwdDir, 'mesh.dat'))
         
         # write the forward .in file
+        dump('Writing .in file...')
         fparam = self.param.copy()
         fparam['job_type'] = 0
-        if fparam['mesh_type'] == 3:
-            fparam['num_regions'] = 0
-            fparam['timeLapse'] = 'resistivity.dat' # just starting resistivity
-        elif fparam['mesh_type'] == 4:
-            # let the default
-            pass
-            print('Note that region definition on quadrilateral mesh is not implemented yet.')
+        fparam['num_regions'] = 0
+        fparam['res0File'] = 'resistivity.dat' # just starting resistivity
         write2in(fparam, fwdDir, typ=self.typ)
+        dump('done\n')
         
         # write the protocol.dat (that contains the sequence)
         if self.sequence is None:
+            dump('Creating sequence ...')
             self.createSequence()
+            dump('done\n')
+        dump('Writing protocol.dat ...')
         seq = self.sequence
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
         outputname = os.path.join(fwdDir, 'protocol.dat')
@@ -855,9 +1066,12 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
-    
+        dump('done\n')
+        
         # fun the inversion
+        dump('Running forward model')
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
+        self.iForward = True
         
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
@@ -873,6 +1087,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         self.write2protocol()
         self.pseudo()
+        dump('done\n')
+
         
         
     def computeModelError(self):
@@ -906,7 +1122,7 @@ class R2(object): # R2 master class instanciated by the GUI
             shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
                         os.path.join(fwdDir, 'mesh.dat'))
             fparam['num_regions'] = 0
-            fparam['timeLapse'] = 'resistivity.dat'
+            fparam['res0File'] = 'resistivity.dat'
         write2in(fparam, fwdDir, typ=self.typ)
         
         # write the protocol.dat based on measured sequence
@@ -948,10 +1164,16 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(fs) > 0:
             if self.param['mesh_type'] == 4:
                 self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
+                # TODO change that to full meshTools
             else:
                 x = np.genfromtxt(os.path.join(self.dirname, fs[-1]))
+#                iterNumber = fs[-1].split('_')[0].split('.')[1]
+#                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
+#                print('iterNumber = ', iterNumber, 'name=', attrName)
                 self.mesh.add_attr_dict({'iter':x[:,-2]})
                 self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
+#                self.mesh.add_attr(x[:,-2], attrName)
+#                self.mesh.draw(attr=attrName)
                 
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
@@ -967,13 +1189,12 @@ class R2(object): # R2 master class instanciated by the GUI
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
-#    def showOnMesh(self, fname=''):
-#        if fname == '':
-#            fname = os.path.join(self.dirname, 'f001_res.dat')
-#        x = np.genfromtxt(fname)
-#        self.mesh.add_attribute(x[:,3], 'iter')
-#        self.mesh.show(attr='iter')
-
+    def showInversionErrors(self, ax=None):
+        """ Display inversion error by measurment numbers.
+        """
+        file_path = os.path.join(self.dirname, 'f001_err.dat')
+        error_info = import_R2_err_dat(file_path)
+        disp_R2_errors(error_info, ax=ax)
 
 
 
@@ -1023,16 +1244,17 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
 #k.typ = 'cR2'
-#k.createSurvey('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', spacing=0.5)
+#k = R2
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createMesh(typ='trian')
+#k.write2in()
 #k.computeModelError()
 #k.pwlfit()
 #k.write2protocol(errTyp='pwl', errTot=True)
 #k.invert(modErr=True)
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.pwlfit()
-#k.invert(iplot=False)
+#k.invert(iplot=True)
 #k.showIter()
 #k.showResults()
 #k.surveys[0].dca()
@@ -1051,7 +1273,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.plotIPFit()
 #k.errTyp = 'pwl'
 #k.errTypIP = 'pwl'
-#k.invert(iplot=False)
+#k.invert(iplot=True)
 #k.showIter()
 #k.showResults(edge_color='k')
 #k.pseudoError()
@@ -1075,7 +1297,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #    mesh.show()
 #
 
-
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
@@ -1086,7 +1307,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% test for timelapse inversion
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
+#k = R2()
 #k.createTimeLapseSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.createBatchSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
 #k.linfit()
@@ -1094,7 +1315,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.errTyp = 'pwl'
 #k.param['a_wgt'] = 0
 #k.param['b_wgt'] = 0
-#k.createMesh()
+#k.createMesh(typ='trian', cl_factor=5, cl=0.05)
+#k.showMesh()
 #k.write2in()
 #k.write2protocol()
 #k.invert(iplot=False)
@@ -1103,22 +1325,47 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
 #k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))
 
+#%% test mesh
+#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
+#buried = np.zeros(k.elec.shape[0], dtype=bool)
+#buried[5] = True
+#k.elec[5,1] = -1
+#k.createMesh(typ='trian', buried=buried, cl=0.05, cl_factor=5) # works well
+#k.showMesh()
+#k.invert()
 
 #%% forward modelling
+#def readMeshDat(fname):
+#    with open(fname, 'r') as f:
+#        x = f.readline().split()
+#    numel = int(x[0])
+#    numnode = int(x[1])
+#    elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
+#    nodes = np.genfromtxt(fname, skip_header=numel+1)
+#    return elems, nodes
+
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir/')
-#k.elec = np.c_[np.arange(24), np.zeros((24, 2))]
+#plt.close('all')
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv')
+#k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
 #
 ## full API function
-#k.addRegion(np.array([[2,0],[8,0],[8,-8],[2,-8],[2,0]]), 10)
-#
+#k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10)
+#k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 50, blocky=True, fixed=True)
+#k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fixed=False)
+
 ## full GUI function
-#k.createModel()
-#k.assignRes0({1:30,2:30,3:40,4:120})
-#
-#k.forward(iplot=True, noise=0)
-#k.invert()
+#k.createModel() # manually define 3 regions
+#k.assignRes0({1:500, 2:10, 3:50}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
+
+#k.forward(iplot=True, noise=0.0)
+##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
+#k.invert(iplot=True)
+
 
 #%% test Sina
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')

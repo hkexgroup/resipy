@@ -46,24 +46,35 @@
 <dd><p>Master class to handle all processing around the inversion codes.</p>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
-<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add region according to a polyline defined by <cite>xy</cite> and assign it
 the starting resistivity <cite>res0</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>xy</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd><p class="first last">Array with two columns for the x and y coordinates.</p>
-</dd>
-<dt><strong>res0</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd><p class="first last">Resistivity values of the defined area.</p>
-</dd>
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib.axes.Axes</span></dt>
-<dd><p class="first last">If not <cite>None</cite>, the region will be plotted against this axes.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>xy</strong> : array</p>
+<blockquote>
+<div><p>Array with two columns for the x and y coordinates.</p>
+</div></blockquote>
+<p><strong>res0</strong> : float</p>
+<blockquote>
+<div><p>Resistivity values of the defined area.</p>
+</div></blockquote>
+<p><strong>blocky</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> the boundary of the region will be blocky if inversion
+is block inversion.</p>
+</div></blockquote>
+<p><strong>fixed</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, the inversion will keep the starting resistivity of this
+region.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib.axes.Axes</p>
+<blockquote class="last">
+<div><p>If not <cite>None</cite>, the region will be plotted against this axes.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -72,18 +83,29 @@ the starting resistivity <cite>res0</cite>.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.assignRes0">
-<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
+<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em>, <em>zoneValues={}</em>, <em>fixedValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign starting resitivity values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>regionValues</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
-<dd><p class="first last">Dictionnary with key beeing the region number and the value beeing
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>regionValues</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary with key being the region number and the value being
 the resistivity in [Ohm.m].</p>
-</dd>
-</dl>
+</div></blockquote>
+<p><strong>zoneValues</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary with key being the region number and the zone number.
+There would be no smoothing between the zones if ‘block inversion’
+is selected (<cite>inversion_type</cite> = 4).</p>
+</div></blockquote>
+<p><strong>fixedValues</strong> : dict</p>
+<blockquote class="last">
+<div><p>Dictionnary with key being the region number and a boolean value if
+we want to fix the resistivity of the zone to the starting one.
+Note that it only works for triangular mesh for now.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -97,19 +119,76 @@ the resistivity in [Ohm.m].</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.createBatchSurvey">
+<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read multiples files from a folders (sorted by alphabetical order).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote>
+<div><p>Filename to be parsed.</p>
+</div></blockquote>
+<p><strong>ftype</strong> : str, optional</p>
+<blockquote>
+<div><p>Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
+</div></blockquote>
+<p><strong>info</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionnary of info about the survey.</p>
+</div></blockquote>
+<p><strong>spacing</strong> : float, optional</p>
+<blockquote>
+<div><p>Electrode spacing to be passed to the parser function.</p>
+</div></blockquote>
+<p><strong>parser</strong> : function, optional</p>
+<blockquote>
+<div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
+</div></blockquote>
+<p><strong>isurveys</strong> : list</p>
+<blockquote class="last">
+<div><p>List of surveys index that will be used for error modelling and so
+reciprocal measurements. By default all surveys are used.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.createMesh">
-<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a mesh.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Type of mesh. Eithter ‘quad’ or ‘trian’. If no topography, ‘quad’
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>typ</strong> : str, optional</p>
+<blockquote>
+<div><p>Type of mesh. Eithter ‘quad’ or ‘trian’. If no topography, ‘quad’
 mesh will be chosen.</p>
-</dd>
-</dl>
+</div></blockquote>
+<p><strong>buried</strong> : numpy.array, optional</p>
+<blockquote>
+<div><p>Boolean array of electrodes that are buried. Should be the same
+length as <cite>R2.elec</cite></p>
+</div></blockquote>
+<p><strong>surface</strong> : numpy.array, optional</p>
+<blockquote>
+<div><p>Array with two columns x and y for additional surface points.</p>
+</div></blockquote>
+<p><strong>cl_factor</strong> : float, optional</p>
+<blockquote>
+<div><p>Characteristic length factor. Only used for triangular mesh to allow
+mesh to be refined close the electrodes and then expand.</p>
+</div></blockquote>
+<p><strong>cl</strong> : float, optional</p>
+<blockquote class="last">
+<div><p>Characteristic length that define the mesh size around the
+electrodes.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -124,29 +203,30 @@ mesh will be chosen.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib.axes.Axes, optional</span></dt>
-<dd><p class="first last">Axes to which the graph will be plotted.</p>
-</dd>
-<dt><strong>dump</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function, optional</span></dt>
-<dd><p class="first last">Function that outputs messages from the interactive model creation.</p>
-</dd>
-<dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Type of selection either <cite>poly</cite> for polyline or <cite>rect</cite> for
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib.axes.Axes, optional</p>
+<blockquote>
+<div><p>Axes to which the graph will be plotted.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote>
+<div><p>Function that outputs messages from the interactive model creation.</p>
+</div></blockquote>
+<p><strong>typ</strong> : str</p>
+<blockquote>
+<div><p>Type of selection either <cite>poly</cite> for polyline or <cite>rect</cite> for
 rectangle.</p>
-</dd>
-<dt><strong>addAction</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
-<dd><p class="first last">Function to be called once the selection is finished (design for
+</div></blockquote>
+<p><strong>addAction</strong> : function</p>
+<blockquote>
+<div><p>Function to be called once the selection is finished (design for
 GUI purpose).</p>
-</dd>
-</dl>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib.figure</span></dt>
-<dd><p class="first last">If <cite>ax</cite> is <cite>None</cite>, will return a figure.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib.figure</p>
+<blockquote class="last">
+<div><p>If <cite>ax</cite> is <cite>None</cite>, will return a figure.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -161,11 +241,10 @@ GUI purpose).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>skipDepths</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list of tuple, optional</span></dt>
-<dd><p class="first last">Each tuple in the list is of the form <cite>(skip, depths)</cite>. The <cite>skip</cite> is the number of electrode between the A B and M N electrode. The <cite>depths</cite> is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>skipDepths</strong> : list of tuple, optional</p>
+<blockquote class="last">
+<div><p>Each tuple in the list is of the form <cite>(skip, depths)</cite>. The <cite>skip</cite> is the number of electrode between the A B and M N electrode. The <cite>depths</cite> is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -174,27 +253,33 @@ GUI purpose).</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createSurvey">
-<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Filename to be parsed.</p>
-</dd>
-<dt><strong>ftype</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
-</dd>
-<dt><strong>info</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
-<dd><p class="first last">Dictionnary of info about the survey.</p>
-</dd>
-<dt><strong>spacing</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
-<dd><p class="first last">Electrode spacing to be passed to the parser function.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote>
+<div><p>Filename to be parsed.</p>
+</div></blockquote>
+<p><strong>ftype</strong> : str, optional</p>
+<blockquote>
+<div><p>Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
+</div></blockquote>
+<p><strong>info</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionnary of info about the survey.</p>
+</div></blockquote>
+<p><strong>spacing</strong> : float, optional</p>
+<blockquote>
+<div><p>Electrode spacing to be passed to the parser function.</p>
+</div></blockquote>
+<p><strong>parser</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -203,31 +288,38 @@ a survey object.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createTimeLapseSurvey">
-<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>isurveys=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Filename to be parsed.</p>
-</dd>
-<dt><strong>ftype</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
-</dd>
-<dt><strong>info</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
-<dd><p class="first last">Dictionnary of info about the survey.</p>
-</dd>
-<dt><strong>spacing</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
-<dd><p class="first last">Electrode spacing to be passed to the parser function.</p>
-</dd>
-<dt><strong>isurveys</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
-<dd><p class="first last">List of surveys index that will be used for error modelling and so
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote>
+<div><p>Filename to be parsed.</p>
+</div></blockquote>
+<p><strong>ftype</strong> : str, optional</p>
+<blockquote>
+<div><p>Type of file to be parsed. Either ‘Syscal’ or ‘Protocol’.</p>
+</div></blockquote>
+<p><strong>info</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionnary of info about the survey.</p>
+</div></blockquote>
+<p><strong>spacing</strong> : float, optional</p>
+<blockquote>
+<div><p>Electrode spacing to be passed to the parser function.</p>
+</div></blockquote>
+<p><strong>parser</strong> : function, optional</p>
+<blockquote>
+<div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
+</div></blockquote>
+<p><strong>isurveys</strong> : list</p>
+<blockquote class="last">
+<div><p>List of surveys index that will be used for error modelling and so
 reciprocal measurements. By default all surveys are used.</p>
-</dd>
-</dl>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -236,20 +328,25 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.forward">
-<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.05</em>, <em>iplot=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
+<code class="descname">forward</code><span class="sig-paren">(</span><em>noise=0.0</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.forward" title="Permalink to this definition">¶</a></dt>
 <dd><p>Operates forward modelling.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>noise</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float, optional 0 &lt;= noise &lt;= 1</span></dt>
-<dd><p class="first last">Noise level from a Gaussian distribution that should be applied on the forward apparent resistivities obtained.</p>
-</dd>
-<dt><strong>iplot</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite> will plot the pseudo section after the forward modelling.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>noise</strong> : float, optional 0 &lt;= noise &lt;= 1</p>
+<blockquote>
+<div><p>Noise level from a Gaussian distribution that should be applied
+on the forward apparent resistivities obtained.</p>
+</div></blockquote>
+<p><strong>iplot</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> will plot the pseudo section after the forward modelling.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>Function to print information messages when running the forward model.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -271,11 +368,10 @@ them to <cite>R2.meshResults</cite> list.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote class="last">
+<div><p>Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -290,11 +386,10 @@ them to <cite>R2.meshResults</cite> list.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Path of the CSV file to be imported. The file shouldn’t have any headers just 4 columns with the 4 electrodes numbers.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote class="last">
+<div><p>Path of the CSV file to be imported. The file shouldn’t have any headers just 4 columns with the 4 electrodes numbers.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -310,39 +405,21 @@ inversion using appropriate wrapper, then return results.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>param</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict, optional</span></dt>
-<dd><p class="first last">Dictionary of parameters for inversion. Will be passed to
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>param</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary of parameters for inversion. Will be passed to
 <cite>R2.write2in()</cite>.</p>
-</dd>
-<dt><strong>iplot</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite>, will plot the results of the inversion using
+</div></blockquote>
+<p><strong>iplot</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, will plot the results of the inversion using
 <cite>R2.showResults()</cite>.</p>
-</dd>
-<dt><strong>dump</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function, optinal</span></dt>
-<dd><p class="first last">Function to print the output of the inversion. To be passed to 
+</div></blockquote>
+<p><strong>dump</strong> : function, optinal</p>
+<blockquote class="last">
+<div><p>Function to print the output of the inversion. To be passed to 
 <cite>R2.runR2()</cite>.</p>
-</dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.R2.R2.pseudo">
-<code class="descname">pseudo</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.pseudo" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create a pseudo section.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>**kwargs :</strong></dt>
-<dd><p class="first last">To be passed to <cite>R2.pseudoCallback()</cite>.</p>
-</dd>
-</dl>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -357,15 +434,23 @@ inversion using appropriate wrapper, then return results.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis</span></dt>
-<dd><p class="first last">If specified, the graph will be plotted against <cite>ax</cite>.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis</p>
+<blockquote class="last">
+<div><p>If specified, the graph will be plotted against <cite>ax</cite>.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.resetRegions">
+<code class="descname">resetRegions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.resetRegions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Just reset all regions already draw. Shouldn’t be needed as 
+the <cite>self.runR2()</cite> automatically use a homogenous model as starting
+for inversion. The only purpose of this is to use an inhomogeous
+starting model to invert data from forward modelling.</p>
 </dd></dl>
 
 <dl class="method">
@@ -376,18 +461,24 @@ inversion using appropriate wrapper, then return results.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>dirname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Path of the directory where to run the inversion code.</p>
-</dd>
-<dt><strong>dump</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function, optional</span></dt>
-<dd><p class="first last">Function to print the output of the invrsion code while running.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str, optional</p>
+<blockquote>
+<div><p>Path of the directory where to run the inversion code.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>Function to print the output of the invrsion code while running.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.setBorehole">
+<code class="descname">setBorehole</code><span class="sig-paren">(</span><em>val=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setBorehole" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set all surveys in borehole type if <cite>True</cite> is passed.</p>
 </dd></dl>
 
 <dl class="method">
@@ -398,15 +489,20 @@ inversion using appropriate wrapper, then return results.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>dirname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Path of the working directory.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str</p>
+<blockquote class="last">
+<div><p>Path of the working directory.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showInversionErrors">
+<code class="descname">showInversionErrors</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInversionErrors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display inversion error by measurment numbers.</p>
 </dd></dl>
 
 <dl class="method">
@@ -417,11 +513,10 @@ inversion using appropriate wrapper, then return results.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotib axis, optional</span></dt>
-<dd><p class="first last">If specified, the graph will be plotted along <cite>ax</cite>.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotib axis, optional</p>
+<blockquote class="last">
+<div><p>If specified, the graph will be plotted along <cite>ax</cite>.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -442,28 +537,32 @@ inversion using appropriate wrapper, then return results.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>index</strong> <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
-<dd><p class="first last">Index of the inverted section (mainly in the case of time-lapse
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>index</strong> : int, optional</p>
+<blockquote>
+<div><p>Index of the inverted section (mainly in the case of time-lapse
 inversion)</p>
-</dd>
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, the inverted graph will be plotted agains <cite>ax</cite>.</p>
-</dd>
-<dt><strong>edge_color</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Color of the edges of the mesh.</p>
-</dd>
-<dt><strong>attr</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Name of the attribute to be plotted.</p>
-</dd>
-<dt><strong>sens</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite> and if sensitivity is available, it will be plotted as
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, the inverted graph will be plotted agains <cite>ax</cite>.</p>
+</div></blockquote>
+<p><strong>edge_color</strong> : str, optional</p>
+<blockquote>
+<div><p>Color of the edges of the mesh.</p>
+</div></blockquote>
+<p><strong>attr</strong> : str, optional</p>
+<blockquote>
+<div><p>Name of the attribute to be plotted.</p>
+</div></blockquote>
+<p><strong>sens</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> and if sensitivity is available, it will be plotted as
 a white transparent shade on top of the inverted section.</p>
-</dd>
-<dt><strong>color_map</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Name of the colormap to be used.</p>
-</dd>
-</dl>
+</div></blockquote>
+<p><strong>color_map</strong> : str, optional</p>
+<blockquote class="last">
+<div><p>Name of the colormap to be used.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -479,24 +578,27 @@ a white transparent shade on top of the inverted section.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Name of the inverted <cite>.dat</cite> file produced by the inversion.</p>
-</dd>
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, the graph will be plotted along <cite>ax</cite>.</p>
-</dd>
-<dt><strong>ilog10</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite>, the log10 of the resistivity will be used.</p>
-</dd>
-<dt><strong>isen</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite>, sensitivity will be displayed as white transparent
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str, optional</p>
+<blockquote>
+<div><p>Name of the inverted <cite>.dat</cite> file produced by the inversion.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, the graph will be plotted along <cite>ax</cite>.</p>
+</div></blockquote>
+<p><strong>ilog10</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, the log10 of the resistivity will be used.</p>
+</div></blockquote>
+<p><strong>isen</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, sensitivity will be displayed as white transparent
 shade on top of the inverted section.</p>
-</dd>
-<dt><strong>figsize</strong> <span class="classifier-delimiter">:</span> <span class="classifier">tuple, optional</span></dt>
-<dd><p class="first last">Size of the figure.</p>
-</dd>
-</dl>
+</div></blockquote>
+<p><strong>figsize</strong> : tuple, optional</p>
+<blockquote class="last">
+<div><p>Size of the figure.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -511,14 +613,14 @@ shade on top of the inverted section.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>param</strong> <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
-<dd><p class="first last">Dictionnary of parameters and values for the inversion settings.</p>
-</dd>
-<dt><strong>typ</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Type of inversion. By default given by <cite>R2.typ</cite>.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>param</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary of parameters and values for the inversion settings.</p>
+</div></blockquote>
+<p><strong>typ</strong> : str, optional</p>
+<blockquote class="last">
+<div><p>Type of inversion. By default given by <cite>R2.typ</cite>.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -533,14 +635,14 @@ shade on top of the inverted section.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>errTyp</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Type of the DC error. Either ‘pwl’, ‘lin’, ‘obs’.</p>
-</dd>
-<dt><strong>errTypIP</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Type of the IP error. Either ‘pwl’.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>errTyp</strong> : str</p>
+<blockquote>
+<div><p>Type of the DC error. Either ‘pwl’, ‘lin’, ‘obs’.</p>
+</div></blockquote>
+<p><strong>errTypIP</strong> : str</p>
+<blockquote class="last">
+<div><p>Type of the IP error. Either ‘pwl’.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -553,12 +655,12 @@ shade on top of the inverted section.</p>
 <p>&#64;author: jkl</p>
 <dl class="class">
 <dt id="api.Survey.Survey">
-<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that handles geophysical data and some basic functions. One 
 instance is created for each survey.</p>
 <dl class="method">
 <dt id="api.Survey.Survey.addData">
-<code class="descname">addData</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addData" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addData</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add data to the actual survey (for instance the reciprocal if they
 are not in the same file).</p>
 </dd></dl>
@@ -589,12 +691,11 @@ are not in the same file).</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>i2keep</strong> <span class="classifier-delimiter">:</span> <span class="classifier">ndarray of bool</span></dt>
-<dd><p class="first last">Index where all measurement to be retained are <cite>True</cite> and the
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>i2keep</strong> : ndarray of bool</p>
+<blockquote class="last">
+<div><p>Index where all measurement to be retained are <cite>True</cite> and the
 others <cite>False</cite>.</p>
-</dd>
-</dl>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -610,18 +711,16 @@ Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced 
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
-<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -642,14 +741,14 @@ Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced 
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>phimin</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd><p class="first last">Minimium phase angle [mrad].</p>
-</dd>
-<dt><strong>phimax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
-<dd><p class="first last">Maximum phase angle [mrad].</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>phimin</strong> : float</p>
+<blockquote>
+<div><p>Minimium phase angle [mrad].</p>
+</div></blockquote>
+<p><strong>phimax</strong> : float</p>
+<blockquote class="last">
+<div><p>Maximum phase angle [mrad].</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -664,18 +763,16 @@ Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced 
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
-<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -691,35 +788,38 @@ func to each bin.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>datax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd><p class="first last">x values to be from which the log-classes will be made.</p>
-</dd>
-<dt><strong>datay</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd><p class="first last">y values to which the function <cite>func</cite> will be applied inside each
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>datax</strong> : array</p>
+<blockquote>
+<div><p>x values to be from which the log-classes will be made.</p>
+</div></blockquote>
+<p><strong>datay</strong> : array</p>
+<blockquote>
+<div><p>y values to which the function <cite>func</cite> will be applied inside each
 log-class</p>
-</dd>
-<dt><strong>func</strong> <span class="classifier-delimiter">:</span> <span class="classifier">function</span></dt>
-<dd><p class="first last">Function to be applied to the y value of each log class.</p>
-</dd>
-<dt><strong>class1</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array, optional</span></dt>
-<dd><p class="first last">Array of values for the log classes. If given, the limit of the 
+</div></blockquote>
+<p><strong>func</strong> : function</p>
+<blockquote>
+<div><p>Function to be applied to the y value of each log class.</p>
+</div></blockquote>
+<p><strong>class1</strong> : array, optional</p>
+<blockquote>
+<div><p>Array of values for the log classes. If given, the limit of the 
 classes will be computed as 10**class1</p>
-</dd>
-</dl>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>mbins</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd><p class="first last">x-means of each bin.</p>
-</dd>
-<dt><strong>vbins</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd><p class="first last">Value of each bin (output of the function <cite>func</cite>).</p>
-</dd>
-<dt><strong>nbins</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array</span></dt>
-<dd><p class="first last">Number of measurements in each bin.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mbins</strong> : array</p>
+<blockquote>
+<div><p>x-means of each bin.</p>
+</div></blockquote>
+<p><strong>vbins</strong> : array</p>
+<blockquote>
+<div><p>Value of each bin (output of the function <cite>func</cite>).</p>
+</div></blockquote>
+<p><strong>nbins</strong> : array</p>
+<blockquote class="last">
+<div><p>Number of measurements in each bin.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -727,24 +827,20 @@ classes will be computed as 10**class1</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="api.Survey.Survey.manualFilter">
-<code class="descname">manualFilter</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.manualFilter" title="Permalink to this definition">¶</a></dt>
+<dt id="api.Survey.Survey.manualFiltering">
+<code class="descname">manualFiltering</code><span class="sig-paren">(</span><em>ax=None</em>, <em>figsize=(12</em>, <em>3)</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=False</em>, <em>label=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.manualFiltering" title="Permalink to this definition">¶</a></dt>
 <dd><p>Manually filters the data visually.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, the graph is plotted along the axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, the graph is plotted along the axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>If `ax` is not None, a matplotlib figure is returned.</strong></dt>
-<dd></dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">If <cite>ax</cite> is not None, a matplotlib figure is returned.</p>
 </td>
 </tr>
 </tbody>
@@ -759,18 +855,16 @@ classes will be computed as 10**class1</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
-<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -785,18 +879,16 @@ classes will be computed as 10**class1</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
-<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -811,18 +903,16 @@ classes will be computed as 10**class1</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
-<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -831,8 +921,9 @@ classes will be computed as 10**class1</p>
 
 <dl class="method">
 <dt id="api.Survey.Survey.pseudo">
-<code class="descname">pseudo</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
-<dd><p>create true pseudo graph with points and no interpolation</p>
+<code class="descname">pseudo</code><span class="sig-paren">(</span><em>ax=None</em>, <em>bx=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot pseudo section if 2D survey or just quadrupoles transfer
+resistance otherwise.</p>
 </dd></dl>
 
 <dl class="method">
@@ -843,25 +934,30 @@ classes will be computed as 10**class1</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, the graph is plotted along this axis.</p>
-</dd>
-<dt><strong>contour</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
-<dd><p class="first last">If True, use filled contour instead of points in the pseudosection.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, the graph is plotted along this axis.</p>
+</div></blockquote>
+<p><strong>contour</strong> : bool</p>
+<blockquote>
+<div><p>If True, use filled contour instead of points in the pseudosection.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure</span></dt>
-<dd><p class="first last">If <cite>ax</cite> is not specified, the method returns a figure.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure</p>
+<blockquote class="last">
+<div><p>If <cite>ax</cite> is not specified, the method returns a figure.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.pseudoSection">
+<code class="descname">pseudoSection</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudoSection" title="Permalink to this definition">¶</a></dt>
+<dd><p>create true pseudo graph with points and no interpolation</p>
 </dd></dl>
 
 <dl class="method">
@@ -872,18 +968,16 @@ classes will be computed as 10**class1</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>ax</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib axis, optional</span></dt>
-<dd><p class="first last">If specified, graph will be plotted on the given axis.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>fig</strong> <span class="classifier-delimiter">:</span> <span class="classifier">matplotlib figure, optional</span></dt>
-<dd><p class="first last">If ax is not specified, the function will return a figure object.</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -910,12 +1004,11 @@ without reciprocal.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>stype</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
-<dd><p class="first last">Type of the survey. Could also be infered using 
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>stype</strong> : str</p>
+<blockquote class="last">
+<div><p>Type of the survey. Could also be infered using 
 <cite>Survey.inferType()</cite>.</p>
-</dd>
-</dl>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -930,41 +1023,44 @@ without reciprocal.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>outputname</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Path of the output file.</p>
-</dd>
-<dt><strong>errTyp</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><dl class="first last docutils">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>outputname</strong> : str, optional</p>
+<blockquote>
+<div><p>Path of the output file.</p>
+</div></blockquote>
+<p><strong>errTyp</strong> : str, optional</p>
+<blockquote>
+<div><dl class="docutils">
 <dt>If <cite>none</cite> no error columns will be added. Other options are <span class="classifier-delimiter">:</span> <span class="classifier"></span></dt>
 <dd><p class="first last">‘lin’,’lme’,’pwl’or ‘obs’.</p>
 </dd>
 </dl>
-</dd>
-<dt><strong>errTot</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite>, the modelling error will be added to the error from the
+</div></blockquote>
+<p><strong>errTot</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, the modelling error will be added to the error from the
 error model to form the <em>total error</em>.</p>
-</dd>
-<dt><strong>ip</strong> <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
-<dd><p class="first last">If <cite>True</cite> and IP columns will be added to the file.</p>
-</dd>
-<dt><strong>errTypIP</strong> <span class="classifier-delimiter">:</span> <span class="classifier">str, optional</span></dt>
-<dd><p class="first last">Needs <cite>ip=True</cite> to be taken into account. Specify the string of
+</div></blockquote>
+<p><strong>ip</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> and IP columns will be added to the file.</p>
+</div></blockquote>
+<p><strong>errTypIP</strong> : str, optional</p>
+<blockquote>
+<div><p>Needs <cite>ip=True</cite> to be taken into account. Specify the string of
 the error model to apply for IP data.</p>
-</dd>
-</dl>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>protocol</strong> : pandas.DataFrame</p>
+<blockquote class="last">
+<div><p>Dataframe which contains the data for the <cite>protocol.dat</cite>.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="function">
-<dt id="api.Survey.pseudo">
-<code class="descclassname">api.Survey.</code><code class="descname">pseudo</code><span class="sig-paren">(</span><em>array</em>, <em>resist</em>, <em>spacing</em>, <em>name=''</em>, <em>ax=None</em>, <em>figsize=(12</em>, <em>3)</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=False</em>, <em>label=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
-<dd><p>create true pseudo graph with points and no interpolation</p>
 </dd></dl>
 
 <span class="target" id="module-api.meshTools"></span><p>Created on Wed May 30 10:19:09 2018, python 3.6.5
@@ -977,14 +1073,11 @@ to mesh parameters.</p>
 <dt>Classes: </dt>
 <dd>mesh_obj</dd>
 <dt>Functions: </dt>
-<dd><p class="first">tri_cent() - computes the centre point for a 2d triangular element
+<dd>tri_cent() - computes the centre point for a 2d triangular element
 vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-readR2_resdat () - reads resistivity values from a R2 file. 
-quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates</p>
-<blockquote>
-<div>(returns info needed for R2in)</div></blockquote>
-<p class="last">tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</p>
-</dd>
+readR2_resdat () - reads resistivity values from a R2 file
+quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
+tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</dd>
 <dt>Dependencies: </dt>
 <dd>numpy (conda lib)
 matplotlib (conda lib)
@@ -993,352 +1086,39 @@ gmshWrap(pyR2 api module)
 python3 standard libaries</dd>
 </dl>
 <p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
-<dl class="class">
-<dt id="api.meshTools.Mesh_obj">
-<em class="property">class </em><code class="descclassname">api.meshTools.</code><code class="descname">Mesh_obj</code><span class="sig-paren">(</span><em>num_nodes</em>, <em>num_elms</em>, <em>node_x</em>, <em>node_y</em>, <em>node_z</em>, <em>node_id</em>, <em>elm_id</em>, <em>node_data</em>, <em>elm_centre</em>, <em>elm_area</em>, <em>cell_type</em>, <em>cell_attributes</em>, <em>atribute_title</em>, <em>original_file_path='N/A'</em>, <em>regions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj" title="Permalink to this definition">¶</a></dt>
-<dd><p>creates a mesh class</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>num_nodes: int</strong></dt>
-<dd><p class="first last">number of nodes</p>
-</dd>
-<dt><strong>num_elms: int</strong></dt>
-<dd><p class="first last">number of elements</p>
-</dd>
-<dt><strong>node_x: list, 1d numpy array</strong></dt>
-<dd><p class="first last">x coordinates of nodes</p>
-</dd>
-<dt><strong>node_y: list, 1d numpy array</strong></dt>
-<dd><p class="first last">coordinates of nodes</p>
-</dd>
-<dt><strong>node_z: list, 1d numpy array</strong></dt>
-<dd><p class="first last">z coordinates of nodes</p>
-</dd>
-<dt><strong>node_id: list</strong></dt>
-<dd><p class="first last">node id number (ie 1,2,3,4,…)</p>
-</dd>
-<dt><strong>elm_id: list</strong></dt>
-<dd><p class="first last">element id number</p>
-</dd>
-<dt><strong>node_data: list of lists of ints</strong></dt>
-<dd><p class="first last">nodes of element vertices in the form [[node1],[node2],[node3],…], each
-node id should be an integer type.</p>
-</dd>
-<dt><strong>elm_centre: list of lists of floats</strong></dt>
-<dd><p class="first last">centre of elements (x,y)</p>
-</dd>
-<dt><strong>elm_area: list</strong></dt>
-<dd><p class="first last">area of each element</p>
-</dd>
-<dt><strong>cell_type: list of ints</strong></dt>
-<dd><p class="first last">code referencing cell geometry (e.g. triangle) according to vtk format</p>
-</dd>
-<dt><strong>cell_attributes: list of floats</strong></dt>
-<dd><p class="first last">the values of the attributes given to each cell</p>
-</dd>
-<dt><strong>atribute_title: string</strong></dt>
-<dd><p class="first last">what is the attribute? we may use conductivity instead of resistivity for example</p>
-</dd>
-<dt><strong>original_file_path: string, optional</strong></dt>
-<dd><p class="first last">file path to where the mesh file was originally imported</p>
-</dd>
-<dt><strong>regions: optional</strong></dt>
-<dd><p class="first last">element indexes for a material in the mesh (needs further explanation)</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>Mesh_obj: object</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.apply_func">
-<code class="descname">apply_func</code><span class="sig-paren">(</span><em>mesh_paras</em>, <em>material_no</em>, <em>new_key</em>, <em>function</em>, <em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.apply_func" title="Permalink to this definition">¶</a></dt>
-<dd><p>applys a function to a mesh by material number and mesh parameter</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>mesh_paras:</strong></dt>
-<dd><p class="first last">mesh parameters from which new parameters are calculated</p>
-</dd>
-<dt><strong>material_no: list of ints</strong></dt>
-<dd><p class="first last">material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
-…ie if you have 2 materials in the mesh then pass an array of ones and twos.</p>
-</dd>
-<dt><strong>new_key: string</strong></dt>
-<dd><p class="first last">key assigned to the parameter in the attr_cache. DOES NOT default</p>
-</dd>
-<dt><strong>function: function</strong></dt>
-<dd><p class="first last">function to be applied to mesh attributes, first argument must be the mesh parameter</p>
-</dd>
-<dt><strong>args: [see function info]</strong></dt>
-<dd><p class="first last">all arguments to be passed through function after to modify the mesh parameter,
-… argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
-… where letters are the material, numbers refer to the argument number</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>new parameters added to Mesh_obj.attr_dict</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.asgn_atbrte_ID">
-<code class="descname">asgn_atbrte_ID</code><span class="sig-paren">(</span><em>poly_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.asgn_atbrte_ID" title="Permalink to this definition">¶</a></dt>
-<dd><p>Assign material/region assocations with certain elements in the mesh 
-say if you have an area you’d like to forward model. 
-<strong>*2D ONLY*</strong></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>poly_data: dictionary</strong></dt>
-<dd><p class="first last">with the vertices (x,y) of each point in the polygon</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>a list of element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the</strong></dt>
-<dd></dd>
-<dt><strong>second region defined and so on. If the element cant be assigned to a region then it’ll be left at 0.</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.assign_material_attribute">
-<code class="descname">assign_material_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.assign_material_attribute" title="Permalink to this definition">¶</a></dt>
-<dd><p>Asssigns values to the mesh which depend on region / material only. E.G 
-a single resistivity value</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>material_no</strong> <span class="classifier-delimiter">:</span> <span class="classifier">array or list</span></dt>
-<dd><p class="first last">integers starting at 0 or 1, and ascend in intervals of 1, which 
-correspond to a material in the mesh returned from assign_attr_ID.</p>
-</dd>
-<dt><strong>attr_list</strong> <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
-<dd><p class="first last">list of values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
-[resistivity1,resistivity2,resistivity3]</p>
-</dd>
-<dt><strong>new_key: string</strong></dt>
-<dd><p class="first last">key identifier assigned to the attribute in the attr_cache.</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>mesh object will now have the new attribute added. Use the mesh.show() function to see the result.</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="api.meshTools.Mesh_obj.mesh_dict2obj">
-<em class="property">classmethod </em><code class="descname">mesh_dict2obj</code><span class="sig-paren">(</span><em>mesh_info</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.mesh_dict2obj" title="Permalink to this definition">¶</a></dt>
-<dd><p>converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
-mesh object, its an alternative way to make a mesh object. 
-<strong>*Intended for development use*</strong></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>mesh_info: dictionary</strong></dt>
-<dd><p class="first last">mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>mesh class object</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.show">
-<code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>ylim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.show" title="Permalink to this definition">¶</a></dt>
-<dd><p>displays a 2d mesh and attribute</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>color_map</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string,</span></dt>
-<dd><p class="first last">color map reference</p>
-</dd>
-<dt><strong>color_bar</strong> <span class="classifier-delimiter">:</span> <span class="classifier">Boolian,</span></dt>
-<dd><p class="first last">True to plot colorbar</p>
-</dd>
-<dt><strong>xlim: tuple</strong></dt>
-<dd><p class="first last">axis x limits as (xmin, xmax)</p>
-</dd>
-<dt><strong>ylim: tuple</strong></dt>
-<dd><p class="first last">axis y limits as (ymin, ymax)</p>
-</dd>
-<dt><strong>ax: matplotlib axis handle,</strong></dt>
-<dd><p class="first last">axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
-</dd>
-<dt><strong>electrodes: Boolian</strong></dt>
-<dd><p class="first last">enter true to add electrodes to plot</p>
-</dd>
-<dt><strong>sens: Boolian,</strong></dt>
-<dd><p class="first last">enter true to plot sensitivities</p>
-</dd>
-<dt><strong>edge_color: string</strong></dt>
-<dd><p class="first last">color of the cell edges, set to None if you dont want an edge</p>
-</dd>
-<dt><strong>contour: boolian</strong></dt>
-<dd><p class="first last">if True, plot filled contours</p>
-</dd>
-<dt><strong>vmin: float</strong></dt>
-<dd><p class="first last">minimum limit for the color bar scale</p>
-</dd>
-<dt><strong>vmax: float</strong></dt>
-<dd><p class="first last">maximum limit for the color bar scale</p>
-</dd>
-<dt><strong>attr: string</strong></dt>
-<dd><p class="first last">which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
-as the key for this dictionary</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>matplotlib figure with mesh</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>Show a mesh object using matplotlib. The color map variable should be 
-a string refering to the color map you want (default is “jet”).
-As we’re using the matplotlib package here any color map avialable within 
-matplotlib package can be used to display the mesh here also. See: 
-<a class="reference external" href="https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html">https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html</a></p>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.write_attr">
-<code class="descname">write_attr</code><span class="sig-paren">(</span><em>attr_key</em>, <em>file_name='_res.dat'</em>, <em>file_path='defualt'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_attr" title="Permalink to this definition">¶</a></dt>
-<dd><p>writes a attribute to a _res.dat type file. file_name entered seperately 
-becuase it will be needed for the R2 config file. The reason for this function
-is so you can write a forward model parameter input file. 
-Parameters
-———
-attr_key: string</p>
-<blockquote>
-<div>key identifying the attr to be written in the mesh object attr_cache</div></blockquote>
-<dl class="docutils">
-<dt>file_name: string</dt>
-<dd>name of the _res.dat type file</dd>
-<dt>file_path: string</dt>
-<dd>directory to which the file will be saved in, if left as none then the
-file will be written in the current working directory</dd>
-</dl>
-<p>#_res.dat type file</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="api.meshTools.Mesh_obj.write_vtk">
-<code class="descname">write_vtk</code><span class="sig-paren">(</span><em>file_path='default'</em>, <em>title=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh_obj.write_vtk" title="Permalink to this definition">¶</a></dt>
-<dd><p>writes a vtk file</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>file_path</strong> <span class="classifier-delimiter">:</span> <span class="classifier">string</span></dt>
-<dd><p class="first last">maps where python will write the file. if left as default then mesh.vtk
-will be written the current working directory.</p>
-</dd>
-<dt><strong>title: string</strong></dt>
-<dd><p class="first last">header string written at the top of the vtk file</p>
-</dd>
-</dl>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>vtk file written to specified directory</strong></dt>
-<dd></dd>
-</dl>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</dd></dl>
-
 <dl class="function">
 <dt id="api.meshTools.points2vtk">
 <code class="descclassname">api.meshTools.</code><code class="descname">points2vtk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em>, <em>file_name='points.vtk'</em>, <em>title='points'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.points2vtk" title="Permalink to this definition">¶</a></dt>
-<dd><p>function makes a .vtk file for some xyz coordinates. optional argument
+<dd><p>Function makes a .vtk file for some xyz coordinates. optional argument
 renames the name of the file (needs file path also) (default is “points.vtk”). 
-title is the name of the vtk file</p>
+title is the name of the vtk file.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>x: list, tuple, np array</strong></dt>
-<dd><p class="first last">x coordinates of points</p>
-</dd>
-<dt><strong>y: list, tuple, np array</strong></dt>
-<dd><p class="first last">y coordinates of points</p>
-</dd>
-<dt><strong>z: list, tuple, np array</strong></dt>
-<dd><p class="first last">z coordinates of points</p>
-</dd>
-<dt><strong>file_name: string, optional</strong></dt>
-<dd><p class="first last">path to saved file, defualts to ‘points.vtk’ in current working directory</p>
-</dd>
-<dt><strong>title: string, optional</strong></dt>
-<dd><p class="first last">title of vtk file</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>x</strong> : list, tuple, np array</p>
+<blockquote>
+<div><p>X coordinates of points.</p>
+</div></blockquote>
+<p><strong>y</strong> : list, tuple, np array</p>
+<blockquote>
+<div><p>Y coordinates of points.</p>
+</div></blockquote>
+<p><strong>z</strong> : list, tuple, np array</p>
+<blockquote>
+<div><p>Z coordinates of points.</p>
+</div></blockquote>
+<p><strong>file_name</strong> : string, optional</p>
+<blockquote>
+<div><p>Path to saved file, defualts to ‘points.vtk’ in current working directory.</p>
+</div></blockquote>
+<p><strong>title</strong> : string, optional</p>
+<blockquote>
+<div><p>Title of vtk file.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>~.vtk file</strong></dt>
-<dd></dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>~.vtk</strong> : file</p>
 </td>
 </tr>
 </tbody>
@@ -1348,54 +1128,62 @@ title is the name of the vtk file</p>
 <dl class="function">
 <dt id="api.meshTools.quad_mesh">
 <code class="descclassname">api.meshTools.</code><code class="descname">quad_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elemx=4</em>, <em>xgf=1.5</em>, <em>yf=1.1</em>, <em>ygf=1.5</em>, <em>doi=-1</em>, <em>pad=2</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.quad_mesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>creates a quaderlateral mesh given the electrode x and y positions. Function
+<dd><p>Creates a quaderlateral mesh given the electrode x and y positions. Function
 relies heavily on the numpy package.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>elec_x: list, np array</strong></dt>
-<dd><p class="first last">electrode x coordinates</p>
-</dd>
-<dt><strong>elec_y: list, np array</strong></dt>
-<dd><p class="first last">electrode y coordinates</p>
-</dd>
-<dt><strong>elemy: int</strong></dt>
-<dd><p class="first last">number of elements in the fine y region</p>
-</dd>
-<dt><strong>yf: float</strong></dt>
-<dd><p class="first last">y factor multiplier in the fine zone</p>
-</dd>
-<dt><strong>ygf: float</strong></dt>
-<dd><p class="first last">y factor multiplier in the coarse zone</p>
-</dd>
-<dt><strong>doi: float (m)</strong></dt>
-<dd><p class="first last">depth of investigation (if left as -1 = half survey width)</p>
-</dd>
-<dt><strong>pad:</strong></dt>
-<dd><p class="first last">x padding outside the fine area (tipicaly twice the number of elements between electrodes)</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec_x</strong> : list, np array</p>
+<blockquote>
+<div><p>Electrode x coordinates</p>
+</div></blockquote>
+<p><strong>elec_y</strong> : list, np array</p>
+<blockquote>
+<div><p>Electrode y coordinates</p>
+</div></blockquote>
+<p><strong>elemy</strong> : int</p>
+<blockquote>
+<div><p>Number of elements in the fine y region</p>
+</div></blockquote>
+<p><strong>yf</strong> : float</p>
+<blockquote>
+<div><p>Y factor multiplier in the fine zone.</p>
+</div></blockquote>
+<p><strong>ygf</strong> : float</p>
+<blockquote>
+<div><p>Y factor multiplier in the coarse zone.</p>
+</div></blockquote>
+<p><strong>doi</strong> : float (m)</p>
+<blockquote>
+<div><p>Depth of investigation (if left as -1 = half survey width).</p>
+</div></blockquote>
+<p><strong>pad :</strong></p>
+<blockquote>
+<div><p>X padding outside the fine area (tipicaly twice the number of elements between electrodes).</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>Mesh: class</strong></dt>
-<dd><p class="first last">mesh object</p>
-</dd>
-<dt><strong>meshx: np array</strong></dt>
-<dd><p class="first last">mesh x locations for R2in file</p>
-</dd>
-<dt><strong>meshy: np array</strong></dt>
-<dd><p class="first last">mesh y locations for R2in file (ie node depths)</p>
-</dd>
-<dt><strong>topo: np array</strong></dt>
-<dd><p class="first last">topography for R2in file</p>
-</dd>
-<dt><strong>elec_node: np array</strong></dt>
-<dd><p class="first last">x columns where the electrodes are</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Mesh</strong> : class</p>
+<blockquote>
+<div><p>Mesh object</p>
+</div></blockquote>
+<p><strong>meshx</strong> : numpy.array</p>
+<blockquote>
+<div><p>Mesh x locations for R2in file.</p>
+</div></blockquote>
+<p><strong>meshy</strong> : numpy.array</p>
+<blockquote>
+<div><p>Mesh y locations for R2in file (ie node depths).</p>
+</div></blockquote>
+<p><strong>topo</strong> : numpy.array</p>
+<blockquote>
+<div><p>Topography for R2in file.</p>
+</div></blockquote>
+<p><strong>elec_node</strong> : numpy.array</p>
+<blockquote class="last">
+<div><p>x columns where the electrodes are.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1405,23 +1193,21 @@ relies heavily on the numpy package.</p>
 <dl class="function">
 <dt id="api.meshTools.readR2_resdat">
 <code class="descclassname">api.meshTools.</code><code class="descname">readR2_resdat</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.readR2_resdat" title="Permalink to this definition">¶</a></dt>
-<dd><p>reads resistivity values in f00#_res.dat file output from R2,</p>
+<dd><p>Reads resistivity values in f00#_res.dat file output from R2.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>file_path: string</strong></dt>
-<dd><p class="first last">maps to the _res.dat file</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string</p>
+<blockquote>
+<div><p>Maps to the _res.dat file.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>res_values: list of floats</strong></dt>
-<dd><p class="first last">resistivity values returned from the .dat file</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res_values</strong> : list of floats</p>
+<blockquote class="last">
+<div><p>Resistivity values returned from the .dat file.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1431,23 +1217,21 @@ relies heavily on the numpy package.</p>
 <dl class="function">
 <dt id="api.meshTools.readR2_sensdat">
 <code class="descclassname">api.meshTools.</code><code class="descname">readR2_sensdat</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.readR2_sensdat" title="Permalink to this definition">¶</a></dt>
-<dd><p>reads sensitivity values in f00#_res.dat file output from R2,</p>
+<dd><p>Reads sensitivity values in _sens.dat file output from R2.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>file_path: string</strong></dt>
-<dd><p class="first last">maps to the _sens.dat file</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string</p>
+<blockquote>
+<div><p>Maps to the _sens.dat file.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>res_values: list of floats</strong></dt>
-<dd><p class="first last">sensitivity values returned from the .dat file (not log10!)</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>res_values</strong> : list of floats</p>
+<blockquote class="last">
+<div><p>Sensitivity values returned from the .dat file (not log10!).</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1457,23 +1241,30 @@ relies heavily on the numpy package.</p>
 <dl class="function">
 <dt id="api.meshTools.tri_cent">
 <code class="descclassname">api.meshTools.</code><code class="descname">tri_cent</code><span class="sig-paren">(</span><em>p</em>, <em>q</em>, <em>r</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_cent" title="Permalink to this definition">¶</a></dt>
-<dd><p>#compute the centre coordinates for a 2d triangle given the x,y coordinates 
-#of the vertices.</p>
+<dd><p>Compute the centre coordinates for a 2d triangle given the x,y coordinates 
+of the vertices.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>#code expects points as p=(x,y) and so on (counter clockwise prefered)</strong></dt>
-<dd></dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>p</strong> : tuple,list,np array</p>
+<blockquote>
+<div><p>Coordinates of triangle vertices in the form (x,y).</p>
+</div></blockquote>
+<p><strong>q</strong> : tuple,list,np array</p>
+<blockquote>
+<div><p>Coordinates of triangle vertices in the form (x,y).</p>
+</div></blockquote>
+<p><strong>r</strong> : tuple,list,np array</p>
+<blockquote>
+<div><p>Coordinates of triangle vertices in the form (x,y).</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>coordinates: tuple</strong></dt>
-<dd><p class="first last">in the format (x,y)</p>
-</dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>coordinates</strong> : tuple</p>
+<blockquote class="last">
+<div><p>In the format (x,y).</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1482,39 +1273,39 @@ relies heavily on the numpy package.</p>
 
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>save_path='default'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-this function expects the current working directory has path: exe/gmsh.exe</p>
+this function expects the current working directory has path: exe/gmsh.exe.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>keep_files: boolian</strong></dt>
-<dd><p class="first last">True if the gmsh input and output file is to be stored in the exe directory</p>
-</dd>
-<dt><strong>show_ouput: boolian</strong></dt>
-<dd><p class="first last">True if gmsh output is to be printed to console</p>
-</dd>
-<dt><strong>path: string</strong></dt>
-<dd><p class="first last">path to exe folder (leave default unless you know what you are doing)</p>
-</dd>
-<dt><strong>save_path: string</strong></dt>
-<dd><p class="first last">directory to save ‘mesh.dat’</p>
-</dd>
-<dt><strong>geom_input:</strong></dt>
-<dd><p class="first last">dictionary used to generate survey geometry in genGeoFile_adv (see notes there),</p>
-</dd>
-<dt><strong>**kwargs: optional</strong></dt>
-<dd><p class="first last">key word arguments to be passed to genGeoFile.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>geom_input</strong> : dictionnary</p>
+<blockquote>
+<div><p>Dictionary used to generate survey geometry in genGeoFile_adv (see notes there).</p>
+</div></blockquote>
+<p><strong>keep_files</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> if the gmsh input and output file is to be stored in the exe directory.</p>
+</div></blockquote>
+<p><strong>show_ouput</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> if gmsh output is to be printed to console.</p>
+</div></blockquote>
+<p><strong>path</strong> : string, optional</p>
+<blockquote>
+<div><p>Path to exe folder (leave default unless you know what you are doing).</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : optional</p>
+<blockquote>
+<div><p>Key word arguments to be passed to genGeoFile.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>mesh.dat in the Executables directory</strong></dt>
-<dd></dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh.dat</strong> : file</p>
+<blockquote class="last">
+<div><p>In the Executables directory.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1523,28 +1314,29 @@ this function expects the current working directory has path: exe/gmsh.exe</p>
 
 <dl class="function">
 <dt id="api.meshTools.vtk_import">
-<code class="descclassname">api.meshTools.</code><code class="descname">vtk_import</code><span class="sig-paren">(</span><em>file_path='ask_to_open'</em>, <em>parameter_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.vtk_import" title="Permalink to this definition">¶</a></dt>
-<dd><p>#imports a 2d mesh file into the python workspace, can have triangular or quad type elements</p>
+<code class="descclassname">api.meshTools.</code><code class="descname">vtk_import</code><span class="sig-paren">(</span><em>file_path='mesh.vtk'</em>, <em>parameter_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.vtk_import" title="Permalink to this definition">¶</a></dt>
+<dd><p>Imports a 2d mesh file into the python workspace, can have triangular or quad type elements. 3D meshes 
+are still a work in progress.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
-<dt><strong>file_path: string</strong></dt>
-<dd><p class="first last">file path to mesh file. note that a error will occur if the file format is not as expected</p>
-</dd>
-<dt><strong>parameter_title: string</strong></dt>
-<dd><p class="first last">name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
-also note that all parameters will be imported. just the title highlights which one the mesh object will use as 
-default.</p>
-</dd>
-</dl>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string, optional</p>
+<blockquote>
+<div><p>File path to mesh file. Note that a error will occur if the file format is not as expected.</p>
+</div></blockquote>
+<p><strong>parameter_title</strong> : string, optional</p>
+<blockquote>
+<div><p>Name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
+also note that all parameters will be imported. Just the title highlights which one the mesh object will use as 
+default cell attribute.</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><dl class="first last docutils">
-<dt><strong>mesh object</strong></dt>
-<dd></dd>
-</dl>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh</strong> : class</p>
+<blockquote class="last">
+<div><p>a pyR2 mesh class</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1610,7 +1402,7 @@ default.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, G. Blanchy, S. Saneiyan, J. Boyd.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.7.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.9.
     </div>
   </body>
 </html>

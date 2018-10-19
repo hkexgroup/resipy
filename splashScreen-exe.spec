@@ -3,12 +3,11 @@
 block_cipher = None
 
 
-a = Analysis(['ui.py'],
-             pathex=[],
+a = Analysis(['splashScreen.py'],
+             pathex=['/media/jkl/data/phd/tmp/r2gui'],
              binaries=[],
-             datas=[('./api/exe/R2.exe','./api/exe'),
-					('./api/exe/gmsh.exe','./api/exe'),
-					('./api/exe/cR2.exe', './api/exe')],
+             datas=[('./ui.zip','.'),
+                    ('./logo.png','.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -20,16 +19,13 @@ pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
-          exclude_binaries=True,
-          name='ui',
+          a.binaries,
+          a.zipfiles,
+          a.datas,
+          name='pyR2-launch',
           debug=False,
           strip=False,
           upx=True,
-          console=True )
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=False,
-               upx=True,
-               name='ui')
+          runtime_tmpdir=None,
+          console=True,
+          icon='r2icon.ico')

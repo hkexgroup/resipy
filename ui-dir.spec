@@ -1,6 +1,7 @@
-## -*- mode: python -*-
-import sys
-sys.setrecursionlimit(1500)
+# -*- mode: python -*-
+# this file is used by pyinstaller to generate a zip file that would 
+# then be uncompressed by the splashScreen.spec
+
 block_cipher = None
 
 
@@ -24,14 +25,16 @@ pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
-          a.binaries,
-          a.zipfiles,
-          a.datas,
+          exclude_binaries=True,
           name='pyR2',
           debug=False,
           strip=False,
           upx=True,
-          runtime_tmpdir=None,
-          console=True,
-		  icon='r2icon.ico')
-
+          console=True )
+coll = COLLECT(exe,
+               a.binaries,
+               a.zipfiles,
+               a.datas,
+               strip=False,
+               upx=True,
+               name='ui')

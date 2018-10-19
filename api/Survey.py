@@ -47,6 +47,7 @@ class Survey(object):
         if name == '':
             name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
+        self.iBorehole = False # True is it's a borehole
         
         if parser is not None:
             elec, data = parser(fname)
@@ -781,7 +782,24 @@ class Survey(object):
             self.filterDataIP = temp_data.dropna()
         self.addFilteredIP()
 
-    def pseudo(self, ax=None, contour=False, log=True, geom=True):
+
+    def pseudo(self, ax=None, bx=None, **kwargs):
+        """ Plot pseudo section if 2D survey or just quadrupoles transfer
+        resistance otherwise.
+        """
+        if bx is None:
+            bx = self.iBorehole
+        if bx is False:
+            self.pseudoSection(ax=ax, **kwargs)
+        else:
+            if ax is None:
+                fig, ax = plt.subplots()
+            ax.plot(self.df['resist'].values, '.')
+            ax.set_xlabel('Measurements')
+            ax.set_ylabel('Transfert Resistance [Ohm]')
+            
+
+    def pseudoSection(self, ax=None, contour=False, log=True, geom=True):
         ''' create true pseudo graph with points and no interpolation
         '''
         array = self.df[['a','b','m','n']].values.astype(int)
@@ -837,16 +855,9 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, resist)
             if ax is None:
                 fig, ax = plt.subplots()
-            figsize=(10,6)
             cax = ax.contourf(X,Y,Z)
-#            cbar = fig.colorbar(cax, ax=ax)
-#            cbar.set_label(label)
             ax.set_title('Pseudo Section')
-#            fig.suptitle(self.name, x= 0.2)
-#            fig.tight_layout()
 
-        if ax is None:
-            return fig
     
     def pseudoIP(self, ax=None, contour=False): #IP pseudo section
         """ Create pseudo section of IP data with points (default)
@@ -1006,10 +1017,25 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values
         if 'recipError' in self.df.columns:
-            resist = self.df['recipError'].values
+            resist = self.df['recipError'].values # some nan here are not plotted !!!
             print('set to reciprocal')
+            clabel = 'Reciprocal Error'
         else:
             resist = np.ones(self.df.shape[0])
+            clabel = 'Resistivity [Ohm.m]'
+        if label == '':
+            label = clabel
+        inan = np.isnan(resist)
+        resist = resist.copy()[~inan]
+        array = array.copy()[~inan]
+        self.iselect = np.zeros(len(inan), dtype=bool)
+        
+        def setSelect(ie, boolVal):
+            ipoints[ie] = boolVal
+            self.iselect[~inan] = ipoints
+        # TODO find a way to get rid of the NaN before plotting them but still
+        # keeping the index to be able to filter out the data ... maybe add
+        # a third class of empty points just for NaN
         spacing = np.mean(np.diff(self.elec[:,0]))
         
         nelec = np.max(array)
@@ -1044,32 +1070,32 @@ class Survey(object):
         def onpick(event):
             # TODO single doesn't want to change the electrode selection
             if lines[event.artist] == 'data':
-                print('onpick event', event.ind[0])
-                print(self.iselect[event.ind[0]])
+#                print('onpick event', event.ind[0])
+#                print(ipoints[event.ind[0]])
                 xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
                 isame = (xpos == xid) & (ypos == yid)
-                if (self.iselect[isame] == True).all():
-                    print('set to false')
-                    self.iselect[isame] = False
+                if (ipoints[isame] == True).all():
+#                    print('set to false')
+                    setSelect(isame, False)
                 else:
-                    self.iselect[isame] = True
+                    setSelect(isame, True)
             
             if lines[event.artist] == 'elec':
-                print('onpick2', event.ind[0])
+#                print('onpick2', event.ind[0])
                 ie = (array == (event.ind[0]+1)).any(-1)
-                if all(self.iselect[ie] == True):
-                    self.iselect[ie] = False
+                if all(ipoints[ie] == True):
+                    setSelect(ie, False)
                 else:
-                    self.iselect[ie] = True
+                    setSelect(ie, True)
                 if eselect[event.ind[0]] == True:
                     eselect[event.ind[0]] = False
                 else:
                     eselect[event.ind[0]] = True
                 elecKilled.set_xdata(elecpos[eselect])
                 elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
-            print('update canvas')
-            killed.set_xdata(x[self.iselect])
-            killed.set_ydata(y[self.iselect])
+#            print('update canvas')
+            killed.set_xdata(x[ipoints])
+            killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
                 
                 
@@ -1085,19 +1111,17 @@ class Survey(object):
         #for i in range(int(len(array)/2)):
         #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
         
-        line = cax
-        killed, = line.axes.plot([],[],'rx')
-        elecKilled, = line.axes.plot([],[],'rx')
+        killed, = cax.axes.plot([],[],'rx')
+        elecKilled, = cax.axes.plot([],[],'rx')
     #    x = np.array(line.get_xdata())
     #    y = np.array(line.get_ydata())
-        x = line.get_offsets()[:,0]
-        y = line.get_offsets()[:,1]
+        x = cax.get_offsets()[:,0]
+        y = cax.get_offsets()[:,1]
         
-        # TODO we need to get those variables out of the function
-        self.iselect = np.zeros(len(y),dtype=bool)
+        ipoints = np.zeros(len(y),dtype=bool)
         eselect = np.zeros(len(elecpos), dtype=bool)
         
-        lines = {line:'data',caxElec:'elec',killed:'killed'}
+        lines = {cax:'data',caxElec:'elec',killed:'killed'}
 
 
 
@@ -1526,7 +1550,7 @@ class Survey(object):
 #fig, ax = plt.subplots()
 #fig.suptitle('kkkkkkkkkkkkkk')
 #s.plotError(ax=ax)
-#s.manualFilter()
+#s.manualFiltering()
 #s.pseudo(contour=True)
 #s.linfit()
 #s.pwlfit()

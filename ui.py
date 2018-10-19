@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-#import time
+import time
 
 #a = time.time()
 print('importing pyqt')
@@ -146,18 +146,25 @@ class App(QMainWindow):
         os.mkdir(newwd)
         self.r2 = R2(newwd)
         self.r2.cwd = bundle_dir
+        self.parser = None
+        self.fname = None
  
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
-        self.setWindowIcon(QIcon('logo.png')) ### change this to change the icon of the window. 
+        
+        # app icon
+        self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
+        
         def errorDump(text, flag=1):
+            timeStamp = time.strftime('%H:%M:%S')
             if flag == 1: # error in red
                 col = 'red'
             else:
                 col = 'black'
-            errorLabel.setText('<i style="color:'+col+'">'+text+'</i>')
+            errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
+        
         
         #%% tab 1 importing data
         tabImporting = QTabWidget()
@@ -197,13 +204,13 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
             tabPreProcessing.setTabEnabled(3, False)
-
             
             # mesh
             meshType.currentIndexChanged.disconnect()
             meshType.setCurrentIndex(0)
             meshType.currentIndexChanged.connect(meshTypeFunc)
             mwMesh.clear()
+            regionTable.reset()
             
             # inversion options
             flux_type.setCurrentIndex(0)
@@ -236,10 +243,16 @@ class App(QMainWindow):
             self.inversionOutput = ''
             logText.setText('')
             mwRMS.clear()
-            sectionId.currentIndexChanged.disconnect()
-            sectionId.clear()
-            attributeName.currentIndexChanged.disconnect()
-            attributeName.clear()
+            try: # try because maybe the user hasn't inverted yet
+                sectionId.currentIndexChanged.disconnect()
+                sectionId.clear()
+                attributeName.currentIndexChanged.disconnect()
+                attributeName.clear()
+            except:
+                pass
+
+            vminEdit.setText('')
+            vmaxEdit.setText('')
             mwInvResult.clear()
             mwInvError.clear()
 
@@ -313,10 +326,11 @@ class App(QMainWindow):
         
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
-                self.r2.iBorehole = True
+                self.r2.setBorehole(True)
             else:
-                self.r2.iBorehole = False
-                
+                self.r2.setBorehole(False)
+            if self.fname is not None:
+                    plotPseudo()
         boreholeCheck = QCheckBox('Borehole Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
 
@@ -412,11 +426,18 @@ class App(QMainWindow):
                 self.ftype = 'Syscal'
             elif index == 1:
                 self.ftype = 'Protocol'
+            elif index == 2:
+                self.ftype = 'Res2Dinv'
+            elif index == 3:
+                self.ftype = 'Custom'
+                tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
                 self.ftype = '' # let to be guessed
         fileType = QComboBox()
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
+        fileType.addItem('Res2Dinv')
+        fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         
         spacingEdit = QLineEdit()
@@ -447,30 +468,47 @@ class App(QMainWindow):
         def getfile():
             print('ftype = ', self.ftype)
             fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
+            if fname != '':
+                importFile(fname)
+        
+        def importFile(fname):            
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
-            if fname != '':
+            try:
+                ipCheck.setEnabled(True)
+                self.fname = fname
+                buttonf.setText(self.fname + ' (Press to change)')
+                if float(spacingEdit.text()) == -1:
+                    spacing = None
+                else:
+                    spacing = float(spacingEdit.text())
+                print('all ok')
                 try:
-                    ipCheck.setEnabled(True)
-                    self.fname = fname
-                    buttonf.setText(self.fname + ' (Press to change)')
-                    if float(spacingEdit.text()) == -1:
-                        spacing = None
-                    else:
-                        spacing = float(spacingEdit.text())
-                    self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing)
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        hbox4.addWidget(buttonfr)
-                    else:
-                        tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
-    #                generateMesh()
-                    plotPseudo()
-                    plotManualFiltering()
-                    elecTable.initTable(self.r2.elec)
-                    tabImporting.setTabEnabled(1,True)
+                    self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                                         parser=self.parser)
                 except:
                     errorDump('File not recognized.')
+                    pass
+                print('ok passed import')
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    hbox4.addWidget(buttonfr)
+                else:
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+#                generateMesh()
+                if boreholeCheck.isChecked() is True:
+                    self.r2.setBorehole(True)
+                else:
+                    self.r2.setBorehole(False)
+                plotPseudo()
+#                plotManualFiltering()
+                elecTable.initTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
+            except Exception as e:
+                print(e)
+                errorDump('Importation failed. File is not being recognized. \
+                          Make sure you selected the right file type.')
+                pass
         
         buttonf = QPushButton('Import Data') 
         buttonf.clicked.connect(getfile)
@@ -487,7 +525,7 @@ class App(QMainWindow):
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                     tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                     plotError()
-                plotManualFiltering()
+#                plotManualFiltering()
 
         buttonfr = QPushButton('If you have reciprocals upload them here') 
         buttonfr.clicked.connect(getfileR)
@@ -559,12 +597,17 @@ class App(QMainWindow):
         
         # electrode table
         class ElecTable(QTableWidget):
-            def __init__(self, nrow=10, headers=['x','z','Buried'], visible=True):
+            def __init__(self, nrow=10, headers=['x','z','Buried'],
+                         visible=True, selfInit=False):
+                """ if selfInit is true, it will automatically add rows if tt
+                is bigger than the actual rows
+                """
                 ncol = len(headers)
                 super(ElecTable, self).__init__(nrow, ncol)
                 self.setVisible(visible)
                 self.nrow = nrow
                 self.ncol = ncol
+                self.selfInit = selfInit
                 self.initTable(np.zeros((nrow, ncol)), headers=headers)
 #                self.headers = np.array(headers)
 #                self.setHorizontalHeaderLabels(headers)
@@ -584,10 +627,10 @@ class App(QMainWindow):
             
             def getBuried(self):
                 j = np.where(self.headers == 'Buried')[0][0]
-                self.buried = np.zeros(len(self.nrow), dtype=bool)
+                self.buried = np.zeros(self.nrow, dtype=bool)
                 for i in range(self.nrow):
                     buriedCheck = self.cellWidget(i, j)
-                    if buriedCheck.state == Qt.Checked:
+                    if buriedCheck.isChecked() is True:
                         self.buried[i] = True
                 return self.buried
                 
@@ -620,14 +663,17 @@ class App(QMainWindow):
                     # get max row/columns
 #                    cell = self.selectedIndexes()[0]
 #                    c0, r0 = cell.column(), cell.row()
-                    self.setTable(tt, c0, r0)
+                    if self.selfInit is True:
+                        self.initTable(tt)
+                    else:
+                        self.setTable(tt, c0, r0)
                     
             
             def initTable(self, tt=None, headers=None):
                 self.clear()
                 if headers is not None:
 #                    print('rename headers = ', headers)
-                    self.headers = headers
+                    self.headers = np.array(headers)
 #                else:
 #                    print('will use ', self.headers)
                 self.ncol = len(self.headers)
@@ -654,10 +700,12 @@ class App(QMainWindow):
 #                        print('item just ste', self.item(j,i).text())
                     
             def getTable(self):
-                table = np.zeros((self.nrow, self.ncol))
+                table = np.zeros((self.nrow, self.ncol))*np.nan
                 for i in range(self.ncol):
                     for j in range(self.nrow):
-                        table[j,i] = float(self.item(j,i).text())
+                        item = self.item(j,i).text()
+                        if item != '':
+                            table[j,i] = float(item)
 #                print('table = ', table)
                 return table
             
@@ -668,12 +716,16 @@ class App(QMainWindow):
                     tt = df.values
                     if 'Buried' in self.headers:
                         if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
-                            self.setTable(tt[:,:-1])
+                            self.initTable(tt[:,:-1])
                             self.setBuried(tt[:,-1])
                         else:
-                            self.setTable(tt)
+                            self.initTable(tt)
                     else:
-                        self.setTable(tt)    
+                        self.initTable(tt)
+#                        if self.selfInit is True:
+#                            self.initTable(tt)
+#                        else:
+#                            self.setTable(tt)    
         
         
         topoLayout = QVBoxLayout()
@@ -729,7 +781,8 @@ class App(QMainWindow):
         topoLayout.addWidget(elecButton)
         topoLayout.addWidget(elecTable)
         
-        topoTable = ElecTable(visible=True, headers=['x','z'])
+        topoTable = ElecTable(visible=True, headers=['x','z'], selfInit=True)
+        topoTable.initTable(np.array([['',''],['','']]))
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
                            into a cell.</i>')
@@ -777,16 +830,16 @@ class App(QMainWindow):
         parseBtn.clicked.connect(parseBtnFunc)
             
         # have qcombobox to be read for each columns
-        aBoxLabel = QLabel('A (or C1)')
-        bBoxLabel = QLabel('B (or C2)')
-        mBoxLabel = QLabel('M (or P1)')
-        nBoxLabel = QLabel('N (or P2)')
-        vpBoxLabel = QLabel('Vp Potential Difference')
-        InBoxLabel = QLabel('In Current')
+        aBoxLabel = QLabel('A (or C1)*')
+        bBoxLabel = QLabel('B (or C2)*')
+        mBoxLabel = QLabel('M (or P1)*')
+        nBoxLabel = QLabel('N (or P2)*')
+        vpBoxLabel = QLabel('Vp Potential Difference*')
+        InBoxLabel = QLabel('In Current*')
         resistBoxLabel = QLabel('Transfer Resistance')
         ipStartBoxLabel = QLabel('IP start column')
         ipEndBoxLabel = QLabel('IP end column')
-        chargeabilityBoxLabel = QLabel('Chargeability')
+        chargeabilityBoxLabel = QLabel('Chargeability*')
         elecSpacingLabel = QLabel('Electrode spacing')
        
         boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
@@ -802,9 +855,9 @@ class App(QMainWindow):
         ipStartBox = QComboBox()
         ipEndBox = QComboBox()
         chargeabilityBox = QComboBox()
-        elecSpacingEdit = QLineEdit('1')
-        elecSpacingEdit.setValidator(QIntValidator())
-        elecSpacingEdit.setFixedWidth(50)
+        elecSpacingEdit = QLineEdit('')
+        elecSpacingEdit.setValidator(QDoubleValidator())
+        elecSpacingEdit.setFixedWidth(80)
         elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
         
         boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
@@ -860,7 +913,7 @@ class App(QMainWindow):
             colIndex = []
             newHeaders = []
             vals = getBoxes([aBox,bBox,mBox,nBox])
-            if (all(vals > 0) is True) & (len(np.unique(vals) == 4)):
+            if (np.sum(vals > 0) == 4) & (len(np.unique(vals)) == 4):
                 colIndex.append(vals)
                 newHeaders.append(['a','b','m','n'])
             else:
@@ -877,11 +930,15 @@ class App(QMainWindow):
                 else:
                     errorDump('Please select columns for Vp, In or Resist.')
                     return
+            vals = getBoxes([chargeabilityBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['ip'])
             # TODO need to import the IP coluns as well
             
             colIndex = np.hstack(colIndex)
             newHeaders = np.hstack(newHeaders)
-            print(colIndex, newHeaders)
+#            print(colIndex, newHeaders)
 
             def parserFunc(fname):
                 # retrieve usefull values
@@ -889,7 +946,7 @@ class App(QMainWindow):
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
-                espacing = float(elecSpacingEdit.text())
+                espacing = None if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
                 df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows)
@@ -897,17 +954,29 @@ class App(QMainWindow):
                 df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
                 if 'resist' not in df.columns:
                     df['resist'] = df['vp']/df['i']
-                array = df[['a','b','m','n']].values
+                if 'ip' not in df.columns:
+                    df['ip'] = 0
+                array = df[['a','b','m','n']].values.copy()
+                if espacing is None:
+                    espacing = np.unique(np.sort(array.flatten()))[1]
+                array = np.round(array/espacing+1).astype(int)
+                df[['a','b','m','n']] = array
                 imax = int(np.max(array))
                 elec = np.zeros((imax,3))
                 elec[:,0] = np.arange(0,imax)*espacing
-                
                 return elec, df
+
+            self.parser = parserFunc
             
+            # test            
             elec, df = parserFunc(self.fnameManual)
-            print(elec.shape)
-            print(df.shape)
+#            print(elec.shape, df.shape)
                 
+            
+            if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
+                importFile(self.fnameManual)
+            
+            tabImporting.setCurrentIndex(0)
                 
                 
         importBtn = QPushButton('Import Dataset')
@@ -947,22 +1016,23 @@ class App(QMainWindow):
         
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
-            
+        
         def btnDoneFunc():
             self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
             print('Data have been manually filtered')
-            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+            plotManualFiltering()
             plotError()
             
         notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
         manualLayout.addWidget(notice)
         
         btnLayout = QHBoxLayout()
-#        btnStart = QPushButton('Reset')
-#        btnStart.clicked.connect(plotManualFiltering)
-#        btnLayout.addWidget(btnStart)
+        btnStart = QPushButton('Start')
+        btnStart.clicked.connect(plotManualFiltering)
+        btnLayout.addWidget(btnStart)
         btnDone = QPushButton('Apply')
         btnDone.clicked.connect(btnDoneFunc)
+        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
         btnLayout.addWidget(btnDone)
         manualLayout.addLayout(btnLayout)
         
@@ -1193,24 +1263,32 @@ class App(QMainWindow):
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
         meshLayout = QVBoxLayout()
-                
-        def callback2(ax):
-            ax.plot(np.random.randn(20,5), '+--')
-            ax.set_title('Random data nnnnndfghdfh')
 
         def meshTypeFunc(index=1):
             self.r2.elec = elecTable.getTable()
+            buried = elecTable.getBuried()
+            surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
+            if np.sum(inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
             if index == 1:
                 self.r2.createMesh(typ='quad')
                 scale.setVisible(False)
                 scaleLabel.setVisible(False)
+                meshOptionLayout.setCurrentIndex(0)
             elif index == 2:
                 scale.setVisible(True)
                 scaleLabel.setVisible(True)
-                self.r2.createMesh(typ='trian')
+                meshOptionLayout.setCurrentIndex(1)
+                self.r2.createMesh(typ='trian', buried=buried, surface=surface)
             else:
                 print('NOT IMPLEMENTED')
             print(self.r2.mesh.summary())
+            replotMesh()
+        
+        def replotMesh():
             regionTable.reset()
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=regionTable.addRow)
@@ -1225,61 +1303,100 @@ class App(QMainWindow):
         meshType.addItem('Triangular Mesh')
         meshType.currentIndexChanged.connect(meshTypeFunc)
         meshLayout.addWidget(meshType)
-        
-        meshOptionLayout = QHBoxLayout()
-        
-        def updateMesh():
+                
+        def updateQuadMesh():
             nnodes = int(nnodesEdit.text())
             self.r2.createMesh(typ='quad', elemx=nnodes)
-#            mwMesh.plot(self.r2.mesh.show)
-            regionTable.reset()
-            def func(ax):
-                self.r2.createModel(ax=ax, addAction=regionTable.addRow)
-            mwMesh.plot(func)
-            mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
-            mwMesh.canvas.setFocus() # set focus on the canvas
-            
+            replotMesh()
+        
+        def updateTrianMesh():
+            cl = float(clEdit.text())
+            cl_factor = float(cl_factorEdit.text())
+            buried = elecTable.getBuried()
+            surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
+            if np.sum(inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
+            self.r2.createMesh(typ='trian', buried=buried, surface=surface,
+                               cl=cl, cl_factor=cl_factor)
+            replotMesh()
+        
+        # additional options for quadrilateral mesh
         nnodesLabel = QLabel('Number of nodes between electrode:')
-        meshOptionLayout.addWidget(nnodesLabel)
         nnodesEdit = QLineEdit()
         nnodesEdit.setValidator(QIntValidator())
         nnodesEdit.setText('4')
-#        nnodesEdit.editingFinished.connect(updateMesh)
-        meshOptionLayout.addWidget(nnodesEdit)
+        meshBtnQuad = QPushButton('Apply')
+        meshBtnQuad.clicked.connect(updateQuadMesh)
+
+        # additional options for triangular mesh
+        clLabel = QLabel('Characteristic Length:')
+        clEdit = QLineEdit()
+        clEdit.setValidator(QDoubleValidator())
+        clEdit.setText('-1')
+        cl_factorLabel = QLabel('Growth factor:')
+        cl_factorEdit = QLineEdit()
+        cl_factorEdit.setValidator(QDoubleValidator())
+        cl_factorEdit.setText('2')
+        meshBtnTrian = QPushButton('Apply')
+        meshBtnTrian.clicked.connect(updateTrianMesh)
         
-        meshBtn = QPushButton('Apply')
-        meshBtn.clicked.connect(updateMesh)
-        meshOptionLayout.addWidget(meshBtn)
+        meshOptionQuadLayout = QHBoxLayout()
+        meshOptionQuadLayout.addWidget(nnodesLabel)
+        meshOptionQuadLayout.addWidget(nnodesEdit)
+        meshOptionQuadLayout.addWidget(meshBtnQuad)
+        
+        meshOptionTrianLayout = QHBoxLayout()
+        meshOptionTrianLayout.addWidget(clLabel)
+        meshOptionTrianLayout.addWidget(clEdit)
+        meshOptionTrianLayout.addWidget(cl_factorLabel)
+        meshOptionTrianLayout.addWidget(cl_factorEdit)
+        meshOptionTrianLayout.addWidget(meshBtnTrian)
+        
+        meshOptionLayout = QStackedLayout()
+        meshOptionQuadWidget = QWidget()
+        meshOptionQuadWidget.setLayout(meshOptionQuadLayout)
+        meshOptionLayout.addWidget(meshOptionQuadWidget)
+        meshOptionTrianWidget = QWidget()
+        meshOptionTrianWidget.setLayout(meshOptionTrianLayout)
+        meshOptionLayout.addWidget(meshOptionTrianWidget)
+        meshOptionLayout.setCurrentIndex(0)
         
         meshLayout.addLayout(meshOptionLayout)
         
         
         class RegionTable(QTableWidget):
-            def __init__(self):
-                nrow, ncol = 1, 1
+            def __init__(self, nrow=1, ncol=3):
                 super(RegionTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['Resistivity [Ohm.m]']
+                self.headers = ['Resistivity [Ohm.m]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0'))
-
-            
+                self.setItem(0,1,QTableWidgetItem('1'))
+                self.setCellWidget(0,2, QCheckBox())
+                    
             def addRow(self):
-                print('row added')
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
-                self.setItem(0, self.nrow-1, QTableWidgetItem('100.0'))
+                self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
+                self.setItem(self.nrow-1, 1, QTableWidgetItem('1'))
+                self.setCellWidget(self.nrow-1, 2, QCheckBox())
                 
             def getTable(self):
-                table = np.zeros((self.nrow, self.ncol))
-                for i in range(self.ncol):
-                    for j in range(self.nrow):
-                        table[j,i] = float(self.item(j,i).text())
-                return table
+                res0 = np.zeros(self.nrow)
+                zones = np.zeros(self.nrow, dtype=int)
+                fixed = np.zeros(self.nrow, dtype=bool)
+                for j in range(self.nrow):
+                    res0[j] = float(self.item(j,0).text())
+                    zones[j] = int(self.item(j,1).text())
+                    fixed[j] = self.cellWidget(j,2).isChecked()
+                return res0, zones, fixed
             
             def reset(self):
                 self.nrow = 1
@@ -1297,9 +1414,9 @@ class App(QMainWindow):
         
 
         def regionButtonFunc():
-            self.r2.regid = 0
-            self.r2.regions.fill(0)
+            self.r2.resetRegions()
             regionTable.reset()
+            self.r2.mesh.draw(attr='res0')
 #            x = regionTable.getTable().flatten()
 #            regid = np.arange(len(x))
 #            self.r2.assignRes0(dict(zip(regid, x)))
@@ -1415,9 +1532,11 @@ class App(QMainWindow):
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
-            x = regionTable.getTable().flatten()
+            x, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x))
-            self.r2.assignRes0(dict(zip(regid, x)))
+            self.r2.assignRes0(dict(zip(regid, x)),
+                               dict(zip(regid, zones)),
+                               dict(zip(regid, fixed)))
             noise = float(noiseEdit.text())
             self.r2.forward(noise=noise, iplot=False)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
@@ -1928,9 +2047,11 @@ class App(QMainWindow):
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
-            x = regionTable.getTable().flatten()
+            x, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x))
-            self.r2.assignRes0(dict(zip(regid, x)))
+            self.r2.assignRes0(dict(zip(regid, x)),
+                               dict(zip(regid, zones)),
+                               dict(zip(regid, fixed)))
             
             self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
             try:
@@ -1941,21 +2062,24 @@ class App(QMainWindow):
                 pass
             
             # displaying results or error
-            if self.end is True:
-                plotSection()
-                for i in range(len(self.r2.meshResults)):
-                    sectionId.addItem(self.r2.surveys[i].name)
-                outStackLayout.setCurrentIndex(0)
-#                invLayout.addLayout(resultLayout, 70)
-            else:
+            def printR2out():
                 print('--------INVERSION FAILED--------')
-#                invLayout.removeItem(invLayout.itemAt(1))
-#                invLayout.addLayout(r2outLayout, 70)
                 outStackLayout.setCurrentIndex(1)
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
                 r2outEdit.setText(text)
            
+            if self.end is True:
+                try:
+                    plotSection()
+                    for i in range(len(self.r2.meshResults)):
+                        sectionId.addItem(self.r2.surveys[i].name)
+                    outStackLayout.setCurrentIndex(0)
+                except:
+                    pass
+                    printR2out()
+            else:
+                printR2out()
             
 #        def logInversion2():
 ##            self.r2.invert(callback=dataReady)
@@ -1984,13 +2108,15 @@ class App(QMainWindow):
 #                runR2(self.refdir)
 #                self.processes[-1].finished.connect(timeLapseMainRun)
 #                print('ok ip')
-#            else:
+#            else:<<<<<<<<
 #                runMainInversion()
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.typ == 'R2':
-                plotInvError()
+                if self.r2.iBorehole is False:
+                    plotInvError()
+                plotInvError2()
             if self.r2.typ == 'R2':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ == 'cR2':
@@ -2108,7 +2234,7 @@ class App(QMainWindow):
 #            mwInvResult.replot()
             
         sectionId = QComboBox()
-        displayOptions.addWidget(sectionId, 10)
+        displayOptions.addWidget(sectionId, 20)
         
         attributeName = QComboBox()
         displayOptions.addWidget(attributeName, 20)
@@ -2202,7 +2328,7 @@ class App(QMainWindow):
         tabs.addTab(tabPostProcessing, 'Post-processing')
         
         invError = QWidget()
-        tabPostProcessing.addTab(invError, 'Inversion Errors')
+        tabPostProcessing.addTab(invError, 'Inversion Errors (1)')
         invErrorLayout = QVBoxLayout()
         
         def plotInvError():
@@ -2210,12 +2336,18 @@ class App(QMainWindow):
             
         mwInvError = MatplotlibWidget(navi=True)
         invErrorLayout.addWidget(mwInvError)
-        
-        
         invError.setLayout(invErrorLayout)
+
         
+        invError2 = QWidget()
+        tabPostProcessing.addTab(invError2, 'Inversion Errors (2)')
+        invErrorLayout2 = QVBoxLayout()
         
-        # add Jimmy graph
+        def plotInvError2():
+            mwInvError2.plot(self.r2.showInversionErrors)
+        mwInvError2 = MatplotlibWidget(navi=True)
+        invErrorLayout2.addWidget(mwInvError2)
+        invError2.setLayout(invErrorLayout2)
         
         
         #%% About tab
@@ -2225,7 +2357,7 @@ class App(QMainWindow):
         
         infoLayout = QVBoxLayout()
         aboutText = QLabel()
-        aboutText.setText('<h1>About pyR2</h1> \
+        aboutText.setText('''<h1>About pyR2</h1> \
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (DC and IP)</i></p> \
                           <p>If you encouter issues or would like to submit a feature request, please raise an issue on gitlab:</p> \
                           <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
@@ -2233,8 +2365,33 @@ class App(QMainWindow):
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
                           <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
                           <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-                          <p>Authors: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd.</p>')
+                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+<ul>
+<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
+<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
+<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
+</li>
+<li>
+ Wes McKinney.
+<strong>Data Structures for Statistical Computing in Python</strong>,
+Proceedings of the 9th Python in Science Conference, 51-56 (2010)
+(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
+</li>
+<li>
+John D. Hunter.
+<strong>Matplotlib: A 2D Graphics Environment</strong>,
+Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
+<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a> 
+</li>
+<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
+USA: Trelgol Publishing, (2006).
+</li>
+</ul>
+</p>
+<br/>
+                          <p><strong>pyR2's core developpers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>''')
         aboutText.setOpenExternalLinks(True)
+        aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         infoLayout.addWidget(aboutText)
         
@@ -2286,8 +2443,9 @@ class MyTableWidget(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-
-    splash_pix = QPixmap('logo.png')
+    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
+    print(os.path.join(bundle_dir, 'logo.png'))
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
@@ -2301,27 +2459,9 @@ if __name__ == '__main__':
 
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
-    app.processEvents()
-#    for i in range(1, 11):
-#        progressBar.setValue(i)
-#        t = time.time()
-#        app.processEvents()
-#        while time.time() < t + 0.1:
-#           app.processEvents()
+    app.processEvents()    
 
-    # Simulate something that takes time
-#    time.sleep(4)
-    
-
-#    print('importing pyqt')
-#    from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
-#        QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-#        QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-#        QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
-#        QStackedLayout)
-#    from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator
-#    from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
-#    from PyQt5.QtCore import Qt
+    # in this section all import are made except the one for pyQt
     
     progressBar.setValue(1)    
     app.processEvents()
@@ -2330,7 +2470,6 @@ if __name__ == '__main__':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
-#    import matplotlib.pyplot as plt
     progressBar.setValue(2)
     app.processEvents()
 
@@ -2351,20 +2490,14 @@ if __name__ == '__main__':
     app.processEvents()
     from matplotlib import rcParams
     rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
-
-    #sys.path.append(os.path.relpath('../api')) # not needed anymore
     
-    #from mesh_class import mesh_obj
-    #import meshTools as mt
-    #from meshTools import Mesh_obj
     from api.R2 import R2
     from api.r2help import r2help
     progressBar.setValue(10)
     app.processEvents()
     
     ex = App()
-    splash.hide()
-    
+    splash.hide() # hiding the splash screen when finished
     
     sys.exit(app.exec_())
 
