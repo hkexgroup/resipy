@@ -19,8 +19,8 @@ Dependencies:
     python3 standard libs
 """
 #python standard libraries 
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, warnings
 #general 3rd party libraries
 import numpy as np
