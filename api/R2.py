@@ -340,6 +340,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
+        self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
         #write mesh to working directory - edit by jamyd91 
         file_path = os.path.join(self.dirname,'mesh.dat')
         self.mesh.write_dat(file_path)
@@ -1170,11 +1171,12 @@ class R2(object): # R2 master class instanciated by the GUI
 #                iterNumber = fs[-1].split('_')[0].split('.')[1]
 #                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
 #                print('iterNumber = ', iterNumber, 'name=', attrName)
-                self.mesh.add_attr_dict({'iter':x[:,-2]})
-                self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
-#                self.mesh.add_attr(x[:,-2], attrName)
+#                self.mesh.add_attr_dict({'iter':x[:,-2]})
+                self.mesh.attr_cache['iter'] = x[:,-2]
 #                self.mesh.draw(attr=attrName)
+                self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
                 
+               
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
         
@@ -1355,16 +1357,17 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #
 ## full API function
 #k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10)
-#k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 50, blocky=True, fixed=True)
+#k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 20, blocky=True, fixed=True)
 #k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fixed=False)
 
 ## full GUI function
 #k.createModel() # manually define 3 regions
-#k.assignRes0({1:500, 2:10, 3:50}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
+#k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
 
 #k.forward(iplot=True, noise=0.0)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=True)
+
 
 
 #%% test Sina
