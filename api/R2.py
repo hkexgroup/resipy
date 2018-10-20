@@ -468,6 +468,17 @@ class R2(object): # R2 master class instanciated by the GUI
         ifixed2 = elems2[:,-2] == 0
         elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
         writeMeshDat(meshFile, elems2, nodes)
+        
+        res0File = os.path.join(self.dirname, 'res0.dat')
+        resistivityFile = os.path.join(self.dirname, 'resistivity.dat')
+        fnames = [res0File, resistivityFile]
+        for f in fnames:
+            if os.path.exists(f):
+                x = np.genfromtxt(f)
+                x2 = np.r_[x[~ifixed,:], x[ifixed,:]]
+                np.savetxt(f, x2)
+                
+        
         # We NEED parameter = elemement number if changed AND
         # all fixed element (with parameter = 0) at the end of the element
         # matrix. BOTH conditions needs to be filled.
@@ -1366,8 +1377,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #k.forward(iplot=True, noise=0.0)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
-#k.invert(iplot=True)
-
+#k.invert(iplot=False)
+#k.showResults(attr='Resistivity(Ohm-m)', sens=False)
 
 
 #%% test Sina

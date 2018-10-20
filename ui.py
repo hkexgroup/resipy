@@ -535,7 +535,7 @@ class App(QMainWindow):
         hbox4.addWidget(spacingEdit, 10)
         hbox4.addWidget(buttonf, 80)
         
-        def diplayPseudoIP(state):
+        def ipCheckFunc(state):
             if state  == Qt.Checked:
                 self.r2.typ = 'cR2'
 #                timeLapseCheck.setEnabled(False)
@@ -554,11 +554,11 @@ class App(QMainWindow):
                 showIpOptions(False)
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
-                tabPreProcessing.setTabEnabled(2, False)
+                tabPreProcessing.setTabEnabled(1, False)
                 tabPreProcessing.setTabEnabled(3, False)
 
         ipCheck = QCheckBox('Induced Polarization')
-        ipCheck.stateChanged.connect(diplayPseudoIP)
+        ipCheck.stateChanged.connect(ipCheckFunc)
         ipCheck.setEnabled(False)
         hbox5 = QHBoxLayout()
         hbox5.addWidget(ipCheck)
@@ -2070,14 +2070,14 @@ class App(QMainWindow):
                 r2outEdit.setText(text)
            
             if self.end is True:
-                try:
-                    plotSection()
-                    for i in range(len(self.r2.meshResults)):
-                        sectionId.addItem(self.r2.surveys[i].name)
-                    outStackLayout.setCurrentIndex(0)
-                except:
-                    pass
-                    printR2out()
+#                try:
+                plotSection()
+                for i in range(len(self.r2.surveys)):
+                    sectionId.addItem(self.r2.surveys[i].name)
+                outStackLayout.setCurrentIndex(0)
+#                except:
+#                    pass
+#                    printR2out()
             else:
                 printR2out()
             
