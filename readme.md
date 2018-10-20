@@ -41,7 +41,7 @@ You can then test the GUI by first setting a working directory (./api/test) and 
 
 
 Try the Jupyter Notebook
-----
+------------------------
 To start the Jupyter notebook:
 ```
 cd r2gui/examples/jupyter-notebook
