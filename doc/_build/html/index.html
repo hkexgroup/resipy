@@ -159,7 +159,7 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createMesh">
-<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a mesh.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -185,9 +185,17 @@ length as <cite>R2.elec</cite></p>
 mesh to be refined close the electrodes and then expand.</p>
 </div></blockquote>
 <p><strong>cl</strong> : float, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Characteristic length that define the mesh size around the
 electrodes.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><dl class="docutils">
+<dt>Function to which pass the output during mesh generation. <cite>print()</cite></dt>
+<dd><p class="first last">is the default.</p>
+</dd>
+</dl>
 </div></blockquote>
 </td>
 </tr>
@@ -1273,7 +1281,7 @@ of the vertices.</p>
 
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=False</em>, <em>path='exe'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
 this function expects the current working directory has path: exe/gmsh.exe.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1295,6 +1303,11 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 <p><strong>path</strong> : string, optional</p>
 <blockquote>
 <div><p>Path to exe folder (leave default unless you know what you are doing).</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote>
+<div><p>Function to which pass the output during mesh generation. <cite>print()</cite> is
+the default.</p>
 </div></blockquote>
 <p><strong>**kwargs</strong> : optional</p>
 <blockquote>

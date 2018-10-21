@@ -1263,30 +1263,6 @@ class App(QMainWindow):
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
         meshLayout = QVBoxLayout()
-
-        def meshTypeFunc(index=1):
-            self.r2.elec = elecTable.getTable()
-            buried = elecTable.getBuried()
-            surface = topoTable.getTable()
-            inan = ~np.isnan(surface[:,0])
-            if np.sum(inan) == surface.shape[0]:
-                surface = None
-            else:
-                surface = surface[inan,:]
-            if index == 1:
-                self.r2.createMesh(typ='quad')
-                scale.setVisible(False)
-                scaleLabel.setVisible(False)
-                meshOptionLayout.setCurrentIndex(0)
-            elif index == 2:
-                scale.setVisible(True)
-                scaleLabel.setVisible(True)
-                meshOptionLayout.setCurrentIndex(1)
-                self.r2.createMesh(typ='trian', buried=buried, surface=surface)
-            else:
-                print('NOT IMPLEMENTED')
-            print(self.r2.mesh.summary())
-            replotMesh()
         
         def replotMesh():
             regionTable.reset()
@@ -1296,20 +1272,22 @@ class App(QMainWindow):
             mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             mwMesh.canvas.setFocus() # set focus on the canvas
             
-        
-        meshType = QComboBox()
-        meshType.addItem('Please choose a mesh...')
-        meshType.addItem('Quadrilateral Mesh')
-        meshType.addItem('Triangular Mesh')
-        meshType.currentIndexChanged.connect(meshTypeFunc)
-        meshLayout.addWidget(meshType)
-                
-        def updateQuadMesh():
+        def meshQuadFunc():
+            self.r2.elec = elecTable.getTable()
             nnodes = int(nnodesEdit.text())
             self.r2.createMesh(typ='quad', elemx=nnodes)
+            scale.setVisible(False)
+            scaleLabel.setVisible(False)
+            meshOutputStack.setCurrentIndex(1)
             replotMesh()
+        meshQuad = QPushButton('Quadrilateral Mesh')
+        meshQuad.clicked.connect(meshQuadFunc)
         
-        def updateTrianMesh():
+        def meshTrianFunc():
+            meshOutputStack.setCurrentIndex(0)
+            QApplication.processEvents()
+            meshLogText.clear()
+            self.r2.elec = elecTable.getTable()
             cl = float(clEdit.text())
             cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
@@ -1320,16 +1298,19 @@ class App(QMainWindow):
             else:
                 surface = surface[inan,:]
             self.r2.createMesh(typ='trian', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor)
+                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+            scale.setVisible(True)
+            scaleLabel.setVisible(True)
+#            meshOutputStack.setCurrentIndex(1)
             replotMesh()
+        meshTrian = QPushButton('Triangular Mesh')
+        meshTrian.clicked.connect(meshTrianFunc)
         
         # additional options for quadrilateral mesh
         nnodesLabel = QLabel('Number of nodes between electrode:')
         nnodesEdit = QLineEdit()
         nnodesEdit.setValidator(QIntValidator())
         nnodesEdit.setText('4')
-        meshBtnQuad = QPushButton('Apply')
-        meshBtnQuad.clicked.connect(updateQuadMesh)
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
@@ -1340,31 +1321,34 @@ class App(QMainWindow):
         cl_factorEdit = QLineEdit()
         cl_factorEdit.setValidator(QDoubleValidator())
         cl_factorEdit.setText('2')
-        meshBtnTrian = QPushButton('Apply')
-        meshBtnTrian.clicked.connect(updateTrianMesh)
         
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
         meshOptionQuadLayout.addWidget(nnodesEdit)
-        meshOptionQuadLayout.addWidget(meshBtnQuad)
         
         meshOptionTrianLayout = QHBoxLayout()
         meshOptionTrianLayout.addWidget(clLabel)
         meshOptionTrianLayout.addWidget(clEdit)
         meshOptionTrianLayout.addWidget(cl_factorLabel)
         meshOptionTrianLayout.addWidget(cl_factorEdit)
-        meshOptionTrianLayout.addWidget(meshBtnTrian)
         
-        meshOptionLayout = QStackedLayout()
-        meshOptionQuadWidget = QWidget()
-        meshOptionQuadWidget.setLayout(meshOptionQuadLayout)
-        meshOptionLayout.addWidget(meshOptionQuadWidget)
-        meshOptionTrianWidget = QWidget()
-        meshOptionTrianWidget.setLayout(meshOptionTrianLayout)
-        meshOptionLayout.addWidget(meshOptionTrianWidget)
-        meshOptionLayout.setCurrentIndex(0)
+        meshChoiceLayout = QHBoxLayout()
+        meshQuadLayout = QVBoxLayout()
+        meshTrianLayout = QVBoxLayout()
+        meshQuadGroup = QGroupBox()
+        meshTrianGroup = QGroupBox()
         
-        meshLayout.addLayout(meshOptionLayout)
+        meshQuadLayout.addWidget(meshQuad)
+        meshQuadLayout.addLayout(meshOptionQuadLayout)
+        meshQuadGroup.setLayout(meshQuadLayout)
+        meshChoiceLayout.addWidget(meshQuadGroup)
+        
+        meshTrianLayout.addWidget(meshTrian)
+        meshTrianLayout.addLayout(meshOptionTrianLayout)
+        meshTrianGroup.setLayout(meshTrianLayout)
+        meshChoiceLayout.addWidget(meshTrianGroup)
+        
+        meshLayout.addLayout(meshChoiceLayout)
         
         
         class RegionTable(QTableWidget):
@@ -1404,7 +1388,7 @@ class App(QMainWindow):
         
         
         instructionLabel = QLabel('To define a region, just click on the mesh'
-           'to draw a polygone. Close the polygon using a left click. Once done'
+           ' to draw a polygon. Close the polygon using a left click. Once done'
            ', you can define the region resistivity in the table. To define a'
            ' new region, just press \'e\'')
         instructionLabel.setWordWrap(True)
@@ -1412,29 +1396,36 @@ class App(QMainWindow):
         
         mwMesh = MatplotlibWidget(navi=True)
         
+        meshLogText = QTextEdit()
+        meshLogText.setReadOnly(True)
+        def meshLogTextFunc(text):
+            cursor = meshLogText.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(text + '\n')
+            meshLogText.ensureCursorVisible()
+            QApplication.processEvents()
+            if len(text.split()) > 2:
+                if text.split()[2] == 'Stopped':
+                    meshOutputStack.setCurrentIndex(1) # switch to graph
 
-        def regionButtonFunc():
-            self.r2.resetRegions()
-            regionTable.reset()
-            self.r2.mesh.draw(attr='res0')
-#            x = regionTable.getTable().flatten()
-#            regid = np.arange(len(x))
-#            self.r2.assignRes0(dict(zip(regid, x)))
-#            regionLabel.setText('Regions applied.')
-        regionButton = QPushButton('Reset')
-        regionButton.clicked.connect(regionButtonFunc)
         regionTable = RegionTable()
-#        regionLabel = QLabel('')
         
         regionLayout = QVBoxLayout()
-        regionLayout.addWidget(regionButton)
         regionLayout.addWidget(regionTable)
-#        regionLayout.addWidget(regionLabel)
         
+        meshPlot = QWidget()
         meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(mwMesh, 85)
-        meshPlotLayout.addLayout(regionLayout, 15)
-        meshLayout.addLayout(meshPlotLayout)
+        meshPlotLayout.addWidget(mwMesh, 80)
+        meshPlotLayout.addLayout(regionLayout, 20)
+        meshPlot.setLayout(meshPlotLayout)
+        
+        meshOutputStack = QStackedLayout()
+        meshOutputStack.addWidget(meshLogText)
+        meshOutputStack.addWidget(meshPlot)
+        meshOutputStack.setCurrentIndex(0)
+        
+        meshLayout.addLayout(meshOutputStack)
+        
         
         
         

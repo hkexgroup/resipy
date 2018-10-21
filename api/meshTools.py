@@ -1308,7 +1308,7 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(geom_input,keep_files=True, show_output=False, path='exe', **kwargs):
+def tri_mesh(geom_input,keep_files=True, show_output=True, path='exe', dump=print, **kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function expects the current working directory has path: exe/gmsh.exe.
@@ -1323,6 +1323,9 @@ def tri_mesh(geom_input,keep_files=True, show_output=False, path='exe', **kwargs
         `True` if gmsh output is to be printed to console. 
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
+    dump : function, optional
+        Function to which pass the output during mesh generation. `print()` is
+        the default.
     **kwargs : optional
         Key word arguments to be passed to genGeoFile. 
             
@@ -1362,7 +1365,7 @@ def tri_mesh(geom_input,keep_files=True, show_output=False, path='exe', **kwargs
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
-            print(line.decode('utf-8'))
+            dump(line.decode('utf-8'))
     else:
         call(cmd_line)#run gmsh 
         

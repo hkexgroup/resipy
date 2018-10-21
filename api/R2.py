@@ -245,7 +245,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.pseudoCallback(**kwargs)
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, **kwargs):
+                   cl=-1, dump=print, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -264,6 +264,9 @@ class R2(object): # R2 master class instanciated by the GUI
         cl : float, optional
             Characteristic length that define the mesh size around the
             electrodes.
+        dump : function, optional
+            Function to which pass the output during mesh generation. `print()`
+             is the default.
         """
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
@@ -307,7 +310,7 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh = tri_mesh(geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
-                             cl=cl)
+                             cl=cl, dump=dump, show_output=True)
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
