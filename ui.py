@@ -78,7 +78,7 @@ class MatplotlibWidget(QWidget):
     def plot(self, callback):
         ''' call a callback plot function and give it the ax to plot to
         '''
-        print('plot is called')
+#        print('plot is called')
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         self.axis = ax
@@ -157,6 +157,7 @@ class App(QMainWindow):
         self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
         
         def errorDump(text, flag=1):
+            text = str(text)
             timeStamp = time.strftime('%H:%M:%S')
             if flag == 1: # error in red
                 col = 'red'
@@ -186,6 +187,9 @@ class App(QMainWindow):
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
+            elecTable.clear()
+            topoTable.clear()
+            dimInverse.setChecked(True)
             
             # pre-processing
             mwManualFiltering.clear()
@@ -426,6 +430,8 @@ class App(QMainWindow):
             elif index == 2:
                 self.ftype = 'Res2Dinv'
             elif index == 3:
+                self.ftype = 'BGS Prime'
+            elif index == 4:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -434,6 +440,7 @@ class App(QMainWindow):
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
         fileType.addItem('Res2Dinv')
+        fileType.addItem('BGS Prime')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         
@@ -799,9 +806,12 @@ class App(QMainWindow):
         
         delimiterLabel = QLabel('Delimiter')
         delimiterEdit = QLineEdit('')
-        skipRowsLabel = QLabel('Number of rows to skip')
+        skipRowsLabel = QLabel('Number of header to skip')
         skipRowsEdit = QLineEdit('0')
         skipRowsEdit.setValidator(QIntValidator())
+        nrowsLabel = QLabel('Number of rows to read')
+        nrowsEdit = QLineEdit('')
+        nrowsEdit.setValidator(QIntValidator())
         
         def openFileBtnFunc(file):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
@@ -817,8 +827,10 @@ class App(QMainWindow):
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
+                nrows = nrowsEdit.text()
+                nrows = None if nrows == '' else int(nrows)
                 parserTable.readTable(self.fnameManual, delimiter=delimiter,
-                                          skiprows=skipRows)
+                                          skiprows=skipRows, nrows=nrows)
                 fillBoxes(boxes[:-1]) # last one is elecSpacingEdit
             except ValueError as e:
                 errorDump('Import error:', e)
@@ -884,9 +896,10 @@ class App(QMainWindow):
                 self.headers = []
 #                self.horizontalHeader.hide()
             
-            def readTable(self, fname='', delimiter=None, skiprows=None):
+            def readTable(self, fname='', delimiter=None, skiprows=None, nrows=None):
                 if fname != '':
-                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows)
+                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows)
+                    df = df.reset_index() # in case all parse columns goes into the index (don't know why)
                     self.headers = df.columns.values
                     self.setHorizontalHeaderLabels(self.headers)
                     tt = df.values
@@ -919,6 +932,7 @@ class App(QMainWindow):
             vals = getBoxes([resistBox])
             if vals[0] > 0:
                 colIndex.append(vals)
+                newHeaders.append(['resist'])
             else:
                 vals = getBoxes([vpBox,InBox])
                 if all(vals > 0) is True:
@@ -943,10 +957,13 @@ class App(QMainWindow):
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
+                nrows = nrowsEdit.text()
+                nrows = None if nrows == '' else int(nrows)
                 espacing = None if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
-                df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows)
+                df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
+                df = df.reset_index() # solve issue all columns in index
                 oldHeaders = df.columns.values[colIndex]
                 df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
                 if 'resist' not in df.columns:
@@ -959,6 +976,9 @@ class App(QMainWindow):
                 array = np.round(array/espacing+1).astype(int)
                 df[['a','b','m','n']] = array
                 imax = int(np.max(array))
+#                if np.sum(array == 0) > 0:
+#                    print('add 1 as there is electrodes at zeros')
+#                    imax = imax+1
                 elec = np.zeros((imax,3))
                 elec[:,0] = np.arange(0,imax)*espacing
                 return elec, df
@@ -967,7 +987,7 @@ class App(QMainWindow):
             
             # test            
             elec, df = parserFunc(self.fnameManual)
-#            print(elec.shape, df.shape)
+            print('shapes = ', elec.shape, df.shape)
                 
             
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
@@ -990,6 +1010,8 @@ class App(QMainWindow):
         parserOptions.addWidget(delimiterEdit)
         parserOptions.addWidget(skipRowsLabel)
         parserOptions.addWidget(skipRowsEdit)
+        parserOptions.addWidget(nrowsLabel)
+        parserOptions.addWidget(nrowsEdit)
         parserOptions.addWidget(parseBtn)
         parserLayout.addLayout(parserOptions)
         
@@ -2064,7 +2086,7 @@ class App(QMainWindow):
                 sectionId.currentIndexChanged.disconnect()
                 sectionId.clear()
             except:
-                print('no method connected to sectionId yet')
+#                print('no method connected to sectionId yet')
                 pass
             
             # displaying results or error
@@ -2087,42 +2109,17 @@ class App(QMainWindow):
             else:
                 printR2out()
             
-#        def logInversion2():
-##            self.r2.invert(callback=dataReady)
-##            dataReady('kk\n')
-#            if 'mesh' not in self.r2.param:
-#                generateMesh() # that will call mesh creation
-#        
-#            # write configuration file'
-#            self.r2.write2in()
-#            
-#            # write protocol file
-#            self.r2.write2protocol()#os.path.join(self.r2.dirname, 'protocol.dat'))
-#
-#            def runMainInversion():
-#                print('run main inversion')
-#                runR2()
-#                self.processes[-1].finished.connect(plotSection)
-#            
-#            def timeLapseMainRun():
-#                print('----------- finished inverting reference model ------------')
-#                shutil.copy(os.path.join(self.refdir, 'f001_res.dat'),
-#                runMainInversion()
-#            
-#            if self.r2.iTimeLapse == True:
-#                self.refdir = os.path.join(self.r2.dirname, 'ref')
-#                runR2(self.refdir)
-#                self.processes[-1].finished.connect(timeLapseMainRun)
-#                print('ok ip')
-#            else:<<<<<<<<
-#                runMainInversion()
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.typ == 'R2':
                 if self.r2.iBorehole is False:
                     plotInvError()
-                plotInvError2()
+                try:
+                    plotInvError2()
+                except Exception as e:
+                    errorDump(e)
+                    pass
             if self.r2.typ == 'R2':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ == 'cR2':

@@ -1188,25 +1188,26 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
         elec1 = elec[i,0]
         elec2 = elec[i+1,0]
         espacing = np.abs(elec1-elec2)
-        dx = espacing/elemx # we ask for elemx nodes between electrodes
+#        dx = espacing/elemx # we ask for elemx nodes between electrodes
         if i == 0:
-            xx2 = np.arange(elec1-espacing, elec1, dx)
+            xx2 = np.linspace(elec1-espacing, elec1, elemx, endpoint=False)
             xx3 = np.ones(elemx*pad)*elec1-espacing
             dxx = espacing
             for j in range(1,elemx*pad): # padding
                 xx3[j] = xx3[j-1]-dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx3[::-1], xx2[1:]]
-        xx = np.arange(elec1, elec2, dx)
+        xx = np.linspace(elec1, elec2, elemx, endpoint=False)
         meshx = np.r_[meshx, xx]
         if i == len(elec)-2:
-            xx2 = np.arange(elec2, elec2+espacing, dx)
+            xx2 = np.linspace(elec2, elec2+espacing, elemx, endpoint=False)
             xx3 = np.ones(elemx*pad)*elec2+espacing
             dxx = espacing
             for j in range(1,elemx*pad):
                 xx3[j] = xx3[j-1]+dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
+
     
     # create e_nodes
     elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
@@ -1440,8 +1441,8 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 #ax.add_artist(rect)
 #selector = SelectPoints(ax, np.array(mesh.elm_centre).T, typ='rect')
 
-
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
+#elec = np.genfromtxt('/home/jkl/Downloads/paulRiverData/elecPos.csv', delimiter=',')
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(elec[:,0], elec[:,1], elemx=8)
 #mesh.show(color_bar=False)
 
 #mesh = vtk_import('api/test/testQuadMesh.vtk')

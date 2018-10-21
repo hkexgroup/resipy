@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from api.parsers import syscalParser, protocolParser, res2invInputParser
+from api.parsers import (syscalParser, protocolParser, res2invInputParser,
+                     primeParser)
 from api.DCA import DCA
 
 class Survey(object):
@@ -58,6 +59,8 @@ class Survey(object):
                 elec, data = protocolParser(fname)
             elif ftype == 'Res2Dinv':
                 elec, data = res2invInputParser(fname)
+            elif ftype == 'BGS Prime':
+                elec, data = primeParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')

@@ -279,7 +279,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh = QuadMesh(elec, nnode=4)
             elec_x = self.elec[:,0]
             elec_y = self.elec[:,1]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y,**kwargs)
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)#,**kwargs)
 #            mesh = QuadMesh()
 #            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
@@ -440,7 +440,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ifixed = np.array(self.mesh.attr_cache['fixed'])
         paramFixed[ifixed] = 0
         
-        print('SUM OF PARAMFIXED = ', np.sum(paramFixed == 0))
+#        print('SUM OF PARAMFIXED = ', np.sum(paramFixed == 0))
         self.mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'),
                             zone = self.mesh.attr_cache['zones'],
                             param = paramFixed)
@@ -1177,9 +1177,10 @@ class R2(object): # R2 master class instanciated by the GUI
         fs = sorted(fs)
         print(fs)
         if len(fs) > 0:
-            if self.param['mesh_type'] == 4:
+            if self.param['mesh_type'] == 10:
                 self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
                 # TODO change that to full meshTools
+                
             else:
                 x = np.genfromtxt(os.path.join(self.dirname, fs[-1]))
 #                iterNumber = fs[-1].split('_')[0].split('.')[1]
@@ -1345,9 +1346,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2()
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
-#buried = np.zeros(k.elec.shape[0], dtype=bool)
-#buried[5] = True
-#k.elec[5,1] = -1
+#k.elec[:,1] = np.tile(np.arange(0,-12,-1),2)
+#k.elec[:,0] = np.repeat([0,8], 12)
+#buried = np.ones(k.elec.shape[0], dtype=bool)
+#buried[[0,11]] = False
 #k.createMesh(typ='trian', buried=buried, cl=0.05, cl_factor=5) # works well
 #k.showMesh()
 #k.invert()
@@ -1390,3 +1392,14 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('/home/jkl/Downloads/D10_N.csv')
 #k.surveys[0].addData('/home/jkl/Downloads/D10_R.csv')
 #k.invert()
+
+
+#%% test Paul River
+#k = R2()
+#k.createSurvey('api/test/primeFile.dat', ftype='BGS Prime')
+#elec = np.genfromtxt('api/test/primePos.csv', delimiter=',')
+#k.elec[:,0] = elec[:,0]
+#k.elec[:,1] = elec[:,1]
+#k.elec = elec
+#k.createMesh(typ='quad', elemx=4)
+#k.showMesh()
