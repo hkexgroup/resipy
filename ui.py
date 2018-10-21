@@ -206,9 +206,6 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(3, False)
             
             # mesh
-            meshType.currentIndexChanged.disconnect()
-            meshType.setCurrentIndex(0)
-            meshType.currentIndexChanged.connect(meshTypeFunc)
             mwMesh.clear()
             regionTable.reset()
             
@@ -1337,7 +1334,9 @@ class App(QMainWindow):
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
         meshQuadGroup = QGroupBox()
+        meshQuadGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         meshTrianGroup = QGroupBox()
+        meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
         meshQuadLayout.addWidget(meshQuad)
         meshQuadLayout.addLayout(meshOptionQuadLayout)
