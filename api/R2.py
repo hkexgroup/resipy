@@ -1085,7 +1085,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # fun the inversion
         dump('Running forward model')
-        self.runR2(fwdDir) # this will copy the R2.exe inside as well
+        self.runR2(fwdDir, dump=dump) # this will copy the R2.exe inside as well
         self.iForward = True
         
         # create a protocol.dat file (overwrite the method)
@@ -1102,7 +1102,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         self.write2protocol()
         self.pseudo()
-        dump('done\n')
+        dump('Forward modelling done.')
 
         
         

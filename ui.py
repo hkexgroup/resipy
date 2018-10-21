@@ -1301,8 +1301,9 @@ class App(QMainWindow):
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
             scale.setVisible(True)
             scaleLabel.setVisible(True)
-#            meshOutputStack.setCurrentIndex(1)
             replotMesh()
+            meshOutputStack.setCurrentIndex(1)
+
         meshTrian = QPushButton('Triangular Mesh')
         meshTrian.clicked.connect(meshTrianFunc)
         
@@ -1348,7 +1349,7 @@ class App(QMainWindow):
         meshTrianGroup.setLayout(meshTrianLayout)
         meshChoiceLayout.addWidget(meshTrianGroup)
         
-        meshLayout.addLayout(meshChoiceLayout)
+        meshLayout.addLayout(meshChoiceLayout, 20)
         
         
         class RegionTable(QTableWidget):
@@ -1404,9 +1405,9 @@ class App(QMainWindow):
             cursor.insertText(text + '\n')
             meshLogText.ensureCursorVisible()
             QApplication.processEvents()
-            if len(text.split()) > 2:
-                if text.split()[2] == 'Stopped':
-                    meshOutputStack.setCurrentIndex(1) # switch to graph
+#            if len(text.split()) > 2:
+#                if text.split()[2] == 'Stopped':
+#                    meshOutputStack.setCurrentIndex(1) # switch to graph
 
         regionTable = RegionTable()
         
@@ -1424,7 +1425,7 @@ class App(QMainWindow):
         meshOutputStack.addWidget(meshPlot)
         meshOutputStack.setCurrentIndex(0)
         
-        meshLayout.addLayout(meshOutputStack)
+        meshLayout.addLayout(meshOutputStack, 80)
         
         
         
@@ -1519,7 +1520,9 @@ class App(QMainWindow):
         
         # add a forward button
         def forwardBtnFunc():
-            forwardLabel.setText('Forward model running.')
+            forwardOutputStack.setCurrentIndex(0)
+            forwardLogText.clear()
+            QApplication.processEvents()
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
@@ -1529,15 +1532,23 @@ class App(QMainWindow):
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)))
             noise = float(noiseEdit.text())
-            self.r2.forward(noise=noise, iplot=False)
+            self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
-            forwardLabel.setText('Forward model finished.')
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.clicked.connect(forwardBtnFunc)
-        
-        forwardLabel = QLabel('Clicked to make the forward model.')
-        
+                
         forwardPseudo = MatplotlibWidget(navi=True)
+        
+        forwardLogText = QTextEdit()
+        forwardLogText.setReadOnly(True)
+        def forwardLogTextFunc(text):
+            cursor = forwardLogText.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(text + '\n')
+            forwardLogText.ensureCursorVisible()
+            QApplication.processEvents()
+            if text == 'Forward modelling done.':
+                forwardOutputStack.setCurrentIndex(1) # switch to graph
 
         
         # layout
@@ -1564,8 +1575,13 @@ class App(QMainWindow):
         forwardLayout.addLayout(seqLayout, 15)
         forwardLayout.addLayout(noiseLayout, 5)
         forwardLayout.addWidget(forwardBtn, 5)
-        forwardLayout.addWidget(forwardLabel, 5)
-        forwardLayout.addWidget(forwardPseudo, 65)
+        
+        forwardOutputStack = QStackedLayout()
+        forwardOutputStack.addWidget(forwardLogText)
+        forwardOutputStack.addWidget(forwardPseudo)
+        forwardOutputStack.setCurrentIndex(0)
+        
+        forwardLayout.addLayout(forwardOutputStack, 70)
         
         tabForward.setLayout(forwardLayout)
         
