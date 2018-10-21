@@ -2114,7 +2114,11 @@ class App(QMainWindow):
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.typ == 'R2':
                 if self.r2.iBorehole is False:
-                    plotInvError()
+                    try:
+                        plotInvError()
+                    except Exception as e:
+                        print('plotInvError FAILED:', e)
+                        pass
                 try:
                     plotInvError2()
                 except Exception as e:
