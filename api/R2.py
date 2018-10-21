@@ -1348,11 +1348,14 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.elec[:,1] = np.tile(np.arange(0,-12,-1),2)
 #k.elec[:,0] = np.repeat([0,8], 12)
+#k.elec[1:11,:2] = np.c_[np.ones(10)*2, np.linspace(0,-4,10)]
 #buried = np.ones(k.elec.shape[0], dtype=bool)
-#buried[[0,11]] = False
-#k.createMesh(typ='trian', buried=buried, cl=0.05, cl_factor=5) # works well
+#buried[[0,12]] = False
+#surface = np.array([[-2,0],[10,0]])
+#k.createMesh(typ='trian', buried=buried, cl=0.5, cl_factor=5) # works well
 #k.showMesh()
 #k.invert()
+
 
 #%% forward modelling
 #def readMeshDat(fname):
@@ -1401,5 +1404,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.elec[:,0] = elec[:,0]
 #k.elec[:,1] = elec[:,1]
 #k.elec = elec
+#k.surveys[0].manualFiltering()
 #k.createMesh(typ='quad', elemx=4)
 #k.showMesh()
