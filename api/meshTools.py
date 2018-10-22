@@ -633,14 +633,12 @@ class Mesh_obj:
         triangle meshes.
         Parameters
         ------------
-        file_name : string 
-            name of the file
-        save_path: string, optional
-            directory to save the file 
+        file_path : string, optional
+            Path to the file. By default 'mesh.dat' is saved in the working directory. 
         zone: array like, optional
             An array of integers which are assocaited with regions/materials in the mesh. 
             Useful in the case of an inversion which has a boundary constraint. 
-            You can use assignAttributeID to give a material to the mesh, and pass that 
+            You can use assign_zone to give a zone/material number to the mesh, and pass that 
             as the zone argument. 
         param : array-like, optional
             Array of parameter number. Set a parameter number to zero fixed its
@@ -772,7 +770,8 @@ class Mesh_obj:
     
 
     def write_attr(self,attr_key,file_name='_res.dat',file_path='defualt'):
-        """ Writes a attribute to a _res.dat type file. file_name entered
+        """ 
+        Writes a attribute to a _res.dat type file. file_name entered
         seperately because it will be needed for the R2 config file.
         The reason for this function is so you can write a forward model 
         parameter input file. 
@@ -1419,6 +1418,74 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     fh.write('POINTS      %i double\n'%len(x))
     [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
     fh.close()
+
+#%% parser for reading in mesh.dat like file and returning a mesh.     
+def dat_import(file_path):
+    fh = open(file_path)
+    header = fh.readline().strip() # read in first line
+    no_nodes = int(header.split()[1])
+    no_elms = int(header.split()[0])
+    #first loop import connection matrix data
+    elm_number=[0]*no_elms#assign lists to nodes 
+    node1=[0]*no_elms
+    node2=[0]*no_elms
+    node3=[0]*no_elms
+    #node4=[0]*no_elms
+    parameter =[0]*no_elms
+    zone =[0]*no_elms
+    for i in range(no_elms):
+        matrix_dat = fh.readline().strip().split()
+        elm_number[i] = int(matrix_dat[0])
+        node1[i] = int(matrix_dat[1])-1
+        node2[i] = int(matrix_dat[2])-1
+        node3[i] = int(matrix_dat[3])-1
+        #node4=[i]
+        parameter [i] = int(matrix_dat[4])
+        zone[i] = int(matrix_dat[5])
+    #second loop read in node coordinates 
+    x_coord = [0]*no_nodes
+    z_coord = [0]*no_nodes 
+    node_num = [0]*no_nodes 
+    for i in range(no_nodes):
+        coord_data=fh.readline().strip().split()
+        node_num[i]=float(coord_data[0])
+        x_coord[i]=float(coord_data[1])
+        z_coord[i]=float(coord_data[2])
+    fh.close()
+    
+    #final loop computes the element areas and centres    
+    centriod_x = []
+    centriod_y = []
+    areas = []
+    for i in range(no_elms):
+        #find the centriod of the element for triangles
+        n1=(x_coord[node1[i]-1],z_coord[node1[i]-1])#in vtk files the 1st element id is 0 
+        n2=(x_coord[node2[i]-1],z_coord[node1[i]-1])
+        n3=(x_coord[node3[i]-1],z_coord[node1[i]-1])
+        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
+        centriod_x.append(xy_tuple[0])
+        centriod_y.append(xy_tuple[1])
+        #find area of element (for a triangle this is 0.5*base*height)
+        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+        areas.append(0.5*base*height)
+        
+
+    mesh = Mesh_obj(num_nodes = no_nodes,#number of nodes
+                     num_elms = no_elms,#number of elements 
+                     node_x = x_coord,#x coordinates of nodes 
+                     node_y = z_coord,#y coordinates of nodes
+                     node_z= [0]*no_nodes,#z coordinates of nodes 
+                     node_id= node_num,#node id number 
+                     elm_id=elm_number,#element id number 
+                     node_data=(node1,node2,node3),#nodes of element vertices
+                     elm_centre= (centriod_x,centriod_y),#centre of elements (x,y)
+                     elm_area = areas,#area of each element
+                     cell_type = [5],#according to vtk format
+                     cell_attributes = float("nan"),#the values of the attributes given to each cell 
+                     atribute_title='none')#what is the attribute? we may use conductivity instead of resistivity for example
+    return mesh
     
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=4)

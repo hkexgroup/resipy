@@ -528,7 +528,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
                     
     fh.write("\n//j'ai fini!\n")
     fh.close()
-    print("writing .geo to file completed, save location:\n%s\n"%file_path)
+    print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
 
     return node_pos,file_path
 
