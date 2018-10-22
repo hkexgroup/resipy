@@ -78,7 +78,7 @@ class MatplotlibWidget(QWidget):
     def plot(self, callback):
         ''' call a callback plot function and give it the ax to plot to
         '''
-        print('plot is called')
+#        print('plot is called')
         self.figure.clear()
         ax = self.figure.add_subplot(111)
         self.axis = ax
@@ -157,6 +157,7 @@ class App(QMainWindow):
         self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
         
         def errorDump(text, flag=1):
+            text = str(text)
             timeStamp = time.strftime('%H:%M:%S')
             if flag == 1: # error in red
                 col = 'red'
@@ -186,6 +187,9 @@ class App(QMainWindow):
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
+            elecTable.clear()
+            topoTable.clear()
+            dimInverse.setChecked(True)
             
             # pre-processing
             mwManualFiltering.clear()
@@ -206,9 +210,6 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(3, False)
             
             # mesh
-            meshType.currentIndexChanged.disconnect()
-            meshType.setCurrentIndex(0)
-            meshType.currentIndexChanged.connect(meshTypeFunc)
             mwMesh.clear()
             regionTable.reset()
             
@@ -429,6 +430,8 @@ class App(QMainWindow):
             elif index == 2:
                 self.ftype = 'Res2Dinv'
             elif index == 3:
+                self.ftype = 'BGS Prime'
+            elif index == 4:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -437,6 +440,7 @@ class App(QMainWindow):
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
         fileType.addItem('Res2Dinv')
+        fileType.addItem('BGS Prime')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         
@@ -535,7 +539,7 @@ class App(QMainWindow):
         hbox4.addWidget(spacingEdit, 10)
         hbox4.addWidget(buttonf, 80)
         
-        def diplayPseudoIP(state):
+        def ipCheckFunc(state):
             if state  == Qt.Checked:
                 self.r2.typ = 'cR2'
 #                timeLapseCheck.setEnabled(False)
@@ -554,11 +558,11 @@ class App(QMainWindow):
                 showIpOptions(False)
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
-                tabPreProcessing.setTabEnabled(2, False)
+                tabPreProcessing.setTabEnabled(1, False)
                 tabPreProcessing.setTabEnabled(3, False)
 
         ipCheck = QCheckBox('Induced Polarization')
-        ipCheck.stateChanged.connect(diplayPseudoIP)
+        ipCheck.stateChanged.connect(ipCheckFunc)
         ipCheck.setEnabled(False)
         hbox5 = QHBoxLayout()
         hbox5.addWidget(ipCheck)
@@ -802,9 +806,12 @@ class App(QMainWindow):
         
         delimiterLabel = QLabel('Delimiter')
         delimiterEdit = QLineEdit('')
-        skipRowsLabel = QLabel('Number of rows to skip')
+        skipRowsLabel = QLabel('Number of header to skip')
         skipRowsEdit = QLineEdit('0')
         skipRowsEdit.setValidator(QIntValidator())
+        nrowsLabel = QLabel('Number of rows to read')
+        nrowsEdit = QLineEdit('')
+        nrowsEdit.setValidator(QIntValidator())
         
         def openFileBtnFunc(file):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
@@ -820,8 +827,10 @@ class App(QMainWindow):
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
+                nrows = nrowsEdit.text()
+                nrows = None if nrows == '' else int(nrows)
                 parserTable.readTable(self.fnameManual, delimiter=delimiter,
-                                          skiprows=skipRows)
+                                          skiprows=skipRows, nrows=nrows)
                 fillBoxes(boxes[:-1]) # last one is elecSpacingEdit
             except ValueError as e:
                 errorDump('Import error:', e)
@@ -887,9 +896,10 @@ class App(QMainWindow):
                 self.headers = []
 #                self.horizontalHeader.hide()
             
-            def readTable(self, fname='', delimiter=None, skiprows=None):
+            def readTable(self, fname='', delimiter=None, skiprows=None, nrows=None):
                 if fname != '':
-                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows)
+                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows)
+                    df = df.reset_index() # in case all parse columns goes into the index (don't know why)
                     self.headers = df.columns.values
                     self.setHorizontalHeaderLabels(self.headers)
                     tt = df.values
@@ -922,6 +932,7 @@ class App(QMainWindow):
             vals = getBoxes([resistBox])
             if vals[0] > 0:
                 colIndex.append(vals)
+                newHeaders.append(['resist'])
             else:
                 vals = getBoxes([vpBox,InBox])
                 if all(vals > 0) is True:
@@ -946,10 +957,13 @@ class App(QMainWindow):
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
+                nrows = nrowsEdit.text()
+                nrows = None if nrows == '' else int(nrows)
                 espacing = None if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
-                df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows)
+                df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
+                df = df.reset_index() # solve issue all columns in index
                 oldHeaders = df.columns.values[colIndex]
                 df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
                 if 'resist' not in df.columns:
@@ -962,6 +976,9 @@ class App(QMainWindow):
                 array = np.round(array/espacing+1).astype(int)
                 df[['a','b','m','n']] = array
                 imax = int(np.max(array))
+#                if np.sum(array == 0) > 0:
+#                    print('add 1 as there is electrodes at zeros')
+#                    imax = imax+1
                 elec = np.zeros((imax,3))
                 elec[:,0] = np.arange(0,imax)*espacing
                 return elec, df
@@ -970,7 +987,7 @@ class App(QMainWindow):
             
             # test            
             elec, df = parserFunc(self.fnameManual)
-#            print(elec.shape, df.shape)
+            print('shapes = ', elec.shape, df.shape)
                 
             
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
@@ -993,6 +1010,8 @@ class App(QMainWindow):
         parserOptions.addWidget(delimiterEdit)
         parserOptions.addWidget(skipRowsLabel)
         parserOptions.addWidget(skipRowsEdit)
+        parserOptions.addWidget(nrowsLabel)
+        parserOptions.addWidget(nrowsEdit)
         parserOptions.addWidget(parseBtn)
         parserLayout.addLayout(parserOptions)
         
@@ -1263,30 +1282,6 @@ class App(QMainWindow):
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
         meshLayout = QVBoxLayout()
-
-        def meshTypeFunc(index=1):
-            self.r2.elec = elecTable.getTable()
-            buried = elecTable.getBuried()
-            surface = topoTable.getTable()
-            inan = ~np.isnan(surface[:,0])
-            if np.sum(inan) == surface.shape[0]:
-                surface = None
-            else:
-                surface = surface[inan,:]
-            if index == 1:
-                self.r2.createMesh(typ='quad')
-                scale.setVisible(False)
-                scaleLabel.setVisible(False)
-                meshOptionLayout.setCurrentIndex(0)
-            elif index == 2:
-                scale.setVisible(True)
-                scaleLabel.setVisible(True)
-                meshOptionLayout.setCurrentIndex(1)
-                self.r2.createMesh(typ='trian', buried=buried, surface=surface)
-            else:
-                print('NOT IMPLEMENTED')
-            print(self.r2.mesh.summary())
-            replotMesh()
         
         def replotMesh():
             regionTable.reset()
@@ -1296,20 +1291,22 @@ class App(QMainWindow):
             mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             mwMesh.canvas.setFocus() # set focus on the canvas
             
-        
-        meshType = QComboBox()
-        meshType.addItem('Please choose a mesh...')
-        meshType.addItem('Quadrilateral Mesh')
-        meshType.addItem('Triangular Mesh')
-        meshType.currentIndexChanged.connect(meshTypeFunc)
-        meshLayout.addWidget(meshType)
-                
-        def updateQuadMesh():
+        def meshQuadFunc():
+            self.r2.elec = elecTable.getTable()
             nnodes = int(nnodesEdit.text())
             self.r2.createMesh(typ='quad', elemx=nnodes)
+            scale.setVisible(False)
+            scaleLabel.setVisible(False)
+            meshOutputStack.setCurrentIndex(1)
             replotMesh()
+        meshQuad = QPushButton('Quadrilateral Mesh')
+        meshQuad.clicked.connect(meshQuadFunc)
         
-        def updateTrianMesh():
+        def meshTrianFunc():
+            meshOutputStack.setCurrentIndex(0)
+            QApplication.processEvents()
+            meshLogText.clear()
+            self.r2.elec = elecTable.getTable()
             cl = float(clEdit.text())
             cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
@@ -1320,16 +1317,20 @@ class App(QMainWindow):
             else:
                 surface = surface[inan,:]
             self.r2.createMesh(typ='trian', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor)
+                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+            scale.setVisible(True)
+            scaleLabel.setVisible(True)
             replotMesh()
+            meshOutputStack.setCurrentIndex(1)
+
+        meshTrian = QPushButton('Triangular Mesh')
+        meshTrian.clicked.connect(meshTrianFunc)
         
         # additional options for quadrilateral mesh
         nnodesLabel = QLabel('Number of nodes between electrode:')
         nnodesEdit = QLineEdit()
         nnodesEdit.setValidator(QIntValidator())
         nnodesEdit.setText('4')
-        meshBtnQuad = QPushButton('Apply')
-        meshBtnQuad.clicked.connect(updateQuadMesh)
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
@@ -1340,31 +1341,36 @@ class App(QMainWindow):
         cl_factorEdit = QLineEdit()
         cl_factorEdit.setValidator(QDoubleValidator())
         cl_factorEdit.setText('2')
-        meshBtnTrian = QPushButton('Apply')
-        meshBtnTrian.clicked.connect(updateTrianMesh)
         
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
         meshOptionQuadLayout.addWidget(nnodesEdit)
-        meshOptionQuadLayout.addWidget(meshBtnQuad)
         
         meshOptionTrianLayout = QHBoxLayout()
         meshOptionTrianLayout.addWidget(clLabel)
         meshOptionTrianLayout.addWidget(clEdit)
         meshOptionTrianLayout.addWidget(cl_factorLabel)
         meshOptionTrianLayout.addWidget(cl_factorEdit)
-        meshOptionTrianLayout.addWidget(meshBtnTrian)
         
-        meshOptionLayout = QStackedLayout()
-        meshOptionQuadWidget = QWidget()
-        meshOptionQuadWidget.setLayout(meshOptionQuadLayout)
-        meshOptionLayout.addWidget(meshOptionQuadWidget)
-        meshOptionTrianWidget = QWidget()
-        meshOptionTrianWidget.setLayout(meshOptionTrianLayout)
-        meshOptionLayout.addWidget(meshOptionTrianWidget)
-        meshOptionLayout.setCurrentIndex(0)
+        meshChoiceLayout = QHBoxLayout()
+        meshQuadLayout = QVBoxLayout()
+        meshTrianLayout = QVBoxLayout()
+        meshQuadGroup = QGroupBox()
+        meshQuadGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        meshTrianGroup = QGroupBox()
+        meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
-        meshLayout.addLayout(meshOptionLayout)
+        meshQuadLayout.addWidget(meshQuad)
+        meshQuadLayout.addLayout(meshOptionQuadLayout)
+        meshQuadGroup.setLayout(meshQuadLayout)
+        meshChoiceLayout.addWidget(meshQuadGroup)
+        
+        meshTrianLayout.addWidget(meshTrian)
+        meshTrianLayout.addLayout(meshOptionTrianLayout)
+        meshTrianGroup.setLayout(meshTrianLayout)
+        meshChoiceLayout.addWidget(meshTrianGroup)
+        
+        meshLayout.addLayout(meshChoiceLayout, 20)
         
         
         class RegionTable(QTableWidget):
@@ -1404,7 +1410,7 @@ class App(QMainWindow):
         
         
         instructionLabel = QLabel('To define a region, just click on the mesh'
-           'to draw a polygone. Close the polygon using a left click. Once done'
+           ' to draw a polygon. Close the polygon using a left click. Once done'
            ', you can define the region resistivity in the table. To define a'
            ' new region, just press \'e\'')
         instructionLabel.setWordWrap(True)
@@ -1412,29 +1418,36 @@ class App(QMainWindow):
         
         mwMesh = MatplotlibWidget(navi=True)
         
+        meshLogText = QTextEdit()
+        meshLogText.setReadOnly(True)
+        def meshLogTextFunc(text):
+            cursor = meshLogText.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(text + '\n')
+            meshLogText.ensureCursorVisible()
+            QApplication.processEvents()
+#            if len(text.split()) > 2:
+#                if text.split()[2] == 'Stopped':
+#                    meshOutputStack.setCurrentIndex(1) # switch to graph
 
-        def regionButtonFunc():
-            self.r2.resetRegions()
-            regionTable.reset()
-            self.r2.mesh.draw(attr='res0')
-#            x = regionTable.getTable().flatten()
-#            regid = np.arange(len(x))
-#            self.r2.assignRes0(dict(zip(regid, x)))
-#            regionLabel.setText('Regions applied.')
-        regionButton = QPushButton('Reset')
-        regionButton.clicked.connect(regionButtonFunc)
         regionTable = RegionTable()
-#        regionLabel = QLabel('')
         
         regionLayout = QVBoxLayout()
-        regionLayout.addWidget(regionButton)
         regionLayout.addWidget(regionTable)
-#        regionLayout.addWidget(regionLabel)
         
+        meshPlot = QWidget()
         meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(mwMesh, 85)
-        meshPlotLayout.addLayout(regionLayout, 15)
-        meshLayout.addLayout(meshPlotLayout)
+        meshPlotLayout.addWidget(mwMesh, 80)
+        meshPlotLayout.addLayout(regionLayout, 20)
+        meshPlot.setLayout(meshPlotLayout)
+        
+        meshOutputStack = QStackedLayout()
+        meshOutputStack.addWidget(meshLogText)
+        meshOutputStack.addWidget(meshPlot)
+        meshOutputStack.setCurrentIndex(0)
+        
+        meshLayout.addLayout(meshOutputStack, 80)
+        
         
         
         
@@ -1528,7 +1541,9 @@ class App(QMainWindow):
         
         # add a forward button
         def forwardBtnFunc():
-            forwardLabel.setText('Forward model running.')
+            forwardOutputStack.setCurrentIndex(0)
+            forwardLogText.clear()
+            QApplication.processEvents()
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
@@ -1538,15 +1553,23 @@ class App(QMainWindow):
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)))
             noise = float(noiseEdit.text())
-            self.r2.forward(noise=noise, iplot=False)
+            self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
-            forwardLabel.setText('Forward model finished.')
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.clicked.connect(forwardBtnFunc)
-        
-        forwardLabel = QLabel('Clicked to make the forward model.')
-        
+                
         forwardPseudo = MatplotlibWidget(navi=True)
+        
+        forwardLogText = QTextEdit()
+        forwardLogText.setReadOnly(True)
+        def forwardLogTextFunc(text):
+            cursor = forwardLogText.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(text + '\n')
+            forwardLogText.ensureCursorVisible()
+            QApplication.processEvents()
+            if text == 'Forward modelling done.':
+                forwardOutputStack.setCurrentIndex(1) # switch to graph
 
         
         # layout
@@ -1573,8 +1596,13 @@ class App(QMainWindow):
         forwardLayout.addLayout(seqLayout, 15)
         forwardLayout.addLayout(noiseLayout, 5)
         forwardLayout.addWidget(forwardBtn, 5)
-        forwardLayout.addWidget(forwardLabel, 5)
-        forwardLayout.addWidget(forwardPseudo, 65)
+        
+        forwardOutputStack = QStackedLayout()
+        forwardOutputStack.addWidget(forwardLogText)
+        forwardOutputStack.addWidget(forwardPseudo)
+        forwardOutputStack.setCurrentIndex(0)
+        
+        forwardLayout.addLayout(forwardOutputStack, 70)
         
         tabForward.setLayout(forwardLayout)
         
@@ -2058,7 +2086,7 @@ class App(QMainWindow):
                 sectionId.currentIndexChanged.disconnect()
                 sectionId.clear()
             except:
-                print('no method connected to sectionId yet')
+#                print('no method connected to sectionId yet')
                 pass
             
             # displaying results or error
@@ -2070,53 +2098,32 @@ class App(QMainWindow):
                 r2outEdit.setText(text)
            
             if self.end is True:
-                try:
-                    plotSection()
-                    for i in range(len(self.r2.meshResults)):
-                        sectionId.addItem(self.r2.surveys[i].name)
-                    outStackLayout.setCurrentIndex(0)
-                except:
-                    pass
-                    printR2out()
+#                try:
+                plotSection()
+                for i in range(len(self.r2.surveys)):
+                    sectionId.addItem(self.r2.surveys[i].name)
+                outStackLayout.setCurrentIndex(0)
+#                except:
+#                    pass
+#                    printR2out()
             else:
                 printR2out()
             
-#        def logInversion2():
-##            self.r2.invert(callback=dataReady)
-##            dataReady('kk\n')
-#            if 'mesh' not in self.r2.param:
-#                generateMesh() # that will call mesh creation
-#        
-#            # write configuration file'
-#            self.r2.write2in()
-#            
-#            # write protocol file
-#            self.r2.write2protocol()#os.path.join(self.r2.dirname, 'protocol.dat'))
-#
-#            def runMainInversion():
-#                print('run main inversion')
-#                runR2()
-#                self.processes[-1].finished.connect(plotSection)
-#            
-#            def timeLapseMainRun():
-#                print('----------- finished inverting reference model ------------')
-#                shutil.copy(os.path.join(self.refdir, 'f001_res.dat'),
-#                runMainInversion()
-#            
-#            if self.r2.iTimeLapse == True:
-#                self.refdir = os.path.join(self.r2.dirname, 'ref')
-#                runR2(self.refdir)
-#                self.processes[-1].finished.connect(timeLapseMainRun)
-#                print('ok ip')
-#            else:<<<<<<<<
-#                runMainInversion()
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.typ == 'R2':
                 if self.r2.iBorehole is False:
-                    plotInvError()
-                plotInvError2()
+                    try:
+                        plotInvError()
+                    except Exception as e:
+                        print('plotInvError FAILED:', e)
+                        pass
+                try:
+                    plotInvError2()
+                except Exception as e:
+                    errorDump(e)
+                    pass
             if self.r2.typ == 'R2':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ == 'cR2':

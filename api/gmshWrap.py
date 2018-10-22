@@ -19,8 +19,8 @@ Dependencies:
     python3 standard libs
 """
 #python standard libraries 
-import tkinter as tk
-from tkinter import filedialog
+#import tkinter as tk
+#from tkinter import filedialog
 import os, warnings
 #general 3rd party libraries
 import numpy as np
@@ -212,8 +212,10 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
         bu_flag = False
   
     if doi == -1:#then set to a default 
-        if bh_flag:
+        if bh_flag is True:
             doi = abs(min(geom_input['borehole1'][1])) + abs(0.05*min(geom_input['borehole1'][1]))
+        elif bu_flag is True:
+            doi = abs(min(geom_input['buried1'][1])) + abs(0.05*min(geom_input['buried1'][1]))
         else:
             doi = abs(np.max(elec_x) - np.min(elec_x))/2
     if cl == -1:

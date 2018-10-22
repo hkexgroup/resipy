@@ -47,49 +47,7 @@ import api.gmshWrap as gw
 from api.isinpolygon import isinpolygon
 
 #%% create mesh object
-class Mesh_obj: 
-    """
-    creates a mesh class
-    
-    Parameters
-    ----------
-    num_nodes: int
-        number of nodes
-    num_elms: int 
-        number of elements 
-    node_x: list, 1d numpy array
-        x coordinates of nodes 
-    node_y: list, 1d numpy array
-        coordinates of nodes
-    node_z: list, 1d numpy array
-        z coordinates of nodes 
-    node_id: list
-        node id number (ie 1,2,3,4,...)
-    elm_id: list
-        element id number 
-    node_data: list of lists of ints 
-        nodes of element vertices in the form [[node1],[node2],[node3],...], each
-        node id should be an integer type. 
-    elm_centre: list of lists of floats
-        centre of elements (x,y)
-    elm_area: list 
-        area of each element
-    cell_type: list of ints
-        code referencing cell geometry (e.g. triangle) according to vtk format
-    cell_attributes: list of floats
-        the values of the attributes given to each cell 
-    atribute_title: string 
-        what is the attribute? we may use conductivity instead of resistivity for example
-    original_file_path: string, optional
-        file path to where the mesh file was originally imported
-    regions: optional
-        element indexes for a material in the mesh (needs further explanation)
-        
-    Returns
-    ----------
-    Mesh_obj: class
-        
-    """    
+class Mesh_obj:
     cax = None 
     zone = None
     attr_cache={}
@@ -111,6 +69,48 @@ class Mesh_obj:
                  atribute_title,#what is the attribute? we may use conductivity instead of resistivity for example
                  original_file_path='N/A',
                  regions=None) :
+        """
+        Creates mesh object.
+        
+        Parameters
+        ----------
+        num_nodes : int
+            number of nodes
+        num_elms : int 
+            number of elements 
+        node_x : list, 1d numpy array
+            x coordinates of nodes 
+        node_y : list, 1d numpy array
+            coordinates of nodes
+        node_z : list, 1d numpy array
+            z coordinates of nodes 
+        node_id : list
+            node id number (ie 1,2,3,4,...)
+        elm_id : list
+            element id number 
+        node_data : list of lists of ints 
+            nodes of element vertices in the form [[node1],[node2],[node3],...], each
+            node id should be an integer type. 
+        elm_centre : list of lists of floats
+            centre of elements (x,y)
+        elm_area : list 
+            area of each element
+        cell_type : list of ints
+            code referencing cell geometry (e.g. triangle) according to vtk format
+        cell_attributes : list of floats
+            the values of the attributes given to each cell 
+        atribute_title : string 
+            what is the attribute? we may use conductivity instead of resistivity for example
+        original_file_path : string, optional
+            file path to where the mesh file was originally imported
+        regions : optional
+            element indexes for a material in the mesh (needs further explanation)
+            
+        Returns
+        -------
+        Mesh_obj : class
+            
+        """
         #assign varaibles to the mesh object 
         self.num_nodes=num_nodes
         self.num_elms=num_elms
@@ -135,9 +135,9 @@ class Mesh_obj:
     
     @classmethod # creates a mesh object from a mesh dictionary
     def mesh_dict2obj(cls,mesh_info):
-        """
-        converts a mesh dictionary produced by the gmsh2r2mesh and vtkimport functions into a 
-        mesh object, its an alternative way to make a mesh object. 
+        """ Converts a mesh dictionary produced by the gmsh2r2mesh and
+        vtk_import functions into a mesh object, its an alternative way to
+         make a mesh object. 
         ***Intended for development use***
             
         Parameters
@@ -258,40 +258,39 @@ class Mesh_obj:
              vmin=None,
              vmax=None,
              attr=None):
-        """
-        Displays a 2d mesh and attribute.
+        """ Displays a 2d mesh and attribute.
         
         Parameters
         ----------
-        color_map : string, 
+        color_map : string, optional
             color map reference 
-        color_bar : Boolian, 
+        color_bar : Boolean, optional 
             `True` to plot colorbar 
-        xlim: tuple
+        xlim : tuple, optional
             Axis x limits as `(xmin, xmax)`.
-        ylim: tuple
+        ylim : tuple, optional
             Axis y limits as `(ymin, ymax)`. 
-        ax: matplotlib axis handle,
+        ax : matplotlib axis handle, optional
             Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
-        electrodes: Boolian 
+        electrodes : boolean, optional
             Enter true to add electrodes to plot.
-        sens: Boolian, 
+        sens : boolean, optional
             Enter true to plot sensitivities. 
-        edge_color: string
+        edge_color : string, optional
             Color of the cell edges, set to `None` if you dont want an edge.
-        contour: Boolian
+        contour : boolean, optional
             If `True`, plot filled with contours instead of the mesh.
-        vmin: float
+        vmin : float, optional
             Minimum limit for the color bar scale.
-        vmax: float
+        vmax : float, optional
             Maximum limit for the color bar scale.
-        attr: string
+        attr : string, optional
             Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
             as the key for this dictionary.
 
         Returns
         ----------
-        figure: matplotlib figure 
+        figure : matplotlib figure 
             Figure handle for the plotted mesh object.
         
         Notes
@@ -442,25 +441,25 @@ class Mesh_obj:
         
         Parameters
         ----------
-        color_map : string, 
+        color_map : string, optional
             color map reference 
-        color_bar : Boolian, 
+        color_bar : boolean, optional 
             `True` to plot colorbar 
-        ax: matplotlib axis handle,
+        ax : matplotlib axis handle, optional
             Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
-        edge_color: string
+        edge_color : string, optional
             Color of the cell edges, set to `None` if you dont want an edge.
-        vmin: float
+        vmin : float, optional
             Minimum limit for the color bar scale.
-        vmax: float
+        vmax : float, optional
             Maximum limit for the color bar scale.
-        attr: string
+        attr : string, optional
             Which attribute in the mesh to plot, references a dictionary of attributes. `attr` is passed 
             as the key for this dictionary.
 
         Returns
         ----------
-        figure: matplotlib figure 
+        figure : matplotlib figure 
             Figure handle for the plotted mesh object.
         
         """
@@ -506,21 +505,22 @@ class Mesh_obj:
     
 
     def assign_zone(self,poly_data):
-        """
-        Assign material/region assocations with certain elements in the mesh 
+        """ Assign material/region assocations with certain elements in the mesh 
         say if you have an area you'd like to forward model. 
         ***2D ONLY***
             
         Parameters
         ----------
-        poly_data: dictionary 
-            with the vertices (x,y) of each point in the polygon
+        poly_data : dictionary 
+            Dictionary with the vertices (x,y) of each point in the polygon.
             
         Returns
-        ---------- 
-        material_no: np array
-            element assocaitions starting at 1. So 1 for the first region defined in the region_data variable, 2 for the
-            second region defined and so on. If the element cant be assigned to a region then it'll be left at 0. 
+        -------
+        material_no : numpy.array
+            Element associations starting at 1. So 1 for the first region 
+            defined in the region_data variable, 2 for the second region 
+            defined and so on. If the element can't be assigned to a region
+            then it'll be left at 0. 
         """   
         no_elms=self.num_elms#number of elements 
         elm_xy=self.elm_centre#centriods of mesh elements 
@@ -557,12 +557,12 @@ class Mesh_obj:
         attr_list : list
             Values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
             `[resistivity1,resistivity2,resistivity3]`.
-        new_key: string
+        new_key : string
             Key identifier assigned to the attribute in the attr_cache. 
         
         Notes  
-        ----------
-        mesh object will now have the new attribute added once the function is run.
+        -----
+        Mesh object will now have the new attribute added once the function is run.
         Use the `mesh.show()` (or `.draw()`) function to see the result. 
         """ 
         if len(material_no) != self.num_elms:
@@ -587,26 +587,26 @@ class Mesh_obj:
 
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
         """
-        Applys a function to a mesh by zone number and mesh parameter.
+        Applies a function to a mesh by zone number and mesh parameter.
         
         Parameters
         ----------
-        mesh_paras: 
-            Mesh parameters from which new parameters are calculated 
-        material_no: list of ints
+        mesh_paras : list??
+            Mesh parameters from which new parameters are calculated.
+        material_no : list of ints
             Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
             ...ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored. 
-        new_key: string
+        new_key : string
             Key assigned to the parameter in the attr_cache. DOES NOT default.
-        function: function
+        function : function
             Function to be applied to mesh attributes, first argument must be the mesh parameter.
-        args: [see function info]
+        args : [see function info]
             All arguments to be passed through function after to modify the mesh parameter,
             ... argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
             ... where letters are the material, numbers refer to the argument number
         
         Notes  
-        ----------
+        -----
         Mesh object will now have the new attribute added once the function is run.
         Use the `mesh.show()` (or `.draw()`) function to see the result. 
         """
@@ -631,11 +631,12 @@ class Mesh_obj:
         Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
         input file for triangle meshes, so this function is only relevant for
         triangle meshes.
+        
         Parameters
         ------------
         file_path : string, optional
             Path to the file. By default 'mesh.dat' is saved in the working directory. 
-        zone: array like, optional
+        zone : array like, optional
             An array of integers which are assocaited with regions/materials in the mesh. 
             Useful in the case of an inversion which has a boundary constraint. 
             You can use assign_zone to give a zone/material number to the mesh, and pass that 
@@ -643,8 +644,9 @@ class Mesh_obj:
         param : array-like, optional
             Array of parameter number. Set a parameter number to zero fixed its
             conductivity to the starting conductivity.
+        
         Notes
-        ------------
+        -----
         mesh.dat like file written to file path. 
         ***IMPORTANT***
         R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
@@ -673,7 +675,7 @@ class Mesh_obj:
         else:
             if len(param) != self.num_elms:
                 raise IndexError("the number of parameters does not match the number of elements")
- 
+    
         if self.Type2VertsNo() == 3:
         #add element data following the R2 format - Note that indexing in FORTRAN starts at 1!!!!!
             for i in range(self.num_elms):
@@ -683,7 +685,7 @@ class Mesh_obj:
                            self.con_matrix[0][i]+1,#node 1 - add 1 
                            self.con_matrix[1][i]+1,#node 2
                            self.con_matrix[2][i]+1,#node 3
-                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
+                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
                            #this will be enabled in a future update 
                            zone[i]))
         elif self.Type2VertsNo() == 4:#if for some reason you want make a mesh.dat file for a quad mesh, you can, using the exact same format. 
@@ -695,7 +697,7 @@ class Mesh_obj:
                            self.con_matrix[1][i]+1,#node 2
                            self.con_matrix[2][i]+1,#node 3
                            self.con_matrix[3][i]+1,#node 4
-                           elm_no,#assigning the parameter number as the elm number allows for a unique parameter to be assigned
+                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned
                            zone[i]))
         #now add nodes
         x_coord = self.node_x
@@ -719,16 +721,16 @@ class Mesh_obj:
         
         Parameters
         ------------
-        file_path : string 
+        file_path : string, optional
             Maps where python will write the file, if left as `default` then mesh.vtk
             will be written the current working directory. 
-        title: string
+        title : string, optional
             Header string written at the top of the vtk file .
         
         Returns
         ----------
         vtk: file 
-            vtk file written to specified directory
+            vtk file written to specified directory.
         """
         #open file and write header information    
         fh = open(file_path,'w')
@@ -778,11 +780,11 @@ class Mesh_obj:
         
         Parameters
         ----------
-        attr_key: string
+        attr_key : string
             Key identifying the attr to be written in the mesh object attr_cache.
-        file_name: string
+        file_name : string, optional
             Name of the _res.dat type file.
-        file_path: string
+        file_path : string, optional
             Directory to which the file will be saved in, if left as none then the
             file will be written in the current working directory.
         """
@@ -818,17 +820,17 @@ def tri_cent(p,q,r):
             
     Parameters
     ----------
-    p: tuple,list,np array
+    p : tuple,list,np array
         Coordinates of triangle vertices in the form (x,y).
-    q: tuple,list,np array
+    q : tuple,list,np array
         Coordinates of triangle vertices in the form (x,y).
-    r: tuple,list,np array
+    r : tuple,list,np array
         Coordinates of triangle vertices in the form (x,y).
             
     Returns
     ----------
-    coordinates: tuple
-        in the format (x,y)    
+    coordinates : tuple
+        In the format (x,y).    
     """
     Xm=(p[0]+q[0])/2
     Ym=(p[1]+q[1])/2
@@ -845,16 +847,16 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             
     Parameters
     ----------
-    file_path: string
+    file_path : string, optional
         File path to mesh file. Note that a error will occur if the file format is not as expected.
-    parameter_title: string
+    parameter_title : string, optional
         Name of the parameter table in the vtk file, if left as default the first look up table found will be returned 
         also note that all parameters will be imported. Just the title highlights which one the mesh object will use as 
         default cell attribute. 
             
     Returns
-    ----------
-    mesh: class 
+    -------
+    mesh : class 
         a pyR2 mesh class 
     """
     #open the selected file for reading
@@ -1091,13 +1093,13 @@ def readR2_resdat(file_path):
             
     Parameters
     ----------
-    file_path: string
-        maps to the _res.dat file
+    file_path : string
+        Maps to the _res.dat file.
             
     Returns
-    ----------
-    res_values: list of floats
-        resistivity values returned from the .dat file 
+    -------
+    res_values : list of floats
+        Resistivity values returned from the .dat file. 
     """
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
@@ -1117,13 +1119,13 @@ def readR2_sensdat(file_path):
             
     Parameters
     ----------
-    file_path: string
-        maps to the _sens.dat file
+    file_path : string
+        Maps to the _sens.dat file.
             
     Returns
-    ----------
-    res_values: list of floats
-        sensitivity values returned from the .dat file (not log10!)
+    -------
+    res_values : list of floats
+        Sensitivity values returned from the .dat file (not log10!).
     """
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
@@ -1146,32 +1148,32 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
             
     Parameters
     ----------
-    elec_x: list, np array
+    elec_x : list, np array
         Electrode x coordinates 
-    elec_y: list, np array
+    elec_y : list, np array
         Electrode y coordinates
-    elemy: int
+    elemy : int
         Number of elements in the fine y region
-    yf: float
+    yf : float
          Y factor multiplier in the fine zone.
-    ygf: float
+    ygf : float
          Y factor multiplier in the coarse zone.
-    doi: float (m)
+    doi : float (m)
          Depth of investigation (if left as -1 = half survey width).
-    pad:
+    pad :
          X padding outside the fine area (tipicaly twice the number of elements between electrodes).
             
     Returns
-    ----------
-    Mesh: class
+    -------
+    Mesh : class
         Mesh object 
-    meshx: np array
+    meshx : numpy.array
         Mesh x locations for R2in file.
-    meshy: np array
+    meshy : numpy.array
         Mesh y locations for R2in file (ie node depths).
-    topo: np array
+    topo : numpy.array
         Topography for R2in file.
-    elec_node: np array
+    elec_node : numpy.array
         x columns where the electrodes are. 
     """
     if elemx < 4:
@@ -1185,25 +1187,26 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
         elec1 = elec[i,0]
         elec2 = elec[i+1,0]
         espacing = np.abs(elec1-elec2)
-        dx = espacing/elemx # we ask for elemx nodes between electrodes
+#        dx = espacing/elemx # we ask for elemx nodes between electrodes
         if i == 0:
-            xx2 = np.arange(elec1-espacing, elec1, dx)
+            xx2 = np.linspace(elec1-espacing, elec1, elemx, endpoint=False)
             xx3 = np.ones(elemx*pad)*elec1-espacing
             dxx = espacing
             for j in range(1,elemx*pad): # padding
                 xx3[j] = xx3[j-1]-dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx3[::-1], xx2[1:]]
-        xx = np.arange(elec1, elec2, dx)
+        xx = np.linspace(elec1, elec2, elemx, endpoint=False)
         meshx = np.r_[meshx, xx]
         if i == len(elec)-2:
-            xx2 = np.arange(elec2, elec2+espacing, dx)
+            xx2 = np.linspace(elec2, elec2+espacing, elemx, endpoint=False)
             xx3 = np.ones(elemx*pad)*elec2+espacing
             dxx = espacing
             for j in range(1,elemx*pad):
                 xx3[j] = xx3[j-1]+dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
+
     
     # create e_nodes
     elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
@@ -1305,27 +1308,30 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwargs):
+def tri_mesh(geom_input,keep_files=True, show_output=True, path='exe', dump=print, **kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function expects the current working directory has path: exe/gmsh.exe.
             
     Parameters
     ---------- 
-    keep_files: boolian
+    geom_input : dictionnary
+        Dictionary used to generate survey geometry in genGeoFile_adv (see notes there).
+    keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the exe directory.
-    show_ouput: boolian
+    show_ouput : boolean, optional
         `True` if gmsh output is to be printed to console. 
-    path: string
+    path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
-    geom_input:
-        Dictionary used to generate survey geometry in genGeoFile_adv (see notes there). 
-    **kwargs: optional
+    dump : function, optional
+        Function to which pass the output during mesh generation. `print()` is
+        the default.
+    **kwargs : optional
         Key word arguments to be passed to genGeoFile. 
             
     Returns
-    ----------
-    mesh.dat: file
+    -------
+    mesh.dat : file
         In the Executables directory.
     """
     #check directories 
@@ -1359,7 +1365,7 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwarg
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
-            print(line.decode('utf-8'))
+            dump(line.decode('utf-8'))
     else:
         call(cmd_line)#run gmsh 
         
@@ -1383,26 +1389,26 @@ def tri_mesh(geom_input,keep_files=True, show_output = False, path='exe',**kwarg
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     """
-    function makes a .vtk file for some xyz coordinates. optional argument
+    Function makes a .vtk file for some xyz coordinates. optional argument
     renames the name of the file (needs file path also) (default is "points.vtk"). 
-    title is the name of the vtk file
+    title is the name of the vtk file.
             
     Parameters
     ----------
-    x: list, tuple, np array
+    x : list, tuple, np array
         X coordinates of points.
-    y: list, tuple, np array
+    y : list, tuple, np array
         Y coordinates of points.
-    z: list, tuple, np array
+    z : list, tuple, np array
         Z coordinates of points.
-    file_name: string, optional
+    file_name : string, optional
         Path to saved file, defualts to 'points.vtk' in current working directory.
-    title: string, optional
+    title : string, optional
         Title of vtk file.
             
     Returns
-    ----------
-    ~.vtk: file
+    -------
+    ~.vtk : file
     """
     #error check
     if len(x) != len(y) or len(x) != len(z):
@@ -1502,11 +1508,12 @@ def dat_import(file_path):
 #ax.add_artist(rect)
 #selector = SelectPoints(ax, np.array(mesh.elm_centre).T, typ='rect')
 
-
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=8)
+#elec = np.genfromtxt('/home/jkl/Downloads/paulRiverData/elecPos.csv', delimiter=',')
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(elec[:,0], elec[:,1], elemx=8)
 #mesh.show(color_bar=False)
 
-#mesh = vtk_import('api/test/test.vtk')
+#mesh = vtk_import('api/test/testQuadMesh.vtk')
+#mesh = vtk_import('api/test/testTrianMesh.vtk')
 #mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()

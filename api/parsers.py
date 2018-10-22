@@ -76,6 +76,41 @@ def protocolParser(fname):
 # test code
 #protocolParser('test/protocolFile.dat')
     
+
+#%% PRIME system parser
+
+def primeParser(fname, espacing=None):
+    """ Returns data and elec from BGS PRIME system.
+    """
+    with open(fname, 'r') as f:
+        x = f.readlines()
+        nrows = int(x[6])
+    df = pd.read_csv(fname, header=11, delimiter='\t', nrows=nrows)
+    df = df.reset_index()
+    df = df.rename(columns={'level_1':'a',
+                            'level_3':'b',
+                            'level_5':'m',
+                            'level_7':'n',
+                            'level_9':'resist'})
+    array = df[['a','b','m','n']].values
+    if espacing is None:
+        espacing = np.unique(np.sort(array.flatten()))[1]
+    array = np.round(array/espacing+1).astype(int)
+    imax = int(np.max(array))
+#                if np.sum(array == 0) > 0:
+#                    print('add 1 as there is electrodes at zeros')
+#                    imax = imax+1
+    elec = np.zeros((imax,3))
+    elec[:,0] = np.arange(0,imax)*espacing
+    df['ip'] = np.nan
+    df[['a','b','m','n']] = array
+    
+    return elec, df
+
+# test code
+#elec, df = primeParser('api/test/primeFile.dat')
+    
+
 #%% parse input for res2inv (.dat file) - Jimmy B. 
 #jamyd91@bgs.ac.uk
 def res2invInputParser(file_path):

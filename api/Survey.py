@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from api.parsers import syscalParser, protocolParser, res2invInputParser
+from api.parsers import (syscalParser, protocolParser, res2invInputParser,
+                     primeParser)
 from api.DCA import DCA
 
 class Survey(object):
@@ -58,6 +59,8 @@ class Survey(object):
                 elec, data = protocolParser(fname)
             elif ftype == 'Res2Dinv':
                 elec, data = res2invInputParser(fname)
+            elif ftype == 'BGS Prime':
+                elec, data = primeParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -106,7 +109,7 @@ class Survey(object):
         
         # remove duplicates
         shapeBefore = self.df.shape[0]
-        self.df = self.df.drop_duplicates(subset=['a','m'], keep = 'first')
+        self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0:
             print(ndup, 'duplicates removed.')
@@ -1016,13 +1019,14 @@ class Survey(object):
             If `ax` is not None, a matplotlib figure is returned.
         """
         array = self.df[['a','b','m','n']].values
-        if 'recipError' in self.df.columns:
+        if np.sum(self.df['irecip'].values == 0) == 0:
+            print('choose recipError')
             resist = self.df['recipError'].values # some nan here are not plotted !!!
-            print('set to reciprocal')
             clabel = 'Reciprocal Error'
         else:
-            resist = np.ones(self.df.shape[0])
-            clabel = 'Resistivity [Ohm.m]'
+            print('choose resist')
+            resist = self.df['resist'].values
+            clabel = 'Tx Resistance [Ohm.m]'
         if label == '':
             label = clabel
         inan = np.isnan(resist)
@@ -1037,7 +1041,7 @@ class Survey(object):
         # keeping the index to be able to filter out the data ... maybe add
         # a third class of empty points just for NaN
         spacing = np.mean(np.diff(self.elec[:,0]))
-        
+        print(array)
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
         
