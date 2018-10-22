@@ -1493,6 +1493,34 @@ def dat_import(file_path):
                      atribute_title='none')#what is the attribute? we may use conductivity instead of resistivity for example
     return mesh
     
+#%% ram amount check. 
+#Now for complicated meshes we need alot more RAM. the below function is a os agnostic
+#function for returning the amount of total ram. 
+def checkRAM():
+    OpSys=platform.system()
+    print("Kernal type: %s"%OpSys)
+    if OpSys=="Linux":
+        totalMemory = os.popen("free -m").readlines()[1].split()[1]
+    elif OpSys=="Windows":
+        info = os.popen("systeminfo").readlines()
+        for i,line in enumerate(info):
+            if line.find("Total Physical Memory")!=-1:
+                temp = line.split()[3]
+                idx = temp.find(',')
+                totalMemory = temp[0:idx]
+                totalMemory += temp[idx+1:]
+                
+    elif OpSys=='Mac':
+        totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
+        totalMemory = totalMemory*1000
+        
+    else:
+        raise OSError("unrecognised operating system")
+        
+    totalMemory = int(totalMemory)
+    print("Total RAM available: %i Mb"%totalMemory)
+    return totalMemory
+    
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=4)
 #mesh.show(color_bar=False)
