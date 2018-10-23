@@ -79,7 +79,7 @@ print("time taken to do inversions in series %f s"%(time.time()-t0))
 
 #multiprocessing using the pool method 
 t1 = time.time()
-pool = mp.Pool(processes=int(num_threads/2)) # now do computation in parallel? 
+pool = mp.Pool(processes=int(diag['core_count']/2)) # now do computation in parallel? 
 results = [pool.apply_async(parallel_R2, args=(k.dirname,x,)) for x in range(2)]
 results = [p.get() for p in results]
 
