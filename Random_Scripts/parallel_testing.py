@@ -6,9 +6,10 @@ parellisation testing for batch inversion
 @author: jimmy
 """
 import os,sys, platform, time #utility standard python packages 
-pyR2_location = r"/home/jimmy/phd/r2gui" #insert r2gui location here
+pyR2_location = r".." #insert r2gui location here
 sys.path.append(pyR2_location)
 from api.R2 import R2 #import r2 class 
+from api.meshTools import checkRAM
 #multiprocessing lib
 import multiprocessing as mp #python standard library for multiprocessing 
 import shutil # python library - manages copying files etc
@@ -22,15 +23,10 @@ num_threads = mp.cpu_count()
 print("Number of logical processors: %i"%num_threads)
 if num_threads<3:
     print("It looks like your computer only has 1 or 2 logical cores, consider getting a better PC you scrub")
-OpSys=platform.system()
-print("Kernal type: %s"%OpSys)
-if OpSys != "Linux":
-    print("It looks like you are not using Linux, multithreaded python workflow will have unpredictable behaviour!")
-else:
-    totalMemory = os.popen("free -m").readlines()[1].split()[1]
-    print("Total RAM available: %iMb"%int(totalMemory))
-    if int(totalMemory)<4000:
-        print("Your computer has a small amount of RAM, parallel processing is ill advised")
+totalMemory = checkRAM()
+#print("Total RAM available: %iMb"%int(totalMemory))
+if int(totalMemory)<4000:
+    print("Your computer has a small amount of RAM, parallel processing is ill advised")
 
 #%%create batch survey
 k = R2()
@@ -81,6 +77,7 @@ def parallel_R2(working_directory,time_step=0,output=None):
     shutil.copyfile(os.path.join(path,'f001_res.vtk'),os.path.join(working_directory,result_name))
     #Then delete the created folder otherwise things will get very messy!
     shutil.rmtree(path)
+    return True # the function has completed 
     
 #%%now actually put the above into practice 
 t0 = time.time()
@@ -90,8 +87,10 @@ print("time taken to do inversions in series %f s"%(time.time()-t0))
 
 #multiprocessing using the pool method 
 t1 = time.time()
-pool = mp.Pool(processes=4) # now do computation in parallel? 
-results = [pool.apply_async(parallel_R2, args=(k.dirname,x,)) for x in range(4)]
+pool = mp.Pool(processes=int(num_threads/2)) # now do computation in parallel? 
+results = [pool.apply_async(parallel_R2, args=(k.dirname,x,)) for x in range(2)]
+results = [p.get() for p in results]
+
 print("time taken to do inversions in parallel %f s"%(time.time()-t1))
 
 ## Define an output queue

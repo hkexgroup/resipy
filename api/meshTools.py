@@ -1510,9 +1510,9 @@ def checkRAM():
                 totalMemory = temp[0:idx]
                 totalMemory += temp[idx+1:]
                 
-    elif OpSys=='Mac':
+    elif OpSys=='Darwin':
         totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
-        totalMemory = totalMemory*1000
+        totalMemory = int(totalMemory)*1000
         
     else:
         raise OSError("unrecognised operating system")
