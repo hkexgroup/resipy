@@ -28,7 +28,7 @@ Nb: Module has a heavy dependence on numpy and matplotlib packages
 #import standard python packages
 #import tkinter as tk
 #from tkinter import filedialog
-import os, platform, warnings
+import os, platform, warnings, multiprocessing
 from subprocess import PIPE, Popen, call
 import time
 #import anaconda default libraries
@@ -1496,9 +1496,19 @@ def dat_import(file_path):
 #%% ram amount check. 
 #Now for complicated meshes we need alot more RAM. the below function is a os agnostic
 #function for returning the amount of total ram. 
-def checkRAM():
+def systemCheck():
+    print("________________System-Check__________________")
+    #display processor info
+    print("Processor info: %s"%platform.processor())
+    num_threads = multiprocessing.cpu_count()
+    print("Number of logical CPUs: %i"%num_threads)
+    #check operating system 
     OpSys=platform.system()
-    print("Kernal type: %s"%OpSys)
+    if OpSys=='Darwin':
+        print("Kernal type: macOS")
+    else:
+        print("Kernal type: %s"%OpSys)
+    #check the amount of ram 
     if OpSys=="Linux":
         totalMemory = os.popen("free -m").readlines()[1].split()[1]
     elif OpSys=="Windows":
@@ -1515,11 +1525,18 @@ def checkRAM():
         totalMemory = int(totalMemory)*1000
         
     else:
-        raise OSError("unrecognised operating system")
+        raise OSError("unrecognised/unsupported operating system")
         
     totalMemory = int(totalMemory)
     print("Total RAM available: %i Mb"%totalMemory)
-    return totalMemory
+    
+    #print some warnings incase the user has a low end PC
+    if totalMemory <= 4000:
+        warnings.warn("The amount of RAM currently installed is quite low (<4Gb), complicated problems may incur memory access voilations")
+    if num_threads <=2:
+        warnings.warn("Your core count is quite small, multithreaded workflows will not perform well.")
+    
+    return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
     
 #%% test code
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=4)

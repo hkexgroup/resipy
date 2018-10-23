@@ -9,7 +9,7 @@ import os,sys, platform, time #utility standard python packages
 pyR2_location = r".." #insert r2gui location here
 sys.path.append(pyR2_location)
 from api.R2 import R2 #import r2 class 
-from api.meshTools import checkRAM
+from api.meshTools import systemCheck
 #multiprocessing lib
 import multiprocessing as mp #python standard library for multiprocessing 
 import shutil # python library - manages copying files etc
@@ -18,15 +18,7 @@ import string
 from subprocess import PIPE, Popen, call#python library to manage running os level commands 
 
 #%%Return some information about the system 
-print("Processor type: %s"%platform.processor())
-num_threads = mp.cpu_count()
-print("Number of logical processors: %i"%num_threads)
-if num_threads<3:
-    print("It looks like your computer only has 1 or 2 logical cores, consider getting a better PC you scrub")
-totalMemory = checkRAM()
-#print("Total RAM available: %iMb"%int(totalMemory))
-if int(totalMemory)<4000:
-    print("Your computer has a small amount of RAM, parallel processing is ill advised")
+diag = systemCheck()
 
 #%%create batch survey
 k = R2()
