@@ -591,9 +591,9 @@ class Mesh_obj:
         
         Parameters
         ----------
-        mesh_paras : list??
+        mesh_paras : array like
             Mesh parameters from which new parameters are calculated.
-        material_no : list of ints
+        material_no : array like of ints
             Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
             ...ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored. 
         new_key : string
@@ -617,7 +617,7 @@ class Mesh_obj:
         #iterate through each set of argument variables
         for iteration in range(len(args[0])):
             parameters=[items[iteration] for items in args]#return parameters 
-            parameters.insert(0,0)#this adds an element to the front of the parameters which can be swapped out resistivity
+            parameters.insert(0,0)#this adds an element to the front of the parameters which can be swapped out to mesh_paras
             for i in range(self.num_elms):
                 if material_no[i]==iteration+1:#does the material match the iteration? 
                     parameters[0]=mesh_paras[i]#change parameter value at start of variables list
@@ -668,37 +668,21 @@ class Mesh_obj:
                 raise IndexError("the number of zone parameters does not match the number of elements")
             elif min(zone) == 0:
                 zone = np.array(zone,dtype=int)+1 # as fortran indexing starts at 1, not 0 we must add one to the array if min ==0 
-        #check if we have quad type mesh
         
         if param  is None:
             param = 1 + np.arange(self.num_elms) # default one parameter per element
         else:
             if len(param) != self.num_elms:
                 raise IndexError("the number of parameters does not match the number of elements")
+        
+        #write out elements         
+        no_verts = self.Type2VertsNo()
+        for i in range(self.num_elms):
+            elm_no=i+1
+            fid.write("%i "%elm_no)
+            [fid.write("%i "%(self.con_matrix[k][i]+1)) for k in range(no_verts)]
+            fid.write("%i %i\n"%(param[i],zone[i]))
     
-        if self.Type2VertsNo() == 3:
-        #add element data following the R2 format - Note that indexing in FORTRAN starts at 1!!!!!
-            for i in range(self.num_elms):
-                elm_no=i+1
-                fid.write("%i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, parameter,zone.
-                          (elm_no,
-                           self.con_matrix[0][i]+1,#node 1 - add 1 
-                           self.con_matrix[1][i]+1,#node 2
-                           self.con_matrix[2][i]+1,#node 3
-                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned, 
-                           #this will be enabled in a future update 
-                           zone[i]))
-        elif self.Type2VertsNo() == 4:#if for some reason you want make a mesh.dat file for a quad mesh, you can, using the exact same format. 
-            for i in range(self.num_elms):
-                elm_no=i+1
-                fid.write("%i %i %i %i %i %i %i\n"%#element number, nd1, nd2, nd3, nd4, parameter,zone.
-                          (elm_no,
-                           self.con_matrix[0][i]+1,#node 1
-                           self.con_matrix[1][i]+1,#node 2
-                           self.con_matrix[2][i]+1,#node 3
-                           self.con_matrix[3][i]+1,#node 4
-                           param[i],#assigning the parameter number as the elm number allows for a unique parameter to be assigned
-                           zone[i]))
         #now add nodes
         x_coord = self.node_x
         y_coord = self.node_y
