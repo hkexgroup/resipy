@@ -2396,7 +2396,7 @@ USA: Trelgol Publishing, (2006).
 </ul>
 </p>
 <br/>
-                          <p><strong>pyR2's core developpers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>''')
+                          <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>''')
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
