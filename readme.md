@@ -1,6 +1,5 @@
 GUI for R2 family code
 ======================
-qsdfqsdfqsdfq
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
 provides a standalone graphical user interface (GUI) along with a python API* for use in jupyter notebook.
 
