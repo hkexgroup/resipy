@@ -1022,7 +1022,7 @@ class Survey(object):
         if np.sum(self.df['irecip'].values == 0) == 0:
             print('choose recipError')
             resist = self.df['recipError'].values # some nan here are not plotted !!!
-            clabel = 'Reciprocal Error'
+            clabel = 'Reciprocal Error [$\Omega$]'
         else:
             print('choose resist')
             resist = self.df['resist'].values
