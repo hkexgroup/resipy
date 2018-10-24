@@ -188,7 +188,7 @@ class App(QMainWindow):
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
             elecTable.clear()
-            topoTable.clear()
+            topoTable.initTable(np.array([['',''],['','']]))
             dimInverse.setChecked(True)
             
             # pre-processing
