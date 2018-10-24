@@ -1360,13 +1360,13 @@ class App(QMainWindow):
         meshTrianGroup = QGroupBox()
         meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
-        meshQuadLayout.addWidget(meshQuad)
         meshQuadLayout.addLayout(meshOptionQuadLayout)
+        meshQuadLayout.addWidget(meshQuad)
         meshQuadGroup.setLayout(meshQuadLayout)
         meshChoiceLayout.addWidget(meshQuadGroup)
         
-        meshTrianLayout.addWidget(meshTrian)
         meshTrianLayout.addLayout(meshOptionTrianLayout)
+        meshTrianLayout.addWidget(meshTrian)
         meshTrianGroup.setLayout(meshTrianLayout)
         meshChoiceLayout.addWidget(meshTrianGroup)
         
