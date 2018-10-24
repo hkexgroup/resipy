@@ -1216,15 +1216,22 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         """
-        err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)
-        array = err[:,[-2,-1,-4,-3]].astype(int)
-        errors = err[:,0]
+        if self.typ == 'R2':
+            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
+            array = err[:,[-2,-1,-4,-3]].astype(int)
+            errors = err[:,0]
+        if self.typ == 'cR2':
+            err = pd.read_fwf(os.path.join(self.dirname, 'f001.err')).values       
+            array = err[:,[0,1,2,3]].astype(int)
+            errors = err[:,4]
+        
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
     def showInversionErrors(self, ax=None):
         """ Display inversion error by measurment numbers.
         """
+        # TODO make it work with cR2
         file_path = os.path.join(self.dirname, 'f001_err.dat')
         error_info = import_R2_err_dat(file_path)
         disp_R2_errors(error_info, ax=ax)
@@ -1347,13 +1354,13 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
+#k = R2()
 #k.typ = 'cR2'
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.createSurvey('api/test/syscalFileIP.csv')
 #k.write2protocol()
 #k.invert()
-
+#k.pseudoError()
 
 #%% test for timelapse inversion
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')

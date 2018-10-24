@@ -85,6 +85,7 @@ class MatplotlibWidget(QWidget):
         self.callback = callback
         callback(ax=ax)
         ax.set_aspect('auto')
+        ax.set_autoscale_on(False)
         self.figure.tight_layout()
         self.canvas.draw()
     
@@ -148,7 +149,8 @@ class App(QMainWindow):
         self.r2.cwd = bundle_dir
         self.parser = None
         self.fname = None
- 
+        self.datadir = os.path.join(bundle_dir, 'api', 'test')
+        
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
@@ -256,9 +258,11 @@ class App(QMainWindow):
             vmaxEdit.setText('')
             mwInvResult.clear()
             mwInvError.clear()
+            mwInvError2.clear()
 
             
         restartBtn = QPushButton('Reset UI')
+        restartBtn.setAutoDefault(True)
         restartBtn.clicked.connect(restartFunc)
         restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
         
@@ -417,6 +421,7 @@ class App(QMainWindow):
                 wdBtn.setText(fdir)
             
         wdBtn = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
+        wdBtn.setAutoDefault(True)
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('The working directory will contains all files for the inversion (R2.in, R2.exe, protocol.dat, f001_res.vtk, ...)')
         
@@ -450,8 +455,9 @@ class App(QMainWindow):
         
         
         def getdir():
-            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.r2.dirname)
+            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
             if fdir != '':
+                self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
                         self.r2.createTimeLapseSurvey(fdir)
@@ -471,8 +477,9 @@ class App(QMainWindow):
             
         def getfile():
             print('ftype = ', self.ftype)
-            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
             if fname != '':
+                self.datadir = os.path.dirname(fname)
                 importFile(fname)
         
         def importFile(fname):            
@@ -514,11 +521,12 @@ class App(QMainWindow):
                           Make sure you selected the right file type.')
                 pass
         
-        buttonf = QPushButton('Import Data') 
+        buttonf = QPushButton('Import Data')
+        buttonf.setAutoDefault(True)
         buttonf.clicked.connect(getfile)
         
         def getfileR():
-            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.r2.dirname)
+            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
             if fnameRecip != '':
                 buttonfr.setText(fnameRecip)
                 if float(spacingEdit.text()) == -1:
@@ -531,7 +539,8 @@ class App(QMainWindow):
                     plotError()
 #                plotManualFiltering()
 
-        buttonfr = QPushButton('If you have reciprocals upload them here') 
+        buttonfr = QPushButton('If you have reciprocals upload them here')
+        buttonfr.setAutoDefault(True)
         buttonfr.clicked.connect(getfileR)
         
         hbox4 = QHBoxLayout()
@@ -741,6 +750,7 @@ class App(QMainWindow):
                            regular electrode spacing.</i>')
         elecLabel.setWordWrap(True)
         elecButton = QPushButton('Import from CSV files (no headers)')
+        elecButton.setAutoDefault(True)
         elecButton.clicked.connect(elecTable.readTable)
         nbElecEdit = QLineEdit()
         nbElecEdit.setValidator(QIntValidator())
@@ -769,6 +779,7 @@ class App(QMainWindow):
                               np.linspace(0.0, (nbElec-1)*dz, nbElec)]
             elecTable.initTable(electrodes)
         elecGenButton = QPushButton('Generate')
+        elecGenButton.setAutoDefault(True)
         elecGenButton.clicked.connect(elecGenButtonFunc)
         elecGenLayout = QHBoxLayout()
         elecGenLayout.addWidget(nbElecLabel)
@@ -791,6 +802,7 @@ class App(QMainWindow):
                            You can use <code>Ctrl+V</code> to paste directly \
                            into a cell.</i>')
         topoButton = QPushButton('Import from CSV files (no headers)')
+        topoButton.setAutoDefault(True)
         topoButton.clicked.connect(topoTable.readTable)
         topoLayout.addWidget(topoLabel)
         topoLayout.addWidget(topoButton)
@@ -819,6 +831,7 @@ class App(QMainWindow):
                 self.fnameManual = fname
                 openFileBtn.setText(fname + ' (Click to change)')
         openFileBtn = QPushButton('Open File')
+        openFileBtn.setAutoDefault(True)
         openFileBtn.clicked.connect(openFileBtnFunc)
 
         def parseBtnFunc():
@@ -836,6 +849,7 @@ class App(QMainWindow):
                 errorDump('Import error:', e)
 
         parseBtn = QPushButton('Import')
+        parseBtn.setAutoDefault(True)
         parseBtn.clicked.connect(parseBtnFunc)
             
         # have qcombobox to be read for each columns
@@ -997,6 +1011,7 @@ class App(QMainWindow):
                 
                 
         importBtn = QPushButton('Import Dataset')
+        importBtn.setAutoDefault(True)
         importBtn.clicked.connect(importBtnFunc)
         
         
@@ -1047,9 +1062,11 @@ class App(QMainWindow):
         
         btnLayout = QHBoxLayout()
         btnStart = QPushButton('Start')
+        btnStart.setAutoDefault(True)
         btnStart.clicked.connect(plotManualFiltering)
         btnLayout.addWidget(btnStart)
         btnDone = QPushButton('Apply')
+        btnDone.setAutoDefault(True)
         btnDone.clicked.connect(btnDoneFunc)
         btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
         btnLayout.addWidget(btnDone)
@@ -1189,12 +1206,15 @@ class App(QMainWindow):
         phivmaxEdit = QLineEdit()
         phivmaxEdit.setValidator(QDoubleValidator())
         rangebutton = QPushButton('Apply')
+        rangebutton.setAutoDefault(True)
         rangebutton.clicked.connect(phirange)
         
         recipfilt = QPushButton('Remove reciprocals')
+        recipfilt.setAutoDefault(True)
         recipfilt.clicked.connect(removerecip)
 
         nestedfilt = QPushButton('Remove nested')
+        nestedfilt.setAutoDefault(True)
         nestedfilt.clicked.connect(removenested)        
         
         phitoplayout.addWidget(rangelabel)
@@ -1215,6 +1235,7 @@ class App(QMainWindow):
         
         resetlayout = QVBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
+        filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
         resetlayout.addWidget(filtreset)
 #        recipfilt.clicked.connect("add function")
@@ -1248,6 +1269,7 @@ class App(QMainWindow):
             
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
+        dcaButton.setAutoDefault(True)
         dcaButton.clicked.connect(dcaFiltering)
         dcaProgress = QProgressBar()
         dcaLayout.addWidget(dcaButton)
@@ -1300,6 +1322,7 @@ class App(QMainWindow):
             meshOutputStack.setCurrentIndex(1)
             replotMesh()
         meshQuad = QPushButton('Quadrilateral Mesh')
+        meshQuad.setAutoDefault(True)
         meshQuad.clicked.connect(meshQuadFunc)
         
         def meshTrianFunc():
@@ -1324,6 +1347,7 @@ class App(QMainWindow):
             meshOutputStack.setCurrentIndex(1)
 
         meshTrian = QPushButton('Triangular Mesh')
+        meshTrian.setAutoDefault(True)
         meshTrian.clicked.connect(meshTrianFunc)
         
         # additional options for quadrilateral mesh
@@ -1522,8 +1546,10 @@ class App(QMainWindow):
         
         seqTable = SequenceTable()
         seqReset = QPushButton('Reset')
+        seqReset.setAutoDefault(True)
         seqReset.clicked.connect(seqTable.reset)
         seqAddRow = QPushButton('Add Row')
+        seqAddRow.setAutoDefault(True)
         seqAddRow.clicked.connect(seqTable.addRow)
         def seqCreateFunc():
             skipDepths = [tuple(a) for a in list(seqTable.getTable())]
@@ -1531,6 +1557,7 @@ class App(QMainWindow):
             self.r2.createSequence(skipDepths=skipDepths)
             seqOutputLabel.setText(str(len(self.r2.sequence)) + ' quadrupoles generated')
         seqCreate = QPushButton('Create Sequence')
+        seqCreate.setAutoDefault(True)
         seqCreate.clicked.connect(seqCreateFunc)
         seqOutputLabel = QLabel('')
     
@@ -1556,6 +1583,7 @@ class App(QMainWindow):
             self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
         forwardBtn = QPushButton('Forward Modelling')
+        forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
                 
         forwardPseudo = MatplotlibWidget(navi=True)
@@ -1624,7 +1652,11 @@ class App(QMainWindow):
             opts = [c_wgt, c_wgtLabel, d_wgt, d_wgtLabel,
                     singular_type, singular_typeLabel,
                     res_matrix, res_matrixLabel]
-            iopts = arg*[1, 1, 1, 1, 0, 0, 0, 0]
+            activeState = np.array([1, 1, 1, 1, 0, 0, 0, 0], dtype=bool)
+            if arg == True:
+                iopts = activeState
+            else:
+                iopts = ~activeState
             [o.setVisible(io) for o, io in zip(opts, iopts)]
         
         # help sections
@@ -2112,18 +2144,17 @@ class App(QMainWindow):
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
-            if self.r2.typ == 'R2':
-                if self.r2.iBorehole is False:
-                    try:
-                        plotInvError()
-                    except Exception as e:
-                        print('plotInvError FAILED:', e)
-                        pass
+            if self.r2.iBorehole is False:
                 try:
-                    plotInvError2()
+                    plotInvError()
                 except Exception as e:
-                    errorDump(e)
+                    print('plotInvError FAILED:', e)
                     pass
+            try:
+                plotInvError2()
+            except Exception as e:
+                errorDump(e)
+                pass
             if self.r2.typ == 'R2':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ == 'cR2':
@@ -2174,9 +2205,10 @@ class App(QMainWindow):
                 mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
             
 
-        btn = QPushButton('Invert')
-        btn.clicked.connect(logInversion)
-        invLayout.addWidget(btn)
+        btnInvert = QPushButton('Invert')
+        btnInvert.setAutoDefault(True)
+        btnInvert.clicked.connect(logInversion)
+        invLayout.addWidget(btnInvert)
         
         logLayout = QHBoxLayout()
         
@@ -2255,6 +2287,7 @@ class App(QMainWindow):
 #        vmaxEdit.textChanged.connect(setCBarLimit)
         vmaxEdit.setValidator(QDoubleValidator())
         vMinMaxApply = QPushButton('Apply')
+        vMinMaxApply.setAutoDefault(True)
         vMinMaxApply.clicked.connect(setCBarLimit)
         
         displayOptions.addWidget(vminLabel)
