@@ -1411,56 +1411,93 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 
 #%% parser for reading in mesh.dat like file and returning a mesh.     
 def dat_import(file_path):
-    fh = open(file_path)
-    header = fh.readline().strip() # read in first line
-    no_nodes = int(header.split()[1])
-    no_elms = int(header.split()[0])
-    #first loop import connection matrix data
-    elm_number=[0]*no_elms#assign lists to nodes 
-    node1=[0]*no_elms
-    node2=[0]*no_elms
-    node3=[0]*no_elms
-    #node4=[0]*no_elms
-    parameter =[0]*no_elms
-    zone =[0]*no_elms
-    for i in range(no_elms):
-        matrix_dat = fh.readline().strip().split()
-        elm_number[i] = int(matrix_dat[0])
-        node1[i] = int(matrix_dat[1])-1
-        node2[i] = int(matrix_dat[2])-1
-        node3[i] = int(matrix_dat[3])-1
-        #node4=[i]
-        parameter [i] = int(matrix_dat[4])
-        zone[i] = int(matrix_dat[5])
-    #second loop read in node coordinates 
-    x_coord = [0]*no_nodes
-    z_coord = [0]*no_nodes 
-    node_num = [0]*no_nodes 
-    for i in range(no_nodes):
-        coord_data=fh.readline().strip().split()
-        node_num[i]=float(coord_data[0])
-        x_coord[i]=float(coord_data[1])
-        z_coord[i]=float(coord_data[2])
-    fh.close()
+#    fh = open(file_path)
+#    header = fh.readline().strip() # read in first line
+#    no_nodes = int(header.split()[1])
+#    no_elms = int(header.split()[0])
+#    #first loop import connection matrix data
+#    elm_number=[0]*no_elms#assign lists to nodes 
+#    elems = []
+#    #node4=[0]*no_elms
+#    parameter =[0]*no_elms
+#    zone =[0]*no_elms
+#    for i in range(no_elms):
+#        matrix_dat = fh.readline().strip().split()
+#        elm_number[i] = int(matrix_dat[0])
+#        elems.append([int(a)-1 for a in matrix_dat[1:-2]])
+#        parameter [i] = int(matrix_dat[4])
+#        zone[i] = int(matrix_dat[5])
+#    #second loop read in node coordinates
+#    elems = np.vstack(elems) # sorry jimmy some numpy here ^^
+#    elemsTuple = tuple([elems[:,i] for i in range(elems.shape[1])])
+#    x_coord = [0]*no_nodes
+#    z_coord = [0]*no_nodes 
+#    node_num = [0]*no_nodes 
+#    for i in range(no_nodes):
+#        coord_data=fh.readline().strip().split()
+#        node_num[i]=float(coord_data[0])
+#        x_coord[i]=float(coord_data[1])
+#        z_coord[i]=float(coord_data[2])
+#    fh.close()
+#    
+#    
+#    
+#    #final loop computes the element areas and centres    
+#    centriod_x = []
+#    centriod_y = []
+#    areas = []
+#    for i in range(no_elms):
+#        #find the centriod of the element for triangles
+#        n1=(x_coord[node1[i]-1],z_coord[node1[i]-1])#in vtk files the 1st element id is 0 
+#        n2=(x_coord[node2[i]-1],z_coord[node1[i]-1])
+#        n3=(x_coord[node3[i]-1],z_coord[node1[i]-1])
+#        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
+#        centriod_x.append(xy_tuple[0])
+#        centriod_y.append(xy_tuple[1])
+#        #find area of element (for a triangle this is 0.5*base*height)
+#        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+#        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+#        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+#        areas.append(0.5*base*height)
+#    
+    # couldn't work out a simplest way to deal with both triangular and quad mesh
+    # ----------
     
-    #final loop computes the element areas and centres    
-    centriod_x = []
-    centriod_y = []
-    areas = []
-    for i in range(no_elms):
-        #find the centriod of the element for triangles
-        n1=(x_coord[node1[i]-1],z_coord[node1[i]-1])#in vtk files the 1st element id is 0 
-        n2=(x_coord[node2[i]-1],z_coord[node1[i]-1])
-        n3=(x_coord[node3[i]-1],z_coord[node1[i]-1])
-        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
-        centriod_x.append(xy_tuple[0])
-        centriod_y.append(xy_tuple[1])
-        #find area of element (for a triangle this is 0.5*base*height)
-        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
-        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
-        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-        areas.append(0.5*base*height)
-        
+    
+    def readMeshDat(fname):
+        with open(fname, 'r') as f:
+            x = f.readline().split()
+        numel = int(x[0])
+        elems = np.genfromtxt(fname, skip_header=1, max_rows=numel).astype(int)
+        nodes = np.genfromtxt(fname, skip_header=numel+1)
+        return elems, nodes
+    
+    def computeCentroid(elems, nodes):
+        elx = nodes[elems,1]
+        ely = nodes[elems,2]
+        cx = np.sum(elx, axis=1)/elems.shape[1]
+        cy = np.sum(ely, axis=1)/elems.shape[1]
+        return np.c_[cx, cy]
+    
+    elems, nodes = readMeshDat(file_path)
+    centroids = computeCentroid(elems[:,1:-2]-1, nodes)
+    centriod_x, centriod_y = centroids[:,0], centroids[:,1]
+    no_nodes = nodes.shape[0]
+    no_elms = elems.shape[0]
+    x_coord = nodes[:,1]
+    z_coord = nodes[:,2]
+    node_num = nodes[:,0]
+    elm_number = elems[:,0]
+    node_data = tuple([list(elems[:,i]-1) for i in range(1, elems.shape[1]-2)])
+    if len(node_data) == 3: # triangules
+        # using Heron formula
+        s = np.sum(elems[:,1:-2], axis=1)/2
+        areas = np.sqrt(s*(s-node_data[0])*(s-node_data[1])*(s-node_data[2]))
+    elif len(node_data) == 4: # rectuangular
+        areas = np.abs(np.array(node_data[0])-np.array(node_data[1]))\
+                *np.abs(np.array(node_data[2])-np.array(node_data[3]))
+    else: # fill with nan
+        areas = np.zeros(elm_number)*np.nan
 
     mesh = Mesh_obj(num_nodes = no_nodes,#number of nodes
                      num_elms = no_elms,#number of elements 
@@ -1469,7 +1506,7 @@ def dat_import(file_path):
                      node_z= [0]*no_nodes,#z coordinates of nodes 
                      node_id= node_num,#node id number 
                      elm_id=elm_number,#element id number 
-                     node_data=(node1,node2,node3),#nodes of element vertices
+                     node_data=node_data,#nodes of element vertices
                      elm_centre= (centriod_x,centriod_y),#centre of elements (x,y)
                      elm_area = areas,#area of each element
                      cell_type = [5],#according to vtk format

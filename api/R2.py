@@ -31,7 +31,7 @@ print('API path = ', apiPath)
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
     """
-    def __init__(self, dirname=''):
+    def __init__(self, dirname='', typ='R2'):
         """ Create an R2 object.
         
         Parameters
@@ -49,7 +49,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh = None # mesh object (one per R2 instance)
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
-        self.typ = 'R2' # or cR2 or R3, cR3
+        self.typ = typ # or cR2 or R3, cR3
         self.errTyp = 'none' # type of error to add for DC
         self.errTypIP = 'none' # type of error to add for IP phase
         self.iBorehole = False # to tell the software to not plot pseudoSection
@@ -405,6 +405,10 @@ class R2(object): # R2 master class instanciated by the GUI
         for p in param:
             self.param[p] = param[p]
         
+        # overwite the cropping of the mesh, too many issue (though we need it
+        # to display it in paraview)
+        self.param['num_xy_poly'] = 0
+        
         if self.iTimeLapse == True:
             refdir = os.path.join(self.dirname, 'ref')
             if os.path.exists(refdir) == False:
@@ -514,16 +518,15 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # important changing sign of resistivity and quadrupoles so to work
         # with complex resistivity
-        for s in self.surveys:
-            if np.sum(s.df['resist'].values < 0) > s.df.shape[0]/2:
-                print('most resistances are negative, swapping over potential electrodes')
-                # then most of the resist are negative
+        if self.typ[0] == 'c':
+            for s in self.surveys:
+                ie = s.df['resist'].values < 0
                 m = s.df['m'].values.copy()
                 n = s.df['n'].values.copy()
-                s.df['m'] = n
-                s.df['n'] = m
-                s.df['resist'] = s.df['resist']*-1
-                s.df['recipMean'] = s.df['recipMean']*-1
+                s.df.loc[ie, 'm'] = n[ie]
+                s.df.loc[ie, 'n'] = m[ie]
+                s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
+                s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
 
         if self.iTimeLapse is True:
             # a bit simplistic but assign error to all based on Transfer resistance
@@ -1449,3 +1452,50 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showMesh()
 
 
+#%% check mesh
+#k.createMesh('trian')
+#k.param['num_xy_poly'] = 0
+#k.invert()
+
+##%% test mesh issue
+#def readMeshDat(fname):
+#    with open(fname, 'r') as f:
+#        x = f.readline().split()
+#    numel = int(x[0])
+#    elems = np.genfromtxt(fname, skip_header=1, max_rows=numel).astype(int)
+#    nodes = np.genfromtxt(fname, skip_header=numel+1)
+#    return elems, nodes
+#
+#def computeCentroid(elems, nodes):
+#    elx = nodes[elems,1]
+#    ely = nodes[elems,2]
+#    cx = np.sum(elx, axis=1)/3
+#    cy = np.sum(ely, axis=1)/3
+#    return np.c_[cx, cy]
+#    
+#elems, nodes = readMeshDat('api/invdir/mesh.dat')
+#centroids = computeCentroid(elems[:,1:4]-1, nodes)
+#np.savetxt('api/invdir/centroids.dat', centroids)
+#df = pd.read_fwf('api/invdir/f001.001_res.dat', header=None)
+#df2 = pd.read_fwf('api/invdir/f001_res.dat', header=None)
+#x = df.values[:,:2] - centroids
+#print(np.sum(x, axis=0))
+#
+#x2 = df.values[:,:2] - df2.values[:,:2]
+#np.sum(x2, axis=0) # ok same format for iteration and non iteration
+
+
+#%% mesh investigation part 2
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv')
+#k.createMesh('quad')
+#k.showMesh()
+#k.param['num_xy_poly'] = 0
+#k.invert()
+#k.showResults(contour=True)
+#k.showIter(index=0)
+#mesh2 = mt.dat_import('api/invdir/mesh.dat')
+#mesh2.write_dat('api/invdir/mesh2.dat')
+#
+#elems, nodes = readMeshDat('api/invdir/mesh.dat')
+#elems2, nodes2 = readMeshDat('api/invdir/mesh2.dat')
