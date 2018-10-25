@@ -460,7 +460,7 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
-                        self.r2.createTimeLapseSurvey(fdir)
+                        self.r2.createTimeLapseSurvey(fdir, ftype=self.ftype)
                     else:
                         self.r2.createBatchSurvey(fdir)
                     buttonf.setText(fdir + ' (Press to change)')

@@ -463,7 +463,7 @@ class R2(object): # R2 master class instanciated by the GUI
             nnodes = len(nodes)
             with open(fname, 'w') as f:
                 f.write('{:.0f} {:.0f}\n'.format(numel, nnodes))
-            with open(fname, 'a') as f:
+            with open(fname, 'ab') as f:
                 np.savetxt(f, elems, fmt='%.0f')
                 np.savetxt(f, nodes, fmt='%.0f %f %f')
         
