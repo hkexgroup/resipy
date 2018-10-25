@@ -20,7 +20,7 @@ sys.path.append(os.path.relpath('..'))
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
-from api.meshTools import Mesh_obj, tri_mesh
+from api.meshTools import Mesh_obj, tri_mesh, dat_import
 from api.sequenceHelper import ddskip
 from api.SelectPoints import SelectPoints
 from api.post_processing import import_R2_err_dat, disp_R2_errors
@@ -480,7 +480,9 @@ class R2(object): # R2 master class instanciated by the GUI
                 x = np.genfromtxt(f)
                 x2 = np.r_[x[~ifixed,:], x[ifixed,:]]
                 np.savetxt(f, x2)
-                
+        
+        # UPDATE MESH
+        self.mesh = dat_import(meshFile)
         
         # We NEED parameter = elemement number if changed AND
         # all fixed element (with parameter = 0) at the end of the element
@@ -510,6 +512,18 @@ class R2(object): # R2 master class instanciated by the GUI
         if errTypIP == '':
             errTypIP = self.errTypIP
         
+        # important changing sign of resistivity and quadrupoles so to work
+        # with complex resistivity
+        for s in self.surveys:
+            if np.sum(s.df['resist'].values < 0) > s.df.shape[0]/2:
+                print('most resistances are negative, swapping over potential electrodes')
+                # then most of the resist are negative
+                m = s.df['m'].values.copy()
+                n = s.df['n'].values.copy()
+                s.df['m'] = n
+                s.df['n'] = m
+                s.df['resist'] = s.df['resist']*-1
+                s.df['recipMean'] = s.df['recipMean']*-1
 
         if self.iTimeLapse is True:
             # a bit simplistic but assign error to all based on Transfer resistance
@@ -1161,13 +1175,15 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     
-    def showIter(self, ax=None):
+    def showIter(self, ax=None, index=-1):
         """ Dispay temporary inverted section after each iteration.
         
         Parameters
         ----------
         ax : matplotib axis, optional
             If specified, the graph will be plotted along `ax`.
+        index : int, optional
+            Iteration number to show.
         """
         files = os.listdir(self.dirname)
         fs = []
@@ -1178,11 +1194,11 @@ class R2(object): # R2 master class instanciated by the GUI
         print(fs)
         if len(fs) > 0:
             if self.param['mesh_type'] == 10:
-                self.showSection(os.path.join(self.dirname, fs[-1]), ax=ax)
+                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
                 # TODO change that to full meshTools
                 
             else:
-                x = np.genfromtxt(os.path.join(self.dirname, fs[-1]))
+                x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
 #                iterNumber = fs[-1].split('_')[0].split('.')[1]
 #                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
 #                print('iterNumber = ', iterNumber, 'name=', attrName)
@@ -1200,15 +1216,22 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         """
-        err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)
-        array = err[:,[-2,-1,-4,-3]].astype(int)
-        errors = err[:,0]
+        if self.typ == 'R2':
+            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
+            array = err[:,[-2,-1,-4,-3]].astype(int)
+            errors = err[:,0]
+        if self.typ == 'cR2':
+            err = pd.read_fwf(os.path.join(self.dirname, 'f001.err')).values       
+            array = err[:,[0,1,2,3]].astype(int)
+            errors = err[:,4]
+        
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
     def showInversionErrors(self, ax=None):
         """ Display inversion error by measurment numbers.
         """
+        # TODO make it work with cR2
         file_path = os.path.join(self.dirname, 'f001_err.dat')
         error_info = import_R2_err_dat(file_path)
         disp_R2_errors(error_info, ax=ax)
@@ -1314,13 +1337,30 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #    mesh.show()
 #
 
+#%% test for DC with topo
+#k = R2()
+#k.createSurvey('api/test/syscalFileTopo.csv')
+#topo = np.genfromtxt('api/test/elecTopo.csv', delimiter=',')
+#k.elec = topo
+#k.createMesh(typ='trian',cl=0.1, cl_factor=5)
+#k.showMesh()
+#k.invert()
+#
+#k.showIter(index=0)
+
+#%% check order by building centroid
+
+
+    
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
+#k = R2()
 #k.typ = 'cR2'
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
+#k.createSurvey('api/test/syscalFileIP.csv')
+#k.write2protocol()
 #k.invert()
-
+#k.pseudoError()
 
 #%% test for timelapse inversion
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
@@ -1407,3 +1447,5 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.surveys[0].manualFiltering()
 #k.createMesh(typ='quad', elemx=4)
 #k.showMesh()
+
+

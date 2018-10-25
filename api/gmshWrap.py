@@ -215,7 +215,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
         if bh_flag is True:
             doi = abs(min(geom_input['borehole1'][1])) + abs(0.05*min(geom_input['borehole1'][1]))
         elif bu_flag is True:
-            doi = abs(min(geom_input['buried1'][1])) + abs(0.05*min(geom_input['buried1'][1]))
+            doi = abs(min(geom_input['buried1'][1]))*2# + abs(0.05*min(geom_input['buried1'][1]))
         else:
             doi = abs(np.max(elec_x) - np.min(elec_x))/2
     if cl == -1:
