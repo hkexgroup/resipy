@@ -235,7 +235,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
     #start to write the file  
     fh = open(file_path,'w') #file handle
     
-    fh.write("//Jamyd91's gmsh wrapper code version 0.2 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
+    fh.write("//Jamyd91's gmsh wrapper code version 0.8 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
     fh.write("//2D mesh coordinates\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
     fh.write("//Define surface points\n")
@@ -925,6 +925,7 @@ def msh_parse(file_path):
     #we could return a mesh object here, but a dictionary is easier to debug with spyder, 
     #also we'd need to import the mesh class, and its not a good idea to have modules
     #importing each other, as meshTools has a dependency on gmshWrap. 
+        
     
 #%% test block 
 #import parsers as prs     
