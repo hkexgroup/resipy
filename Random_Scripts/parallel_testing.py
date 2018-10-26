@@ -22,8 +22,9 @@ diag = systemCheck()
 
 #%%create batch survey
 k = R2()
-test_dir = os.path.join(pyR2_location,'api/test/testTimelapse')
-k.createBatchSurvey(test_dir)
+#test_dir = os.path.join(pyR2_location,'api/test/testTimelapse')
+#k.createBatchSurvey(test_dir)
+k.createSurvey('api/test/syscalFile.csv')
 k.dirname
 k.invert()
 #okay that works pretty well. 

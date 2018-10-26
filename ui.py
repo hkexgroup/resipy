@@ -141,12 +141,12 @@ class App(QMainWindow):
         super().__init__()
         self.setWindowTitle('pyR2')
         self.setGeometry(100,100,1100,600)
-        newwd = os.path.join(bundle_dir, 'api', 'invdir')
-        if os.path.exists(newwd):
-            shutil.rmtree(newwd)
-        os.mkdir(newwd)
-        self.r2 = R2(newwd)
-        self.r2.cwd = bundle_dir
+        self.newwd = os.path.join(bundle_dir, 'api', 'invdir')
+        if os.path.exists(self.newwd):
+            shutil.rmtree(self.newwd)
+        os.mkdir(self.newwd)
+        
+        self.r2 = None
         self.parser = None
         self.fname = None
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
@@ -168,6 +168,9 @@ class App(QMainWindow):
             errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
         
+        def infoDump(text):
+            errorDump(text, flag=0)
+        
         
         #%% tab 1 importing data
         tabImporting = QTabWidget()
@@ -179,7 +182,7 @@ class App(QMainWindow):
         
         # restart all new survey
         def restartFunc():
-            self.r2 = R2(newwd) # create new R2 instance
+            self.r2 = R2(self.newwd) # create new R2 instance
             # importing
             wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
             buttonf.setText('Import Data')
@@ -261,10 +264,10 @@ class App(QMainWindow):
             mwInvError2.clear()
 
             
-        restartBtn = QPushButton('Reset UI')
-        restartBtn.setAutoDefault(True)
-        restartBtn.clicked.connect(restartFunc)
-        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
+#        restartBtn = QPushButton('Reset UI')
+#        restartBtn.setAutoDefault(True)
+#        restartBtn.clicked.connect(restartFunc)
+#        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
         
         def dimSurvey():                
             if dimRadio2D.isChecked():
@@ -398,7 +401,7 @@ class App(QMainWindow):
         
         
         hbox1 = QHBoxLayout()
-        hbox1.addWidget(restartBtn)
+#        hbox1.addWidget(restartBtn)
         hbox1.addWidget(dimGroup)
         hbox1.addWidget(title)
         hbox1.addWidget(titleEdit)
@@ -416,11 +419,13 @@ class App(QMainWindow):
         def getwd():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose Working Directory')
             if fdir != '':
-                self.r2.setwd(fdir)
+                self.newwd = fdir
+                if self.r2 is not None:
+                    self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
                 wdBtn.setText(fdir)
             
-        wdBtn = QPushButton('Working directory:' + self.r2.dirname + ' (Press to change)')
+        wdBtn = QPushButton('Working directory:' + self.newwd + ' (Press to change)')
         wdBtn.setAutoDefault(True)
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('The working directory will contains all files for the inversion (R2.in, R2.exe, protocol.dat, f001_res.vtk, ...)')
@@ -457,6 +462,7 @@ class App(QMainWindow):
         def getdir():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
             if fdir != '':
+                restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
@@ -479,6 +485,7 @@ class App(QMainWindow):
             print('ftype = ', self.ftype)
             fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
             if fname != '':
+                restartFunc()
                 self.datadir = os.path.dirname(fname)
                 importFile(fname)
         
@@ -515,6 +522,10 @@ class App(QMainWindow):
 #                plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
+                if 'ip' in self.r2.surveys[0].df.columns:
+                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0:
+                        ipCheck.setChecked(True)
+                infoDump(fname + ' imported successfully')
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
