@@ -334,14 +334,12 @@ class R2(object): # R2 master class instanciated by the GUI
 #            e_nodes = np.arange(len(self.elec))+1
             e_nodes = mesh.e_nodes + 1
             if buried is not None:
-                enodes = np.zeros(len(e_nodes), dtype=int)
-                nburied = np.sum(buried)
-                enodes[~buried] = e_nodes[:-nburied]
-                enodes[buried] = e_nodes[-nburied:]
-                e_nodes = enodes
-#                e_nodes1 = e_nodes[~buried]
-#                e_nodes2 = e_nodes[buried]
-#                e_nodes = np.r_[e_nodes1, e_nodes2]
+                if np.sum(buried) > 0:
+                    enodes = np.zeros(len(e_nodes), dtype=int)
+                    nburied = np.sum(buried)
+                    enodes[~buried] = e_nodes[:-nburied]
+                    enodes[buried] = e_nodes[-nburied:]
+                    e_nodes = enodes
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh

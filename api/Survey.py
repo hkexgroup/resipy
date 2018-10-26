@@ -84,7 +84,8 @@ class Survey(object):
 #        self.array = self.df[['a','b','m','n']].values
 #        self.resist = self.df['resist'].values
 #        self.dev = self.df['dev'].values
-        
+        if ftype == 'BGS Prime':
+            self.checkTxSign()        
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
@@ -95,8 +96,30 @@ class Survey(object):
 #        self.errTyp = 'none' # type of error to add for DC
 #        self.errTypIP = 'none' # type of error to add for IP phase
  
-            
-    
+    def checkTxSign(self):
+        """ Checking the sign of the transfer resistance.
+        """
+        elecpos = self.elec[:,0]
+        array = self.df[['a','b','m','n']].values.copy()
+        print(array.shape)
+        resist = self.df['resist'].values.copy()
+        print(array)
+        
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        
+        ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
+        self.df.loc[ie, 'resist'] = resist[ie]*-1
+        print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
+        
+        
     def basicFilter(self):
         """ Remove NaN and Inf values in the data.
         """
