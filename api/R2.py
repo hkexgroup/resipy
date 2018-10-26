@@ -331,7 +331,17 @@ class R2(object): # R2 master class instanciated by the GUI
             [self.elec[0,0], ymin],
             [self.elec[0,0], ymax]])
             self.param['xy_poly_table'] = xy_poly_table
-            e_nodes = np.arange(len(self.elec))+1
+#            e_nodes = np.arange(len(self.elec))+1
+            e_nodes = mesh.e_nodes + 1
+            if buried is not None:
+                enodes = np.zeros(len(e_nodes), dtype=int)
+                nburied = np.sum(buried)
+                enodes[~buried] = e_nodes[:-nburied]
+                enodes[buried] = e_nodes[-nburied:]
+                e_nodes = enodes
+#                e_nodes1 = e_nodes[~buried]
+#                e_nodes2 = e_nodes[buried]
+#                e_nodes = np.r_[e_nodes1, e_nodes2]
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
@@ -619,13 +629,17 @@ class R2(object): # R2 master class instanciated by the GUI
 #            dump(line.decode('utf-8'))
         
         def execute(cmd):
-            popen = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
-            for stdout_line in iter(popen.stdout.readline, ""):
+            proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
+            for stdout_line in iter(proc.stdout.readline, ""):
                 yield stdout_line
-            popen.stdout.close()
-            return_code = popen.wait()
+#                dump(stdout_line.rstrip())
+            proc.stdout.close()
+            return_code = proc.wait()
             if return_code:
                 print('error on return_code')
+#            return proc
+        
+#        print('proc = ', p)
         
         for text in execute(cmd):
                 dump(text.rstrip())
@@ -1295,7 +1309,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.computeModelError()
 #k.pwlfit()
 #k.write2protocol(errTyp='pwl', errTot=True)
-#k.invert(modErr=True)
+#k.invert()
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.pwlfit()
 #k.invert(iplot=True)
@@ -1400,6 +1414,16 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showMesh()
 #k.invert()
 
+
+#%%
+k = R2()
+k.createSurvey('api/test/syscalFile.csv')
+k.elec[3,1] = -1
+buried = np.zeros(k.elec.shape[0], dtype=bool)
+buried[3] = True
+k.createMesh('trian', buried=buried)
+k.write2in()
+#k.invert()
 
 #%% forward modelling
 #def readMeshDat(fname):
