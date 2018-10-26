@@ -421,7 +421,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
                 
         except KeyError:#run out of borehole keys 
-            fh.write("//no more borehole strings to add.\n")
+            fh.write("//end of borehole strings.\n")
             print('%i boreholes added to input file'%(count-1))
             break
     
@@ -447,7 +447,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
             fh.write("Point{%s} In Surface{1};\n"%str(e_pt_idx).strip('[').strip(']'))
                 
         except KeyError:#run out of keys 
-            fh.write("//no more buried electrode strings to add.\n")
+            fh.write("//end of buried electrodes.\n")
             if bu_flag:
                 print('buried electrodes added to input file')
             break
@@ -491,7 +491,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
             
         except KeyError:
-            fh.write("//no more polygons to add.\n")
+            fh.write("//end of polygons.\n")
             print('%i polygons added to input file'%(count-1))
             break  
 
@@ -524,7 +524,7 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
                 
         except KeyError:
-            fh.write("//no more boundaries to add.\n")
+            fh.write("//end of boundaries.\n")
             print('%i boundary(ies) added to input file'%(count-1))
             break              
                     
