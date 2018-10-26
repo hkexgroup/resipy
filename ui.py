@@ -1223,9 +1223,19 @@ class App(QMainWindow):
         def removenested():
             self.r2.removenested()
             heatFilter()
-
+            
+        def convFactK():
+            self.r2.surveys[0].kFactor = float(phiConvFactor.text())
+            heatFilter()
+            
         phitoplayout = QHBoxLayout()
-        rangelabel = QLabel('Phase range filtering:    ')
+        phiConvFactorlabel = QLabel('Conversion factor k (phi = -kM)')
+        phiConvFactor = QLineEdit()
+        phiConvFactor.setFixedWidth(50)
+        phiConvFactor.setValidator(QDoubleValidator())
+        phiConvFactor.setText('1.2')
+        phiConvFactor.editingFinished.connect(convFactK)
+        rangelabel = QLabel('  |  Phase range filtering:')
         phivminlabel = QLabel('-phi min: ')
         phivminEdit = QLineEdit()
         phivminEdit.setValidator(QDoubleValidator())
@@ -1244,6 +1254,8 @@ class App(QMainWindow):
         nestedfilt.setAutoDefault(True)
         nestedfilt.clicked.connect(removenested)        
         
+        phitoplayout.addWidget(phiConvFactorlabel)
+        phitoplayout.addWidget(phiConvFactor)
         phitoplayout.addWidget(rangelabel)
         phitoplayout.addWidget(phivminlabel)
         phitoplayout.addWidget(phivminEdit)
