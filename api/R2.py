@@ -1417,13 +1417,13 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 
 #%%
-k = R2()
-k.createSurvey('api/test/syscalFile.csv')
-k.elec[3,1] = -1
-buried = np.zeros(k.elec.shape[0], dtype=bool)
-buried[3] = True
-k.createMesh('trian', buried=buried)
-k.write2in()
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv')
+#k.elec[3,1] = -1
+#buried = np.zeros(k.elec.shape[0], dtype=bool)
+#buried[3] = True
+#k.createMesh('trian', buried=buried)
+#k.write2in()
 #k.invert()
 
 #%% forward modelling
