@@ -434,6 +434,7 @@ class R2(object): # R2 master class instanciated by the GUI
                   be inverted is from a forward model already.')
             res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
             self.mesh.add_attribute(res0, 'r100')
+            self.mesh.attr_cache['fixed'] = np.zeros(self.mesh.num_elms, dtype=bool)
             self.mesh.write_attr('r100', 'res0.dat', self.dirname)
         else: # if we invert field data, we allow the user to define prior
             # knowledge of the resistivity structure

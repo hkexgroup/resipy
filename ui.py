@@ -1316,11 +1316,14 @@ class App(QMainWindow):
         def meshQuadFunc():
             self.r2.elec = elecTable.getTable()
             nnodes = int(nnodesEdit.text())
-            self.r2.createMesh(typ='quad', elemx=nnodes)
-            scale.setVisible(False)
-            scaleLabel.setVisible(False)
-            meshOutputStack.setCurrentIndex(1)
-            replotMesh()
+            try:
+                self.r2.createMesh(typ='quad', elemx=nnodes)
+                scale.setVisible(False)
+                scaleLabel.setVisible(False)
+                meshOutputStack.setCurrentIndex(1)
+                replotMesh()
+            except Exception as e:
+                errorDump('Error creating the mesh: ' + str(e))
         meshQuad = QPushButton('Quadrilateral Mesh')
         meshQuad.setAutoDefault(True)
         meshQuad.clicked.connect(meshQuadFunc)
@@ -1329,22 +1332,25 @@ class App(QMainWindow):
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
-            self.r2.elec = elecTable.getTable()
-            cl = float(clEdit.text())
-            cl_factor = float(cl_factorEdit.text())
-            buried = elecTable.getBuried()
-            surface = topoTable.getTable()
-            inan = ~np.isnan(surface[:,0])
-            if np.sum(inan) == surface.shape[0]:
-                surface = None
-            else:
-                surface = surface[inan,:]
-            self.r2.createMesh(typ='trian', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
-            scale.setVisible(True)
-            scaleLabel.setVisible(True)
-            replotMesh()
-            meshOutputStack.setCurrentIndex(1)
+            try:
+                self.r2.elec = elecTable.getTable()
+                cl = float(clEdit.text())
+                cl_factor = float(cl_factorEdit.text())
+                buried = elecTable.getBuried()
+                surface = topoTable.getTable()
+                inan = ~np.isnan(surface[:,0])
+                if np.sum(inan) == surface.shape[0]:
+                    surface = None
+                else:
+                    surface = surface[inan,:]
+                self.r2.createMesh(typ='trian', buried=buried, surface=surface,
+                                   cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+                scale.setVisible(True)
+                scaleLabel.setVisible(True)
+                replotMesh()
+                meshOutputStack.setCurrentIndex(1)
+            except Exception as e:
+                errorDump('Error creating the mesh: ' + str(e))
 
         meshTrian = QPushButton('Triangular Mesh')
         meshTrian.setAutoDefault(True)
