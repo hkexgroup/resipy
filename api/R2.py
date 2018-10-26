@@ -13,6 +13,8 @@ import shutil
 import platform
 import matplotlib.pyplot as plt
 from subprocess import PIPE, call, Popen
+import matplotlib.tri as tri
+
 OS = platform.system()
 
 sys.path.append(os.path.relpath('..'))
@@ -141,7 +143,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removerecip = self.surveys[0].removerecip
             self.removenested = self.surveys[0].removenested
         
-    def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[]):
+    def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
+                          parser=None, isurveys=[], dump=print):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -156,15 +159,19 @@ class R2(object): # R2 master class instanciated by the GUI
             Electrode spacing to be passed to the parser function.
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
-        isurveys : list
+        isurveys : list, optional
             List of surveys index that will be used for error modelling and so
             reciprocal measurements. By default all surveys are used.
+        dump : function, optional
+            Function to dump the information message when importing the files.
         """  
-        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info, spacing=spacing, isurveys=isurveys, parser=parser)
+        self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
+                                   spacing=spacing, isurveys=isurveys, 
+                                   parser=parser, dump=dump)
         self.iTimeLapse = False
         self.iBatch = True
 
-    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[]):
+    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[], dump=print):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -180,9 +187,11 @@ class R2(object): # R2 master class instanciated by the GUI
             Electrode spacing to be passed to the parser function.
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
-        isurveys : list
+        isurveys : list, optional
             List of surveys index that will be used for error modelling and so
             reciprocal measurements. By default all surveys are used.
+        dump : function, optional
+            Function to dump information message when importing the files.
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
@@ -191,6 +200,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
+            dump(f + ' imported')
             print('---------', f, 'imported')
             if len(self.surveys) == 1:
                 ltime = len(self.surveys[0].df)
@@ -415,7 +425,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # overwite the cropping of the mesh, too many issue (though we need it
         # to display it in paraview)
-        self.param['num_xy_poly'] = 0
+#        self.param['num_xy_poly'] = 0
         
         if self.iTimeLapse == True:
             refdir = os.path.join(self.dirname, 'ref')
@@ -1202,6 +1212,12 @@ class R2(object): # R2 master class instanciated by the GUI
         index : int, optional
             Iteration number to show.
         """
+        if ax is None:
+            fig, ax = plt.subplots()
+            iplot = True
+        else:
+            fig = ax.figure
+            iplot = False
         files = os.listdir(self.dirname)
         fs = []
         for f in files:
@@ -1220,11 +1236,19 @@ class R2(object): # R2 master class instanciated by the GUI
 #                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
 #                print('iterNumber = ', iterNumber, 'name=', attrName)
 #                self.mesh.add_attr_dict({'iter':x[:,-2]})
-                self.mesh.attr_cache['iter'] = x[:,-2]
-#                self.mesh.draw(attr=attrName)
-                self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
                 
-               
+                triang = tri.Triangulation(x[:,0],x[:,1])
+                cax = ax.tricontourf(triang, x[:,3], extend='both')
+                fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
+                ax.plot(self.elec[:,0], self.elec[:,1], 'ko')
+                if iplot is True:
+                    fig.show()
+                
+#                self.mesh.attr_cache['iter'] = x[:,-2]
+#                self.mesh.draw(attr=attrName)
+#                self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
+            
+            
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
         
@@ -1363,10 +1387,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showMesh()
 #k.invert()
 #
-#k.showIter(index=0)
-
-#%% check order by building centroid
-
+#k.showIter(index=1)
 
     
 #%% test for IP

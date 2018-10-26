@@ -149,6 +149,8 @@ class App(QMainWindow):
         self.r2 = None
         self.parser = None
         self.fname = None
+        self.iBatch = False
+        self.iBorehole = False
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
         self.table_widget = QWidget()
@@ -167,6 +169,8 @@ class App(QMainWindow):
                 col = 'black'
             errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
+        QApplication.processEvents()
+
         
         def infoDump(text):
             errorDump(text, flag=0)
@@ -183,18 +187,21 @@ class App(QMainWindow):
         # restart all new survey
         def restartFunc():
             self.r2 = R2(self.newwd) # create new R2 instance
+            self.r2.iBatch = self.iBatch
+            self.r2.setBorehole(self.iBorehole)
             # importing
             wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
             buttonf.setText('Import Data')
             timeLapseCheck.setChecked(False)
-            boreholeCheck.setChecked(False)
+#            boreholeCheck.setChecked(False)
+#            batchCheck.setChecked(False)
             ipCheck.setChecked(False)
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
             elecTable.clear()
             topoTable.initTable(np.array([['',''],['','']]))
-            dimInverse.setChecked(True)
+#            dimInverse.setChecked(True)
             
             # pre-processing
             mwManualFiltering.clear()
@@ -334,9 +341,13 @@ class App(QMainWindow):
         
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
-                self.r2.setBorehole(True)
+                self.iBorehole = True
+                if self.r2 is not None:
+                    self.r2.setBorehole(True)
             else:
-                self.r2.setBorehole(False)
+                self.iBorehole = False
+                if self.r2 is not None:
+                    self.r2.setBorehole(False)
             if self.fname is not None:
                     plotPseudo()
         boreholeCheck = QCheckBox('Borehole Survey')
@@ -344,13 +355,13 @@ class App(QMainWindow):
 
         def batchCheckFunc(state):
             if state == Qt.Checked:
-                self.r2.iBatch = True
+                self.iBatch = True
                 buttonf.setText('Import Data Directory')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
                 timeLapseCheck.setEnabled(False)
             else:
-                self.r2.iBatch = False
+                self.iBatch = False
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
@@ -360,7 +371,6 @@ class App(QMainWindow):
         
         # select inverse or forward model
         def dimForwardFunc():
-            print('forward')
             fileType.setEnabled(False)
             spacingEdit.setReadOnly(True)
             dimInverse.setChecked(False)
@@ -371,6 +381,10 @@ class App(QMainWindow):
             timeLapseCheck.setEnabled(False)
             batchCheck.setEnabled(False)
             boreholeCheck.setEnabled(False)
+            if self.r2 is None:
+                self.r2 = R2(self.newwd)
+            else:
+                restartFunc() # let's first from previous inversion
         def dimInverseFunc():
             fileType.setEnabled(True)
             dimForward.setChecked(False)
@@ -466,9 +480,11 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
-                        self.r2.createTimeLapseSurvey(fdir, ftype=self.ftype)
+                        self.r2.createTimeLapseSurvey(fdir, ftype=self.ftype, dump=infoDump)
+                        infoDump('Time-lapse survey created.')
                     else:
-                        self.r2.createBatchSurvey(fdir)
+                        self.r2.createBatchSurvey(fdir, dump=infoDump)
+                        infoDump('Batch survey created.')
                     buttonf.setText(fdir + ' (Press to change)')
                     plotPseudo()
                     elecTable.initTable(self.r2.elec)
@@ -2105,6 +2121,8 @@ class App(QMainWindow):
             self.end = False
             outStackLayout.setCurrentIndex(0)
             mwInvResult.clear()
+            if self.r2.mesh is None:
+                meshQuadFunc() # generate default mesh
 
             def func(text):
 #                print('t', text)
