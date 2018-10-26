@@ -678,6 +678,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.runR2(refdir, dump=dump)
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                     os.path.join(self.dirname, 'Start_res.dat'))
+            
         dump('-------- Main inversion ---------------\n')
         self.runR2(dump=dump)
         
