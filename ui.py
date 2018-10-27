@@ -886,16 +886,16 @@ class App(QMainWindow):
         parseBtn.clicked.connect(parseBtnFunc)
             
         # have qcombobox to be read for each columns
-        aBoxLabel = QLabel('A (or C1)*')
-        bBoxLabel = QLabel('B (or C2)*')
-        mBoxLabel = QLabel('M (or P1)*')
-        nBoxLabel = QLabel('N (or P2)*')
-        vpBoxLabel = QLabel('Vp Potential Difference*')
-        InBoxLabel = QLabel('In Current*')
+        aBoxLabel = QLabel('A (or C1)')
+        bBoxLabel = QLabel('B (or C2)')
+        mBoxLabel = QLabel('M (or P1)')
+        nBoxLabel = QLabel('N (or P2)')
+        vpBoxLabel = QLabel('Vp Potential Difference')
+        InBoxLabel = QLabel('In Current')
         resistBoxLabel = QLabel('Transfer Resistance')
         ipStartBoxLabel = QLabel('IP start column')
         ipEndBoxLabel = QLabel('IP end column')
-        chargeabilityBoxLabel = QLabel('Chargeability*')
+        chargeabilityBoxLabel = QLabel('Chargeability')
         elecSpacingLabel = QLabel('Electrode spacing')
        
         boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
