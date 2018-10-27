@@ -288,8 +288,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if typ == 'quad':
 #            mesh = QuadMesh(elec, nnode=4)
             elec_x = self.elec[:,0]
-            elec_y = self.elec[:,1]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y,**kwargs)
+            elec_z = self.elec[:,2]
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,**kwargs)
 #            mesh = QuadMesh()
 #            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
@@ -309,12 +309,12 @@ class R2(object): # R2 master class instanciated by the GUI
                     and np.sum(buried) != 0):
                 iburied = buried == True
                 geom_input['electrode'] = [self.elec[~iburied, 0],
-                                           self.elec[~iburied, 1]]
+                                           self.elec[~iburied, 2]]
                 geom_input['buried1'] = [self.elec[iburied, 0],
-                                       self.elec[iburied, 1]]
+                                       self.elec[iburied, 2]]
             else:
                 geom_input['electrode'] = [self.elec[:,0],
-                                           self.elec[:,1]]
+                                           self.elec[:,2]]
             if surface is not None:
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
@@ -329,18 +329,18 @@ class R2(object): # R2 master class instanciated by the GUI
 #            if self.typ == 'cR2':
 #                regions = np.c_[regs, np.ones(regs.shape[0])*50, np.ones(regs.shape[0])*-0.1]
 #            self.param['regions'] = regions
-            self.param['num_xy_poly'] = 5
+#            self.param['num_xy_poly'] = 5
             # define xy_poly_table (still need to do it here because param['meshx'] is undefined if triangular mesh)
-            doi = np.abs(self.elec[0,0]-self.elec[-1,0])/2
-            ymax = np.max(self.elec[:,1])
-            ymin = np.min(self.elec[:,1])-doi
-            xy_poly_table = np.array([
-            [self.elec[0,0], ymax],
-            [self.elec[-1,0], ymax],
-            [self.elec[-1,0], ymin],
-            [self.elec[0,0], ymin],
-            [self.elec[0,0], ymax]])
-            self.param['xy_poly_table'] = xy_poly_table
+#            doi = np.abs(self.elec[0,0]-self.elec[-1,0])/2
+#            ymax = np.max(self.elec[:,1])
+#            ymin = np.min(self.elec[:,1])-doi
+#            xy_poly_table = np.array([
+#            [self.elec[0,0], ymax],
+#            [self.elec[-1,0], ymax],
+#            [self.elec[-1,0], ymin],
+#            [self.elec[0,0], ymin],
+#            [self.elec[0,0], ymax]])
+#            self.param['xy_poly_table'] = xy_poly_table
 #            e_nodes = np.arange(len(self.elec))+1
             e_nodes = mesh.e_nodes + 1
             if buried is not None:
@@ -353,6 +353,23 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
+        
+        # compute DOI
+        array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
+        elec = self.elec.copy()
+        maxDist = np.max(elec[array[:,0]-1,0] - elec[array[:,2]-1,0]) # max dipole separation
+        doi = np.min(elec[:,2])-2/3*maxDist
+        self.doi = doi # keep it plotting mesh later on
+        self.param['num_xy_poly'] = 5
+        ymax = np.max(self.elec[:,2])
+        ymin = doi
+        xy_poly_table = np.array([
+        [self.elec[0,0], ymax],
+        [self.elec[-1,0], ymax],
+        [self.elec[-1,0], ymin],
+        [self.elec[0,0], ymin],
+        [self.elec[0,0], ymax]])
+        self.param['xy_poly_table'] = xy_poly_table
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
@@ -712,7 +729,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.showResults()
 
     
-    def showResults(self, index=0, ax=None, edge_color='none', attr='', sens=True, color_map='viridis', **kwargs):
+    def showResults(self, index=0, ax=None, edge_color='none', attr='',
+                    sens=True, color_map='viridis', ylim=None, **kwargs):
         """ Show the inverteds section.
         
         Parameters
@@ -739,9 +757,11 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
+            if ylim is None:
+                ylim = [self.doi, np.max(self.elec[:,2])]
             self.meshResults[index].show(ax=ax, edge_color=edge_color,
                             attr=attr, sens=sens, color_map=color_map,
-                            ylim=[None,None], **kwargs)
+                            ylim=ylim, **kwargs)
         else:
             print('Unexpected Error')
 
@@ -756,7 +776,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('reading ref', fresults)
                 mesh = mt.vtk_import(fresults)
                 mesh.elec_x = self.elec[:,0]
-                mesh.elec_y = self.elec[:,1]
+                mesh.elec_y = self.elec[:,2]
                 self.meshResults.append(mesh)
             for i in range(100):
                 fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
@@ -764,7 +784,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     print('reading ', fresults)
                     mesh = mt.vtk_import(fresults)
                     mesh.elec_x = self.elec[:,0]
-                    mesh.elec_y = self.elec[:,1]
+                    mesh.elec_y = self.elec[:,2]
                     self.meshResults.append(mesh)
                 else:
                     break
@@ -773,7 +793,7 @@ class R2(object): # R2 master class instanciated by the GUI
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.elec_x = self.elec[:,0]
-            mesh.elec_y = self.elec[:,1]
+            mesh.elec_y = self.elec[:,2]
             self.meshResults.append(mesh)
 
             
@@ -823,7 +843,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             fig = ax.get_figure()
         cax = ax.pcolormesh(x, y, z)
-        ax.plot(self.elec[:,0], self.elec[:,1], 'ko')
+        ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
     #    fig.canvas.draw() # need to draw the figure to have the cax.get_facecolors()
     #    print(cax.get_facecolors().shape)
     #    print(alpha.flatten().shape)
@@ -1204,15 +1224,15 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     
-    def showIter(self, ax=None, index=-1):
+    def showIter(self, index=-1, ax=None):
         """ Dispay temporary inverted section after each iteration.
         
         Parameters
         ----------
-        ax : matplotib axis, optional
-            If specified, the graph will be plotted along `ax`.
         index : int, optional
             Iteration number to show.
+        ax : matplotib axis, optional
+            If specified, the graph will be plotted along `ax`.
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -1238,11 +1258,12 @@ class R2(object): # R2 master class instanciated by the GUI
 #                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
 #                print('iterNumber = ', iterNumber, 'name=', attrName)
 #                self.mesh.add_attr_dict({'iter':x[:,-2]})
-                
+
                 triang = tri.Triangulation(x[:,0],x[:,1])
                 cax = ax.tricontourf(triang, x[:,3], extend='both')
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
-                ax.plot(self.elec[:,0], self.elec[:,1], 'ko')
+                ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
+                ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel('Elevation [m]')
                 if iplot is True:
@@ -1251,7 +1272,36 @@ class R2(object): # R2 master class instanciated by the GUI
 #                self.mesh.attr_cache['iter'] = x[:,-2]
 #                self.mesh.draw(attr=attrName)
 #                self.mesh.show(ax=ax, attr='iter', edge_color='none', color_map='viridis')
-            
+    
+    def saveInvPlots(self, outputdir=None, **kwargs):
+        """ Save all plots to output (or working directory). Parameters
+        are passed to the `showResults()` method.
+        
+        Parameters
+        ----------
+        outputdir : str, optional
+            Path of the output directory. Default is the working directory.
+        """
+        if outputdir is None:
+            outputdir = self.dirname
+        if len(self.meshResults) == 0:
+            self.getResults()
+        if len(self.meshResults) > 0:
+            for i in range(len(self.meshResults)):
+                kwargs2 = kwargs.copy()
+                fig, ax = plt.subplots()
+                if 'ylim' not in kwargs2:
+                    ylim = [self.doi, np.max(self.elec[:,2])]
+                    kwargs2 = dict(kwargs2, ylim=ylim)
+                if 'color_map' not in kwargs2:
+                    kwargs2 = dict(kwargs2, color_map='viridis')
+                if 'attr' in kwargs2:
+                    if kwargs2['attr'] not in list(self.meshResults[i].attr_cache.keys()):
+                        kwargs2['attr'] = 'Resistivity(log10)' 
+                self.meshResults[i].show(ax=ax, **kwargs2)
+                fname = self.surveys[i].name
+                fig.savefig(os.path.join(outputdir, fname + '.png'))
+        
             
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
@@ -1329,7 +1379,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
 #k.typ = 'cR2'
-#k = R2
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createMesh(typ='trian')
 #k.write2in()
@@ -1419,6 +1468,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.write2in()
 #k.write2protocol()
 #k.invert(iplot=False)
+#k.saveInvPlots(attr='difference(percent)')
 #k.showResults(index=0)
 #k.showResults(index=1)
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))

@@ -152,6 +152,7 @@ class App(QMainWindow):
         self.parser = None
         self.fname = None
         self.iBatch = False
+        self.iTimeLapse = False
         self.iBorehole = False
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
@@ -191,6 +192,11 @@ class App(QMainWindow):
             self.r2 = R2(self.newwd) # create new R2 instance
             self.r2.iBatch = self.iBatch
             self.r2.setBorehole(self.iBorehole)
+            self.r2.iTimeLapse = self.iTimeLapse
+            if self.iTimeLapse is True:
+                reg_mode.setCurrentIndex(2)
+            else:
+                reg_mode.setCurrentIndex(0)
             # importing
             wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
             buttonf.setText('Import Data')
@@ -322,19 +328,17 @@ class App(QMainWindow):
         
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
-                self.r2.iTimeLapse = True
+                self.iTimeLapse = True
                 buttonf.setText('Import Data Directory')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
-                reg_mode.setCurrentIndex(2)
                 ipCheck.setEnabled(False)
                 batchCheck.setEnabled(False)
             else:
-                self.r2.iTimeLapse = False
+                self.iTimeLapse = False
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
-                reg_mode.setCurrentIndex(0)
                 ipCheck.setEnabled(True)
                 batchCheck.setEnabled(True)
                 
@@ -1355,7 +1359,7 @@ class App(QMainWindow):
             mwMesh.canvas.setFocus() # set focus on the canvas
             
         def meshQuadFunc():
-            self.r2.elec = elecTable.getTable()
+            self.r2.elec[:,[0,2]] = elecTable.getTable()
             nnodes = int(nnodesEdit.text())
             try:
                 self.r2.createMesh(typ='quad', elemx=nnodes)
@@ -1374,7 +1378,7 @@ class App(QMainWindow):
             QApplication.processEvents()
             meshLogText.clear()
 #            try:
-            self.r2.elec = elecTable.getTable()
+            self.r2.elec[:,[0,2]] = elecTable.getTable()
             cl = float(clEdit.text())
             cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
@@ -2237,7 +2241,7 @@ class App(QMainWindow):
             mwInvResult.replot(index=index, edge_color=edge_color,
                                contour=contour, sens=sens, attr=attr,
                                vmin=vmin, vmax=vmax)
-            
+                    
         def msgBox(text):
             msg = QMessageBox()
             msg.setText(text)
@@ -2371,9 +2375,9 @@ class App(QMainWindow):
         vMinMaxApply.clicked.connect(setCBarLimit)
         
         displayOptions.addWidget(vminLabel)
-        displayOptions.addWidget(vminEdit)
+        displayOptions.addWidget(vminEdit, 10)
         displayOptions.addWidget(vmaxLabel)
-        displayOptions.addWidget(vmaxEdit)
+        displayOptions.addWidget(vmaxEdit, 10)
         displayOptions.addWidget(vMinMaxApply)
         
         def showEdges(status):
@@ -2410,11 +2414,29 @@ class App(QMainWindow):
         sensCheck.stateChanged.connect(showSens)
         displayOptions.addWidget(sensCheck)
         
+        def btnSaveGraphs():
+            edge_color = self.displayParams['edge_color']
+            sens = self.displayParams['sens']
+            attr = self.displayParams['attr']
+            contour = self.displayParams['contour']
+            vmin = self.displayParams['vmin']
+            vmax = self.displayParams['vmax']
+            self.r2.saveInvPlots(edge_color=edge_color,
+                               contour=contour, sens=sens, attr=attr,
+                               vmin=vmin, vmax=vmax)
+            infoDump('All graphs saved successfully in the working directory.')
+
+        btnSave = QPushButton('Save graphs')
+        btnSave.clicked.connect(btnSaveGraphs)
+        displayOptions.addWidget(btnSave)
+        
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply, 
-                    edgeCheck, contourCheck, sensCheck]
+                    edgeCheck, contourCheck, sensCheck, btnSave]
             [o.setEnabled(val) for o in opts]
-            
+        
+        showDisplayOptions(False) # hidden by default
+        
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
         
