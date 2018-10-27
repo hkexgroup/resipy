@@ -285,7 +285,7 @@ class R2(object): # R2 master class instanciated by the GUI
         maxDist = np.max(elec[array[:,0]-1,0] - elec[array[:,2]-1,0]) # max dipole separation
         doi = np.min(elec[:,2])-2/3*maxDist
         self.doi = doi # keep it plotting mesh later on
-        print('computed DOI : ', doi)
+        print('computed DOI : {:.2f}'.format(doi))
         self.param['num_xy_poly'] = 5
         ymax = np.max(self.elec[:,2])
         ymin = doi
@@ -335,7 +335,6 @@ class R2(object): # R2 master class instanciated by the GUI
                 geom_input['electrode'] = [self.elec[:,0],
                                            self.elec[:,2]]
             
-            print('GOEOM_INPUT = ', geom_input)
             if surface is not None:
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
