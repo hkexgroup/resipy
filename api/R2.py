@@ -289,7 +289,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh = QuadMesh(elec, nnode=4)
             elec_x = self.elec[:,0]
             elec_y = self.elec[:,1]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)#,**kwargs)
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y,**kwargs)
 #            mesh = QuadMesh()
 #            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
             self.param['meshx'] = meshx
@@ -739,7 +739,9 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
-            self.meshResults[index].show(ax=ax, edge_color=edge_color, attr=attr, sens=sens, color_map=color_map, **kwargs)
+            self.meshResults[index].show(ax=ax, edge_color=edge_color,
+                            attr=attr, sens=sens, color_map=color_map,
+                            ylim=[None,None], **kwargs)
         else:
             print('Unexpected Error')
 
@@ -1241,6 +1243,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 cax = ax.tricontourf(triang, x[:,3], extend='both')
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,1], 'ko')
+                ax.set_xlabel('Distance [m]')
+                ax.set_ylabel('Elevation [m]')
                 if iplot is True:
                     fig.show()
                 

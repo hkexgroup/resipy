@@ -36,10 +36,11 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False):
+    def __init__(self, parent=None, figure=None, navi=False, itight=True):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
+        self.itight = itight
         if figure is None:
             figure = Figure()
             axes = figure.add_subplot(111)
@@ -86,7 +87,8 @@ class MatplotlibWidget(QWidget):
         callback(ax=ax)
         ax.set_aspect('auto')
         ax.set_autoscale_on(False)
-#        self.figure.tight_layout()
+        if self.itight == True:
+            self.figure.tight_layout()
         self.canvas.draw()
     
     def setCallback(self, callback):
@@ -2082,8 +2084,8 @@ class App(QMainWindow):
             ax.set_xticklabels([],[])
             ax.set_xlabel('Iterations', fontsize=8)
             ax.tick_params(axis='both', which='major', labelsize=8)
-            ax.set_ylabel('RMS Misfit', fontsize=8)
-            ax.figure.tight_layout()
+            ax.set_ylabel('RMS', fontsize=8)
+#            ax.figure.tight_layout()
                 
         # run R2
 #        def dataReady():
@@ -2182,7 +2184,8 @@ class App(QMainWindow):
                 for i in range(len(self.r2.surveys)):
                     sectionId.addItem(self.r2.surveys[i].name)
                 outStackLayout.setCurrentIndex(0)
-                displayOpts.setEnabled(True)
+                showDisplayOptions(True)
+                btnInvert.animateClick() # simulate a click
 #                except:
 #                    pass
 #                    printR2out()
@@ -2210,6 +2213,7 @@ class App(QMainWindow):
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None}
+            contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
             vminEdit.setText('')
@@ -2247,7 +2251,7 @@ class App(QMainWindow):
             vmin = None if vmin == '' else float(vmin)
             self.displayParams['vmin'] = vmin
             self.displayParams['vmax'] = vmax
-            if contour.isChecked() is True:
+            if contourCheck.isChecked() is True:
                 replotSection()
             else:
                 mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
@@ -2255,6 +2259,7 @@ class App(QMainWindow):
         def frozeUI(val=True): # when inversion is running
             n = tabs.count()
             if val == True: # froze them
+                showDisplayOptions(False)
                 self.tabState = np.array([tabs.isTabEnabled(i) for i in range(n)])
                 for i in range(n):
                     if i != 5:
@@ -2266,6 +2271,7 @@ class App(QMainWindow):
         def btnInvertFunc():
             frozeUI()
             btnInvert.setText('Kill')
+            btnInvert.setStyleSheet("background-color: red")
             btnInvert.clicked.disconnect()
             btnInvert.clicked.connect(btnKillFunc)
             QApplication.processEvents()
@@ -2274,10 +2280,12 @@ class App(QMainWindow):
             self.r2.proc.kill()
             frozeUI(False)
             btnInvert.setText('Invert')
+            btnInvert.setStyleSheet("background-color: green")
             btnInvert.clicked.disconnect()
             btnInvert.clicked.connect(btnInvertFunc)
             QApplication.processEvents()
         btnInvert = QPushButton('Invert')
+        btnInvert.setStyleSheet("background-color: green")
         btnInvert.setAutoDefault(True)
         btnInvert.clicked.connect(btnInvertFunc)
         invLayout.addWidget(btnInvert)
@@ -2288,12 +2296,12 @@ class App(QMainWindow):
         logText.setReadOnly(True)
         logLayout.addWidget(logText)
         
-        mwRMS = MatplotlibWidget(navi=False)
+        mwRMS = MatplotlibWidget(navi=False, itight=False)
         logLayout.addWidget(mwRMS)
 
         logLayout.setStretch(0, 60)
         logLayout.setStretch(1, 40)        
-        invLayout.addLayout(logLayout, 30)
+        invLayout.addLayout(logLayout, 25)
         
         # option for display
         def displayAttribute(arg='Resistivity(log10)'):
@@ -2368,10 +2376,6 @@ class App(QMainWindow):
         displayOptions.addWidget(vmaxEdit)
         displayOptions.addWidget(vMinMaxApply)
         
-        displayOpts = QWidget()
-        displayOpts.setEnabled(False)
-        displayOpts.setLayout(displayOptions)
-        
         def showEdges(status):
             if status == Qt.Checked:
                 self.displayParams['edge_color'] = 'k'
@@ -2383,16 +2387,17 @@ class App(QMainWindow):
         edgeCheck.stateChanged.connect(showEdges)
         displayOptions.addWidget(edgeCheck)
         
-        def contourFunc(state):
-            print('contour')
+        def contourCheckFunc(state):
             if state == Qt.Checked:
+                edgeCheck.setEnabled(False)
                 self.displayParams['contour'] = True
             else:
+                edgeCheck.setEnabled(True)
                 self.displayParams['contour'] = False
             replotSection()
-        contour = QCheckBox('Contour')
-        contour.stateChanged.connect(contourFunc)
-        displayOptions.addWidget(contour)
+        contourCheck = QCheckBox('Contour')
+        contourCheck.stateChanged.connect(contourCheckFunc)
+        displayOptions.addWidget(contourCheck)
         
         def showSens(status):
             if status == Qt.Checked:
@@ -2405,12 +2410,16 @@ class App(QMainWindow):
         sensCheck.stateChanged.connect(showSens)
         displayOptions.addWidget(sensCheck)
         
+        def showDisplayOptions(val=True):
+            opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply, 
+                    edgeCheck, contourCheck, sensCheck]
+            [o.setEnabled(val) for o in opts]
+            
         resultLayout = QVBoxLayout()
-#        resultLayout.addLayout(displayOptions, 20)
-        resultLayout.addWidget(displayOpts, 20)
+        resultLayout.addLayout(displayOptions, 20)
         
         mwInvResult = MatplotlibWidget(navi=True)
-        resultLayout.addWidget(mwInvResult, 80)
+        resultLayout.addWidget(mwInvResult, 90)
         
 #        invLayout.addLayout(resultLayout, 70)
         
@@ -2434,7 +2443,7 @@ class App(QMainWindow):
         outStackLayout.addWidget(r2outWidget)
         outStackLayout.setCurrentIndex(0)
         
-        invLayout.addLayout(outStackLayout, 70)
+        invLayout.addLayout(outStackLayout, 75)
         
         
         tabInversion.setLayout(invLayout)
