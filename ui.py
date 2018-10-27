@@ -86,7 +86,7 @@ class MatplotlibWidget(QWidget):
         callback(ax=ax)
         ax.set_aspect('auto')
         ax.set_autoscale_on(False)
-        self.figure.tight_layout()
+#        self.figure.tight_layout()
         self.canvas.draw()
     
     def setCallback(self, callback):
@@ -99,7 +99,7 @@ class MatplotlibWidget(QWidget):
         self.axis = ax
         self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
-        self.figure.tight_layout()
+#        self.figure.tight_layout()
         self.canvas.draw()
     
     def clear(self):
@@ -2170,6 +2170,7 @@ class App(QMainWindow):
                 for i in range(len(self.r2.surveys)):
                     sectionId.addItem(self.r2.surveys[i].name)
                 outStackLayout.setCurrentIndex(0)
+                displayOpts.setEnabled(True)
 #                except:
 #                    pass
 #                    printR2out()
@@ -2238,11 +2239,35 @@ class App(QMainWindow):
                 replotSection()
             else:
                 mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
-            
-
+        
+        def frozeUI(val=True): # when inversion is running
+            n = tabs.count()
+            if val == True: # froze them
+                self.tabState = np.array([tabs.isTabEnabled(i) for i in range(n)])
+                for i in range(n):
+                    if i != 5:
+                        tabs.setTabEnabled(i, False)
+            else: # unfrozing
+                for i in range(n):
+                    tabs.setTabEnabled(i, self.tabState[i])
+        
+        def btnInvertFunc():
+            frozeUI()
+            btnInvert.setText('Kill')
+            btnInvert.clicked.disconnect()
+            btnInvert.clicked.connect(btnKillFunc)
+            QApplication.processEvents()
+            logInversion()
+        def btnKillFunc():
+            self.r2.proc.kill()
+            frozeUI(False)
+            btnInvert.setText('Invert')
+            btnInvert.clicked.disconnect()
+            btnInvert.clicked.connect(btnInvertFunc)
+            QApplication.processEvents()
         btnInvert = QPushButton('Invert')
         btnInvert.setAutoDefault(True)
-        btnInvert.clicked.connect(logInversion)
+        btnInvert.clicked.connect(btnInvertFunc)
         invLayout.addWidget(btnInvert)
         
         logLayout = QHBoxLayout()
@@ -2295,9 +2320,7 @@ class App(QMainWindow):
             vmaxEdit.setText('')
             replotSection()
 
-            
-        displayOptions = QHBoxLayout()
-        
+
         def changeSection(index):
 #            print('changeSection')
             self.displayParams['index'] = index
@@ -2306,6 +2329,8 @@ class App(QMainWindow):
             # find a way to keep the current display settings between section
             # without just replotting it here
 #            mwInvResult.replot()
+        
+        displayOptions = QHBoxLayout()
             
         sectionId = QComboBox()
         displayOptions.addWidget(sectionId, 20)
@@ -2330,6 +2355,10 @@ class App(QMainWindow):
         displayOptions.addWidget(vmaxLabel)
         displayOptions.addWidget(vmaxEdit)
         displayOptions.addWidget(vMinMaxApply)
+        
+        displayOpts = QWidget()
+        displayOpts.setEnabled(False)
+        displayOpts.setLayout(displayOptions)
         
         def showEdges(status):
             if status == Qt.Checked:
@@ -2365,7 +2394,8 @@ class App(QMainWindow):
         displayOptions.addWidget(sensCheck)
         
         resultLayout = QVBoxLayout()
-        resultLayout.addLayout(displayOptions, 20)
+#        resultLayout.addLayout(displayOptions, 20)
+        resultLayout.addWidget(displayOpts, 20)
         
         mwInvResult = MatplotlibWidget(navi=True)
         resultLayout.addWidget(mwInvResult, 80)

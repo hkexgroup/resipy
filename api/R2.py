@@ -637,12 +637,12 @@ class R2(object): # R2 master class instanciated by the GUI
 #            dump(line.decode('utf-8'))
         
         def execute(cmd):
-            proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
-            for stdout_line in iter(proc.stdout.readline, ""):
+            self.proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
+            for stdout_line in iter(self.proc.stdout.readline, ""):
                 yield stdout_line
 #                dump(stdout_line.rstrip())
-            proc.stdout.close()
-            return_code = proc.wait()
+            self.proc.stdout.close()
+            return_code = self.proc.wait()
             if return_code:
                 print('error on return_code')
 #            return proc
