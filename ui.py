@@ -189,6 +189,7 @@ class App(QMainWindow):
         
         # restart all new survey
         def restartFunc():
+            print('------- creating new R2 object ----------')
             self.r2 = R2(self.newwd) # create new R2 instance
             self.r2.iBatch = self.iBatch
             self.r2.setBorehole(self.iBorehole)
@@ -200,7 +201,7 @@ class App(QMainWindow):
             # importing
             wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
             buttonf.setText('Import Data')
-            timeLapseCheck.setChecked(False)
+#            timeLapseCheck.setChecked(False)
 #            boreholeCheck.setChecked(False)
 #            batchCheck.setChecked(False)
             ipCheck.setChecked(False)
@@ -443,7 +444,7 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
-                wdBtn.setText(fdir)
+                wdBtn.setText(fdir + ' (Press to change)')
             
         wdBtn = QPushButton('Working directory:' + self.newwd + ' (Press to change)')
         wdBtn.setAutoDefault(True)
@@ -473,11 +474,12 @@ class App(QMainWindow):
         fileType.addItem('BGS Prime')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
+        fileType.setFixedWidth(150)
         
         spacingEdit = QLineEdit()
         spacingEdit.setValidator(QDoubleValidator())
         spacingEdit.setText('-1.0') # -1 let it search for the spacing
-        
+        spacingEdit.setFixedWidth(80)
         
         def getdir():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
@@ -491,10 +493,11 @@ class App(QMainWindow):
                     else:
                         self.r2.createBatchSurvey(fdir, dump=infoDump)
                         infoDump('Batch survey created.')
-                    buttonf.setText(fdir + ' (Press to change)')
+                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
                     plotPseudo()
                     elecTable.initTable(self.r2.elec)
                     tabImporting.setTabEnabled(1,True)
+                    btnInvNow.setEnabled(True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         pass
                     else:
@@ -517,12 +520,11 @@ class App(QMainWindow):
             try:
                 ipCheck.setEnabled(True)
                 self.fname = fname
-                buttonf.setText(self.fname + ' (Press to change)')
+                buttonf.setText(os.path.basename(self.fname) + ' (Press to change)')
                 if float(spacingEdit.text()) == -1:
                     spacing = None
                 else:
                     spacing = float(spacingEdit.text())
-                print('all ok')
                 try:
                     self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                          parser=self.parser)
@@ -531,8 +533,10 @@ class App(QMainWindow):
                     pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
-                    hbox4.addWidget(buttonfr)
+#                    hbox4.addWidget(buttonfr)
+                    buttonfr.show()
                 else:
+                    buttonfr.hide()
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
 #                generateMesh()
@@ -548,6 +552,7 @@ class App(QMainWindow):
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0:
                         ipCheck.setChecked(True)
                 infoDump(fname + ' imported successfully')
+                btnInvNow.setEnabled(True)
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
@@ -561,7 +566,7 @@ class App(QMainWindow):
         def getfileR():
             fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
             if fnameRecip != '':
-                buttonfr.setText(fnameRecip)
+                buttonfr.setText(os.path.basename(fnameRecip))
                 if float(spacingEdit.text()) == -1:
                     spacing = None
                 else:
@@ -575,11 +580,24 @@ class App(QMainWindow):
         buttonfr = QPushButton('If you have reciprocals upload them here')
         buttonfr.setAutoDefault(True)
         buttonfr.clicked.connect(getfileR)
+        buttonfr.hide()
+        
+        def btnInvNowFunc():
+            tabs.setCurrentIndex(5) # jump to inversion tab
+            btnInvert.animateClick() # invert
+        btnInvNow = QPushButton('Invert')
+        btnInvNow.setStyleSheet('background-color: green')
+        btnInvNow.setFixedWidth(150)
+        btnInvNow.setAutoDefault(True)
+        btnInvNow.clicked.connect(btnInvNowFunc)
+        btnInvNow.setEnabled(False)
         
         hbox4 = QHBoxLayout()
-        hbox4.addWidget(fileType, 10)
-        hbox4.addWidget(spacingEdit, 10)
-        hbox4.addWidget(buttonf, 80)
+        hbox4.addWidget(fileType)
+        hbox4.addWidget(spacingEdit)
+        hbox4.addWidget(buttonf)
+        hbox4.addWidget(buttonfr)
+        hbox4.addWidget(btnInvNow)
         
         def ipCheckFunc(state):
             if state  == Qt.Checked:
