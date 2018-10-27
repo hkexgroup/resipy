@@ -1275,6 +1275,7 @@ class App(QMainWindow):
         
         def filt_reset():
             self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfphasereset.copy()
+            self.r2.surveys[0].df = self.r2.surveys[0].dfphasereset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             
@@ -1286,6 +1287,7 @@ class App(QMainWindow):
         
         resetlayout = QHBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
+        filtreset.setStyleSheet("background-color: red")
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
         phiCbarminlabel = QLabel('Colorbar min: ')

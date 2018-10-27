@@ -297,7 +297,7 @@ class Survey(object):
         self.df['reci_IP_err'] = reci_IP_err
         
         return Ri
-    
+
     
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.

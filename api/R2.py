@@ -142,6 +142,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.iprangefilt = self.surveys[0].iprangefilt
             self.removerecip = self.surveys[0].removerecip
             self.removenested = self.surveys[0].removenested
+            self.addFilteredIP = self.surveys[0].addFilteredIP
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
                           parser=None, isurveys=[], dump=print):
