@@ -278,6 +278,24 @@ class R2(object): # R2 master class instanciated by the GUI
             Function to which pass the output during mesh generation. `print()`
              is the default.
         """
+        # compute DOI
+        array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
+        elec = self.elec.copy()
+        maxDist = np.max(elec[array[:,0]-1,0] - elec[array[:,2]-1,0]) # max dipole separation
+        doi = np.min(elec[:,2])-2/3*maxDist
+        self.doi = doi # keep it plotting mesh later on
+        print('computed DOI : ', doi)
+        self.param['num_xy_poly'] = 5
+        ymax = np.max(self.elec[:,2])
+        ymin = doi
+        xy_poly_table = np.array([
+        [self.elec[0,0], ymax],
+        [self.elec[-1,0], ymax],
+        [self.elec[-1,0], ymin],
+        [self.elec[0,0], ymin],
+        [self.elec[0,0], ymax]])
+        self.param['xy_poly_table'] = xy_poly_table
+        
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
                 typ = 'quad'
@@ -315,12 +333,14 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 geom_input['electrode'] = [self.elec[:,0],
                                            self.elec[:,2]]
+            
+            print('GOEOM_INPUT = ', geom_input)
             if surface is not None:
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
             mesh = tri_mesh(geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True)
+                             cl=cl, dump=dump, show_output=True, doi=self.doi)
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
@@ -353,23 +373,6 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
-        
-        # compute DOI
-        array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
-        elec = self.elec.copy()
-        maxDist = np.max(elec[array[:,0]-1,0] - elec[array[:,2]-1,0]) # max dipole separation
-        doi = np.min(elec[:,2])-2/3*maxDist
-        self.doi = doi # keep it plotting mesh later on
-        self.param['num_xy_poly'] = 5
-        ymax = np.max(self.elec[:,2])
-        ymin = doi
-        xy_poly_table = np.array([
-        [self.elec[0,0], ymax],
-        [self.elec[-1,0], ymax],
-        [self.elec[-1,0], ymin],
-        [self.elec[0,0], ymin],
-        [self.elec[0,0], ymax]])
-        self.param['xy_poly_table'] = xy_poly_table
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
@@ -1442,7 +1445,18 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #
 #k.showIter(index=1)
 
-    
+#%% test with borehole
+#k = R2()
+#k.createSurvey('api/test/protocolXbh.dat', ftype='Protocol')
+#x = np.genfromtxt('api/test/elecXbh.csv', delimiter=',')
+#k.elec[:,[0,2]] = x[:,:2]
+#buried = x[:,2].astype(bool)
+#k.createMesh('trian', buried=buried)
+#k.showMesh()
+#k.write2in()
+#k.invert()
+#k.showResults()
+
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2()
