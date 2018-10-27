@@ -72,6 +72,7 @@ class Survey(object):
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
+        self.kFactor = 1.2
         self.filt_typ = None
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
@@ -227,7 +228,7 @@ class Survey(object):
         without reciprocal.
         """
         resist = self.df['resist'].values
-        phase = -1.2*self.df['ip'].values #converting chargeability to phase shift
+        phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
         array = self.df[['a','b','m','n']].values
         
@@ -433,7 +434,7 @@ class Survey(object):
         if ax is None:
             fig, ax = plt.subplots()
         reciprocalMean = np.abs(self.df['recipMean'].values)
-        phase = np.abs(-1.2*self.df['reci_IP_err'].values)
+        phase = np.abs(-self.kFactor*self.df['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
         ax.set_ylabel(r's($\phi$) [mRad]')
@@ -493,7 +494,7 @@ class Survey(object):
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
         ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
         self.df['PhaseError'] = a1*(np.abs(self.df['resist'])**a2)
-        self.df['Phase'] = -1.2*self.df['ip']
+        self.df['Phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
 
@@ -742,8 +743,8 @@ class Survey(object):
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*1.2
-        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).ip.unstack(0)     
+        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*self.kFactor
+        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
         else:
@@ -774,9 +775,9 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/1.2, phimax/1.2))
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/1.2, phimax/1.2))
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -982,7 +983,7 @@ class Survey(object):
             protocol['R'] = dfg['recipMean'].values
             if ip == True:
 #                protocol['R'] = np.abs(protocol['R'])
-                protocol['Phase'] = -1.2*dfg['ip'].values # "-1.2" factor is for IRIS syscal instrument
+                protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
             if errTyp != 'none':
                 if errTyp == 'obs':
                     protocol['error'] = self.df['recipError'].values[ie]
