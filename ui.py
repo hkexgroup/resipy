@@ -1277,11 +1277,35 @@ class App(QMainWindow):
             self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfphasereset.copy()
             heatFilter()
             dcaProgress.setValue(0)
+            
+        def phiCbarRange():
+            self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
+            self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
+            heatFilter()
+            heatRaw()
         
-        resetlayout = QVBoxLayout()
+        resetlayout = QHBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
+        phiCbarminlabel = QLabel('Colorbar min: ')
+        phiCbarminEdit = QLineEdit()
+#        phiCbarminEdit.setFixedWidth(80)
+        phiCbarminEdit.setValidator(QDoubleValidator())
+        phiCbarminEdit.setText('0')
+        phiCbarMaxlabel = QLabel('Colorbar Max: ')
+        phiCbarMaxEdit = QLineEdit()
+#        phiCbarMaxEdit.setFixedWidth(80)
+        phiCbarMaxEdit.setValidator(QDoubleValidator())
+        phiCbarMaxEdit.setText('25')
+        phiCbarrangebutton = QPushButton('Apply')
+        phiCbarrangebutton.setAutoDefault(True)
+        phiCbarrangebutton.clicked.connect(phiCbarRange)
+        resetlayout.addWidget(phiCbarminlabel)
+        resetlayout.addWidget(phiCbarminEdit)
+        resetlayout.addWidget(phiCbarMaxlabel)
+        resetlayout.addWidget(phiCbarMaxEdit)
+        resetlayout.addWidget(phiCbarrangebutton)
         resetlayout.addWidget(filtreset)
 #        recipfilt.clicked.connect("add function")
         
@@ -1289,6 +1313,8 @@ class App(QMainWindow):
         ipfiltlayout = QHBoxLayout()
         
         def heatRaw():
+            self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
+            self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
             self.r2.surveys[0].filt_typ = 'Raw'
 #            self.r2.surveys[0].cbar = False
             raw_hmp.plot(self.r2.heatmap)

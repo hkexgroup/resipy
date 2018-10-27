@@ -73,6 +73,8 @@ class Survey(object):
         self.elec = elec
         self.ndata = len(data)
         self.kFactor = 1.2
+        self.phiCbarmin = 0
+        self.phiCbarMax = 25
         self.filt_typ = None
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
@@ -433,8 +435,9 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        reciprocalMean = np.abs(self.df['recipMean'].values)
-        phase = np.abs(-self.kFactor*self.df['reci_IP_err'].values)
+        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/self.kFactor, self.phiCbarMax/self.kFactor))
+        reciprocalMean = np.abs(temp_df_renge_filter['recipMean'].values)
+        phase = np.abs(-self.kFactor*temp_df_renge_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
         ax.set_ylabel(r's($\phi$) [mRad]')
@@ -470,7 +473,7 @@ class Survey(object):
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['resist'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-25 & Phase_dicrep<25')# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -749,7 +752,7 @@ class Survey(object):
             fig, ax = plt.subplots()  
         else:
             fig = ax.get_figure()             
-        m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=0, vmax=25)
+        m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=self.phiCbarmin, vmax=self.phiCbarMax)
         ax.xaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['a'].max()+1,4))
         ax.yaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['m'].max(),4))
         ax.set_ylabel('A',fontsize = 22)
