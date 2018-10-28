@@ -1430,10 +1430,11 @@ class App(QMainWindow):
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
             inan = ~np.isnan(surface[:,0])
-            if np.sum(inan) == surface.shape[0]:
+            if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
+            print('------surface = ', surface)
             self.r2.createMesh(typ='trian', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
             scale.setVisible(True)
@@ -1672,7 +1673,7 @@ class App(QMainWindow):
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
             x, zones, fixed = regionTable.getTable()
-            regid = np.arange(len(x))
+            regid = np.arange(len(x)) + 1 # region 0 doesn't exist
             self.r2.assignRes0(dict(zip(regid, x)),
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)))
@@ -2207,7 +2208,7 @@ class App(QMainWindow):
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
             x, zones, fixed = regionTable.getTable()
-            regid = np.arange(len(x))
+            regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
             self.r2.assignRes0(dict(zip(regid, x)),
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)))

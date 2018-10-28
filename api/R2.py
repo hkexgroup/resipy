@@ -282,7 +282,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # compute DOI
         array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
         elec = self.elec.copy()
-        maxDist = np.max(elec[array[:,0]-1,0] - elec[array[:,2]-1,0]) # max dipole separation
+        maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
         doi = np.min(elec[:,2])-2/3*maxDist
         self.doi = doi # keep it plotting mesh later on
         print('computed DOI : {:.2f}'.format(doi))
@@ -387,8 +387,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.write_dat(file_path)
         
         
-        self.regid = 0
-        self.regions = np.zeros(len(self.mesh.elm_centre[0]))
+        self.regid = 1 # 1 is the background (no 0 region)
+        self.regions = np.ones(len(self.mesh.elm_centre[0]))
         self.resist0 = np.ones(len(self.regions))*100
         
         
@@ -418,7 +418,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if all(self.surveys[0].df['irecip'].values == 0):
             if 'a_wgt' not in self.param:
                 self.param['a_wgt'] = 0.01
-            if 'b_wft' not in self.param:
+            if 'b_wgt' not in self.param:
                 self.param['b_wgt'] = 0.02
         if typ == 'cR2':
             if self.errTypIP != 'none': # we have individual errors
@@ -867,7 +867,7 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
-    def addRegion(self, xy, res0, blocky=False, fixed=False, ax=None):
+    def addRegion(self, xy, res0=100, blocky=False, fixed=False, ax=None):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -875,7 +875,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ----------
         xy : array
             Array with two columns for the x and y coordinates.
-        res0 : float
+        res0 : float, optional
             Resistivity values of the defined area.
         blocky : bool, optional
             If `True` the boundary of the region will be blocky if inversion
@@ -886,7 +886,10 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib.axes.Axes
             If not `None`, the region will be plotted against this axes.
         """
-        
+#        if (xy[0,:] == xy[-1,:]).all() == False:
+#            print('adding last element same as first')
+#            xy = np.r_[xy, xy[0,:][None,:]]
+#        
         if ax is None:
             fig, ax = plt.subplots()
         self.mesh.show(ax=ax)
@@ -922,8 +925,8 @@ class R2(object): # R2 master class instanciated by the GUI
         for inversion. The only purpose of this is to use an inhomogeous
         starting model to invert data from forward modelling.
         """
-        self.regid = 0
-        self.regions.fill(0)
+        self.regid = 1
+        self.regions.fill(1)
         self.mesh.attr_cache['res0'] = np.ones(len(self.regions))*100 # set back as default
         
         
@@ -1556,14 +1559,17 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #%% test Paul River
 #k = R2()
 #k.createSurvey('api/test/primeFile.dat', ftype='BGS Prime')
-#elec = np.genfromtxt('api/test/primePos.csv', delimiter=',')
-#k.elec[:,0] = elec[:,0]
-#k.elec[:,1] = elec[:,1]
-#k.elec = elec
-#k.surveys[0].manualFiltering()
-#k.createMesh(typ='quad', elemx=4)
-#k.showMesh()
-
+#x = np.genfromtxt('api/test/primePosBuried.csv', delimiter=',')
+#k.elec[:,[0,2]] = x[:,:2]
+#surface = np.array([[0.7, 92.30],[10.3, 92.30]])
+#buried = x[:,2].astype(bool)
+#k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=50)
+##k.showMesh()
+#xy = k.elec[1:21,[0,2]]
+#k.addRegion(xy, res0=18, blocky=True, fixed=True)
+#k.param['b_wgt'] = 0.05 # doesn't work
+#k.invert()
+#k.showResults(sens=False)
 
 #%% check mesh
 #k.createMesh('trian')
