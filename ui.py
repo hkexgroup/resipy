@@ -2497,7 +2497,7 @@ class App(QMainWindow):
         # in case of error, display R2.out
         r2outLayout = QVBoxLayout()
 
-        r2outTitle = QLabel('<b>The Inversion did not succeeded. Please see below for more details.</b>')
+        r2outTitle = QLabel('<b>The inversion was unsuccessful. Please see below for more details.</b>')
         r2outLayout.addWidget(r2outTitle)
         
         r2outEdit = QTextEdit()
