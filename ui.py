@@ -2389,6 +2389,8 @@ class App(QMainWindow):
             self.displayParams['attr'] = self.attr[index]
             vminEdit.setText('')
             vmaxEdit.setText('')
+            self.displayParams['vmin'] = None
+            self.displayParams['vmax'] = None
             replotSection()
 
 

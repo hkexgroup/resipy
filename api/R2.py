@@ -773,6 +773,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Collect inverted results after running the inversion and adding
         them to `R2.meshResults` list.
         """
+        self.meshResults = [] # make sure we empty the list first
         if self.typ == 'R2':
             if self.iTimeLapse == True:
                 fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
@@ -1292,7 +1293,7 @@ class R2(object): # R2 master class instanciated by the GUI
             outputdir = self.dirname
         if len(self.meshResults) == 0:
             self.getResults()
-        if len(self.meshResults) > 0:
+        else:
             for i in range(len(self.meshResults)):
                 kwargs2 = kwargs.copy()
                 fig, ax = plt.subplots()
