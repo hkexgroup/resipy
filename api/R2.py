@@ -379,6 +379,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         numel = self.mesh.num_elms
         self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.add_attribute(np.ones(numel)*-2, 'phase0') # default starting phase [mrad]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
@@ -472,12 +473,41 @@ class R2(object): # R2 master class instanciated by the GUI
                   be inverted is from a forward model already.')
             res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
             self.mesh.add_attribute(res0, 'r100')
+            phase2 = np.ones(self.mesh.num_elms)*-2
+            self.mesh.add_attribute(phase2, 'phase2')
             self.mesh.attr_cache['fixed'] = np.zeros(self.mesh.num_elms, dtype=bool)
-            self.mesh.write_attr('r100', 'res0.dat', self.dirname)
+            if self.typ[0] == 'c' : # we're dealing with IP here !
+                r = np.array(self.mesh.attr_cache['r100'])
+                phase = np.array(self.mesh.attr_cache['phase2'])
+                centroids = np.array(self.mesh.elm_centre).T
+                x = np.c_[centroids,
+                          r,
+                          phase, # mrad
+                          np.log10(r),
+                          np.log10(1/r),
+                          np.log10(-10**np.log10(1/r)*phase/1000)]
+                np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
+            else:
+                self.mesh.write_attr('r100', 'res0.dat', self.dirname)
+
+            
         else: # if we invert field data, we allow the user to define prior
-            # knowledge of the resistivity structure
-            self.mesh.write_attr('res0', 'res0.dat', self.dirname)
-        
+            # knowledge of the resistivity structure            
+            if self.typ[0] == 'c' : # we're dealing with IP here !
+                r = np.array(self.mesh.attr_cache['res0'])
+                phase = np.array(self.mesh.attr_cache['phase0'])
+                centroids = np.array(self.mesh.elm_centre).T
+                x = np.c_[centroids,
+                          r,
+                          phase, # mrad
+                          np.log10(r),
+                          np.log10(1/r),
+                          np.log10(-10**np.log10(1/r)*phase/1000)]
+                np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
+            else:
+                self.mesh.write_attr('res0', 'res0.dat', self.dirname)
+
+                
         # rewriting mesh.dat
         paramFixed = 1+ np.arange(self.mesh.num_elms)
         ifixed = np.array(self.mesh.attr_cache['fixed'])
@@ -1457,17 +1487,18 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #buried = x[:,2].astype(bool)
 #k.createMesh('trian', buried=buried)
 #k.showMesh()
-#k.write2in()
+#k.write2in()con_
 #k.invert()
 #k.showResults()
 
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2()
-#k.typ = 'cR2'
+k = R2(typ='cR2')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
-#k.createSurvey('api/test/syscalFileIP.csv')
-#k.write2protocol()
+k.createSurvey('api/test/syscalFileIP.csv')
+k.createMesh()
+k.write2protocol()
+k.write2in()
 #k.invert()
 #k.pseudoError()
 
