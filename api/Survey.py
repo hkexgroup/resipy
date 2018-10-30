@@ -15,7 +15,7 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
-                     primeParser)
+                     primeParser, protocolParserIP)
 from api.DCA import DCA
 
 class Survey(object):
@@ -61,6 +61,8 @@ class Survey(object):
                 elec, data = res2invInputParser(fname)
             elif ftype == 'BGS Prime':
                 elec, data = primeParser(fname)
+            elif ftype == 'ProtocolIP':
+                elec, data = protocolParserIP(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -104,9 +106,7 @@ class Survey(object):
         """
         elecpos = self.elec[:,0]
         array = self.df[['a','b','m','n']].values.copy()
-        print(array.shape)
         resist = self.df['resist'].values.copy()
-        print(array)
         
         apos = elecpos[array[:,0]-1]
         bpos = elecpos[array[:,1]-1]
@@ -985,7 +985,6 @@ class Survey(object):
             dfg = self.df[self.df['irecip'] > 0] 
             protocol['R'] = dfg['recipMean'].values
             if ip == True:
-#                protocol['R'] = np.abs(protocol['R'])
                 protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
             if errTyp != 'none':
                 if errTyp == 'obs':
@@ -1013,6 +1012,8 @@ class Survey(object):
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             protocol['R'] = self.df['resist'].values
+            if ip == True:
+                protocol['Phase'] = -self.kFactor*self.df['ip'].values
         
         if outputname != '':
             with open(outputname, 'w') as f:

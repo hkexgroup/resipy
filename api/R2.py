@@ -476,16 +476,20 @@ class R2(object): # R2 master class instanciated by the GUI
             phase2 = np.ones(self.mesh.num_elms)*-2
             self.mesh.add_attribute(phase2, 'phase2')
             self.mesh.attr_cache['fixed'] = np.zeros(self.mesh.num_elms, dtype=bool)
+            
             if self.typ[0] == 'c' : # we're dealing with IP here !
-                r = np.array(self.mesh.attr_cache['r100'])
-                phase = np.array(self.mesh.attr_cache['phase2'])
-                centroids = np.array(self.mesh.elm_centre).T
-                x = np.c_[centroids,
-                          r,
-                          phase, # mrad
-                          np.log10(r),
-                          np.log10(1/r),
-                          np.log10(-10**np.log10(1/r)*phase/1000)]
+#                r = np.array(self.mesh.attr_cache['r100'])
+#                phase = np.array(self.mesh.attr_cache['phase2'])
+#                centroids = np.array(self.mesh.elm_centre).T
+#                x = np.c_[centroids,
+#                          r,
+#                          phase, # mrad
+#                          np.log10(r),
+#                          np.log10(1/r),
+#                          np.log10(-10**np.log10(1/r)*phase/1000)]
+                x = np.c_[np.array(self.mesh.elm_centre).T,
+                          np.array(self.mesh.attr_cache['r100']),
+                          np.array(self.mesh.attr_cache['phase2'])] # mrad
                 np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
             else:
                 self.mesh.write_attr('r100', 'res0.dat', self.dirname)
@@ -494,15 +498,18 @@ class R2(object): # R2 master class instanciated by the GUI
         else: # if we invert field data, we allow the user to define prior
             # knowledge of the resistivity structure            
             if self.typ[0] == 'c' : # we're dealing with IP here !
-                r = np.array(self.mesh.attr_cache['res0'])
-                phase = np.array(self.mesh.attr_cache['phase0'])
-                centroids = np.array(self.mesh.elm_centre).T
-                x = np.c_[centroids,
-                          r,
-                          phase, # mrad
-                          np.log10(r),
-                          np.log10(1/r),
-                          np.log10(-10**np.log10(1/r)*phase/1000)]
+#                r = np.array(self.mesh.attr_cache['res0'])
+#                phase = np.array(self.mesh.attr_cache['phase0'])
+#                centroids = np.array(self.mesh.elm_centre).T
+#                x = np.c_[centroids,
+#                          r,
+#                          phase, # mrad
+#                          np.log10(r),
+#                          np.log10(1/r),
+#                          np.log10(-10**np.log10(1/r)*phase/1000)]
+                x = np.c_[np.array(self.mesh.elm_centre).T,
+                          np.array(self.mesh.attr_cache['res0']),
+                          np.array(self.mesh.attr_cache['phase0'])] # mrad
                 np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
             else:
                 self.mesh.write_attr('res0', 'res0.dat', self.dirname)
@@ -898,7 +905,7 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
-    def addRegion(self, xy, res0=100, blocky=False, fixed=False, ax=None):
+    def addRegion(self, xy, res0=100, phase0=2, blocky=False, fixed=False, ax=None):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -908,6 +915,9 @@ class R2(object): # R2 master class instanciated by the GUI
             Array with two columns for the x and y coordinates.
         res0 : float, optional
             Resistivity values of the defined area.
+        phase0 : float, optional
+            Read only if you choose the cR2 option. Phase value of the defined
+            area in mrad
         blocky : bool, optional
             If `True` the boundary of the region will be blocky if inversion
             is block inversion.
@@ -934,6 +944,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.cell_attributes = list(self.regions) # overwriting regions
         self.resist0[idx] = res0
         self.mesh.attr_cache['res0'] = self.resist0 # hard way to do it
+        phase = self.mesh.attr_cache['phase0'].copy()
+        phase[idx] = phase0
+        self.mesh.attr_cache['phase0'] = phase
         
         # define zone
         if blocky is True:
@@ -1013,7 +1026,7 @@ class R2(object): # R2 master class instanciated by the GUI
             return fig
             
         
-    def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}):
+    def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
         """ Assign starting resitivity values.
         
         Parameters
@@ -1029,6 +1042,9 @@ class R2(object): # R2 master class instanciated by the GUI
             Dictionnary with key being the region number and a boolean value if
             we want to fix the resistivity of the zone to the starting one.
             Note that it only works for triangular mesh for now.
+        ipValues : dict
+            Dictionnary with key being the region number and the values beeing
+            the phase [mrad].
         
         Note
         ----
@@ -1051,6 +1067,12 @@ class R2(object): # R2 master class instanciated by the GUI
             idx = self.regions == key
             fixed[idx] = fixedValues[key]
         self.mesh.attr_cache['fixed'] = fixed
+        
+        phase0 = np.array(self.mesh.attr_cache['phase0']).copy()
+        for key in ipValues.keys():
+            idx = self.regions == key
+            phase0[idx] = ipValues[key]
+        self.mesh.attr_cache['phase0'] = phase0
         
 #        for key in regionValues.keys():
 #            if key in self.regions:
@@ -1153,7 +1175,22 @@ class R2(object): # R2 master class instanciated by the GUI
 #        np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
 #                   fmt='%.3f')
         
-        self.mesh.write_attr('res0', 'resistivity.dat', fwdDir)
+        if self.typ[0] == 'c':
+            r = np.array(self.mesh.attr_cache['res0'])
+            phase = np.array(self.mesh.attr_cache['phase0'])
+            centroids = np.array(self.mesh.elm_centre).T
+            x = np.c_[centroids,
+                      r,
+                      phase, # mrad
+                      np.log10(r),
+                      np.log10(1/r),
+                      np.log10(-10**np.log10(1/r)*phase/1000)]
+#                x = np.c_[np.array(self.mesh.elm_centre).T,
+#                          np.array(self.mesh.attr_cache['r100']),
+#                          np.array(self.mesh.attr_cache['phase2'])] # mrad
+            np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), x)
+        else:
+            self.mesh.write_attr('res0', 'resistivity.dat', fwdDir)
         
         if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
             shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
@@ -1175,7 +1212,26 @@ class R2(object): # R2 master class instanciated by the GUI
             dump('done\n')
         dump('Writing protocol.dat ...')
         seq = self.sequence
-        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        
+        # let's check if IP that we have a positive geometric factor
+        if self.typ[0] == 'c': # NOTE this does'nt work for borehole
+            elecpos = k.elec[:,0].copy() # and works only for 2D
+            array = seq.copy()
+            apos = elecpos[array[:,0]-1]
+            bpos = elecpos[array[:,1]-1]
+            mpos = elecpos[array[:,2]-1]
+            npos = elecpos[array[:,3]-1]
+            AM = np.abs(apos-mpos)
+            BM = np.abs(bpos-mpos)
+            AN = np.abs(apos-npos)
+            BN = np.abs(bpos-npos)
+            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            ie = K < 0
+            seq2 = seq.copy()
+            seq[ie,2] = seq2[ie,3] # swap if K is < 0
+            seq[ie,3] = seq2[ie,2]
+            
+        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])            
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
@@ -1196,11 +1252,14 @@ class R2(object): # R2 master class instanciated by the GUI
         
         elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
-        self.createSurvey(os.path.join(fwdDir, 'R2_forward.dat'), ftype='Protocol')
+        self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
+        # NOTE the 'ip' columns here is in PHASE not in chargeability
+        self.surveys[0].kFactor = 1
+        self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], noise)
+        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'], noise)
         self.elec = elec
         
-        self.write2protocol()
         self.pseudo()
         dump('Forward modelling done.')
 
@@ -1493,12 +1552,12 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-k = R2(typ='cR2')
+#k = R2(typ='cR2')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
-k.createSurvey('api/test/syscalFileIP.csv')
-k.createMesh()
-k.write2protocol()
-k.write2in()
+#k.createSurvey('api/test/syscalFileIP.csv')
+#k.createMesh()
+#k.write2protocol()
+#k.write2in()
 #k.invert()
 #k.pseudoError()
 
@@ -1560,13 +1619,13 @@ k.write2in()
 
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #plt.close('all')
-#k = R2()
+#k = R2(typ='cR2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
 #
 ## full API function
-#k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10)
+#k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10, -3)
 #k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 20, blocky=True, fixed=True)
 #k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fixed=False)
 
@@ -1578,7 +1637,7 @@ k.write2in()
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=False)
 #k.showResults(attr='Resistivity(Ohm-m)', sens=False)
-
+#k.showResults(attr='Phase(mrad'))
 
 #%% test Sina
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')

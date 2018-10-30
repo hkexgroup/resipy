@@ -75,7 +75,14 @@ def protocolParser(fname):
 
 # test code
 #protocolParser('test/protocolFile.dat')
-    
+
+def protocolParserIP(fname): # just for protocol forward output with cR2
+    x = np.genfromtxt(fname, skip_header=1)
+    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','ip','appResist'])
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return elec, df    
 
 #%% PRIME system parser
 
