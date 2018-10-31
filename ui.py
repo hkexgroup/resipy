@@ -154,6 +154,7 @@ class App(QMainWindow):
         self.iBatch = False
         self.iTimeLapse = False
         self.iBorehole = False
+        self.iForward = False
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
         self.table_widget = QWidget()
@@ -194,6 +195,7 @@ class App(QMainWindow):
             self.r2.iBatch = self.iBatch
             self.r2.setBorehole(self.iBorehole)
             self.r2.iTimeLapse = self.iTimeLapse
+            self.r2.iForward = self.iForward
             if self.iTimeLapse is True:
                 reg_mode.setCurrentIndex(2)
             else:
@@ -208,7 +210,7 @@ class App(QMainWindow):
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
-            elecTable.clear()
+            elecTable.initTable(np.array([['',''],['','']]))
             topoTable.initTable(np.array([['',''],['','']]))
 #            dimInverse.setChecked(True)
             
@@ -378,6 +380,7 @@ class App(QMainWindow):
         
         # select inverse or forward model
         def dimForwardFunc():
+            self.iForward = True
             fileType.setEnabled(False)
             spacingEdit.setReadOnly(True)
             dimInverse.setChecked(False)
@@ -387,11 +390,9 @@ class App(QMainWindow):
             timeLapseCheck.setEnabled(False)
             batchCheck.setEnabled(False)
             boreholeCheck.setEnabled(False)
-            if self.r2 is None:
-                self.r2 = R2(self.newwd)
-            else:
-                restartFunc() # let's first from previous inversion
+            restartFunc() # let's first from previous inversion
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
+            ipCheck.setEnabled(True)
 
         def dimInverseFunc():
             fileType.setEnabled(True)
@@ -402,6 +403,7 @@ class App(QMainWindow):
             tabImporting.setTabEnabled(1, False)
             buttonf.setEnabled(True)
             timeLapseCheck.setEnabled(True)
+            ipCheck.setEnabled(False)
             batchCheck.setEnabled(True)
             boreholeCheck.setEnabled(True)
         dimForward = QRadioButton('Forward')
@@ -604,17 +606,21 @@ class App(QMainWindow):
             if state  == Qt.Checked:
                 self.r2.typ = 'cR2'
 #                timeLapseCheck.setEnabled(False)
-                plotPseudoIP()
-                phaseplotError()
-                showIpOptions(True)
-                mwPseudoIP.setVisible(True)
-                tabPreProcessing.setTabEnabled(1, True)
-                tabPreProcessing.setTabEnabled(3, True)
+                if self.r2.iForward == True:
+                    forwardPseudoIP.setVisible(True)
+                else:
+                    plotPseudoIP()
+                    phaseplotError()
+                    showIpOptions(True)
+                    mwPseudoIP.setVisible(True)
+                    tabPreProcessing.setTabEnabled(1, True)
+                    tabPreProcessing.setTabEnabled(3, True)
+                    heatRaw()
+    #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
+                    self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                    heatFilter()
                 regionTable.setColumnHidden(1, False)
-                heatRaw()
-#                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
-                heatFilter()
+
             else:
                 self.r2.typ = 'R2'
                 showIpOptions(False)
@@ -780,9 +786,7 @@ class App(QMainWindow):
                     table = t
                 return table
             
-            def readTable(self):
-                fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
-                if fname != '':
+            def readTable(self, fname):
                     df = pd.read_csv(fname, header=None)
                     tt = df.values
                     if 'Buried' in self.headers:
@@ -807,9 +811,14 @@ class App(QMainWindow):
                            You can also use the form below to generate \
                            regular electrode spacing.</i>')
         elecLabel.setWordWrap(True)
+        
+        def elecButtonFunc():
+            fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File', directory=self.datadir)
+            if fname != '':
+                elecTable.readTable(fname)
         elecButton = QPushButton('Import from CSV files (no headers)')
         elecButton.setAutoDefault(True)
-        elecButton.clicked.connect(elecTable.readTable)
+        elecButton.clicked.connect(elecButtonFunc)
         nbElecEdit = QLineEdit()
         nbElecEdit.setValidator(QIntValidator())
         nbElecLabel = QLabel('Number of electrodes:')
@@ -859,9 +868,13 @@ class App(QMainWindow):
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
                            into a cell.</i>')
+        def topoButtonFunc():
+            fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File', directory=self.datadir)
+            if fname != '':
+                topoTable.readTable(fname)
         topoButton = QPushButton('Import from CSV files (no headers)')
         topoButton.setAutoDefault(True)
-        topoButton.clicked.connect(topoTable.readTable)
+        topoButton.clicked.connect(topoButtonFunc)
         topoLayout.addWidget(topoLabel)
         topoLayout.addWidget(topoButton)
         topoLayout.addWidget(topoTable)
@@ -1693,12 +1706,15 @@ class App(QMainWindow):
             noise = float(noiseEdit.text())
             self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
+            if self.r2.typ[0] == 'c':
+                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP)
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
                 
         forwardPseudo = MatplotlibWidget(navi=True)
         forwardPseudoIP = MatplotlibWidget(navi=True)
+        forwardPseudoIP.setVisible(False)
         
         forwardLogText = QTextEdit()
         forwardLogText.setReadOnly(True)

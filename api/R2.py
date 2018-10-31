@@ -1231,7 +1231,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # let's check if IP that we have a positive geometric factor
         if self.typ[0] == 'c': # NOTE this does'nt work for borehole
-            elecpos = k.elec[:,0].copy() # and works only for 2D
+            elecpos = self.elec[:,0].copy() # and works only for 2D
             array = seq.copy()
             apos = elecpos[array[:,0]-1]
             bpos = elecpos[array[:,1]-1]
