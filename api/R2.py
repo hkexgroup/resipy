@@ -44,6 +44,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
             dirname = os.path.join(self.apiPath, 'invdir')
+            if os.path.exists(dirname) is True:
+                shutil.rmtree(dirname)
+            os.mkdir(dirname)
         print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
         self.surveys = [] # list of survey object
@@ -62,6 +65,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
         # to run an inversion (and so need to reset the regions before this)
+        
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -767,7 +771,12 @@ class R2(object): # R2 master class instanciated by the GUI
         
         if iplot is True:
             self.showResults()
-
+        
+        files = os.listdir(self.dirname)
+        if 'R2.exe' in files:
+            os.remove(os.path.join(self.dirname, 'R2.exe'))
+        if 'cR2.exe' in files:
+            os.remove(os.path.join(self.dirname, 'cR2.exe'))
     
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', ylim=None, **kwargs):
@@ -1636,8 +1645,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.forward(iplot=True, noise=0.0)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=False)
-#k.showResults(attr='Resistivity(Ohm-m)', sens=False)
-#k.showResults(attr='Phase(mrad'))
+#k.showResults(attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+#k.showResults(attr='Phase(mrad)')
 
 #%% test Sina
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
