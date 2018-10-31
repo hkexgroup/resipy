@@ -2238,6 +2238,7 @@ class App(QMainWindow):
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
                 r2outEdit.setText(text)
+                btnInvert.animateClick()
            
             if self.end is True:
 #                try:
