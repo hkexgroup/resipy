@@ -383,7 +383,6 @@ class App(QMainWindow):
             dimInverse.setChecked(False)
             tabs.setTabEnabled(1,False)
             tabs.setTabEnabled(3, True)
-            tabImporting.setTabEnabled(1, True)
             buttonf.setEnabled(False)
             timeLapseCheck.setEnabled(False)
             batchCheck.setEnabled(False)
@@ -392,6 +391,8 @@ class App(QMainWindow):
                 self.r2 = R2(self.newwd)
             else:
                 restartFunc() # let's first from previous inversion
+            tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
+
         def dimInverseFunc():
             fileType.setEnabled(True)
             dimForward.setChecked(False)
@@ -665,13 +666,12 @@ class App(QMainWindow):
         # electrode table
         class ElecTable(QTableWidget):
             def __init__(self, nrow=10, headers=['x','z','Buried'],
-                         visible=True, selfInit=False):
+                         selfInit=False):
                 """ if selfInit is true, it will automatically add rows if tt
                 is bigger than the actual rows
                 """
                 ncol = len(headers)
                 super(ElecTable, self).__init__(nrow, ncol)
-                self.setVisible(visible)
                 self.nrow = nrow
                 self.ncol = ncol
                 self.selfInit = selfInit
@@ -774,6 +774,10 @@ class App(QMainWindow):
                         if item != '':
                             table[j,i] = float(item)
 #                print('table = ', table)
+                if 'y' not in self.headers:
+                    t = np.zeros((table.shape[0], 3))
+                    t[:,[0,2]] = table
+                    table = t
                 return table
             
             def readTable(self):
@@ -797,7 +801,7 @@ class App(QMainWindow):
         
         topoLayout = QVBoxLayout()
         
-        elecTable = ElecTable(visible=True, headers=['x','z','Buried'])
+        elecTable = ElecTable(headers=['x','z','Buried'])
         elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
                            You can also use the form below to generate \
@@ -850,7 +854,7 @@ class App(QMainWindow):
         topoLayout.addWidget(elecButton)
         topoLayout.addWidget(elecTable)
         
-        topoTable = ElecTable(visible=True, headers=['x','z'], selfInit=True)
+        topoTable = ElecTable(headers=['x','z'], selfInit=True)
         topoTable.initTable(np.array([['',''],['','']]))
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
@@ -1408,7 +1412,7 @@ class App(QMainWindow):
             mwMesh.canvas.setFocus() # set focus on the canvas
             
         def meshQuadFunc():
-            self.r2.elec[:,[0,2]] = elecTable.getTable()
+            self.r2.elec = elecTable.getTable()
             nnodes = int(nnodesEdit.text())
             try:
                 self.r2.createMesh(typ='quad', elemx=nnodes)
@@ -1427,7 +1431,7 @@ class App(QMainWindow):
             QApplication.processEvents()
             meshLogText.clear()
 #            try:
-            self.r2.elec[:,[0,2]] = elecTable.getTable()
+            self.r2.elec = elecTable.getTable()
             cl = float(clEdit.text())
             cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
@@ -1694,6 +1698,7 @@ class App(QMainWindow):
         forwardBtn.clicked.connect(forwardBtnFunc)
                 
         forwardPseudo = MatplotlibWidget(navi=True)
+        forwardPseudoIP = MatplotlibWidget(navi=True)
         
         forwardLogText = QTextEdit()
         forwardLogText.setReadOnly(True)
@@ -1732,9 +1737,17 @@ class App(QMainWindow):
         forwardLayout.addLayout(noiseLayout, 5)
         forwardLayout.addWidget(forwardBtn, 5)
         
+        forwardPseudoLayout = QHBoxLayout()
+        forwardPseudoLayout.addWidget(forwardPseudo)
+        forwardPseudoLayout.addWidget(forwardPseudoIP)
+        forwardPseudoIP.hide()
+        
+        forwardPseudos = QWidget()
+        forwardPseudos.setLayout(forwardPseudoLayout)
+        
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(forwardLogText)
-        forwardOutputStack.addWidget(forwardPseudo)
+        forwardOutputStack.addWidget(forwardPseudos)
         forwardOutputStack.setCurrentIndex(0)
         
         forwardLayout.addLayout(forwardOutputStack, 70)
@@ -2241,16 +2254,18 @@ class App(QMainWindow):
                 btnInvert.animateClick()
            
             if self.end is True:
-#                try:
-                plotSection()
-                for i in range(len(self.r2.surveys)):
-                    sectionId.addItem(self.r2.surveys[i].name)
-                outStackLayout.setCurrentIndex(0)
-                showDisplayOptions(True)
-                btnInvert.animateClick() # simulate a click
-#                except:
-#                    pass
-#                    printR2out()
+                try:
+                    # this could failed if we invert homogeneous model -> vtk
+                    #file size = 0 -> R2.getResults() -> vtk_import failed
+                    plotSection()
+                    for i in range(len(self.r2.surveys)):
+                        sectionId.addItem(self.r2.surveys[i].name)
+                    outStackLayout.setCurrentIndex(0)
+                    showDisplayOptions(True)
+                    btnInvert.animateClick() # simulate a click
+                except:
+                    pass
+                    printR2out()
             else:
                 printR2out()
             

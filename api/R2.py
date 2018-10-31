@@ -49,6 +49,7 @@ class R2(object): # R2 master class instanciated by the GUI
             os.mkdir(dirname)
         print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
+        self.elec = None # will be assigned when creating a survey
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
@@ -284,15 +285,19 @@ class R2(object): # R2 master class instanciated by the GUI
              is the default.
         """
         # compute DOI
-        array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
         elec = self.elec.copy()
-        maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
-        doi = np.min(elec[:,2])-2/3*maxDist
-        self.doi = doi # keep it plotting mesh later on
-        print('computed DOI : {:.2f}'.format(doi))
+        if len(self.surveys) > 0:
+            array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
+            maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
+            self.doi = np.min(elec[:,2])-2/3*maxDist
+        else:
+            self.doi = 2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
+        print('computed DOI : {:.2f}'.format(self.doi))
+        
+        # set num_xy_poly
         self.param['num_xy_poly'] = 5
         ymax = np.max(self.elec[:,2])
-        ymin = doi
+        ymin = self.doi
         xy_poly_table = np.array([
         [self.elec[0,0], ymax],
         [self.elec[-1,0], ymax],
@@ -1263,7 +1268,10 @@ class R2(object): # R2 master class instanciated by the GUI
         
         elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
-        self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
+        if self.typ[0] == 'c':
+            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
+        else:
+            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='Protocol')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1
         self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
