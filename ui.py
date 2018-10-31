@@ -609,6 +609,7 @@ class App(QMainWindow):
                 mwPseudoIP.setVisible(True)
                 tabPreProcessing.setTabEnabled(1, True)
                 tabPreProcessing.setTabEnabled(3, True)
+                regionTable.setColumnHidden(1, False)
                 heatRaw()
 #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -620,6 +621,8 @@ class App(QMainWindow):
                 mwPseudoIP.setVisible(False)
                 tabPreProcessing.setTabEnabled(1, False)
                 tabPreProcessing.setTabEnabled(3, False)
+                regionTable.setColumnHidden(1, True)
+
 
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(ipCheckFunc)
@@ -1496,35 +1499,39 @@ class App(QMainWindow):
         
         
         class RegionTable(QTableWidget):
-            def __init__(self, nrow=1, ncol=3):
+            def __init__(self, nrow=1, ncol=4):
                 super(RegionTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['Resistivity [Ohm.m]', 'Zones', 'Fixed']
+                self.headers = ['Resist. [Ohm.m]', 'Phase [mrad]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0'))
-                self.setItem(0,1,QTableWidgetItem('1'))
-                self.setCellWidget(0,2, QCheckBox())
+                self.setItem(0,1,QTableWidgetItem('-2'))
+                self.setItem(0,2,QTableWidgetItem('1'))
+                self.setCellWidget(0,3, QCheckBox())
                     
             def addRow(self):
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
                 self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
-                self.setItem(self.nrow-1, 1, QTableWidgetItem('1'))
-                self.setCellWidget(self.nrow-1, 2, QCheckBox())
+                self.setItem(self.nrow-1, 1, QTableWidgetItem('-2'))
+                self.setItem(self.nrow-1, 2, QTableWidgetItem('1'))
+                self.setCellWidget(self.nrow-1, 3, QCheckBox())
                 
             def getTable(self):
                 res0 = np.zeros(self.nrow)
+                phase0 = np.zeros(self.nrow)
                 zones = np.zeros(self.nrow, dtype=int)
                 fixed = np.zeros(self.nrow, dtype=bool)
                 for j in range(self.nrow):
                     res0[j] = float(self.item(j,0).text())
-                    zones[j] = int(self.item(j,1).text())
-                    fixed[j] = self.cellWidget(j,2).isChecked()
-                return res0, zones, fixed
+                    phase0[j] = float(self.item(j,1).text())
+                    zones[j] = int(self.item(j,2).text())
+                    fixed[j] = self.cellWidget(j,3).isChecked()
+                return res0, phase0, zones, fixed
             
             def reset(self):
                 self.nrow = 1
@@ -1553,6 +1560,7 @@ class App(QMainWindow):
 #                    meshOutputStack.setCurrentIndex(1) # switch to graph
 
         regionTable = RegionTable()
+        regionTable.setColumnHidden(1, True)
         
         regionLayout = QVBoxLayout()
         regionLayout.addWidget(regionTable)
@@ -1672,11 +1680,12 @@ class App(QMainWindow):
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
-            x, zones, fixed = regionTable.getTable()
+            x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # region 0 doesn't exist
             self.r2.assignRes0(dict(zip(regid, x)),
                                dict(zip(regid, zones)),
-                               dict(zip(regid, fixed)))
+                               dict(zip(regid, fixed)),
+                               dict(zip(regid, phase0)))
             noise = float(noiseEdit.text())
             self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
@@ -2207,11 +2216,12 @@ class App(QMainWindow):
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
-            x, zones, fixed = regionTable.getTable()
+            x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
             self.r2.assignRes0(dict(zip(regid, x)),
                                dict(zip(regid, zones)),
-                               dict(zip(regid, fixed)))
+                               dict(zip(regid, fixed)),
+                               dict(zip(regid, phase0)))
             
             self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
             try:
@@ -2328,13 +2338,14 @@ class App(QMainWindow):
             QApplication.processEvents()
             logInversion()
         def btnKillFunc():
-            self.r2.proc.kill()
-            frozeUI(False)
             btnInvert.setText('Invert')
             btnInvert.setStyleSheet("background-color: green")
             btnInvert.clicked.disconnect()
             btnInvert.clicked.connect(btnInvertFunc)
             QApplication.processEvents()
+            self.r2.proc.kill()
+            frozeUI(False)
+
         btnInvert = QPushButton('Invert')
         btnInvert.setStyleSheet("background-color: green")
         btnInvert.setAutoDefault(True)

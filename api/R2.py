@@ -1643,6 +1643,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.invert(iplot=False)
 #k.showResults(attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 #k.showResults(attr='Phase(mrad)')
+#k.showResults(attr='Magnitude(Ohm-m)')
 
 #%% test Sina
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
