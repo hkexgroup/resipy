@@ -46,7 +46,7 @@
 <dd><p>Master class to handle all processing around the inversion codes.</p>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
-<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=2</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add region according to a polyline defined by <cite>xy</cite> and assign it
 the starting resistivity <cite>res0</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -57,9 +57,14 @@ the starting resistivity <cite>res0</cite>.</p>
 <blockquote>
 <div><p>Array with two columns for the x and y coordinates.</p>
 </div></blockquote>
-<p><strong>res0</strong> : float</p>
+<p><strong>res0</strong> : float, optional</p>
 <blockquote>
 <div><p>Resistivity values of the defined area.</p>
+</div></blockquote>
+<p><strong>phase0</strong> : float, optional</p>
+<blockquote>
+<div><p>Read only if you choose the cR2 option. Phase value of the defined
+area in mrad</p>
 </div></blockquote>
 <p><strong>blocky</strong> : bool, optional</p>
 <blockquote>
@@ -83,7 +88,7 @@ region.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.assignRes0">
-<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em>, <em>zoneValues={}</em>, <em>fixedValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
+<code class="descname">assignRes0</code><span class="sig-paren">(</span><em>regionValues={}</em>, <em>zoneValues={}</em>, <em>fixedValues={}</em>, <em>ipValues={}</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.assignRes0" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assign starting resitivity values.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -101,10 +106,15 @@ There would be no smoothing between the zones if ‘block inversion’
 is selected (<cite>inversion_type</cite> = 4).</p>
 </div></blockquote>
 <p><strong>fixedValues</strong> : dict</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Dictionnary with key being the region number and a boolean value if
 we want to fix the resistivity of the zone to the starting one.
 Note that it only works for triangular mesh for now.</p>
+</div></blockquote>
+<p><strong>ipValues</strong> : dict</p>
+<blockquote class="last">
+<div><p>Dictionnary with key being the region number and the values beeing
+the phase [mrad].</p>
 </div></blockquote>
 </td>
 </tr>
@@ -492,6 +502,25 @@ starting model to invert data from forward modelling.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.saveInvPlots">
+<code class="descname">saveInvPlots</code><span class="sig-paren">(</span><em>outputdir=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.saveInvPlots" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save all plots to output (or working directory). Parameters
+are passed to the <cite>showResults()</cite> method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>outputdir</strong> : str, optional</p>
+<blockquote class="last">
+<div><p>Path of the output directory. Default is the working directory.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.setBorehole">
 <code class="descname">setBorehole</code><span class="sig-paren">(</span><em>val=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setBorehole" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set all surveys in borehole type if <cite>True</cite> is passed.</p>
@@ -523,19 +552,19 @@ starting model to invert data from forward modelling.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.showIter">
-<code class="descname">showIter</code><span class="sig-paren">(</span><em>ax=None</em>, <em>index=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showIter" title="Permalink to this definition">¶</a></dt>
+<code class="descname">showIter</code><span class="sig-paren">(</span><em>index=-1</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showIter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dispay temporary inverted section after each iteration.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotib axis, optional</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>index</strong> : int, optional</p>
 <blockquote>
-<div><p>If specified, the graph will be plotted along <cite>ax</cite>.</p>
-</div></blockquote>
-<p><strong>index</strong> : int, optional</p>
-<blockquote class="last">
 <div><p>Iteration number to show.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotib axis, optional</p>
+<blockquote class="last">
+<div><p>If specified, the graph will be plotted along <cite>ax</cite>.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -551,7 +580,7 @@ starting model to invert data from forward modelling.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.showResults">
-<code class="descname">showResults</code><span class="sig-paren">(</span><em>index=0</em>, <em>ax=None</em>, <em>edge_color='none'</em>, <em>attr=''</em>, <em>sens=True</em>, <em>color_map='viridis'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showResults" title="Permalink to this definition">¶</a></dt>
+<code class="descname">showResults</code><span class="sig-paren">(</span><em>index=0</em>, <em>ax=None</em>, <em>edge_color='none'</em>, <em>attr=''</em>, <em>sens=True</em>, <em>color_map='viridis'</em>, <em>ylim=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showResults" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show the inverteds section.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -946,6 +975,30 @@ classes will be computed as 10**class1</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.Survey.Survey.plotIPFitParabola">
+<code class="descname">plotIPFitParabola</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.plotIPFitParabola" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the reciprocal phase errors and fit parabola.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib axis, optional</p>
+<blockquote>
+<div><p>If specified, graph will be plotted on the given axis.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fig</strong> : matplotlib figure, optional</p>
+<blockquote class="last">
+<div><p>If ax is not specified, the function will return a figure object.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.Survey.Survey.pseudo">
 <code class="descname">pseudo</code><span class="sig-paren">(</span><em>ax=None</em>, <em>bx=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot pseudo section if 2D survey or just quadrupoles transfer
@@ -1299,16 +1352,28 @@ of the vertices.</p>
 
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>geom_input</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_type=None</em>, <em>geom_input=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
 this function expects the current working directory has path: exe/gmsh.exe.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>geom_input</strong> : dictionnary</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec_x: array like</strong></p>
 <blockquote>
-<div><p>Dictionary used to generate survey geometry in genGeoFile_adv (see notes there).</p>
+<div><p>electrode x coordinates</p>
+</div></blockquote>
+<p><strong>elec_y: array like</strong></p>
+<blockquote>
+<div><p>electrode y coordinates</p>
+</div></blockquote>
+<p><strong>elec_type: list of strings, optional</strong></p>
+<blockquote>
+<div><p>type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list</p>
+</div></blockquote>
+<p><strong>geom_input</strong> : dict, optional</p>
+<blockquote>
+<div><p>Allows for advanced survey geometry in genGeoFile in gmshWrap.py (see notes there).</p>
 </div></blockquote>
 <p><strong>keep_files</strong> : boolean, optional</p>
 <blockquote>
