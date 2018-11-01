@@ -1225,6 +1225,9 @@ class App(QMainWindow):
             elif index == 1:
                 mwIPFiltering.plot(self.r2.plotIPFit)
                 self.r2.errTypIP = 'pwlip'
+            elif index == 2:
+                mwIPFiltering.plot(self.r2.plotIPFitParabola)
+                self.r2.errTypIP = 'pwlip'
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1244,6 +1247,7 @@ class App(QMainWindow):
         iperrFitType = QComboBox()
         iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
         iperrFitType.addItem('Power law')
+        iperrFitType.addItem('Parabola')
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
         ipLayout.addWidget(iperrFitType)
         
