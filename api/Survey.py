@@ -501,6 +501,54 @@ class Survey(object):
         if ax is None:
             return fig   
 
+    def plotIPFitParabola(self, ax=None):
+        """ Plot the reciprocal phase errors and fit parabola.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()        
+        numbins_ip = 16
+        binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
+        Rn = np.abs(self.df['resist'])
+        phasedisc = self.df['reci_IP_err']
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
+        for i in range(numbins_ip): # bining 
+            ns=i*binsize_ip
+            ne=ns+binsize_ip-1
+            bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
+            bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
+        bins_ip = bins_ip.dropna()
+        coefs_ip = np.polyfit(np.log10(bins_ip.iloc[:,0]), bins_ip.iloc[:,1], 2) # calculating fitting coefficients (a, b, c)
+        R_error_predict_ip = (coefs_ip[0]*np.log10(bins_ip.iloc[:,0])**2) + (coefs_ip[1]*np.log10(bins_ip.iloc[:,0]) + coefs_ip[2] ) # error prediction based of fitted parabola model       
+        ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
+        ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
+        ax.semilogx(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Parabola Fit")
+        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_xlabel(r'R [$\Omega$]')      
+        ax.legend(loc='best', frameon=True)
+        R2_ip= s.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
+        #a3 = np.around((coefs_ip[0]),decimals=3)
+        #b3 = np.around((coefs_ip[1]), decimals=3)
+        #c3 = np.around((coefs_ip[2]),decimals=3)
+        #a1 = np.around((coefs_ip[0]),decimals=1)
+        #b1 = np.around((coefs_ip[1]), decimals=1)
+        #c1 = np.around((coefs_ip[2]),decimals=1)
+        ax.set_title('Multi bin phase error plot\n(R$^2$ = %s)' % (R2_ip))
+        self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['resist']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['resist'])) + coefs_ip[2])
+        self.df['Phase'] = -self.kFactor*self.df['ip']
+        if ax is None:
+            return fig   
+
     def pwlfit(self, ax=None):
         """ Fit an power law to the resistivity data.
         
