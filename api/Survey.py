@@ -15,7 +15,7 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
-                     primeParser)
+                     primeParser, protocolParserIP)
 from api.DCA import DCA
 
 class Survey(object):
@@ -61,6 +61,8 @@ class Survey(object):
                 elec, data = res2invInputParser(fname)
             elif ftype == 'BGS Prime':
                 elec, data = primeParser(fname)
+            elif ftype == 'ProtocolIP':
+                elec, data = protocolParserIP(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -72,6 +74,9 @@ class Survey(object):
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
+        self.kFactor = 1.2
+        self.phiCbarmin = 0
+        self.phiCbarMax = 25
         self.filt_typ = None
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
@@ -84,7 +89,8 @@ class Survey(object):
 #        self.array = self.df[['a','b','m','n']].values
 #        self.resist = self.df['resist'].values
 #        self.dev = self.df['dev'].values
-        
+        if ftype == 'BGS Prime':
+            self.checkTxSign()        
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
@@ -95,8 +101,28 @@ class Survey(object):
 #        self.errTyp = 'none' # type of error to add for DC
 #        self.errTypIP = 'none' # type of error to add for IP phase
  
-            
-    
+    def checkTxSign(self):
+        """ Checking the sign of the transfer resistance.
+        """
+        elecpos = self.elec[:,0]
+        array = self.df[['a','b','m','n']].values.copy()
+        resist = self.df['resist'].values.copy()
+        
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        
+        ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
+        self.df.loc[ie, 'resist'] = resist[ie]*-1
+        print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
+        
+        
     def basicFilter(self):
         """ Remove NaN and Inf values in the data.
         """
@@ -204,7 +230,7 @@ class Survey(object):
         without reciprocal.
         """
         resist = self.df['resist'].values
-        phase = -1.2*self.df['ip'].values #converting chargeability to phase shift
+        phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
         array = self.df[['a','b','m','n']].values
         
@@ -271,7 +297,7 @@ class Survey(object):
         self.df['reci_IP_err'] = reci_IP_err
         
         return Ri
-    
+
     
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
@@ -409,8 +435,9 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        reciprocalMean = np.abs(self.df['recipMean'].values)
-        phase = np.abs(-1.2*self.df['reci_IP_err'].values)
+        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/self.kFactor, self.phiCbarMax/self.kFactor))
+        reciprocalMean = np.abs(temp_df_renge_filter['recipMean'].values)
+        phase = np.abs(-self.kFactor*temp_df_renge_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
         ax.set_ylabel(r's($\phi$) [mRad]')
@@ -446,7 +473,7 @@ class Survey(object):
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['resist'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-25 & Phase_dicrep<25')# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -470,7 +497,7 @@ class Survey(object):
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
         ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
         self.df['PhaseError'] = a1*(np.abs(self.df['resist'])**a2)
-        self.df['Phase'] = -1.2*self.df['ip']
+        self.df['Phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
 
@@ -719,13 +746,13 @@ class Survey(object):
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*1.2
-        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).ip.unstack(0)     
+        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*self.kFactor
+        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
         else:
             fig = ax.get_figure()             
-        m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=0, vmax=25)
+        m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=self.phiCbarmin, vmax=self.phiCbarMax)
         ax.xaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['a'].max()+1,4))
         ax.yaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['m'].max(),4))
         ax.set_ylabel('A',fontsize = 22)
@@ -751,9 +778,9 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/1.2, phimax/1.2))
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/1.2, phimax/1.2))
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -958,8 +985,7 @@ class Survey(object):
             dfg = self.df[self.df['irecip'] > 0] 
             protocol['R'] = dfg['recipMean'].values
             if ip == True:
-#                protocol['R'] = np.abs(protocol['R'])
-                protocol['Phase'] = -1.2*dfg['ip'].values # "-1.2" factor is for IRIS syscal instrument
+                protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
             if errTyp != 'none':
                 if errTyp == 'obs':
                     protocol['error'] = self.df['recipError'].values[ie]
@@ -986,6 +1012,8 @@ class Survey(object):
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             protocol['R'] = self.df['resist'].values
+            if ip == True:
+                protocol['Phase'] = -self.kFactor*self.df['ip'].values
         
         if outputname != '':
             with open(outputname, 'w') as f:

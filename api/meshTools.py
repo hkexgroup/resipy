@@ -394,8 +394,8 @@ class Mesh_obj:
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
         ax.set_ylim(ylim)
         ax.set_xlim(xlim)
-        ax.set_xlabel('Distance')
-        ax.set_ylabel('Elevation')
+        ax.set_xlabel('Distance [m]')
+        ax.set_ylabel('Elevation [m]')
         
         if color_bar:#add the color bar 
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')

@@ -20,7 +20,6 @@ See doc online. Activate your virtual environment (as above). Inside this enviro
 
 Packages needed:
 - numpy
-- scipy
 - matplotlib
 - pandas
 - pyinstaller

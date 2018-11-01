@@ -42,7 +42,7 @@
 <p>&#64;author: jkl</p>
 <dl class="class">
 <dt id="api.R2.R2">
-<em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em>, <em>typ='R2'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Master class to handle all processing around the inversion codes.</p>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
@@ -120,7 +120,7 @@ Note that it only works for triangular mesh for now.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createBatchSurvey">
-<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read multiples files from a folders (sorted by alphabetical order).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -146,10 +146,14 @@ Note that it only works for triangular mesh for now.</p>
 <blockquote>
 <div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
 </div></blockquote>
-<p><strong>isurveys</strong> : list</p>
-<blockquote class="last">
+<p><strong>isurveys</strong> : list, optional</p>
+<blockquote>
 <div><p>List of surveys index that will be used for error modelling and so
 reciprocal measurements. By default all surveys are used.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>Function to dump the information message when importing the files.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -296,7 +300,7 @@ a survey object.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createTimeLapseSurvey">
-<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -323,10 +327,14 @@ a survey object.</p>
 <blockquote>
 <div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
 </div></blockquote>
-<p><strong>isurveys</strong> : list</p>
-<blockquote class="last">
+<p><strong>isurveys</strong> : list, optional</p>
+<blockquote>
 <div><p>List of surveys index that will be used for error modelling and so
 reciprocal measurements. By default all surveys are used.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>Function to dump information message when importing the files.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -515,15 +523,19 @@ starting model to invert data from forward modelling.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.showIter">
-<code class="descname">showIter</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showIter" title="Permalink to this definition">¶</a></dt>
+<code class="descname">showIter</code><span class="sig-paren">(</span><em>ax=None</em>, <em>index=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showIter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Dispay temporary inverted section after each iteration.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotib axis, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>If specified, the graph will be plotted along <cite>ax</cite>.</p>
+</div></blockquote>
+<p><strong>index</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>Iteration number to show.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -683,6 +695,12 @@ are not in the same file).</p>
 <dt id="api.Survey.Survey.basicFilter">
 <code class="descname">basicFilter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.basicFilter" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove NaN and Inf values in the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.checkTxSign">
+<code class="descname">checkTxSign</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.checkTxSign" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checking the sign of the transfer resistance.</p>
 </dd></dl>
 
 <dl class="method">
