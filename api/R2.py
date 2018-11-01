@@ -146,6 +146,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.pwlfit = self.surveys[0].pwlfit
             self.phaseplotError = self.surveys[0].phaseplotError
             self.plotIPFit = self.surveys[0].plotIPFit
+            self.plotIPFitParabola = self.surveys[0].plotIPFitParabola
             self.heatmap = self.surveys[0].heatmap
             self.iprangefilt = self.surveys[0].iprangefilt
             self.removerecip = self.surveys[0].removerecip
@@ -249,7 +250,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.pwlfit = self.bigSurvey.pwlfit
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
-    
+        self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
+        
 #    def pseudo(self, **kwargs):
 #        """ Create a pseudo section.
 #        

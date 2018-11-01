@@ -536,7 +536,7 @@ class Survey(object):
         ax.set_ylabel(r's($\phi$) [mRad]')
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
-        R2_ip= s.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
+        R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
         #a3 = np.around((coefs_ip[0]),decimals=3)
         #b3 = np.around((coefs_ip[1]), decimals=3)
         #c3 = np.around((coefs_ip[2]),decimals=3)
