@@ -2285,8 +2285,11 @@ class App(QMainWindow):
                     printR2out()
             else:
                 printR2out()
-#                btnInvert.animateClick()
-            
+                btnInvert.setText('Invert')
+                btnInvert.setStyleSheet("background-color: green")
+                btnInvert.clicked.disconnect()
+                btnInvert.clicked.connect(btnInvertFunc)
+                print('process was killed by user')
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
