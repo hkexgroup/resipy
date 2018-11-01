@@ -43,12 +43,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
-            print('jsjsjjs')
             dirname = os.path.join(self.apiPath, 'invdir')
-            if os.path.exists(dirname) is True:
-                print('clearing directory')
-                shutil.rmtree(dirname)
-            os.mkdir(dirname)
         print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
         self.elec = None # will be assigned when creating a survey
@@ -78,29 +73,35 @@ class R2(object): # R2 master class instanciated by the GUI
         dirname : str
             Path of the working directory.
         """
-        # get rid of some stuff
-        files = os.listdir(dirname)
-        if 'ref' in files: # only for timelapse survey
-            shutil.rmtree(os.path.join(dirname, 'ref'))
-        if 'err' in files: # only for error modelling
-            shutil.rmtree(os.path.join(dirname, 'err'))
-        if 'R2.exe' in files:
-            os.remove(os.path.join(dirname, 'R2.exe'))
-        if 'cR2.exe' in files:
-            os.remove(os.path.join(dirname, 'cR2.exe'))
-        if 'mesh.dat' in files:
-            os.remove(os.path.join(dirname, 'mesh.dat'))
-        if 'Start_res.dat' in files:
-            os.remove(os.path.join(dirname, 'Start_res.dat'))
-        def isNumber(x):
-            try:
-                float(x)
-                return True
-            except:
-                return False
-        for f in files:
-            if (f[0] == 'f') & (isNumber(f[1:3]) is True):
-                os.remove(os.path.join(dirname, f))
+        # first check if directory exists
+        if os.path.exists(dirname): # ok it exists, let's clear it
+            print('clearing the dirname')
+            # get rid of some stuff
+            files = os.listdir(dirname)
+            if 'ref' in files: # only for timelapse survey
+                shutil.rmtree(os.path.join(dirname, 'ref'))
+            if 'err' in files: # only for error modelling
+                shutil.rmtree(os.path.join(dirname, 'err'))
+            if 'R2.exe' in files:
+                os.remove(os.path.join(dirname, 'R2.exe'))
+            if 'cR2.exe' in files:
+                os.remove(os.path.join(dirname, 'cR2.exe'))
+            if 'mesh.dat' in files:
+                os.remove(os.path.join(dirname, 'mesh.dat'))
+            if 'Start_res.dat' in files:
+                os.remove(os.path.join(dirname, 'Start_res.dat'))
+            def isNumber(x):
+                try:
+                    float(x)
+                    return True
+                except:
+                    return False
+            for f in files:
+                if (f[0] == 'f') & (isNumber(f[1:3]) is True):
+                    os.remove(os.path.join(dirname, f))
+        else:
+            print('createing the dirname')
+            os.mkdir(dirname)
         self.dirname = dirname
     
     
@@ -1495,7 +1496,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
         
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#k = R2('/media/jkl/data/phd/tmp/r2gui/api/invdir')
+#k = R2()
 #k.typ = 'cR2'
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.createMesh(typ='trian')
@@ -1553,11 +1554,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2()
 #k.createSurvey('api/test/syscalFileTopo.csv')
 #topo = np.genfromtxt('api/test/elecTopo.csv', delimiter=',')
-#k.elec = topo
+#k.elec[:,[0,2]] = topo[:,[0,1]]
 #k.createMesh(typ='trian',cl=0.1, cl_factor=5)
 #k.showMesh()
-#k.invert()
-#
+#k.invert(iplot=True)
 #k.showIter(index=1)
 
 #%% test with borehole
@@ -1566,11 +1566,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #x = np.genfromtxt('api/test/elecXbh.csv', delimiter=',')
 #k.elec[:,[0,2]] = x[:,:2]
 #buried = x[:,2].astype(bool)
-#k.createMesh('trian', buried=buried)
+#k.createMesh('trian', buried=buried, cl=0.5, cl_factor=20)
 #k.showMesh()
-#k.write2in()con_
 #k.invert()
-#k.showResults()
+#k.showResults(sens=False)
 
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
@@ -1581,6 +1580,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.write2protocol()
 #k.write2in()
 #k.invert()
+#k.showResults()
 #k.pseudoError()
 
 #%% test for timelapse inversion
@@ -1599,7 +1599,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.write2protocol()
 #k.invert(iplot=False)
 #k.saveInvPlots(attr='difference(percent)')
-#k.showResults(index=0)
+#k.showResults(index=3)
 #k.showResults(index=1)
 #k.showSection(os.path.join(k.dirname, 'f001_res.vtk'))
 #k.showSection(os.path.join(k.dirname, 'f002_res.vtk'))

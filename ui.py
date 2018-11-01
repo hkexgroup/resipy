@@ -144,9 +144,6 @@ class App(QMainWindow):
         self.setWindowTitle('pyR2')
         self.setGeometry(100,100,1100,600)
         self.newwd = os.path.join(bundle_dir, 'api', 'invdir')
-#        if os.path.exists(self.newwd):
-#            shutil.rmtree(self.newwd)
-#        os.mkdir(self.newwd)
         
         self.r2 = None
         self.parser = None
@@ -2267,7 +2264,7 @@ class App(QMainWindow):
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
                 r2outEdit.setText(text)
-                btnInvert.animateClick()
+                
            
             if self.end is True:
                 try:
@@ -2284,6 +2281,7 @@ class App(QMainWindow):
                     printR2out()
             else:
                 printR2out()
+#                btnInvert.animateClick()
             
         
         def plotSection():
