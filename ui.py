@@ -144,9 +144,9 @@ class App(QMainWindow):
         self.setWindowTitle('pyR2')
         self.setGeometry(100,100,1100,600)
         self.newwd = os.path.join(bundle_dir, 'api', 'invdir')
-        if os.path.exists(self.newwd):
-            shutil.rmtree(self.newwd)
-        os.mkdir(self.newwd)
+#        if os.path.exists(self.newwd):
+#            shutil.rmtree(self.newwd)
+#        os.mkdir(self.newwd)
         
         self.r2 = None
         self.parser = None

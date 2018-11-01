@@ -43,8 +43,10 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
+            print('jsjsjjs')
             dirname = os.path.join(self.apiPath, 'invdir')
             if os.path.exists(dirname) is True:
+                print('clearing directory')
                 shutil.rmtree(dirname)
             os.mkdir(dirname)
         print('Working directory is:', dirname)
@@ -332,24 +334,25 @@ class R2(object): # R2 master class instanciated by the GUI
         if typ == 'trian':
             elec = self.elec.copy()
             geom_input = {}
+            elec_x = self.elec[:,0]
+            elec_z = self.elec[:,2]
+            elec_type = np.repeat('electrode',len(elec_x))
             if (buried is not None
                     and elec.shape[0] == len(buried)
                     and np.sum(buried) != 0):
-                iburied = buried == True
-                geom_input['electrode'] = [self.elec[~iburied, 0],
-                                           self.elec[~iburied, 2]]
-                geom_input['buried1'] = [self.elec[iburied, 0],
-                                       self.elec[iburied, 2]]
-            else:
-                geom_input['electrode'] = [self.elec[:,0],
-                                           self.elec[:,2]]
+                elec_type[buried]='buried'
             
             if surface is not None:
                 geom_input['surface'] = [surface[:,0], surface[:,1]]
-            mesh = tri_mesh(geom_input,
+                
+            elec_type = elec_type.tolist()
+            
+            mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True, doi=self.doi)
+                             cl=cl, dump=dump, show_output=True,
+                             doi=self.doi-max(elec_z))
+            
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
 #            regs = np.array(np.array(mesh.regions))[:,1:]
@@ -372,13 +375,13 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.param['xy_poly_table'] = xy_poly_table
 #            e_nodes = np.arange(len(self.elec))+1
             e_nodes = mesh.e_nodes + 1
-            if buried is not None:
-                if np.sum(buried) > 0:
-                    enodes = np.zeros(len(e_nodes), dtype=int)
-                    nburied = np.sum(buried)
-                    enodes[~buried] = e_nodes[:-nburied]
-                    enodes[buried] = e_nodes[-nburied:]
-                    e_nodes = enodes
+#            if buried is not None:
+#                if np.sum(buried) > 0:
+#                    enodes = np.zeros(len(e_nodes), dtype=int)
+#                    nburied = np.sum(buried)
+#                    enodes[~buried] = e_nodes[:-nburied]
+#                    enodes[buried] = e_nodes[-nburied:]
+#                    e_nodes = enodes
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
@@ -1674,8 +1677,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.elec[:,[0,2]] = x[:,:2]
 #surface = np.array([[0.7, 92.30],[10.3, 92.30]])
 #buried = x[:,2].astype(bool)
-#k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=50)
-##k.showMesh()
+#k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
+#k.showMesh()
 #xy = k.elec[1:21,[0,2]]
 #k.addRegion(xy, res0=18, blocky=True, fixed=True)
 #k.param['b_wgt'] = 0.05 # doesn't work

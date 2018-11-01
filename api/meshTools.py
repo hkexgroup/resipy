@@ -43,7 +43,7 @@ import matplotlib.tri as tri
 #    import gmshWrap as gw 
 #    from isinpolygon import isinpolygon
 #else:
-import api.gmshWrap2 as gw
+import api.gmshWrap as gw
 from api.isinpolygon import isinpolygon
 
 #%% create mesh object
@@ -1292,15 +1292,22 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(geom_input,keep_files=True, show_output=True, path='exe', dump=print, **kwargs):
+def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True, 
+             show_output=True, path='exe', dump=print, **kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function expects the current working directory has path: exe/gmsh.exe.
             
     Parameters
     ---------- 
-    geom_input : dictionnary
-        Dictionary used to generate survey geometry in genGeoFile_adv (see notes there).
+    elec_x: array like
+        electrode x coordinates 
+    elec_y: array like 
+        electrode y coordinates 
+    elec_type: list of strings, optional
+        type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list    
+    geom_input : dict, optional
+        Allows for advanced survey geometry in genGeoFile in gmshWrap.py (see notes there).
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the exe directory.
     show_ouput : boolean, optional
@@ -1335,9 +1342,9 @@ def tri_mesh(geom_input,keep_files=True, show_output=True, path='exe', dump=prin
     os.chdir(ewd) # change to the executable directory 
     #make .geo file
     file_name="temp"
-    if not isinstance(geom_input,dict):
-        raise ValueError("geom_input has not been given!")
-    node_pos = gw.genGeoFile(geom_input,file_path=file_name,**kwargs)
+    
+    node_pos = gw.genGeoFile([elec_x,elec_y], elec_type, geom_input,
+                             file_path=file_name,**kwargs)
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
@@ -1366,7 +1373,7 @@ def tri_mesh(geom_input,keep_files=True, show_output=True, path='exe', dump=prin
     #change back to orginal working directory
     os.chdir(cwd)
     
-    mesh.add_e_nodes(node_pos-1)
+    mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh#, mesh_dict['element_ranges']
 
