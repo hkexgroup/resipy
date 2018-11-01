@@ -43,7 +43,7 @@ import matplotlib.tri as tri
 #    import gmshWrap as gw 
 #    from isinpolygon import isinpolygon
 #else:
-import api.gmshWrap as gw
+import api.gmshWrap2 as gw
 from api.isinpolygon import isinpolygon
 
 #%% create mesh object
@@ -1337,7 +1337,7 @@ def tri_mesh(geom_input,keep_files=True, show_output=True, path='exe', dump=prin
     file_name="temp"
     if not isinstance(geom_input,dict):
         raise ValueError("geom_input has not been given!")
-    node_pos,_ = gw.genGeoFile(geom_input,file_path=file_name,**kwargs)
+    node_pos = gw.genGeoFile(geom_input,file_path=file_name,**kwargs)
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 

@@ -117,7 +117,8 @@ def tri_cent(p,q,r):
     return(Xc,Yc)
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
-def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
+def genGeoFile(electrodes, electrode_type = None, geom_input = None,
+               file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
     """
     writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
@@ -180,12 +181,12 @@ def genGeoFile(geom_input,file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
         raise Exception("niether surface electrode or elevation points have been given to genGeoFile. Aborting... ")
     
     #determine     
-    if 'electrode' not in geom_input:
-        elec_x=[]
-        elec_z=[]
-        topo_x = geom_input['surface'][0]
-        topo_z = geom_input['surface'][1]
-    elif 'surface' not in geom_input:
+#    if 'electrode' not in geom_input:
+#        elec_x=[]
+#        elec_z=[]
+#        topo_x = geom_input['surface'][0]
+#        topo_z = geom_input['surface'][1]
+    if 'surface' not in geom_input:
         print("surface not in geom_input")
         elec_x = geom_input['electrode'][0]
         elec_z = geom_input['electrode'][1]
