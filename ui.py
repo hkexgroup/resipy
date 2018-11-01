@@ -1427,7 +1427,16 @@ class App(QMainWindow):
             
         def meshQuadFunc():
             self.r2.elec = elecTable.getTable()
-            nnodes = int(nnodesEdit.text())
+#            nnodes = int(nnodesEdit.text())
+#            if nnodes < 4:
+#                nnodesEdit.setText('4')
+#                nnodes = 4
+#                errorDump('There need to be at least 4 elements between two electrodes.')
+#            if nnodes > 10:
+#                nnodesEdit.setText('10')
+#                nnodes = 10
+#                errorDump('Sorry no more than 10 elements between electrodes.')
+            nnodes = nnodesSld.value()
             try:
                 self.r2.createMesh(typ='quad', elemx=nnodes)
                 scale.setVisible(False)
@@ -1470,10 +1479,13 @@ class App(QMainWindow):
         meshTrian.clicked.connect(meshTrianFunc)
         
         # additional options for quadrilateral mesh
-        nnodesLabel = QLabel('Number of nodes between electrode:')
-        nnodesEdit = QLineEdit()
-        nnodesEdit.setValidator(QIntValidator())
-        nnodesEdit.setText('4')
+        nnodesLabel = QLabel('Number of nodes between electrode (4 -> 10):')
+#        nnodesEdit = QLineEdit()
+#        nnodesEdit.setValidator(QIntValidator())
+#        nnodesEdit.setText('4')
+        nnodesSld = QSlider(Qt.Horizontal)
+        nnodesSld.setMinimum(4)
+        nnodesSld.setMaximum(10)
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
@@ -1487,7 +1499,8 @@ class App(QMainWindow):
         
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
-        meshOptionQuadLayout.addWidget(nnodesEdit)
+#        meshOptionQuadLayout.addWidget(nnodesEdit)
+        meshOptionQuadLayout.addWidget(nnodesSld)
         
         meshOptionTrianLayout = QHBoxLayout()
         meshOptionTrianLayout.addWidget(clLabel)
@@ -2289,7 +2302,6 @@ class App(QMainWindow):
                 btnInvert.setStyleSheet("background-color: green")
                 btnInvert.clicked.disconnect()
                 btnInvert.clicked.connect(btnInvertFunc)
-                print('process was killed by user')
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
