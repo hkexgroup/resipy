@@ -394,7 +394,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         numel = self.mesh.num_elms
         self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
-        self.mesh.add_attribute(np.ones(numel)*-2, 'phase0') # default starting phase [mrad]
+        self.mesh.add_attribute(np.ones(numel)*1, 'phase0') # default starting phase [mrad]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
@@ -438,17 +438,25 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.param['b_wgt'] = 0.02
         if typ == 'cR2':
             if self.errTypIP != 'none': # we have individual errors
+                if 'a_wgt' not in self.param:
+                    self.param['a_wgt'] = 0
                 if 'b_wgt' not in self.param:
                     self.param['b_wgt'] = 0
-                if 'c_wgt' not in self.param:
-                    self.param['c_wgt'] = 0
-                if 'a_wgt' not in self.param:
-                    self.param['a_wgt'] = 0.01 # not sure of that (Gui)
+#                if 'b_wgt' not in self.param:
+#                    self.param['b_wgt'] = 0
+#                if 'c_wgt' not in self.param:
+#                    self.param['c_wgt'] = 0
+#                if 'a_wgt' not in self.param:
+#                    self.param['a_wgt'] = 0.01 # not sure of that (Gui)
             else:
-                if 'c_wgt' not in self.param:
-                    self.param['c_wgt'] = 1 # better if set by user !!
-                if 'd_wgt' not in self.param:
-                    self.param['d_wgt'] = 2
+                if 'a_wgt' not in self.param:
+                    self.param['a_wgt'] = 0.02 # variance for magnitude (no more offset)
+                if 'b_wgt' not in self.param:
+                    self.param['b_wgt'] = 2 # mrad
+#                if 'c_wgt' not in self.param:
+#                    self.param['c_wgt'] = 1 # better if set by user !!
+#                if 'd_wgt' not in self.param:
+#                    self.param['d_wgt'] = 2
         
         if self.param['mesh_type'] == 4:
             self.param['zones'] = self.mesh.attr_cache['zones']
@@ -833,31 +841,31 @@ class R2(object): # R2 master class instanciated by the GUI
         them to `R2.meshResults` list.
         """
         self.meshResults = [] # make sure we empty the list first
-        if self.typ == 'R2':
-            if self.iTimeLapse == True:
-                fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
-                print('reading ref', fresults)
-                mesh = mt.vtk_import(fresults)
-                mesh.elec_x = self.elec[:,0]
-                mesh.elec_y = self.elec[:,2]
-                self.meshResults.append(mesh)
-            for i in range(100):
-                fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
-                if os.path.exists(fresults):
-                    print('reading ', fresults)
-                    mesh = mt.vtk_import(fresults)
-                    mesh.elec_x = self.elec[:,0]
-                    mesh.elec_y = self.elec[:,2]
-                    self.meshResults.append(mesh)
-                else:
-                    break
-        if self.typ == 'cR2':
-            fresults = os.path.join(self.dirname, 'f001.vtk')
+#        if self.typ == 'R2':
+        if self.iTimeLapse == True:
+            fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,2]
             self.meshResults.append(mesh)
+        for i in range(100):
+            fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
+            if os.path.exists(fresults):
+                print('reading ', fresults)
+                mesh = mt.vtk_import(fresults)
+                mesh.elec_x = self.elec[:,0]
+                mesh.elec_y = self.elec[:,2]
+                self.meshResults.append(mesh)
+            else:
+                break
+#        if self.typ == 'cR2':
+#            fresults = os.path.join(self.dirname, 'f001.vtk')
+#            print('reading ref', fresults)
+#            mesh = mt.vtk_import(fresults)
+#            mesh.elec_x = self.elec[:,0]
+#            mesh.elec_y = self.elec[:,2]
+#            self.meshResults.append(mesh)
 
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
@@ -927,7 +935,7 @@ class R2(object): # R2 master class instanciated by the GUI
     #    fig.show()
 #        return fig
     
-    def addRegion(self, xy, res0=100, phase0=2, blocky=False, fixed=False, ax=None):
+    def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False, ax=None):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -1437,13 +1445,24 @@ class R2(object): # R2 master class instanciated by the GUI
             array = err[:,[-2,-1,-4,-3]].astype(int)
             errors = err[:,0]
         if self.typ == 'cR2':
-            err = pd.read_fwf(os.path.join(self.dirname, 'f001.err')).values       
-            array = err[:,[0,1,2,3]].astype(int)
+            err = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat')).values       
+            array = err[:,[2,3,0,1]].astype(int)
             errors = err[:,4]
-        
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
+    
+    def pseudoErrorIP(self, ax=None):
+        """ Display normalized phase error.
+        """
+        if self.typ == 'cR2':
+            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat')).values       
+            array = df[['C+','C-','P+','P-']].values.astype(int)
+            errors = df['Calculated_Phase']-df['Observed_Phase']
+        spacing = np.diff(self.elec[[0,1],0])
+        pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
+    
+        
     def showInversionErrors(self, ax=None):
         """ Display inversion error by measurment numbers.
         """
@@ -1578,11 +1597,12 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2(typ='cR2')
 #k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
 #k.createSurvey('api/test/syscalFileIP.csv')
-#k.createMesh()
+#k.createMesh('trian')
 #k.write2protocol()
 #k.write2in()
 #k.invert()
-#k.showResults()
+#k.showResults(attr='Magnitude(Ohm-m)', sens=False)
+#k.showResults(attr='Phase(mrad)', sens=False)
 #k.pseudoError()
 
 #%% test for timelapse inversion

@@ -246,10 +246,11 @@ class App(QMainWindow):
             max_iterations.setText('10')
             error_mod.setCurrentIndex(1)
             alpha_aniso.setText('1.0')
+            min_error.setText('0.0')
             a_wgt.setText('0.01')
             b_wgt.setText('0.02')
-            c_wgt.setText('1')
-            d_wgt.setText('2')
+#            c_wgt.setText('1')
+#            d_wgt.setText('2')
             rho_min.setText('-1000')
             rho_max.setText('1000')
             target_decrease.setText('0')
@@ -1231,17 +1232,25 @@ class App(QMainWindow):
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
-                b_wgt.setText('0.02')
-                b_wgtFunc()
-                c_wgt.setText('1.0')
-                c_wgtFunc()
-            else:
-                a_wgt.setText('0.01')
+                a_wgt.setText('0.02')
                 a_wgtFunc()
-                b_wgt.setText('0.0')
+                b_wgt.setText('2')
                 b_wgtFunc()
-                c_wgt.setText('0.0')
-                c_wgtFunc()
+#                b_wgt.setText('0.02')
+#                b_wgtFunc()
+#                c_wgt.setText('1.0')
+#                c_wgtFunc()
+            else:
+                a_wgt.setText('0')
+                a_wgtFunc()
+                b_wgt.setText('0')
+                b_wgtFunc()
+#                a_wgt.setText('0.01')
+#                a_wgtFunc()
+#                b_wgt.setText('0.0')
+#                b_wgtFunc()
+#                c_wgt.setText('0.0')
+#                c_wgtFunc()
             
             
         iperrFitType = QComboBox()
@@ -1426,7 +1435,11 @@ class App(QMainWindow):
             mwMesh.canvas.setFocus() # set focus on the canvas
             
         def meshQuadFunc():
-            self.r2.elec = elecTable.getTable()
+            try:
+                self.r2.elec = elecTable.getTable()
+            except:
+                errorDump('Please first import data or specify electrode in the Topography tab.')
+                return
 #            nnodes = int(nnodesEdit.text())
 #            if nnodes < 4:
 #                nnodesEdit.setText('4')
@@ -1450,13 +1463,23 @@ class App(QMainWindow):
         meshQuad.clicked.connect(meshQuadFunc)
         
         def meshTrianFunc():
+            try:
+                self.r2.elec = elecTable.getTable()
+            except:
+                errorDump('Please first import data or specify electrode in the Topography tab.')
+                return
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
-#            try:
-            self.r2.elec = elecTable.getTable()
-            cl = float(clEdit.text())
-            cl_factor = float(cl_factorEdit.text())
+            elecSpacing = np.sqrt((self.r2.elec[0,0]-self.r2.elec[1,0])**2+
+                                  (self.r2.elec[0,2]-self.r2.elec[1,2])**2)
+            print(clSld.value(), elecSpacing)
+            cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
+            print('cl = ', cl)
+            cl_factor = clFactorSld.value()
+            print('cl_factor = ', cl_factor)
+#            cl = float(clEdit.text())
+#            cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
             inan = ~np.isnan(surface[:,0])
@@ -1464,16 +1487,13 @@ class App(QMainWindow):
                 surface = None
             else:
                 surface = surface[inan,:]
-            print('------surface = ', surface)
             self.r2.createMesh(typ='trian', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
             scale.setVisible(True)
             scaleLabel.setVisible(True)
             replotMesh()
             meshOutputStack.setCurrentIndex(1)
-#            except Exception as e:
-#                errorDump('Error creating the mesh: ' + str(e))
-
+            
         meshTrian = QPushButton('Triangular Mesh')
         meshTrian.setAutoDefault(True)
         meshTrian.clicked.connect(meshTrianFunc)
@@ -1489,13 +1509,20 @@ class App(QMainWindow):
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
-        clEdit = QLineEdit()
-        clEdit.setValidator(QDoubleValidator())
-        clEdit.setText('-1')
-        cl_factorLabel = QLabel('Growth factor:')
-        cl_factorEdit = QLineEdit()
-        cl_factorEdit.setValidator(QDoubleValidator())
-        cl_factorEdit.setText('2')
+#        clEdit = QLineEdit()
+#        clEdit.setValidator(QDoubleValidator())
+#        clEdit.setText('-1')
+        clSld = QSlider(Qt.Horizontal)
+        clSld.setMinimum(1) # TODO this will depend of electrode spacing
+        clSld.setMaximum(10)
+        clSld.setValue(5)
+        clFactorLabel = QLabel('Growth factor:')
+#        cl_factorEdit = QLineEdit()
+#        cl_factorEdit.setValidator(QDoubleValidator())
+#        cl_factorEdit.setText('2')
+        clFactorSld = QSlider(Qt.Horizontal)
+        clFactorSld.setMinimum(1)
+        clFactorSld.setMaximum(10)
         
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
@@ -1504,9 +1531,11 @@ class App(QMainWindow):
         
         meshOptionTrianLayout = QHBoxLayout()
         meshOptionTrianLayout.addWidget(clLabel)
-        meshOptionTrianLayout.addWidget(clEdit)
-        meshOptionTrianLayout.addWidget(cl_factorLabel)
-        meshOptionTrianLayout.addWidget(cl_factorEdit)
+        meshOptionTrianLayout.addWidget(clSld)
+#        meshOptionTrianLayout.addWidget(clEdit)
+        meshOptionTrianLayout.addWidget(clFactorLabel)
+#        meshOptionTrianLayout.addWidget(clFactorEdit)
+        meshOptionTrianLayout.addWidget(clFactorSld)
         
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
@@ -1536,11 +1565,11 @@ class App(QMainWindow):
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['Resist. [Ohm.m]', 'Phase [mrad]', 'Zones', 'Fixed']
+                self.headers = ['|Z| [Ohm.m]', '|-φ| [mrad]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0'))
-                self.setItem(0,1,QTableWidgetItem('-2'))
+                self.setItem(0,1,QTableWidgetItem('1'))
                 self.setItem(0,2,QTableWidgetItem('1'))
                 self.setCellWidget(0,3, QCheckBox())
                     
@@ -1798,16 +1827,28 @@ class App(QMainWindow):
         advancedLayout = QHBoxLayout()
         advForm = QFormLayout()
         
+#        def showIpOptions(arg):
+#            opts = [c_wgt, c_wgtLabel, d_wgt, d_wgtLabel,
+#                    singular_type, singular_typeLabel,
+#                    res_matrix, res_matrixLabel]
+#            activeState = np.array([1, 1, 1, 1, 0, 0, 0, 0], dtype=bool)
+#            if arg == True:
+#                iopts = activeState
+#            else:
+#                iopts = ~activeState
+#            [o.setVisible(io) for o, io in zip(opts, iopts)]
         def showIpOptions(arg):
-            opts = [c_wgt, c_wgtLabel, d_wgt, d_wgtLabel,
-                    singular_type, singular_typeLabel,
-                    res_matrix, res_matrixLabel]
-            activeState = np.array([1, 1, 1, 1, 0, 0, 0, 0], dtype=bool)
             if arg == True:
-                iopts = activeState
+                a_wgt.setText('0.02')
+                b_wgt.setText('2')
+                min_error.setVisible(True)
+                min_errorLabel.setVisible(True)
             else:
-                iopts = ~activeState
-            [o.setVisible(io) for o, io in zip(opts, iopts)]
+                a_wgt.setText('0.01')
+                b_wgt.setText('0.02')
+                min_error.setVisible(False)
+                min_errorLabel.setVisible(False)
+                
         
         # help sections
         def showHelp(arg): # for general tab
@@ -2009,6 +2050,15 @@ class App(QMainWindow):
         alpha_aniso.editingFinished.connect(alpha_anisoFunc)
         advForm.addRow(alpha_anisoLabel, alpha_aniso)
         
+        def min_errorFunc():
+            self.r2.param['min_error'] = float(min_error.text())
+        min_errorLabel = QLabel('<a href="errorParam"><code>min_error</code></a>:')
+        min_errorLabel.linkActivated.connect(showHelp)
+        min_error = QLineEdit()
+        min_error.setText('0.0')
+        min_error.editingFinished.connect(min_errorFunc)
+        invForm.addRow(min_errorLabel, min_error)
+        
         def a_wgtFunc():
             self.r2.param['a_wgt'] = float(a_wgt.text())
         a_wgtLabel = QLabel('<a href="errorParam"><code>a_wgt</code></a>:')
@@ -2029,29 +2079,29 @@ class App(QMainWindow):
         b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(b_wgtLabel, b_wgt)
         
-        def c_wgtFunc():
-            self.r2.param['c_wgt'] = float(c_wgt.text())
-        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
-        c_wgtLabel.linkActivated.connect(showHelp)
-        c_wgtLabel.setVisible(False)
-        c_wgt = QLineEdit()
-        c_wgt.setValidator(QDoubleValidator())
-        c_wgt.setText('1')
-        c_wgt.editingFinished.connect(c_wgtFunc)
-        c_wgt.setVisible(False)
-        invForm.addRow(c_wgtLabel, c_wgt)
-        
-        def d_wgtFunc():
-            self.r2.param['d_wgt'] = float(d_wgt.text())
-        d_wgtLabel = QLabel('<a href="errorParam"><code>d_wgt</code></a>:')
-        d_wgtLabel.linkActivated.connect(showHelp)
-        d_wgtLabel.setVisible(False)
-        d_wgt = QLineEdit()
-        d_wgt.setValidator(QDoubleValidator())
-        d_wgt.setText('2')
-        d_wgt.editingFinished.connect(d_wgtFunc)
-        d_wgt.setVisible(False)
-        invForm.addRow(d_wgtLabel, d_wgt)
+#        def c_wgtFunc():
+#            self.r2.param['c_wgt'] = float(c_wgt.text())
+#        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
+#        c_wgtLabel.linkActivated.connect(showHelp)
+#        c_wgtLabel.setVisible(False)
+#        c_wgt = QLineEdit()
+#        c_wgt.setValidator(QDoubleValidator())
+#        c_wgt.setText('1')
+#        c_wgt.editingFinished.connect(c_wgtFunc)
+#        c_wgt.setVisible(False)
+#        invForm.addRow(c_wgtLabel, c_wgt)
+#        
+#        def d_wgtFunc():
+#            self.r2.param['d_wgt'] = float(d_wgt.text())
+#        d_wgtLabel = QLabel('<a href="errorParam"><code>d_wgt</code></a>:')
+#        d_wgtLabel.linkActivated.connect(showHelp)
+#        d_wgtLabel.setVisible(False)
+#        d_wgt = QLineEdit()
+#        d_wgt.setValidator(QDoubleValidator())
+#        d_wgt.setText('2')
+#        d_wgt.editingFinished.connect(d_wgtFunc)
+#        d_wgt.setVisible(False)
+#        invForm.addRow(d_wgtLabel, d_wgt)
         
         def rho_minFunc():
             self.r2.param['rho_min'] = float(rho_min.text())
@@ -2302,6 +2352,7 @@ class App(QMainWindow):
                 btnInvert.setStyleSheet("background-color: green")
                 btnInvert.clicked.disconnect()
                 btnInvert.clicked.connect(btnInvertFunc)
+                frozeUI(False)
         
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)

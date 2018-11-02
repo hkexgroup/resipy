@@ -43,10 +43,11 @@ def write2in(param, dirname, typ='R2'):
             'max_iter':10,
             'error_mod':2,
             'alpha_aniso':1,
-            'a_wgt':0.01,
-            'b_wgt':0.02,
-            'c_wgt':1,
-            'd_wgt':2,
+            'min_error':0, # for IP only
+            'a_wgt':0.01, # 0.02 for IP
+            'b_wgt':0.02, # 2 for IP
+#            'c_wgt':1,
+#            'd_wgt':2,
             'rho_min':-1000,
             'rho_max':1000,
             'num_xy_poly':-1,
@@ -115,15 +116,16 @@ def write2in(param, dirname, typ='R2'):
         if param['mesh_type'] == 4|5:
             content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
                     param['patchx'], param['patchy'])
+#        if typ == 'R2':
+        content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
+                param['inverse_type'],
+                param['target_decrease'])
         if typ == 'R2':
-            content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
-                    param['inverse_type'],
-                    param['target_decrease'])    
             content = content + '{}\t{}\t<< data type (0=normal;1=log), regularization type\n\n'.format(
                     param['data_type'],
                     param['reg_mode'])
-        elif typ == 'cR2':
-            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
+#        elif typ == 'cR2':
+#            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
         
         content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
                 param['tolerance'],
@@ -137,13 +139,20 @@ def write2in(param, dirname, typ='R2'):
                     param['rho_min'],
                     param['rho_max'])
         elif typ == 'cR2':
-                content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, c_wgt, d_wgt, rho_min, rho_max\n\n'.format(
-                param['a_wgt'],
-                param['b_wgt'],
-                param['c_wgt'],
-                param['d_wgt'],
-                param['rho_min'],
-                param['rho_max'])
+            content = content + '{}\t{}\t{}\t{}\t{}\t<<  min_error, a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+                    param['min_error'],
+                    param['a_wgt'],
+                    param['b_wgt'],
+                    param['rho_min'],
+                    param['rho_max'])
+#        elif typ == 'cR2':
+#                content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, c_wgt, d_wgt, rho_min, rho_max\n\n'.format(
+#                param['a_wgt'],
+#                param['b_wgt'],
+#                param['c_wgt'],
+#                param['d_wgt'],
+#                param['rho_min'],
+#                param['rho_max'])
                 
     # define polyline
 #    if typ == 'R2':
