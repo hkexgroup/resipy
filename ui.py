@@ -1599,7 +1599,7 @@ class App(QMainWindow):
         
         
         instructionLabel = QLabel('To define a region, just click on the mesh'
-           ' to draw a polygon. Close the polygon using a left click. Once done'
+           ' to draw a polygon. Close the polygon using a right click. Once done'
            ', you can define the region resistivity in the table. To define a'
            ' new region, just press \'e\'')
         instructionLabel.setWordWrap(True)
