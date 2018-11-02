@@ -453,6 +453,14 @@ class Survey(object):
         R2 = 1-(ss_res/ss_tot)
         R2 = np.around(R2,decimals=4)
         return R2
+    
+    @staticmethod
+    def sign_coef(x):
+        if x>=0:
+            t = '+'
+        else:
+            t = '-'
+        return t    
         
     def plotIPFit(self, ax=None):
         """ Plot the reciprocal phase errors.
@@ -495,7 +503,8 @@ class Survey(object):
         a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
         a4 = np.around(coefs_ip[1], decimals=1)
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
+#        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
+        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
         self.df['PhaseError'] = a1*(np.abs(self.df['resist'])**a2)
         self.df['Phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -537,13 +546,14 @@ class Survey(object):
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
-        #a3 = np.around((coefs_ip[0]),decimals=3)
-        #b3 = np.around((coefs_ip[1]), decimals=3)
-        #c3 = np.around((coefs_ip[2]),decimals=3)
+        a3 = np.around((coefs_ip[0]),decimals=3)
+        b3 = np.around((coefs_ip[1]), decimals=3)
+        c3 = np.around((coefs_ip[2]),decimals=3)
         #a1 = np.around((coefs_ip[0]),decimals=1)
         #b1 = np.around((coefs_ip[1]), decimals=1)
         #c1 = np.around((coefs_ip[2]),decimals=1)
-        ax.set_title('Multi bin phase error plot\n(R$^2$ = %s)' % (R2_ip))
+#        ax.set_title('Multi bin phase error plot\n(R$^2$ = %s)' % (R2_ip))
+        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
         self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['resist']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['resist'])) + coefs_ip[2])
         self.df['Phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -591,7 +601,8 @@ class Survey(object):
         a3 = np.around(np.exp(coefs[0]),decimals=1)
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))           
+#        ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
         self.df['pwlError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
@@ -679,7 +690,7 @@ class Survey(object):
         a3 = np.around((coefs[0]),decimals=1)
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin Linear plot\n' + r'$m =  %s, b = %s$ (R$^2$ = %s)' % (a1,a2,R2))     
+        ax.set_title('Multi bin Linear plot\n $R_{error}$ = %s$R_{avg}$ %s %s (R$^2$ = %s)' % (a1,self.sign_coef(a2), np.abs(a2),R2))     
         self.df['linError'] = a1*(np.abs(self.df['recipMean']))+a2
         self.errorModel = lambda x : a1*(np.abs(x))+a2
         if ax is None:
@@ -1618,7 +1629,7 @@ class Survey(object):
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #s = Survey('api/test/syscalFile.csv', ftype='Syscal')
-#s = Survey('api/test/rifleday8.csv', ftype='Syscal')
+#s = Survey('test/rifleday8.csv', ftype='Syscal')
 #s.manualFiltering()
 #s.dca()
 #s.addFilteredIP()
