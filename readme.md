@@ -38,6 +38,38 @@ python ui.py
 You can then test the GUI by first setting a working directory (./api/test) and specifying a survey file (./api/test/syscalFile.csv).
 *Check out the tutorial with examples*: ![pyR2-workshop.pdf](./examples/workshop/pyR2-workshop.pdf)
 
+For Mac users only:
+
+You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X:
+
+Open "terminal" and install ```homebrew``` with:
+```
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+Follow the instructions. (You may need to install [Command Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/))
+
+Once the ```homebrew``` installation is successfully done, install ```xquartz``` by below command in terminal:
+```
+brew cask install xquartz
+```
+
+Then install ```wine```:
+```
+brew install wine
+```
+
+If all is done with no errors, you are ready to run the gui by: 
+```
+cd r2gui
+python ui.py
+``` 
+You also can run any ```.exe``` files by this command:
+```
+wine /your example.exe file directory/example.exe
+```
+
+**NOTE: the first time you're running ```wine``` it will need to be updated and that will take some time.
+
 
 Try the Jupyter Notebook
 ------------------------
