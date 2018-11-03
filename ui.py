@@ -1435,11 +1435,12 @@ class App(QMainWindow):
             mwMesh.canvas.setFocus() # set focus on the canvas
             
         def meshQuadFunc():
-            try:
-                self.r2.elec = elecTable.getTable()
-            except:
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
                 errorDump('Please first import data or specify electrode in the Topography tab.')
                 return
+            else:
+                self.r2.elec = elec
 #            nnodes = int(nnodesEdit.text())
 #            if nnodes < 4:
 #                nnodesEdit.setText('4')
@@ -1463,11 +1464,12 @@ class App(QMainWindow):
         meshQuad.clicked.connect(meshQuadFunc)
         
         def meshTrianFunc():
-            try:
-                self.r2.elec = elecTable.getTable()
-            except:
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
                 errorDump('Please first import data or specify electrode in the Topography tab.')
                 return
+            else:
+                self.r2.elec = elec
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
@@ -1512,10 +1514,16 @@ class App(QMainWindow):
 #        clEdit = QLineEdit()
 #        clEdit.setValidator(QDoubleValidator())
 #        clEdit.setText('-1')
+        clGrid = QGridLayout()
+        clFineLabel = QLabel('Fine')
+        clCoarseLabel = QLabel('Coarse')
         clSld = QSlider(Qt.Horizontal)
         clSld.setMinimum(1) # TODO this will depend of electrode spacing
         clSld.setMaximum(10)
         clSld.setValue(5)
+        clGrid.addWidget(clSld, 0, 0, 1, 2)
+        clGrid.addWidget(clFineLabel, 1,0,1,1)
+        clGrid.addWidget(clCoarseLabel, 1,1,1,1)
         clFactorLabel = QLabel('Growth factor:')
 #        cl_factorEdit = QLineEdit()
 #        cl_factorEdit.setValidator(QDoubleValidator())
@@ -1531,7 +1539,8 @@ class App(QMainWindow):
         
         meshOptionTrianLayout = QHBoxLayout()
         meshOptionTrianLayout.addWidget(clLabel)
-        meshOptionTrianLayout.addWidget(clSld)
+#        meshOptionTrianLayout.addWidget(clSld)
+        meshOptionTrianLayout.addLayout(clGrid)
 #        meshOptionTrianLayout.addWidget(clEdit)
         meshOptionTrianLayout.addWidget(clFactorLabel)
 #        meshOptionTrianLayout.addWidget(clFactorEdit)
