@@ -6,7 +6,7 @@ provides a standalone graphical user interface (GUI) along with a python API* fo
 *API = Application Programming Interface
 
 
-[**Download last binary for your platform here**](https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh)
+[**DOWNLOAD BINARY HERE**](https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh)
 Note tha Mac and Linux user needs to have *wine* installed.
 
 
@@ -133,7 +133,7 @@ cd r2gui
 Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
 If you choose (1) you can create a new branch using:
 ```bash
-git checkout -b <name_of_new_branch>
+git checkout -b <name_of_branch>
 ```
 
 If you choose (2) make sure `develop` is ahead of `master` before changing anything. You can also use those instructions
@@ -152,8 +152,10 @@ Finally the typicall workflow is as following:
 4. Use `git status` to see which file need to be added to the reposity and which files have just been changed.
 5. Use `git add newfile` to add new files.
 6. Use `git commit -a` to add a commit messages to the changes you are about to push.
-7. Use `git push origin develop` to push your changes to the repository.
-8. Go on gitlab and on the project page you will see an invitation to create a merge request from the branch you have just push to. You can also go to Repository > Branches and create a merge request from the `develop` branch.
+7. Use `git push origin <name_of_branch>` to push your changes to the repository.
+8. Go on gitlab and on the project page you will see an invitation to create a merge
+9. request from the branch you have just push to. You can also go to Repository > 
+10. Branches and create a merge request from the `<name_of_branch>` branch.
 
 
 
