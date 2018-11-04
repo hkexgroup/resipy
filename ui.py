@@ -669,7 +669,7 @@ class App(QMainWindow):
         
         # electrode table
         class ElecTable(QTableWidget):
-            def __init__(self, nrow=10, headers=['x','z','Buried'],
+            def __init__(self, nrow=2, headers=['x','z','Buried'],
                          selfInit=False):
                 """ if selfInit is true, it will automatically add rows if tt
                 is bigger than the actual rows
@@ -679,7 +679,7 @@ class App(QMainWindow):
                 self.nrow = nrow
                 self.ncol = ncol
                 self.selfInit = selfInit
-                self.initTable(np.zeros((nrow, ncol)), headers=headers)
+                self.initTable(np.array([['',''],['','']]), headers=headers)
 #                self.headers = np.array(headers)
 #                self.setHorizontalHeaderLabels(headers)
 #                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -1465,6 +1465,7 @@ class App(QMainWindow):
         
         def meshTrianFunc():
             elec = elecTable.getTable()
+            print(elec)
             if np.sum(~np.isnan(elec[:,0])) == 0:
                 errorDump('Please first import data or specify electrode in the Topography tab.')
                 return
@@ -1516,7 +1517,9 @@ class App(QMainWindow):
 #        clEdit.setText('-1')
         clGrid = QGridLayout()
         clFineLabel = QLabel('Fine')
+        clFineLabel.setStyleSheet('font:12px;')
         clCoarseLabel = QLabel('Coarse')
+        clCoarseLabel.setStyleSheet('font:12px;')
         clSld = QSlider(Qt.Horizontal)
         clSld.setMinimum(1) # TODO this will depend of electrode spacing
         clSld.setMaximum(10)

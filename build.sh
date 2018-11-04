@@ -1,3 +1,10 @@
 #!/bin/bash
-. ../pyenv/bin/activate
+activate()
+{
+    . ../pyenv/bin/activate
+}
+
+activate
 pip list
+pyinstaller --help
+pyinstaller ui-dir.spec
