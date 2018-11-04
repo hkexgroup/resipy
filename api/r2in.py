@@ -89,9 +89,8 @@ def write2in(param, dirname, typ='R2'):
         content = content + ' '.join(['{:.4f}']*len(topo)).format(*topo) + '\t<< topo \n\n'        
         content = content + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '\t<< yy \n\n'
     elif param['mesh_type'] == 3:
-        if typ == 'R2':
-            content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
-        # no scaling for cR2
+#        if typ == 'R2':
+        content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
     else:
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])
@@ -177,8 +176,12 @@ def write2in(param, dirname, typ='R2'):
     # define nodes for electrodes
     param['num_elec'] = param['node_elec'].shape[0]
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
-    content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
-            *param['node_elec'].flatten())
+    if param['mesh_type'] == 4:
+        content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
+                *param['node_elec'].flatten())
+    elif param['mesh_type'] == 3:
+        content = content + ''.join(['{}\t{}\n']*len(param['node_elec'])).format(
+                *param['node_elec'].flatten())
     content = content + '\n'
     
     # write configuration file

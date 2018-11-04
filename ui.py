@@ -1580,16 +1580,16 @@ class App(QMainWindow):
                 self.headers = ['|Z| [Ohm.m]', '|-φ| [mrad]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                self.setItem(0,0,QTableWidgetItem('100.0'))
-                self.setItem(0,1,QTableWidgetItem('1'))
-                self.setItem(0,2,QTableWidgetItem('1'))
+                self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
+                self.setItem(0,1,QTableWidgetItem('0')) # phase [mrad]
+                self.setItem(0,2,QTableWidgetItem('1')) # zone
                 self.setCellWidget(0,3, QCheckBox())
                     
             def addRow(self):
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
                 self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
-                self.setItem(self.nrow-1, 1, QTableWidgetItem('-2'))
+                self.setItem(self.nrow-1, 1, QTableWidgetItem('0'))
                 self.setItem(self.nrow-1, 2, QTableWidgetItem('1'))
                 self.setCellWidget(self.nrow-1, 3, QCheckBox())
                 

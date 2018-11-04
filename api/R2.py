@@ -385,7 +385,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                    enodes[~buried] = e_nodes[:-nburied]
 #                    enodes[buried] = e_nodes[-nburied:]
 #                    e_nodes = enodes
-            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
         self.mesh = mesh
         self.param['mesh'] = mesh
         
@@ -394,7 +394,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         numel = self.mesh.num_elms
         self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
-        self.mesh.add_attribute(np.ones(numel)*1, 'phase0') # default starting phase [mrad]
+        self.mesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
@@ -496,23 +496,23 @@ class R2(object): # R2 master class instanciated by the GUI
                   be inverted is from a forward model already.')
             res0 = np.ones(self.mesh.num_elms)*100 # default starting resistivity [Ohm.m]
             self.mesh.add_attribute(res0, 'r100')
-            phase2 = np.ones(self.mesh.num_elms)*-2
+            phase2 = np.ones(self.mesh.num_elms)*0
             self.mesh.add_attribute(phase2, 'phase2')
             self.mesh.attr_cache['fixed'] = np.zeros(self.mesh.num_elms, dtype=bool)
             
             if self.typ[0] == 'c' : # we're dealing with IP here !
-#                r = np.array(self.mesh.attr_cache['r100'])
-#                phase = np.array(self.mesh.attr_cache['phase2'])
-#                centroids = np.array(self.mesh.elm_centre).T
-#                x = np.c_[centroids,
-#                          r,
-#                          phase, # mrad
-#                          np.log10(r),
-#                          np.log10(1/r),
-#                          np.log10(-10**np.log10(1/r)*phase/1000)]
-                x = np.c_[np.array(self.mesh.elm_centre).T,
-                          np.array(self.mesh.attr_cache['r100']),
-                          np.array(self.mesh.attr_cache['phase2'])] # mrad
+                r = np.array(self.mesh.attr_cache['r100'])
+                phase = np.array(self.mesh.attr_cache['phase2'])
+                centroids = np.array(self.mesh.elm_centre).T
+                x = np.c_[centroids,
+                          r,
+                          phase, # mrad
+                          np.log10(r),
+                          np.log10(1/r),
+                          np.log10(-10**np.log10(1/r)*phase/1000)]
+#                x = np.c_[np.array(self.mesh.elm_centre).T,
+#                          np.array(self.mesh.attr_cache['r100']),
+#                          np.array(self.mesh.attr_cache['phase2'])] # mrad
                 np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
             else:
                 self.mesh.write_attr('r100', 'res0.dat', self.dirname)
@@ -521,18 +521,18 @@ class R2(object): # R2 master class instanciated by the GUI
         else: # if we invert field data, we allow the user to define prior
             # knowledge of the resistivity structure            
             if self.typ[0] == 'c' : # we're dealing with IP here !
-#                r = np.array(self.mesh.attr_cache['res0'])
-#                phase = np.array(self.mesh.attr_cache['phase0'])
-#                centroids = np.array(self.mesh.elm_centre).T
-#                x = np.c_[centroids,
-#                          r,
-#                          phase, # mrad
-#                          np.log10(r),
-#                          np.log10(1/r),
-#                          np.log10(-10**np.log10(1/r)*phase/1000)]
-                x = np.c_[np.array(self.mesh.elm_centre).T,
-                          np.array(self.mesh.attr_cache['res0']),
-                          np.array(self.mesh.attr_cache['phase0'])] # mrad
+                r = np.array(self.mesh.attr_cache['res0'])
+                phase = np.array(self.mesh.attr_cache['phase0'])
+                centroids = np.array(self.mesh.elm_centre).T
+                x = np.c_[centroids,
+                          r,
+                          phase, # mrad
+                          np.log10(r),
+                          np.log10(1/r),
+                          np.log10(-10**np.log10(1/r)*phase/1000)]
+#                x = np.c_[np.array(self.mesh.elm_centre).T,
+#                          np.array(self.mesh.attr_cache['res0']),
+#                          np.array(self.mesh.attr_cache['phase0'])] # mrad
                 np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
             else:
                 self.mesh.write_attr('res0', 'res0.dat', self.dirname)
