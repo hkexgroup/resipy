@@ -6,6 +6,10 @@ provides a standalone graphical user interface (GUI) along with a python API* fo
 *API = Application Programming Interface
 
 
+[**Download last binary for your platform here**](https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh)
+Note tha Mac and Linux user needs to have *wine* installed.
+
+
 Project structure
 -----------------
 
@@ -38,8 +42,20 @@ python ui.py
 You can then test the GUI by first setting a working directory (./api/test) and specifying a survey file (./api/test/syscalFile.csv).
 *Check out the tutorial with examples*: ![pyR2-workshop.pdf](./examples/workshop/pyR2-workshop.pdf)
 
-For Mac users only:
 
+Linux and Mac user
+---
+The executable contains in pyR2 are build for windows. To run them you will need to install *wine*.
+
+On Linux
+---
+
+```
+sudo apt-get install wine
+```
+
+On Mac
+---
 You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X:
 
 Open "terminal" and install ```homebrew``` with:
@@ -82,9 +98,7 @@ jupyter notebook # the command is jupyter-notebook (with a dash) on Linux but wi
 You can then execute each cell of the notebook using ```Shift + Enter```. This will work on the same example as for the GUI above.
 To edit a cell, just double click on it.
 
-Single .EXE
----
-Development builds can be downloaded at : https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh
+
 
 Best practices
 --------------
