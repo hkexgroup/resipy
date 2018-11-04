@@ -47,15 +47,15 @@ Linux and Mac user
 ---
 The executable contains in pyR2 are build for windows. To run them you will need to install *wine*.
 
-On Linux
----
+###On Linux
+
 
 ```
 sudo apt-get install wine
 ```
 
-On Mac
----
+###On Mac
+
 You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X:
 
 Open "terminal" and install ```homebrew``` with:
@@ -130,16 +130,24 @@ First ensure you have cloned the project and are in the main project directory.
 git clone git@gitlab.com:sagitta1618/r2gui.git
 cd r2gui
 ```
-
-Second, you will need to create a new branch to which you can push you changes to. This branch will then be merge to `master` in merge requests. To create the branch (to be done once):
+Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
+If you choose (1) you can create a new branch using:
 ```bash
-git checkout -b develop
+git checkout -b <name_of_new_branch>
+```
+
+If you choose (2) make sure `develop` is ahead of `master` before changing anything. You can also use those instructions
+to update your own branch with `master`.
+```bash
+git branch develop # change to develop branch
+git fetch origin # get all changes from master
+git merge origin/master # merge those change to the develop branch
+git push # push them to the online repository
 ```
  
-
-The typical workflow is as following:
-1. Check you are up to date with the master branch using : `git checkout master`
-2. Create a new branch to which you can push you changes to. This branch will then be merge to `master` in a merge request : `git checkout -b newbranch`. Note that you can check in which branch you are using the `git branch`.
+Finally the typicall workflow is as following:
+1. Change branch: `git branch <name_of_branch>`. You can see which branch you use by typing:`git branch`
+2. Check you are up to date with the master branch (as shown above): `git fetch origin; git merge origin master`
 3. Operates your changes in the files
 4. Use `git status` to see which file need to be added to the reposity and which files have just been changed.
 5. Use `git add newfile` to add new files.
