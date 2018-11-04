@@ -47,14 +47,14 @@ Linux and Mac user
 ---
 The executable contains in pyR2 are build for windows. To run them you will need to install *wine*.
 
-###On Linux
+### On Linux
 
 
 ```
 sudo apt-get install wine
 ```
 
-###On Mac
+### On Mac
 
 You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X:
 
