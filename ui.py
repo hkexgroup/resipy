@@ -393,6 +393,7 @@ class App(QMainWindow):
             ipCheck.setEnabled(True)
 
         def dimInverseFunc():
+            self.iForward = False
             fileType.setEnabled(True)
             dimForward.setChecked(False)
             spacingEdit.setReadOnly(False)
