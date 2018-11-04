@@ -146,7 +146,7 @@ git push # push them to the online repository
 ```
  
 Finally the typicall workflow is as following:
-1. Change branch: `git branch <name_of_branch>`. You can see which branch you use by typing:`git branch`
+1. Change branch: `git checkout <name_of_branch>`. You can see which branch you use by typing:`git branch`
 2. Check you are up to date with the master branch (as shown above): `git fetch origin; git merge origin/master`
 3. Operates your changes in the files
 4. Use `git status` to see which file need to be added to the reposity and which files have just been changed.
