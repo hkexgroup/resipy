@@ -63,6 +63,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
         # to run an inversion (and so need to reset the regions before this)
+        self.doi = None
         
         
     def setwd(self, dirname):
@@ -265,6 +266,32 @@ class R2(object): # R2 master class instanciated by the GUI
 #        else:
 #            self.pseudoCallback(**kwargs)
     
+    
+    def computeDOI(self):
+        """ Compute the Depth Of Investigation (DOI).
+        """
+        elec = self.elec.copy()
+        if len(self.surveys) > 0:
+            array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
+            maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
+            self.doi = np.min(elec[:,2])-2/3*maxDist
+        else:
+            self.doi = np.min(elec[:,2])-2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
+        print('computed DOI : {:.2f}'.format(self.doi))
+        
+        # set num_xy_poly
+        self.param['num_xy_poly'] = 5
+        ymax = np.max(self.elec[:,2])
+        ymin = self.doi
+        xy_poly_table = np.array([
+        [self.elec[0,0], ymax],
+        [self.elec[-1,0], ymax],
+        [self.elec[-1,0], ymin],
+        [self.elec[0,0], ymin],
+        [self.elec[0,0], ymax]])
+        self.param['xy_poly_table'] = xy_poly_table
+        
+        
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
                    cl=-1, dump=print, **kwargs):
         """ Create a mesh.
@@ -289,27 +316,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Function to which pass the output during mesh generation. `print()`
              is the default.
         """
-        # compute DOI
-        elec = self.elec.copy()
-        if len(self.surveys) > 0:
-            array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
-            maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
-            self.doi = np.min(elec[:,2])-2/3*maxDist
-        else:
-            self.doi = 2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
-        print('computed DOI : {:.2f}'.format(self.doi))
-        
-        # set num_xy_poly
-        self.param['num_xy_poly'] = 5
-        ymax = np.max(self.elec[:,2])
-        ymin = self.doi
-        xy_poly_table = np.array([
-        [self.elec[0,0], ymax],
-        [self.elec[-1,0], ymax],
-        [self.elec[-1,0], ymin],
-        [self.elec[0,0], ymin],
-        [self.elec[0,0], ymax]])
-        self.param['xy_poly_table'] = xy_poly_table
+        self.computeDOI()
         
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
@@ -1179,7 +1186,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.00, iplot=False, dump=print):
+    def forward(self, noise=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
         Parameters
@@ -1289,8 +1296,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1
         self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
-        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], noise)
-        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'], noise)
+        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], self.noise)
+        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'], self.noise)
         self.elec = elec
         
         self.pseudo()

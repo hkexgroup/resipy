@@ -2356,7 +2356,8 @@ class App(QMainWindow):
                     outStackLayout.setCurrentIndex(0)
                     showDisplayOptions(True)
                     btnInvert.animateClick() # simulate a click
-                except:
+                except Exception as e:
+                    print('Error when plotting:', e)
                     pass
                     printR2out()
             else:
