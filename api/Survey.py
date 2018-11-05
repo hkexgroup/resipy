@@ -963,7 +963,7 @@ class Survey(object):
         fig : matplotlib figure
             If `ax` is not specified, the method returns a figure.
         """
-        array = self.df[['a','b','m','n']].values
+        array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
         ip = self.df['ip'].values            
 

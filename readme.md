@@ -45,7 +45,7 @@ You can then test the GUI by first setting a working directory (./api/test) and 
 
 Linux and Mac user
 ---
-The executable contains in pyR2 are build for windows. To run them you will need to install *wine*.
+pyR2 contains executables that are build only for windows. To run them you will need to install *wine*.
 
 ### On Linux
 
