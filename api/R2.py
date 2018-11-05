@@ -1670,7 +1670,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #plt.close('all')
-#k = R2(typ='cR2')
+#k = R2(typ='R2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
@@ -1684,7 +1684,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createModel() # manually define 3 regions
 #k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
 
-#k.forward(iplot=True, noise=0.0)
+#k.forward(iplot=True, noise=0.05)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=False)
 #k.showResults(attr='Resistivity(Ohm-m)', sens=False) # not for cR2

@@ -2344,6 +2344,11 @@ class App(QMainWindow):
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
                 r2outEdit.setText(text)
+                btnInvert.setText('Invert')
+                btnInvert.setStyleSheet("background-color: green")
+                btnInvert.clicked.disconnect()
+                btnInvert.clicked.connect(btnInvertFunc)
+                frozeUI(False)
                 
            
             if self.end is True:
@@ -2362,12 +2367,8 @@ class App(QMainWindow):
                     printR2out()
             else:
                 printR2out()
-                btnInvert.setText('Invert')
-                btnInvert.setStyleSheet("background-color: green")
-                btnInvert.clicked.disconnect()
-                btnInvert.clicked.connect(btnInvertFunc)
-                frozeUI(False)
-        
+                
+                
         def plotSection():
             mwInvResult.setCallback(self.r2.showResults)
             if self.r2.iBorehole is False:
