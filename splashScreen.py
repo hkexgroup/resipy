@@ -105,6 +105,7 @@ if __name__ == "__main__":
     print('finished unzipping')
     
     splash.hide()
+    splash.close()
     appDir = os.path.join(bundle_dir, 'ui', 'ui') # zip always putting a double dir ... don't know why
     print('Main app will be run in appDir = ', appDir)
     os.chdir(appDir)
