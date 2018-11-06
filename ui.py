@@ -663,7 +663,8 @@ class App(QMainWindow):
                 tabPreProcessing.setTabEnabled(1, False)
                 tabPreProcessing.setTabEnabled(3, False)
                 regionTable.setColumnHidden(1, True)
-
+                if self.r2.iForward == True:
+                    forwardPseudoIP.setVisible(False)
 
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(ipCheckFunc)
@@ -2419,6 +2420,8 @@ class App(QMainWindow):
                     # this could failed if we invert homogeneous model -> vtk
                     #file size = 0 -> R2.getResults() -> vtk_import failed
                     plotSection()
+                    if self.iForward is True:
+                        sectionId.addItem('Initial Model')
                     for i in range(len(self.r2.surveys)):
                         sectionId.addItem(self.r2.surveys[i].name)
                     outStackLayout.setCurrentIndex(0)
@@ -2428,6 +2431,8 @@ class App(QMainWindow):
                     btnInvert.clicked.disconnect()
                     btnInvert.clicked.connect(btnInvertFunc)
                     frozeUI(False)
+                    if self.iForward is True:
+                        sectionId.setCurrentIndex(1)
                 except Exception as e:
                     print('Error when plotting:', e)
                     pass

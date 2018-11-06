@@ -857,6 +857,14 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,2]
             self.meshResults.append(mesh)
+        if self.iForward is True:
+#            initMesh = self.mesh
+#            res0 = self.mesh.attr_cache['res0']
+#            initMesh.attr_cache['Resistivity(Ohm-m)'] = res0
+#            initMesh.attr_cache['Resistivity(log10)'] = np.log10(res0)
+            initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
+            self.meshResults.append(initMesh)
+            
         for i in range(100):
             fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fresults):
