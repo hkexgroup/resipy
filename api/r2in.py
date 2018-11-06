@@ -37,7 +37,7 @@ def write2in(param, dirname, typ='R2'):
 #            'phasest':-0.1, # default in R2.createMesh()
             'inverse_type':1,
             'target_decrease':0,    
-            'data_type':0,
+            'data_type':1,
             'reg_mode':0,
             'tolerance':1,
             'max_iter':10,

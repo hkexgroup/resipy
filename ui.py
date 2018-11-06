@@ -259,7 +259,7 @@ class App(QMainWindow):
             patch_size_x.setText('1')
             patch_size_y.setText('1')
             inv_type.setCurrentIndex(1)
-            data_type.setCurrentIndex(0)
+            data_type.setCurrentIndex(1)
             reg_mode.setCurrentIndex(0)
             max_iterations.setText('10')
             error_mod.setCurrentIndex(1)
@@ -339,11 +339,12 @@ class App(QMainWindow):
         title = QLabel('Title')
         titleEdit = QLineEdit()
         titleEdit.setText('My beautiful survey')
+        titleEdit.setToolTip('This title will be used in the R2.in file.')
         
         date = QLabel('Date')
         dateEdit = QLineEdit()
         dateEdit.setText(datetime.now().strftime('%Y-%m-%d')) # get today date
-        
+        dateEdit.setToolTip('This date will be used in the R2.in file.')
         
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
@@ -363,6 +364,7 @@ class App(QMainWindow):
                 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
+        timeLapseCheck.setToolTip('Check to enable a time-lapse survey and import.')
         
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
@@ -377,6 +379,7 @@ class App(QMainWindow):
                     plotPseudo()
         boreholeCheck = QCheckBox('Borehole Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
+        boreholeCheck.setToolTip('Check if you have borehole data. This will just change the pseudo-section.')
 
         def batchCheckFunc(state):
             if state == Qt.Checked:
@@ -393,6 +396,7 @@ class App(QMainWindow):
                 timeLapseCheck.setEnabled(True)
         batchCheck = QCheckBox('Batch Inversion')
         batchCheck.stateChanged.connect(batchCheckFunc)
+        batchCheck.setToolTip('Check if you want to invert multiple survey with same settings.')
         
         # select inverse or forward model
         def dimForwardFunc():
@@ -430,9 +434,11 @@ class App(QMainWindow):
         dimForward = QRadioButton('Forward')
         dimForward.setChecked(False)
         dimForward.toggled.connect(dimForwardFunc)
+        dimForward.setToolTip('To create a model and a sequence and see what output you can obtain.')
         dimInverse = QRadioButton('Inverse')
         dimInverse.setChecked(True)
         dimInverse.toggled.connect(dimInverseFunc)
+        dimInverse.setToolTip('To invert data already collected.')
         dimInvLayout = QHBoxLayout()
         dimInvLayout.addWidget(dimForward)
         dimInvLayout.addWidget(dimInverse)
@@ -499,11 +505,13 @@ class App(QMainWindow):
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
+        fileType.setToolTip('Select data format.')
         
         spacingEdit = QLineEdit()
         spacingEdit.setValidator(QDoubleValidator())
         spacingEdit.setText('-1.0') # -1 let it search for the spacing
         spacingEdit.setFixedWidth(80)
+        spacingEdit.setToolTip('Electrode spacing.')
         
         def getdir():
             fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
@@ -588,6 +596,7 @@ class App(QMainWindow):
         buttonf = QPushButton('Import Data')
         buttonf.setAutoDefault(True)
         buttonf.clicked.connect(getfile)
+        buttonf.setToolTip('Select file or directory that contains the data.')
         
         def getfileR():
             fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
@@ -607,6 +616,7 @@ class App(QMainWindow):
         buttonfr.setAutoDefault(True)
         buttonfr.clicked.connect(getfileR)
         buttonfr.hide()
+        buttonfr.setToolTip('Import file with reciprocal if you have it.')
         
         def btnInvNowFunc():
             tabs.setCurrentIndex(5) # jump to inversion tab
@@ -617,6 +627,7 @@ class App(QMainWindow):
         btnInvNow.setAutoDefault(True)
         btnInvNow.clicked.connect(btnInvNowFunc)
         btnInvNow.setEnabled(False)
+        btnInvNow.setToolTip('Invert with default setting. This will redirect to the inversion tab.')
         
         hbox4 = QHBoxLayout()
         hbox4.addWidget(fileType)
@@ -1159,6 +1170,7 @@ class App(QMainWindow):
         btnStart = QPushButton('Start')
         btnStart.setAutoDefault(True)
         btnStart.clicked.connect(plotManualFiltering)
+        btnStart.setToolTip('Plot a clickable pseudo section with electrodes.')
         btnLayout.addWidget(btnStart)
         btnDone = QPushButton('Apply')
         btnDone.setAutoDefault(True)
@@ -1230,6 +1242,7 @@ class App(QMainWindow):
         errFitType.addItem('Power-law')
         errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
+        errFitType.setToolTip('Select error model to use.')
         errorLayout.addWidget(errFitType)
         
         mwFitError = MatplotlibWidget(navi=True)
@@ -1284,6 +1297,7 @@ class App(QMainWindow):
         iperrFitType.addItem('Power law')
         iperrFitType.addItem('Parabola')
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
+        iperrFitType.setToolTip('Select error model for IP.')
         ipLayout.addWidget(iperrFitType)
         
         mwIPFiltering = MatplotlibWidget(navi=True)
@@ -1489,6 +1503,7 @@ class App(QMainWindow):
         meshQuad = QPushButton('Quadrilateral Mesh')
         meshQuad.setAutoDefault(True)
         meshQuad.clicked.connect(meshQuadFunc)
+        meshQuad.setToolTip('Generate quadrilateral mesh.')
         
         def meshTrianFunc():
             elec = elecTable.getTable()
@@ -1526,6 +1541,7 @@ class App(QMainWindow):
         meshTrian = QPushButton('Triangular Mesh')
         meshTrian.setAutoDefault(True)
         meshTrian.clicked.connect(meshTrianFunc)
+        meshTrian.setToolTip('Generate triangular mesh.')
         
         # additional options for quadrilateral mesh
         nnodesLabel = QLabel('Number of nodes between electrode (4 -> 10):')
@@ -1604,7 +1620,7 @@ class App(QMainWindow):
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['|Z| [Ohm.m]', '|-φ| [mrad]', 'Zones', 'Fixed']
+                self.headers = ['|Z| [Ohm.m]', '-φ [mrad]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
@@ -1666,8 +1682,8 @@ class App(QMainWindow):
         
         meshPlot = QWidget()
         meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(mwMesh, 80)
-        meshPlotLayout.addLayout(regionLayout, 20)
+        meshPlotLayout.addWidget(mwMesh, 70)
+        meshPlotLayout.addLayout(regionLayout, 30)
         meshPlot.setLayout(meshPlotLayout)
         
         meshOutputStack = QStackedLayout()
@@ -1772,7 +1788,7 @@ class App(QMainWindow):
     
         # add noise possibility
         noiseLabel = QLabel('Guassian noise to be added to the simulated data:')
-        noiseEdit = QLineEdit('0.05')
+        noiseEdit = QLineEdit('0.02')
         noiseEdit.setValidator(QDoubleValidator())
         
         # add a forward button
@@ -1805,6 +1821,7 @@ class App(QMainWindow):
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
+        forwardBtn.setStyleSheet('background-color: green')
                 
         forwardPseudo = MatplotlibWidget(navi=True)
         forwardPseudoIP = MatplotlibWidget(navi=True)
@@ -1895,12 +1912,15 @@ class App(QMainWindow):
                 b_wgt.setText('2')
                 min_error.setVisible(True)
                 min_errorLabel.setVisible(True)
+                data_type.setVisible(False)
+                data_typeLabel.setVisible(False)
             else:
                 a_wgt.setText('0.01')
                 b_wgt.setText('0.02')
                 min_error.setVisible(False)
                 min_errorLabel.setVisible(False)
-                
+                data_type.setVisible(True)
+                data_typeLabel.setVisible(True)
         
         # help sections
         def showHelp(arg): # for general tab
@@ -2040,6 +2060,7 @@ class App(QMainWindow):
         data_type = QComboBox()
         data_type.addItem('Normal [0]')
         data_type.addItem('Logarithmic [1]')
+        data_type.setCurrentIndex(1)
         data_type.currentIndexChanged.connect(data_typeFunc)
         invForm.addRow(data_typeLabel, data_type)
         
