@@ -64,7 +64,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iForward = False # if True, it will use the output of the forward
         # to run an inversion (and so need to reset the regions before this)
         self.doi = None
-        
+        self.proc = None # where the process to run R2/cR2 will be
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -83,14 +83,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 shutil.rmtree(os.path.join(dirname, 'ref'))
             if 'err' in files: # only for error modelling
                 shutil.rmtree(os.path.join(dirname, 'err'))
-            if 'R2.exe' in files:
-                os.remove(os.path.join(dirname, 'R2.exe'))
-            if 'cR2.exe' in files:
-                os.remove(os.path.join(dirname, 'cR2.exe'))
-            if 'mesh.dat' in files:
-                os.remove(os.path.join(dirname, 'mesh.dat'))
-            if 'Start_res.dat' in files:
-                os.remove(os.path.join(dirname, 'Start_res.dat'))
+            files2remove = ['R2.exe','cR2.exe','R2.in','cR2.in','mesh.dat',
+                            'r100.dat','res0.dat']
+            for f in files2remove:
+                if f in files:
+                    os.remove(os.path.join(dirname, f))
             def isNumber(x):
                 try:
                     float(x)
@@ -101,7 +98,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if (f[0] == 'f') & (isNumber(f[1:3]) is True):
                     os.remove(os.path.join(dirname, f))
         else:
-            print('createing the dirname')
+            print('creating the dirname')
             os.mkdir(dirname)
         self.dirname = dirname
     
@@ -1674,7 +1671,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #plt.close('all')
-#k = R2(typ='cR2')
+#k = R2(typ='R2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
@@ -1688,9 +1685,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createModel() # manually define 3 regions
 #k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
 
-#k.forward(iplot=True, noise=0.0)
+#k.forward(iplot=True, noise=0.05)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
-#k.invert(iplot=False)
+#k.invert(iplot=True)
 #k.showResults(attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 #k.showResults(attr='Phase(mrad)')
 #k.showResults(attr='Magnitude(Ohm-m)')

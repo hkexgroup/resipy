@@ -185,10 +185,28 @@ class App(QMainWindow):
         tabImporting.addTab(tabImportingData, 'Data')
         tabImportingDataLayout = QVBoxLayout()
         
+        # disable tabs if no survey is imported
+        def activateTabs(val=True):
+            if self.iForward is False:
+                tabs.setTabEnabled(1,val)
+                tabs.setTabEnabled(2,val)
+                tabs.setTabEnabled(4,val)
+                tabs.setTabEnabled(5,val)
+                tabs.setTabEnabled(6,val)
+            else:
+                tabs.setTabEnabled(2,val)
+#                tabs.setTabEnabled(4,val)
+#                tabs.setTabEnabled(5,val)
+#                tabs.setTabEnabled(6,val)
+        
         # restart all new survey
         def restartFunc():
             print('------- creating new R2 object ----------')
             self.r2 = R2(self.newwd) # create new R2 instance
+            '''actually we don't really need to instanciate a new object each
+            time but it's save otherwise we would have to reset all attributes
+            , delete all surveys and clear parameters
+            '''
             self.r2.iBatch = self.iBatch
             self.r2.setBorehole(self.iBorehole)
             self.r2.iTimeLapse = self.iTimeLapse
@@ -246,7 +264,7 @@ class App(QMainWindow):
             max_iterations.setText('10')
             error_mod.setCurrentIndex(1)
             alpha_aniso.setText('1.0')
-            min_error.setText('0.0')
+            min_error.setText('0.01')
             a_wgt.setText('0.01')
             b_wgt.setText('0.02')
 #            c_wgt.setText('1')
@@ -388,9 +406,11 @@ class App(QMainWindow):
             timeLapseCheck.setEnabled(False)
             batchCheck.setEnabled(False)
             boreholeCheck.setEnabled(False)
+            tabImporting.setTabEnabled(2,False) # no custom parser needed
             restartFunc() # let's first from previous inversion
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             ipCheck.setEnabled(True)
+            activateTabs(True)
 
         def dimInverseFunc():
             self.iForward = False
@@ -403,8 +423,10 @@ class App(QMainWindow):
             buttonf.setEnabled(True)
             timeLapseCheck.setEnabled(True)
             ipCheck.setEnabled(False)
+            tabImporting.setTabEnabled(2,True)
             batchCheck.setEnabled(True)
             boreholeCheck.setEnabled(True)
+            activateTabs(False)
         dimForward = QRadioButton('Forward')
         dimForward.setChecked(False)
         dimForward.toggled.connect(dimForwardFunc)
@@ -555,6 +577,8 @@ class App(QMainWindow):
                         ipCheck.setChecked(True)
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
+                activateTabs(True)
+                
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
@@ -1115,6 +1139,7 @@ class App(QMainWindow):
         #%% tab 2 PRE PROCESSING
         tabPreProcessing = QTabWidget()
         tabs.addTab(tabPreProcessing, 'Pre-processing')
+        tabs.setTabEnabled(1,False)
         
         manualLayout = QVBoxLayout()
         
@@ -1123,7 +1148,7 @@ class App(QMainWindow):
         
         def btnDoneFunc():
             self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-            print('Data have been manually filtered')
+            infoDump('Data have been manually filtered.')
             plotManualFiltering()
             plotError()
             
@@ -1416,15 +1441,16 @@ class App(QMainWindow):
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
 
-        
-        tabPreProcessing.setTabEnabled(3, False)
-        tabPreProcessing.setTabEnabled(2, False)
-        tabPreProcessing.setTabEnabled(1, False)
+        tabPreProcessing.setTabEnabled(0, True) # manual DC filter
+        tabPreProcessing.setTabEnabled(1, False) # IP filter
+        tabPreProcessing.setTabEnabled(2, False) # resistivity error model        
+        tabPreProcessing.setTabEnabled(3, False) # IP error model
         
         
         #%% tab MESH
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
+        tabs.setTabEnabled(2, False)
         meshLayout = QVBoxLayout()
         
         def replotMesh():
@@ -1534,6 +1560,7 @@ class App(QMainWindow):
         clFactorSld = QSlider(Qt.Horizontal)
         clFactorSld.setMinimum(1)
         clFactorSld.setMaximum(10)
+        clFactorSld.setValue(4)
         
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
@@ -1729,6 +1756,11 @@ class App(QMainWindow):
         seqAddRow.setAutoDefault(True)
         seqAddRow.clicked.connect(seqTable.addRow)
         def seqCreateFunc():
+            if self.r2.elec is None:
+                errorDump('Input electrode position in the topography tab first.')
+                return
+            else:
+                self.r2.elec = elecTable.getTable()
             skipDepths = [tuple(a) for a in list(seqTable.getTable())]
             print(skipDepths)
             self.r2.createSequence(skipDepths=skipDepths)
@@ -1745,12 +1777,17 @@ class App(QMainWindow):
         
         # add a forward button
         def forwardBtnFunc():
+            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
+                errorDump('Please specify a mesh and initial model first.')
+                return
+            if self.r2.sequence is None:
+                seqCreateFunc()
+                infoDump('Creating a dipole-dipole function by default.')
             forwardOutputStack.setCurrentIndex(0)
             forwardLogText.clear()
             QApplication.processEvents()
             # apply region for initial model
-            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
-                self.r2.createMesh()
+            
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # region 0 doesn't exist
             self.r2.assignRes0(dict(zip(regid, x)),
@@ -1760,6 +1797,9 @@ class App(QMainWindow):
             noise = float(noiseEdit.text())
             self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
+            tabs.setTabEnabled(4, True)
+            tabs.setTabEnabled(5, True)
+            tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
                 forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP)
         forwardBtn = QPushButton('Forward Modelling')
@@ -1827,6 +1867,7 @@ class App(QMainWindow):
         #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()
         tabs.addTab(tabInversionSettings, 'Inversion settings')
+        tabs.setTabEnabled(4,False)
 
         # general tab
         generalSettings = QWidget()
@@ -2172,6 +2213,8 @@ class App(QMainWindow):
         tabInversion = QWidget()
 #        tabInversion.setStyleSheet('background-color:red')
         tabs.addTab(tabInversion, '&Inversion')
+        tabs.setTabEnabled(5, False)
+        
         invLayout = QVBoxLayout()
 
 #        def callback(ax):
@@ -2328,6 +2371,7 @@ class App(QMainWindow):
                                dict(zip(regid, phase0)))
             
             self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
+            self.r2.proc = None
             try:
                 sectionId.currentIndexChanged.disconnect()
                 sectionId.clear()
@@ -2358,11 +2402,16 @@ class App(QMainWindow):
                         sectionId.addItem(self.r2.surveys[i].name)
                     outStackLayout.setCurrentIndex(0)
                     showDisplayOptions(True)
-                    btnInvert.animateClick() # simulate a click
+                    btnInvert.setText('Invert')
+                    btnInvert.setStyleSheet("background-color: green")
+                    btnInvert.clicked.disconnect()
+                    btnInvert.clicked.connect(btnInvertFunc)
+                    frozeUI(False)
                 except Exception as e:
                     print('Error when plotting:', e)
                     pass
                     printR2out()
+                    
             else:
                 printR2out()
                 
@@ -2450,14 +2499,16 @@ class App(QMainWindow):
             btnInvert.clicked.connect(btnKillFunc)
             QApplication.processEvents()
             logInversion()
+            
         def btnKillFunc():
-            btnInvert.setText('Invert')
-            btnInvert.setStyleSheet("background-color: green")
-            btnInvert.clicked.disconnect()
-            btnInvert.clicked.connect(btnInvertFunc)
-            QApplication.processEvents()
-            self.r2.proc.kill()
-            frozeUI(False)
+            if self.r2.proc is not None:
+                btnInvert.setText('Invert')
+                btnInvert.setStyleSheet("background-color: green")
+                btnInvert.clicked.disconnect()
+                btnInvert.clicked.connect(btnInvertFunc)
+                QApplication.processEvents()
+                self.r2.proc.kill()
+                frozeUI(False)
 
         btnInvert = QPushButton('Invert')
         btnInvert.setStyleSheet("background-color: green")
@@ -2647,6 +2698,7 @@ class App(QMainWindow):
         #%% tab 6 POSTPROCESSING
         tabPostProcessing = QTabWidget()
         tabs.addTab(tabPostProcessing, 'Post-processing')
+        tabs.setTabEnabled(6,False)
         
         invError = QWidget()
         tabPostProcessing.addTab(invError, 'Inversion Errors (1)')

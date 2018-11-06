@@ -888,7 +888,7 @@ class Survey(object):
             ax.set_ylabel('Transfert Resistance [Ohm]')
             
 
-    def pseudoSection(self, ax=None, contour=False, log=True, geom=True):
+    def pseudoSection(self, ax=None, contour=False, log=False, geom=True):
         ''' create true pseudo graph with points and no interpolation
         '''
         array = self.df[['a','b','m','n']].values.astype(int)
