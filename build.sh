@@ -1,8 +1,8 @@
 #!/bin/bash
 . ../pyenv/bin/activate
-pyinstaller ui-dir.spec
+pyinstaller -y ui-dir.spec
 cd dist
 zip -r ui.zip ui
 cd ..
 mv dist/ui.zip ui.zip
-pyinstaller splashScreen-exe.spec
+pyinstaller -y splashScreen-exe.spec
