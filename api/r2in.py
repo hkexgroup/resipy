@@ -43,7 +43,7 @@ def write2in(param, dirname, typ='R2'):
             'max_iter':10,
             'error_mod':2,
             'alpha_aniso':1,
-            'min_error':0, # for IP only
+            'min_error':0.01, # for IP only
             'a_wgt':0.01, # 0.02 for IP
             'b_wgt':0.02, # 2 for IP
 #            'c_wgt':1,

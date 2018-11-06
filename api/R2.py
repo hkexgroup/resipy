@@ -353,9 +353,13 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec_type[buried]='buried'
             
             if surface is not None:
-                geom_input['surface'] = [surface[:,0], surface[:,1]]
+                if surface.shape[1] == 2:
+                    geom_input['surface'] = [surface[:,0], surface[:,1]]
+                else:
+                    geom_input['surface'] = [surface[:,0], surface[:,2]]
                 
             elec_type = elec_type.tolist()
+            print('elec_type', elec_type)
             
             mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
@@ -1283,7 +1287,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
-            return np.random.normal(x,level,1)
+            return np.random.normal(x,level)
         addnoise = np.vectorize(addnoise)
         self.noise = noise
         
@@ -1296,8 +1300,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1
         self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
-        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], self.noise)
-        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'], self.noise)
+        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
+        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
         self.elec = elec
         
         self.pseudo()
@@ -1670,7 +1674,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #plt.close('all')
-#k = R2(typ='R2')
+#k = R2(typ='cR2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
@@ -1684,7 +1688,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createModel() # manually define 3 regions
 #k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
 
-#k.forward(iplot=True, noise=0.05)
+#k.forward(iplot=True, noise=0.0)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
 #k.invert(iplot=False)
 #k.showResults(attr='Resistivity(Ohm-m)', sens=False) # not for cR2

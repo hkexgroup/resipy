@@ -1466,7 +1466,6 @@ class App(QMainWindow):
         
         def meshTrianFunc():
             elec = elecTable.getTable()
-            print(elec)
             if np.sum(~np.isnan(elec[:,0])) == 0:
                 errorDump('Please first import data or specify electrode in the Topography tab.')
                 return
@@ -1477,15 +1476,15 @@ class App(QMainWindow):
             meshLogText.clear()
             elecSpacing = np.sqrt((self.r2.elec[0,0]-self.r2.elec[1,0])**2+
                                   (self.r2.elec[0,2]-self.r2.elec[1,2])**2)
-            print(clSld.value(), elecSpacing)
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
-            print('cl = ', cl)
             cl_factor = clFactorSld.value()
-            print('cl_factor = ', cl_factor)
 #            cl = float(clEdit.text())
 #            cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
+            print('buried = ', buried)
+            print('surface = ', surface)
+            print('electrode = ', elec)
             inan = ~np.isnan(surface[:,0])
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
@@ -1707,7 +1706,6 @@ class App(QMainWindow):
                 self.setItem(0,0,QTableWidgetItem('0'))
                 self.setItem(0,1,QTableWidgetItem('10'))
 
-            
             def addRow(self):
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
@@ -2068,7 +2066,7 @@ class App(QMainWindow):
         min_errorLabel = QLabel('<a href="errorParam"><code>min_error</code></a>:')
         min_errorLabel.linkActivated.connect(showHelp)
         min_error = QLineEdit()
-        min_error.setText('0.0')
+        min_error.setText('0.01')
         min_error.editingFinished.connect(min_errorFunc)
         invForm.addRow(min_errorLabel, min_error)
         
