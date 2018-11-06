@@ -22,7 +22,7 @@ Download/Clone the project
 To clone the project please use git:
 
 ```
-git clone git@gitlab.com:sagitta1618/r2gui.git
+git clone https://gitlab.com/sagitta1618/r2gui.git
 ```
 
 You may need to generate a public ssh key to be able to fully use the git command line.
