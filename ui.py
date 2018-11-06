@@ -535,6 +535,7 @@ class App(QMainWindow):
                     else:
                         tabPreProcessing.setTabEnabled(2, True)
                         plotError()
+                    activateTabs(True)
                 except:
                     errorDump('File format not recognize or directory contains other files than .dat files')
             
