@@ -2540,6 +2540,7 @@ class App(QMainWindow):
         btnInvert.setStyleSheet("background-color: green")
         btnInvert.setAutoDefault(True)
         btnInvert.clicked.connect(btnInvertFunc)
+        btnInvert.setToolTip('Click to invert. This could take a while.')
         invLayout.addWidget(btnInvert)
         
         logLayout = QHBoxLayout()
@@ -2607,22 +2608,27 @@ class App(QMainWindow):
         displayOptions = QHBoxLayout()
             
         sectionId = QComboBox()
+        sectionId.setToolTip('Change survey or see initial model.')
         displayOptions.addWidget(sectionId, 20)
         
         attributeName = QComboBox()
+        attributeName.setToolTip('Change attribute to display.')
         displayOptions.addWidget(attributeName, 20)
         
         vminLabel = QLabel('Min:')
         vminEdit = QLineEdit()
+        vminEdit.setToolTip('Set mininum for current scale.')
         vminEdit.setValidator(QDoubleValidator())
 #        vminEdit.textChanged.connect(setCBarLimit)
         vmaxLabel = QLabel('Max:')
         vmaxEdit = QLineEdit()
+        vmaxEdit.setToolTip('Set maximum for current color scale.')
 #        vmaxEdit.textChanged.connect(setCBarLimit)
         vmaxEdit.setValidator(QDoubleValidator())
         vMinMaxApply = QPushButton('Apply')
         vMinMaxApply.setAutoDefault(True)
         vMinMaxApply.clicked.connect(setCBarLimit)
+        vMinMaxApply.setToolTip('Apply limits on current color scale.')
         
         displayOptions.addWidget(vminLabel)
         displayOptions.addWidget(vminEdit, 10)
@@ -2638,6 +2644,7 @@ class App(QMainWindow):
             replotSection()
         edgeCheck= QCheckBox('Show edges')
         edgeCheck.setChecked(False)
+        edgeCheck.setToolTip('Show edges of each mesh cell.')
         edgeCheck.stateChanged.connect(showEdges)
         displayOptions.addWidget(edgeCheck)
         
@@ -2651,6 +2658,7 @@ class App(QMainWindow):
             replotSection()
         contourCheck = QCheckBox('Contour')
         contourCheck.stateChanged.connect(contourCheckFunc)
+        contourCheck.setToolTip('Grid and contour the data.')
         displayOptions.addWidget(contourCheck)
         
         def showSens(status):
@@ -2662,6 +2670,7 @@ class App(QMainWindow):
         sensCheck = QCheckBox('Sensitivity overlay')
         sensCheck.setChecked(True)
         sensCheck.stateChanged.connect(showSens)
+        sensCheck.setToolTip('Overlay a semi-transparent white sensivity layer.')
         displayOptions.addWidget(sensCheck)
         
         def btnSaveGraphs():
@@ -2678,6 +2687,7 @@ class App(QMainWindow):
 
         btnSave = QPushButton('Save graphs')
         btnSave.clicked.connect(btnSaveGraphs)
+        btnSave.setToolTip('Save current graph to working directory.')
         displayOptions.addWidget(btnSave)
         
         def showDisplayOptions(val=True):
