@@ -13,6 +13,7 @@ import shutil
 import platform
 import matplotlib.pyplot as plt
 from subprocess import PIPE, call, Popen
+import subprocess
 import matplotlib.tri as tri
 
 OS = platform.system()
@@ -724,8 +725,10 @@ class R2(object): # R2 master class instanciated by the GUI
 #            line = p.stdout.readline().rstrip()
 #            dump(line.decode('utf-8'))
         
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         def execute(cmd):
-            self.proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
+            self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
             for stdout_line in iter(self.proc.stdout.readline, ""):
                 yield stdout_line
 #                dump(stdout_line.rstrip())
