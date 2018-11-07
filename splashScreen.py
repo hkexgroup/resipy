@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
+from subprocess import Popen
 import os
 import sys
 import time
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     print('Main app will be run in appDir = ', appDir)
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
-    os.system(os.path.join(appDir, 'pyR2')) # this works now as well !
+    Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
 
 #  need to comment the following lines as the exit signal is given by the main app
 #    sys.exit()
