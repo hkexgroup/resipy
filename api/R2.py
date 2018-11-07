@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed May 30 16:48:54 2018
-
+Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: jkl
 """
 
@@ -324,7 +324,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 typ = 'trian'
                 print('Using a triangular mesh')
         if typ == 'quad':
-#            mesh = QuadMesh(elec, nnode=4)
+            elec = self.elec.copy()
             elec_x = self.elec[:,0]
             elec_z = self.elec[:,2]
             #add buried electrodes? 
