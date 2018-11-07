@@ -210,7 +210,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         if len(surface_idx)>0:# then surface electrodes are present
             elec_x=np.array(electrodes[0])[surface_idx]
             elec_z=np.array(electrodes[1])[surface_idx]
-        elif len(surface_idx)==0and 'surface' not in geom_input:
+        elif len(surface_idx)==0 and 'surface' not in geom_input:
             #fail safe if no surface electrodes are present to generate surface topography 
             max_idx = np.argmax(electrodes[0])
             min_idx = np.argmax(electrodes[0])
@@ -251,8 +251,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #start to write the file  
     fh = open(file_path,'w') #file handle
     
-    fh.write("//Jamyd91's gmsh wrapper code version 0.9 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
-    fh.write("//2D only mesh coordinates\n")
+    fh.write("//Gmsh wrapper code version 1.0 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
+    fh.write("//2D mesh coordinates\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
     fh.write("//Define surface points\n")
     #we have surface topograpghy, and electrode positions to make use of here:
@@ -273,8 +273,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         flag.append('topography point')
     
     
-    idx=np.argsort(x_pts)#now resort the x positions in ascending order
-    x_pts=x_pts[idx]#compute sorted arrays
+    idx=np.argsort(x_pts) # now resort the x positions in ascending order
+    x_pts=x_pts[idx] # compute sorted arrays
     y_pts=y_pts[idx]
     z_pts=np.zeros((len(x_pts),1))#for now let z = 0
     #add flags which distinguish what each point is 
@@ -569,12 +569,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     ordered_node_pos = node_pos[original_idx]
     
     return ordered_node_pos 
-# =============================================================================
-# how to solve node ordering issue? 
-    #make one full x y electrode variable after sorting at the end. 
-    #match x and y indexes to originals. 
-    #map compiled node ordering back to original ordering. 
-# =============================================================================
 
 #%% parse a .msh file
 def msh_parse(file_path):
@@ -662,7 +656,7 @@ def msh_parse(file_path):
             node3.append(data_dump[7])
         else:
             ignored_elements += 1
-    print("ignoring %i non-triangle elements in the mesh file, as they are not required for R2\n"%ignored_elements)
+    print("ignoring %i non-triangle elements in the mesh file, as they are not required for R2"%ignored_elements)
     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
     
     ##clock wise correction and area / centre computations 

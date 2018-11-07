@@ -4,7 +4,7 @@ Created on Wed May 30 10:19:09 2018, python 3.6.5
 @author: jamyd91
 Import a vtk file with an unstructured grid (triangular/quad elements) and 
 creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. module has capacity to show meshes, inverted results, apply a function 
+triangular elements. Module has capacity to show meshes, inverted results, apply a function 
 to mesh parameters. 
 
 Classes: 
@@ -38,11 +38,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
-#import R2gui API package - uncomment the below code for testing purposes 
-#if __name__ =="__main__" or __name__=="meshTools":
-#    import gmshWrap as gw 
-#    from isinpolygon import isinpolygon
-#else:
+#import R2gui API packages - remove the "api." below code if running the script and using the test blocks at the bottom 
 import api.gmshWrap as gw
 from api.isinpolygon import isinpolygon
 
@@ -1038,7 +1034,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     
     #put in fail safe if no attributes are found        
     if num_attr == 0:
-        print("no cell attributes found")
+        print("no cell attributes found in vtk file")
         attr_dict = {"no attributes":float("nan")}
         values_oi= float("nan")
         parameter_title = "n/a"
@@ -1125,7 +1121,7 @@ def readR2_sensdat(file_path):
 
         
 #%% build a quad mesh        
-def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
+def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     """
     Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
@@ -1136,6 +1132,8 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
         Electrode x coordinates 
     elec_y : list, np array
         Electrode y coordinates
+    elec_type: list
+        strings, where 'electrode' is a surface electrode; 'buried' is a buried electrode
     elemy : int
         Number of elements in the fine y region
     yf : float
@@ -1163,7 +1161,40 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
     if elemx < 4:
         print('elemx too small, set up to 4 at least')
         elemx = 4
-    elec = np.c_[elec_x, elec_y]
+        
+    bh_flag = False
+    #determine the relevant node ordering for the surface electrodes? 
+    if elec_type is not None:
+        if not isinstance(elec_type,list):
+            raise TypeError("electrode_type variable is given but expected a list type argument")
+        if len(elec_type) != len(elec_x):
+            raise ValueError("mis-match in length between the electrode type and number of electrodes")
+        
+        surface_idx=[]#surface electrode index
+        bur_idx=[]#buried electrode index 
+        for i,key in enumerate(elec_type):
+            if key == 'electrode': surface_idx.append(i)
+            if key == 'buried': 
+                bur_idx.append(i)
+                bh_flag = True
+           # if key == 'surface': pass
+        
+        if len(surface_idx)>0:# then surface electrodes are present
+            Ex=np.array(elec_x)[surface_idx]
+            Ey=np.array(elec_y)[surface_idx]
+        elif len(surface_idx)== 0:
+            #fail safe if no surface electrodes are present to generate surface topography 
+            max_idx = np.argmax(elec_x)
+            min_idx = np.argmax(elec_y)
+            Ex=np.array([elec_x[min_idx],elec_x[max_idx]])
+            Ey=np.array([elec_y[min_idx],elec_y[max_idx]])
+    else: 
+        Ex = elec_x; Ey = elec_y
+        
+    elec = np.c_[Ex, Ey]
+    if bh_flag:
+        bh = np.c_[np.array(elec_x)[bur_idx],np.array(elec_y)[bur_idx]]
+        
     pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
     meshx = np.array([])
@@ -1190,10 +1221,9 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
                 xx3[j] = xx3[j-1]+dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
-
     
     # create e_nodes
-    elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
+#    elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
     #TODO make sure it's dividable by patchx and patch y
     
     # create meshy
@@ -1215,26 +1245,44 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
         dyy = dyy*xgf
     meshy = np.r_[meshy, yy[1:]]
     
+    #insert borehole electrodes? if we have boreholes / buried electrodes 
+    if bh_flag:
+        meshx = np.unique(np.append(meshx,bh[:,0]))
+        meshy = np.unique(np.append(meshy,-bh[:,1]))
+
     # create topo
     topo = np.interp(meshx, elec[:,0], elec[:,1])
     
-    no_electrodes = len(elec)
+    no_electrodes = len(elec_x)
     
     ###
     #find the columns relating to the electrode nodes? 
-#    elec_node=[meshx.index(elec_x[i])+1 for i in range(len(elec_x))]
+    temp_x = meshx.tolist()
+    temp_y = meshy.tolist()
+    print(temp_y)
+    elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 becuase of indexing in R2. 
+    
+    elec_node_y = np.ones((len(elec_y),0))#by default electrodes are at the surface
+    #this ugly looking if - for loop thing finds the y values for borehole meshes. 
+    if bh_flag:
+        for i,key in enumerate(elec_type):
+            if key == 'buried':
+                elec_node_y[i] = temp_y.index(-elec_y[i]) + 1
+                
+    elec_node = [elec_node_x,list(elec_node_y)]
     
     #print some warnings for debugging 
     if len(topo)!=len(meshx):
-        print("WARNING: topography vector and x coordinate arrays not the same length! ")
-    elif len(elec_node)!=no_electrodes:
-        print("WARNING: electrode node vector and number of electrodes mismatch! ")
+        warnings.warn("Topography vector and x coordinate arrays not the same length! ")
+    elif len(elec_node_x)!=no_electrodes:
+        warnings.warn("Electrode node vector and number of electrodes mismatch! ")
+        print( "%i versus %i"%(len(elec_node_x),no_electrodes))
      
     # what is the number of regions? (elements)
     no_elms=(len(meshx)-1)*(len(meshy)-1)
     no_nodes=len(meshx)*len(meshy)
     
-    # compute node mappins 
+    # compute node mappins (connection matrix)
     y_dim=len(meshy)
     fnl_node=no_nodes-1
     
@@ -1243,16 +1291,16 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
                   np.arange(y_dim+1,fnl_node+1),
                   np.arange(1,fnl_node-y_dim+1))
     
-    del_idx=np.arange(y_dim-1,len(node_mappins[0]),y_dim)
+    del_idx=np.arange(y_dim-1,len(node_mappins[0]),y_dim)#the above has too many indexes at the changeover of columns so some need deleting
     
     node_mappins = [list(np.delete(node_mappins[i],del_idx)) for i in range(4)]#delete excess node placements
     #compute node x and y  (and z)
     node_x,node_y=np.meshgrid(meshx,meshy)
     #account for topography in the y direction 
-    node_y = [topo-node_y[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh
-    node_y=list(np.array(node_y).flatten(order='F'))
-    node_x=list(node_x.flatten(order='F'))
-    node_z=[0]*len(node_x)
+    node_y = [topo-node_y[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
+    node_y=np.array(node_y).flatten(order='F')
+    node_x=node_x.flatten(order='F')
+    node_z=np.array([0]*len(node_x))
     
     #compute element centres and areas
     centriod_x=[]
@@ -1286,8 +1334,13 @@ def quad_mesh(elec_x,elec_y,elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
                     [0]*no_elms,
                     'no attribute')
     
-    elec_node2 = elec_node*len(meshy) # because we use columns based flattening
-    Mesh.add_e_nodes(elec_node2)
+    #find the node which the electrodes are actually on in terms of the mesh. 
+    node_in_mesh = [0]*len(elec_x)
+    for i in range(len(elec_x)):
+        sq_dist = (node_x - elec_x[i])**2 + (node_y - elec_y[i])**2 # find the minimum square distance
+        node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
+            
+    Mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
     
     return Mesh,meshx,meshy,topo,elec_node
 
@@ -1361,11 +1414,9 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat 
-    
-    ###old code ### : mesh_dict=gw.gmsh2R2mesh(file_path=file_name+'.msh',return_mesh=True, save_path=save_path, poly_data = poly_data)
     mesh_dict = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
     mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
-    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat -disabled as handled higher up 
+    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat -disabled as handled higher up in the R2 class 
     
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
@@ -1520,6 +1571,7 @@ def dat_import(file_path):
                      cell_attributes = float("nan"),#the values of the attributes given to each cell 
                      atribute_title='none')#what is the attribute? we may use conductivity instead of resistivity for example
     return mesh
+#now do mesh.add_e_nodes to add electrode positions to the mesh. 
     
 #%% ram amount check. 
 #Now for complicated meshes we need alot more RAM. the below function is a os agnostic
@@ -1566,12 +1618,14 @@ def systemCheck():
     
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
     
-#%% test code
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(np.arange(10), np.zeros(10), elemx=4)
+#%% test code for borehole quad mesh
+#elec_x = np.append(np.arange(10),[5.1,5.1,5.1])
+#elec_y = np.append(np.zeros(10),[2,4,6])
+#elec_type = ['electrode']*10 + ['buried']*3
+#mesh, meshx, meshy, topo, elec_node = quad_mesh(elec_x, elec_y, elec_type = elec_type, elemx=4)
 #mesh.show(color_bar=False)
 
-
-# testing automatic selection
+# %%testing automatic selection
 #plt.ion()
 #from api.SelectPoints import SelectPoints
 #from matplotlib.patches import Rectangle

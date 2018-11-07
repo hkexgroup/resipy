@@ -322,14 +322,21 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh = QuadMesh(elec, nnode=4)
             elec_x = self.elec[:,0]
             elec_z = self.elec[:,2]
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,**kwargs)
-#            mesh = QuadMesh()
-#            meshx, meshy, topo, e_nodes = mesh.createMesh(elec=self.elec, **kwargs)            
+            #add buried electrodes? 
+            elec_type = np.repeat('electrode',len(elec_x))
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
+                elec_type[buried]='buried'
+                
+            elec_type = elec_type.tolist()
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,**kwargs)   #generate quad mesh     
+            #update parameters accordingly 
             self.param['meshx'] = meshx
             self.param['meshy'] = meshy
             self.param['topo'] = topo
             self.param['mesh_type'] = 4
-            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes, np.ones(len(e_nodes))].astype(int)
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes[0])), e_nodes[0], e_nodes[1]].astype(int)
             if 'regions' in self.param: # allow to create a new mesh then rerun inversion
                 del self.param['regions']
             if 'num_regions' in self.param:
@@ -1573,21 +1580,21 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% test for DC with topo
 #k = R2()
-#k.createSurvey('api/test/syscalFileTopo.csv')
-#topo = np.genfromtxt('api/test/elecTopo.csv', delimiter=',')
+#k.createSurvey('../api/test/syscalFileTopo.csv')
+#topo = np.genfromtxt('../api/test/elecTopo.csv', delimiter=',')
 #k.elec[:,[0,2]] = topo[:,[0,1]]
-#k.createMesh(typ='trian',cl=0.1, cl_factor=5)
+#k.createMesh(typ='quad',cl=0.1, cl_factor=5)
 #k.showMesh()
 #k.invert(iplot=True)
 #k.showIter(index=1)
 
 #%% test with borehole
 #k = R2()
-#k.createSurvey('api/test/protocolXbh.dat', ftype='Protocol')
-#x = np.genfromtxt('api/test/elecXbh.csv', delimiter=',')
+#k.createSurvey('../api/test/protocolXbh.dat', ftype='Protocol')
+#x = np.genfromtxt('../api/test/elecXbh.csv', delimiter=',')
 #k.elec[:,[0,2]] = x[:,:2]
 #buried = x[:,2].astype(bool)
-#k.createMesh('trian', buried=buried, cl=0.5, cl_factor=20)
+#k.createMesh('quad', buried=buried, cl=0.5, cl_factor=20)
 #k.showMesh()
 #k.invert()
 #k.showResults(sens=False)
@@ -1643,11 +1650,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%%
 #k = R2()
-#k.createSurvey('api/test/syscalFile.csv')
+#k.createSurvey('../api/test/syscalFile.csv')
 #k.elec[3,1] = -1
 #buried = np.zeros(k.elec.shape[0], dtype=bool)
 #buried[3] = True
-#k.createMesh('trian', buried=buried)
+#k.createMesh('quad', buried=buried)
 #k.write2in()
 #k.invert()
 
