@@ -363,19 +363,7 @@ class Mesh_obj:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[1])
             z = np.array(X)
-#            xmin, xmax = np.min(x), np.max(x)
-#            ymin, ymax = np.min(y), np.max(y)
-#            dx = (xmax-xmin)/40
-#            dy = (ymax-ymin)/40
-#            xi, yi = np.meshgrid(np.linspace(xmin-dx, xmax+dx, 40),
-#                                 np.linspace(ymin-dy, ymax+dy, 40))
-#            print(np.min(xi), np.max(xi), np.min(yi), np.max(yi))
-#            zi = griddata((x, y), z, (xi.flatten(), yi.flatten()))#, method='linear')
-#            zi = zi.reshape(xi.shape)
-#            cax = ax.contourf(xi, yi, zi, cmap=color_map, edgecolors=edge_color)
             triang = tri.Triangulation(x,y)
-#            z[z<=vmin] = vmin
-#            z[z>=vmax] = vmax
             if vmin is None:
                 vmin = np.nanmin(z)
             if vmax is None:
@@ -408,10 +396,16 @@ class Mesh_obj:
                 raw_alpha[..., -1] = alphas
                 alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
                 #make alpha collection
-                alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors=None)
+                alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
                 #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
                 #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
                 ax.add_collection(alpha_coll)
+                
+#                x = np.array(self.elm_centre[0])
+#                y = np.array(self.elm_centre[1])
+#                triang = tri.Triangulation(x,y)
+#                ax.tricontourf(triang, weights, cmap=alpha_map, levels=None, edgecolor='none', extend='both')
+
             except AttributeError:
                 print("no sensitivities in mesh object to plot")
         
@@ -1645,7 +1639,7 @@ def systemCheck():
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()
 #mesh.show(attr=attrs[0], contour=False, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
-##mesh.show(attr=attrs[2])
+#mesh.show(attr=attrs[1], edge_color='none', sens=True, contour=True)
 ##mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 #fig.show()
 ##mesh.write_attr(attrs[0], file_name='test_res.dat', file_path='api/test/')

@@ -34,5 +34,5 @@ exe = EXE(pyz,
           upx=True,
           runtime_tmpdir=None,
           console=False,
-		 icon='r2icon.ico')
+		  icon='r2icon.ico')
 

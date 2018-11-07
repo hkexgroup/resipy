@@ -96,6 +96,8 @@ class Survey(object):
         
         if all(irecip == 0) == False: # contains reciprocal
             self.basicFilter()
+        else:
+            self.dfphasereset = self.df.copy()
         
 #        self.typ = 'R2' # or cR2 or R3, cR3
 #        self.errTyp = 'none' # type of error to add for DC
@@ -166,6 +168,7 @@ class Survey(object):
         else:
             raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
+        self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
         self.reciprocal()
         self.basicFilter() # we assume the user input reciprocal data not another
@@ -862,13 +865,13 @@ class Survey(object):
             temp_data = self.df.copy()
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
-            self.filterDataIP = temp_data.dropna()
+            self.filterDataIP = temp_data.dropna(subset = ['ip'])
         else:
 #            self.filterDataIP = self.filterDataIP.query('m>a & m>b & n>a & n>b')
             temp_data = self.filterDataIP.copy()
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
-            self.filterDataIP = temp_data.dropna()
+            self.filterDataIP = temp_data.dropna(subset = ['ip'])
         self.addFilteredIP()
 
 
@@ -888,7 +891,7 @@ class Survey(object):
             ax.set_ylabel('Transfert Resistance [Ohm]')
             
 
-    def pseudoSection(self, ax=None, contour=False, log=True, geom=True):
+    def pseudoSection(self, ax=None, contour=False, log=False, geom=True):
         ''' create true pseudo graph with points and no interpolation
         '''
         array = self.df[['a','b','m','n']].values.astype(int)
@@ -963,7 +966,7 @@ class Survey(object):
         fig : matplotlib figure
             If `ax` is not specified, the method returns a figure.
         """
-        array = self.df[['a','b','m','n']].values
+        array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
         ip = self.df['ip'].values            
 

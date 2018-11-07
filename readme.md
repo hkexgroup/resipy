@@ -22,7 +22,7 @@ Download/Clone the project
 To clone the project please use git:
 
 ```
-git clone git@gitlab.com:sagitta1618/r2gui.git
+git clone https://gitlab.com/sagitta1618/r2gui.git
 ```
 
 You may need to generate a public ssh key to be able to fully use the git command line.
@@ -45,7 +45,7 @@ You can then test the GUI by first setting a working directory (./api/test) and 
 
 Linux and Mac user
 ---
-The executable contains in pyR2 are build for windows. To run them you will need to install *wine*.
+pyR2 contains executables that are build only for windows. To run them you will need to install *wine*.
 
 ### On Linux
 

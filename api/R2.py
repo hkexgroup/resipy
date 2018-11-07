@@ -13,6 +13,7 @@ import shutil
 import platform
 import matplotlib.pyplot as plt
 from subprocess import PIPE, call, Popen
+import subprocess
 import matplotlib.tri as tri
 
 OS = platform.system()
@@ -63,7 +64,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
         # to run an inversion (and so need to reset the regions before this)
-        
+        self.doi = None
+        self.proc = None # where the process to run R2/cR2 will be
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -82,14 +84,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 shutil.rmtree(os.path.join(dirname, 'ref'))
             if 'err' in files: # only for error modelling
                 shutil.rmtree(os.path.join(dirname, 'err'))
-            if 'R2.exe' in files:
-                os.remove(os.path.join(dirname, 'R2.exe'))
-            if 'cR2.exe' in files:
-                os.remove(os.path.join(dirname, 'cR2.exe'))
-            if 'mesh.dat' in files:
-                os.remove(os.path.join(dirname, 'mesh.dat'))
-            if 'Start_res.dat' in files:
-                os.remove(os.path.join(dirname, 'Start_res.dat'))
+            files2remove = ['R2.exe','cR2.exe','R2.in','cR2.in','mesh.dat',
+                            'r100.dat','res0.dat']
+            for f in files2remove:
+                if f in files:
+                    os.remove(os.path.join(dirname, f))
             def isNumber(x):
                 try:
                     float(x)
@@ -100,7 +99,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if (f[0] == 'f') & (isNumber(f[1:3]) is True):
                     os.remove(os.path.join(dirname, f))
         else:
-            print('createing the dirname')
+            print('creating the dirname')
             os.mkdir(dirname)
         self.dirname = dirname
     
@@ -265,6 +264,32 @@ class R2(object): # R2 master class instanciated by the GUI
 #        else:
 #            self.pseudoCallback(**kwargs)
     
+    
+    def computeDOI(self):
+        """ Compute the Depth Of Investigation (DOI).
+        """
+        elec = self.elec.copy()
+        if len(self.surveys) > 0:
+            array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
+            maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
+            self.doi = np.min(elec[:,2])-2/3*maxDist
+        else:
+            self.doi = np.min(elec[:,2])-2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
+        print('computed DOI : {:.2f}'.format(self.doi))
+        
+        # set num_xy_poly
+        self.param['num_xy_poly'] = 5
+        ymax = np.max(self.elec[:,2])
+        ymin = self.doi
+        xy_poly_table = np.array([
+        [self.elec[0,0], ymax],
+        [self.elec[-1,0], ymax],
+        [self.elec[-1,0], ymin],
+        [self.elec[0,0], ymin],
+        [self.elec[0,0], ymax]])
+        self.param['xy_poly_table'] = xy_poly_table
+        
+        
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
                    cl=-1, dump=print, **kwargs):
         """ Create a mesh.
@@ -289,27 +314,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Function to which pass the output during mesh generation. `print()`
              is the default.
         """
-        # compute DOI
-        elec = self.elec.copy()
-        if len(self.surveys) > 0:
-            array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
-            maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
-            self.doi = np.min(elec[:,2])-2/3*maxDist
-        else:
-            self.doi = 2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
-        print('computed DOI : {:.2f}'.format(self.doi))
-        
-        # set num_xy_poly
-        self.param['num_xy_poly'] = 5
-        ymax = np.max(self.elec[:,2])
-        ymin = self.doi
-        xy_poly_table = np.array([
-        [self.elec[0,0], ymax],
-        [self.elec[-1,0], ymax],
-        [self.elec[-1,0], ymin],
-        [self.elec[0,0], ymin],
-        [self.elec[0,0], ymax]])
-        self.param['xy_poly_table'] = xy_poly_table
+        self.computeDOI()
         
         if typ == 'default':
             if self.elec[:,2].sum() == 0:
@@ -353,9 +358,13 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec_type[buried]='buried'
             
             if surface is not None:
-                geom_input['surface'] = [surface[:,0], surface[:,1]]
+                if surface.shape[1] == 2:
+                    geom_input['surface'] = [surface[:,0], surface[:,1]]
+                else:
+                    geom_input['surface'] = [surface[:,0], surface[:,2]]
                 
             elec_type = elec_type.tolist()
+            print('elec_type', elec_type)
             
             mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
@@ -723,8 +732,10 @@ class R2(object): # R2 master class instanciated by the GUI
 #            line = p.stdout.readline().rstrip()
 #            dump(line.decode('utf-8'))
         
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         def execute(cmd):
-            self.proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)
+            self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
             for stdout_line in iter(self.proc.stdout.readline, ""):
                 yield stdout_line
 #                dump(stdout_line.rstrip())
@@ -856,6 +867,14 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,2]
             self.meshResults.append(mesh)
+        if self.iForward is True:
+#            initMesh = self.mesh
+#            res0 = self.mesh.attr_cache['res0']
+#            initMesh.attr_cache['Resistivity(Ohm-m)'] = res0
+#            initMesh.attr_cache['Resistivity(log10)'] = np.log10(res0)
+            initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
+            self.meshResults.append(initMesh)
+            
         for i in range(100):
             fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fresults):
@@ -1186,7 +1205,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.00, iplot=False, dump=print):
+    def forward(self, noise=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
         Parameters
@@ -1283,7 +1302,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
-            return np.random.normal(x,level,1)
+            return np.random.normal(x,level)
         addnoise = np.vectorize(addnoise)
         self.noise = noise
         
@@ -1296,8 +1315,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1
         self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
-        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'], noise)
-        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'], noise)
+        self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
+        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
         self.elec = elec
         
         self.pseudo()
@@ -1670,7 +1689,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #plt.close('all')
-#k = R2(typ='cR2')
+#k = R2(typ='R2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 #k.createMesh(typ='trian')
@@ -1684,9 +1703,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createModel() # manually define 3 regions
 #k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
 
-#k.forward(iplot=True, noise=0.0)
+#k.forward(iplot=True, noise=0.05)
 ##k.resetRegions() # don't need to do this anymore you need to reset regions as they are used for starting model
-#k.invert(iplot=False)
+#k.invert(iplot=True)
 #k.showResults(attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 #k.showResults(attr='Phase(mrad)')
 #k.showResults(attr='Magnitude(Ohm-m)')

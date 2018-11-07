@@ -37,13 +37,13 @@ def write2in(param, dirname, typ='R2'):
 #            'phasest':-0.1, # default in R2.createMesh()
             'inverse_type':1,
             'target_decrease':0,    
-            'data_type':0,
+            'data_type':1,
             'reg_mode':0,
             'tolerance':1,
             'max_iter':10,
             'error_mod':2,
             'alpha_aniso':1,
-            'min_error':0, # for IP only
+            'min_error':0.01, # for IP only
             'a_wgt':0.01, # 0.02 for IP
             'b_wgt':0.02, # 2 for IP
 #            'c_wgt':1,
