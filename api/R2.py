@@ -325,6 +325,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('Using a triangular mesh')
         if typ == 'quad':
 #            mesh = QuadMesh(elec, nnode=4)
+            elec = self.elec.copy()
             elec_x = self.elec[:,0]
             elec_z = self.elec[:,2]
             #add buried electrodes? 
@@ -1611,6 +1612,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2()
 #k.createSurvey('../api/test/protocolXbh.dat', ftype='Protocol')
 #x = np.genfromtxt('../api/test/elecXbh.csv', delimiter=',')
+#x[16:32,1] = x[16:32,1] + 2
 #k.elec[:,[0,2]] = x[:,:2]
 #buried = x[:,2].astype(bool)
 #k.createMesh('quad', buried=buried, cl=0.5, cl_factor=20)

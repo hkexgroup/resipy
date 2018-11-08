@@ -1242,35 +1242,42 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     #insert borehole electrodes? if we have boreholes / buried electrodes 
     if bh_flag:
         meshx = np.unique(np.append(meshx,bh[:,0]))
-        meshy = np.unique(np.append(meshy,-bh[:,1]))
+        #meshy = np.unique(np.append(meshy,-bh[:,1]))
 
     # create topo
     topo = np.interp(meshx, elec[:,0], elec[:,1])
     
-    no_electrodes = len(elec_x)
+    if bh_flag:
+        #insert y values of boreholes, normalised to topography
+        norm_bhy = np.interp(bh[:,0], elec[:,0], elec[:,1]) - bh[:,1]
+        meshy = np.unique(np.append(meshy,norm_bhy))
     
     ###
     #find the columns relating to the electrode nodes? 
     temp_x = meshx.tolist()
     temp_y = meshy.tolist()
-    print(temp_y)
     elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 becuase of indexing in R2. 
     
     elec_node_y = np.ones((len(elec_y),0))#by default electrodes are at the surface
     #this ugly looking if - for loop thing finds the y values for borehole meshes. 
     if bh_flag:
-        for i,key in enumerate(elec_type):
-            if key == 'buried':
-                elec_node_y[i] = temp_y.index(-elec_y[i]) + 1
+        count = 0 
+        try:            
+            for i,key in enumerate(elec_type):
+                if key == 'buried':
+                    elec_node_y[i] = temp_y.index(norm_bhy[count]+elec_y[i]) + 1
+                    count += 1
+        except ValueError:
+            raise Exception("There was a problem indexing the meshy values for electrode number %i"%i)
                 
     elec_node = [elec_node_x,list(elec_node_y)]
     
     #print some warnings for debugging 
     if len(topo)!=len(meshx):
         warnings.warn("Topography vector and x coordinate arrays not the same length! ")
-    elif len(elec_node_x)!=no_electrodes:
+    elif len(elec_node_x)!=len(elec_x):
         warnings.warn("Electrode node vector and number of electrodes mismatch! ")
-        print( "%i versus %i"%(len(elec_node_x),no_electrodes))
+        #print( "%i versus %i"%(len(elec_node_x),no_electrodes))
      
     # what is the number of regions? (elements)
     no_elms=(len(meshx)-1)*(len(meshy)-1)
