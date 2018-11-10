@@ -1395,7 +1395,7 @@ class App(QMainWindow):
         phiCbarMaxEdit.setValidator(QDoubleValidator())
         phiCbarMaxEdit.setText('25')
         phiCbarrangebutton = QPushButton('Apply')
-        phiCbarrangebutton.setToolTip('This is not a filtering setp.')
+        phiCbarrangebutton.setToolTip('This is not a filtering step.')
         phiCbarrangebutton.setAutoDefault(True)
         phiCbarrangebutton.clicked.connect(phiCbarRange)
         resetlayout.addWidget(phiCbarminlabel)
