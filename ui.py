@@ -632,7 +632,7 @@ class App(QMainWindow):
         
         hbox4 = QHBoxLayout()
         hbox4.addWidget(fileType)
-        hbox4.addWidget(spacingEdit)
+#        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
         hbox4.addWidget(buttonfr)
         hbox4.addWidget(btnInvNow)
