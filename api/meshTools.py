@@ -1115,7 +1115,8 @@ def readR2_sensdat(file_path):
 
         
 #%% build a quad mesh        
-def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2):
+def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2, 
+              surface_x=None,surface_y=None):
     """
     Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
@@ -1126,18 +1127,24 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         Electrode x coordinates 
     elec_y : list, np array
         Electrode y coordinates
-    elec_type: list
+    elec_type: list, optional
         strings, where 'electrode' is a surface electrode; 'buried' is a buried electrode
-    elemy : int
+    elemy : int, optional
         Number of elements in the fine y region
-    yf : float
+    yf : float, optional
          Y factor multiplier in the fine zone.
-    ygf : float
+    ygf : float, optional
          Y factor multiplier in the coarse zone.
-    doi : float (m)
+    doi : float (m), optional 
          Depth of investigation (if left as -1 = half survey width).
-    pad :
+    pad : int, optional
          X padding outside the fine area (tipicaly twice the number of elements between electrodes).
+    surface_x: array like, optional
+        Default is None. x coordinates of extra surface topography points for the generation of topography in the quad mesh
+    surface_y: array like, optional
+        Default is None. y coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
+        an error will be returned if len(surface_x) != len(surface_y)
+        
             
     Returns
     -------
@@ -1152,10 +1159,17 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     elec_node : numpy.array
         x columns where the electrodes are. 
     """
+    #formalities, error check
     if elemx < 4:
         print('elemx too small, set up to 4 at least')
         elemx = 4
-        
+    if surface_x != None and surface_y != None:
+            if len(surface_x) != len(surface_y):
+                raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
+    elif surface_x == None or surface_y == None:
+        surface_x = np.array([])
+        surface_y = np.array([])
+    
     bh_flag = False
     #determine the relevant node ordering for the surface electrodes? 
     if elec_type is not None:
@@ -1171,7 +1185,6 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             if key == 'buried': 
                 bur_idx.append(i)
                 bh_flag = True
-           # if key == 'surface': pass
         
         if len(surface_idx)>0:# then surface electrodes are present
             Ex=np.array(elec_x)[surface_idx]
@@ -1182,10 +1195,12 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             min_idx = np.argmax(elec_y)
             Ex=np.array([elec_x[min_idx],elec_x[max_idx]])
             Ey=np.array([elec_y[min_idx],elec_y[max_idx]])
-    else: 
-        Ex = elec_x; Ey = elec_y
-        
-    elec = np.c_[Ex, Ey]
+        #elec=np.c_[Ex,Ey]
+    else:
+        pass
+        #elec = np.c_[elec_x,elec_y]
+    elec = np.c_[elec_x,elec_y]    
+    
     if bh_flag:
         bh = np.c_[np.array(elec_x)[bur_idx],np.array(elec_y)[bur_idx]]
         
@@ -1249,7 +1264,14 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         #meshy = np.unique(np.append(meshy,-bh[:,1]))
 
     # create topo
-    topo = np.interp(meshx, elec[:,0], elec[:,1])
+    if bh_flag:
+        topo = np.interp(meshx, # only use surface electrodes to make the topography if buried electrodes present
+                         np.append(Ex,surface_x),
+                         np.append(Ey,surface_y)) 
+    else:
+        topo = np.interp(meshx, 
+                         np.append(elec[:,0],surface_x), 
+                         np.append(elec[:,1],surface_y))#all electrodes are assumed to be on the surface 
     
     if bh_flag:
         #insert y values of boreholes, normalised to topography
@@ -1282,7 +1304,6 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         warnings.warn("Topography vector and x coordinate arrays not the same length! ")
     elif len(elec_node_x)!=len(elec_x):
         warnings.warn("Electrode node vector and number of electrodes mismatch! ")
-        #print( "%i versus %i"%(len(elec_node_x),no_electrodes))
      
     # what is the number of regions? (elements)
     no_elms=(len(meshx)-1)*(len(meshy)-1)
