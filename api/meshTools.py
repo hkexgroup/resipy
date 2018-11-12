@@ -1222,7 +1222,11 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     
     # create meshy
     if doi == -1:
-        doi = np.abs(elec[0,0]-elec[-1,0])/2
+        if bh_flag:
+            doi = abs(min(elec_y))
+        else:
+            doi = np.abs(elec[0,0]-elec[-1,0])/2
+        
 #    dyy = espacing/(elemx*4)
     meshy = [0]
     dyy = 0.05
@@ -1343,7 +1347,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
             
     Mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
-    
+
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
