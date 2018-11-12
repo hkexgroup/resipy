@@ -1612,7 +1612,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k = R2()
 #k.createSurvey('../api/test/protocolXbh.dat', ftype='Protocol')
 #x = np.genfromtxt('../api/test/elecXbh.csv', delimiter=',')
-#x[16:32,1] = x[16:32,1] + 2
 #k.elec[:,[0,2]] = x[:,:2]
 #buried = x[:,2].astype(bool)
 ##k.createMesh('trian', buried=buried, cl=0.5, cl_factor=20)
@@ -1728,7 +1727,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.elec[:,[0,2]] = x[:,:2]
 #surface = np.array([[0.7, 92.30],[10.3, 92.30]])
 #buried = x[:,2].astype(bool)
-#k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
+##k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
 #k.createMesh(typ='quad',buried=buried)
 #k.showMesh()
 #xy = k.elec[1:21,[0,2]]

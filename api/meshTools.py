@@ -1163,12 +1163,15 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     if elemx < 4:
         print('elemx too small, set up to 4 at least')
         elemx = 4
-    if surface_x != None and surface_y != None:
-            if len(surface_x) != len(surface_y):
-                raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
-    elif surface_x == None or surface_y == None:
+        
+    if surface_x is None or surface_y is None:
         surface_x = np.array([])
         surface_y = np.array([])
+    else: #if surface_x != None and surface_y != None:
+            if len(surface_x) != len(surface_y):
+                raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
+            surface_x = np.array(surface_x)
+            surface_y = np.array(surface_y)
     
     bh_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -1212,6 +1215,8 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         elec2 = elec[i+1,0]
         espacing = np.abs(elec1-elec2)
 #        dx = espacing/elemx # we ask for elemx nodes between electrodes
+        if espacing == 0: # then we probably are probing 2 borehole electrodes
+            espacing = np.abs(elec[i,1] - elec[i+1,1])
         if i == 0:
             xx2 = np.linspace(elec1-espacing, elec1, elemx, endpoint=False)
             xx3 = np.ones(elemx*pad)*elec1-espacing
@@ -1231,6 +1236,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
     
+#    print(meshx)
     # create e_nodes
 #    elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
     #TODO make sure it's dividable by patchx and patch y
@@ -1261,17 +1267,22 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     #insert borehole electrodes? if we have boreholes / buried electrodes 
     if bh_flag:
         meshx = np.unique(np.append(meshx,bh[:,0]))
-        #meshy = np.unique(np.append(meshy,-bh[:,1]))
 
     # create topo
     if bh_flag:
+        X = np.append(Ex,surface_x)
+        Y = np.append(Ey,surface_y)
+        idx = np.argsort(X)
         topo = np.interp(meshx, # only use surface electrodes to make the topography if buried electrodes present
-                         np.append(Ex,surface_x),
-                         np.append(Ey,surface_y)) 
+                         X[idx], 
+                         Y[idx]) 
     else:
-        topo = np.interp(meshx, 
-                         np.append(elec[:,0],surface_x), 
-                         np.append(elec[:,1],surface_y))#all electrodes are assumed to be on the surface 
+        X = np.append(elec[:,0],surface_x)
+        Y = np.append(elec[:,1],surface_y)
+        idx = np.argsort(X)
+        topo = np.interp(meshx, # all electrodes are assumed to be on the surface 
+                         X[idx], 
+                         Y[idx])
     
     if bh_flag:
         #insert y values of boreholes, normalised to topography
@@ -1443,7 +1454,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     #convert into mesh.dat 
     mesh_dict = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
     mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
-    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat -disabled as handled higher up in the R2 class 
+    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
     
     if keep_files is False: 
         os.remove("temp.geo");os.remove("temp.msh")
