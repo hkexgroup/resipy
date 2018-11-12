@@ -12,7 +12,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-#import statsmodels.formula.api as smf
+import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
                      primeParser, protocolParserIP)
@@ -747,40 +747,48 @@ class Survey(object):
             return figs
         
     def lmefit(self, iplot=True, ax=None):
-#        self.errTyp = 'lme'
+        self.errTyp = 'lme'
         print('NOT IMPLEMENTED YET')
-#        # fit linear mixed effect model
-#        # NEED filterData() before
-#        recipMean = np.abs(self.dfg['recipMean'].values)
-#        recipError = np.abs(self.dfg['recipError'].values)
-#        irecip = self.df['irecip'].values
-#        array = self.df[['a','b','m','n']].values
-#        
-#        ie = irecip > 0
-#        data = np.vstack([recipMean, recipError]).T
-#        data = np.hstack((data, array[ie]))
-#        df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
-#        md = smf.mixedlm('obsErr~avgR', df, groups=df[['c1', 'c2', 'p1', 'p2']])
-#        mdf = md.fit()
-#        #print(np.min(df['avgR']))
-#        #print(np.min(df['obsErr']))
-#        #print(np.min(mdf.predict()))
-#        print(mdf.summary())
-#        
-#
-#        self.dfg['lmeError'] = mdf.predict()
-#        
-#        if iplot:
-#            if ax is None:
-#                fig, ax = plt.subplots()
-#
-#            ax.loglog(df['obsErr'], mdf.predict(), 'o')
-#            ax.loglog([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-#            ax.grid()
-#            ax.legend()
-#            ax.set_title('Linear Mixed Effect Model Fit')
-#            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-#            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+        # fit linear mixed effect model
+        # NEED filterData() before
+        # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
+        
+        if 'recipMean' not in self.df.columns:
+            self.reciprocal()
+        dfg = self.df[self.df['irecip'] > 0]
+              
+        
+        recipMean = np.abs(dfg['recipMean'].values)
+        recipError = np.abs(dfg['recipError'].values)
+        irecip = self.df['irecip'].values
+        array = self.df[['a','b','m','n']].values
+        
+        ie = irecip > 0
+        data = np.vstack([recipMean, recipError]).T
+        data = np.hstack((data, array[ie]))
+        df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
+        #cols= ['c1','c2','p1','p2']
+        #df[cols] = df[cols].apply(np.int64)
+        #print(df.to_string())
+        md = smf.mixedlm('obsErr~avgR', re_formula="~avgR", data=df, groups=df[['c1','c2','p1','p2']])
+        mdf = md.fit()
+        
+        print(mdf.summary())
+        
+
+        dfg['lmeError'] = mdf.predict()
+        
+        if iplot:
+            if ax is None:
+                fig, ax = plt.subplots()
+
+            ax.plot(df['obsErr'], mdf.predict(), 'o')
+            ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+            ax.grid()
+            ax.legend()
+            ax.set_title('Linear Mixed Effect Model Fit')
+            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
 
     def heatmap(self,ax=None):
         """ Plot a heatmap based on 
