@@ -335,13 +335,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec_type[buried]='buried'
                 
             elec_type = elec_type.tolist()
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,**kwargs)   #generate quad mesh     
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,**kwargs)   #generate quad mesh   
             #update parameters accordingly 
             self.param['meshx'] = meshx
             self.param['meshy'] = meshy
             self.param['topo'] = topo
             self.param['mesh_type'] = 4
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes[0])), e_nodes[0], e_nodes[1]].astype(int)
+            
             if 'regions' in self.param: # allow to create a new mesh then rerun inversion
                 del self.param['regions']
             if 'num_regions' in self.param:

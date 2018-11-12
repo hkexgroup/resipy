@@ -1258,19 +1258,20 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     temp_y = meshy.tolist()
     elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 becuase of indexing in R2. 
     
-    elec_node_y = np.ones((len(elec_y),0))#by default electrodes are at the surface
+    elec_node_y = np.ones((len(elec_y),1),dtype=int)#by default electrodes are at the surface
     #this ugly looking if - for loop thing finds the y values for borehole meshes. 
     if bh_flag:
         count = 0 
         try:            
             for i,key in enumerate(elec_type):
                 if key == 'buried':
-                    elec_node_y[i] = temp_y.index(norm_bhy[count]+elec_y[i]) + 1
+                    elec_node_y[i] = temp_y.index(norm_bhy[count]) + 1
+                    #print(elec_node_y[i])
                     count += 1
         except ValueError:
             raise Exception("There was a problem indexing the meshy values for electrode number %i"%i)
                 
-    elec_node = [elec_node_x,list(elec_node_y)]
+    elec_node = [elec_node_x,elec_node_y.T.tolist()[0]]
     
     #print some warnings for debugging 
     if len(topo)!=len(meshx):
@@ -1621,7 +1622,7 @@ def systemCheck():
     
 #%% test code for borehole quad mesh
 #elec_x = np.append(np.arange(10),[5.1,5.1,5.1])
-#elec_y = np.append(np.zeros(10),[2,4,6])
+#elec_y = np.append(np.zeros(10),[-2,-4,-6])
 #elec_type = ['electrode']*10 + ['buried']*3
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(elec_x, elec_y, elec_type = elec_type, elemx=4)
 #mesh.show(color_bar=False)
