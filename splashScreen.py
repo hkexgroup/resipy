@@ -1,12 +1,8 @@
-"""
-Splash screen example
+""" splashScreen
 
-Eli Bendersky (eliben@gmail.com)
-License: this code is in the public domain
-Last modified: 09.05.2009
 """
 from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon, QMovie
 from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
 from subprocess import Popen
@@ -14,6 +10,8 @@ import os
 import sys
 import time
 import shutil
+#from multiprocessing import Pool
+
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -33,6 +31,21 @@ by default zipfile does not umpack any binary bit to say executable or not
 Below is a way to do it
 """
 
+class MySplashScreen(QSplashScreen):
+    def __init__(self, animation, flags):
+        # run event dispatching in another thread
+        QSplashScreen.__init__(self, QPixmap(), flags)
+        self.movie = QMovie(animation)
+        self.movie.frameChanged.connect(self.onNextFrame)
+        #self.connect(self.movie, SIGNAL('frameChanged(int)'), SLOT('onNextFrame()'))
+        self.movie.start()
+
+    def onNextFrame(self):
+        pixmap = self.movie.currentPixmap()
+        self.setPixmap(pixmap)
+        self.setMask(pixmap.mask())
+        
+        
 class MyZipFile(ZipFile):
     def extract(self, member, path=None, pwd=None):
         if not isinstance(member, ZipInfo):
@@ -52,21 +65,28 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 #    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png')))
 
-    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
-    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+#    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
+#    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+    splash = MySplashScreen('chicken.gif', Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
     # splash = QSplashScreen(splash_pix)
     # adding progress bar
     progressBar = QProgressBar(splash)
     progressBar.setMaximum(10)
-    progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
-
+#    progressBar.setGeometry(0, splash.height() - 50, splash.width(), 20)
+    progressBar.setGeometry(150, 320, 200, 18)
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-    splash.showMessage("Expanding app", Qt.AlignBottom, Qt.white)
+    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.white)
     app.processEvents()
+    
+#    initLoop = Qt.QEventLoop()
+#    pool = Pool(processes=1)
+#    pool.apply_async(longInitialization, [2], callback=lambda exitCode: initLoop.exit(exitCode))
+#    initLoop.exec_()
+    
 #    app.processEvents()    
 #    progressBar.setValue(1)
 #    app.processEvents()
@@ -109,6 +129,7 @@ if __name__ == "__main__":
     splash.close()
     appDir = os.path.join(bundle_dir, 'ui', 'ui') # zip always putting a double dir ... don't know why
     print('Main app will be run in appDir = ', appDir)
+    print(os.listdir(appDir))
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
     Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
