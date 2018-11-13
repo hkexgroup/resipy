@@ -733,10 +733,15 @@ class R2(object): # R2 master class instanciated by the GUI
 #            line = p.stdout.readline().rstrip()
 #            dump(line.decode('utf-8'))
         
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        if OS == 'Windows':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        
         def execute(cmd):
-            self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+            if OS == 'windows':
+                self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+            else:
+                self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
             for stdout_line in iter(self.proc.stdout.readline, ""):
                 yield stdout_line
 #                dump(stdout_line.rstrip())
