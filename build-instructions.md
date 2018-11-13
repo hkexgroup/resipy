@@ -6,8 +6,8 @@
 You need to work inside a python virtual environment. Use the `virtualenv` command to create a new one. Use python 3.X.
 Create it using:
 ```command line
-cd my_directory
-virtualenv <my_virtual_env>
+mkdir <my_virtual_env>
+virtualenv <my_virtual_env> -p python3 # use Python 3 if it's not the default on your system
 <my_virtual_env>\Scripts\activate.bat #windows version
 source <my_virtual_env>\bin\activate #linux version
 ```
