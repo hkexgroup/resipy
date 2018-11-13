@@ -15,7 +15,7 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
-                     primeParser, protocolParserIP)
+                     primeParser, primeParserTab, protocolParserIP)
 from api.DCA import DCA
 
 class Survey(object):
@@ -50,6 +50,8 @@ class Survey(object):
         self.name = name
         self.iBorehole = False # True is it's a borehole
         
+        avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
+        
         if parser is not None:
             elec, data = parser(fname)
         else:
@@ -60,14 +62,19 @@ class Survey(object):
             elif ftype == 'Res2Dinv':
                 elec, data = res2invInputParser(fname)
             elif ftype == 'BGS Prime':
-                elec, data = primeParser(fname)
+                try:
+                    elec, data = primeParser(fname)
+                except:
+                    elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
             else:
+                print("Unrecognised ftype, available types are :",avail_ftypes )
                 raise Exception('Sorry this file type is not implemented yet')
+                
         
         self.df = data
         self.dfphasereset = pd.DataFrame() #for preserving phase reset ability
@@ -1225,9 +1232,13 @@ class Survey(object):
         eselect = np.zeros(len(elecpos), dtype=bool)
         
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
-
-
-
+          
+    def filterdip(self,elec): # deleted specific elec data
+        #index=(self.array==any(elec)).any(-1)
+        index = (self.array == elec[0]).any(-1)
+        for i in range(1,len(elec)):
+            index = index | (self.array == elec[i]).any(-1)
+        self.filterData(~index)
 
 
 """        
@@ -1587,13 +1598,6 @@ class Survey(object):
         
         self.irecip = self.reciprocal() # to rebuild self.recipMean and recipError
         
-        
-    def filterdip(self,elec): # deleted specific elec data
-        #index=(self.array==any(elec)).any(-1)
-        index = (self.array == elec[0]).any(-1)
-        for i in range(1,len(elec)):
-            index = index | (self.array == elec[i]).any(-1)
-        self.filterData(~index)
     
     def plotData(self):
         fig, ax = plt.subplots()

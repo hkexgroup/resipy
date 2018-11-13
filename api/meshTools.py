@@ -1269,20 +1269,16 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         meshx = np.unique(np.append(meshx,bh[:,0]))
 
     # create topo
-    if bh_flag:
-        X = np.append(Ex,surface_x)
+    if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
+        X = np.append(Ex,surface_x) 
         Y = np.append(Ey,surface_y)
         idx = np.argsort(X)
-        topo = np.interp(meshx, # only use surface electrodes to make the topography if buried electrodes present
-                         X[idx], 
-                         Y[idx]) 
-    else:
+        topo = np.interp(meshx, X[idx], Y[idx])
+    else: # all electrodes are assumed to be on the surface 
         X = np.append(elec[:,0],surface_x)
         Y = np.append(elec[:,1],surface_y)
         idx = np.argsort(X)
-        topo = np.interp(meshx, # all electrodes are assumed to be on the surface 
-                         X[idx], 
-                         Y[idx])
+        topo = np.interp(meshx, X[idx], Y[idx])
     
     if bh_flag:
         #insert y values of boreholes, normalised to topography

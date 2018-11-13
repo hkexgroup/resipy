@@ -1487,8 +1487,10 @@ class App(QMainWindow):
             elec = elecTable.getTable()
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
-            if np.isnan(surface[0,0]):
-                surface[:,:] = 0 
+            if not np.isnan(surface[0,0]):
+                surface_flag = True
+            else:
+                surface_flag = False
             if np.sum(~np.isnan(elec[:,0])) == 0:
                 errorDump('Please first import data or specify electrode in the Topography tab.')
                 return
@@ -1505,7 +1507,12 @@ class App(QMainWindow):
 #                errorDump('Sorry no more than 10 elements between electrodes.')
             nnodes = nnodesSld.value()
             try:
-                self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes, surface_x=surface[:,0], surface_y=surface[:,2])
+                if surface_flag:
+                    print("quad mesh + topo")
+                    self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes, surface_x=surface[:,0], surface_y=surface[:,2])
+                else:
+                    print("quad mesh no topo")
+                    self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes)
                 scale.setVisible(False)
                 scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)

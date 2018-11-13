@@ -117,6 +117,43 @@ def primeParser(fname, espacing=None):
 # test code
 #elec, df = primeParser('api/test/primeFile.dat')
     
+def primeParserTab(fname, espacing = 1):
+    """
+    Parses data from a prime file with the .tab extension - jamyd91
+    """
+    #error check
+    fh = open(fname,'r')
+    line1 = fh.readline()
+    fh.close()
+    #print(line1)
+    if line1.find("Prime") == -1:
+        raise ImportError("Unrecognised prime file type")
+        
+    temp = pd.read_csv(fname,header=26,delimiter='\t')
+    #Note R2 expects the electrode format in the form:
+    #meas.no | P+ | P- | C+ | C- | transfer resistance
+    
+    a = temp["pt_p1_no:"]
+    b = temp["pt_p2_no:"]
+    m = temp["pt_c1_no:"]
+    n = temp["pt_c2_no:"]
+    num_meas = len(a)
+    data_dict = {'a':a,'b':b,'m':m,'n':n}
+    data_dict['resist'] = temp["pt_calc_res:"]
+    data_dict['vp'] = temp["pt_meas_applied_voltage:"]
+    data_dict['dev'] = temp["pt_calc_res_error:"]
+    data_dict["Rho"] = [float("nan")]*num_meas
+    data_dict["ip"] = [0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    
+    #compute default electrode positions 
+    imax = np.max(np.array((a,b,m,n)))
+    elec = np.zeros((imax,3))
+    elec[:,0] = np.arange(0,imax)*espacing
+    return elec, df
+##Test code
+#electrodes, data = primeParserTab("../Data/PRIME/3001_CAN_2017-11-16_005119.tab")
 
 #%% parse input for res2inv (.dat file) - Jimmy B. 
 #jamyd91@bgs.ac.uk
@@ -240,6 +277,7 @@ def res2invInputParser(file_path):
     return elec,df
 
 #%% convert a dataframe output by the parsers into a simple protocal.dat file    
+###DEPRECIATED###
 def dataframe2dat(df,save_path='default',
                   typ='R2',
                   ref_flag=False,
