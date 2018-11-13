@@ -721,6 +721,12 @@ class R2(object): # R2 master class instanciated by the GUI
         # copy R2.exe
         if ~os.path.exists(targetName):
             shutil.copy(os.path.join(self.apiPath, 'exe', exeName), targetName)  
+        
+            
+        if OS == 'Windows':
+            cmd = [exeName]
+        else:
+            cmd = ['wine',exeName]
             
 #        p = Popen(cmd, stdout=PIPE, shell=False)
 #        while p.poll() is None:
@@ -733,11 +739,9 @@ class R2(object): # R2 master class instanciated by the GUI
         
         def execute(cmd):
             if OS == 'windows':
-                self.proc = subprocess.Popen([exeName], stdout=PIPE,
-                    shell=False, universal_newlines=True, startupinfo=startupinfo)
+                self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
             else:
-                self.proc = subprocess.Popen(['wine', exeName], stdout=PIPE,
-                    shell=False, universal_newlines=True)                
+                self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
             for stdout_line in iter(self.proc.stdout.readline, ""):
                 yield stdout_line
 #                dump(stdout_line.rstrip())
