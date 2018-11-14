@@ -1644,11 +1644,11 @@ class Survey(object):
         
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-s = Survey('api/test/syscalFile.csv', ftype='Syscal')
+#s = Survey('api/test/syscalFile.csv', ftype='Syscal')
 #s = Survey('test/rifleday8.csv', ftype='Syscal')
 #s.manualFiltering()
 #s.dca()
-s.lmefit()
+#s.lmefit()
 #s.addFilteredIP()
 #s.pwlfit()
 #s.plotIPFit()

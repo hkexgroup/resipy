@@ -1,25 +1,23 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed May 30 16:48:54 2018
+Created on Wed May 30 16:48:54 2018 in python 3.6.5
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: jkl
 """
-
-import numpy as np
-import pandas as pd
-import os
-import sys
-import shutil
-import platform
-import matplotlib.pyplot as plt
+pyR2_version = 1.0 # pyR2 version
+#import relevant modules 
+import os, sys, shutil, platform # python standard libs
 from subprocess import PIPE, call, Popen
 import subprocess
+import numpy as np # import default 3rd party libaries (can be downloaded from conda repositry, incl with winpython)
+import pandas as pd
+import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 
 OS = platform.system()
-
 sys.path.append(os.path.relpath('..'))
 
+#import pyR2 api packages 
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
@@ -30,10 +28,11 @@ from api.post_processing import import_R2_err_dat, disp_R2_errors
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
+print('pyR2 version = ',str(pyR2_version))
 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
-    """
+    """    
     def __init__(self, dirname='', typ='R2'):
         """ Create an R2 object.
         
