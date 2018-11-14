@@ -10,6 +10,10 @@ import os
 import sys
 import time
 import shutil
+import platform
+
+OS = platform.system()
+
 #from multiprocessing import Pool
 
 
@@ -129,10 +133,13 @@ if __name__ == "__main__":
     splash.close()
     appDir = os.path.join(bundle_dir, 'ui', 'ui') # zip always putting a double dir ... don't know why
     print('Main app will be run in appDir = ', appDir)
-    print(os.listdir(appDir))
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
-    Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
+    if OS == 'Linux':
+        os.system(os.path.join(appDir, 'pyR2'))
+    else:
+        Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
+    # this last one doesn't work on linux WHEN COMPILED and I don't know why
 
 #  need to comment the following lines as the exit signal is given by the main app
 #    sys.exit()
