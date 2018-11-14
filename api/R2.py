@@ -796,6 +796,12 @@ class R2(object): # R2 master class instanciated by the GUI
         dump('Writing .in file and protocol.dat ...')
         self.write2in(param=param) # R2.in
         self.write2protocol(errTot=errTot) # protocol.dat
+        #check to make sure the number of electrodes in the protocal matches the
+        #the number of electrodes.
+        df = self.surveys[0].df
+        check = np.array((df['a'],df['b'],df['m'],df['n']))
+        if len(self.elec) != np.max(check):
+            raise Exception("The number of electrodes given to pyR2 does not match the number of electrodes parsed in the scheduling file.")
         dump('done\n')
         
         # runs inversion
@@ -1192,7 +1198,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if elec.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columsn')
         else:
-            self.elec = elec
+            self.elec = np.array(elec)
             
     
     def importSequence(self, fname=''):

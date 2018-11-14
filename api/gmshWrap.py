@@ -238,7 +238,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         if bh_flag or bu_flag:
             cl = abs(np.mean(np.diff(electrodes[1]))/2)
         else:
-            cl = np.mean(np.diff(elec_x))/2
+            cl = abs(np.mean(np.diff(elec_x))/2)
             
     if len(topo_x) != len(topo_z):
         raise ValueError("topography x and y arrays are not the same length!")
@@ -366,7 +366,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
-    e_spacing=np.mean(np.diff(elec_x))
+    e_spacing=abs(np.mean(np.diff(elec_x)))
     flank=e_spacing*100
     b_max_depth=-abs(doi)-flank#background max depth
     #add nuemon boundaries on left hand side
