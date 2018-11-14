@@ -138,8 +138,8 @@ if __name__ == "__main__":
     if OS == 'Linux':
         os.system(os.path.join(appDir, 'pyR2'))
     else:
-        Popen(os.path.join(app, shell=False, stdout=None, stdin=None) # this works now as well !
-    ''' this last one doesn't work on linux WHEN COMPILED and I don't know why'''
+        Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
+    # this last one doesn't work on linux WHEN COMPILED and I don't know why
 
 #  need to comment the following lines as the exit signal is given by the main app
 #    sys.exit()
