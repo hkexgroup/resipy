@@ -212,10 +212,19 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             elec_z=np.array(electrodes[1])[surface_idx]
         elif len(surface_idx)==0 and 'surface' not in geom_input:
             #fail safe if no surface electrodes are present to generate surface topography 
+            if not isinstance(geom_input, dict):
+                geom_input = {}
             max_idx = np.argmax(electrodes[0])
-            min_idx = np.argmax(electrodes[0])
-            elec_x=np.array([electrodes[0][min_idx],electrodes[0][max_idx]])
-            elec_z=np.array([electrodes[1][min_idx],electrodes[1][max_idx]])
+            min_idx = np.argmin(electrodes[0])
+            topo_x = [electrodes[0][min_idx],electrodes[0][max_idx]]
+            y_idx = np.argmax(electrodes[1])
+            topo_z = [electrodes[1][y_idx]+1,electrodes[1][y_idx]+1] # add one so we cut into the buried in electrodes with the mesh
+            geom_input['surface'] = [topo_x,topo_z]
+            elec_x = np.array([])
+            elec_z = np.array([])
+        elif len(surface_idx)==0 and 'surface' in geom_input:
+            elec_x = np.array([])
+            elec_z = np.array([])
     
     else:
         elec_x = np.array(electrodes[0])
@@ -262,15 +271,28 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     flag=flag+(['electrode']*len(elec_x))   
     
     #deal with end case electrodes, check max topo points are outside survey bounds 
-    if min(elec_x) == min(x_pts):
-        x_pts = np.append(x_pts,elec_x[0] - 5*np.mean(np.diff(elec_x))) # in this case extend the survey bounds beyond the first electrode 
-        y_pts = np.append(y_pts,elec_z[0])
-        flag.append('topography point')#add a flag
-        
-    if max(elec_x) == max(x_pts):
-        x_pts = np.append(x_pts,elec_x[-1] + 5*np.mean(np.diff(elec_x)))
-        y_pts = np.append(y_pts,elec_z[-1])
-        flag.append('topography point')
+    try:
+        if min(elec_x) == min(x_pts):
+            x_pts = np.append(x_pts,elec_x[0] - 5*np.mean(np.diff(elec_x))) # in this case extend the survey bounds beyond the first electrode 
+            y_pts = np.append(y_pts,elec_z[0])
+            flag.append('topography point')#add a flag
+            
+        if max(elec_x) == max(x_pts):
+            x_pts = np.append(x_pts,elec_x[-1] + 5*np.mean(np.diff(elec_x)))
+            y_pts = np.append(y_pts,elec_z[-1])
+            flag.append('topography point')
+    except ValueError: # then there are no surface electrodes, in which case 
+        min_idx = np.argmin(electrodes[0])
+        max_idx = np.argmax(electrodes[0])
+        if min(electrodes[0]) == min(x_pts):
+            x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*np.mean(np.diff(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
+            y_pts = np.append(y_pts,max(electrodes[1])+1)
+            flag.append('topography point')#add a flag
+            
+        if max(electrodes[0]) == max(x_pts):
+            x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*np.mean(np.diff(electrodes[0])))
+            y_pts = np.append(y_pts,max(electrodes[1])+1)
+            flag.append('topography point')
     
     
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
@@ -367,6 +389,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
     e_spacing=abs(np.mean(np.diff(elec_x)))
+    if np.isnan(e_spacing):#catch error where e_spacing is nan if no surface electrodes 
+        e_spacing=abs(np.mean(np.diff(np.unique(electrodes[0]))))
     flank=e_spacing*100
     b_max_depth=-abs(doi)-flank#background max depth
     #add nuemon boundaries on left hand side
@@ -566,7 +590,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         idx = idx.tolist()
         original_idx[i] = idx.index(True)
 
-    ordered_node_pos = node_pos[original_idx]
+    ordered_node_pos = node_pos[original_idx].astype(int)
     
     return ordered_node_pos 
 
@@ -688,8 +712,11 @@ def msh_parse(file_path):
         areas.append(0.5*base*height)
         
     #print warning if areas of zero found, this will cuase problems in R2
-    if min(areas)==0:
-        warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
+    try:
+        if min(areas)==0:
+            warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
+    except ValueError:#if mesh hasnt been read in this is where the error occurs 
+        raise Exception("It looks like no elements have read into pyR2, its likley gmsh has failed to produced a stable mesh. Consider checking the mesh input (.geo) file.")
             
     print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
     fid.close()

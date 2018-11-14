@@ -181,8 +181,8 @@ class Mesh_obj:
 
     def add_e_nodes(self,e_nodes):
         self.e_nodes = e_nodes
-        self.elec_x = np.array(self.node_x)[np.array(e_nodes)]
-        self.elec_y = np.array(self.node_y)[np.array(e_nodes)]
+        self.elec_x = np.array(self.node_x)[np.array(e_nodes, dtype=int)]
+        self.elec_y = np.array(self.node_y)[np.array(e_nodes, dtype=int)]
     
     #add some functions to allow adding some extra attributes to mesh 
     def add_sensitivity(self,values):#sensitivity of the mesh
@@ -1194,10 +1194,8 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             Ey=np.array(elec_y)[surface_idx]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
-            max_idx = np.argmax(elec_x)
-            min_idx = np.argmax(elec_y)
-            Ex=np.array([elec_x[min_idx],elec_x[max_idx]])
-            Ey=np.array([elec_y[min_idx],elec_y[max_idx]])
+            Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
+            Ey=np.array([elec_y[np.argmax(elec_y)],elec_y[np.argmax(elec_y)]])
         #elec=np.c_[Ex,Ey]
     else:
         pass
@@ -1458,6 +1456,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     #change back to orginal working directory
     os.chdir(cwd)
     
+    print(node_pos)
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh#, mesh_dict['element_ranges']
