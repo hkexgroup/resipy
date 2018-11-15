@@ -409,7 +409,7 @@ class App(QMainWindow):
             buttonf.setEnabled(False)
             timeLapseCheck.setEnabled(False)
             batchCheck.setEnabled(False)
-            boreholeCheck.setEnabled(False)
+#            boreholeCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,False) # no custom parser needed
             restartFunc() # let's first from previous inversion
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
@@ -429,7 +429,7 @@ class App(QMainWindow):
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,True)
             batchCheck.setEnabled(True)
-            boreholeCheck.setEnabled(True)
+#            boreholeCheck.setEnabled(True)
             activateTabs(False)
         dimForward = QRadioButton('Forward')
         dimForward.setChecked(False)
