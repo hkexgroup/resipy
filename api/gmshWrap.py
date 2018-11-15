@@ -11,8 +11,7 @@ Programs:
     ccw() - checks cartesian points are oreintated clockwise 
     moving_average() - as says on tin, used to smooth surface topography which is repeated at the base of the fine mesh region in the inversion
     genGeoFile () - generates a .geo file for gmsh
-    gmsh2R2mesh () - converts a gmsh.msh file to a mesh.dat file readable by R2
-    isinpolygon () - checks to see if a point lies inside a polygon
+    msh_parse() - converts a 2d gmsh.msh file to a mesh class readable by R2. 
 
 Dependencies: 
     numpy (conda library)
