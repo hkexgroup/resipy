@@ -38,15 +38,16 @@
 <h1>Welcome to pyR2’s documentation!<a class="headerlink" href="#welcome-to-pyr2-s-documentation" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<span class="target" id="module-api.R2"></span><p>Created on Wed May 30 16:48:54 2018</p>
-<p>&#64;author: jkl</p>
+<span class="target" id="module-api.R2"></span><p>Created on Wed May 30 16:48:54 2018 in python 3.6.5
+Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
+&#64;author: jkl</p>
 <dl class="class">
 <dt id="api.R2.R2">
 <em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em>, <em>typ='R2'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Master class to handle all processing around the inversion codes.</p>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
-<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=2</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=1</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add region according to a polyline defined by <cite>xy</cite> and assign it
 the starting resistivity <cite>res0</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -120,6 +121,12 @@ the phase [mrad].</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.computeDOI">
+<code class="descname">computeDOI</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.computeDOI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Depth Of Investigation (DOI).</p>
 </dd></dl>
 
 <dl class="method">
@@ -468,6 +475,12 @@ inversion using appropriate wrapper, then return results.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.pseudoErrorIP">
+<code class="descname">pseudoErrorIP</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.pseudoErrorIP" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display normalized phase error.</p>
 </dd></dl>
 
 <dl class="method">
@@ -1035,7 +1048,7 @@ resistance otherwise.</p>
 
 <dl class="method">
 <dt id="api.Survey.Survey.pseudoSection">
-<code class="descname">pseudoSection</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=True</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudoSection" title="Permalink to this definition">¶</a></dt>
+<code class="descname">pseudoSection</code><span class="sig-paren">(</span><em>ax=None</em>, <em>contour=False</em>, <em>log=False</em>, <em>geom=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.pseudoSection" title="Permalink to this definition">¶</a></dt>
 <dd><p>create true pseudo graph with points and no interpolation</p>
 </dd></dl>
 
@@ -1146,7 +1159,7 @@ the error model to apply for IP data.</p>
 &#64;author: jamyd91
 Import a vtk file with an unstructured grid (triangular/quad elements) and 
 creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. module has capacity to show meshes, inverted results, apply a function 
+triangular elements. Module has capacity to show meshes, inverted results, apply a function 
 to mesh parameters.</p>
 <dl class="docutils">
 <dt>Classes: </dt>
@@ -1206,7 +1219,7 @@ title is the name of the vtk file.</p>
 
 <dl class="function">
 <dt id="api.meshTools.quad_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">quad_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elemx=4</em>, <em>xgf=1.5</em>, <em>yf=1.1</em>, <em>ygf=1.5</em>, <em>doi=-1</em>, <em>pad=2</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.quad_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">quad_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_type=None</em>, <em>elemx=4</em>, <em>xgf=1.5</em>, <em>yf=1.1</em>, <em>ygf=1.5</em>, <em>doi=-1</em>, <em>pad=2</em>, <em>surface_x=None</em>, <em>surface_y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.quad_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a quaderlateral mesh given the electrode x and y positions. Function
 relies heavily on the numpy package.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1221,25 +1234,38 @@ relies heavily on the numpy package.</p>
 <blockquote>
 <div><p>Electrode y coordinates</p>
 </div></blockquote>
-<p><strong>elemy</strong> : int</p>
+<p><strong>elec_type: list, optional</strong></p>
+<blockquote>
+<div><p>strings, where ‘electrode’ is a surface electrode; ‘buried’ is a buried electrode</p>
+</div></blockquote>
+<p><strong>elemy</strong> : int, optional</p>
 <blockquote>
 <div><p>Number of elements in the fine y region</p>
 </div></blockquote>
-<p><strong>yf</strong> : float</p>
+<p><strong>yf</strong> : float, optional</p>
 <blockquote>
 <div><p>Y factor multiplier in the fine zone.</p>
 </div></blockquote>
-<p><strong>ygf</strong> : float</p>
+<p><strong>ygf</strong> : float, optional</p>
 <blockquote>
 <div><p>Y factor multiplier in the coarse zone.</p>
 </div></blockquote>
-<p><strong>doi</strong> : float (m)</p>
+<p><strong>doi</strong> : float (m), optional</p>
 <blockquote>
 <div><p>Depth of investigation (if left as -1 = half survey width).</p>
 </div></blockquote>
-<p><strong>pad :</strong></p>
+<p><strong>pad</strong> : int, optional</p>
 <blockquote>
 <div><p>X padding outside the fine area (tipicaly twice the number of elements between electrodes).</p>
+</div></blockquote>
+<p><strong>surface_x: array like, optional</strong></p>
+<blockquote>
+<div><p>Default is None. x coordinates of extra surface topography points for the generation of topography in the quad mesh</p>
+</div></blockquote>
+<p><strong>surface_y: array like, optional</strong></p>
+<blockquote>
+<div><p>Default is None. y coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
+an error will be returned if len(surface_x) != len(surface_y)</p>
 </div></blockquote>
 </td>
 </tr>
