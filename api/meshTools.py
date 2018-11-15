@@ -169,7 +169,7 @@ class Mesh_obj:
         try:
             obj.add_attr_dict(mesh_info['cell_attributes'])
         except KeyError as e:
-            print('error in add_attr_dict', e)
+            #print('error in add_attr_dict', e)
             pass
         try:
             obj.regions = mesh_info['element_ranges']
@@ -219,7 +219,7 @@ class Mesh_obj:
             return out
 
     def __str__(self):
-        #returns the summary function if the object is printed
+        #returns the summary function if the object is printed using print()
         return self.summary(flag=False)
             
     def add_attribute(self,values,key):
@@ -1208,9 +1208,10 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
     meshx = np.array([])
+    elecXsorted=np.sort(elec[:,0]) # sort x coordinates of the electrodes 
     for i in range(len(elec)-1):
-        elec1 = elec[i,0]
-        elec2 = elec[i+1,0]
+        elec1 = elecXsorted[i]#elec[i,0]
+        elec2 = elecXsorted[i+1]#elec[i+1,0]
         espacing = np.abs(elec1-elec2)
 #        dx = espacing/elemx # we ask for elemx nodes between electrodes
         if espacing == 0: # then we probably are probing 2 borehole electrodes
@@ -1265,7 +1266,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     #insert borehole electrodes? if we have boreholes / buried electrodes 
     if bh_flag:
         meshx = np.unique(np.append(meshx,bh[:,0]))
-
+        
     # create topo
     if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
         X = np.append(Ex,surface_x) 
