@@ -1630,7 +1630,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     if OpSys=="Linux":
         totalMemory = os.popen("free -m").readlines()[1].split()[1]
         #detect wine 
-        is_wine = os.popen("wine --version").readlines()#[0].split()[0]
+        is_wine = os.popen("wine --version").readline()#[0].split()[0]
         if is_wine.find("wine") == -1:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
@@ -1651,7 +1651,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
         totalMemory = int(totalMemory)*1000
         #detect wine 
-        is_wine = os.popen("wine --version").readlines()#[0].split()[0]
+        is_wine = os.popen("wine --version").readline()#[0].split()[0]
         if is_wine.find("wine") == -1:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True

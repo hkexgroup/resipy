@@ -131,6 +131,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """    
         self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser))
         self.surveysInfo.append(info)
+        self.setBorehole(self.iBorehole)
         
         # define electrode position according to first survey
         if len(self.surveys) == 1:
@@ -179,6 +180,8 @@ class R2(object): # R2 master class instanciated by the GUI
                                    parser=parser, dump=dump)
         self.iTimeLapse = False
         self.iBatch = True
+        self.setBorehole(self.iBorehole)
+
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[], dump=print):
         """ Read electrodes and quadrupoles data and return 
@@ -219,7 +222,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     return
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
         self.elec = self.surveys[0].elec
-        
+        self.setBorehole(self.iBorehole)
         
         # create bigSurvey
         print('creating bigSurvey')

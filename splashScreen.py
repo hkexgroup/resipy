@@ -69,17 +69,17 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 #    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png')))
 
-#    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
-#    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
-    splash = MySplashScreen('chicken.gif', Qt.WindowStaysOnTopHint)
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
+    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+#    splash = MySplashScreen('chicken.gif', Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
     # splash = QSplashScreen(splash_pix)
     # adding progress bar
     progressBar = QProgressBar(splash)
     progressBar.setMaximum(10)
-#    progressBar.setGeometry(0, splash.height() - 50, splash.width(), 20)
-    progressBar.setGeometry(150, 320, 200, 18)
+    progressBar.setGeometry(0, splash.height() - 50, splash.width(), 20)
+#    progressBar.setGeometry(150, 320, 200, 18)
     # splash.setMask(splash_pix.mask())
 
     splash.show()

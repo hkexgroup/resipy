@@ -409,7 +409,7 @@ class App(QMainWindow):
             buttonf.setEnabled(False)
             timeLapseCheck.setEnabled(False)
             batchCheck.setEnabled(False)
-            boreholeCheck.setEnabled(False)
+#            boreholeCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,False) # no custom parser needed
             restartFunc() # let's first from previous inversion
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
@@ -429,7 +429,7 @@ class App(QMainWindow):
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,True)
             batchCheck.setEnabled(True)
-            boreholeCheck.setEnabled(True)
+#            boreholeCheck.setEnabled(True)
             activateTabs(False)
         dimForward = QRadioButton('Forward')
         dimForward.setChecked(False)
@@ -1221,10 +1221,10 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.errTyp = 'pwl'
-            elif index == 3:
-                print('NOT READY YET')
-                mwFitError.plot(self.r2.lmefit)
-                self.r2.errTyp = 'lme'
+#            elif index == 3:
+#                print('NOT READY YET')
+#                mwFitError.plot(self.r2.lmefit)
+#                self.r2.errTyp = 'lme'
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1242,7 +1242,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Linear Mixed Effect')
+#        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select error model to use.')
         errorLayout.addWidget(errFitType)
@@ -2105,7 +2105,7 @@ class App(QMainWindow):
         invForm.addRow(toleranceLabel, tolerance)
         
         def max_iterationsFunc():
-            self.r2.param['max_iterations'] = int(max_iterations.text())
+            self.r2.param['max_iter'] = int(max_iterations.text())
         max_iterationsLabel = QLabel('<a href="max_iterations">Maximum number of iterations</a>:')
         max_iterationsLabel.linkActivated.connect(showHelp)
         max_iterations = QLineEdit()
@@ -2149,6 +2149,7 @@ class App(QMainWindow):
         min_error = QLineEdit()
         min_error.setText('0.01')
         min_error.editingFinished.connect(min_errorFunc)
+        min_error.setVisible(False)
         invForm.addRow(min_errorLabel, min_error)
         
         def a_wgtFunc():

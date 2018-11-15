@@ -139,7 +139,7 @@ git checkout -b <name_of_branch>
 If you choose (2) make sure `develop` is ahead of `master` before changing anything. You can also use those instructions
 to update your own branch with `master`.
 ```bash
-git branch develop # change to develop branch
+git checkout develop # change to develop branch
 git fetch origin # get all changes from master
 git merge origin/master # merge those change to the develop branch
 git push # push them to the online repository
