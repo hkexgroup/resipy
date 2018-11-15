@@ -169,7 +169,7 @@ class Mesh_obj:
         try:
             obj.add_attr_dict(mesh_info['cell_attributes'])
         except KeyError as e:
-            print('error in add_attr_dict', e)
+            #print('error in add_attr_dict', e)
             pass
         try:
             obj.regions = mesh_info['element_ranges']
@@ -181,8 +181,8 @@ class Mesh_obj:
 
     def add_e_nodes(self,e_nodes):
         self.e_nodes = e_nodes
-        self.elec_x = np.array(self.node_x)[np.array(e_nodes)]
-        self.elec_y = np.array(self.node_y)[np.array(e_nodes)]
+        self.elec_x = np.array(self.node_x)[np.array(e_nodes, dtype=int)]
+        self.elec_y = np.array(self.node_y)[np.array(e_nodes, dtype=int)]
     
     #add some functions to allow adding some extra attributes to mesh 
     def add_sensitivity(self,values):#sensitivity of the mesh
@@ -219,7 +219,7 @@ class Mesh_obj:
             return out
 
     def __str__(self):
-        #returns the summary function if the object is printed
+        #returns the summary function if the object is printed using print()
         return self.summary(flag=False)
             
     def add_attribute(self,values,key):
@@ -1194,10 +1194,8 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             Ey=np.array(elec_y)[surface_idx]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
-            max_idx = np.argmax(elec_x)
-            min_idx = np.argmax(elec_y)
-            Ex=np.array([elec_x[min_idx],elec_x[max_idx]])
-            Ey=np.array([elec_y[min_idx],elec_y[max_idx]])
+            Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
+            Ey=np.array([elec_y[np.argmax(elec_y)],elec_y[np.argmax(elec_y)]])
         #elec=np.c_[Ex,Ey]
     else:
         pass
@@ -1210,9 +1208,10 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
     meshx = np.array([])
+    elecXsorted=np.sort(elec[:,0]) # sort x coordinates of the electrodes 
     for i in range(len(elec)-1):
-        elec1 = elec[i,0]
-        elec2 = elec[i+1,0]
+        elec1 = elecXsorted[i]#elec[i,0]
+        elec2 = elecXsorted[i+1]#elec[i+1,0]
         espacing = np.abs(elec1-elec2)
 #        dx = espacing/elemx # we ask for elemx nodes between electrodes
         if espacing == 0: # then we probably are probing 2 borehole electrodes
@@ -1235,12 +1234,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                 xx3[j] = xx3[j-1]+dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
-    
-#    print(meshx)
-    # create e_nodes
-#    elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
-    #TODO make sure it's dividable by patchx and patch y
-    
+            
     # create meshy
     if doi == -1:
         if bh_flag:
@@ -1267,7 +1261,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     #insert borehole electrodes? if we have boreholes / buried electrodes 
     if bh_flag:
         meshx = np.unique(np.append(meshx,bh[:,0]))
-
+        
     # create topo
     if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
         X = np.append(Ex,surface_x) 
@@ -1457,7 +1451,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     
     #change back to orginal working directory
     os.chdir(cwd)
-    
+
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh#, mesh_dict['element_ranges']

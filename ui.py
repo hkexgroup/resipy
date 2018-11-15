@@ -2783,8 +2783,9 @@ class App(QMainWindow):
         tabs.addTab(tabAbout, 'About')
         
         infoLayout = QVBoxLayout()
-        aboutText = QLabel()
+        aboutText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
         aboutText.setText('''<h1>About pyR2</h1> \
+                          <p><b>Version = 1.0</b></p> \ 
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (DC and IP)</i></p> \
                           <p>If you encouter issues or would like to submit a feature request, please raise an issue on gitlab:</p> \
                           <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
