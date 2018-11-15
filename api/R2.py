@@ -21,7 +21,7 @@ sys.path.append(os.path.relpath('..'))
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
-from api.meshTools import Mesh_obj, tri_mesh, dat_import
+from api.meshTools import Mesh_obj, tri_mesh, dat_import, systemCheck
 from api.sequenceHelper import ddskip
 from api.SelectPoints import SelectPoints
 from api.post_processing import import_R2_err_dat, disp_R2_errors
@@ -29,6 +29,7 @@ from api.post_processing import import_R2_err_dat, disp_R2_errors
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
 print('pyR2 version = ',str(pyR2_version))
+#info = systemCheck()
 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
