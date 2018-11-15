@@ -2105,7 +2105,7 @@ class App(QMainWindow):
         invForm.addRow(toleranceLabel, tolerance)
         
         def max_iterationsFunc():
-            self.r2.param['max_iterations'] = int(max_iterations.text())
+            self.r2.param['max_iter'] = int(max_iterations.text())
         max_iterationsLabel = QLabel('<a href="max_iterations">Maximum number of iterations</a>:')
         max_iterationsLabel.linkActivated.connect(showHelp)
         max_iterations = QLineEdit()
