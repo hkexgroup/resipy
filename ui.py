@@ -1221,10 +1221,10 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.errTyp = 'pwl'
-            elif index == 3:
-                print('NOT READY YET')
-                mwFitError.plot(self.r2.lmefit)
-                self.r2.errTyp = 'lme'
+#            elif index == 3:
+#                print('NOT READY YET')
+#                mwFitError.plot(self.r2.lmefit)
+#                self.r2.errTyp = 'lme'
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1242,7 +1242,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Linear Mixed Effect')
+#        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select error model to use.')
         errorLayout.addWidget(errFitType)
@@ -2149,6 +2149,7 @@ class App(QMainWindow):
         min_error = QLineEdit()
         min_error.setText('0.01')
         min_error.editingFinished.connect(min_errorFunc)
+        min_error.setVisible(False)
         invForm.addRow(min_errorLabel, min_error)
         
         def a_wgtFunc():
