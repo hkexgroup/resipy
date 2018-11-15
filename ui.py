@@ -2883,7 +2883,8 @@ if __name__ == '__main__':
     progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
 
     # splash.setMask(splash_pix.mask())
-
+#    from api.R2 import pyR2_version
+    
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
     app.processEvents()    
@@ -2899,7 +2900,7 @@ if __name__ == '__main__':
     from matplotlib.figure import Figure
     progressBar.setValue(2)
     app.processEvents()
-
+    
     print('importing numpy')
     import numpy as np
     progressBar.setValue(4)
@@ -2922,7 +2923,7 @@ if __name__ == '__main__':
     from api.r2help import r2help
     progressBar.setValue(10)
     app.processEvents()
-    
+
     ex = App()
     splash.hide() # hiding the splash screen when finished
     
