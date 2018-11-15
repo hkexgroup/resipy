@@ -1234,12 +1234,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                 xx3[j] = xx3[j-1]+dxx*xgf
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
-    
-#    print(meshx)
-    # create e_nodes
-#    elec_node = np.arange(len(xx3)+len(xx2)-1, 2*pad*(elemx-1)+(len(elec)-1)*elemx, elemx)
-    #TODO make sure it's dividable by patchx and patch y
-    
+            
     # create meshy
     if doi == -1:
         if bh_flag:
@@ -1456,8 +1451,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     
     #change back to orginal working directory
     os.chdir(cwd)
-    
-    print(node_pos)
+
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh#, mesh_dict['element_ranges']
