@@ -14,7 +14,11 @@ Note that Mac and Linux users need to have *wine* installed.
 
 What it can do
 --------------
-
+![import data](image/importData.png)
+![fit error model](image/fitErrorModel.png)
+![build a triangular mesh](image/meshTrian.png)
+![inversion settings](image/inversionSettings.png)
+![invert](image/invert.png)
 
 
 Project structure
