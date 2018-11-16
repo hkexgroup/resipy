@@ -3,9 +3,15 @@
 GUI for R2 family code
 ======================
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
-provides a standalone graphical user interface (GUI) along with a python API* for use in jupyter notebook.
+provides a standalone graphical user interface (GUI) along with a python API (Application Programming Interface)
+for use in jupyter notebook.
 
-*API = Application Programming Interface
+pyR2 aims to be 
+- (1) **simple and intuitive** to use (you can invert your data in one-click with all default settings)
+- (2) but still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
+
+
+pyR2 is an open-source project, everyone is welcome to contribute.
 
 
 [**DOWNLOAD BINARY HERE**](https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh)
@@ -156,7 +162,7 @@ Below is the usual commands you are likely to go through if you contribute to th
 
 First ensure you have cloned the project and are in the main project directory.
 ```bash
-git clone git@gitlab.com:sagitta1618/r2gui.git
+git clone https://gitlab.com/sagitta1618/r2gui.git
 cd r2gui
 ```
 Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
