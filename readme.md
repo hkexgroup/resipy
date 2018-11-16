@@ -9,7 +9,12 @@ provides a standalone graphical user interface (GUI) along with a python API* fo
 
 
 [**DOWNLOAD BINARY HERE**](https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh)
-Note tha Mac and Linux user needs to have *wine* installed.
+Note that Mac and Linux users need to have *wine* installed.
+
+
+What it can do
+--------------
+
 
 
 Project structure
