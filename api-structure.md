@@ -14,7 +14,9 @@ It provides methods for looking for reciprocal, fitting error model and filterin
 - `api/meshTools.py`: contains the `mesh` class for all mesh creation (quadrilateral and triangular) and plotting
 - `api/gmshWrap.py`: provides a wrapper for `gmsh.exe` to create triangular mesh
 - `api/DCA.py`: provides function for DCA filtering of IP decay curves
+- `api/r2in.py`: provides function to write `R2.in` and `cR2.in` file. Is called by the `R2 class`.
 
 
-        
+Please see the documentation for a full description of the API: ![documentation](doc/_build/html/index.html).
+
         
