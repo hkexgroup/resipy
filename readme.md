@@ -14,11 +14,23 @@ Note that Mac and Linux users need to have *wine* installed.
 
 What it can do
 --------------
-![import data](image/importData.png)
-![fit error model](image/fitErrorModel.png)
-![build a triangular mesh](image/meshTrian.png)
-![inversion settings](image/inversionSettings.png)
-![invert](image/invert.png)
+<img src="image/importData.png"  width="700">
+<figcaption>Importing data and plotting pseudo-section. Note that there are option for borehole survey, time-lapse, batch and IP data.</figcaption>
+
+<img src="image/fitErrorModel.png"  width="700">
+<figcaption>Fitting a power-law error model for DC resistivity.</figcaption>
+
+<img src="image/meshTrian.png"  width="700">
+<figcaption>Creating a triangular mesh.</figcaption>
+
+<img src="image/inversionSettings.png"  width="700">
+<figcaption>Tweaking fine inversion settings.</figcaption>
+
+<img src="image/invert.png"  width="700">
+<figcaption>Inverting and plotting inverted section with different attributes.</figcaption>
+
+
+More examples can be found in ![workshop](examples/workshop/pyR2-workshop.pdf)
 
 
 Project structure
