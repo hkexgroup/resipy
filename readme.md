@@ -30,7 +30,7 @@ What it can do
 <figcaption>Inverting and plotting inverted section with different attributes.</figcaption>
 
 
-More examples can be found in ![workshop](examples/workshop/pyR2-workshop.pdf)
+More examples can be found in ![examples/workshop/](examples/workshop/pyR2-workshop.pdf)
 
 
 Project structure
