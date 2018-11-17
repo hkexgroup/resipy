@@ -67,6 +67,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             wineVersion.append(stdout_line)
         if not wineVersion:
             warnings.warn("Wine is not installed!", Warning)
+            msg_flag = True
         else:
             wine_version = stdout_line.split()[0].split('-')[1]
             print("Wine version = "+wine_version)
@@ -98,4 +99,4 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
 #%% 
-#info = systemCheck()
+info = systemCheck()
