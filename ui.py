@@ -339,12 +339,12 @@ class App(QMainWindow):
         title = QLabel('Title')
         titleEdit = QLineEdit()
         titleEdit.setText('My beautiful survey')
-        titleEdit.setToolTip('This title will be used in the R2.in file.')
+        titleEdit.setToolTip('This title will be used in the ".in" file.')
         
         date = QLabel('Date')
         dateEdit = QLineEdit()
         dateEdit.setText(datetime.now().strftime('%Y-%m-%d')) # get today date
-        dateEdit.setToolTip('This date will be used in the R2.in file.')
+        dateEdit.setToolTip('This date will be used in the ".in" file.')
         
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
@@ -364,7 +364,7 @@ class App(QMainWindow):
                 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
         timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
-        timeLapseCheck.setToolTip('Check to enable a time-lapse survey and import.')
+        timeLapseCheck.setToolTip('Check to import time-lapse datasets and enable time-lapse inversion.')
         
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
@@ -379,7 +379,7 @@ class App(QMainWindow):
                     plotPseudo()
         boreholeCheck = QCheckBox('Borehole Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
-        boreholeCheck.setToolTip('Check if you have borehole data. This will just change the pseudo-section.')
+        boreholeCheck.setToolTip('Check if you have a borehole dataset. This will just change the pseudo-section.')
 
         def batchCheckFunc(state):
             if state == Qt.Checked:
@@ -396,7 +396,7 @@ class App(QMainWindow):
                 timeLapseCheck.setEnabled(True)
         batchCheck = QCheckBox('Batch Inversion')
         batchCheck.stateChanged.connect(batchCheckFunc)
-        batchCheck.setToolTip('Check if you want to invert multiple survey with same settings.')
+        batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings.')
         
         # select inverse or forward model
         def dimForwardFunc():
@@ -434,11 +434,11 @@ class App(QMainWindow):
         dimForward = QRadioButton('Forward')
         dimForward.setChecked(False)
         dimForward.toggled.connect(dimForwardFunc)
-        dimForward.setToolTip('To create a model and a sequence and see what output you can obtain.')
+        dimForward.setToolTip('To create a model, a sequence and see what output you can obtain.')
         dimInverse = QRadioButton('Inverse')
         dimInverse.setChecked(True)
         dimInverse.toggled.connect(dimInverseFunc)
-        dimInverse.setToolTip('To invert data already collected.')
+        dimInverse.setToolTip('To invert data that is already collected.')
         dimInvLayout = QHBoxLayout()
         dimInvLayout.addWidget(dimForward)
         dimInvLayout.addWidget(dimInverse)
@@ -479,7 +479,7 @@ class App(QMainWindow):
         wdBtn = QPushButton('Working directory:' + self.newwd + ' (Press to change)')
         wdBtn.setAutoDefault(True)
         wdBtn.clicked.connect(getwd)
-        wdBtn.setToolTip('The working directory will contains all files for the inversion (R2.in, R2.exe, protocol.dat, f001_res.vtk, ...)')
+        wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
         
         self.ftype = 'Syscal' # by default
         
@@ -537,7 +537,7 @@ class App(QMainWindow):
                         plotError()
                     activateTabs(True)
                 except:
-                    errorDump('File format not recognize or directory contains other files than .dat files')
+                    errorDump('File format is not recognized (or directory contains invalid input files)')
             
         def getfile():
             print('ftype = ', self.ftype)
@@ -562,7 +562,7 @@ class App(QMainWindow):
                     self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                          parser=self.parser)
                 except:
-                    errorDump('File not recognized.')
+                    errorDump('File is not recognized.')
                     pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
@@ -591,13 +591,13 @@ class App(QMainWindow):
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
-                          Make sure you selected the right file type.')
+                          Make sure you have selected the right file type.')
                 pass
         
         buttonf = QPushButton('Import Data')
         buttonf.setAutoDefault(True)
         buttonf.clicked.connect(getfile)
-        buttonf.setToolTip('Select file or directory that contains the data.')
+        buttonf.setToolTip('Select input file (time-lapse: select the directory that contains the data).')
         
         def getfileR():
             fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
@@ -613,11 +613,11 @@ class App(QMainWindow):
                     plotError()
 #                plotManualFiltering()
 
-        buttonfr = QPushButton('If you have reciprocals upload them here')
+        buttonfr = QPushButton('If you have a reciprocal dataset upload it here')
         buttonfr.setAutoDefault(True)
         buttonfr.clicked.connect(getfileR)
         buttonfr.hide()
-        buttonfr.setToolTip('Import file with reciprocal if you have it.')
+        buttonfr.setToolTip('Import file with reciprocal measurements (not mandatory).')
         
         def btnInvNowFunc():
             tabs.setCurrentIndex(5) # jump to inversion tab
@@ -628,7 +628,7 @@ class App(QMainWindow):
         btnInvNow.setAutoDefault(True)
         btnInvNow.clicked.connect(btnInvNowFunc)
         btnInvNow.setEnabled(False)
-        btnInvNow.setToolTip('Invert with default setting. This will redirect to the inversion tab.')
+        btnInvNow.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
         
         hbox4 = QHBoxLayout()
         hbox4.addWidget(fileType)
@@ -670,6 +670,7 @@ class App(QMainWindow):
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(ipCheckFunc)
         ipCheck.setEnabled(False)
+        ipCheck.setToolTip('Check if you have IP data or want IP forward modeling')
         hbox5 = QHBoxLayout()
         hbox5.addWidget(ipCheck)
         
@@ -1244,7 +1245,7 @@ class App(QMainWindow):
         errFitType.addItem('Power-law')
 #        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
-        errFitType.setToolTip('Select error model to use.')
+        errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
         
         mwFitError = MatplotlibWidget(navi=True)
@@ -1299,7 +1300,7 @@ class App(QMainWindow):
         iperrFitType.addItem('Power law')
         iperrFitType.addItem('Parabola')
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
-        iperrFitType.setToolTip('Select error model for IP.')
+        iperrFitType.setToolTip('Select an error model for IP.')
         ipLayout.addWidget(iperrFitType)
         
         mwIPFiltering = MatplotlibWidget(navi=True)
@@ -1437,7 +1438,7 @@ class App(QMainWindow):
             
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
-        dcaButton.setToolTip('Decay Curve Analysis filterig.\nFor more see: Flores Orozco, et al. (2017), Decay curve analysis for data error quantification in\ntime-domain induced polarization imaging')
+        dcaButton.setToolTip('Decay Curve Analysis filtering.\nFor more see: Flores Orozco, et al. (2017), Decay curve analysis for data error quantification in\ntime-domain induced polarization imaging')
         dcaButton.setAutoDefault(True)
         dcaButton.clicked.connect(dcaFiltering)
         dcaProgress = QProgressBar()
@@ -1492,7 +1493,7 @@ class App(QMainWindow):
             else:
                 surface_flag = False
             if np.sum(~np.isnan(elec[:,0])) == 0:
-                errorDump('Please first import data or specify electrode in the Topography tab.')
+                errorDump('Please first import data or specify electrodes in the Topography tab.')
                 return
             else:
                 self.r2.elec = elec
@@ -1527,7 +1528,7 @@ class App(QMainWindow):
         def meshTrianFunc():
             elec = elecTable.getTable()
             if np.sum(~np.isnan(elec[:,0])) == 0:
-                errorDump('Please first import data or specify electrode in the Topography tab.')
+                errorDump('Please first import data or specify electrodes in the Topography tab.')
                 return
             else:
                 self.r2.elec = elec
@@ -1792,7 +1793,7 @@ class App(QMainWindow):
         seqAddRow.clicked.connect(seqTable.addRow)
         def seqCreateFunc():
             if self.r2.elec is None:
-                errorDump('Input electrode position in the topography tab first.')
+                errorDump('Input electrode positions in the topography tab first.')
                 return
             else:
                 self.r2.elec = elecTable.getTable()
@@ -1813,11 +1814,11 @@ class App(QMainWindow):
         # add a forward button
         def forwardBtnFunc():
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
-                errorDump('Please specify a mesh and initial model first.')
+                errorDump('Please specify a mesh and an initial model first.')
                 return
             if self.r2.sequence is None:
                 seqCreateFunc()
-                infoDump('Creating a dipole-dipole function by default.')
+                infoDump('Creating a dipole-dipole configuration by default.')
             forwardOutputStack.setCurrentIndex(0)
             forwardLogText.clear()
             QApplication.processEvents()
@@ -2707,7 +2708,7 @@ class App(QMainWindow):
 
         btnSave = QPushButton('Save graphs')
         btnSave.clicked.connect(btnSaveGraphs)
-        btnSave.setToolTip('Save current graph to working directory.')
+        btnSave.setToolTip('Save current graph to the working directory.')
         displayOptions.addWidget(btnSave)
         
         def showDisplayOptions(val=True):
@@ -2787,7 +2788,7 @@ class App(QMainWindow):
         infoLayout = QVBoxLayout()
         aboutText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
         aboutText.setText('''<h1>About pyR2</h1> \
-                          <p><b>Version = 1.0</b></p> \ 
+                          <p><b>Version = 1.0</b></p> \
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (DC and IP)</i></p> \
                           <p>If you encouter issues or would like to submit a feature request, please raise an issue on gitlab:</p> \
                           <p><a href="https://gitlab.com/sagitta1618/r2gui/issues">https://gitlab.com/sagitta1618/r2gui/issues</a></p> \
