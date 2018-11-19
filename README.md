@@ -55,7 +55,7 @@ Download/Clone the project
 To clone the project please use git:
 
 ```
-git clone https://gitlab.com/sagitta1618/r2gui.git
+git clone https://gitlab.com/hkex/pyr2
 ```
 
 You may need to generate a public ssh key to be able to fully use the git command line.
@@ -69,7 +69,7 @@ Try the GUI
 
 To test the GUI:
 ```
-cd r2gui
+cd pyr2/src
 python ui.py
 ```
 You can then test the GUI by first setting a working directory (./src/api/test) and specifying a survey file (./src/api/test/syscalFile.csv).
