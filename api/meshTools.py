@@ -865,10 +865,16 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     z_coord=[]
     node_num=[]
     for i in range(no_nodes):
-        coord_data=fid.readline().strip().split()
-        x_coord.append(float(coord_data[0]))
-        y_coord.append(float(coord_data[1]))
-        z_coord.append(float(coord_data[2]))
+        try:
+            coord_data=fid.readline().strip().split()
+            x_coord.append(float(coord_data[0]))
+            y_coord.append(float(coord_data[1]))
+            z_coord.append(float(coord_data[2]))
+        except:# ValueError:
+            coord_data=fid.readline()
+            x_coord.append(float(coord_data[0:12])) # retrive fixed width columns if cannot parse as split strings
+            y_coord.append(float(coord_data[12:24]))
+            z_coord.append(float(coord_data[24:36]))
         node_num.append(i)
     
     #now read in element data
