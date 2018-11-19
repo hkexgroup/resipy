@@ -92,7 +92,7 @@ To edit a cell, just double click on it.
 
 Linux and Mac user
 ------------------
-pyR2 contains executables that are build only for windows. To run them you will need to install *wine*.
+pyR2 contains executables that are built only for windows. To run them you will need to install *wine*.
 
 ### On Linux
 
@@ -143,7 +143,7 @@ The issue will then be assigned to someone to be addressed. This will allow to s
 two people doing the same work in parallel.
 
 
-Best practices for developpers
+Best practices for developers
 ------------------------------
 
 Here are a set of best coding practices that we need to respect in order to make a
@@ -180,11 +180,11 @@ git merge origin/master # merge those change to the develop branch
 git push # push them to the online repository
 ```
  
-Finally the typicall workflow is as following:
+Finally the typical workflow is as following:
 1. Change branch: `git checkout <name_of_branch>`. You can see which branch you use by typing:`git branch`
 2. Check you are up to date with the master branch (as shown above): `git fetch origin; git merge origin/master`
 3. Operates your changes in the files
-4. Use `git status` to see which file need to be added to the reposity and which files have just been changed.
+4. Use `git status` to see which file need to be added to the repository and which files have just been changed.
 5. Use `git add newfile` to add new files.
 6. Use `git commit -a` to add a commit messages to the changes you are about to push.
 7. Use `git push origin <name_of_branch>` to push your changes to the repository.

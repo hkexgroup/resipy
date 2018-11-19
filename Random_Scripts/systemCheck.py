@@ -5,6 +5,8 @@ System check
 @author: jamyd91
 """
 import multiprocessing, platform, warnings, os # python standard libs
+import re
+from subprocess import PIPE, Popen
 
 #%% ram amount check. 
 #Now for complicated meshes we need alot more RAM. the below function is a os agnostic
@@ -51,16 +53,34 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
                 totalMemory += temp[idx+1:]
                 
     elif OpSys=='Darwin':
-        totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
-        totalMemory = int(totalMemory)*1000
+        sysinfo = []
+        info = Popen(['system_profiler SPHardwareDataType'], shell = True, stdout=PIPE, universal_newlines=True)
+        for stdout_line in iter(info.stdout.readline, ''):
+            sysinfo.append(stdout_line)
+        memoryLine = [s for s in sysinfo if any(xs in s for xs in ['Memory'])] 
+        totalMemory = re.findall('\\d+', memoryLine[0]) 
+        totalMemory = int(totalMemory[0])*1000
         #detect wine 
-        is_wine = os.popen("wine --version").readlines()#[0].split()[0]
-        if is_wine.find("wine") == -1:
+        wineVersion = []
+        is_wine = Popen(['/usr/local/bin/wine --version'], stdout=PIPE, shell=True, universal_newlines=True)
+        for stdout_line in iter(is_wine.stdout.readline, ""):
+            wineVersion.append(stdout_line)
+        if not wineVersion:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
         else:
-            wine_version = is_wine.split()[0].split('-')[1]
+            wine_version = stdout_line.split()[0].split('-')[1]
             print("Wine version = "+wine_version)
+#        totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
+#        totalMemory = int(totalMemory)*1000
+#        #detect wine 
+#        is_wine = os.popen("wine --version").readlines()#[0].split()[0]
+#        if is_wine.find("wine") == -1:
+#            warnings.warn("Wine is not installed!", Warning)
+#            msg_flag = True
+#        else:
+#            wine_version = is_wine.split()[0].split('-')[1]
+#            print("Wine version = "+wine_version)
         
     else:
         raise OSError("unrecognised/unsupported operating system")
