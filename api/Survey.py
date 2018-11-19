@@ -1239,7 +1239,35 @@ class Survey(object):
         for i in range(1,len(elec)):
             index = index | (self.array == elec[i]).any(-1)
         self.filterData(~index)
+        
+    def zeroIndexes(self): # normalise the indexes the sequence matrix to start at 1 
+        df = self.df
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        imin = np.min(sch_mat)
+        if imin > 1:
+            print("it looks like scheduling indexing starts at: %i"%imin)
+            print("normalising electrode indexing to start at 1.")
+        corrected = sch_mat - (imin - 1)
+        #return corrected
+        df['a'] = corrected[:,0]
+        df['b'] = corrected[:,1]
+        df['m'] = corrected[:,2]
+        df['n'] = corrected[:,3]
+        self.df = df 
 
+    def swapIndexes(self,old_indx,new_indx): # replace the electrode number in a sequence matrix
+        #say for example you have a dud electrode which was replaced by a new electrode number. 
+        df = self.df
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        idx = np.argwhere(sch_mat == old_indx)
+        sch_mat[idx[:,0],idx[:,1]] = new_indx
+        corrected = sch_mat
+        df['a'] = corrected[:,0]
+        df['b'] = corrected[:,1]
+        df['m'] = corrected[:,2]
+        df['n'] = corrected[:,3]
+        self.df = df 
+        #return replace,corrected
 
 """        
     def addModError(self, fname):

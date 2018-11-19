@@ -2105,7 +2105,7 @@ class App(QMainWindow):
         invForm.addRow(toleranceLabel, tolerance)
         
         def max_iterationsFunc():
-            self.r2.param['max_iterations'] = int(max_iterations.text())
+            self.r2.param['max_iter'] = int(max_iterations.text())
         max_iterationsLabel = QLabel('<a href="max_iterations">Maximum number of iterations</a>:')
         max_iterationsLabel.linkActivated.connect(showHelp)
         max_iterations = QLineEdit()
@@ -2146,6 +2146,7 @@ class App(QMainWindow):
             self.r2.param['min_error'] = float(min_error.text())
         min_errorLabel = QLabel('<a href="errorParam"><code>min_error</code></a>:')
         min_errorLabel.linkActivated.connect(showHelp)
+        min_errorLabel.setVisible(False)
         min_error = QLineEdit()
         min_error.setText('0.01')
         min_error.editingFinished.connect(min_errorFunc)
