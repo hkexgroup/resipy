@@ -239,7 +239,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
   
     if doi == -1:#then set to a default 
         doi = np.max(elec_z) - (np.min(elec_z) - abs(np.max(elec_x) - np.min(elec_x))/2)
-            
+                    
     print("doi in gmshWrap.py: %f"%doi)
     
     if cl == -1:
@@ -292,7 +292,12 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*np.mean(np.diff(electrodes[0])))
             y_pts = np.append(y_pts,max(electrodes[1])+1)
             flag.append('topography point')
-    
+            
+    #catch an error where the fine mesh region will truncate where the electrodes are        
+    if min(electrodes[0]) < min(x_pts):
+        raise ValueError("the minimum X coordinate value for the surface of the mesh must be smaller than the minimum electrode X coordinate")
+    if max(electrodes[0]) > max(x_pts):
+        raise ValueError("The maximum X coordinate value for the surface of the mesh must be greater than the maximum electrode X coordinate") 
     
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
     x_pts=x_pts[idx] # compute sorted arrays
@@ -352,6 +357,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         z_base = np.append(z_base,y_pts[-1]- abs(doi))#puts in extra point at base underneath last x and y point
         x_base = np.append(x_base,x_pts[-1])
     # a smoothed version of the topography ... 
+    if np.max(z_base) > np.min(electrodes[1]):
+        #warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
+        raise Exception("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!")
     
     basal_pnt_cache = []
     for i in range(len(x_base)):
