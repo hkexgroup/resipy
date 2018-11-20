@@ -30,23 +30,58 @@ def syscalParser(fname, spacing=None):
         df = pd.read_csv(fname, skipinitialspace=True)
         # delete space at the end and the beginning of columns names
         headers = df.columns
-        newheaders = list(map(str.strip, headers)) 
-        dico = dict(zip(headers, newheaders))
-        df = df.rename(index=str, columns=dico)
-        df = df.rename(columns={'Spa.1':'a',
-                                'Spa.2':'b',
-                                'Spa.3':'m',
-                                'Spa.4':'n',
-                                'In':'i',
-                                'Vp':'vp',
-                                'Dev.':'dev',
-                                'M':'ip', #M1, M2,...Mn are good for now when importing
-                                'Sp':'sp'})
+        if 'Spa.1' in headers:
+            newheaders = list(map(str.strip, headers)) 
+            dico = dict(zip(headers, newheaders))
+            df = df.rename(index=str, columns=dico)
+            df = df.rename(columns={'Spa.1':'a',
+                                    'Spa.2':'b',
+                                    'Spa.3':'m',
+                                    'Spa.4':'n',
+                                    'In':'i',
+                                    'Vp':'vp',
+                                    'Dev.':'dev',
+                                    'M':'ip', #M1, M2,...Mn are good for now when importing
+                                    'Sp':'sp'})
+        else:
+            newheaders = list(map(str.strip, headers)) 
+            dico = dict(zip(headers, newheaders))
+            df = df.rename(index=str, columns=dico)
+            df = df.rename(columns={'xA(m)':'a',
+                                    'xB(m)':'b',
+                                    'xM(m)':'m',
+                                    'xN(m)':'n',
+                                    'Dev.':'dev',
+                                    'M (mV/V)':'ip',
+                                    'SP (mV)':'sp',
+                                    'VMN (mV)':'vp',
+                                    'IAB (mA)':'i',
+                                    'M1 (mV/V)':'M1',
+                                    'M2 (mV/V)':'M2',
+                                    'M3 (mV/V)':'M3',
+                                    'M4 (mV/V)':'M4',
+                                    'M5 (mV/V)':'M5',
+                                    'M6 (mV/V)':'M6',
+                                    'M7 (mV/V)':'M7',
+                                    'M8 (mV/V)':'M8',
+                                    'M9 (mV/V)':'M9',
+                                    'M10 (mV/V)':'M10',
+                                    'M11 (mV/V)':'M11',
+                                    'M12 (mV/V)':'M12',
+                                    'M13 (mV/V)':'M13',
+                                    'M14 (mV/V)':'M14',
+                                    'M15 (mV/V)':'M15',
+                                    'M16 (mV/V)':'M16',
+                                    'M17 (mV/V)':'M17',
+                                    'M18 (mV/V)':'M18',
+                                    'M19 (mV/V)':'M19',
+                                    'M20 (mV/V)':'M20',
+                                    'TM1 (ms)':'TM1'})
         
         array = df[['a','b','m','n']].values
         arrayMin = np.min(np.unique(np.sort(array.flatten())))
         if arrayMin != 0:
-            array = array - arrayMin
+            array -= arrayMin
         espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
         array = np.round(array/espacing+1).astype(int)
         df[['a','b','m','n']] = array
