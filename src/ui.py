@@ -2790,7 +2790,7 @@ class App(QMainWindow):
         aboutText.setText('''<h1>About pyR2</h1> \
                           <p><b>Version: 1.0</b></p> \
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
-                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on out gitlab repository at:</p> \
+                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
                           <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
                           <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
