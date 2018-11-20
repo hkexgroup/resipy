@@ -44,7 +44,10 @@ def syscalParser(fname, spacing=None):
                                 'Sp':'sp'})
         
         array = df[['a','b','m','n']].values
-        espacing = np.unique(np.sort(array.flatten()))[1]
+        arrayMin = np.min(np.unique(np.sort(array.flatten())))
+        if arrayMin != 0:
+            array = array - arrayMin
+        espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
         array = np.round(array/espacing+1).astype(int)
         df[['a','b','m','n']] = array
         df['resist'] = df['vp']/df['i']
