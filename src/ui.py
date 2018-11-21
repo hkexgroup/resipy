@@ -730,7 +730,7 @@ class App(QMainWindow):
         
         # topo informations
         tabImportingTopo = QWidget()
-        tabImporting.addTab(tabImportingTopo, 'Topography')
+        tabImporting.addTab(tabImportingTopo, 'Electrodes (XYZ/Topo)')
         
         # electrode table
         class ElecTable(QTableWidget):
@@ -978,7 +978,7 @@ class App(QMainWindow):
                 nrows = None if nrows == '' else int(nrows)
                 parserTable.readTable(self.fnameManual, delimiter=delimiter,
                                           skiprows=skipRows, nrows=nrows)
-                fillBoxes(boxes[:-1]) # last one is elecSpacingEdit
+                fillBoxes(boxes) # last one is elecSpacingEdit
             except ValueError as e:
                 errorDump('Import error:', e)
 
@@ -997,10 +997,10 @@ class App(QMainWindow):
         ipStartBoxLabel = QLabel('IP start column')
         ipEndBoxLabel = QLabel('IP end column')
         chargeabilityBoxLabel = QLabel('Chargeability')
-        elecSpacingLabel = QLabel('Electrode spacing')
+#        elecSpacingLabel = QLabel('Electrode spacing')
        
         boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
-                 ipEndBoxLabel, chargeabilityBoxLabel, elecSpacingLabel]
+                 ipEndBoxLabel, chargeabilityBoxLabel]#, elecSpacingLabel]
         
         aBox = QComboBox()
         bBox = QComboBox()
@@ -1012,13 +1012,14 @@ class App(QMainWindow):
         ipStartBox = QComboBox()
         ipEndBox = QComboBox()
         chargeabilityBox = QComboBox()
-        elecSpacingEdit = QLineEdit('')
-        elecSpacingEdit.setValidator(QDoubleValidator())
-        elecSpacingEdit.setFixedWidth(80)
-        elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
+#        elecSpacingEdit = QLineEdit('')
+#        elecSpacingEdit.setEnabled(False)
+#        elecSpacingEdit.setValidator(QDoubleValidator())
+#        elecSpacingEdit.setFixedWidth(80)
+#        elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
         
         boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
-                 ipEndBox, chargeabilityBox, elecSpacingEdit]
+                 ipEndBox, chargeabilityBox]#, elecSpacingEdit]
                 
         def fillBoxes(bs):
             for b in bs:
@@ -1067,6 +1068,7 @@ class App(QMainWindow):
         parserTable = ParserTable()
         
         def importBtnFunc():
+            self.r2 = R2()
             print('importing data')
             colIndex = []
             newHeaders = []
@@ -1107,7 +1109,7 @@ class App(QMainWindow):
                 skipRows = None if skipRows == '' else int(skipRows)
                 nrows = nrowsEdit.text()
                 nrows = None if nrows == '' else int(nrows)
-                espacing = None if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
+                espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
                 df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
@@ -1119,8 +1121,11 @@ class App(QMainWindow):
                 if 'ip' not in df.columns:
                     df['ip'] = 0
                 array = df[['a','b','m','n']].values.copy()
+                arrayMin = np.min(np.unique(np.sort(array.flatten())))
+                if arrayMin != 0:
+                    array -= arrayMin
                 if espacing is None:
-                    espacing = np.unique(np.sort(array.flatten()))[1]
+                    espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
                 array = np.round(array/espacing+1).astype(int)
                 df[['a','b','m','n']] = array
                 imax = int(np.max(array))
@@ -1519,7 +1524,7 @@ class App(QMainWindow):
             else:
                 surface_flag = False
             if np.sum(~np.isnan(elec[:,0])) == 0:
-                errorDump('Please first import data or specify electrodes in the Topography tab.')
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
                 self.r2.elec = elec
@@ -1554,7 +1559,7 @@ class App(QMainWindow):
         def meshTrianFunc():
             elec = elecTable.getTable()
             if np.sum(~np.isnan(elec[:,0])) == 0:
-                errorDump('Please first import data or specify electrodes in the Topography tab.')
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
                 self.r2.elec = elec
@@ -1819,7 +1824,7 @@ class App(QMainWindow):
         seqAddRow.clicked.connect(seqTable.addRow)
         def seqCreateFunc():
             if self.r2.elec is None:
-                errorDump('Input electrode positions in the topography tab first.')
+                errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
             else:
                 self.r2.elec = elecTable.getTable()
