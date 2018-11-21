@@ -1134,6 +1134,9 @@ class App(QMainWindow):
 #                    imax = imax+1
                 elec = np.zeros((imax,3))
                 elec[:,0] = np.arange(0,imax)*espacing
+                nbElecEdit.setText('%s' % (len(elec)))
+#                nbElecEdit.setEnabled(False)
+                elecDx.setText('%s' % (espacing))
                 return elec, df
 
             self.parser = parserFunc
