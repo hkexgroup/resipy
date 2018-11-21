@@ -15,6 +15,28 @@ from PyQt5.QtGui import QIcon, QKeySequence, QPixmap, QIntValidator, QDoubleVali
 from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
 
+#%% General crash ERROR
+import threading
+import traceback
+
+def errorMessage(etype, value, tb):
+    print('ERROR begin:')
+    traceback.print_exception(etype, value, tb)
+    print('ERROR end.')
+    errorMsg = traceback.format_exception(etype, value, tb,limit=None, chain=True)
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Critical)
+    msg.setText("Critical error:")
+    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p>''')
+    msg.setWindowTitle("Error!")
+    msg.setDetailedText('%s\n%s' % ((errorMsg[1]).replace('  ', ''),errorMsg[-1]))
+    msg.setStandardButtons(QMessageBox.Retry)
+    msg.exec_()
+
+def catchErrors():
+    sys.excepthook = errorMessage
+    threading.Thread.__init__
+#%%
 QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
 
 #print('elpased', time.time()-a)
@@ -2877,6 +2899,7 @@ class MyTableWidget(QWidget):
 '''
 
 if __name__ == '__main__':
+    catchErrors()
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
     print(os.path.join(bundle_dir, 'logo.png'))
