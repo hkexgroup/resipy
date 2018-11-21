@@ -546,6 +546,10 @@ class App(QMainWindow):
                 restartFunc()
                 self.datadir = os.path.dirname(fname)
                 importFile(fname)
+            if self.ftype == 'Syscal':
+                nbElecEdit.setText('%s' % (len(self.r2.elec)))
+                nbElecEdit.setEnabled(False)
+                elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
         
         def importFile(fname):            
             if len(self.r2.surveys) > 0:
@@ -857,7 +861,7 @@ class App(QMainWindow):
         elecButton.setAutoDefault(True)
         elecButton.clicked.connect(elecButtonFunc)
         nbElecEdit = QLineEdit()
-        nbElecEdit.setValidator(QIntValidator())
+        nbElecEdit.setValidator(QDoubleValidator())
         nbElecLabel = QLabel('Number of electrodes:')
         elecDx = QLineEdit('0.0')
         elecDx.setValidator(QDoubleValidator())
