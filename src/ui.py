@@ -24,12 +24,15 @@ def errorMessage(etype, value, tb):
     traceback.print_exception(etype, value, tb)
     print('ERROR end.')
     errorMsg = traceback.format_exception(etype, value, tb,limit=None, chain=True)
+    finalError =''
+    for errs in errorMsg:
+        finalError += errs
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
     msg.setText("Critical error:")
-    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p>''')
+    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p><br>''')
     msg.setWindowTitle("Error!")
-    msg.setDetailedText('%s\n%s' % ((errorMsg[1]).replace('  ', ''),errorMsg[-1]))
+    msg.setDetailedText('%s' % (finalError))
     msg.setStandardButtons(QMessageBox.Retry)
     msg.exec_()
 
