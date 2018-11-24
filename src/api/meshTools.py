@@ -28,7 +28,7 @@ Nb: Module has a heavy dependence on numpy and matplotlib packages
 #import standard python packages
 #import tkinter as tk
 #from tkinter import filedialog
-import os, platform, warnings, multiprocessing
+import os, platform, warnings, multiprocessing, re
 from subprocess import PIPE, Popen, call
 import time
 #import anaconda default libraries
@@ -1436,6 +1436,15 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = 'gmsh.exe '+file_name+'.geo -2'
+    elif platform.system() == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd_line = ['%s' % (winePath[0].strip('\n')), 'gmsh.exe', file_name+'.geo', '-2']
+            else:
+                cmd_line = ['/usr/local/bin/wine', 'gmsh.exe', file_name+'.geo', '-2']
     else:
         cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
         
@@ -1658,19 +1667,31 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
                 totalMemory += temp[idx+1:]
                 
     elif OpSys=='Darwin':
-        p = Popen('hwprefs memory_size', stdout=PIPE, shell=True)
-        totalMemory = p.readlines()[0].split()[0]
-#        totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
-        totalMemory = int(totalMemory)*1000
-        #detect wine 
-        p = Popen('wine --version', stdout=PIPE, shell=True)
-        is_wine = str(p.stdout.readline())#[0].split()[0]
-        if is_wine.find("wine") == -1:
+        sysinfo = []
+        info = Popen(['system_profiler','SPHardwareDataType'], shell = False, stdout=PIPE, universal_newlines=True)
+        for stdout_line in iter(info.stdout.readline, ''):
+            sysinfo.append(stdout_line)
+        memoryLine = [s for s in sysinfo if any(xs in s for xs in ['Memory'])] 
+        totalMemory = re.findall('\\d+', memoryLine[0]) 
+        totalMemory = int(totalMemory[0])*1000
+        #detect wine
+        try: 
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+            else:
+                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+            wineVersion = []
+            for stdout_line in iter(is_wine.stdout.readline, ""):
+                wineVersion.append(stdout_line)
+            wine_version = stdout_line.split()[0].split('-')[1]
+            print("Wine version = "+wine_version)
+        except:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
-        else:
-            wine_version = is_wine.split()[0].split('-')[1]
-            print("Wine version = "+wine_version)
         
     else:
         raise OSError("unrecognised/unsupported operating system")
