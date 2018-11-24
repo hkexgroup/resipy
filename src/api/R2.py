@@ -790,6 +790,8 @@ class R2(object): # R2 master class instanciated by the GUI
         for i, df in enumerate(dfs):
             d = os.path.join(self.dirname, str(i))
             dirs.append(d)
+            if os.path.exists(d) is True:
+                shutil.rmtree(d)
             os.mkdir(d)
             for t in toMove:
                 if os.path.exists(os.path.join(self.dirname, t)) is True:

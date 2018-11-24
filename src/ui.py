@@ -2009,6 +2009,16 @@ class App(QMainWindow):
 #        job_type.currentIndexChanged.connect(job_typeFunc)
 #        invForm.addRow(QLabel('Job Type:'), job_type)
         
+#        def parallelFunc(state):
+#            if state == Qt.Checked:
+#                self.parallel = True
+#            else:
+#                self.parallel = False
+#        parallelLabel = QLabel('Parallel inversion')
+#        parallelCheck =QCheckBox()
+#        parallelCheck.stateChanged.connect(parallelFunc)
+#        invForm.addRow(parallelLabel, parallelCheck)
+        
         def modErrFunc(state):
             if state == Qt.Checked:
                 self.modErr = True
@@ -2447,6 +2457,14 @@ class App(QMainWindow):
                 if newFlag:
                     mwRMS.plot(plotRMS)
                 QApplication.processEvents()
+            
+            def funcLogOnly(text): #for // processing
+                self.inversionOutput = text + '\n'
+                cursor = logText.textCursor()
+                cursor.movePosition(cursor.End)
+                cursor.insertText(text+'\n')
+                logText.ensureCursorVisible()
+                QApplication.processEvents()
                 
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
@@ -2458,7 +2476,8 @@ class App(QMainWindow):
                                dict(zip(regid, fixed)),
                                dict(zip(regid, phase0)))
             
-            self.r2.invert(iplot=False, dump=func, modErr=self.modErr)
+#            f = print if self.parallel is True else func
+            self.r2.invert(iplot=False, dump=func, modErr=self.modErr)#,parallel=self.parallel)
             self.r2.proc = None
             try:
                 sectionId.currentIndexChanged.disconnect()
