@@ -571,10 +571,6 @@ class App(QMainWindow):
                 restartFunc()
                 self.datadir = os.path.dirname(fname)
                 importFile(fname)
-            if self.ftype == 'Syscal':
-                nbElecEdit.setText('%s' % (len(self.r2.elec)))
-                nbElecEdit.setEnabled(False)
-                elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
         
         def importFile(fname):            
             if len(self.r2.surveys) > 0:
@@ -616,6 +612,9 @@ class App(QMainWindow):
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
+                nbElecEdit.setText(str(len(self.r2.elec)))
+                nbElecEdit.setEnabled(False)
+                elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
                 
             except Exception as e:
                 print(e)
@@ -852,9 +851,14 @@ class App(QMainWindow):
                     table = t
                 return table
             
-            def readTable(self, fname):
+            def readTable(self, fname, nbElec=None):
                     df = pd.read_csv(fname, header=None)
                     tt = df.values
+                    if nbElec is not None:
+                        if tt.shape[0] != nbElec:
+                            errorDump('The file must have exactly ' + \
+                                      str(nbElec) + ' lines (same number as number of electrodes).')
+                            return
                     if 'Buried' in self.headers:
                         if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
                             self.initTable(tt[:,:-1])
@@ -881,7 +885,11 @@ class App(QMainWindow):
         def elecButtonFunc():
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File', directory=self.datadir)
             if fname != '':
-                elecTable.readTable(fname)
+                if self.iForward is False:
+                    nbElec = int(nbElecEdit.text())
+                else:
+                    nbElec = None
+                elecTable.readTable(fname, nbElec=nbElec)
         elecButton = QPushButton('Import from CSV files (no headers)')
         elecButton.setAutoDefault(True)
         elecButton.clicked.connect(elecButtonFunc)

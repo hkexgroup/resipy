@@ -1,4 +1,4 @@
-..\pyenv\Scripts\activate.bat && ^
+..\..\pyenv\Scripts\activate.bat && ^
 pyinstaller -y ui-dir.spec && ^
 cd dist && ^
 7z a -r ui.zip ui && ^
