@@ -1634,9 +1634,11 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         print("Kernal type: %s"%OpSys)
     #check the amount of ram 
     if OpSys=="Linux":
-        totalMemory = os.popen("free -m").readlines()[1].split()[1]
+        p = Popen('free -m', stdout=PIPE, shell=True)
+        totalMemory = p.stdout.readlines()[1].split()[1]
         #detect wine 
-        is_wine = os.popen("wine --version").readline()#[0].split()[0]
+        p = Popen("wine --version", stdout=PIPE, shell=True)
+        is_wine = str(p.stdout.readline())#[0].split()[0]
         if is_wine.find("wine") == -1:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
@@ -1645,7 +1647,9 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             print("Wine version = "+wine_version)
                           
     elif OpSys=="Windows":
-        info = os.popen("systeminfo").readlines()
+        p = Popen('systeminfo', stdout=PIPE, shell=True)
+        info = p.stdout.realines()
+#        info = os.popen("systeminfo").readlines()
         for i,line in enumerate(info):
             if line.find("Total Physical Memory")!=-1:
                 temp = line.split()[3]
@@ -1654,10 +1658,13 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
                 totalMemory += temp[idx+1:]
                 
     elif OpSys=='Darwin':
-        totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
+        p = Popen('hwprefs memory_size', stdout=PIPE, shell=True)
+        totalMemory = p.readlines()[0].split()[0]
+#        totalMemory = os.popen("hwprefs memory_size").readlines()[0].split()[0]
         totalMemory = int(totalMemory)*1000
         #detect wine 
-        is_wine = os.popen("wine --version").readline()#[0].split()[0]
+        p = Popen('wine --version', stdout=PIPE, shell=True)
+        is_wine = str(p.stdout.readline())#[0].split()[0]
         if is_wine.find("wine") == -1:
             warnings.warn("Wine is not installed!", Warning)
             msg_flag = True
