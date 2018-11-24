@@ -43,4 +43,5 @@ coll = COLLECT(exe,
 app = BUNDLE(coll,
              name='pyR2.app',
              icon='icon.icns',
-             bundle_identifier=None)
+             bundle_identifier=None,
+             info_plist={'NSHighResolutionCapable': 'True'})
