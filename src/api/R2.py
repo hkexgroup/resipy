@@ -729,6 +729,15 @@ class R2(object): # R2 master class instanciated by the GUI
             
         if OS == 'Windows':
             cmd = [exeName]
+        elif OS == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd = ['%s' % (winePath[0].strip('\n')), exeName]
+            else:
+                cmd = ['/usr/local/bin/wine', exeName]
         else:
             cmd = ['wine',exeName]
             
