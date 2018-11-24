@@ -13,6 +13,7 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
+from multiprocessing import Pool
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -760,9 +761,64 @@ class R2(object): # R2 master class instanciated by the GUI
                 dump(text.rstrip())
 
         os.chdir(cwd)
+    
+    def runParallel(self, dirname=None, dump=print):
+        """ Run R2 in // according to the number of cores available.
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory.
+        dump : function, optional
+            Function to be passed to `R2.runR2()` for printing output during
+            inversion.
+        """
+        if dirname is None:
+            dirname = self.dirname
+        
+        # split the protocol.dat
+        dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
+                            sep='\t', header=None, engine='python').reset_index()
+        
+        idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
+        idf.append(len(dfall))
+        dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
+        
+        # create individual dirs
+        toMove = ['R2.exe','cR2.exe','mesh.dat','R2.in','cR2.in','res0.dat','resistivity.dat']
+        dirs = []
+        for i, df in enumerate(dfs):
+            d = os.path.join(self.dirname, str(i))
+            dirs.append(d)
+            os.mkdir(d)
+            for t in toMove:
+                if os.path.exists(os.path.join(self.dirname, t)) is True:
+                    shutil.copy(os.path.join(self.dirname, t), os.path.join(d, t))
+            outputname = os.path.join(d, 'protocol.dat')
+            with open(outputname, 'w') as f:
+                df.to_csv(f, sep='\t', header=False, index=False)
+                
+        # get number of cores available
+        ncores = mt.systemCheck()['core_count']
+        p = Pool(ncores)
+        p.starmap(self.runR2, tuple(zip(dirs, [dump for i in range(len(dirs))])))
+        
+        # get them all back in the main dirname
+        toMove = ['f001_res.dat','f001_res.vtk','f001_err.dat','f001_sen.dat']
+        for i, d in enumerate(dirs):
+            for f in toMove:
+                shutil.move(os.path.join(d, f), os.path.join(self.dirname, f.replace('001',str(i+1).zfill(3))))
+        shutil.move(os.path.join(d, 'electrodes.dat'), os.path.join(self.dirname, 'electrodes.dat'))
+        shutil.move(os.path.join(d, 'electrodes.vtk'), os.path.join(self.dirname, 'electrodes.vtk'))
+        
+        # delete the dirs
+        [shutil.rmtree(d) for d in dirs]
+        
+        print('----------- END OF INVERSION IN // ----------')
         
         
-    def invert(self, param={}, iplot=False, dump=print, modErr=False):
+    def invert(self, param={}, iplot=False, dump=print, modErr=False,
+               parallel=False):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -777,6 +833,12 @@ class R2(object): # R2 master class instanciated by the GUI
         dump : function, optinal
             Function to print the output of the inversion. To be passed to 
             `R2.runR2()`.
+        modErr : bool, optional
+            If `True`, the model error will be compute and added before
+            inversion.
+        parallel : bool, optional
+            If `True`, batch and time-lapse survey will be inverted in //. No
+            output will be display during inversion.
         """
         # clean meshResults list
         self.meshResults = []
@@ -819,7 +881,10 @@ class R2(object): # R2 master class instanciated by the GUI
                     os.path.join(self.dirname, 'Start_res.dat'))
             
         dump('-------- Main inversion ---------------\n')
-        self.runR2(dump=dump)
+        if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
+            self.runParallel(dump=dump)
+        else:
+            self.runR2(dump=dump)
         
         if iplot is True:
             self.showResults()
@@ -1661,7 +1726,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showMesh()
 #k.write2in()
 #k.write2protocol()
-#k.invert(iplot=False)
+#k.invert(iplot=False, parallel=True)
 #k.saveInvPlots(attr='difference(percent)')
 #k.showResults(index=3)
 #k.showResults(index=1)
