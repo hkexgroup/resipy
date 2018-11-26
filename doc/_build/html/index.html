@@ -431,7 +431,7 @@ them to <cite>R2.meshResults</cite> list.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.invert">
-<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Invert the data, first generate R2.in file, then run
 inversion using appropriate wrapper, then return results.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -449,9 +449,19 @@ inversion using appropriate wrapper, then return results.</p>
 <cite>R2.showResults()</cite>.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optinal</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to print the output of the inversion. To be passed to 
 <cite>R2.runR2()</cite>.</p>
+</div></blockquote>
+<p><strong>modErr</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, the model error will be compute and added before
+inversion.</p>
+</div></blockquote>
+<p><strong>parallel</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>If <cite>True</cite>, batch and time-lapse survey will be inverted in //. No
+output will be display during inversion.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -490,6 +500,29 @@ inversion using appropriate wrapper, then return results.</p>
 the <cite>self.runR2()</cite> automatically use a homogenous model as starting
 for inversion. The only purpose of this is to use an inhomogeous
 starting model to invert data from forward modelling.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.runParallel">
+<code class="descname">runParallel</code><span class="sig-paren">(</span><em>dirname=None</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runParallel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run R2 in // according to the number of cores available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str, optional</p>
+<blockquote>
+<div><p>Path of the working directory.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote class="last">
+<div><p>Function to be passed to <cite>R2.runR2()</cite> for printing output during
+inversion.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">

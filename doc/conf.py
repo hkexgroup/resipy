@@ -15,7 +15,7 @@
 import os
 import sys
 #sys.path.insert(0, os.path.abspath('..'))
-sys.path.append(os.path.relpath('..'))
+sys.path.append(os.path.relpath('../src'))
 
 
 # -- Project information -----------------------------------------------------
