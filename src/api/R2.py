@@ -367,7 +367,12 @@ class R2(object): # R2 master class instanciated by the GUI
                     geom_input['surface'] = [surface[:,0], surface[:,1]]
                 else:
                     geom_input['surface'] = [surface[:,0], surface[:,2]]
-                
+            
+            whole_space = False
+            if np.sum(buried) == len(buried) and surface is None:
+                # all electrodes buried and no surface given
+                whole_space = True
+
             elec_type = elec_type.tolist()
             print('elec_type', elec_type)
             
@@ -375,7 +380,8 @@ class R2(object): # R2 master class instanciated by the GUI
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
                              cl=cl, dump=dump, show_output=True,
-                             doi=self.doi-max(elec_z), **kwargs)
+                             doi=self.doi-max(elec_z), whole_space=whole_space,
+                             **kwargs)
             
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
