@@ -14,9 +14,9 @@ pyR2 aims to be
 
 pyR2 is an open-source project, everyone is welcome to contribute.
 
-[**Windows standalone**](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
-[**macOS app**](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
-[**Linux standalone**](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm)
+- [**Windows standalone**](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
+- [**macOS app**](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
+- [**Linux standalone**](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm)
 
 Note that Mac and Linux users need to have *wine* installed.
 
