@@ -2822,7 +2822,7 @@ class App(QMainWindow):
         tabs.setTabEnabled(6,False)
         
         invError = QWidget()
-        tabPostProcessing.addTab(invError, 'Inversion Errors (1)')
+        tabPostProcessing.addTab(invError, 'Psuedo Section Error')
         invErrorLayout = QVBoxLayout()
         
         def plotInvError():
@@ -2834,7 +2834,7 @@ class App(QMainWindow):
 
         
         invError2 = QWidget()
-        tabPostProcessing.addTab(invError2, 'Inversion Errors (2)')
+        tabPostProcessing.addTab(invError2, 'Normalised Errors')
         invErrorLayout2 = QVBoxLayout()
         
         def plotInvError2():
