@@ -6,6 +6,8 @@ This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/
 provides a standalone graphical user interface (GUI) along with a python API (Application Programming Interface)
 for use in jupyter notebook.
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/hkex/pyr2/master?filepath=jupyter-notebook)
+
 pyR2 aims to be 
 - (1) **simple and intuitive** to use (you can invert your data in one-click with all default settings)
 - (2) but still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
