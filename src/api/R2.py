@@ -375,7 +375,7 @@ class R2(object): # R2 master class instanciated by the GUI
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
                              cl=cl, dump=dump, show_output=True,
-                             doi=self.doi-max(elec_z))
+                             doi=self.doi-max(elec_z), **kwargs)
             
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
