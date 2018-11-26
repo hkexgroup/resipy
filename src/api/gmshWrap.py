@@ -180,8 +180,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     the area you are surveying, otherwise some funky errors will occur in the mesh. 
 
     #### TODO: search through each set of points and check for repeats 
-    #### TODO: check with some real data
-    #### TODO: change nuemon boundary distance to be based on the survey extent 
     """
     print('Generating gmsh input file...\n')
     #formalities and error checks
@@ -775,6 +773,233 @@ def msh_parse(file_path):
     #also we'd need to import the mesh class, and its not a good idea to have modules
     #importing each other, as meshTools has a dependency on gmshWrap. 
         
+#%% 2D whole space 
+
+def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_input = None,
+                       file_path='mesh.geo',cl=1):
+    """
+    writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
+    
+    Parameters
+    ----------
+    electrodes: array like
+        first column/list is the x coordinates of electrode positions, second column
+        is the elevation
+    padding: float, optional
+        Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
+        
+    geom_input: dict, optional
+        Allows for further customisation of the 2D mesh, its a
+        dictionary contianing surface topography, polygons and boundaries 
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5. 
+    
+    Returns
+    ----------
+    Node_pos: numpy array
+        The indexes for the mesh nodes corresponding to the electrodes input, the ordering of the nodes
+        should be the same as the input of 'electrodes'
+    .geo: file
+        Can be run in gmsh
+
+    NOTES
+    ----------
+     geom_input format:
+        the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
+        currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
+        the first borehole string should be given the key 'borehole1' and so on. The code stops
+        searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
+        and polygons to the mesh. See below example:
+            
+            geom_input = {'surface': [surf_x,surf_z],
+              'boundary1':[bound1x,bound1y],
+              'polygon1':[poly1x,poly1y]} 
+            
+    electrodes and electrode_type (if not None) format: 
+        
+            electrodes = [[x1,x2,x3,...],[y1,y2,y3,...]]
+            electrode_type = ['electrode','electrode','buried',...]
+        
+        like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
+        The code will cycle through each borehole and internally sort them and add them to 
+        the mesh. 
+        
+    The code expects that all polygons, boundaries and electrodes fall within x values 
+    of the actaul survey area. So make sure your topography / surface electrode points cover 
+    the area you are surveying, otherwise some funky errors will occur in the mesh. 
+
+    #### TODO: search through each set of points and check for repeats ?
+    """
+    
+    elec_x = electrodes[0]
+    elec_z = electrodes[1]
+    
+    if len(elec_x) != len(elec_z):
+        raise ValueError("The length of the x coordinate array does not match of the Z coordinate")
+    
+    if geom_input != None: 
+        if not isinstance(geom_input,dict):
+            raise TypeError ("'geom_input' is not a dictionary type object. Dict type is expected for the first argument of genGeoFile_adv")
+    elif geom_input is None:
+        geom_input = {}
+        
+    fh = open(file_path,'w') #file handle
+    
+    fh.write("//Gmsh wrapper code version 1.0 (run the following in gmsh to generate a triangular mesh for 2D whole space)\n")
+    fh.write("//2D mesh coordinates\n")
+    fh.write("cl=%.2f;//define characteristic length\n" %cl)
+    
+    #create square around all of the electrodes
+    x_dist = abs(np.max(elec_x) - np.min(elec_x))
+    z_dist = abs(np.max(elec_z) - np.min(elec_z))
+    max_x = np.max(elec_x) + (padding/100)*x_dist
+    min_x = np.min(elec_x) - (padding/100)*x_dist
+    max_z = np.max(elec_z) + (padding/100)*z_dist
+    min_z = np.min(elec_z) - (padding/100)*z_dist
+    
+    fh.write("//Fine mesh region.\n")
+    #add points to file 
+    no_pts = 1
+    loop_pt_idx=[no_pts]
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, max_z, 0))
+    no_pts += 1
+    loop_pt_idx.append(no_pts)
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, min_z, 0))
+    no_pts += 1
+    loop_pt_idx.append(no_pts)
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, min_z, 0))
+    no_pts += 1
+    loop_pt_idx.append(no_pts)
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, max_z, 0))
+    
+    #add line loop
+    no_lns = 0 
+    for i in range(4):
+        no_lns += 1 
+        if i == 3:
+            fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[0]))
+        else:
+            fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
+         
+    #Nuemon boundary 
+    flank_x = 100*x_dist
+    flank_z = 100*z_dist 
+    fh.write("//Nuemonn boundary \n")
+    cl2 = cl*150
+    fh.write("cl2 = %.2f;\n"%cl2)
+    no_pts += 1
+    nmn_pt_idx=[no_pts]
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, max_z+flank_z, 0))
+    no_pts += 1
+    nmn_pt_idx.append(no_pts)
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, min_z-flank_z, 0))
+    no_pts += 1
+    nmn_pt_idx.append(no_pts)
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, min_z-flank_z, 0))
+    no_pts += 1
+    nmn_pt_idx.append(no_pts)
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, max_z+flank_z, 0))
+    
+    for i in range(4):
+        no_lns += 1 
+        if i == 3:
+            fh.write("Line(%i) = {%i,%i};\n"%(no_lns,nmn_pt_idx[i],nmn_pt_idx[0]))
+        else:
+            fh.write("Line(%i) = {%i,%i};\n"%(no_lns,nmn_pt_idx[i],nmn_pt_idx[i+1]))
+            
+    fh.write("Line Loop(2) = {5,6,7,8};\n")    
+    fh.write("Plane Surface(1) = {2};\n")
+    fh.write("Line{1,2,3,4} In Surface{1};\n")
+    
+    fh.write("//Electrode positions.\n")
+    node_pos = [0]*len(elec_x)
+    for i in range(len(elec_x)):
+        no_pts += 1
+        node_pos[i] = no_pts
+        fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_z[i], 0))
+        fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
+    fh.write("//End electrodes\n")
+    
+    fh.write("\n//Adding polygons?\n")
+    count = 0    
+    while True:  
+        count += 1
+        key = 'polygon'+str(count)
+
+        try:
+            plyx = geom_input[key][0]
+            plyy = geom_input[key][1]
+            try:
+                plyz = geom_input[key][2]
+            except IndexError:
+                plyz = [0]*len(plyx)
+            pt_idx = [0] *len(plyx)
+            fh.write("//polygon vertices for polygon %i\n"%count)
+            for k in range(len(plyx)):
+                no_pts += 1
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//polygon vertex \n"%(no_pts,plyx[k],plyy[k],plyz[k]))
+                pt_idx[k] = no_pts
+            fh.write("//put lines between each vertex\n")
+            line_idx = []
+            for i in range(len(pt_idx)):
+                idx = pt_idx[i]
+                no_lin += 1
+                if i == len(pt_idx)-1:
+                    fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,pt_idx[0]))
+                else:
+                    fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
+                line_idx.append(no_lin)
+            #make line loop out of polygon
+            fh.write("//make lines forming polygon into a line loop? - current inactive due to unexpected behaviour in gmsh\n")
+            no_lin += 1
+            fh.write("//Line Loop(%i) = {%s};\n"%(no_lin,str(line_idx).strip('[').strip(']')))
+            no_plane +=1
+            fh.write("//Plane Surface(%i) = {%i};\n"%(no_plane,no_lin))
+            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+            
+        except KeyError:
+            fh.write("//end of polygons.\n")
+            print('%i polygons added to input file'%(count-1))
+            break  
+
+    fh.write("\n//Adding boundaries?\n")
+    count = 0   
+    while True:
+        count += 1        
+        key = 'boundary'+str(count)
+
+        try:
+            bdx = geom_input[key][0]
+            bdy = geom_input[key][1]
+            try:
+                bdz = geom_input[key][2]
+            except IndexError:
+                bdz = [0]*len(bdx)
+            pt_idx = [0] *len(bdx)
+            fh.write("// vertices for boundary line %i\n"%count)
+            for k in range(len(bdx)):
+                no_pts += 1 
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//boundary vertex \n"%(no_pts,bdx[k],bdy[k],bdz[k]))
+                pt_idx[k] = no_pts
+            fh.write("//put lines between each vertex\n")
+            line_idx = []
+            for i in range(len(pt_idx)-1):
+                idx = pt_idx[i]
+                no_lin += 1
+                fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
+                line_idx.append(no_lin)
+            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+                
+        except KeyError:
+            fh.write("//end of boundaries.\n")
+            print('%i boundary(ies) added to input file'%(count-1))
+            break              
+    
+    fh.close()
+    return node_pos
     
 #%% test block 
 #import parsers as prs     
