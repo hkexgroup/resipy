@@ -6,7 +6,6 @@ This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/
 provides a standalone graphical user interface (GUI) along with a python API (Application Programming Interface)
 for use in jupyter notebook.
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/hkex/pyr2/master?filepath=jupyter-notebook)
 
 pyR2 aims to be 
 - (1) **simple and intuitive** to use (you can invert your data in one-click with all default settings)
@@ -15,8 +14,10 @@ pyR2 aims to be
 
 pyR2 is an open-source project, everyone is welcome to contribute.
 
+[**Windows standalone**](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
+[**macOS app**](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
+[**Linux standalone**](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm)
 
-[**DOWNLOAD BINARY HERE**](https://lancaster.box.com/s/x7ke3i6ogmdkfobmbur6vttmxawjwjnh)
 Note that Mac and Linux users need to have *wine* installed.
 
 
