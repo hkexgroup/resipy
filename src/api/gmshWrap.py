@@ -846,6 +846,9 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     elif geom_input is None:
         geom_input = {}
         
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+        
     fh = open(file_path,'w') #file handle
     
     fh.write("//Gmsh wrapper code version 1.0 (run the following in gmsh to generate a triangular mesh for 2D whole space)\n")
@@ -924,6 +927,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     fh.write("//End electrodes\n")
     
     fh.write("\n//Adding polygons?\n")
+    no_lin=no_lns
+    no_plane=0
     count = 0    
     while True:  
         count += 1
@@ -999,7 +1004,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
             break              
     
     fh.close()
-    return node_pos
+    print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
+    return np.array(node_pos)
     
 #%% test block 
 #import parsers as prs     

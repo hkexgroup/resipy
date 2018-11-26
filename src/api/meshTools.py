@@ -1380,7 +1380,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
 
 #%% build a triangle mesh - using the gmsh wrapper
 def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True, 
-             show_output=True, path='exe', dump=print, **kwargs):
+             show_output=True, path='exe', dump=print,whole_space=False, **kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
     this function expects the current working directory has path: exe/gmsh.exe.
@@ -1401,6 +1401,9 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
         `True` if gmsh output is to be printed to console. 
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
+    whole_space: boolean, optional
+        flag for if the problem should be treated as a whole space porblem, in which case 
+        electrode type is ingored and all electrodes are buried in the middle of a large mesh. 
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
         the default.
@@ -1429,9 +1432,13 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     os.chdir(ewd) # change to the executable directory 
     #make .geo file
     file_name="temp"
-    
-    node_pos = gw.genGeoFile([elec_x,elec_y], elec_type, geom_input,
+    if not whole_space:#by default create survey with topography 
+        node_pos = gw.genGeoFile([elec_x,elec_y], elec_type, geom_input,
                              file_path=file_name,**kwargs)
+    elif whole_space:
+        print("Whole space problem")
+        node_pos = gw.gen_2d_whole_space([elec_x,elec_y], geom_input = geom_input, 
+                                         file_path=file_name)    
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
@@ -1512,58 +1519,6 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
 
 #%% parser for reading in mesh.dat like file and returning a mesh.     
 def dat_import(file_path):
-#    fh = open(file_path)
-#    header = fh.readline().strip() # read in first line
-#    no_nodes = int(header.split()[1])
-#    no_elms = int(header.split()[0])
-#    #first loop import connection matrix data
-#    elm_number=[0]*no_elms#assign lists to nodes 
-#    elems = []
-#    #node4=[0]*no_elms
-#    parameter =[0]*no_elms
-#    zone =[0]*no_elms
-#    for i in range(no_elms):
-#        matrix_dat = fh.readline().strip().split()
-#        elm_number[i] = int(matrix_dat[0])
-#        elems.append([int(a)-1 for a in matrix_dat[1:-2]])
-#        parameter [i] = int(matrix_dat[4])
-#        zone[i] = int(matrix_dat[5])
-#    #second loop read in node coordinates
-#    elems = np.vstack(elems) # sorry jimmy some numpy here ^^
-#    elemsTuple = tuple([elems[:,i] for i in range(elems.shape[1])])
-#    x_coord = [0]*no_nodes
-#    z_coord = [0]*no_nodes 
-#    node_num = [0]*no_nodes 
-#    for i in range(no_nodes):
-#        coord_data=fh.readline().strip().split()
-#        node_num[i]=float(coord_data[0])
-#        x_coord[i]=float(coord_data[1])
-#        z_coord[i]=float(coord_data[2])
-#    fh.close()
-#    
-#    
-#    
-#    #final loop computes the element areas and centres    
-#    centriod_x = []
-#    centriod_y = []
-#    areas = []
-#    for i in range(no_elms):
-#        #find the centriod of the element for triangles
-#        n1=(x_coord[node1[i]-1],z_coord[node1[i]-1])#in vtk files the 1st element id is 0 
-#        n2=(x_coord[node2[i]-1],z_coord[node1[i]-1])
-#        n3=(x_coord[node3[i]-1],z_coord[node1[i]-1])
-#        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
-#        centriod_x.append(xy_tuple[0])
-#        centriod_y.append(xy_tuple[1])
-#        #find area of element (for a triangle this is 0.5*base*height)
-#        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
-#        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
-#        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-#        areas.append(0.5*base*height)
-#    
-    # couldn't work out a simplest way to deal with both triangular and quad mesh
-    # ----------
-    
     
     def readMeshDat(fname):
         with open(fname, 'r') as f:
