@@ -24,6 +24,8 @@ from api.r2in import write2in
 import api.meshTools as mt
 from api.meshTools import Mesh_obj, tri_mesh, dat_import, systemCheck
 from api.sequenceHelper import ddskip
+from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
+                          wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
 from api.post_processing import import_R2_err_dat, disp_R2_errors
 
@@ -1255,21 +1257,30 @@ class R2(object): # R2 master class instanciated by the GUI
 #        self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
         
 
-    def createSequence(self, skipDepths=[(0, 10)]):
+    def createSequence(self, params=[('dpdp1', 1, 3)]):
         """ Create a dipole-dipole sequence.
         
         Parameters
         ----------
-        skipDepths : list of tuple, optional
-            Each tuple in the list is of the form `(skip, depths)`. The `skip` is the number of electrode between the A B and M N electrode. The `depths` is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.
+        params : list of tuple, optional
+            Each tuple is the form (<array_name>, param1, param2, ...)
+            Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
+            'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
         """
         qs = []
         nelec = len(self.elec)
-        for sd in skipDepths:
-            elec, quad = ddskip(nelec, spacing=1, skip=int(sd[0]), depth=int(sd[1]))
-            qs.append(quad)
-        qs = np.vstack(qs)
-        self.sequence = qs
+        fdico = {'dpdp1': dpdp1,
+              'dpdp2': dpdp2,
+              'wenner_alpha': wenner_alpha,
+              'wenner_beta': wenner_beta,
+              'wenner_gamma': wenner_gamma,
+              'schlum1': schlum1,
+              'schlum2': schlum2,
+              'multigrad': multigrad}
+        for p in params:
+            pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+            qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
+        self.sequence = np.vstack(qs)
     
     
     def importElec(self, fname=''):
@@ -1879,3 +1890,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #
 #elems, nodes = readMeshDat('api/invdir/mesh.dat')
 #elems2, nodes2 = readMeshDat('api/invdir/mesh2.dat')
+
+
+# quick test sequence
+#k = R2()
+#k.elec = np.c_[np.arange(24), np.zeros((24, 2))]
+#k.createSequence([('dpdp1', 1, 2),
+#                  ('wenner_alpha', 1)])
+#print(k.sequence)

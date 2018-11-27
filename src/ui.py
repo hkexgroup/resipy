@@ -1797,58 +1797,84 @@ class App(QMainWindow):
         # add table for sequence generation
         seqLabel = QLabel('Define the number of skip and levels in the table.'
                           'Take into account the specifications of your instrument to'
-                          'obtain realistic simulation results.')
+                          ' obtain realistic simulation results.')
         seqLabel.setWordWrap(True)
         
         class SequenceTable(QTableWidget):
-            def __init__(self):
-                nrow, ncol = 1, 2
+            def __init__(self, headers):
+                nrow, ncol = 10, len(headers)
                 super(SequenceTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['Skip', 'Levels']
+                self.headers = headers
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                self.setItem(0,0,QTableWidgetItem('0'))
-                self.setItem(0,1,QTableWidgetItem('10'))
+#                self.setItem(0,0,QTableWidgetItem(''))
+#                self.setItem(0,1,QTableWidgetItem(''))
 
             def addRow(self):
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
                 
             def getTable(self):
-                table = np.zeros((self.nrow, self.ncol))
+                table = -np.ones((self.nrow, self.ncol), dtype=int)
                 for i in range(self.ncol):
                     for j in range(self.nrow):
-                        table[j,i] = int(self.item(j,i).text())
+                        if self.item(j,i) is not None:
+                            try:
+                                table[j,i] = int(self.item(j,i).text())
+                            except:
+                                pass
                 return table
             
             def reset(self):
                 self.nrow = 1
                 self.setRowCount(1)
         
-        seqTable = SequenceTable()
-        seqReset = QPushButton('Reset')
-        seqReset.setAutoDefault(True)
-        seqReset.clicked.connect(seqTable.reset)
-        seqAddRow = QPushButton('Add Row')
-        seqAddRow.setAutoDefault(True)
-        seqAddRow.clicked.connect(seqTable.addRow)
+        seqDipDipLabel = QLabel('Dipole-Dipole')
+        seqDipDip = SequenceTable(['a','n'])
+        seqDipDip.setItem(0,0,QTableWidgetItem('1'))
+        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
+        
+        seqWennerLabel = QLabel('Wenner')
+        seqWenner = SequenceTable(['a'])
+        
+        seqSchlumLabel = QLabel('Schlumberger')
+        seqSchlum = SequenceTable(['a','n'])
+        
+        seqMultiLabel = QLabel('Multigradient')
+        seqMulti = SequenceTable(['a','n','s'])
+        
+        seqTables = {'dpdp1' : seqDipDip,
+                     'wenner_alpha' : seqWenner,
+                     'schlum1' : seqSchlum,
+                     'multigrad' : seqMulti}
+        
+        seqs = [[seqDipDipLabel, seqDipDip],
+                [seqWennerLabel, seqWenner],
+                [seqSchlumLabel, seqSchlum],
+                [seqMultiLabel, seqMulti]]
+        
         def seqCreateFunc():
             if self.r2.elec is None:
                 errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
             else:
                 self.r2.elec = elecTable.getTable()
-            skipDepths = [tuple(a) for a in list(seqTable.getTable())]
-            print(skipDepths)
-            self.r2.createSequence(skipDepths=skipDepths)
+            params = []
+            for key in seqTables:
+                p = seqTables[key].getTable()
+                ie = (p != -1).all(1)
+                p = p[ie,:]
+                if len(p) > 0:
+                    for i in range(p.shape[0]):
+                        params.append((key, *p[i,:]))
+            print(params)
+            self.r2.createSequence(params=params)
             seqOutputLabel.setText(str(len(self.r2.sequence)) + ' quadrupoles generated')
-        seqCreate = QPushButton('Create Sequence')
-        seqCreate.setAutoDefault(True)
-        seqCreate.clicked.connect(seqCreateFunc)
+        
         seqOutputLabel = QLabel('')
     
         # add noise possibility
@@ -1861,9 +1887,7 @@ class App(QMainWindow):
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 errorDump('Please specify a mesh and an initial model first.')
                 return
-            if self.r2.sequence is None:
-                seqCreateFunc()
-                infoDump('Creating a dipole-dipole configuration by default.')
+            seqCreateFunc()
             forwardOutputStack.setCurrentIndex(0)
             forwardLogText.clear()
             QApplication.processEvents()
@@ -1907,27 +1931,25 @@ class App(QMainWindow):
         # layout
         forwardLayout = QVBoxLayout()
         seqLayout = QHBoxLayout()
-        seqBtnLayout = QVBoxLayout()
-        seqBtnLayoutH = QHBoxLayout()
         noiseLayout = QHBoxLayout()
         
-        seqBtnLayoutH.addWidget(seqAddRow)
-        seqBtnLayoutH.addWidget(seqReset)
-        
-        seqBtnLayout.addLayout(seqBtnLayoutH)
-        seqBtnLayout.addWidget(seqCreate)
-        seqBtnLayout.addWidget(seqOutputLabel)
-        
-        seqLayout.addWidget(seqTable)
-        seqLayout.addLayout(seqBtnLayout)
+        for seq in seqs:
+            qgroup = QGroupBox()
+            qgroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+            qlayout = QVBoxLayout()
+            for a in seq:
+                qlayout.addWidget(a)
+            qgroup.setLayout(qlayout)
+            seqLayout.addWidget(qgroup)
         
         noiseLayout.addWidget(noiseLabel)
         noiseLayout.addWidget(noiseEdit)
+        noiseLayout.addWidget(seqOutputLabel)
         
         forwardLayout.addWidget(seqLabel, 5)
-        forwardLayout.addLayout(seqLayout, 15)
-        forwardLayout.addLayout(noiseLayout, 5)
-        forwardLayout.addWidget(forwardBtn, 5)
+        forwardLayout.addLayout(seqLayout, 30)
+        forwardLayout.addLayout(noiseLayout, 2)
+        forwardLayout.addWidget(forwardBtn, 3)
         
         forwardPseudoLayout = QHBoxLayout()
         forwardPseudoLayout.addWidget(forwardPseudo)
@@ -1942,7 +1964,7 @@ class App(QMainWindow):
         forwardOutputStack.addWidget(forwardPseudos)
         forwardOutputStack.setCurrentIndex(0)
         
-        forwardLayout.addLayout(forwardOutputStack, 70)
+        forwardLayout.addLayout(forwardOutputStack, 60)
         
         tabForward.setLayout(forwardLayout)
         
