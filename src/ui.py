@@ -171,6 +171,7 @@ class App(QMainWindow):
         self.newwd = os.path.join(bundle_dir, 'api', 'invdir')
         
         self.r2 = None
+        self.typ = 'R2'
         self.parser = None
         self.fname = None
         self.iBatch = False
@@ -227,7 +228,7 @@ class App(QMainWindow):
         # restart all new survey
         def restartFunc():
             print('------- creating new R2 object ----------')
-            self.r2 = R2(self.newwd) # create new R2 instance
+            self.r2 = R2(self.newwd, typ=self.typ) # create new R2 instance
             '''actually we don't really need to instanciate a new object each
             time but it's save otherwise we would have to reset all attributes
             , delete all surveys and clear parameters
@@ -330,24 +331,24 @@ class App(QMainWindow):
         
         def dimSurvey():                
             if dimRadio2D.isChecked():
-                self.r2.typ = self.r2.typ.replace('3','2')
+                self.typ = self.typ.replace('3t','2')
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
-                print(self.r2.typ)
+                print(self.typ)
             else:
-                self.r2.typ = self.r2.typ.replace('2','3')
+                self.typ = self.typ.replace('2','3t')
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
-                print(self.r2.typ)
+                print(self.typ)
                 
         dimRadio2D = QRadioButton('2D')
         dimRadio2D.setChecked(True)
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False)
+        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -1759,6 +1760,10 @@ class App(QMainWindow):
         meshLayout.addLayout(meshOutputStack, 80)
         
         
+        # TODO add layout for 3D (button for automatic 3D generation+
+        # matplotlib widget for visuallization) and otherbutton to import mesh?
+        # and the possible a table to paste the note electrode relationship...)
+        
         
         
         '''
@@ -2562,9 +2567,9 @@ class App(QMainWindow):
             except Exception as e:
                 errorDump(e)
                 pass
-            if self.r2.typ == 'R2':
+            if self.r2.typ[0] == 'c':
                 defaultAttr = 'Resistivity(log10)'
-            if self.r2.typ == 'cR2':
+            if self.r2.typ[0] == 'c':
                 defaultAttr = 'Sigma_real(log10)'
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,

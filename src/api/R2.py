@@ -631,12 +631,10 @@ class R2(object): # R2 master class instanciated by the GUI
         errTypIP : str
             Type of the IP error. Either 'pwl'.
         """
-        if self.typ == 'R2':
-            ipBool = False
-        elif self.typ == 'cR2':
+        if self.typ[0] == 'c':
             ipBool = True
         else:
-            print('NOT IMPLEMENTED YET')
+            ipBool = False
 
         if errTyp == '':
             errTyp = self.errTyp
@@ -937,9 +935,9 @@ class R2(object): # R2 master class instanciated by the GUI
         color_map : str, optional
             Name of the colormap to be used.
         """
-        if (attr == '') & (self.typ == 'R2'):
+        if (attr == '') & (self.typ[0] != 'c'):
             attr = 'Resistivity(log10)'
-        if (attr == '') & (self.typ == 'cR2'):
+        if (attr == '') & (self.typ[0] == 'c'):
             attr = 'Sigma_real(log10)'
         if len(self.meshResults) == 0:
             self.getResults()
@@ -1574,11 +1572,11 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         """
-        if self.typ == 'R2':
+        if self.typ[0] != 'c':
             err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
             array = err[:,[-2,-1,-4,-3]].astype(int)
             errors = err[:,0]
-        if self.typ == 'cR2':
+        if self.typ[0] == 'c':
             err = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat')).values       
             array = err[:,[2,3,0,1]].astype(int)
             errors = err[:,4]
