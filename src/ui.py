@@ -2567,7 +2567,7 @@ class App(QMainWindow):
             except Exception as e:
                 errorDump(e)
                 pass
-            if self.r2.typ[0] == 'c':
+            if self.r2.typ[0] != 'c':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ[0] == 'c':
                 defaultAttr = 'Sigma_real(log10)'
