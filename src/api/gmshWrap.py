@@ -1011,7 +1011,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
-           file_path='mesh.geo',cl=1, cl_factor=150):
+           file_path='mesh3d.geo',cl=1, cl_factor=150):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     
@@ -1022,15 +1022,16 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         is the elevation
     padding: float, optional
         Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
-        
-    geom_input: dict, optional
-        Allows for further customisation of the 2D mesh, its a
-        dictionary contianing surface topography, polygons and boundaries 
     file_path: string, optional 
         name of the generated gmsh file (can include file path also) (optional)
     cl: float, optional
         characteristic length (optional), essentially describes how big the nodes 
         assocaited elements will be. Usually no bigger than 5. 
+    cl_factor: float, optional 
+        This allows for tuning of the incrimental size increase with depth in the 
+        mesh, usually set to 2 such that the elements at the DOI are twice as big as those
+        at the surface. The reasoning for this is becuase the sensitivity of ERT drops
+        off with depth. 
     
     Returns
     ----------
@@ -1041,31 +1042,12 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         Can be run in gmsh
 
     NOTES
-    ----------
-     geom_input format:
-        the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
-        currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
-        the first borehole string should be given the key 'borehole1' and so on. The code stops
-        searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
-        and polygons to the mesh. See below example:
-            
-            geom_input = {'surface': [surf_x,surf_z],
-              'boundary1':[bound1x,bound1y],
-              'polygon1':[poly1x,poly1y]} 
-            
+    ----------            
     electrodes and electrode_type (if not None) format: 
         
-            electrodes = [[x1,x2,x3,...],[y1,y2,y3,...]]
+            electrodes = [[x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]]
             electrode_type = ['electrode','electrode','buried',...]
-        
-        like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
-        The code will cycle through each borehole and internally sort them and add them to 
-        the mesh. 
-        
-    The code expects that all polygons, boundaries and electrodes fall within x values 
-    of the actaul survey area. So make sure your topography / surface electrode points cover 
-    the area you are surveying, otherwise some funky errors will occur in the mesh. 
-
+                
     #### TODO: search through each set of points and check for repeats ?
     """
     
@@ -1254,6 +1236,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
         fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
     fh.write("//End electrodes\n")
+    return node_pos 
     
 #%% parse a .msh file
 def msh_parse_3d(file_path):
@@ -1279,40 +1262,52 @@ def msh_parse_3d(file_path):
     #check the file is a mesh format
     if dump[0].strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
         raise ImportError("unrecognised file type...")
-    mesh_format=fid.readline()#reads the next line
+    mesh_format=dump[1] 
     if mesh_format.strip() != '2.2 0 8':#warn people that the code was developed with this file format in mind
         print('Warning: the mesh file type version is different to the mesh converter development version ... some errors may occur!\n')   
-
-    # find where the nodes start 
+    
+    #find where the nodes start 
     for i, line in enumerate(dump):
-        if line.find("$Nodes") == 0:
-            no_nodes=int(dump[i+1][1])
+        if line.find("$Nodes") != -1:#node flag 
+            no_nodes=int(dump[i+1])
+            node_start = i+2
+        if line.find("$EndNodes") != -1:
+            node_end = i
+            break # stop the loop, should find the nodes start before the end 
     print('importing node coordinates...')
     #read in number of nodes - at line 5
-    
     #allocate lists for node numbers and coordinates
     node_num=[0]*no_nodes
     x_coord=[0]*no_nodes
     y_coord=[0]*no_nodes
     z_coord=[0]*no_nodes
     #read in node information
-    for i in range(no_nodes):
-        line_info=fid.readline().split()
+    count = 0 
+    node_idx = 1
+    for i in range(node_start, node_end):
+        line_info=dump[i].split()
         #convert string info into floats
-        data_dump=[float(k) for k in line_info]
-        node_num[i]=int(data_dump[0])
-        x_coord[i]=data_dump[1]
-        y_coord[i]=data_dump[2]
-        z_coord[i]=data_dump[3]
+        line_data=[float(k) for k in line_info]
+        previous_node = node_idx 
+        node_idx = int(line_data[0])
+        if not node_idx < previous_node: # else then its some weird flag used by gmsh, ignore
+            node_num[node_idx-1]=node_idx
+            x_coord[node_idx-1]=line_data[1]
+            y_coord[node_idx-1]=line_data[2]
+            z_coord[node_idx-1]=line_data[3]
     
-    #### read in elements   
+    #### read in elements 
+    # find where the elements start 
+    for i, line in enumerate(dump):
+        if line.find("$Elements") != -1:#node flag 
+            no_elements=int(dump[i+1])#number of elements
+            element_start = i+2
+        if line.find("$EndElements") != -1:
+            element_end = i
+            break # stop the loop, should find the nodes start before the end 
     print('reading connection matrix')
-    #read in two lines $EndNodes and $Elements
-    Endnodes=fid.readline()
-    Elements=fid.readline()
-    #number of elements
-    no_elements=int(fid.readline().strip())
-    #engage for loop - this time we want to filter out elements which are not triangles
+    
+    #engage for loop - this time we want to filter out elements which are not tetrahedron
     #... looking at the gmsh docs its elements of type 2 we are after (R2 only needs this information) 
     nat_elm_num = []#native element number to gmsh
     elm_type = []#element type
@@ -1321,91 +1316,49 @@ def msh_parse_3d(file_path):
     elem_entity = []#which plane surface the element is assocaited with
     node1 = []#first node of triangle 
     node2 = []
-    node3 = []#last node of triangle 
+    node3 = []#last node of triangle
+    node4 = [] 
+    npere = 4 
     ignored_elements=0#count the number of ignored elements
-    for i in range(no_elements):
-        line_info=fid.readline().split()
-        if line_info[1]=='2':# then its the right element type!
+    for i in range(element_start,element_end):
+        line_data=[int(k) for k in dump[i].split()]
+        if line_data[1]==4:# then its the right element type!
         #convert string info into floats and cache data
-            data_dump=[int(k) for k in line_info]
-            nat_elm_num.append(data_dump[0])
-            elm_type.append(data_dump[1]) 
-            number_of_tags.append(data_dump[2]) 
-            phys_entity.append(data_dump[3]) 
-            elem_entity.append(data_dump[4]) 
-            node1.append(data_dump[5]) 
-            node2.append(data_dump[6]) 
-            node3.append(data_dump[7])
+            nat_elm_num.append(line_data[0])
+            elm_type.append(line_data[1]) 
+            number_of_tags.append(line_data[2]) 
+            phys_entity.append(line_data[3]) 
+            elem_entity.append(line_data[4]) 
+            node1.append(line_data[5]-1) 
+            node2.append(line_data[6]-1) 
+            node3.append(line_data[7]-1)
+            node4.append(line_data[8]-1)
         else:
             ignored_elements += 1
-    print("ignoring %i non-triangle elements in the mesh file, as they are not required for R2"%ignored_elements)
+    print("ignoring %i non-tetrahedra elements in the mesh file, as they are not required for R2"%ignored_elements)
     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
     
-    ##clock wise correction and area / centre computations 
-    #make sure in nodes in triangle are counterclockwise as this is waht r2 expects
-    c_triangles=[]#'corrected' triangles 
-    num_corrected=0#number of elements that needed 'correcting'
+    #compute element centres 
     centriod_x=[]
     centriod_y=[]
+    centriod_z=[]
     areas=[]
     for i in range(real_no_elements):
-        n1=(x_coord[node1[i]-1],y_coord[node1[i]-1])#define node coordinates
-        n2=(x_coord[node2[i]-1],y_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
-        n3=(x_coord[node3[i]-1],y_coord[node3[i]-1])
-        #see if triangle is counter-clockwise
-        if ccw(n1,n2,n3) == 1: #points are clockwise and therefore need swapping round
-            #exchange elements in rows 6 and 7 to change direction
-            c_triangles.append((node2[i],node1[i],node3[i]))
-            num_corrected=num_corrected+1
-        else:
-            c_triangles.append((node1[i],node2[i],node3[i]))
-        #compute triangle centre
-        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
-        centriod_x.append(xy_tuple[0])
-        centriod_y.append(xy_tuple[1])
-        #compute area (for a triangle this is 0.5*base*height)
-        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
-        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
-        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-        areas.append(0.5*base*height)
+        n1=(x_coord[node1[i]-1],y_coord[node1[i]-1],z_coord[node1[i]-1])#define node coordinates
+        n2=(x_coord[node2[i]-1],y_coord[node2[i]-1],z_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
+        n3=(x_coord[node3[i]-1],y_coord[node3[i]-1],z_coord[node3[i]-1])
+        n4=(x_coord[node4[i]-1],y_coord[node4[i]-1],z_coord[node4[i]-1])
+        centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/4)
+        centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/4)
+        centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/4)
         
-    #print warning if areas of zero found, this will cuase problems in R2
-    try:
-        if min(areas)==0:
-            warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
-    except ValueError:#if mesh hasnt been read in this is where the error occurs 
-        raise Exception("It looks like no elements have read into pyR2, its likley gmsh has failed to produced a stable mesh. Consider checking the mesh input (.geo) file.")
-            
-    print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
-
+        
+    node_dump = [node1,node2,node3,node4]
     
-    ### return dictionary which can be converted to mesh class ### 
-    no_regions=max(elem_entity)#number of regions in the mesh
-    regions=arange(1,1,no_regions,1)
-    assctns=[]
-    #following for loop finds the element number ranges assocaited with a distinct region in the mesh
-    for k in regions:
-        indx=[m for m in range(len(elem_entity)) if elem_entity[m]==k]
-        if len(indx) > 0:
-            assctns.append((k,min(indx)+1,max(indx)+1))
-    #create a dump of the mesh data incase the user wants to see it later on   
-    dump={'nat_elm_num':nat_elm_num,
-          'elm_type':elm_type,
-          'number_of_tags':number_of_tags,
-          'phys_entity':phys_entity,
-          'elem_entity':elem_entity,
-          'string_data':[line1,mesh_format,line3,line4,Endnodes,Elements]} 
-    #convert c_triangles into mesh object format for later recall
-    node_dump=[[],[],[]]
-    for i in range(real_no_elements):
-        node_dump[0].append(c_triangles[i][0]-1)#node 1
-        node_dump[1].append(c_triangles[i][1]-1)#node 2
-        node_dump[2].append(c_triangles[i][2]-1)#node 3
-    #return a dictionary detailing the mesh 
-    return {'num_elms':real_no_elements,
+    mesh_dict = {'num_elms':real_no_elements,
             'num_nodes':no_nodes,
-            'num_regions':no_regions,
-            'element_ranges':assctns,
+    #        'num_regions':0,
+    #        'element_ranges':assctns,
             'dump':dump,      
             'node_x':x_coord,#x coordinates of nodes 
             'node_y':y_coord,#y coordinates of nodes
@@ -1416,11 +1369,12 @@ def msh_parse_3d(file_path):
             'node_data':node_dump,#nodes of element vertices
             'elm_centre':(centriod_x,centriod_y),#centre of elements (x,y)
             'elm_area':areas,
-            'cell_type':[5],
+            'cell_type':[10],
             'parameters':phys_entity,#the values of the attributes given to each cell 
             'parameter_title':'material',
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
+    return mesh_dict 
     
 #%% test block 
 #import parsers as prs     
