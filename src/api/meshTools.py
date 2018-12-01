@@ -200,6 +200,8 @@ class Mesh_obj:
             return 4
         elif int(self.cell_type[0]) == 11: # elements are voxels
             return 8
+        elif int(self.cell_type[0]) == 10:
+            return 4
         #add element types as neccessary 
         else:
             print("WARNING: unrecognised cell type")

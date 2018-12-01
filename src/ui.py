@@ -32,6 +32,7 @@ def errorMessage(etype, value, tb):
     msg.setText("Critical error:")
     msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p><br>''')
     msg.setWindowTitle("Error!")
+#    msg.setWindowFlags(Qt.FramelessWindowHint)
     msg.setDetailedText('%s' % (finalError))
     msg.setStandardButtons(QMessageBox.Retry)
     msg.exec_()
@@ -2567,7 +2568,7 @@ class App(QMainWindow):
             except Exception as e:
                 errorDump(e)
                 pass
-            if self.r2.typ[0] == 'c':
+            if self.r2.typ[0] != 'c':
                 defaultAttr = 'Resistivity(log10)'
             if self.r2.typ[0] == 'c':
                 defaultAttr = 'Sigma_real(log10)'
