@@ -40,7 +40,7 @@ What it can do
 <figcaption>Inverting and plotting inverted section with different attributes.</figcaption>
 
 
-More examples can be found in ![examples/](examples/pyR2-workshop.pdf)
+More examples can be found in [examples](./examples/)
 
 
 Project structure
@@ -50,7 +50,7 @@ Project structure
 Don't hesitate to consult the [api-structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
 
 
-The full description of the API can be found in the *![documentation](doc/_build/html/index.html)*.
+The full description of the API can be found in the *[documentation](./doc/_build/html/index.html)*.
 
 
 
@@ -77,7 +77,7 @@ cd pyr2/src
 python ui.py
 ```
 You can then test the GUI by first setting a working directory (./src/api/test) and specifying a survey file (./src/api/test/syscalFile.csv).
-*Check out the tutorial with examples*: ![pyR2-workshop.pdf](./examples/pyR2-workshop.pdf)
+*Check out the tutorial with examples*: [pyR2-workshop.pdf](./examples/pyR2-workshop.pdf)
 
 
 Try the Jupyter Notebook
