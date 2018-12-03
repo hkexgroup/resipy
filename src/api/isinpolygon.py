@@ -23,9 +23,9 @@ def isinpolygon(x,y,poly_data,ray_cast=10000):
     
     Parameters
     ----------
-    x: float
+    x: array like, float
         x coordinate of query point
-    y: float
+    y: array like, float
         y coordinate of query point 
     poly_data: tuple 
         contains column of x and y coordinates, in the form (polyx, polyy)
@@ -80,4 +80,7 @@ def isinpolygon(x,y,poly_data,ray_cast=10000):
         # say a star. Rule of thumb is that the number of counts should be odd.
         
     return count%2 != 0 #returns boolian indexes
+
+def planeintersect(x,y,z,poly_x,poly_y,poly_z,ray_cast=float('inf')):
+    pass
     

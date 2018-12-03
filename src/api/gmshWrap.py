@@ -1011,15 +1011,17 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
-           file_path='mesh3d.geo',cl=1, cl_factor=150):
+           file_path='mesh3d.geo',cl=2, cl_factor=500):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
+    Z coordinates should be given as depth below the surface! 
     
     Parameters
     ----------
-    electrodes: array like
+    electrodes: list of array likes
         first column/list is the x coordinates of electrode positions, second column
-        is the elevation
+        is the elevation. Z coordinates must normalised to the flat surface if given.ie. 
+        z is the depth below the surface. 
     padding: float, optional
         Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
     file_path: string, optional 
@@ -1053,6 +1055,10 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     
     elec_x = electrodes[0]
     elec_y = electrodes[1]
+    try: 
+        elec_z = electrodes[2]
+    except IndexError:
+        elec_z = [0]*len(elec_x)
     
     if len(elec_x) != len(elec_y):
         raise ValueError("The length of the x coordinate array does not match of the Y coordinate")
@@ -1097,18 +1103,12 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     
     #add line loop
     no_lns = 0 
-#    pair_idx = []
-#    ln_idx = []
     for i in range(4):
         no_lns += 1 
         if i == 3:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[0]))
-#            pair_idx.append([loop_pt_idx[i],loop_pt_idx[0]])
-#            ln_idx.append(no_lns)
         else:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
-#            pair_idx.append([loop_pt_idx[i],loop_pt_idx[i+1]])
-#            ln_idx.append(no_lns)
     
     #add points below surface to make a rectangular volume         
     no_pts += 1
@@ -1129,24 +1129,19 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         no_lns += 1 
         if i == 3:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop2_pt_idx[i],loop2_pt_idx[0]))
-#            pair_idx.append([loop2_pt_idx[i],loop2_pt_idx[0]])
-#            ln_idx.append(no_lns)
         else:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop2_pt_idx[i],loop2_pt_idx[i+1]))
-#            pair_idx.append([loop2_pt_idx[i],loop2_pt_idx[i+1]])
-#            ln_idx.append(no_lns)
+
     #connect the top and bottom of the mesh 
     for i in range(4):
         no_lns += 1 
-        fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop2_pt_idx[i]))  
-#        pair_idx.append([loop_pt_idx[i],loop2_pt_idx[i]])
-#        ln_idx.append(no_lns)  
+        fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop2_pt_idx[i]))   
         
     fh.write("//End fine mesh region points\n" )
         
     #Nuemon boundary 
-    flank_x = 100*x_dist
-    flank_y = 100*y_dist 
+    flank_x = 70 * (x_dist + y_dist)/2
+    flank_y = 70 * (x_dist + y_dist)/2
     flank_z = 100*abs(doi)
     fh.write("//Nuemonn boundary points\n")
     cl2 = cl*cl_factor
@@ -1233,8 +1228,12 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     for i in range(len(elec_x)):
         no_pts += 1
         node_pos[i] = no_pts
-        fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
-        fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
+        if elec_z[i] == 0:
+            fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
+            fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
+        else:
+            fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
+            fh.write("Point{%i} In Volume{1};\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
     return node_pos 
     

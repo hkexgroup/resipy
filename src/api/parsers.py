@@ -103,8 +103,36 @@ def syscalParser(fname, spacing=None):
 #%% protocol.dat forward modelling parser
 
 def protocolParser(fname):
-    x = np.genfromtxt(fname, skip_header=1)
-    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','appResist'])
+#    x = np.genfromtxt(fname, skip_header=1) # original code doesnt work for badly behaved protocol files
+#    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','appResist'])
+    
+    fh = open(fname,'r')
+    num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
+    dump = fh.readlines()
+    fh.close()
+    protocol = {'index':[0]*num_meas,# protocol dictionary 
+                'a':[0]*num_meas,
+                'b':[0]*num_meas,
+                'm':[0]*num_meas,
+                'n':[0]*num_meas,
+                'resist':[0]*num_meas,
+                'appResist':[0]*num_meas} 
+    #determine if apparent resistivity column is present 
+    app_resis_flag = False
+    if len(dump[0])==7:
+        app_resis_flag=True
+    for i, line in enumerate(dump):
+        data = line.split()
+        protocol['index'][i] = int(data[0])
+        protocol['a'][i] = int(data[1])
+        protocol['b'][i] = int(data[2])
+        protocol['m'][i] = int(data[3])
+        protocol['n'][i] = int(data[4])
+        protocol['resist'][i] = float(data[5])
+        if app_resis_flag:
+            protocol['appResist'][i]= float(data[6])
+    
+    df = pd.DataFrame(protocol)
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
