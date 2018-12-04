@@ -612,7 +612,7 @@ class App(QMainWindow):
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
-                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0:
+                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
