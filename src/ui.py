@@ -516,10 +516,12 @@ class App(QMainWindow):
             elif index == 1:
                 self.ftype = 'Protocol'
             elif index == 2:
-                self.ftype = 'Res2Dinv'
+                self.ftype = 'ProtocolIP'
             elif index == 3:
-                self.ftype = 'BGS Prime'
+                self.ftype = 'Res2Dinv'
             elif index == 4:
+                self.ftype = 'BGS Prime'
+            elif index == 5:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -527,6 +529,7 @@ class App(QMainWindow):
         fileType = QComboBox()
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
+        fileType.addItem('Protocol w/ IP')
         fileType.addItem('Res2Dinv')
         fileType.addItem('BGS Prime')
         fileType.addItem('Custom')
