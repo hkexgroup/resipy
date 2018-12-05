@@ -376,7 +376,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 whole_space = True
 
             elec_type = elec_type.tolist()
-            print('elec_type', elec_type)
+#            print('elec_type', elec_type)
             
             mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
