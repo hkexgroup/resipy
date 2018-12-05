@@ -1235,7 +1235,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
-    return node_pos 
+    return np.array(node_pos) 
     
 #%% parse a .msh file
 def msh_parse_3d(file_path):
@@ -1347,10 +1347,9 @@ def msh_parse_3d(file_path):
         n2=(x_coord[node2[i]-1],y_coord[node2[i]-1],z_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
         n3=(x_coord[node3[i]-1],y_coord[node3[i]-1],z_coord[node3[i]-1])
         n4=(x_coord[node4[i]-1],y_coord[node4[i]-1],z_coord[node4[i]-1])
-        centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/4)
-        centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/4)
-        centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/4)
-        
+        centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/npere)
+        centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/npere)
+        centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/npere)
         
     node_dump = [node1,node2,node3,node4]
     

@@ -24,6 +24,8 @@ Dependencies:
     python3 standard libaries
 
 Nb: Module has a heavy dependence on numpy and matplotlib packages
+
+#### TODO: use .exe path in command line rather than changing the working directory" 
 """
 #import standard python packages
 #import tkinter as tk
@@ -34,7 +36,7 @@ import time
 #import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
-#from scipy.interpolate import griddata
+from scipy.interpolate import griddata, NearestNDInterpolator
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
@@ -44,6 +46,7 @@ from api.isinpolygon import isinpolygon
 
 #%% create mesh object
 class Mesh_obj:
+    #### TODO : ADD 3D SHOW CAPACITY 
     cax = None 
     zone = None
     attr_cache={}
@@ -200,7 +203,7 @@ class Mesh_obj:
             return 4
         elif int(self.cell_type[0]) == 11: # elements are voxels
             return 8
-        elif int(self.cell_type[0]) == 10:
+        elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
             return 4
         #add element types as neccessary 
         else:
@@ -495,6 +498,10 @@ class Mesh_obj:
             
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
     
+    def show_3D(self):
+        if self.ndims == 2:
+            raise Exception("Use 'mesh.show()' for 2D meshes rather than show_3D()")
+        print("Sorry 3D meshes cannot be natively displayed in 3D with pyr2, but will be coming in a future update")
 
     def assign_zone(self,poly_data):
         """ Assign material/region assocations with certain elements in the mesh 
@@ -941,12 +948,13 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             node4.append(int(elm_data[4]))
             elm_num.append(i+1)
             #assuming element centres are the average of the x - y coordinates for the quad
-            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
-            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])])
-            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])])
-            n4=(x_coord[int(elm_data[4])],y_coord[int(elm_data[4])])
+            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])],z_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
+            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])],z_coord[int(elm_data[2])])
+            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])],z_coord[int(elm_data[3])])
+            n4=(x_coord[int(elm_data[4])],y_coord[int(elm_data[4])],z_coord[int(elm_data[4])])
             centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0])))
             centriod_y.append(np.mean((n1[1],n2[1],n3[1],n4[1])))
+            centriod_z.append(np.mean((n1[2],n2[2],n3[2],n4[2])))
             #finding element areas, base times height.  
             elm_len=abs(n2[0]-n1[0])#element length
             elm_hgt=abs(n2[1]-n3[1])#element hieght
@@ -993,7 +1001,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
     elif vert_no==4:
         node_maps=(node1,node2,node3,node4)
-        centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
+        centriod=(centriod_x,centriod_y,centriod_z)#centres of each element in form (x...,y...,z...)
     elif vert_no==8:
         node_maps=(node1,node2,node3,node4,node5,node6,node7,node8)
         centriod=(centriod_x,centriod_y,centriod_z)#centres of each element in form (x...,y...,z...)
@@ -1414,8 +1422,8 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
             
     Returns
     -------
-    mesh.dat : file
-        In the Executables directory.
+    mesh: class
+    
     """
     #check directories 
     if path == "exe":
@@ -1479,6 +1487,160 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh#, mesh_dict['element_ranges']
+
+#%% 3D tetrahedral mesh 
+def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=True, 
+             show_output=True, path='exe', dump=print,whole_space=False, padding=20,
+             **kwargs):
+    """ 
+    Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
+    in the working directory. This function expects the current working directory 
+    has path: exe/gmsh.exe.
+    
+    Uses post processing after mesh generation to super impose topography on to 
+    a flat 3D tetrahedral mesh. 
+    
+    ***Buried electrodes not yet supported***
+            
+    Parameters
+    ---------- 
+    elec_x: array like
+        electrode x coordinates 
+    elec_y: array like 
+        electrode y coordinates 
+    elec_z: array like 
+        electrode z coordinates 
+    elec_type: list of strings, optional
+        type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list   
+    shape: tuple, optional
+        must be of length  == 2. reshapes the input into a grid, which allows for better 
+        topography
+        (number of electrodes in x direction, number of electrodes in y direction)
+    keep_files : boolean, optional
+        `True` if the gmsh input and output file is to be stored in the exe directory.
+    show_ouput : boolean, optional
+        `True` if gmsh output is to be printed to console. 
+    path : string, optional
+        Path to exe folder (leave default unless you know what you are doing).
+    whole_space: boolean, optional
+        flag for if the problem should be treated as a whole space porblem, in which case 
+        electrode type is ingored and all electrodes are buried in the middle of a large mesh. 
+    dump : function, optional
+        Function to which pass the output during mesh generation. `print()` is
+        the default.
+    padding : float, optional
+        amount of % the fine mesh region will be extended beyond the extent of the electrode positions
+    **kwargs : optional
+        Key word arguments to be passed to box_3d. 
+            
+    Returns
+    -------
+    mesh3d: class
+    #### TODO : add buried electrode capacity 
+    """
+    if elec_type is not None:
+        raise Exception("Sorry variable electrode types are not yet available")
+    
+    
+    #check directories 
+    if path == "exe":
+        ewd = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                path)
+        #print(ewd) #ewd - exe working directory 
+    else:
+        ewd = path
+        # else its assumed a custom directory has been given to the gmsh.exe
+    cwd=os.getcwd()#get current working directory 
+    
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
+        raise Exception("No gmsh.exe exists in the exe directory!")
+    
+    os.chdir(ewd) # change to the executable directory 
+    #make .geo file
+    file_name="mesh3d"
+    if whole_space:#by default create survey with topography 
+        print("Whole space problem")
+        raise Exception("Sorry whole space 3D problems are not implimented yet")
+        
+    else:
+        node_pos = gw.box_3d([elec_x,elec_y], file_path=file_name, **kwargs)
+        
+    # handling gmsh
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+        cmd_line = 'gmsh.exe '+file_name+'.geo -3'
+    elif platform.system() == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd_line = ['%s' % (winePath[0].strip('\n')), 'gmsh.exe', file_name+'.geo', '-3']
+            else:
+                cmd_line = ['/usr/local/bin/wine', 'gmsh.exe', file_name+'.geo', '-3']
+    else:
+        cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-3']
+        
+    if show_output: 
+        p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            dump(line.decode('utf-8'))
+    else:
+        call(cmd_line)#run gmsh 
+        
+    #convert into mesh.dat 
+    mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
+    mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
+    #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
+    
+    if keep_files is False: 
+        os.remove(file_name+".geo");os.remove(file_name+".msh")
+    
+    #change back to orginal working directory
+    os.chdir(cwd)
+    
+    if shape is None: #we cant rearrange into a nice grid, so just interpolate electrode positions as is. 
+        x_interp = elec_x#np.append(elec_x,add_x)#parameters to be interpolated 
+        y_interp = elec_y#np.append(elec_y,add_y)
+        z_interp = elec_z#np.append(elec_z,add_z)
+    else:
+        if not isinstance(shape,tuple) or len(shape) is not 2:
+            raise TypeError("Expected tuple type argument with length of 2 for 'shape'")
+        x_grid = np.reshape(elec_x,shape)
+        y_grid = np.reshape(elec_y,shape)
+        z_grid = np.reshape(elec_z,shape)
+        add_x = np.append(x_grid[:,0], x_grid[:,-1])
+        add_x = np.append(add_x, x_grid[0,:]-padding)
+        add_x = np.append(add_x, x_grid[-1,:]+padding)
+        add_y = np.append(y_grid[:,0]-padding, y_grid[:,-1]+padding)
+        add_y = np.append(add_y, y_grid[0,:])
+        add_y = np.append(add_y, y_grid[-1,:])
+        add_z = np.append(z_grid[:,0], z_grid[:,-1])
+        add_z = np.append(add_z, z_grid[0,:])
+        add_z = np.append(add_z, z_grid[-1,:])
+        x_interp = np.append(elec_x,add_x)#parameters to be interpolated 
+        y_interp = np.append(elec_y,add_y)
+        z_interp = np.append(elec_z,add_z)
+    
+    node_x = np.array(mesh.node_x)
+    node_y = np.array(mesh.node_y)
+    
+    nodez_surrogate = griddata((x_interp,y_interp),z_interp,(node_x,node_y),method='linear',fill_value=np.nan)#gives smoothed topography but Nans outside survey area
+    #delete nans 
+    idx_nan = np.isnan(nodez_surrogate)
+    idx_num = np.where(idx_nan == False)
+    
+    interp_function = NearestNDInterpolator((node_x[idx_num],node_y[idx_num]),nodez_surrogate[idx_num])#extrapolates the topography outside survey area 
+    nodez_outside = interp_function(node_x,node_y)
+    
+    nodez_surrogate[idx_nan] = nodez_outside[idx_nan]
+    
+    mesh.node_z = np.array(mesh.node_z) + nodez_surrogate
+
+    mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+    
+    return mesh
 
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
@@ -1573,6 +1735,40 @@ def dat_import(file_path):
     return mesh
 #now do mesh.add_e_nodes to add electrode positions to the mesh. 
     
+#%% import a custom mesh, you must know the node positions 
+def custom_mesh_import(file_path, node_pos, flag_3D=False):
+    """
+    Import user defined mesh, currently supports .msh and .vtk format 
+    for quad, triangular and tetrahedral meshes. 
+    Parameters
+    ---------- 
+    file_path: string
+        path to file
+    flag_3D: bool, optional
+        make this true for 3D meshes
+    Returns
+    -------
+    mesh: class
+        
+    """
+    if not isinstance(file_path,str):
+        raise TypeError("Expected string type argument for 'file_path'")
+    
+    path,ext = os.path.splitext(file_path)
+    if ext == '.vtk':
+        mesh = vtk_import(file_path)
+    elif ext == '.msh':
+        if flag_3D:
+            gw.msh_parse_3d(file_path)
+        else:
+            gw.msh_parse(file_path)
+    else:
+        avail_ext = ['vtk','.ext']
+        raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
+    
+    mesh.add_e_nodes(node_pos)
+    
+    return mesh
 
 #%% ram amount check and is wine installed?. 
 #Now for complicated meshes we need alot more RAM. the below function is a os agnostic
