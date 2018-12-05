@@ -42,7 +42,7 @@ from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 #import R2gui API packages - remove the "api." below code if running the script and using the test blocks at the bottom 
 import api.gmshWrap as gw
-from api.isinpolygon import isinpolygon
+from api.isinpolygon import isinpolygon, isinvolume
 
 #%% create mesh object
 class Mesh_obj:
@@ -540,7 +540,28 @@ class Mesh_obj:
                             
         self.zone = material_no
         return material_no
+    
+    def assign_zone_3D(self,volume_data):
+        """
+        Insert description here
+        """
+        no_elms=self.num_elms#number of elements 
+        elm_xy=self.elm_centre#centriods of mesh elements 
+        material_no=np.zeros(no_elms,dtype=int)#attribute number
+        if not isinstance(volume_data,dict):
+            raise Exception("poly_data input is not a dictionary")  
         
+        for i, key in enumerate(volume_data):
+            faces_list = volume_data[key]
+            
+            inside = isinvolume(elm_xy[0],
+                                elm_xy[1],
+                                elm_xy[2],
+                                faces_list)
+            material_no[inside]=i+1
+                            
+        self.zone = material_no
+        return material_no        
         
     def assign_zone_attribute(self,material_no,attr_list,new_key):
         """
