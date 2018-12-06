@@ -36,7 +36,7 @@ import time
 #import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata, NearestNDInterpolator
+#from scipy.interpolate import griddata, NearestNDInterpolator
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
