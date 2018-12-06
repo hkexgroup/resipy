@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from api.R2 import pyR2_version # get version number
 import os
 import sys
 import time
@@ -2986,7 +2985,7 @@ if __name__ == '__main__':
     progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
 
     # splash.setMask(splash_pix.mask())
-#    from api.R2 import pyR2_version
+    from api.R2 import pyR2_version
     
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
