@@ -318,3 +318,25 @@ def multigrad(elec_num, a, n, s):
 #x7 = schlum2(24, 1, 10)
 #x8 = multigrad(24, 1, 10, 2)
 
+
+
+#%% show pseudoSection
+#import matplotlib.pyplot as plt    
+#
+#N = 24
+#elecpos = np.linspace(0, 8, N)
+#quad = pd.concat([wenner_alpha(N, 1), wenner_alpha(N, 2)]).values
+#array = np.sort(quad, axis=1)
+#
+#cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+#    + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+#pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+#    + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+#xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+#ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+#
+#
+#fig, ax = plt.subplots()
+#cax = ax.plot(xpos, ypos, 'o')
+#ax.set_title('Pseudo Section')
+#fig.show()

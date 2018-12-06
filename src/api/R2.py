@@ -1613,6 +1613,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
     resist = resist
+    array = np.sort(array.copy(), axis=1)
     
     if geom: # compute and applied geometric factor
         apos = elecpos[array[:,0]-1]

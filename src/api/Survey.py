@@ -913,6 +913,7 @@ class Survey(object):
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
         resist = self.df['resist'].values
+        array = np.sort(array, axis=1)
         
         if geom: # compute and applied geometric factor
             apos = elecpos[array[:,0]-1]
