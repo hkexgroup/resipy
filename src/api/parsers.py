@@ -106,10 +106,9 @@ def protocolParser(fname):
 #    x = np.genfromtxt(fname, skip_header=1) # original code doesnt work for badly behaved protocol files
 #    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','appResist'])
     
-    fh = open(fname,'r')
-    num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
-    dump = fh.readlines()
-    fh.close()
+    with open(fname,'r') as fh:
+        num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
+        dump = fh.readlines()
     protocol = {'index':[0]*num_meas,# protocol dictionary 
                 'a':[0]*num_meas,
                 'b':[0]*num_meas,
@@ -142,13 +141,28 @@ def protocolParser(fname):
 # test code
 #protocolParser('test/protocolFile.dat')
 
+
+#def protocolParser2(fname): # with pandas = twice slower but same time if we use np.genfromtxt()
+#    colnames = np.array(['index','a','b','m','n','resist','appResist'])
+##    df = pd.read_csv(fname, header=None, sep='\s+', skiprows=1)
+##    colindex = 1+np.arange(df.shape[0])
+##    df = df.rename(columns=dict(zip(colindex, colnames[:df.shape[0]])))
+#    
+#    x = np.genfromtxt(fname, skip_header=1)
+#    df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
+#    df['ip'] = np.nan
+#    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+#    elec = np.zeros((len(xElec),3))
+#    elec[:,0] = xElec
+#    return df, elec
+
+
 def protocolParserIP(fname): # just for protocol forward output with cR2
 #    x = np.genfromtxt(fname, skip_header=1)
 #    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','ip','appResist'])
-    fh = open(fname,'r')
-    num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
-    dump = fh.readlines()
-    fh.close()
+    with open(fname,'r') as fh:
+        num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
+        dump = fh.readlines()
     protocol = {'index':[0]*num_meas,# protocol dictionary 
                 'a':[0]*num_meas,
                 'b':[0]*num_meas,
@@ -178,6 +192,7 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
     return elec, df    
+
 
 #%% PRIME system parser
 

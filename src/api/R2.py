@@ -761,7 +761,7 @@ class R2(object): # R2 master class instanciated by the GUI
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         
         def execute(cmd):
-            if OS == 'windows':
+            if OS == 'Windows':
                 self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
             else:
                 self.proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
