@@ -1451,7 +1451,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
         ewd = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 path)
-        #print(ewd) #ewd - exe working directory 
+        print(ewd) #ewd - exe working directory 
     else:
         ewd = path
         # else its assumed a custom directory has been given to the gmsh.exe
@@ -1460,9 +1460,8 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
         raise Exception("No gmsh.exe exists in the exe directory!")
     
-    os.chdir(ewd) # change to the executable directory 
     #make .geo file
-    file_name="temp"
+    file_name="mesh"
     if not whole_space:#by default create survey with topography 
         node_pos = gw.genGeoFile([elec_x,elec_y], elec_type, geom_input,
                              file_path=file_name,**kwargs)
@@ -1473,18 +1472,18 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = 'gmsh.exe '+file_name+'.geo -2'
+        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), 'gmsh.exe', file_name+'.geo', '-2']
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2']
             else:
-                cmd_line = ['/usr/local/bin/wine', 'gmsh.exe', file_name+'.geo', '-2']
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2']
     else:
-        cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-2']
+        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
         
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
@@ -1500,10 +1499,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
     
     if keep_files is False: 
-        os.remove("temp.geo");os.remove("temp.msh")
-    
-    #change back to orginal working directory
-    os.chdir(cwd)
+        os.remove(file_name+".geo");os.remove(file_name+".msh")
 
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
@@ -1570,14 +1566,12 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
                 path)
         #print(ewd) #ewd - exe working directory 
     else:
-        ewd = path
-        # else its assumed a custom directory has been given to the gmsh.exe
-    cwd=os.getcwd()#get current working directory 
+        ewd = path # points to the location of the .exe 
+        # else its assumed a custom directory has been given to the gmsh.exe 
     
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
         raise Exception("No gmsh.exe exists in the exe directory!")
     
-    os.chdir(ewd) # change to the executable directory 
     #make .geo file
     file_name="mesh3d"
     if whole_space:#by default create survey with topography 
@@ -1589,18 +1583,21 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = 'gmsh.exe '+file_name+'.geo -3'
+        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), 'gmsh.exe', file_name+'.geo', '-3']
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
             else:
-                cmd_line = ['/usr/local/bin/wine', 'gmsh.exe', file_name+'.geo', '-3']
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
-        cmd_line = ['wine', 'gmsh.exe', file_name+'.geo', '-3']
+        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        
+#    print('calling')
+#    print(cmd_line)
         
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
@@ -1619,7 +1616,7 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         os.remove(file_name+".geo");os.remove(file_name+".msh")
     
     #change back to orginal working directory
-    os.chdir(cwd)
+    #os.chdir(cwd)
     
     if shape is None: #we cant rearrange into a nice grid, so just interpolate electrode positions as is. 
         x_interp = elec_x#np.append(elec_x,add_x)#parameters to be interpolated 

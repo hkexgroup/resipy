@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+from api.R2 import pyR2_version # get version number
 import os
 import sys
 import time
@@ -2883,7 +2884,7 @@ class App(QMainWindow):
         infoLayout = QVBoxLayout()
         aboutText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
         aboutText.setText('''<h1>About pyR2</h1> \
-                          <p><b>Version: 1.0</b></p> \
+                          <p><b>Version: %3.2f</b></p> \
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
                           <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
                           <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
@@ -2915,7 +2916,7 @@ USA: Trelgol Publishing, (2006).
 </ul>
 </p>
 <br/>
-                          <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>''')
+                          <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>'''%pyR2_version)
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)

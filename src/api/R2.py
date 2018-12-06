@@ -4,7 +4,7 @@ Created on Wed May 30 16:48:54 2018 in python 3.6.5
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: jkl
 """
-pyR2_version = 1.0 # pyR2 version
+pyR2_version = 1.05 # pyR2 version - update accordingly 
 #import relevant modules 
 import os, sys, shutil, platform # python standard libs
 from subprocess import PIPE, call, Popen
@@ -377,13 +377,15 @@ class R2(object): # R2 master class instanciated by the GUI
 
             elec_type = elec_type.tolist()
             print('elec_type', elec_type)
-            
+            ui_dir = os.getcwd()#current working directory (usually the one the ui is running in)
+            os.chdir(self.dirname)#change to working directory so that mesh files written in working directory 
             mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
                              cl=cl, dump=dump, show_output=True,
                              doi=self.doi-max(elec_z), whole_space=whole_space,
                              **kwargs)
+            os.chdir(ui_dir)#change back to original directory
             
             self.param['mesh_type'] = 3
 #            self.param['num_regions'] = len(mesh.regions)
