@@ -376,9 +376,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 whole_space = True
 
             elec_type = elec_type.tolist()
-            print('elec_type', elec_type)
+
+            #print('elec_type', elec_type)
             ui_dir = os.getcwd()#current working directory (usually the one the ui is running in)
             os.chdir(self.dirname)#change to working directory so that mesh files written in working directory 
+
             mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,

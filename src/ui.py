@@ -440,6 +440,7 @@ class App(QMainWindow):
 #            boreholeCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,False) # no custom parser needed
             restartFunc() # let's first from previous inversion
+            nbElecEdit.setEnabled(True)
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             ipCheck.setEnabled(True)
             activateTabs(True)
@@ -453,6 +454,7 @@ class App(QMainWindow):
             tabs.setTabEnabled(3, False)
             tabImporting.setTabEnabled(1, False)
             buttonf.setEnabled(True)
+            nbElecEdit.setEnabled(False)
             timeLapseCheck.setEnabled(True)
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,True)
@@ -619,7 +621,6 @@ class App(QMainWindow):
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
                 nbElecEdit.setText(str(len(self.r2.elec)))
-                nbElecEdit.setEnabled(False)
                 elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
                 
             except Exception as e:
@@ -901,6 +902,7 @@ class App(QMainWindow):
         elecButton.clicked.connect(elecButtonFunc)
         nbElecEdit = QLineEdit()
         nbElecEdit.setValidator(QDoubleValidator())
+        nbElecEdit.setEnabled(False)
         nbElecLabel = QLabel('Number of electrodes:')
         elecDx = QLineEdit('0.0')
         elecDx.setValidator(QDoubleValidator())
@@ -1594,9 +1596,9 @@ class App(QMainWindow):
 #            cl_factor = float(cl_factorEdit.text())
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
-            print('buried = ', buried)
-            print('surface = ', surface)
-            print('electrode = ', elec)
+#            print('buried = ', buried)
+#            print('surface = ', surface)
+#            print('electrode = ', elec)
             inan = ~np.isnan(surface[:,0])
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
