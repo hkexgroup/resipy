@@ -1424,6 +1424,7 @@ class App(QMainWindow):
             self.r2.surveys[0].df = self.r2.surveys[0].dfphasereset.copy()
             heatFilter()
             dcaProgress.setValue(0)
+            infoDump('All phase filteres are now reset!')
             
         def phiCbarRange():
             self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
@@ -1485,8 +1486,11 @@ class App(QMainWindow):
             QApplication.processEvents()
             
         def dcaFiltering():
-            self.r2.surveys[0].dca(dump=dcaDump)
-            heatFilter()
+            try:
+                self.r2.surveys[0].dca(dump=dcaDump)
+                heatFilter()
+            except:
+                errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')         
             
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
