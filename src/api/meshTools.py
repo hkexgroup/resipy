@@ -1621,28 +1621,16 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         x_interp = elec_x#np.append(elec_x,add_x)#parameters to be interpolated 
         y_interp = elec_y#np.append(elec_y,add_y)
         z_interp = elec_z#np.append(elec_z,add_z)
-        raise Exception("non irregular grid data not implimented yet")
+        nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp)# use inverse distance
     else:
         if not isinstance(shape,tuple) or len(shape) is not 2:
             raise TypeError("Expected tuple type argument with length of 2 for 'shape'")
         x_grid = np.reshape(elec_x,shape)
         y_grid = np.reshape(elec_y,shape)
-        z_grid = np.reshape(elec_z,shape)
-#        add_x = np.append(x_grid[:,0], x_grid[:,-1])
-#        add_x = np.append(add_x, x_grid[0,:]-padding)
-#        add_x = np.append(add_x, x_grid[-1,:]+padding)
-#        add_y = np.append(y_grid[:,0]-padding, y_grid[:,-1]+padding)
-#        add_y = np.append(add_y, y_grid[0,:])
-#        add_y = np.append(add_y, y_grid[-1,:])
-#        add_z = np.append(z_grid[:,0], z_grid[:,-1])
-#        add_z = np.append(add_z, z_grid[0,:])
-#        add_z = np.append(add_z, z_grid[-1,:])
-#        x_interp = np.append(elec_x,add_x)#parameters to be interpolated 
-#        y_interp = np.append(elec_y,add_y)
-#        z_interp = np.append(elec_z,add_z)
+        z_grid = np.reshape(elec_z,shape)    
+        #using home grown function to interpolate / extrapolate topography on mesh
+        nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the 
     
-    #using home grown function to interpolate / extrapolate topography on mesh
-    nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the 
     mesh.node_z = np.array(mesh.node_z) + nodez
     #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 

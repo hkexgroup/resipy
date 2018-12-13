@@ -66,7 +66,7 @@ def cdist(x1, y1, x2, y2):
 #def cdist(x_query,y_query,x0,y0):
     
     
-#%% start 
+#%% irregular grid
 def irregular_grid(xnew, ynew, x_grid, y_grid, z_grid, method="bilinear", extrapolate=True):
     """
     Compute z values for an irregular grid
@@ -118,4 +118,13 @@ def irregular_grid(xnew, ynew, x_grid, y_grid, z_grid, method="bilinear", extrap
     return znew # return new interpolated values 
     
     
+#%% inverse weighted distance
+def idw(xnew, ynew, xknown, yknown, zknown):
+    znew = np.zeros(len(xnew))
+    for i,(x,y) in tqdm(enumerate(zip(xnew, ynew)),ncols=100,desc="Interpolating topo"):
+        dist = pdist(x, y, xknown, yknown)
+        # if we consider all the points (might be not good)
+        w = (1/dist)**2 # exponent to be chosen
+        znew[i] = np.sum(zknown*w)/np.sum(w)
+    return znew
     
