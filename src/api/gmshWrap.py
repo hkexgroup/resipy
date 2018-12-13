@@ -18,13 +18,10 @@ Dependencies:
     python3 standard libs
 """
 #python standard libraries 
-#import tkinter as tk
-#from tkinter import filedialog
 import os, warnings
 #general 3rd party libraries
 import numpy as np
-#pyR2 library?
-#import parsers as prs
+
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
     delta=stop-start
@@ -1235,6 +1232,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
+    print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
     return np.array(node_pos) 
     
 #%% parse a .msh file
