@@ -1613,6 +1613,8 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
     node_x = np.array(mesh.node_x)
     node_y = np.array(mesh.node_y)
+    elm_x = np.array(mesh.elm_centre[0])
+    elm_y = np.array(mesh.elm_centre[1])
     
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
@@ -1622,6 +1624,7 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         y_interp = elec_y#np.append(elec_y,add_y)
         z_interp = elec_z#np.append(elec_z,add_z)
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp)# use inverse distance
+        elm_z = interp.idw(elm_x,elm_y,x_interp, y_interp, z_interp)#translate cell centre positions as well
     else:
         if not isinstance(shape,tuple) or len(shape) is not 2:
             raise TypeError("Expected tuple type argument with length of 2 for 'shape'")
@@ -1630,8 +1633,10 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         z_grid = np.reshape(elec_z,shape)    
         #using home grown function to interpolate / extrapolate topography on mesh
         nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the 
-    
+        elm_z = interp.irregular_grid(elm_x,elm_y,x_grid,y_grid,z_grid)
+        
     mesh.node_z = np.array(mesh.node_z) + nodez
+    mesh.elm_centre = (elm_x, elm_y, np.array(mesh.elm_centre[2]) + elm_z)
     #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     

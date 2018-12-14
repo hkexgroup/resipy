@@ -118,7 +118,7 @@ def planeintersect(Ax, Ay, Az,
     
     return intersect # return binary 
 
-#%% is inside a 
+#%% is inside a volume
 def isinvolume(x,y,z,volume_data,ray_cast=10000):
     """
     Determine if a point lies inside a bounding volume 
@@ -165,5 +165,39 @@ def isinvolume(x,y,z,volume_data,ray_cast=10000):
     
     #the number of intersects with a plane should be  odd   
     return count%2 != 0 #returns boolian indexes
-        
+
+
+#%% determine if points are inside cubiod  
+def in_box(x,y,z,xmax,xmin,ymax,ymin,zmax,zmin):
+    """
+    Determine if a point lies inside a bounding volume 
+    Parameters
+    ----------
+    x: array like, float
+        x coordinate of query point
+    y: array like, float
+        y coordinate of query point 
+    z: array like, float
+        z coordinate of query point
+    volume_data: list 
+        contains column of poly_data, in the form (polyx, polyy, polyz)
+    ray_cast: float, optional
+        determines how the far in the x axis a point is ray casted 
+    Returns
+    ----------
+    inside: boolian, numpy array 
+        true indexes where point is inside volume
+    """
     
+    x = np.array(x)
+    y = np.array(y)
+    z = np.array(z)
+    #first check x coordinates 
+    idx_x_in = (x>xmin) & (x<xmax)
+    #check y coordinates 
+    idx_y_in = (y>ymin) & (y<ymax)
+    #check Z coordinates 
+    idx_z_in = (z>zmin) & (z<zmax)
+    #finally
+    idx = (idx_x_in==True) & (idx_y_in==True) & (idx_z_in==True)
+    return idx

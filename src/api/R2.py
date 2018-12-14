@@ -371,9 +371,10 @@ class R2(object): # R2 master class instanciated by the GUI
                     geom_input['surface'] = [surface[:,0], surface[:,2]]
             
             whole_space = False
-            if np.sum(buried) == len(buried) and surface is None:
-                # all electrodes buried and no surface given
-                whole_space = True
+            if buried is not None:
+                if np.sum(buried) == len(buried) and surface is None:
+                    # all electrodes buried and no surface given
+                    whole_space = True
 
             elec_type = elec_type.tolist()
 
