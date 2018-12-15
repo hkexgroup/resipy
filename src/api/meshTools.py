@@ -36,13 +36,13 @@ import time
 #import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import griddata, NearestNDInterpolator
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 #import R2gui API packages - remove the "api." below code if running the script and using the test blocks at the bottom 
 import api.gmshWrap as gw
 from api.isinpolygon import isinpolygon, isinvolume
+import api.interpolation as interp
 
 #%% create mesh object
 class Mesh_obj:
@@ -1611,51 +1611,33 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
     mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
+    node_x = np.array(mesh.node_x)
+    node_y = np.array(mesh.node_y)
+    elm_x = np.array(mesh.elm_centre[0])
+    elm_y = np.array(mesh.elm_centre[1])
     
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
-    
-    #change back to orginal working directory
-    #os.chdir(cwd)
     
     if shape is None: #we cant rearrange into a nice grid, so just interpolate electrode positions as is. 
         x_interp = elec_x#np.append(elec_x,add_x)#parameters to be interpolated 
         y_interp = elec_y#np.append(elec_y,add_y)
         z_interp = elec_z#np.append(elec_z,add_z)
+        nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp)# use inverse distance
+        elm_z = interp.idw(elm_x,elm_y,x_interp, y_interp, z_interp)#translate cell centre positions as well
     else:
         if not isinstance(shape,tuple) or len(shape) is not 2:
             raise TypeError("Expected tuple type argument with length of 2 for 'shape'")
         x_grid = np.reshape(elec_x,shape)
         y_grid = np.reshape(elec_y,shape)
-        z_grid = np.reshape(elec_z,shape)
-        add_x = np.append(x_grid[:,0], x_grid[:,-1])
-        add_x = np.append(add_x, x_grid[0,:]-padding)
-        add_x = np.append(add_x, x_grid[-1,:]+padding)
-        add_y = np.append(y_grid[:,0]-padding, y_grid[:,-1]+padding)
-        add_y = np.append(add_y, y_grid[0,:])
-        add_y = np.append(add_y, y_grid[-1,:])
-        add_z = np.append(z_grid[:,0], z_grid[:,-1])
-        add_z = np.append(add_z, z_grid[0,:])
-        add_z = np.append(add_z, z_grid[-1,:])
-        x_interp = np.append(elec_x,add_x)#parameters to be interpolated 
-        y_interp = np.append(elec_y,add_y)
-        z_interp = np.append(elec_z,add_z)
-    
-    node_x = np.array(mesh.node_x)
-    node_y = np.array(mesh.node_y)
-    
-    nodez_surrogate = griddata((x_interp,y_interp),z_interp,(node_x,node_y),method='linear',fill_value=np.nan)#gives smoothed topography but Nans outside survey area
-    #delete nans 
-    idx_nan = np.isnan(nodez_surrogate)
-    idx_num = np.where(idx_nan == False)
-    
-    interp_function = NearestNDInterpolator((node_x[idx_num],node_y[idx_num]),nodez_surrogate[idx_num])#extrapolates the topography outside survey area 
-    nodez_outside = interp_function(node_x,node_y)
-    
-    nodez_surrogate[idx_nan] = nodez_outside[idx_nan]
-    
-    mesh.node_z = np.array(mesh.node_z) + nodez_surrogate
-
+        z_grid = np.reshape(elec_z,shape)    
+        #using home grown function to interpolate / extrapolate topography on mesh
+        nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the 
+        elm_z = interp.irregular_grid(elm_x,elm_y,x_grid,y_grid,z_grid)
+        
+    mesh.node_z = np.array(mesh.node_z) + nodez
+    mesh.elm_centre = (elm_x, elm_y, np.array(mesh.elm_centre[2]) + elm_z)
+    #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh

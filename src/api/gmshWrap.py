@@ -18,13 +18,10 @@ Dependencies:
     python3 standard libs
 """
 #python standard libraries 
-#import tkinter as tk
-#from tkinter import filedialog
 import os, warnings
 #general 3rd party libraries
 import numpy as np
-#pyR2 library?
-#import parsers as prs
+
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
     delta=stop-start
@@ -1235,6 +1232,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
+    print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
     return np.array(node_pos) 
     
 #%% parse a .msh file
@@ -1343,10 +1341,10 @@ def msh_parse_3d(file_path):
     centriod_z=[]
     areas=[]
     for i in range(real_no_elements):
-        n1=(x_coord[node1[i]-1],y_coord[node1[i]-1],z_coord[node1[i]-1])#define node coordinates
-        n2=(x_coord[node2[i]-1],y_coord[node2[i]-1],z_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
-        n3=(x_coord[node3[i]-1],y_coord[node3[i]-1],z_coord[node3[i]-1])
-        n4=(x_coord[node4[i]-1],y_coord[node4[i]-1],z_coord[node4[i]-1])
+        n1=(x_coord[node1[i]],y_coord[node1[i]],z_coord[node1[i]])#define node coordinates
+        n2=(x_coord[node2[i]],y_coord[node2[i]],z_coord[node2[i]])#we have to take 1 off here cos of how python indexes lists and tuples
+        n3=(x_coord[node3[i]],y_coord[node3[i]],z_coord[node3[i]])
+        n4=(x_coord[node4[i]],y_coord[node4[i]],z_coord[node4[i]])
         centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/npere)
         centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/npere)
         centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/npere)
@@ -1365,7 +1363,7 @@ def msh_parse_3d(file_path):
             'elm_id':np.arange(1,real_no_elements,1),#element id number 
             'num_elm_nodes':3,#number of points which make an element
             'node_data':node_dump,#nodes of element vertices
-            'elm_centre':(centriod_x,centriod_y),#centre of elements (x,y)
+            'elm_centre':[centriod_x,centriod_y,centriod_z],#centre of elements (x,y,z)
             'elm_area':areas,
             'cell_type':[10],
             'parameters':phys_entity,#the values of the attributes given to each cell 

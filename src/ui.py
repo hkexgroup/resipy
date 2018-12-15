@@ -1424,10 +1424,19 @@ class App(QMainWindow):
             self.r2.surveys[0].df = self.r2.surveys[0].dfphasereset.copy()
             heatFilter()
             dcaProgress.setValue(0)
+            infoDump('All phase filteres are now reset!')
             
         def phiCbarRange():
             self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
             self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
+            heatFilter()
+            heatRaw()
+        
+        def phiCbarDataRange():
+            minDataIP = np.min(self.r2.surveys[0].dfOrigin['ip'])
+            maxDataIP = np.max(self.r2.surveys[0].dfOrigin['ip'])
+            self.r2.surveys[0].phiCbarmin = minDataIP
+            self.r2.surveys[0].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
         
@@ -1451,11 +1460,16 @@ class App(QMainWindow):
         phiCbarrangebutton.setToolTip('This is not a filtering step.')
         phiCbarrangebutton.setAutoDefault(True)
         phiCbarrangebutton.clicked.connect(phiCbarRange)
+        phiCbarDatarangebutton = QPushButton('Scale to raw data range')
+        phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
+        phiCbarDatarangebutton.setAutoDefault(True)
+        phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
         resetlayout.addWidget(phiCbarminlabel)
         resetlayout.addWidget(phiCbarminEdit)
         resetlayout.addWidget(phiCbarMaxlabel)
         resetlayout.addWidget(phiCbarMaxEdit)
         resetlayout.addWidget(phiCbarrangebutton)
+        resetlayout.addWidget(phiCbarDatarangebutton)
         resetlayout.addWidget(filtreset)
 #        recipfilt.clicked.connect("add function")
         
@@ -1463,8 +1477,8 @@ class App(QMainWindow):
         ipfiltlayout = QHBoxLayout()
         
         def heatRaw():
-            self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
-            self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
+#            self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
+#            self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
             self.r2.surveys[0].filt_typ = 'Raw'
 #            self.r2.surveys[0].cbar = False
             raw_hmp.plot(self.r2.heatmap)
@@ -1485,8 +1499,11 @@ class App(QMainWindow):
             QApplication.processEvents()
             
         def dcaFiltering():
-            self.r2.surveys[0].dca(dump=dcaDump)
-            heatFilter()
+            try:
+                self.r2.surveys[0].dca(dump=dcaDump)
+                heatFilter()
+            except:
+                errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')         
             
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
