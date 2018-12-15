@@ -139,7 +139,7 @@ def protocolParser(fname):
     return elec, df
 
 # test code
-#protocolParser('test/protocolFile.dat')
+#protocolParser('api/test/protocol.dat')
 
 
 #def protocolParser2(fname): # with pandas = twice slower but same time if we use np.genfromtxt()
@@ -192,6 +192,27 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
     return elec, df    
+
+
+#%% 3D protocol parsers
+def protocol3DParser(fname):
+    colnames = np.array(['index','sa', 'a','sb','b','sm', 'm','sn', 'n','resist'])
+    x = np.genfromtxt(fname, skip_header=1)
+    
+    # remove string effect (faster option but might lead to  non-consecutive elec number)
+    maxElec = np.max(x[:,[2,4,6,8]])
+    x[:,[2,4,6,8]] = x[:,[1,3,5,7]]*maxElec + x[:,[2,4,6,8]]
+    x[:,[1,3,5,7]] = 1
+    
+    df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
+    df['ip'] = np.nan
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return df, elec
+
+# test code
+#df, elec = protocol3DParser('api/test/protocol3Df.dat')
 
 
 #%% PRIME system parser

@@ -1850,6 +1850,14 @@ class App(QMainWindow):
         seqDipDip.setItem(0,1,QTableWidgetItem('8'))
         
         seqWennerLabel = QLabel('Wenner')
+        pixmap = QPixmap('image/wenner.png').scaledToWidth(200)
+        seqWennerLabel.setPixmap(pixmap)
+        
+        from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+        seqWennerMap = QSvgWidget('image/proto.svg')
+        renderer = QSvgRenderer('image/proto.svg')
+        seqWennerLabel.resize(renderer.defaultSize())
+        
         seqWenner = SequenceTable(['a'])
         
         seqSchlumLabel = QLabel('Schlumberger')
@@ -1864,7 +1872,7 @@ class App(QMainWindow):
                      'multigrad' : seqMulti}
         
         seqs = [[seqDipDipLabel, seqDipDip],
-                [seqWennerLabel, seqWenner],
+                [seqWennerLabel, seqWenner, seqWennerMap],
                 [seqSchlumLabel, seqSchlum],
                 [seqMultiLabel, seqMulti]]
         

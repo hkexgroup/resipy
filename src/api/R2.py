@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from multiprocessing import Pool
 
+#from scipy import interpolate
+#from scipy import spatial
+
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
 

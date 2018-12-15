@@ -36,7 +36,7 @@ import time
 #import anaconda default libraries
 import numpy as np
 import matplotlib.pyplot as plt
-#from scipy.interpolate import griddata, NearestNDInterpolator
+from scipy.interpolate import griddata, NearestNDInterpolator
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
@@ -1973,3 +1973,13 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     ax1.collections[0].facecolors contains the assigned color for each contour
     tcf (output of ax.tricontourf) takes tcf.set_clim()
 """
+
+#%% 3D mesh testing
+#import pandas as pd
+#data = pd.read_csv("./api/test/init_elec_locs.csv")#electrode position file
+#
+##reassign the lists to numpy arrays
+#elec_x = np.array(data['x'])
+#elec_y = np.array(data['y'])
+#elec_z = np.array(data['z'])+2
+#mesh = tetra_mesh(elec_x,elec_y,elec_z, shape=(5,32))
