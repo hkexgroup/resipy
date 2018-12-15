@@ -1825,7 +1825,8 @@ class App(QMainWindow):
         # add table for sequence generation
         seqLabel = QLabel('Define the number of skip and levels in the table.'
                           'Take into account the specifications of your instrument to'
-                          ' obtain realistic simulation results.')
+                          ' obtain realistic simulation results. Hhover on the title to'
+                          ' see the sequence scheme.')
         seqLabel.setWordWrap(True)
         
         class SequenceTable(QTableWidget):
@@ -1862,25 +1863,29 @@ class App(QMainWindow):
                 self.setRowCount(1)
         
         seqDipDipLabel = QLabel('Dipole-Dipole')
+        seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
         seqDipDip = SequenceTable(['a','n'])
         seqDipDip.setItem(0,0,QTableWidgetItem('1'))
         seqDipDip.setItem(0,1,QTableWidgetItem('8'))
         
         seqWennerLabel = QLabel('Wenner')
-        pixmap = QPixmap('image/wenner.png').scaledToWidth(200)
-        seqWennerLabel.setPixmap(pixmap)
+        seqWennerLabel.setToolTip('<img src="image/wenner.png">')
+#        pixmap = QPixmap('image/wenner.png').scaledToWidth(250)
+#        seqWennerLabel.setPixmap(pixmap)
         
-        from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-        seqWennerMap = QSvgWidget('image/proto.svg')
-        renderer = QSvgRenderer('image/proto.svg')
-        seqWennerLabel.resize(renderer.defaultSize())
+#        from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+#        seqWennerMap = QSvgWidget('image/proto.svg')
+#        renderer = QSvgRenderer('image/proto.svg')
+#        seqWennerLabel.resize(renderer.defaultSize())
         
         seqWenner = SequenceTable(['a'])
         
         seqSchlumLabel = QLabel('Schlumberger')
+        seqSchlumLabel.setToolTip('<img src="image/schlum.png">')
         seqSchlum = SequenceTable(['a','n'])
         
         seqMultiLabel = QLabel('Multigradient')
+        seqMultiLabel.setToolTip('<img src="image/gradient.png">')
         seqMulti = SequenceTable(['a','n','s'])
         
         seqTables = {'dpdp1' : seqDipDip,
@@ -1889,7 +1894,7 @@ class App(QMainWindow):
                      'multigrad' : seqMulti}
         
         seqs = [[seqDipDipLabel, seqDipDip],
-                [seqWennerLabel, seqWenner, seqWennerMap],
+                [seqWennerLabel, seqWenner],
                 [seqSchlumLabel, seqSchlum],
                 [seqMultiLabel, seqMulti]]
         

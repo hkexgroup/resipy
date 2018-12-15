@@ -7,7 +7,7 @@ Topography interpolation schemes for pyr2
 """
 import numpy as np
 from api.isinpolygon import isinpolygon
-from tqdm import tqdm
+#from tqdm import tqdm
 
 #%% compute thin plate spline /bilinear models  for irregular grid
 # see solution @ https://math.stackexchange.com/questions/828392/spatial-interpolation-for-irregular-grid
@@ -78,7 +78,7 @@ def irregular_grid(xnew, ynew, x_grid, y_grid, z_grid, method="bilinear", extrap
     znew.fill(np.nan)
     
     #compute new values inside survey
-    for i in tqdm(range(dimns[0]-1),ncols=100,desc="Interpolating values"): # note this done inside 2 for loops - yikes!!! 
+    for i in range(dimns[0]-1):#,ncols=100,desc="Interpolating values"): # note this done inside 2 for loops - yikes!!! 
         for j in range(dimns[1]-1): #### TODO : make this more efficient 
             x = np.array((x_grid[i,j],x_grid[i,j+1],x_grid[i+1,j+1],x_grid[i+1,j]))
             y = np.array((y_grid[i,j],y_grid[i,j+1],y_grid[i+1,j+1],y_grid[i+1,j]))
@@ -108,7 +108,7 @@ def irregular_grid(xnew, ynew, x_grid, y_grid, z_grid, method="bilinear", extrap
         extrap_y = ynew[idx_nan]
         extrap_z = znew[idx_nan]
         
-        for i in tqdm(range(len(extrap_x)),ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate
+        for i in range(len(extrap_x)):#,ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate
             dist = pdist(extrap_x[i],extrap_y[i],known_x,known_y)
             ref = np.argmin(dist)
             extrap_z[i] = known_z[ref]
@@ -121,7 +121,7 @@ def irregular_grid(xnew, ynew, x_grid, y_grid, z_grid, method="bilinear", extrap
 #%% inverse weighted distance
 def idw(xnew, ynew, xknown, yknown, zknown):
     znew = np.zeros(len(xnew))
-    for i,(x,y) in tqdm(enumerate(zip(xnew, ynew)),ncols=100,desc="Interpolating topo"):
+    for i,(x,y) in enumerate(zip(xnew, ynew)):#,ncols=100,desc="Interpolating topo"):
         dist = pdist(x, y, xknown, yknown)
         # if we consider all the points (might be not good)
         w = (1/dist)**2 # exponent to be chosen
