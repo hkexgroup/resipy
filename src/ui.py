@@ -2077,10 +2077,11 @@ class App(QMainWindow):
                 self.parallel = True
             else:
                 self.parallel = False
-        parallelLabel = QLabel('Parallel inversion')
-        parallelCheck =QCheckBox()
+        parallelLabel = QLabel('<a href="parallel">Parallel inversion</a>')
+        parallelLabel.linkActivated.connect(showHelp2)
+        parallelCheck = QCheckBox()
         parallelCheck.stateChanged.connect(parallelFunc)
-        invForm.addRow(parallelLabel, parallelCheck)
+        advForm.addRow(parallelLabel, parallelCheck)
         
         def modErrFunc(state):
             if state == Qt.Checked:
@@ -2088,10 +2089,10 @@ class App(QMainWindow):
             else:
                 self.modErr = False
         modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
-        modErrLabel.linkActivated.connect(showHelp)
+        modErrLabel.linkActivated.connect(showHelp2)
         modErr = QCheckBox()
         modErr.stateChanged.connect(modErrFunc)
-        invForm.addRow(modErrLabel, modErr)
+        advForm.addRow(modErrLabel, modErr)
         self.modErr = False
         
         def flux_typeFunc(index):
