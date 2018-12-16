@@ -344,6 +344,10 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(False)
                 instructionLabel.setVisible(True)
                 
+                # inversion settings
+                show3DOptions(False)
+                showIpOptions(self.typ[0] == 'c')
+                
                 # inversion tab
                 contourCheck.setVisible(True)
                 edgeCheck.setVisible(True)
@@ -365,6 +369,10 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(True)
                 instructionLabel.setVisible(False)
                 
+                # inversion settings
+                show3DOptions(True)
+                showIpOptions(self.typ[0] == 'c')
+                
                 # inversion tab
                 contourCheck.setVisible(False)
                 edgeCheck.setVisible(False)
@@ -379,7 +387,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False) # comment this to enable 3D
+#        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -2138,6 +2146,28 @@ class App(QMainWindow):
                 data_type.setVisible(True)
                 data_typeLabel.setVisible(True)
         
+        def show3DOptions(arg):
+            settings3D = [no_improveLabel, no_improve,
+                          inv_type3DLabel, inv_type3D,
+                          alpha_sLabel, alpha_s,
+                          cginv_toleranceLabel, cginv_tolerance,
+                          cginv_maxitsLabel, cginv_maxits,
+                          alpha_maxLabel, alpha_max,
+                          num_alpha_stepsLabel, num_alpha_steps,
+                          min_stepLabel, min_step]
+            settings2D = [flux_typeLabel, flux_type,
+                          inv_typeLabel, inv_type,
+                          min_errorLabel, min_error,
+                          rho_minLabel, rho_min,
+                          rho_maxLabel, rho_max,
+                          target_decreaseLabel, target_decrease]
+            if arg is True:
+                [s.setVisible(True) for s in settings3D]
+                [s.setVisible(False) for s in settings2D]                
+            else:
+                [s.setVisible(False) for s in settings3D]
+                [s.setVisible(True) for s in settings2D]
+        
         # help sections
         def showHelp(arg): # for general tab
             if arg not in r2help:
@@ -2281,6 +2311,25 @@ class App(QMainWindow):
         inv_type.currentIndexChanged.connect(inv_typeFunc)
         invForm.addRow(inv_typeLabel, inv_type)
         
+        def inv_type3DFunc(index):
+            self.param['inverse_type'] = index
+            if index > 0:
+                alpha_sLabel.setVisible(True)
+                alpha_s.setVisible(True)
+            else:
+                alpha_sLabel.setVisible(False)
+                alpha_s.setVisible(False)
+        inv_type3DLabel = QLabel('<a href="inv_type3D">Inversion Type</a>:')
+        inv_type3DLabel.linkActivated.connect(showHelp)
+        inv_type3D = QComboBox()
+        inv_type3D.addItem('Normal Regularisation [0]')
+        inv_type3D.addItem('Background Regularisation [1]')
+        inv_type3D.addItem('Difference Regularisation [2]')
+        inv_type3D.currentIndexChanged.connect(inv_type3DFunc)
+        invForm.addRow(inv_type3DLabel, inv_type3D)
+        inv_type3DLabel.setVisible(False)
+        inv_type3D.setVisible(False)
+        
         def data_typeFunc(index):
             self.r2.param['data_type'] = index
         data_typeLabel = QLabel('<a href="data_type">Data type</a>:')
@@ -2312,6 +2361,18 @@ class App(QMainWindow):
         tolerance.setText('1.0')
         tolerance.editingFinished.connect(toleranceFunc)
         invForm.addRow(toleranceLabel, tolerance)
+        
+        def no_improveFunc():
+            self.r2.param['no_improve'] = float(no_improve.text())
+        no_improveLabel = QLabel('<a href="no_improve">Stop criteria</a>')
+        no_improveLabel.linkActivated.connect(showHelp)
+        no_improve = QLineEdit()
+        no_improve.setValidator(QDoubleValidator())
+        no_improve.setText('1.0')
+        no_improve.editingFinished.connect(no_improveFunc)
+        invForm.addRow(no_improveLabel, no_improve)
+        no_improveLabel.setVisible(False)
+        no_improve.setVisible(False)
         
         def max_iterationsFunc():
             self.r2.param['max_iter'] = int(max_iterations.text())
@@ -2350,6 +2411,78 @@ class App(QMainWindow):
         alpha_aniso.setText('1.0')
         alpha_aniso.editingFinished.connect(alpha_anisoFunc)
         advForm.addRow(alpha_anisoLabel, alpha_aniso)
+        
+        def alpha_sFunc():
+            self.r2.param['alpha_s'] = float(alpha_s.text())
+        alpha_sLabel = QLabel('<a href="alpha_s"><code>alpha_s</code></a>:')
+        alpha_sLabel.linkActivated.connect(showHelp2)
+        alpha_s = QLineEdit()
+        alpha_s.setValidator(QDoubleValidator())
+        alpha_s.setText('1.0')
+        alpha_s.editingFinished.connect(alpha_sFunc)
+        advForm.addRow(alpha_sLabel, alpha_s)
+        alpha_sLabel.setVisible(False)
+        alpha_s.setVisible(False)
+        
+        def cginv_toleranceFunc():
+            self.r2.param['cginv_tolerance'] = float(cginv_tolerance.text())
+        cginv_toleranceLabel = QLabel('<a href="cginv_tolerance"><code>cginv_tolerance</code></a>:')
+        cginv_toleranceLabel.linkActivated.connect(showHelp2)
+        cginv_tolerance = QLineEdit()
+        cginv_tolerance.setValidator(QDoubleValidator())
+        cginv_tolerance.setText('0.0001')
+        cginv_tolerance.editingFinished.connect(cginv_toleranceFunc)
+        advForm.addRow(cginv_toleranceLabel, cginv_tolerance)
+        cginv_toleranceLabel.setVisible(False)
+        cginv_tolerance.setVisible(False)
+        
+        def cginv_maxitsFunc():
+            self.r2.param['cginv_maxits'] = int(cginv_maxits.text())
+        cginv_maxitsLabel = QLabel('<a href="cginv_maxits"><code>cginv_maxits</code></a>:')
+        cginv_maxitsLabel.linkActivated.connect(showHelp2)
+        cginv_maxits = QLineEdit()
+        cginv_maxits.setValidator(QDoubleValidator())
+        cginv_maxits.setText('500')
+        cginv_maxits.editingFinished.connect(cginv_maxitsFunc)
+        advForm.addRow(cginv_maxitsLabel, cginv_maxits)
+        cginv_maxitsLabel.setVisible(False)
+        cginv_maxits.setVisible(False)
+        
+        def alpha_maxFunc():
+            self.r2.param['alpha_max'] = float(alpha_max.text())
+        alpha_maxLabel = QLabel('<a href="alpha_max">Maximum alpha</a>:')
+        alpha_maxLabel.linkActivated.connect(showHelp2)
+        alpha_max = QLineEdit()
+        alpha_max.setValidator(QIntValidator())
+        alpha_max.setText('1.0')
+        alpha_max.editingFinished.connect(alpha_maxFunc)
+        advForm.addRow(alpha_maxLabel, alpha_max)
+        alpha_maxLabel.setVisible(False)
+        alpha_max.setVisible(False)
+        
+        def num_alpha_stepsFunc():
+            self.r2.param['num_alpha_steps'] = float(num_alpha_steps.text())
+        num_alpha_stepsLabel = QLabel('<a href="alpha_max">Number of alpha steps</a>:')
+        num_alpha_stepsLabel.linkActivated.connect(showHelp2)
+        num_alpha_steps = QLineEdit()
+        num_alpha_steps.setValidator(QDoubleValidator())
+        num_alpha_steps.setText('10')
+        num_alpha_steps.editingFinished.connect(num_alpha_stepsFunc)
+        advForm.addRow(num_alpha_stepsLabel, num_alpha_steps)
+        num_alpha_stepsLabel.setVisible(False)
+        num_alpha_steps.setVisible(False)
+        
+        def min_stepFunc():
+            self.r2.param['min_step'] = float(min_step.text())
+        min_stepLabel = QLabel('<a href="min_step">Minimium Step Length</a>:')
+        min_stepLabel.linkActivated.connect(showHelp2)
+        min_step = QLineEdit()
+        min_step.setValidator(QDoubleValidator())
+        min_step.setText('0.001')
+        min_step.editingFinished.connect(min_stepFunc)
+        advForm.addRow(min_stepLabel, min_step)
+        min_stepLabel.setVisible(False)
+        min_step.setVisible(False)
         
         def min_errorFunc():
             self.r2.param['min_error'] = float(min_error.text())
