@@ -194,25 +194,44 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
     return elec, df    
 
 
-#%% 3D protocol parsers
-def protocol3DParser(fname):
-    colnames = np.array(['index','sa', 'a','sb','b','sm', 'm','sn', 'n','resist'])
+#%% 3D protocol parser
+def protocol3DParser(fname): # works for 2D and 3D (no IP)
+    colnames3d = np.array(['index','sa', 'a','sb','b','sm', 'm','sn', 'n','resist'])
+    colnames = np.array(['index','a','b','m','n','resist','appResist'])
     x = np.genfromtxt(fname, skip_header=1)
-    
-    # remove string effect (faster option but might lead to  non-consecutive elec number)
-    maxElec = np.max(x[:,[2,4,6,8]])
-    x[:,[2,4,6,8]] = x[:,[1,3,5,7]]*maxElec + x[:,[2,4,6,8]]
-    x[:,[1,3,5,7]] = 1
-    
+    if x.shape[1] > 8: # max for non 3D cases
+        colnames = colnames3d
+        # remove string effect (faster option but might lead to non-consecutive elec number)
+#        maxElec = np.max(x[:,[2,4,6,8]])
+#        x[:,[2,4,6,8]] = x[:,[1,3,5,7]]*maxElec + x[:,[2,4,6,8]]
+#        x[:,[1,3,5,7]] = 1
+#        
+        # slower option (but consecutive electrode numbers)
+        elecs = x[:,1:9].reshape((-1,2))
+        c = 0
+        for line in np.unique(elecs[:,0]):
+            ie = elecs[:,0] == line
+            uelec = np.unique(elecs[ie,1])
+            if len(uelec) != np.max(elecs[ie,1]):
+                raise Exception('More electrodes per line ({}) then electrode '
+                                'number ({}).'.format(np.max(elecs[ie,1]), len(uelec)))
+            else:
+                elecs[ie,0] = 0
+                elecs[ie,1] = c + elecs[ie,1]
+                c = c + len(uelec)
+        x[:,1:9] = elecs.reshape((-1,8))
+        
     df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
-    return df, elec
+    return elec, df
 
 # test code
-#df, elec = protocol3DParser('api/test/protocol3Df.dat')
+#elec1, df1 = protocol3DParser('api/test/protocol3Df.dat')
+#elec2, df2 = protocol3DParser('api/test/protocol3Di.dat')
+#elec3, df3 = protocol3DParser('api/test/protocol.dat')
 
 
 #%% PRIME system parser

@@ -25,7 +25,6 @@ sys.path.append(os.path.relpath('..'))
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
-from api.meshTools import Mesh_obj, tri_mesh, dat_import, systemCheck
 from api.sequenceHelper import ddskip
 from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
                           wenner_gamma, schlum1, schlum2, multigrad)
@@ -35,8 +34,46 @@ from api.post_processing import import_R2_err_dat, disp_R2_errors
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
 print('pyR2 version = ',str(pyR2_version))
-#info = systemCheck()
+#info = mt.systemCheck()
 
+
+# small useful function for reading and writing mesh.dat
+def readMeshDat(fname):
+    """ Read mesh.dat or mesh3d.dat and returns elements and nodes.
+    """
+    with open(fname, 'r') as f:
+        x = f.readline().split()
+    numel = int(x[0])
+    elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
+    if fname[-6:] == '3d.dat': # it's a 3D mesh
+        skip_footer = 1
+    else:
+        skip_footer = 0
+    nodes = np.genfromtxt(fname, skip_header=numel+1, skip_footer=skip_footer)
+    return elems, nodes
+
+
+def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
+    """ Write mesh.dat/mesh3d.dat provided elements and nodes at least.
+    """
+    numel = len(elems)
+    nnodes = len(nodes)
+    threed = nodes.shape[1] == 4 # it's a 3D mesh
+    if threed is True:
+        extraHeader = '\t1\t0\t4'
+    with open(fname, 'w') as f:
+        f.write('{:.0f} {:.0f}{}\n'.format(numel, nnodes, extraHeader))
+    with open(fname, 'ab') as f:
+        np.savetxt(f, elems, fmt='%.0f')
+        if threed is True:
+            np.savetxt(f, nodes, fmt='%.0f %f %f %f')
+        else:
+            np.savetxt(f, nodes, fmt='%.0f %f %f')
+    if threed is True: # for 3D only
+        with open(fname, 'a') as f:
+            f.write(footer)
+                
+                
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
     """    
@@ -45,8 +82,11 @@ class R2(object): # R2 master class instanciated by the GUI
         
         Parameters
         ----------
-        dirnaname : str, optional
+        dirname : str, optional
             Path of the working directory. Can also be set using `R2.setwd()`.
+        typ : str, optional
+            Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t'.
+            Automatically infered when creating the survey.
         """
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
@@ -109,7 +149,30 @@ class R2(object): # R2 master class instanciated by the GUI
             os.mkdir(dirname)
         self.dirname = dirname
     
-    
+    def setElec(self, elec):
+        """ Set electrodes.
+        
+        Parameters
+        ----------
+        elec : numpy array
+            Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
+            M = 3 if x,y,z coordinates are supplied.
+        """
+        if self.elec is not None: # then check the shape
+            if elec.shape[0] == self.elec.shape[0]:
+                ok = True
+            else:
+                print('ERROR : elec, does not match shape from Survey;')
+        else:
+            ok = True
+        
+        if ok:
+            if elec.shape[1] == 2:
+                self.elec[:,[0,2]] = elec
+            else:
+                self.elec = elec
+        
+        
     def setBorehole(self, val=False):
         """ Set all surveys in borehole type if `True` is passed.
         """
@@ -278,25 +341,49 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Compute the Depth Of Investigation (DOI).
         """
         elec = self.elec.copy()
-        if len(self.surveys) > 0:
-            array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
-            maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
-            self.doi = np.min(elec[:,2])-2/3*maxDist
-        else:
-            self.doi = np.min(elec[:,2])-2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
+        if self.elec[:,1].sum() == 0: # 2D survey:
+            if len(self.surveys) > 0:
+                array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
+                maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
+                self.doi = np.min(elec[:,2])-2/3*maxDist
+            else:
+                self.doi = np.min(elec[:,2])-2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
+
+            # set num_xy_poly
+            self.param['num_xy_poly'] = 5
+            ymax = np.max(self.elec[:,2])
+            ymin = self.doi
+            xy_poly_table = np.array([
+            [self.elec[0,0], ymax],
+            [self.elec[-1,0], ymax],
+            [self.elec[-1,0], ymin],
+            [self.elec[0,0], ymin],
+            [self.elec[0,0], ymax]])
+            self.param['xy_poly_table'] = xy_poly_table
+        
+        else: # for 3D survey
+            dist = np.zeros((len(elec), len(elec)))
+            for i, el1 in enumerate(elec):
+                dist[:,i] = np.sqrt(np.sum((el1[None,:] - elec)**2, axis=1))
+            self.doi = np.min(elec[:,2])-2/3*np.max(dist)
+            
+            # set num_xy_poly
+            self.param['num_xy_poly'] = 5
+            xmin, xmax = np.min(self.elec[:,0]), np.max(self.elec[:,0])
+            ymin, ymax = np.min(self.elec[:,1]), np.max(self.elec[:,1])
+            xy_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['xy_poly_table'] = xy_poly_table
+            self.param['zmin'] = self.doi
+            self.param['zmax'] = np.max(self.elec[:,2])
+            
         print('computed DOI : {:.2f}'.format(self.doi))
         
-        # set num_xy_poly
-        self.param['num_xy_poly'] = 5
-        ymax = np.max(self.elec[:,2])
-        ymin = self.doi
-        xy_poly_table = np.array([
-        [self.elec[0,0], ymax],
-        [self.elec[-1,0], ymax],
-        [self.elec[-1,0], ymin],
-        [self.elec[0,0], ymin],
-        [self.elec[0,0], ymax]])
-        self.param['xy_poly_table'] = xy_poly_table
+
         
         
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
@@ -326,12 +413,14 @@ class R2(object): # R2 master class instanciated by the GUI
         self.computeDOI()
         
         if typ == 'default':
-            if self.elec[:,2].sum() == 0:
+            if self.elec[:,1].sum() == 0: # it's a 2D mesh
                 typ = 'quad'
-                print('Using a quadrilateral mesh')
+                print('Using a quadrilateral mesh.')
             else:
-                typ = 'trian'
-                print('Using a triangular mesh')
+                typ = 'tetra'
+                print('Using a tetrahedral mesh.')
+        print(typ)
+        
         if typ == 'quad':
             elec = self.elec.copy()
             elec_x = self.elec[:,0]
@@ -356,10 +445,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
-        if typ == 'trian':
+        elif typ == 'trian' or typ == 'tetra':
             elec = self.elec.copy()
             geom_input = {}
             elec_x = self.elec[:,0]
+            elec_y = self.elec[:,1]
             elec_z = self.elec[:,2]
             elec_type = np.repeat('electrode',len(elec_x))
             if (buried is not None
@@ -384,13 +474,25 @@ class R2(object): # R2 master class instanciated by the GUI
             #print('elec_type', elec_type)
             ui_dir = os.getcwd()#current working directory (usually the one the ui is running in)
             os.chdir(self.dirname)#change to working directory so that mesh files written in working directory 
-
-            mesh = tri_mesh(elec_x,elec_z,elec_type,geom_input,
-                             path=os.path.join(self.apiPath, 'exe'),
-                             cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True,
-                             doi=self.doi-max(elec_z), whole_space=whole_space,
-                             **kwargs)
+            try:
+                if typ == 'trian':
+                    mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
+                                 path=os.path.join(self.apiPath, 'exe'),
+                                 cl_factor=cl_factor,
+                                 cl=cl, dump=dump, show_output=True,
+                                 doi=self.doi-max(elec_z), whole_space=whole_space,
+                                 **kwargs)
+                if typ == 'tetra': # TODO add buried
+                    elec_type = None # for now
+                    mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
+                                 path=os.path.join(self.apiPath, 'exe'),
+                                 cl_factor=cl_factor, shape=None, # shape is None -> use IDW
+                                 cl=cl, dump=dump, show_output=True,
+                                 doi=self.doi-max(elec_z), whole_space=whole_space,
+                                 **kwargs)
+            except Exception as e:
+                print("Mesh generation failed :", e)   
+                pass
             os.chdir(ui_dir)#change back to original directory
             
             self.param['mesh_type'] = 3
@@ -414,7 +516,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            [self.elec[0,0], ymax]])
 #            self.param['xy_poly_table'] = xy_poly_table
 #            e_nodes = np.arange(len(self.elec))+1
-            e_nodes = mesh.e_nodes + 1
+            e_nodes = mesh.e_nodes + 1 # +1 because of indexing staring at 0 in python
 #            if buried is not None:
 #                if np.sum(buried) > 0:
 #                    enodes = np.zeros(len(e_nodes), dtype=int)
@@ -423,6 +525,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                    enodes[buried] = e_nodes[-nburied:]
 #                    e_nodes = enodes
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+        
         self.mesh = mesh
         self.param['mesh'] = mesh
         
@@ -435,8 +538,17 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
+        
+#        if self.typ == 'cR3t' or self.typ == 'R3':
+#            elems = np.array(self.mesh.con_matrix).T
+#            nodes = np.c_[mesh.node_x, mesh.node_y, mesh.node_z]
+#            writeMeshDat(os.path.join(self.dirname, 'mesh3d.dat'), elems, nodes)
+#        else:
         #write mesh to working directory - edit by jamyd91 
-        file_path = os.path.join(self.dirname,'mesh.dat')
+        name = 'mesh.dat'
+        if self.typ == 'R3t' or self.typ == 'cR3t':
+            name = 'mesh3d.dat'
+        file_path = os.path.join(self.dirname, name)
         self.mesh.write_dat(file_path)
         
         
@@ -455,6 +567,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            ylim = (0, 110) # TODO
 #            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
             self.mesh.show(ax=ax, color_bar=False)
+    
     
     def write2in(self, param={}, typ=''):
         """ Create configuration file for inversion.
@@ -498,7 +611,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.param['mesh_type'] == 4:
             self.param['zones'] = self.mesh.attr_cache['zones']
             #TODO reshape it to the form of the mesh
-            
+                
         # all those parameters are default but the user can change them and call
         # write2in again
         for p in param:
@@ -581,29 +694,18 @@ class R2(object): # R2 master class instanciated by the GUI
         paramFixed[ifixed] = 0
         
 #        print('SUM OF PARAMFIXED = ', np.sum(paramFixed == 0))
-        self.mesh.write_dat(os.path.join(self.dirname, 'mesh.dat'),
+        name = 'mesh.dat'
+        if self.typ == 'R3t' or self.typ == 'cR3t':
+            name = 'mesh3d.dat'
+        self.mesh.write_dat(os.path.join(self.dirname, name),
                             zone = self.mesh.attr_cache['zones'],
                             param = paramFixed)
 
         # NOTE if fixed elements, they need to be at the end !
-        def readMeshDat(fname):
-            with open(fname, 'r') as f:
-                x = f.readline().split()
-            numel = int(x[0])
-            elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
-            nodes = np.genfromtxt(fname, skip_header=numel+1)
-            return elems, nodes
         
-        def writeMeshDat(fname, elems, nodes):
-            numel = len(elems)
-            nnodes = len(nodes)
-            with open(fname, 'w') as f:
-                f.write('{:.0f} {:.0f}\n'.format(numel, nnodes))
-            with open(fname, 'ab') as f:
-                np.savetxt(f, elems, fmt='%.0f')
-                np.savetxt(f, nodes, fmt='%.0f %f %f')
-        
-        meshFile = os.path.join(self.dirname, 'mesh.dat')
+        # TODO not sure the sorting fixed element issue if for 3D as well
+       
+        meshFile = os.path.join(self.dirname, name)
         elems, nodes = readMeshDat(meshFile)
         ifixed = elems[:,-2] == 0
         elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
@@ -622,7 +724,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 np.savetxt(f, x2)
         
         # UPDATE MESH
-        self.mesh = dat_import(meshFile)
+#        self.mesh = mt.dat_import(meshFile) # do we need that ?
         
         # We NEED parameter = elemement number if changed AND
         # all fixed element (with parameter = 0) at the end of the element
@@ -684,6 +786,10 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh.dat'))
+                    if 'mesh3d.dat' in os.listdir(self.dirname):
+                        shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
+                                os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
+
                     with open(os.path.join(refdir, 'protocol.dat'), 'w') as f:
                         f.write(content) # write the protocol for the reference file
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
@@ -808,7 +914,8 @@ class R2(object): # R2 master class instanciated by the GUI
         dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
         
         # create individual dirs
-        toMove = ['R2.exe','cR2.exe','mesh.dat','R2.in','cR2.in','res0.dat','resistivity.dat']
+        toMove = ['R2.exe','cR2.exe','mesh.dat', 'mesh3d','R2.in','cR2.in',
+                  'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat']
         dirs = []
         for i, df in enumerate(dfs):
             d = os.path.join(self.dirname, str(i))
@@ -1365,6 +1472,9 @@ class R2(object): # R2 master class instanciated by the GUI
         if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
             shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
                         os.path.join(fwdDir, 'mesh.dat'))
+        if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
+            shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
+                        os.path.join(fwdDir, 'mesh3d.dat'))
         
         # write the forward .in file
         dump('Writing .in file...')
@@ -1466,8 +1576,12 @@ class R2(object): # R2 master class instanciated by the GUI
             resFile[:,-1] = 100
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                        fmt='%.3f')
-            shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
-                        os.path.join(fwdDir, 'mesh.dat'))
+            if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
+                shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+                            os.path.join(fwdDir, 'mesh.dat'))
+            if os.path.exists(os.path.join(self.dirname, 'mesh3.dat')) is True:
+                shutil.copy(os.path.join(self.dirname, 'mesh3.dat'),
+                            os.path.join(fwdDir, 'mesh3.dat'))
             fparam['num_regions'] = 0
             fparam['res0File'] = 'resistivity.dat'
         write2in(fparam, fwdDir, typ=self.typ)
@@ -1708,7 +1822,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #if os.path.isfile(fresults):
 #    print('kk')
 #    mesh_dict=mt.vtk_import(fresults)#makes a dictionary of a mesh 
-#    mesh = Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
+#    mesh = mt.Mesh_obj.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
 #    mesh.show()
 #
 
@@ -1748,12 +1862,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.pseudoError()
 
 #%% test for timelapse inversion
-#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2()
-#k.createTimeLapseSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
-#k.createBatchSurvey(os.path.join(k.dirname, '../test/testTimelapse'))
+#k.createTimeLapseSurvey('api/test/testTimelapse') # not for //
+#k.createBatchSurvey('api/test/testTimelapse') # ok for //
 #k.linfit()
-#k.pwlfit()
+#k.pwlfit() # if we do pwlfit then it can't be pickled by multiprocessing 
 #k.errTyp = 'pwl'
 #k.param['a_wgt'] = 0
 #k.param['b_wgt'] = 0
@@ -1905,3 +2018,16 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSequence([('dpdp1', 1, 2),
 #                  ('wenner_alpha', 1)])
 #print(k.sequence)
+
+
+#%% 3D testing
+#data = pd.read_csv("./api/test/init_elec_locs.csv")#electrode position file
+#
+#k = R2(typ='R3t')
+#k.createSurvey('api/test/protocol3Di.dat', ftype='Protocol')
+##k.setElec(data[['x','y','z']].values)
+#k.setElec(np.random.randn(k.elec.shape[0], k.elec.shape[1]))
+#k.createMesh(cl=100)
+#k.invert() # TODO FATAL ERROR labels .in doesn't match mesh3d.dat
+
+

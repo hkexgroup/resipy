@@ -9,10 +9,33 @@ Created on Wed May 30 20:09:24 2018
 import numpy as np
 import os
 
-def write2in(param, dirname, typ='R2'):
-    ''' write R2.in file
-    param = dictionnary of the parameters
-    '''
+def write2in(param, dirname, typ):
+    """ Write a .in file with the `param` specified in the `dirname` for `typ`.
+    
+    Parameters
+    ----------
+    param : dict
+        Dictionnary of parameters to be used.
+    dirname : str
+        Path of the working directory to write the .in file.
+    typ : str
+        Type of file either `R2`, `cR2`, `R3t`, `cR3t`.
+    
+    Returns
+    -------
+    String to be writting ot the file.
+    """
+    if typ == 'R2' or typ == 'cR2':
+        write2Din(param, dirname, typ)
+    else:
+        write3Din(param, dirname, typ)
+
+
+def write2Din(param, dirname, typ='R2'):
+    """ Write a .in file with the `param` specified in the `dirname` for 2D surveys.
+    See `write2in` for detailed documentation.
+    """
+    
     
     # check
     if 'mesh' not in param:
@@ -194,10 +217,10 @@ def write2in(param, dirname, typ='R2'):
 
 
 #%%
-def write3in(param, dirname, typ='R3'):
-    ''' write R3.in file
-    param = dictionnary of the parameters
-    '''
+def write3Din(param, dirname, typ='R3'):
+    """ Write a .in file with the `param` specified in the `dirname` for 3D survey.
+    See `write2in` for detailed documentation.
+    """
 
     # default
     dparam = {

@@ -15,7 +15,7 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
-                     primeParser, primeParserTab, protocolParserIP)
+                     primeParser, primeParserTab, protocolParserIP, protocol3DParser)
 from api.DCA import DCA
 
 class Survey(object):
@@ -58,7 +58,7 @@ class Survey(object):
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname, spacing=spacing)
             elif ftype =='Protocol':
-                elec, data = protocolParser(fname)
+                elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
                 elec, data = res2invInputParser(fname)
             elif ftype == 'BGS Prime':
@@ -1674,7 +1674,8 @@ class Survey(object):
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #s = Survey('api/test/syscalFile.csv', ftype='Syscal')
-#s = Survey('test/rifleday8.csv', ftype='Syscal')
+#s = Survey('api/test/rifleday8.csv', ftype='Syscal')
+#s = Survey('api/test/protocol3Di.dat', ftype='Protocol')
 #s.manualFiltering()
 #s.dca()
 #s.lmefit()

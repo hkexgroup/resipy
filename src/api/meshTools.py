@@ -502,6 +502,8 @@ class Mesh_obj:
         if self.ndims == 2:
             raise Exception("Use 'mesh.show()' for 2D meshes rather than show_3D()")
         print("Sorry 3D meshes cannot be natively displayed in 3D with pyr2, but will be coming in a future update")
+# can add slicing options here
+
 
     def assign_zone(self,poly_data):
         """ Assign material/region assocations with certain elements in the mesh 
@@ -646,7 +648,7 @@ class Mesh_obj:
         self.no_attributes += 1
         #return new_para
         
-    def write_dat(self,file_path='mesh.dat', param=None, zone = None):
+    def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """
         Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
         input file for triangle meshes, so this function is only relevant for
@@ -677,8 +679,16 @@ class Mesh_obj:
         ### write data to mesh.dat kind of file ###
         #open mesh.dat for input      
         fid=open(file_path, 'w')
+        
+        threed = (np.sum(self.node_y) != 0) & (np.sum(self.node_z) != 0)
+#        print('3D mesh detected', threed)
+        
         #write to mesh.dat total num of elements and nodes
-        fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
+        if threed:
+            fid.write('%i %i 1 0 4\n'%(self.num_elms,self.num_nodes))
+        else:
+            fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
+
         
         #compute zones if present 
         if zone  is None:
@@ -706,14 +716,24 @@ class Mesh_obj:
         #now add nodes
         x_coord = self.node_x
         y_coord = self.node_y
-        if np.sum(self.node_z) != 0:
-            z_coord = self.node_z # TODO then need to write it down below
-        for i in range(self.num_nodes):
-            ni_no=i+1
-            fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
-                      (ni_no,
-                       x_coord[i],
-                       y_coord[i]))
+        z_coord = self.node_z
+        if threed:
+            for i in range(self.num_nodes):
+                ni_no=i+1
+                fid.write("%i %6.3f %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
+                          (ni_no,
+                           x_coord[i],
+                           y_coord[i],
+                           z_coord[i]))
+            fid.write('1')
+        else:
+            for i in range(self.num_nodes):
+                ni_no=i+1
+                fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
+                          (ni_no,
+                           x_coord[i],
+                           y_coord[i]))
+
         fid.close()#close the file 
         print('written mesh.dat file to \n%s'%file_path)
 
@@ -775,7 +795,7 @@ class Mesh_obj:
         fh.close()
     
 
-    def write_attr(self,attr_key,file_name='_res.dat',file_path='defualt'):
+    def write_attr(self,attr_key,file_name='_res.dat',file_path='default'):
         """ 
         Writes a attribute to a _res.dat type file. file_name entered
         seperately because it will be needed for the R2 config file.
@@ -799,7 +819,7 @@ class Mesh_obj:
         if isinstance(file_name,str)==False or isinstance(file_path,str) == False:
             raise NameError("file_name and file_path arguments must be strings")
         
-        if file_path == 'defualt':#no directory given then ignore file path input
+        if file_path == 'default':#no directory given then ignore file path input
             file_path = file_name
         else:#reassign file_path to full path including the name
             file_path = os.path.join(file_path,file_name)
@@ -1691,13 +1711,16 @@ def dat_import(file_path):
         elems = np.genfromtxt(fname, skip_header=1, max_rows=numel).astype(int)
         nodes = np.genfromtxt(fname, skip_header=numel+1)
         return elems, nodes
+#    
+#    def computeCentroid(elems, nodes):
+#        elx = nodes[elems,1]
+#        ely = nodes[elems,2]
+#        cx = np.sum(elx, axis=1)/elems.shape[1]
+#        cy = np.sum(ely, axis=1)/elems.shape[1]
+#        return np.c_[cx, cy]
     
     def computeCentroid(elems, nodes):
-        elx = nodes[elems,1]
-        ely = nodes[elems,2]
-        cx = np.sum(elx, axis=1)/elems.shape[1]
-        cy = np.sum(ely, axis=1)/elems.shape[1]
-        return np.c_[cx, cy]
+        return np.mean(nodes[elems,:], axis=1)
     
     elems, nodes = readMeshDat(file_path)
     centroids = computeCentroid(elems[:,1:-2]-1, nodes)
@@ -1881,7 +1904,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
 #ax.add_artist(rect)
 #selector = SelectPoints(ax, np.array(mesh.elm_centre).T, typ='rect')
 
-#elec = np.genfromtxt('/home/jkl/Downloads/paulRiverData/elecPos.csv', delimiter=',')
+#elec = np.genfromtxt('api/test/elecTopo.csv', delimiter=',')
 #mesh, meshx, meshy, topo, elec_node = quad_mesh(elec[:,0], elec[:,1], elemx=8)
 #mesh.show(color_bar=False)
 
@@ -1895,17 +1918,6 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
 ##mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
 #fig.show()
 ##mesh.write_attr(attrs[0], file_name='test_res.dat', file_path='api/test/')
-
-
-#%%
-#x = np.random.randn(100)+10
-#y = np.random.randn(100)+10
-#z = np.random.randn(100)
-#
-#triang = tri.Triangulation(x,y)
-#fig, ax = plt.subplots()
-#ax.tricontourf(triang, z)
-#fig.show()
 
 
 #%%
@@ -1964,4 +1976,6 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
 #elec_x = np.array(data['x'])
 #elec_y = np.array(data['y'])
 #elec_z = np.array(data['z'])+2
-#mesh = tetra_mesh(elec_x,elec_y,elec_z, shape=(5,32))
+#mesh = tetra_mesh(elec_x,elec_y,elec_z, cl=10)#, shape=(5,32))
+##mesh.show_3D() # not implemented right now
+
