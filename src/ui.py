@@ -336,12 +336,20 @@ class App(QMainWindow):
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
+                meshQuadGroup.setHidden(False)
+                meshTrianGroup.setHidden(False)
+                meshTetraGroup.setHidden(True)
+                instructionLabel.setHidden(False)
                 print(self.typ)
             else:
                 self.typ = self.typ.replace('2','3t')
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
+                meshQuadGroup.setHidden(True)
+                meshTrianGroup.setHidden(True)
+                meshTetraGroup.setHidden(False)
+                instructionLabel.setHidden(True)
                 print(self.typ)
                 
         dimRadio2D = QRadioButton('2D')
@@ -349,7 +357,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False) # comment this to enable 3D
+#        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -1543,6 +1551,7 @@ class App(QMainWindow):
         tabMesh= QWidget()
         tabs.addTab(tabMesh, 'Mesh')
         tabs.setTabEnabled(2, False)
+                
         meshLayout = QVBoxLayout()
         
         def replotMesh():
@@ -1631,6 +1640,37 @@ class App(QMainWindow):
         meshTrian.setAutoDefault(True)
         meshTrian.clicked.connect(meshTrianFunc)
         meshTrian.setToolTip('Generate triangular mesh.')
+              
+        
+        def meshTetraFunc():
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
+            meshOutputStack.setCurrentIndex(0)
+            QApplication.processEvents()
+            meshLogText.clear()
+            cl = float(cl3Edit.text())
+            cl_factor = float(cl3FactorEdit.text())
+            buried = elecTable.getBuried()
+            surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
+            if np.sum(~inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
+            self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
+                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+#            replotMesh()
+#            meshOutputStack.setCurrentIndex(1)
+
+        meshTetra = QPushButton('Tetrahedral Mesh')
+        meshTetra.setAutoDefault(True)
+        meshTetra.clicked.connect(meshTetraFunc)
+        meshTetra.setToolTip('Generate tetrahedral mesh.')
+
         
         # additional options for quadrilateral mesh
         nnodesLabel = QLabel('Number of nodes between electrode (4 -> 10):')
@@ -1659,13 +1699,24 @@ class App(QMainWindow):
         clGrid.addWidget(clFineLabel, 1,0,1,1)
         clGrid.addWidget(clCoarseLabel, 1,1,1,1)
         clFactorLabel = QLabel('Growth factor:')
-#        cl_factorEdit = QLineEdit()
-#        cl_factorEdit.setValidator(QDoubleValidator())
-#        cl_factorEdit.setText('2')
+#        clFactorEdit = QLineEdit()
+#        clFactorEdit.setValidator(QDoubleValidator())
+#        clFactorEdit.setText('2')
         clFactorSld = QSlider(Qt.Horizontal)
         clFactorSld.setMinimum(1)
         clFactorSld.setMaximum(10)
         clFactorSld.setValue(4)
+  
+        # additional options for triangular mesh
+        cl3Label = QLabel('Characteristic Length:')
+        cl3Edit = QLineEdit()
+        cl3Edit.setValidator(QDoubleValidator())
+        cl3Edit.setText('-1')
+        cl3FactorLabel = QLabel('Growth factor:')
+        cl3FactorEdit = QLineEdit()
+        cl3FactorEdit.setValidator(QDoubleValidator())
+        cl3FactorEdit.setText('2')
+        
         
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
@@ -1680,14 +1731,23 @@ class App(QMainWindow):
         meshOptionTrianLayout.addWidget(clFactorLabel)
 #        meshOptionTrianLayout.addWidget(clFactorEdit)
         meshOptionTrianLayout.addWidget(clFactorSld)
+
+        meshOptionTetraLayout = QHBoxLayout()
+        meshOptionTetraLayout.addWidget(cl3Label)
+        meshOptionTetraLayout.addWidget(cl3Edit)
+        meshOptionTetraLayout.addWidget(cl3FactorLabel)
+        meshOptionTetraLayout.addWidget(cl3FactorEdit)
         
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
+        meshTetraLayout = QVBoxLayout()
         meshQuadGroup = QGroupBox()
         meshQuadGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         meshTrianGroup = QGroupBox()
         meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        meshTetraGroup = QGroupBox()
+        meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
         meshQuadLayout.addLayout(meshOptionQuadLayout)
         meshQuadLayout.addWidget(meshQuad)
@@ -1698,6 +1758,12 @@ class App(QMainWindow):
         meshTrianLayout.addWidget(meshTrian)
         meshTrianGroup.setLayout(meshTrianLayout)
         meshChoiceLayout.addWidget(meshTrianGroup)
+        
+        meshTetraLayout.addLayout(meshOptionTetraLayout)
+        meshTetraLayout.addWidget(meshTetra)
+        meshTetraGroup.setLayout(meshTetraLayout)
+        meshChoiceLayout.addWidget(meshTetraGroup)
+        meshTetraGroup.setHidden(True)
         
         meshLayout.addLayout(meshChoiceLayout, 20)
         
@@ -1814,7 +1880,7 @@ class App(QMainWindow):
         mwqm = MatplotlibWidget(navi=True)
         grid.addWidget(mwqm, 5, 0)
         '''
-       
+
         tabMesh.setLayout(meshLayout)
         
         #%% tab Forward model
