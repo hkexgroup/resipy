@@ -2072,15 +2072,15 @@ class App(QMainWindow):
 #        job_type.currentIndexChanged.connect(job_typeFunc)
 #        invForm.addRow(QLabel('Job Type:'), job_type)
         
-#        def parallelFunc(state):
-#            if state == Qt.Checked:
-#                self.parallel = True
-#            else:
-#                self.parallel = False
-#        parallelLabel = QLabel('Parallel inversion')
-#        parallelCheck =QCheckBox()
-#        parallelCheck.stateChanged.connect(parallelFunc)
-#        invForm.addRow(parallelLabel, parallelCheck)
+        def parallelFunc(state):
+            if state == Qt.Checked:
+                self.parallel = True
+            else:
+                self.parallel = False
+        parallelLabel = QLabel('Parallel inversion')
+        parallelCheck =QCheckBox()
+        parallelCheck.stateChanged.connect(parallelFunc)
+        invForm.addRow(parallelLabel, parallelCheck)
         
         def modErrFunc(state):
             if state == Qt.Checked:
@@ -2540,7 +2540,13 @@ class App(QMainWindow):
                                dict(zip(regid, phase0)))
             
 #            f = print if self.parallel is True else func
-            self.r2.invert(iplot=False, dump=func, modErr=self.modErr)#,parallel=self.parallel)
+            if self.parallel is True:
+                self.r2.invert(iplot=False, dump=print, parallel=True)
+                with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
+                    text = f.read()
+                func(text)
+            else:
+                self.r2.invert(iplot=False, dump=func, modErr=self.modErr)#, parallel=self.parallel)
             self.r2.proc = None
             try:
                 sectionId.currentIndexChanged.disconnect()

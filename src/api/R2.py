@@ -37,6 +37,50 @@ print('pyR2 version = ',str(pyR2_version))
 #info = mt.systemCheck()
 
 
+
+def runDir(dump, dirname):
+    exeName = [f for f in os.listdir(dirname) if f[-4:] == '.exe'][0]
+    print('-------------', exeName)
+    cwd = os.getcwd()
+    os.chdir(dirname)
+    
+    if OS == 'Windows':
+        cmd = [exeName]
+    elif OS == 'Darwin':
+        winePath = []
+        wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd = ['%s' % (winePath[0].strip('\n')), exeName]
+        else:
+            cmd = ['/usr/local/bin/wine', exeName]
+    else:
+        cmd = ['wine',exeName]
+        
+    if OS == 'Windows':
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
+    def execute(cmd):
+        if OS == 'Windows':
+            proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+        else:
+            proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
+        for stdout_line in iter(proc.stdout.readline, ""):
+            yield stdout_line
+        proc.stdout.close()
+        return_code = proc.wait()
+        if return_code:
+            print('error on return_code')
+
+    for text in execute(cmd):
+            dump(text.rstrip())
+
+    os.chdir(cwd)
+        
+
+
 # small useful function for reading and writing mesh.dat
 def readMeshDat(fname):
     """ Read mesh.dat or mesh3d.dat and returns elements and nodes.
@@ -891,6 +935,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         os.chdir(cwd)
     
+    
+    
     def runParallel(self, dirname=None, dump=print):
         """ Run R2 in // according to the number of cores available.
         
@@ -905,6 +951,13 @@ class R2(object): # R2 master class instanciated by the GUI
         if dirname is None:
             dirname = self.dirname
         
+        # copy R2.exe
+        exeName = self.typ + '.exe'
+        targetName = os.path.join(dirname, exeName)
+        if ~os.path.exists(targetName):
+            shutil.copy(os.path.join(self.apiPath, 'exe', exeName), targetName)  
+        
+        
         # split the protocol.dat
         dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
                             sep='\t', header=None, engine='python').reset_index()
@@ -915,7 +968,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create individual dirs
         toMove = ['R2.exe','cR2.exe','mesh.dat', 'mesh3d','R2.in','cR2.in',
-                  'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat']
+                  'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 'Start_res.dat']
         dirs = []
         for i, df in enumerate(dfs):
             d = os.path.join(self.dirname, str(i))
@@ -933,15 +986,24 @@ class R2(object): # R2 master class instanciated by the GUI
         # get number of cores available
         ncores = mt.systemCheck()['core_count']
         p = Pool(ncores)
-        p.starmap(self.runR2, tuple(zip(dirs, [dump for i in range(len(dirs))])))
+        p.kill = p.terminate
+        self.proc = p
+#        p.starmap(self.runR2, tuple(zip(dirs, [dump for i in range(len(dirs))])))
+        p.starmap(runDir, tuple(zip([dump]*len(dirs), dirs)))
+
         
         # get them all back in the main dirname
         toMove = ['f001_res.dat','f001_res.vtk','f001_err.dat','f001_sen.dat']
+        r2outText = ''
         for i, d in enumerate(dirs):
             for f in toMove:
                 shutil.move(os.path.join(d, f), os.path.join(self.dirname, f.replace('001',str(i+1).zfill(3))))
+            with open(os.path.join(d, self.typ + '.out'),'r') as f:
+                r2outText = r2outText + f.read()
         shutil.move(os.path.join(d, 'electrodes.dat'), os.path.join(self.dirname, 'electrodes.dat'))
         shutil.move(os.path.join(d, 'electrodes.vtk'), os.path.join(self.dirname, 'electrodes.vtk'))
+        with open(os.path.join(self.dirname, self.typ + '.out'),'w') as f:
+            f.write(r2outText)
         
         # delete the dirs
         [shutil.rmtree(d) for d in dirs]
