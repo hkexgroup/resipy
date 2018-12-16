@@ -1103,7 +1103,6 @@ class Survey(object):
                 protocol['Phase'] = -self.kFactor*self.df['ip'].values
                 
         if all(self.elec[:,1] == 0) is False: # it's a 3D example
-            print('ading ----------line')
             protocol.insert(1, 'sa', 1)
             protocol.insert(3, 'sb', 1)
             protocol.insert(5, 'sm', 1)

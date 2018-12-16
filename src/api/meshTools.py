@@ -1805,15 +1805,16 @@ def dat_import(file_path):
     
 #%% import a custom mesh, you must know the node positions 
 def custom_mesh_import(file_path, node_pos, flag_3D=False):
-    """
-    Import user defined mesh, currently supports .msh and .vtk format 
+    """ Import user defined mesh, currently supports .msh and .vtk format 
     for quad, triangular and tetrahedral meshes. 
+    
     Parameters
     ---------- 
     file_path: string
         path to file
     flag_3D: bool, optional
         make this true for 3D meshes
+        
     Returns
     -------
     mesh: class

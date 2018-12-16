@@ -264,15 +264,17 @@ GUI purpose).</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createSequence">
-<code class="descname">createSequence</code><span class="sig-paren">(</span><em>skipDepths=[(0, 10)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSequence</code><span class="sig-paren">(</span><em>params=[('dpdp1', 1, 3)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a dipole-dipole sequence.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>skipDepths</strong> : list of tuple, optional</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>params</strong> : list of tuple, optional</p>
 <blockquote class="last">
-<div><p>Each tuple in the list is of the form <cite>(skip, depths)</cite>. The <cite>skip</cite> is the number of electrode between the A B and M N electrode. The <cite>depths</cite> is the number of quadrupole which will have the same current electrode (same A B). The higher this number, the deeper the investigation.</p>
+<div><p>Each tuple is the form (&lt;array_name&gt;, param1, param2, …)
+Types of sequences available are : ‘dpdp1’,’dpdp2’,’wenner_alpha’,
+‘wenner_beta’, ‘wenner_gamma’, ‘schlum1’, ‘schlum2’, ‘multigrad’.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -573,6 +575,25 @@ are passed to the <cite>showResults()</cite> method.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.setElec">
+<code class="descname">setElec</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setElec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set electrodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec</strong> : numpy array</p>
+<blockquote class="last">
+<div><p>Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
+M = 3 if x,y,z coordinates are supplied.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.setwd">
 <code class="descname">setwd</code><span class="sig-paren">(</span><em>dirname</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setwd" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set the working directory.</p>
@@ -588,6 +609,12 @@ are passed to the <cite>showResults()</cite> method.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showInParaview">
+<code class="descname">showInParaview</code><span class="sig-paren">(</span><em>index=0</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInParaview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open paraview to display the .vtk file.</p>
 </dd></dl>
 
 <dl class="method">
@@ -744,6 +771,18 @@ shade on top of the inverted section.</p>
 </table>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="function">
+<dt id="api.R2.readMeshDat">
+<code class="descclassname">api.R2.</code><code class="descname">readMeshDat</code><span class="sig-paren">(</span><em>fname</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.readMeshDat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read mesh.dat or mesh3d.dat and returns elements and nodes.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="api.R2.writeMeshDat">
+<code class="descclassname">api.R2.</code><code class="descname">writeMeshDat</code><span class="sig-paren">(</span><em>fname</em>, <em>elems</em>, <em>nodes</em>, <em>extraHeader=''</em>, <em>footer='1'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.writeMeshDat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write mesh.dat/mesh3d.dat provided elements and nodes at least.</p>
 </dd></dl>
 
 <span class="target" id="module-api.Survey"></span><p>Created on Fri Jun  1 11:21:54 2018</p>
@@ -1142,7 +1181,7 @@ without reciprocal.</p>
 
 <dl class="method">
 <dt id="api.Survey.Survey.write2protocol">
-<code class="descname">write2protocol</code><span class="sig-paren">(</span><em>outputname=''</em>, <em>errTyp='none'</em>, <em>errTot=False</em>, <em>ip=False</em>, <em>errTypIP='none'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.write2protocol" title="Permalink to this definition">¶</a></dt>
+<code class="descname">write2protocol</code><span class="sig-paren">(</span><em>outputname=''</em>, <em>errTyp='none'</em>, <em>errTot=False</em>, <em>ip=False</em>, <em>errTypIP='none'</em>, <em>res0=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.write2protocol" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a protocol.dat file for R2 or cR2.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -1173,6 +1212,11 @@ error model to form the <em>total error</em>.</p>
 <blockquote>
 <div><p>Needs <cite>ip=True</cite> to be taken into account. Specify the string of
 the error model to apply for IP data.</p>
+</div></blockquote>
+<p><strong>res0</strong> : bool, optional</p>
+<blockquote>
+<div><p>For time-lapse inversion, the background resistivity will be added 
+if <cite>True</cite>.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1211,6 +1255,33 @@ gmshWrap(pyR2 api module)
 python3 standard libaries</dd>
 </dl>
 <p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
+<p>#### TODO: use .exe path in command line rather than changing the working directory”</p>
+<dl class="function">
+<dt id="api.meshTools.custom_mesh_import">
+<code class="descclassname">api.meshTools.</code><code class="descname">custom_mesh_import</code><span class="sig-paren">(</span><em>file_path</em>, <em>node_pos</em>, <em>flag_3D=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.custom_mesh_import" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import user defined mesh, currently supports .msh and .vtk format 
+for quad, triangular and tetrahedral meshes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: string</strong></p>
+<blockquote>
+<div><p>path to file</p>
+</div></blockquote>
+<p><strong>flag_3D: bool, optional</strong></p>
+<blockquote>
+<div><p>make this true for 3D meshes</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh: class</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="function">
 <dt id="api.meshTools.points2vtk">
 <code class="descclassname">api.meshTools.</code><code class="descname">points2vtk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em>, <em>file_name='points.vtk'</em>, <em>title='points'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.points2vtk" title="Permalink to this definition">¶</a></dt>
@@ -1377,6 +1448,81 @@ an error will be returned if len(surface_x) != len(surface_y)</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="api.meshTools.tetra_mesh">
+<code class="descclassname">api.meshTools.</code><code class="descname">tetra_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_z</em>, <em>elec_type=None</em>, <em>shape=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>padding=20</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tetra_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
+in the working directory. This function expects the current working directory 
+has path: exe/gmsh.exe.</p>
+<p>Uses post processing after mesh generation to super impose topography on to 
+a flat 3D tetrahedral mesh.</p>
+<p><strong>*Buried electrodes not yet supported*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec_x: array like</strong></p>
+<blockquote>
+<div><p>electrode x coordinates</p>
+</div></blockquote>
+<p><strong>elec_y: array like</strong></p>
+<blockquote>
+<div><p>electrode y coordinates</p>
+</div></blockquote>
+<p><strong>elec_z: array like</strong></p>
+<blockquote>
+<div><p>electrode z coordinates</p>
+</div></blockquote>
+<p><strong>elec_type: list of strings, optional</strong></p>
+<blockquote>
+<div><p>type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list</p>
+</div></blockquote>
+<p><strong>shape: tuple, optional</strong></p>
+<blockquote>
+<div><p>must be of length  == 2. reshapes the input into a grid, which allows for better 
+topography
+(number of electrodes in x direction, number of electrodes in y direction)</p>
+</div></blockquote>
+<p><strong>keep_files</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> if the gmsh input and output file is to be stored in the exe directory.</p>
+</div></blockquote>
+<p><strong>show_ouput</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> if gmsh output is to be printed to console.</p>
+</div></blockquote>
+<p><strong>path</strong> : string, optional</p>
+<blockquote>
+<div><p>Path to exe folder (leave default unless you know what you are doing).</p>
+</div></blockquote>
+<p><strong>whole_space: boolean, optional</strong></p>
+<blockquote>
+<div><p>flag for if the problem should be treated as a whole space porblem, in which case 
+electrode type is ingored and all electrodes are buried in the middle of a large mesh.</p>
+</div></blockquote>
+<p><strong>dump</strong> : function, optional</p>
+<blockquote>
+<div><p>Function to which pass the output during mesh generation. <cite>print()</cite> is
+the default.</p>
+</div></blockquote>
+<p><strong>padding</strong> : float, optional</p>
+<blockquote>
+<div><p>amount of % the fine mesh region will be extended beyond the extent of the electrode positions</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : optional</p>
+<blockquote>
+<div><p>Key word arguments to be passed to box_3d.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh3d: class</p>
+<p class="last"><strong>#### TODO</strong> : add buried electrode capacity</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="api.meshTools.tri_cent">
 <code class="descclassname">api.meshTools.</code><code class="descname">tri_cent</code><span class="sig-paren">(</span><em>p</em>, <em>q</em>, <em>r</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_cent" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the centre coordinates for a 2d triangle given the x,y coordinates 
@@ -1411,7 +1557,7 @@ of the vertices.</p>
 
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_type=None</em>, <em>geom_input=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_type=None</em>, <em>geom_input=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
 this function expects the current working directory has path: exe/gmsh.exe.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1446,6 +1592,11 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 <blockquote>
 <div><p>Path to exe folder (leave default unless you know what you are doing).</p>
 </div></blockquote>
+<p><strong>whole_space: boolean, optional</strong></p>
+<blockquote>
+<div><p>flag for if the problem should be treated as a whole space porblem, in which case 
+electrode type is ingored and all electrodes are buried in the middle of a large mesh.</p>
+</div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
 <blockquote>
 <div><p>Function to which pass the output during mesh generation. <cite>print()</cite> is
@@ -1457,10 +1608,7 @@ the default.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh.dat</strong> : file</p>
-<blockquote class="last">
-<div><p>In the Executables directory.</p>
-</div></blockquote>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh: class</p>
 </td>
 </tr>
 </tbody>
