@@ -43,6 +43,7 @@ import matplotlib.tri as tri
 import api.gmshWrap as gw
 from api.isinpolygon import isinpolygon, isinvolume
 import api.interpolation as interp
+from api.sliceMesh import sliceMesh # mesh slicing function
 
 #%% create mesh object
 class Mesh_obj:
@@ -505,6 +506,30 @@ class Mesh_obj:
 # can add slicing options here
 
 
+    def showSlice(self, attr='Resistivity(log10)', axis='z', vmin=None, vmax=None, ax=None):
+        """ Show 3D mesh slice.
+        
+        Parameters
+        ----------
+        attr : str, optional
+            String the of the variable to plot. Default is `Resistivity(log10)`.
+        axis : str, optional
+            Axis to be sliced either, x, y or z.
+        vmin : float, optional
+            Minimum value for colorbar.
+        vmax : float, optional
+            Maximum value for colorbar.
+        ax : matplotlib.Axis
+            If provided, plot will be drawn on this axis.
+        """
+        values = np.array(self.attr_cache[attr])        
+        dimDico = {'x':0,'y':1,'z':2}
+        dim = dimDico[axis]
+        elms = np.array(self.con_matrix).T
+        nodes = np.array([self.node_x, self.node_y, self.node_z]).T
+        sliceMesh(nodes, elms, values, label=attr, dim=dim, vmin=vmin, vmax=vmax, ax=ax)
+        
+        
     def assign_zone(self,poly_data):
         """ Assign material/region assocations with certain elements in the mesh 
         say if you have an area you'd like to forward model. 
@@ -1677,6 +1702,9 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
+    # overwrite mesh.show()
+    mesh.show = mesh.showSlice
+    
     return mesh
 
 #%% write descrete points to a vtk file 
@@ -1996,3 +2024,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
 #mesh = tetra_mesh(elec_x,elec_y,elec_z, cl=10)#, shape=(5,32))
 ##mesh.show_3D() # not implemented right now
 
+
+#%% mesh slicing
+#mesh = vtk_import('api/test/mesh3Dinverted.vtk')
+#mesh.showSlice(vmin=1.5, vmax=2.8)
