@@ -333,23 +333,45 @@ class App(QMainWindow):
         def dimSurvey():                
             if dimRadio2D.isChecked():
                 self.typ = self.typ.replace('3t','2')
+                # importing tab
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
-                meshQuadGroup.setHidden(False)
-                meshTrianGroup.setHidden(False)
-                meshTetraGroup.setHidden(True)
-                instructionLabel.setHidden(False)
+                
+                # mesh tab
+                meshQuadGroup.setVisible(True)
+                meshTrianGroup.setVisible(True)
+                meshTetraGroup.setVisible(False)
+                instructionLabel.setVisible(True)
+                
+                # inversion tab
+                contourCheck.setVisible(True)
+                edgeCheck.setVisible(True)
+                btnSave.setVisible(True)
+                sensCheck.setVisible(True)
+                paraviewBtn.setVisible(False)
+                sliceAxis.setVisible(False)
                 print(self.typ)
             else:
                 self.typ = self.typ.replace('2','3t')
+                # importing tab
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
-                meshQuadGroup.setHidden(True)
-                meshTrianGroup.setHidden(True)
-                meshTetraGroup.setHidden(False)
-                instructionLabel.setHidden(True)
+                
+                # mesh tab
+                meshQuadGroup.setVisible(False)
+                meshTrianGroup.setVisible(False)
+                meshTetraGroup.setVisible(True)
+                instructionLabel.setVisible(False)
+                
+                # inversion tab
+                contourCheck.setVisible(False)
+                edgeCheck.setVisible(False)
+                btnSave.setVisible(False)
+                sensCheck.setVisible(False)
+                paraviewBtn.setVisible(True)
+                sliceAxis.setVisible(True)
                 print(self.typ)
                 
         dimRadio2D = QRadioButton('2D')
@@ -357,7 +379,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-#        dimRadio3D.setEnabled(False) # comment this to enable 3D
+        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -2138,6 +2160,7 @@ class App(QMainWindow):
 #        job_type.currentIndexChanged.connect(job_typeFunc)
 #        invForm.addRow(QLabel('Job Type:'), job_type)
         
+        self.parallel = False
         def parallelFunc(state):
             if state == Qt.Checked:
                 self.parallel = True
@@ -2894,6 +2917,23 @@ class App(QMainWindow):
         sensCheck.setToolTip('Overlay a semi-transparent white sensivity layer.')
         displayOptions.addWidget(sensCheck)
         
+        def sliceAxisFunc(index):
+            self.displayParams['axis'] = index
+        sliceAxis = QComboBox()
+        sliceAxis.addItem('x')
+        sliceAxis.addItem('y')
+        sliceAxis.addItem('z')
+        sliceAxis.setToolTip('Define axis slice.')
+        sliceAxis.setVisible(False)
+        displayOptions.addWidget(sliceAxis)
+        
+        def paraviewBtnFunc():
+            self.r2.showInParaview(self.displayParams['index'])
+        paraviewBtn = QPushButton('Open in Paraview')
+        paraviewBtn.clicked.connect(paraviewBtnFunc)
+        paraviewBtn.setVisible(False)
+        displayOptions.addWidget(paraviewBtn)
+            
         def btnSaveGraphs():
             edge_color = self.displayParams['edge_color']
             sens = self.displayParams['sens']
@@ -2913,7 +2953,7 @@ class App(QMainWindow):
         
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply, 
-                    edgeCheck, contourCheck, sensCheck, btnSave]
+                    edgeCheck, contourCheck, sensCheck, sliceAxis, paraviewBtn, btnSave]
             [o.setEnabled(val) for o in opts]
         
         showDisplayOptions(False) # hidden by default
@@ -3019,8 +3059,9 @@ USA: Trelgol Publishing, (2006).
 </li>
 </ul>
 </p>
-<br/>
-                          <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>'''%pyR2_version)
+<p>Contributors : Paul McLachlan</p>
+<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>
+'''%pyR2_version)
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
