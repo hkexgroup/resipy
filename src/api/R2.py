@@ -1788,6 +1788,12 @@ class R2(object): # R2 master class instanciated by the GUI
         disp_R2_errors(error_info, ax=ax)
 
 
+    def showInParaview(self, index=0):
+        """ Open paraview to display the .vtk file.
+        """
+        fname = 'f{:03d}_res.vtk'.format(index+1)
+        os.system('paraview ' + str(os.path.join(self.dirname, fname)))
+
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
