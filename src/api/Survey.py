@@ -1031,7 +1031,8 @@ class Survey(object):
         if ax is None:
             return fig
     
-    def write2protocol(self, outputname='', errTyp='none', errTot=False, ip=False, errTypIP='none'):
+    def write2protocol(self, outputname='', errTyp='none', errTot=False,
+                       ip=False, errTypIP='none', res0=False):
         """ Write a protocol.dat file for R2 or cR2.
         
         Parameters
@@ -1049,6 +1050,9 @@ class Survey(object):
         errTypIP : str, optional
             Needs `ip=True` to be taken into account. Specify the string of
             the error model to apply for IP data.
+        res0 : bool, optional
+            For time-lapse inversion, the background resistivity will be added 
+            if `True`.
             
         Returns
         -------
@@ -1056,13 +1060,15 @@ class Survey(object):
             Dataframe which contains the data for the `protocol.dat`. 
         """
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
-        haveReciprocal = all(self.df['irecip'].values == 0)
-        if haveReciprocal == False: # so we have reciprocals
+        haveReciprocal = ~all(self.df['irecip'].values == 0)
+        if haveReciprocal: # so we have reciprocals
             x = self.df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             dfg = self.df[self.df['irecip'] > 0] 
             protocol['R'] = dfg['recipMean'].values
+            if res0:
+                protocol['R0'] = dfg['recipMean0'].values
             if ip == True:
                 protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
             if errTyp != 'none':
@@ -1091,9 +1097,18 @@ class Survey(object):
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             protocol['R'] = self.df['resist'].values
+            if res0:
+                protocol['R0'] = self.df['resist0'].values
             if ip == True:
                 protocol['Phase'] = -self.kFactor*self.df['ip'].values
-        
+                
+        if all(self.elec[:,1] == 0) is False: # it's a 3D example
+            print('ading ----------line')
+            protocol.insert(1, 'sa', 1)
+            protocol.insert(3, 'sb', 1)
+            protocol.insert(5, 'sm', 1)
+            protocol.insert(7, 'sn', 1)
+            
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
@@ -1101,6 +1116,7 @@ class Survey(object):
                 protocol.to_csv(f, sep='\t', header=False, index=False)
         
         return protocol
+    
                 
     def dca(self, dump=print):
         ''' execute DCA filtering

@@ -213,8 +213,12 @@ class R2(object): # R2 master class instanciated by the GUI
         if ok:
             if elec.shape[1] == 2:
                 self.elec[:,[0,2]] = elec
+                for s in self.surveys:
+                    s.elec[:,[0,2]] = elec
             else:
                 self.elec = elec
+                for s in self.surveys:
+                    s.elec = elec
         
         
     def setBorehole(self, val=False):
@@ -385,7 +389,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Compute the Depth Of Investigation (DOI).
         """
         elec = self.elec.copy()
-        if self.elec[:,1].sum() == 0: # 2D survey:
+        if all(self.elec[:,1] == 0): # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
                 maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
@@ -457,7 +461,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.computeDOI()
         
         if typ == 'default':
-            if self.elec[:,1].sum() == 0: # it's a 2D mesh
+            if all(self.elec[:,1] == 0): # it's a 2D mesh
                 typ = 'quad'
                 print('Using a quadrilateral mesh.')
             else:
@@ -813,16 +817,24 @@ class R2(object): # R2 master class instanciated by the GUI
 #            allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
             # let's assume it's False all the time for now
             content = ''
+            errCol = 'none'
             for i, s in enumerate(self.surveys[1:]):
-                content = content + str(len(s.df)) + '\n'
                 s.df['resist0'] = self.surveys[0].df['resist']
-                if errTyp != 'none': # there is an error model
-                    s.df['error'] = self.bigSurvey.errorModel(s.df['resist'].values)
-                    s.df['index'] = np.arange(1, len(s.df)+1)
-                    content = content + s.df[['index','a','b','m','n','resist', 'resist0','error']].to_csv(sep='\t', header=False, index=False)
-                else:
-                    s.df['index'] = np.arange(1, len(s.df)+1)
-                    content = content + s.df[['index','a','b','m','n','resist', 'resist0']].to_csv(sep='\t', header=False, index=False)
+                s.df['recipMean0'] = self.surveys[0].df['recipMean']
+                if errTyp != 'none':
+                    s.df['pwlError'] = self.bigSurvey.errorModel(s.df['resist'].values)
+                    errCol = 'pwl' # we just use this colum to store the error type
+#                if errTyp != 'none': # there is an error model
+#                    s.df['error'] = self.bigSurvey.errorModel(s.df['resist'].values)
+#                    s.df['index'] = np.arange(1, len(s.df)+1)
+#                    protocol = s.df[['index','a','b','m','n','resist', 'resist0','error']]
+#                else:
+#                    s.df['index'] = np.arange(1, len(s.df)+1)
+#                    protocol = s.df[['index','a','b','m','n','resist', 'resist0']]
+                protocol = s.write2protocol('', errTyp=errCol, res0=True)
+                content = content + str(protocol.shape[0]) + '\n'
+                content = content + protocol.to_csv(sep='\t', header=False, index=False)
+                
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
@@ -833,9 +845,9 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-
-                    with open(os.path.join(refdir, 'protocol.dat'), 'w') as f:
-                        f.write(content) # write the protocol for the reference file
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat'))
+#                    with open(os.path.join(refdir, 'protocol.dat'), 'w') as f:
+#                        f.write(content) # write the protocol for the reference file
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
                 
@@ -2089,13 +2101,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 
 #%% 3D testing
-#data = pd.read_csv("./api/test/init_elec_locs.csv")#electrode position file
-#
 #k = R2(typ='R3t')
-#k.createSurvey('api/test/protocol3Di.dat', ftype='Protocol')
-##k.setElec(data[['x','y','z']].values)
-#k.setElec(np.random.randn(k.elec.shape[0], k.elec.shape[1]))
-#k.createMesh(cl=100)
-#k.invert() # TODO FATAL ERROR labels .in doesn't match mesh3d.dat
+#k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
+#elec = np.genfromtxt('api/test/electrodes3D.dat')
+#k.setElec(elec)
+#k.createMesh(cl=20)
+#k.invert()
 
 

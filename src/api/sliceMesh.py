@@ -14,7 +14,6 @@ from matplotlib.widgets import Slider
 
 
 #%% multidimensional slicing !
-plt.ion()
 
 def sliceMesh(nodes, elms, values, label='', dim=2 ,vmin=None, vmax=None, ax=None):
     """ Produces an interactive graph of a 3D mesh with slice according to `axis`.
