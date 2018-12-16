@@ -854,10 +854,7 @@ class App(QMainWindow):
             def initTable(self, tt=None, headers=None):
                 self.clear()
                 if headers is not None:
-#                    print('rename headers = ', headers)
                     self.headers = np.array(headers)
-#                else:
-#                    print('will use ', self.headers)
                 self.ncol = len(self.headers)
                 self.setColumnCount(len(self.headers)) # +1 for buried check column
                 self.setHorizontalHeaderLabels(self.headers)
@@ -885,9 +882,10 @@ class App(QMainWindow):
                 table = np.zeros((self.nrow, self.ncol))*np.nan
                 for i in range(self.ncol):
                     for j in range(self.nrow):
-                        item = self.item(j,i).text()
-                        if item != '':
-                            table[j,i] = float(item)
+                        if self.item(j,i) is not None:
+                            item = self.item(j,i).text()
+                            if item != '':
+                                table[j,i] = float(item)
 #                print('table = ', table)
                 if 'y' not in self.headers:
                     t = np.zeros((table.shape[0], 3))
