@@ -305,8 +305,7 @@ def multigrad(elec_num, a, n, s):
                 
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] > proto_mtrx.iloc[:,3]]          
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
-    return proto_mtrx
-        
+    return proto_mtrx    
 
 # test code
 #x1 = dpdp1(24, 2, 8)
