@@ -306,7 +306,18 @@ class Mesh_obj:
             #not currently checking if the passed variable is in the matplotlib library
             
         if self.ndims == 3:
-            self.show_3D() # show 3D mesh instead 
+            self.show_3D(color_map = color_map,#displays the mesh using matplotlib
+             color_bar = color_bar, # pass arguments to 3D function
+             xlim = xlim,
+             ylim = ylim,
+             zlim = "default",
+             #ax = None,
+             electrodes = electrodes,
+             sens = sens,
+             edge_color = edge_color,
+             vmin=vmin,
+             vmax=vmax,
+             attr=attr) # show 3D mesh instead 
             return # exit 2D mesh show function 
             
         
@@ -579,11 +590,11 @@ class Mesh_obj:
         plt.xlabel('x')
         plt.ylabel('y')
         
-#        try: 
+#        try: # deactivated code 
 #            if xlim=="default":
 #                xlim=[min(self.elec_x),max(self.elec_x)]
 #            if ylim=="default":
-#                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
+#                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) 
 #                #print(doiEstimate)
 #                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
 #        except AttributeError:
