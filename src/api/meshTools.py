@@ -215,15 +215,16 @@ class Mesh_obj:
         out += "Number of nodes: %i\n"%int(self.num_nodes)
         out += "Number of cell vertices: %i\n"%self.Type2VertsNo()
         out += "Number of cell attributes: %i\n"%int(self.no_attributes)
+        out += "Dimensions: %i\n"%int(self.ndims)
         out += "original file path: %s\n"%self.file_path()
-        if flag==True:
+        if flag:
             print(out)
         else:
             return out
 
     def __str__(self):
         #returns the summary function if the object is printed using print()
-        return self.summary(flag=False)
+        return self.summary(flag=False) + self.show_avail_attr(flag=False)
             
     def add_attribute(self,values,key):
         #add a new attribute to mesh 
@@ -236,6 +237,19 @@ class Mesh_obj:
     def add_attr_dict(self,attr_dict):
         self.attr_cache=attr_dict
         self.no_attributes = len(attr_dict)
+        
+    def show_avail_attr(self,flag=True):
+        #show available attributes 
+        out = '\n______cell attributes_____\n'
+        try: 
+            for i,key in enumerate(self.attr_cache):
+                out += key + '\n'
+        except:
+            out += "None\n"
+        if flag:
+            print(out)
+        else:
+            return out
     
     def update_attribute(self,new_attributes,new_title='default'):
         #allows you to reassign the cell attributes in the mesh object 
@@ -708,7 +722,7 @@ class Mesh_obj:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(self.elec_x,self.elec_y,zs=self.elec_z,'ko')
+                ax.plot(self.elec_x,self.elec_y,zs=self.elec_z, c='k', marker='o')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
             
