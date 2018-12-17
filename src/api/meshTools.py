@@ -306,7 +306,6 @@ class Mesh_obj:
             #not currently checking if the passed variable is in the matplotlib library
             
         if self.ndims == 3:
-            print("Plotting 3D mesh! This is still in the experimental stage")
             self.show_3D() # show 3D mesh instead 
             return # exit 2D mesh show function 
             
@@ -507,8 +506,8 @@ class Mesh_obj:
              ylim = "default",
              zlim = "default", 
              #ax = None,
-             #electrodes = True,
-             #sens = False,
+             electrodes = False,
+             sens = False,
              edge_color = 'k',
              alpha = 1,
              vmax=None,
@@ -516,9 +515,50 @@ class Mesh_obj:
              attr=None):
         """
         Shows a 3D tetrahedral mesh
+        
+        Parameters
+        ----------
+        color_map : string, optional
+            color map reference 
+        color_bar : Boolean, optional 
+            `True` to plot colorbar 
+        xlim : tuple, optional
+            Axis x limits as `(xmin, xmax)`.
+        ylim : tuple, optional
+            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(ymin, ymax)`. 
+        ax : matplotlib axis handle, optional
+            Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
+        electrodes : boolean, optional
+            Enter true to add electrodes to plot.
+        sens : boolean, optional
+            Enter true to plot sensitivities. 
+        edge_color : string, optional
+            Color of the cell edges, set to `None` if you dont want an edge.
+        vmin : float, optional
+            Minimum limit for the color bar scale.
+        vmax : float, optional
+            Maximum limit for the color bar scale.
+        attr : string, optional
+            Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+            as the key for this dictionary.
+
+        Returns
+        ----------
+        figure : matplotlib figure 
+            Figure handle for the plotted mesh object.
+        
+        Notes
+        ----------
+        Show a mesh object using matplotlib. The color map variable should be 
+        a string refering to the color map you want (default is "jet").
+        As we're using the matplotlib package here any color map avialable within 
+        matplotlib package can be used to display the mesh here also. See: 
+        https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html
         """
-        if self.ndims == 2:
-            raise Exception("Use 'mesh.show()' for 2D meshes rather than show_3D()")
+        if not isinstance(color_map,str):#check the color map variable is a string
+            raise NameError('color_map variable is not a string')
             
         #decide which attribute to plot, we may decide to have other attritbutes! 
         if attr is None: 
@@ -557,6 +597,14 @@ class Mesh_obj:
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_zlim(zlim)
+        #set color bar limits 
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
+            
+        if edge_color == None or edge_color=='none' or edge_color=='None':
+            edge_color='face'#set the edge colours to the colours of the polygon patches
         
         # search through each element to see if it is on the edge of the mesh, 
         # this step is important as it is very expensive to plot anything in 3D using matplotlib 
@@ -583,45 +631,75 @@ class Mesh_obj:
         tri_combo = tri_combo.flatten()
         temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
         single_vals_idx = counts==1
-        face_element_idx = np.unique(np.floor(index[single_vals_idx]/4))#get elements with triangles used only once 
+        edge_element_idx = index[single_vals_idx]/4
+        face_element_idx = np.floor(edge_element_idx)
+        face_probe = edge_element_idx - np.floor(edge_element_idx)
         
-        to_plot = face_element_idx.T.tolist()
-        plot_idx = [int(i) for i in to_plot]#convert into python iteratable 
-        face_list = []
-        assign_list = []
-        for i in plot_idx:
-            idx1 = self.con_matrix[0][i]
-            idx2 = self.con_matrix[1][i]
-            idx3 = self.con_matrix[2][i]
-            idx4 = self.con_matrix[3][i]
+        truncated_numel = len(face_element_idx)
+        face_list = [0] * truncated_numel
+        assign = [0] * truncated_numel # the number assigned to each face
+        for i in range(truncated_numel):
+            ref = int(face_element_idx[i])
+            idx1 = self.con_matrix[0][ref]
+            idx2 = self.con_matrix[1][ref]
+            idx3 = self.con_matrix[2][ref]
+            idx4 = self.con_matrix[3][ref]
             
             vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
             vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
             vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
             vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
             
-            face_list.append((vert1,vert2,vert3))#face 1 
-            face_list.append((vert1,vert2,vert4))#face 2 
-            face_list.append((vert2,vert3,vert4))#face 3 
-            face_list.append((vert1,vert4,vert3))#face 4 
-            assign_list.append(X[i])#color assignment for each face 
-            assign_list.append(X[i])
-            assign_list.append(X[i])
-            assign_list.append(X[i])
+            face1 = (vert1,vert2,vert3)
+            face2 = (vert1,vert2,vert4)
+            face3 = (vert2,vert3,vert4)
+            face4 = (vert1,vert4,vert3)
             
-        polly = Poly3DCollection(face_list)#, array=X[plot_idx], cmap=color_map, edgecolors=edge_color,linewidth=0.5)
-        polly.set_alpha(alpha)
+            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
+                face_list[i] = face1#face 1 
+            elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
+                face_list[i] = face2#face 2
+            elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
+                face_list[i] = face3#face 3 
+            elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
+                face_list[i] = face4#face 4
+            
+            assign[i] = X[ref]#get attribute value into assign
+          
+        polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
+        polly.set_alpha(alpha)#add some transparancy to the elements
         try:
-            polly.set_array(np.array(assign_list))
+            polly.set_array(np.array(assign))
         except MemoryError:#catch this error and print something more helpful than matplotlibs output
             raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview")
-        polly.set_edgecolor('k')
-        ax.add_collection3d(polly, zs='z')
+        polly.set_edgecolor(edge_color)
+        polly.set_cmap(color_map) # set color map 
+        polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
+        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
         self.cax = polly
         
         if color_bar:#add the color bar 
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
             self.cbar.set_label(color_bar_title) #set colorbar title
+            
+        if sens: #add sensitivity to plot if available
+            try:
+                weights = np.array(self.sensitivities) #values assigned to alpha channels 
+                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
+                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                raw_alpha[..., -1] = alphas
+                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                #make alpha collection
+                alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+                ax.add_collection(alpha_coll)
+            except AttributeError:
+                print("no sensitivities in mesh object to plot")
+            
+        if electrodes: #try add electrodes to figure if we have them 
+            try: 
+                ax.plot(self.elec_x,self.elec_y,zs=self.elec_z,'ko')
+            except AttributeError:
+                print("no electrodes in mesh object to plot")
             
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
 
