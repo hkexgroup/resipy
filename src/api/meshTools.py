@@ -19,27 +19,24 @@ Functions:
 Dependencies: 
     numpy (conda lib)
     matplotlib (conda lib)
-    scipy (conda lib)
     gmshWrap(pyR2 api module)
     python3 standard libaries
 
 Nb: Module has a heavy dependence on numpy and matplotlib packages
-
-#### TODO: use .exe path in command line rather than changing the working directory" 
 """
 #import standard python packages
-#import tkinter as tk
-#from tkinter import filedialog
 import os, platform, warnings, multiprocessing, re
 from subprocess import PIPE, Popen, call
 import time
-#import anaconda default libraries
+#import matplotlib and numpy packages 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
-#import R2gui API packages - remove the "api." below code if running the script and using the test blocks at the bottom 
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+#import R2gui API packages - remove the "api." in below code if running the script and using the test blocks at the bottom 
 import api.gmshWrap as gw
 from api.isinpolygon import isinpolygon, isinvolume
 import api.interpolation as interp
@@ -307,8 +304,13 @@ class Mesh_obj:
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
             #not currently checking if the passed variable is in the matplotlib library
+            
+        if self.ndims == 3:
+            print("Plotting 3D mesh! This is still in the experimental stage")
+            self.show_3D() # show 3D mesh instead 
+            return # exit 2D mesh show function 
+            
         
-        ### overall this code section needs prettying up to make it easier to change attributes ### 
         #decide which attribute to plot, we may decide to have other attritbutes! 
         if attr is None: 
             #plots default attribute
@@ -499,12 +501,129 @@ class Mesh_obj:
             
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
     
-    def show_3D(self):
+    def show_3D(self,color_map = 'Spectral',#displays the mesh using matplotlib
+             color_bar = True,
+             xlim = "default",
+             ylim = "default",
+             zlim = "default", 
+             #ax = None,
+             #electrodes = True,
+             #sens = False,
+             edge_color = 'k',
+             alpha = 1,
+             vmax=None,
+             vmin=None,
+             attr=None):
+        """
+        Shows a 3D tetrahedral mesh
+        """
         if self.ndims == 2:
             raise Exception("Use 'mesh.show()' for 2D meshes rather than show_3D()")
-        print("Sorry 3D meshes cannot be natively displayed in 3D with pyr2, but will be coming in a future update")
-# can add slicing options here
-
+            
+        #decide which attribute to plot, we may decide to have other attritbutes! 
+        if attr is None: 
+            #plots default attribute
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        else:
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except (KeyError, AttributeError):
+                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+        
+        t0 = time.time() # benchmark function
+        #make 3D figure 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        plt.xlabel('x')
+        plt.ylabel('y')
+        
+#        try: 
+#            if xlim=="default":
+#                xlim=[min(self.elec_x),max(self.elec_x)]
+#            if ylim=="default":
+#                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
+#                #print(doiEstimate)
+#                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
+#        except AttributeError:
+        if xlim=="default":
+            xlim=[min(self.node_x),max(self.node_x)]
+        if ylim=="default":
+            ylim=[min(self.node_y),max(self.node_y)]
+        if zlim=="default":
+            zlim=[min(self.node_z),max(self.node_z)]
+        #set axis limits     
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_zlim(zlim)
+        
+        # search through each element to see if it is on the edge of the mesh, 
+        # this step is important as it is very expensive to plot anything in 3D using matplotlib 
+        # triangles on the edge of the mesh will be used only once
+        tri_combo = np.zeros((self.num_elms,4),dtype=float)
+        
+        for i in range(self.num_elms):
+            idx1 = self.con_matrix[0][i]#extract indexes 
+            idx2 = self.con_matrix[1][i]
+            idx3 = self.con_matrix[2][i]
+            idx4 = self.con_matrix[3][i]
+            
+            face1 = idx1*idx2*idx3 # hopefully each of these make a unique value 
+            face2 = idx1*idx2*idx4
+            face3 = idx2*idx3*idx4
+            face4 = idx1*idx4*idx3
+            
+            tri_combo[i,0] = face1#face 1 
+            tri_combo[i,1] = face2#face 2 
+            tri_combo[i,2] = face3#face 3 
+            tri_combo[i,3] = face4#face 4 
+            
+        #shape = tri_combo.shape
+        tri_combo = tri_combo.flatten()
+        temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
+        single_vals_idx = counts==1
+        face_element_idx = np.unique(np.floor(index[single_vals_idx]/4))#get elements with triangles used only once 
+        
+        to_plot = face_element_idx.T.tolist()
+        plot_idx = [int(i) for i in to_plot]#convert into python iteratable 
+        face_list = []
+        assign_list = []
+        for i in plot_idx:
+            idx1 = self.con_matrix[0][i]
+            idx2 = self.con_matrix[1][i]
+            idx3 = self.con_matrix[2][i]
+            idx4 = self.con_matrix[3][i]
+            
+            vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
+            vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
+            vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
+            vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
+            
+            face_list.append((vert1,vert2,vert3))#face 1 
+            face_list.append((vert1,vert2,vert4))#face 2 
+            face_list.append((vert2,vert3,vert4))#face 3 
+            face_list.append((vert1,vert4,vert3))#face 4 
+            assign_list.append(X[i])#color assignment for each face 
+            assign_list.append(X[i])
+            assign_list.append(X[i])
+            assign_list.append(X[i])
+            
+        polly = Poly3DCollection(face_list)#, array=X[plot_idx], cmap=color_map, edgecolors=edge_color,linewidth=0.5)
+        polly.set_alpha(alpha)
+        try:
+            polly.set_array(np.array(assign_list))
+        except MemoryError:#catch this error and print something more helpful than matplotlibs output
+            raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview")
+        polly.set_edgecolor('k')
+        ax.add_collection3d(polly, zs='z')
+        self.cax = polly
+        
+        if color_bar:#add the color bar 
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
+            self.cbar.set_label(color_bar_title) #set colorbar title
+            
+        print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
 
     def showSlice(self, attr='Resistivity(log10)', axis='z', vmin=None, vmax=None, ax=None):
         """ Show 3D mesh slice.
