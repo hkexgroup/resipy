@@ -38,7 +38,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 #import R2gui API packages - remove the "api." in below code if running the script and using the test blocks at the bottom 
 import api.gmshWrap as gw
-from api.isinpolygon import isinpolygon, isinvolume
+from api.isinpolygon import isinpolygon, isinvolume, in_box
 import api.interpolation as interp
 from api.sliceMesh import sliceMesh # mesh slicing function
 
@@ -270,7 +270,8 @@ class Mesh_obj:
              contour=False,
              vmin=None,
              vmax=None,
-             attr=None):
+             attr=None,
+             **kwargs):
         """ Displays a 2d mesh and attribute.
         
         Parameters
@@ -324,14 +325,15 @@ class Mesh_obj:
              color_bar = color_bar, # pass arguments to 3D function
              xlim = xlim,
              ylim = ylim,
-             zlim = "default",
+             #zlim = "default",
              #ax = None,
              electrodes = electrodes,
              sens = sens,
              edge_color = edge_color,
              vmin=vmin,
              vmax=vmax,
-             attr=attr) # show 3D mesh instead 
+             attr=attr,
+             **kwargs) # show 3D mesh instead 
             return # exit 2D mesh show function 
             
         
@@ -539,7 +541,7 @@ class Mesh_obj:
              vmin=None,
              attr=None):
         """
-        Shows a 3D tetrahedral mesh
+        Shows a 3D tetrahedral mesh. 
         
         Parameters
         ----------
@@ -556,11 +558,13 @@ class Mesh_obj:
         ax : matplotlib axis handle, optional
             Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
         electrodes : boolean, optional
-            Enter true to add electrodes to plot.
+            Enter true to add electrodes to plot (if available in mesh class)
         sens : boolean, optional
-            Enter true to plot sensitivities. 
+            Enter true to plot sensitivities (if available in mesh class). Note that for 3D this doesnt work so well. 
         edge_color : string, optional
             Color of the cell edges, set to `None` if you dont want an edge.
+        alpha: float, optional
+            Should be set between 0 and 1. Sets a transparancy value for the element faces. 
         vmin : float, optional
             Minimum limit for the color bar scale.
         vmax : float, optional
@@ -581,6 +585,8 @@ class Mesh_obj:
         As we're using the matplotlib package here any color map avialable within 
         matplotlib package can be used to display the mesh here also. See: 
         https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html
+        
+        Plotting sensitivies using sens=True is not reccomended. The matplotlib renderer has trouble with it. 
         """
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
@@ -634,13 +640,21 @@ class Mesh_obj:
         # search through each element to see if it is on the edge of the mesh, 
         # this step is important as it is very expensive to plot anything in 3D using matplotlib 
         # triangles on the edge of the mesh will be used only once
-        tri_combo = np.zeros((self.num_elms,4),dtype=float)
+        tri_combo = np.zeros((self.num_elms,4),dtype='float64')
+        elm_x = self.elm_centre[0]
+        elm_y = self.elm_centre[1]
+        elm_z = self.elm_centre[2]
+        in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find elements veiwable in axis
+        X = X[in_elem]#reassign X to elements inside the box limits 
+        temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
+        con_mat=temp_con_mat[:,in_elem] # truncate elements
+        inside_numel = len(con_mat[0])#number of inside elements 
         
-        for i in range(self.num_elms):
-            idx1 = self.con_matrix[0][i]#extract indexes 
-            idx2 = self.con_matrix[1][i]
-            idx3 = self.con_matrix[2][i]
-            idx4 = self.con_matrix[3][i]
+        for i in range(inside_numel):
+            idx1 = con_mat[0][i]#extract indexes 
+            idx2 = con_mat[1][i]
+            idx3 = con_mat[2][i]
+            idx4 = con_mat[3][i]
             
             face1 = idx1*idx2*idx3 # hopefully each of these make a unique value 
             face2 = idx1*idx2*idx4
@@ -665,10 +679,10 @@ class Mesh_obj:
         assign = [0] * truncated_numel # the number assigned to each face
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
-            idx1 = self.con_matrix[0][ref]
-            idx2 = self.con_matrix[1][ref]
-            idx3 = self.con_matrix[2][ref]
-            idx4 = self.con_matrix[3][ref]
+            idx1 = con_mat[0][ref]
+            idx2 = con_mat[1][ref]
+            idx3 = con_mat[2][ref]
+            idx4 = con_mat[3][ref]
             
             vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
             vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
@@ -689,7 +703,7 @@ class Mesh_obj:
             elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
                 face_list[i] = face4#face 4
             
-            assign[i] = X[ref]#get attribute value into assign
+            assign[i] = X[ref]#get attribute value into assigned array
           
         polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
         polly.set_alpha(alpha)#add some transparancy to the elements
@@ -706,6 +720,8 @@ class Mesh_obj:
         if color_bar:#add the color bar 
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
             self.cbar.set_label(color_bar_title) #set colorbar title
+            
+        #ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
             
         if sens: #add sensitivity to plot if available
             try:
