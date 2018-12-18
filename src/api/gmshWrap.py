@@ -613,11 +613,6 @@ def msh_parse(file_path):
     """
     if not isinstance(file_path,str):
         raise Exception("expected a string argument for msh_parser")
-    if file_path=='ask_to_open':#use a dialogue box to open a file
-        print("please select the gmsh mesh file you want to convert.\n")
-        root=tk.Tk()
-        root.withdraw()
-        file_path=filedialog.askopenfilename(title='Select mesh file',filetypes=(("mesh files","*.msh"),("all files","*.*")))
     # open file and read in header lines
     print("parsing gmsh mesh...\n")
     fid=open(file_path,'r')# Open text file
@@ -753,13 +748,13 @@ def msh_parse(file_path):
             'element_ranges':assctns,
             'dump':dump,      
             'node_x':x_coord,#x coordinates of nodes 
-            'node_y':y_coord,#y coordinates of nodes
-            'node_z':z_coord,#z coordinates of nodes 
+            'node_y':z_coord,#y coordinates of nodes - nb swapped around as meshTools sees z as elevation
+            'node_z':y_coord,#z coordinates of nodes 
             'node_id':node_num,#node id number 
             'elm_id':np.arange(1,real_no_elements,1),#element id number 
             'num_elm_nodes':3,#number of points which make an element
             'node_data':node_dump,#nodes of element vertices
-            'elm_centre':(centriod_x,centriod_y),#centre of elements (x,y)
+            'elm_centre':(centriod_x,[0]*len(centriod_x),centriod_y),#centre of elements (x,y)
             'elm_area':areas,
             'cell_type':[5],
             'parameters':phys_entity,#the values of the attributes given to each cell 

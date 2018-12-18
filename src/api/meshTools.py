@@ -7,6 +7,8 @@ creates a mesh object (with associated functions). The mesh object can have quad
 triangular elements. Module has capacity to show meshes, inverted results, apply a function 
 to mesh parameters. 
 
+The convention for x y z coordinates is that the z coordinate is the elevation.
+
 Classes: 
     mesh_obj
 Functions: 
@@ -125,7 +127,7 @@ class Mesh_obj:
         self.original_file_path=original_file_path
         self.regions = regions
         #decide if mesh is 3D or not 
-        if max(node_z) - min(node_z) == 0: # mesh is probably 2D 
+        if max(node_y) - min(node_y) == 0: # mesh is probably 2D 
             self.ndims=2
         else:
             self.ndims=3
@@ -183,7 +185,11 @@ class Mesh_obj:
     def add_e_nodes(self,e_nodes):
         self.e_nodes = e_nodes
         self.elec_x = np.array(self.node_x)[np.array(e_nodes, dtype=int)]
-        self.elec_y = np.array(self.node_y)[np.array(e_nodes, dtype=int)]
+        if self.ndims==3:
+            self.elec_y = np.array(self.node_y)[np.array(e_nodes, dtype=int)]
+        else:
+            self.elec_y = np.zeros_like(self.elec_x)
+        self.elec_z = np.array(self.node_z)[np.array(e_nodes, dtype=int)]
     
     #add some functions to allow adding some extra attributes to mesh 
     def add_sensitivity(self,values):#sensitivity of the mesh
@@ -262,7 +268,7 @@ class Mesh_obj:
     def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
              xlim = "default",
-             ylim = "default",
+             zlim = "default",
              ax = None,
              electrodes = True,
              sens = False,
@@ -324,8 +330,7 @@ class Mesh_obj:
             self.show_3D(color_map = color_map,#displays the mesh using matplotlib
              color_bar = color_bar, # pass arguments to 3D function
              xlim = xlim,
-             ylim = ylim,
-             #zlim = "default",
+             zlim = zlim,
              #ax = None,
              electrodes = electrodes,
              sens = sens,
@@ -362,20 +367,20 @@ class Mesh_obj:
         try: 
             if xlim=="default":
                 xlim=[min(self.elec_x),max(self.elec_x)]
-            if ylim=="default":
+            if zlim=="default":
                 doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
                 #print(doiEstimate)
-                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
+                zlim=[min(self.elec_z)-doiEstimate,max(self.elec_z)]
         except AttributeError:
             if xlim=="default":
                 xlim=[min(self.node_x),max(self.node_x)]
-            if ylim=="default":
-                ylim=[min(self.node_y),max(self.node_y)]
+            if zlim=="default":
+                zlim=[min(self.node_z),max(self.node_z)]
                 
         ##plot mesh! ##
         a = time.time() #start timer on how long it takes to plot the mesh
         #compile mesh coordinates into polygon coordinates  
-        nodes = np.c_[self.node_x, self.node_y]
+        nodes = np.c_[self.node_x, self.node_z]
         connection = np.array(self.con_matrix).T # connection matrix 
         #compile polygons patches into a "patch collection"
         ###X=np.array(self.cell_attributes) # maps resistivity values on the color map### <-- disabled 
@@ -393,9 +398,9 @@ class Mesh_obj:
             coll.set_clim(vmin=vmin, vmax=vmax)
             ax.add_collection(coll)#blit polygons to axis
             self.cax = coll
-        else:
+        else:#use contour algorithm
             x = np.array(self.elm_centre[0])
-            y = np.array(self.elm_centre[1])
+            y = np.array(self.elm_centre[2])
             z = np.array(X)
             triang = tri.Triangulation(x,y)
             if vmin is None:
@@ -410,7 +415,7 @@ class Mesh_obj:
             
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
-        ax.set_ylim(ylim)
+        ax.set_ylim(zlim)
         ax.set_xlim(xlim)
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Elevation [m]')
@@ -435,17 +440,12 @@ class Mesh_obj:
                 #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
                 ax.add_collection(alpha_coll)
                 
-#                x = np.array(self.elm_centre[0])
-#                y = np.array(self.elm_centre[1])
-#                triang = tri.Triangulation(x,y)
-#                ax.tricontourf(triang, weights, cmap=alpha_map, levels=None, edgecolor='none', extend='both')
-
             except AttributeError:
                 print("no sensitivities in mesh object to plot")
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(self.elec_x,self.elec_y,'ko')
+                ax.plot(self.elec_x,self.elec_z,'ko')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))
@@ -590,6 +590,9 @@ class Mesh_obj:
         """
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
+        
+        if self.ndims==2:
+            warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D show will be unstable")
             
         #decide which attribute to plot, we may decide to have other attritbutes! 
         if attr is None: 
@@ -622,6 +625,8 @@ class Mesh_obj:
             xlim=[min(self.node_x),max(self.node_x)]
         if ylim=="default":
             ylim=[min(self.node_y),max(self.node_y)]
+#            if self.ndims==2:
+#                ylim=[min(self.node_y)-1,max(self.node_y)+1]
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
         #set axis limits     
@@ -738,9 +743,14 @@ class Mesh_obj:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(self.elec_x,self.elec_y,zs=self.elec_z, c='k', marker='o')
-            except AttributeError:
-                print("no electrodes in mesh object to plot")
+                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z)+0.01,
+                           s=20, c='k', marker='o')#note you have to give the points a size otherwise you
+                #get an NoneType Attribute error. 
+                #the matplotlib renderer really doesn't cope well with the addition of the electrodes, 
+                #the points are usually masked by the elements hence +0.01 is added to elevation. 
+                #I reccomend putting an alpha setting on the mesh to view electrodes + mesh together. 
+            except AttributeError as e:
+                print("could not plot 3d electrodes, error = "+str(e))
             
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
 
@@ -787,7 +797,7 @@ class Mesh_obj:
             then it'll be left at 0. 
         """   
         no_elms=self.num_elms#number of elements 
-        elm_xy=self.elm_centre#centriods of mesh elements 
+        elm_xyz=self.elm_centre#centriods of mesh elements 
         material_no=np.zeros(no_elms,dtype=int)#attribute number
         
         if not isinstance(poly_data,dict):
@@ -798,8 +808,8 @@ class Mesh_obj:
         for i, key in enumerate(poly_data):
             poly_x=poly_data[key][0]#polygon x coordinates
             poly_y=poly_data[key][1]#polygon y coordinates
-            inside = isinpolygon(np.array(elm_xy[0]),
-                                 np.array(elm_xy[1]),
+            inside = isinpolygon(np.array(elm_xyz[0]),
+                                 np.array(elm_xyz[2]),
                                  (poly_x,poly_y))
             material_no[inside]=i+1
                             
@@ -943,16 +953,12 @@ class Mesh_obj:
         #open mesh.dat for input      
         fid=open(file_path, 'w')
         
-        threed = (np.sum(self.node_y) != 0) & (np.sum(self.node_z) != 0)
-#        print('3D mesh detected', threed)
-        
         #write to mesh.dat total num of elements and nodes
-        if threed:
+        if self.ndims==3:
             fid.write('%i %i 1 0 4\n'%(self.num_elms,self.num_nodes))
         else:
             fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
 
-        
         #compute zones if present 
         if zone  is None:
             zone = np.ones(self.num_elms, dtype=int) # default zone = 1 
@@ -980,10 +986,10 @@ class Mesh_obj:
         x_coord = self.node_x
         y_coord = self.node_y
         z_coord = self.node_z
-        if threed:
+        if self.ndims==3:
             for i in range(self.num_nodes):
                 ni_no=i+1
-                fid.write("%i %6.3f %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
+                fid.write("%i %6.3f %6.3f %6.3f\n"%#node number, x coordinate, y coordinate, z coordinate
                           (ni_no,
                            x_coord[i],
                            y_coord[i],
@@ -995,7 +1001,7 @@ class Mesh_obj:
                 fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
                           (ni_no,
                            x_coord[i],
-                           y_coord[i]))
+                           z_coord[i]))
 
         fid.close()#close the file 
         print('written mesh.dat file to \n%s'%file_path)
@@ -1092,10 +1098,15 @@ class Mesh_obj:
         fh = open(file_path,'w')#open file handle 
         x_coords=self.elm_centre[0]#get element coordinates
         y_coords=self.elm_centre[1]
+        z_coords=self.elm_centre[2]
         values=self.attr_cache[attr_key]
         log_values=np.log10(np.array(values))
-        for i in range(self.num_elms):
-            fh.write("\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\n".format(x_coords[i],y_coords[i],values[i],log_values[i]))
+        if self.ndims==3:
+            for i in range(self.num_elms):
+                fh.write("\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\n".format(x_coords[i],y_coords[i],z_coords[i],values[i],log_values[i]))
+        else:
+            for i in range(self.num_elms):
+                fh.write("\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\n".format(x_coords[i],z_coords[i],values[i],log_values[i]))
             
         fh.close()
         
@@ -1242,7 +1253,6 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             areas.append(0.5*base*height)
         elif int(elm_data[0])==4:
             if i==0:
-                #print("quad elements detected")
                 vert_no=4
             no_pts.append(int(elm_data[0]))
             #nodes
@@ -1265,7 +1275,6 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             areas.append(elm_len*elm_hgt)
         elif int(elm_data[0])==8: # this following code is getting silly in how long it is. Need to work on a more efficent way
             if i==0:
-                #print("voxel elements detected")
                 vert_no=8
             no_pts.append(int(elm_data[0]))
             #nodes
@@ -1298,17 +1307,25 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         else: 
             warnings.warn("WARNING: unkown cell type encountered!")
             ignored_cells+=1
-    #compile some information        
+    #compile some information   
     
+    if len(centriod_z)==0:#check if mesh is 2D 
+        centriod_z==[0]*len(centriod_x)
+    if sum(z_coord)==0:#then mesh is 2D and node y and node z, centriod y and centriod z columns need swapping so they work in mesh tools 
+        temp_y = y_coord
+        y_coord = z_coord
+        z_coord = temp_y
+        temp_y = centriod_y
+        centriod_y = centriod_z
+        centriod_z = temp_y
+    
+    centriod=(centriod_x,centriod_y,centriod_z)#centres of each element in form (x...,y...,z...)
     if vert_no==3:
         node_maps=(node1,node2,node3)
-        centriod=(centriod_x,centriod_y)#centres of each element in form (x...,y...)
     elif vert_no==4:
-        node_maps=(node1,node2,node3,node4)
-        centriod=(centriod_x,centriod_y,centriod_z)#centres of each element in form (x...,y...,z...)
+        node_maps=(node1,node2,node3,node4)  
     elif vert_no==8:
         node_maps=(node1,node2,node3,node4,node5,node6,node7,node8)
-        centriod=(centriod_x,centriod_y,centriod_z)#centres of each element in form (x...,y...,z...)
         
     if ignored_cells>0:
         print("%i cells ignored in the vtk file"%ignored_cells)
@@ -1371,7 +1388,8 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
-    Mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
+    Mesh = Mesh_obj.mesh_dict2obj(mesh_dict)#convert to mesh object 
+    
     try:
         Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
     except:
@@ -1383,7 +1401,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
     """
-    Reads resistivity values in f00#_res.dat file output from R2.
+    Reads resistivity values in f00#_res.dat file output from R2.(2D only)
             
     Parameters
     ----------
@@ -1435,8 +1453,8 @@ def readR2_sensdat(file_path):
 
         
 #%% build a quad mesh        
-def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2, 
-              surface_x=None,surface_y=None):
+def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2, 
+              surface_x=None,surface_z=None):
     """
     Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
@@ -1445,7 +1463,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     ----------
     elec_x : list, np array
         Electrode x coordinates 
-    elec_y : list, np array
+    elec_z : list, np array
         Electrode y coordinates
     elec_type: list, optional
         strings, where 'electrode' is a surface electrode; 'buried' is a buried electrode
@@ -1484,14 +1502,14 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         print('elemx too small, set up to 4 at least')
         elemx = 4
         
-    if surface_x is None or surface_y is None:
+    if surface_x is None or surface_z is None:
         surface_x = np.array([])
-        surface_y = np.array([])
+        surface_z = np.array([])
     else: #if surface_x != None and surface_y != None:
-            if len(surface_x) != len(surface_y):
+            if len(surface_x) != len(surface_z):
                 raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
             surface_x = np.array(surface_x)
-            surface_y = np.array(surface_y)
+            surface_z = np.array(surface_z)
     
     bh_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -1511,19 +1529,19 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         
         if len(surface_idx)>0:# then surface electrodes are present
             Ex=np.array(elec_x)[surface_idx]
-            Ey=np.array(elec_y)[surface_idx]
+            Ey=np.array(elec_z)[surface_idx]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
             Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
-            Ey=np.array([elec_y[np.argmax(elec_y)],elec_y[np.argmax(elec_y)]])
+            Ey=np.array([elec_z[np.argmax(elec_z)],elec_z[np.argmax(elec_z)]])
         #elec=np.c_[Ex,Ey]
     else:
         pass
         #elec = np.c_[elec_x,elec_y]
-    elec = np.c_[elec_x,elec_y]    
+    elec = np.c_[elec_x,elec_z]    
     
     if bh_flag:
-        bh = np.c_[np.array(elec_x)[bur_idx],np.array(elec_y)[bur_idx]]
+        bh = np.c_[np.array(elec_x)[bur_idx],np.array(elec_z)[bur_idx]]
         
     pad = pad # number of padding on both side (as a multiplier of the nb of nodes between electrodes)
     # create meshx
@@ -1558,7 +1576,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     # create meshy
     if doi == -1:
         if bh_flag:
-            doi = abs(min(elec_y))
+            doi = abs(min(elec_z))
         else:
             doi = np.abs(elec[0,0]-elec[-1,0])/2
         
@@ -1585,12 +1603,12 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     # create topo
     if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
         X = np.append(Ex,surface_x) 
-        Y = np.append(Ey,surface_y)
+        Y = np.append(Ey,surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
     else: # all electrodes are assumed to be on the surface 
         X = np.append(elec[:,0],surface_x)
-        Y = np.append(elec[:,1],surface_y)
+        Y = np.append(elec[:,1],surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
     
@@ -1605,7 +1623,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     temp_y = meshy.tolist()
     elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 becuase of indexing in R2. 
     
-    elec_node_y = np.ones((len(elec_y),1),dtype=int)#by default electrodes are at the surface
+    elec_node_y = np.ones((len(elec_z),1),dtype=int)#by default electrodes are at the surface
     #this ugly looking if - for loop thing finds the y values for borehole meshes. 
     if bh_flag:
         count = 0 
@@ -1643,16 +1661,16 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     
     node_mappins = [list(np.delete(node_mappins[i],del_idx)) for i in range(4)]#delete excess node placements
     #compute node x and y  (and z)
-    node_x,node_y=np.meshgrid(meshx,meshy)
+    node_x,node_z=np.meshgrid(meshx,meshy)
     #account for topography in the y direction 
-    node_y = [topo-node_y[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
-    node_y=np.array(node_y).flatten(order='F')
+    node_z = [topo-node_z[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
+    node_z=np.array(node_z).flatten(order='F')
     node_x=node_x.flatten(order='F')
-    node_z=np.array([0]*len(node_x))
+    node_y=np.array([0]*len(node_x))
     
     #compute element centres and areas
     centriod_x=[]
-    centriod_y=[]
+    centriod_z=[]
     areas=[]
     for i in range(no_elms):
         #assuming element centres are the average of the x - y coordinates for the quad
@@ -1661,11 +1679,12 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         n3=(node_x[int(node_mappins[2][i])],node_y[int(node_mappins[2][i])])
         n4=(node_x[int(node_mappins[3][i])],node_y[int(node_mappins[3][i])])
         centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0])))
-        centriod_y.append(np.mean((n1[1],n2[1],n3[1],n4[1])))
+        centriod_z.append(np.mean((n1[1],n2[1],n3[1],n4[1])))
         #finding element areas, base times height.  
         elm_len=abs(n2[0]-n1[0])#element length
         elm_hgt=abs(n2[1]-n3[1])#element hieght
         areas.append(elm_len*elm_hgt)
+    centriod_y = [0]*len(centriod_x)
     
     #make mesh object    
     Mesh = Mesh_obj(no_nodes,
@@ -1676,7 +1695,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                     list(np.arange(0,no_nodes)),
                     list(np.arange(0,no_elms)),
                     node_mappins,
-                    (centriod_x,centriod_y),
+                    (centriod_x,centriod_y,centriod_z),
                     areas,
                     [9],
                     [0]*no_elms,
@@ -1685,7 +1704,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     #find the node which the electrodes are actually on in terms of the mesh. 
     node_in_mesh = [0]*len(elec_x)
     for i in range(len(elec_x)):
-        sq_dist = (node_x - elec_x[i])**2 + (node_y - elec_y[i])**2 # find the minimum square distance
+        sq_dist = (node_x - elec_x[i])**2 + (node_z - elec_z[i])**2 # find the minimum square distance
         node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
             
     Mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
@@ -1693,7 +1712,7 @@ def quad_mesh(elec_x, elec_y, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     return Mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True, 
+def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
              show_output=True, path='exe', dump=print,whole_space=False, **kwargs):
     """ 
     Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
@@ -1703,7 +1722,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     ---------- 
     elec_x: array like
         electrode x coordinates 
-    elec_y: array like 
+    elec_z: array like 
         electrode y coordinates 
     elec_type: list of strings, optional
         type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list    
@@ -1734,7 +1753,7 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
         ewd = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 path)
-        print(ewd) #ewd - exe working directory 
+        print('exe dir = ' + ewd) #ewd - exe working directory 
     else:
         ewd = path
         # else its assumed a custom directory has been given to the gmsh.exe
@@ -1746,11 +1765,11 @@ def tri_mesh(elec_x, elec_y, elec_type=None, geom_input=None,keep_files=True,
     #make .geo file
     file_name="mesh"
     if not whole_space:#by default create survey with topography 
-        node_pos = gw.genGeoFile([elec_x,elec_y], elec_type, geom_input,
+        node_pos = gw.genGeoFile([elec_x,elec_z], elec_type, geom_input,
                              file_path=file_name,**kwargs)
     elif whole_space:
         print("Whole space problem")
-        node_pos = gw.gen_2d_whole_space([elec_x,elec_y], geom_input = geom_input, 
+        node_pos = gw.gen_2d_whole_space([elec_x,elec_z], geom_input = geom_input, 
                                          file_path=file_name)    
     
     # handling gmsh
@@ -1879,9 +1898,6 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     else:
         cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         
-#    print('calling')
-#    print(cmd_line)
-        
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
@@ -1939,9 +1955,6 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     mesh.elm_centre = (elm_x, elm_y, elm_z)
     #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
-    
-    # overwrite mesh.show()
-    mesh.show = mesh.showSlice
     
     return mesh
 

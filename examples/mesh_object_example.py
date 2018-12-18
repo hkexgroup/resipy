@@ -8,7 +8,7 @@ Example of how to use mesh object
 import numpy as np
 import sys 
 #import R2 API libraries
-sys.path.append(r"..")
+sys.path.append(r"../src")
 import api.meshTools as mt
 import matplotlib.pyplot as plt
 
@@ -21,40 +21,41 @@ surf_y=[50,50,100,100]
 #%% lets pretend to put electrodes on the slope 
 elec_x=np.linspace(0,170,25)#electrode x positions 
 #interpolate electrode y positions 
-elec_y = np.interp(elec_x,surf_x,surf_y)
+elec_z = np.interp(elec_x,surf_x,surf_y)
 
 #axis limits 
 xlim=(min(surf_x),max(surf_x))
 ylim=(40,110)
 
 #%% generate a triagnular mesh of the slope 
-geom_input = {'surface':[surf_x,surf_y],
-              'electrode':[elec_x,elec_y]}
-tri_mesh= mt.tri_mesh(geom_input)
+geom_input = {'surface':[[-40,210],[50,100]],}
+tri_mesh= mt.tri_mesh(elec_x,elec_z, geom_input=geom_input)
 
 # show something about the mesh 
 tri_mesh.summary()
 tri_mesh.show(xlim=xlim,ylim=ylim)
+tri_mesh.write_vtk('tri_mesh.vtk')
 #when showing the mesh we haven't actually inverted anything, so it just shows 
 #the material assigned to the mesh elements by gmsh. 
 
 #%% generate a quad mesh 
-qmesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_y)#
+qmesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z)#
 #mesh object, x node coordinates, y node coordinates, topography, x coordinate nodes with electrodes
 
 #show the quad mesh 
 qmesh.summary()
 qmesh.show(xlim=xlim,ylim=ylim)
+qmesh.write_vtk('qmesh.vtk')
 
 #again we havent inverted anything so the mesh is just blank 
 
 #%% importing a vtk file 
 
-mesh_obj = mt.vtk_import('mesh.vtk')
+mesh_obj = mt.vtk_import('qmesh.vtk')
 
 #show info about mesh 
 mesh_obj.summary()
-mesh_obj.show()
+mesh_obj.show(xlim=xlim,zlim=ylim)
 
 #%% mesh with boreholes 
 # import gmshWrap as gw
