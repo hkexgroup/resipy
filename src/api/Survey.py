@@ -1060,8 +1060,8 @@ class Survey(object):
             Dataframe which contains the data for the `protocol.dat`. 
         """
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
-        haveReciprocal = ~all(self.df['irecip'].values == 0)
-        if haveReciprocal: # so we have reciprocals
+        haveReciprocal = all(self.df['irecip'].values == 0)
+        if haveReciprocal is False: # so we have reciprocals
             x = self.df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
@@ -1109,6 +1109,7 @@ class Survey(object):
             protocol.insert(7, 'sn', 1)
             
         if outputname != '':
+            print('writing the file', protocol)
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:

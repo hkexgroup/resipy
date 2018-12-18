@@ -229,7 +229,7 @@ def write3Din(param, dirname, typ='R3'):
             'singular_type':0,
             'num_regions':1,
             'resis':100.0, # default resistivity for regions Ohm.m
-            'inverse_type':1,
+            'inverse_type':0, # different for 3D (it's more the regularization mode)
             'data_type':1,
             'tolerance':1.0,
             'no_improve':1.0 , # 3D specific

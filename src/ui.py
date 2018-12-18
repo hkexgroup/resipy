@@ -1919,9 +1919,9 @@ class App(QMainWindow):
         # add table for sequence generation
         seqLabel = QLabel('Define the number of skip and levels in the table.'
                           'Take into account the specifications of your instrument to'
-                          ' obtain realistic simulation results. Hhover on the title to'
-                          ' see the sequence scheme.\n'
-                          '**Mouse over the sequence title for more help**')
+                          ' obtain realistic simulation results. You can copy-paste '
+                          'your custom sequence as well. '
+                          '<b>Mouse over the sequence title for more help.</b>')
         seqLabel.setWordWrap(True)
         
         class SequenceTable(QTableWidget):
@@ -2010,8 +2010,8 @@ class App(QMainWindow):
         seqDipDipLabel = QLabel('Dipole-Dipole')
         seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
         seqDipDip = SequenceTable(['a','n'])
-#        seqDipDip.setItem(0,0,QTableWidgetItem('1')) #confuses user. user should define the sequence.
-#        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
+        seqDipDip.setItem(0,0,QTableWidgetItem('1')) #confuses user. user should define the sequence.
+        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
         
         seqWennerLabel = QLabel('Wenner')
         seqWennerLabel.setToolTip('<img src="image/wenner.png">')
