@@ -2034,7 +2034,7 @@ class App(QMainWindow):
         seqMulti = SequenceTable(['a','n','s'])
 		
         seqCustomLabel = QLabel('Custom Sequence')
-        seqCustomLabel.setToolTip('paste your custome sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
+        seqCustomLabel.setToolTip('paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
         seqCustom = SequenceTable(['a','b','m','n'], selfInit=True)
         
         seqTables = {'dpdp1' : seqDipDip,
@@ -2056,20 +2056,35 @@ class App(QMainWindow):
             else:
                 self.r2.elec = elecTable.getTable()
             params = []
+            counter = 0 #temp loop counter
             for key in seqTables:
-                if key == 'custSeq':
-                    self.r2.sequence = seqCustom.getTable()
-                else:
-                    p = seqTables[key].getTable()
-                    ie = (p != -1).all(1)
-                    p = p[ie,:]
-                    if len(p) > 0:
+                p = seqTables[key].getTable()
+                ie = (p != -1).all(1)
+                p = p[ie,:]
+                if len(p) > 0:
+                    if key == 'custSeq':
+                        self.r2.sequence = seqCustom.getTable()
+                        seq_typ = ' imported'
+                    else:
                         for i in range(p.shape[0]):
                             params.append((key, *p[i,:]))
+                else:
+                    counter += 1
             print(params)
+            print(counter)
             if params:
                 self.r2.createSequence(params=params)
-            seqOutputLabel.setText(str(len(self.r2.sequence)) + ' quadrupoles generated')
+                seq_typ = ' generated'
+                
+            text_default = ''
+            array_typ = ''
+            if counter == 5: # creats a default DpDp1 if user doesn't specify the sequence
+                self.r2.createSequence()
+                text_default = 'Default '
+                array_typ = ' Dipole - Dipole'
+                seq_typ = ' generated'
+                
+            seqOutputLabel.setText(text_default + str(len(self.r2.sequence)) + array_typ + ' quadrupoles' + seq_typ)
         
         seqOutputLabel = QLabel('')
     
