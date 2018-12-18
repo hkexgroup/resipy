@@ -25,7 +25,6 @@ sys.path.append(os.path.relpath('..'))
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
-from api.sequenceHelper import ddskip
 from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
