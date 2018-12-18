@@ -1920,15 +1920,17 @@ class App(QMainWindow):
         seqLabel = QLabel('Define the number of skip and levels in the table.'
                           'Take into account the specifications of your instrument to'
                           ' obtain realistic simulation results. Hhover on the title to'
-                          ' see the sequence scheme.')
+                          ' see the sequence scheme.\n'
+                          '**Mouse over the sequence title for more help**')
         seqLabel.setWordWrap(True)
         
         class SequenceTable(QTableWidget):
-            def __init__(self, headers):
+            def __init__(self, headers, selfInit=False):
                 nrow, ncol = 10, len(headers)
                 super(SequenceTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
+                self.selfInit = selfInit
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
                 self.headers = headers
@@ -1940,6 +1942,55 @@ class App(QMainWindow):
             def addRow(self):
                 self.nrow = self.nrow + 1
                 self.setRowCount(self.nrow)
+			
+            def keyPressEvent(self, e):
+                if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
+                    cell = self.selectedIndexes()[0]
+                    c0, r0 = cell.column(), cell.row()
+                    self.paste(c0, r0)
+                elif e.modifiers() != Qt.ControlModifier: # start editing
+#                    print('start editing...')
+                    cell = self.selectedIndexes()[0]
+                    c0, r0 = cell.column(), cell.row()
+                    self.editItem(self.item(r0,c0))
+                    
+            def paste(self, c0=0, r0=0):
+                # get clipboard
+                text = QApplication.clipboard().text()
+                # parse clipboard
+                tt = []
+                for row in text.split('\n'):
+                    trow = row.split()
+                    if len(trow) > 0:
+                        tt.append(trow)
+                tt = np.array(tt)
+
+                if np.sum(tt.shape) > 0:
+                    # get max row/columns
+                    if self.selfInit is True:
+                        self.initTable(tt)
+                    else:
+                        self.setTable(tt, c0, r0)
+						
+            def initTable(self, tt=None, headers=None):
+                self.clear()
+                if headers is not None:
+                    self.headers = np.array(headers)
+                self.ncol = len(self.headers)
+                self.setColumnCount(len(self.headers))
+                self.setHorizontalHeaderLabels(self.headers)
+                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                if tt is None:
+                    tt = np.zeros((10,len(self.headers)-1))
+                self.setRowCount(tt.shape[0])
+                self.nrow = tt.shape[0]
+                self.setTable(tt)
+                
+            def setTable(self, tt, c0=0, r0=0):
+                # paste clipboard to qtableView
+                for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
+                    for j in range(r0, min([self.nrow, r0+tt.shape[0]])):
+                        self.setItem(j,i,QTableWidgetItem(str(tt[j-r0, i-c0])))
                 
             def getTable(self):
                 table = -np.ones((self.nrow, self.ncol), dtype=int)
@@ -1959,8 +2010,8 @@ class App(QMainWindow):
         seqDipDipLabel = QLabel('Dipole-Dipole')
         seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
         seqDipDip = SequenceTable(['a','n'])
-        seqDipDip.setItem(0,0,QTableWidgetItem('1'))
-        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
+#        seqDipDip.setItem(0,0,QTableWidgetItem('1')) #confuses user. user should define the sequence.
+#        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
         
         seqWennerLabel = QLabel('Wenner')
         seqWennerLabel.setToolTip('<img src="image/wenner.png">')
@@ -1981,16 +2032,22 @@ class App(QMainWindow):
         seqMultiLabel = QLabel('Multigradient')
         seqMultiLabel.setToolTip('<img src="image/gradient.png">')
         seqMulti = SequenceTable(['a','n','s'])
+		
+        seqCustomLabel = QLabel('Custom Sequence')
+        seqCustomLabel.setToolTip('paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
+        seqCustom = SequenceTable(['a','b','m','n'], selfInit=True)
         
         seqTables = {'dpdp1' : seqDipDip,
                      'wenner_alpha' : seqWenner,
                      'schlum1' : seqSchlum,
-                     'multigrad' : seqMulti}
+                     'multigrad' : seqMulti,
+                     'custSeq' : seqCustom}
         
         seqs = [[seqDipDipLabel, seqDipDip],
                 [seqWennerLabel, seqWenner],
                 [seqSchlumLabel, seqSchlum],
-                [seqMultiLabel, seqMulti]]
+                [seqMultiLabel, seqMulti],
+                [seqCustomLabel, seqCustom]]
         
         def seqCreateFunc():
             if self.r2.elec is None:
@@ -1999,16 +2056,35 @@ class App(QMainWindow):
             else:
                 self.r2.elec = elecTable.getTable()
             params = []
+            counter = 0 #temp loop counter
             for key in seqTables:
                 p = seqTables[key].getTable()
                 ie = (p != -1).all(1)
                 p = p[ie,:]
                 if len(p) > 0:
-                    for i in range(p.shape[0]):
-                        params.append((key, *p[i,:]))
+                    if key == 'custSeq':
+                        self.r2.sequence = seqCustom.getTable()
+                        seq_typ = ' imported'
+                    else:
+                        for i in range(p.shape[0]):
+                            params.append((key, *p[i,:]))
+                else:
+                    counter += 1
             print(params)
-            self.r2.createSequence(params=params)
-            seqOutputLabel.setText(str(len(self.r2.sequence)) + ' quadrupoles generated')
+            print(counter)
+            if params:
+                self.r2.createSequence(params=params)
+                seq_typ = ' generated'
+                
+            text_default = ''
+            array_typ = ''
+            if counter == 5: # creats a default DpDp1 if user doesn't specify the sequence
+                self.r2.createSequence()
+                text_default = 'Default '
+                array_typ = ' Dipole - Dipole'
+                seq_typ = ' generated'
+                
+            seqOutputLabel.setText(text_default + str(len(self.r2.sequence)) + array_typ + ' quadrupoles' + seq_typ)
         
         seqOutputLabel = QLabel('')
     

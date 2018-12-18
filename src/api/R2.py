@@ -1444,7 +1444,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #        self.mesh.assign_zone_attribute(self.regions, fixedList, 'fixed')
         
 
-    def createSequence(self, params=[('dpdp1', 1, 3)]):
+    def createSequence(self, params=[('dpdp1', 1, 8)]):
         """ Create a dipole-dipole sequence.
         
         Parameters
@@ -1464,6 +1464,7 @@ class R2(object): # R2 master class instanciated by the GUI
               'schlum1': schlum1,
               'schlum2': schlum2,
               'multigrad': multigrad}
+        
         for p in params:
             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
             qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
@@ -2107,5 +2108,3 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.setElec(elec)
 #k.createMesh(cl=20)
 #k.invert()
-
-
