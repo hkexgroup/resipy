@@ -1054,12 +1054,6 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     
     if len(elec_x) != len(elec_y):
         raise ValueError("The length of the x coordinate array does not match of the Y coordinate")
-    
-#    if geom_input != None: 
-#        if not isinstance(geom_input,dict):
-#            raise TypeError ("'geom_input' is not a dictionary type object. Dict type is expected for the first argument of genGeoFile_adv")
-#    elif geom_input is None:
-#        geom_input = {}
         
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already

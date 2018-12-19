@@ -119,12 +119,39 @@ def irregular_grid(xnew, ynew, x_grid, y_grid, z_grid, method="bilinear", extrap
     
     
 #%% inverse weighted distance
-def idw(xnew, ynew, xknown, yknown, zknown):
-    znew = np.zeros(len(xnew))
-    for i,(x,y) in enumerate(zip(xnew, ynew)):#,ncols=100,desc="Interpolating topo"):
-        dist = pdist(x, y, xknown, yknown)
-        # if we consider all the points (might be not good)
-        w = (1/dist)**2 # exponent to be chosen
-        znew[i] = np.sum(zknown*w)/np.sum(w)
+def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = None, extrapolate=True):
+    znew = np.zeros_like(xnew)
+    znew.fill(np.nan)
+    if radius is None:
+        for i,(x,y) in enumerate(zip(xnew, ynew)):#,ncols=100,desc="Interpolating topo"):
+            dist = pdist(x, y, xknown, yknown)
+            # if we consider all the points (might be not good)
+            w = (1/dist)**power # exponent to be chosen
+            znew[i] = np.sum(zknown*w)/np.sum(w)
+    else:
+        for i,(x,y) in enumerate(zip(xnew, ynew)):#,ncols=100,desc="Interpolating topo"):
+            dist = pdist(x, y, xknown, yknown)
+            search = dist<=radius #get boolian array where dist is smaller than search radius 
+            w = (1/dist)**power # exponent to be chosen
+            znew[i] = np.sum(zknown[search]*w[search])/np.sum(w[search])
+        
+    idx_nan = np.isnan(znew) # boolian indexes of where nans are
+    idx_num = np.where(idx_nan == False)
+    #extrapolate nans using nearest nieghbough interpolation
+    if extrapolate:
+        #combine known and interpolated values 
+        known_x = np.append(xknown,xnew[idx_num])
+        known_y = np.append(yknown,ynew[idx_num])
+        known_z = np.append(zknown,znew[idx_num])
+        extrap_x = xnew[idx_nan] # extrapolate using the gridded and interpolated data
+        extrap_y = ynew[idx_nan]
+        extrap_z = znew[idx_nan]
+        
+        for i in range(len(extrap_x)):#,ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate
+            dist = pdist(extrap_x[i],extrap_y[i],known_x,known_y)
+            ref = np.argmin(dist)
+            extrap_z[i] = known_z[ref]     
+        znew[idx_nan] = extrap_z
+        
     return znew
     

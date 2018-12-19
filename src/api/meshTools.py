@@ -50,7 +50,7 @@ class Mesh_obj:
     cax = None 
     zone = None
     attr_cache={}
-    mesh_title = "not_given"
+    mesh_title = "R2_mesh"
     no_attributes = 1
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
@@ -62,7 +62,7 @@ class Mesh_obj:
                  elm_id,#element id number 
                  node_data,#nodes of element vertices
                  elm_centre,#centre of elements (x,y)
-                 elm_area,#area of each element
+                 elm_area,#area of each element (actually this can be left blank)
                  cell_type,#according to vtk format
                  cell_attributes,#the values of the attributes given to each cell 
                  atribute_title,#what is the attribute? we may use conductivity instead of resistivity for example
@@ -131,6 +131,7 @@ class Mesh_obj:
             self.ndims=2
         else:
             self.ndims=3
+            self.mesh_title = '3D_R3t_mesh' 
     
     @classmethod # creates a mesh object from a mesh dictionary
     def mesh_dict2obj(cls,mesh_info):
@@ -209,6 +210,8 @@ class Mesh_obj:
             return 8
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
             return 4
+        elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
+            return 6
         #add element types as neccessary 
         else:
             print("WARNING: unrecognised cell type")
@@ -665,7 +668,7 @@ class Mesh_obj:
             face2 = idx1*idx2*idx4
             face3 = idx2*idx3*idx4
             face4 = idx1*idx4*idx3
-            
+
             tri_combo[i,0] = face1#face 1 
             tri_combo[i,1] = face2#face 2 
             tri_combo[i,2] = face3#face 3 
@@ -1166,7 +1169,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     if vtk_ver.find('vtk')==-1:
         raise ImportError("Unexpected file type... ")
     elif vtk_ver.find('3.0')==-1:#not the development version for this code
-        print("Warning: vtk manipulation code was developed for vtk datafile version 3.0, unexpected behaviour may occur")
+        print("Warning: vtk manipulation code was developed for vtk datafile version 3.0, unexpected behaviour may occur in resulting mesh")
     title=fid.readline().strip()#read line 2
     format_type=fid.readline().strip()#read line 3
     if format_type=='BINARY':
@@ -1397,7 +1400,127 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         pass
     Mesh.mesh_title = title
     return Mesh
+
+#%% import mesh from native .dat format
+def dat_import(file_path='mesh.dat'):
+    """
+    """
+    if not isinstance(file_path,str):
+        raise TypeError("Expected string type argument for 'file_path'")
+    fid=open(file_path,'r')#open file
+    #discover if the file is 2 or 3D 
+    header = fid.readline().split()
+    if len(header)==2: # its a 2D mesh 
+        flag_3d = False
+        npere = 3
+    else:
+        flag_3d = True
+        npere = int(header[-1])
+    numel = int(header[0]) # number of elements 
+    numnp = int(header[1]) # number of nodes 
+    #now read in element data
+    elm_no = [0]*numel # element number / index 
+    #allocate nodes
+    for i in range(npere):
+        exec('node%i = [0]*%i'%(i,numel))
+    node_map = np.array([[0]*numel]*npere,dtype=int)
+    zone = [0]*numel # mesh zone 
+    for i in range(numel):
+        line = fid.readline().split()#read in line data
+        elm_no[i] = int(line[0])
+        zone[i] = int(line[-1])
+        ref=1 # read through each node index 
+        if i==0 and not flag_3d and len(line)==7: # we have a special case of a quad mesh .dat file
+            npere=4
+        for j in range(npere):
+            #exec('node%i[i] = int(line[ref])-1'%j)
+            node_map[j][i]=int(line[ref])-1
+            ref += 1
+#            if i==0:
+#                print(j,ref,node_map[j][i])
+    #make node map
+#    statement = '('
+#    for i in range(npere):
+#        if i==npere-1:
+#            statement += 'node%i) '%i
+#        else:
+#            statement += 'node%i, '%i
+#    node_map = eval(statement)
+        
+    #read in nodes 
+    node_x = [0]*numnp
+    node_y = [0]*numnp
+    node_z = [0]*numnp
+    node_id = [0]*numnp
+    for i in range(numnp):
+        line = fid.readline().split()#read in line data
+        while len(line)==0: # then we have a space between elements and nodes 
+            line = fid.readline().split()#read in line data
+        node_id[i] = int(line[0])
+        node_x[i] = float(line[1])
+        if flag_3d:
+            node_y[i] = float(line[2])
+            node_z[i] = float(line[3])
+        else:
+            node_y[i] = float(0)
+            node_z[i] = float(line[2])
+    #iniate mesh class 
+    #compute each cell area and centriod 
+    areas = [0]*numel
+    centriod_x = [0]*numel
+    centriod_y = [0]*numel
+    centriod_z = [0]*numel
+    for i in range(numel):
+        if npere==3:
+            n1=(node_x[node_map[0][i]],node_z[node_map[0][i]])#in vtk files the 1st element id is 0 
+            n2=(node_x[node_map[1][i]],node_z[node_map[1][i]])
+            n3=(node_x[node_map[2][i]],node_z[node_map[2][i]])
+            xy_tuple=tri_cent(n1,n2,n3)#actual calculation
+            centriod_x[i] = xy_tuple[0]
+            centriod_z[i] = xy_tuple[1]
+            #find area of element (for a triangle this is 0.5*base*height)
+            base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+            mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+            height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+            areas[i] = 0.5*base*height
+        else:
+            x_vec = [node_x[node_map[j][i]] for j in range(npere)]
+            y_vec = [node_y[node_map[j][i]] for j in range(npere)]
+            z_vec = [node_z[node_map[j][i]] for j in range(npere)]
+            centriod_x[i] = sum(x_vec)/npere
+            centriod_y[i] = sum(y_vec)/npere
+            centriod_z[i] = sum(z_vec)/npere
+            #dont compute area as it is not needed 
     
+    #probe vtk cell type
+    if flag_3d:
+        if npere == 4:
+            cell_type = 10
+        elif npere == 6:
+            cell_type = 13
+    else:
+        if npere == 4:
+            cell_type = 9
+        elif npere == 3:
+            cell_type = 5
+        
+    mesh = Mesh_obj(num_nodes = numnp,#number of nodes
+                 num_elms = numel,#number of elements 
+                 node_x = node_x,#x coordinates of nodes 
+                 node_y = node_y,#y coordinates of nodes
+                 node_z = node_z,#z coordinates of nodes 
+                 node_id= node_id,#node id number 
+                 elm_id=elm_no,#element id number 
+                 node_data=node_map,#nodes of element vertices
+                 elm_centre= (centriod_x,centriod_y,centriod_z),#centre of elements (x,y)
+                 elm_area = areas,#area of each element
+                 cell_type = [cell_type],#according to vtk format
+                 cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
+                 atribute_title='zone')#what is the attribute? we may use conductivity instead of resistivity for example
+    
+    return mesh 
+        
+           
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
     """
@@ -1757,7 +1880,6 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     else:
         ewd = path
         # else its assumed a custom directory has been given to the gmsh.exe
-    cwd=os.getcwd()#get current working directory 
     
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
         raise Exception("No gmsh.exe exists in the exe directory!")
@@ -1808,9 +1930,11 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     return mesh#, mesh_dict['element_ranges']
 
 #%% 3D tetrahedral mesh 
-def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=True, 
-             show_output=True, path='exe', dump=print,whole_space=False, padding=20,
-             **kwargs):
+def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'idw',
+               surface_refinement = None, mesh_refinement = None,
+               show_output=True, path='exe', dump=print,whole_space=False, padding=20,
+               array_shape=None, search_radius = 10,
+               **kwargs):
     """ 
     Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
     in the working directory. This function expects the current working directory 
@@ -1831,12 +1955,18 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         electrode z coordinates 
     elec_type: list of strings, optional
         type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list   
-    shape: tuple, optional
-        must be of length  == 2. reshapes the input into a grid, which allows for better 
-        topography
-        (number of electrodes in x direction, number of electrodes in y direction)
     keep_files : boolean, optional
-        `True` if the gmsh input and output file is to be stored in the exe directory.
+        `True` if the gmsh input and output file is to be stored in the working directory.
+    interp_method: string, default ='IDW' optional
+        Interpolation method to translate mesh nodes in the z direction. In other words the method in which topography 
+        is appended to the mesh. Here the topography is added to the mesh in post processing. 
+        The options are inverse wieghting distance or bilinear interpolation. 
+        if == 'idw': then provide search_radius.  
+        if == 'bilinear' : then provide array_shape
+    surface_refinement : np.array, optional 
+        Coming soon ... 
+    mesh_refinement : np.array, optional
+        Coming soon ... 
     show_ouput : boolean, optional
         `True` if gmsh output is to be printed to console. 
     path : string, optional
@@ -1849,6 +1979,13 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         the default.
     padding : float, optional
         amount of % the fine mesh region will be extended beyond the extent of the electrode positions
+    array_shape: tuple, optional
+        must be of length  == 2. reshapes the surface electrode input into a grid, which allows for  
+        topography interpolation on an unstructured grid. 
+        (number of electrodes in x direction, number of electrodes in y direction)
+    search_radius: float, None, optional
+        Defines search radius used in the inverse distance weighting interpolation. 
+        If None then no search radius will be used and all points will be considered in the interpolation. 
     **kwargs : optional
         Key word arguments to be passed to box_3d. 
             
@@ -1857,10 +1994,63 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     mesh3d: class
     #### TODO : add buried electrode capacity 
     """
+    #formalities 
+    if len(elec_x) != len(elec_y):
+        raise ValueError("mismatch in electrode x and y vector length, they should be equal")
+    elif elec_type is not None:
+        if len(elec_x) != len(elec_z):
+            raise ValueError("mismatch in electrode x and z vector length, they should be equal")
+        check = 0
+        for i, key in enumerate(elec_type):
+            if key=='surface': check+=1
+        if len(elec_type)==check:
+            print("all electrodes are surface electrodes, ignoring the electrode type")
+            elec_type = None
+    
     if elec_type is not None:
-        raise Exception("Sorry variable electrode types are not yet available")
-    
-    
+        warnings.warn("Borehole electrode meshes still in development!")
+        if not isinstance(elec_type,list):
+            raise TypeError("'elec_type' argument should be of type 'list', got type %s"%str(type(elec_type)))
+        elif len(elec_type) != len(elec_x):
+            raise ValueError("mismatch in elec_type vector and elec_x vector lengths")
+        surf_elec_x = []
+        surf_elec_y = []
+        surf_elec_z = []
+        bur_elec_x = []
+        bur_elec_y = []
+        bur_elec_z = []
+        for i, key in enumerate(elec_type):
+            if key == 'buried':
+                bur_elec_x.append(elec_x[i])
+                bur_elec_y.append(elec_y[i])
+                bur_elec_z.append(elec_z[i])
+            if key == 'surface':
+                surf_elec_x.append(elec_x[i])
+                surf_elec_y.append(elec_y[i])
+                surf_elec_z.append(elec_z[i])
+        #interpolate in order to normalise buried electrode elevations to 0
+        if interp_method is 'idw': 
+            x_interp = surf_elec_x#parameters to be interpolated 
+            y_interp = surf_elec_y
+            z_interp = surf_elec_z
+            bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
+        elif interp_method is 'bilinear':
+            if not isinstance(array_shape,tuple) or len(array_shape) is not 2:
+                raise TypeError("Expected tuple type argument for 'array_shape' with length of 2 for 'shape'")
+            x_grid = np.reshape(surf_elec_x,array_shape)
+            y_grid = np.reshape(surf_elec_y,array_shape)
+            z_grid = np.reshape(surf_elec_z,array_shape)    
+            elec_z = np.array(bur_elec_z) - interp.irregular_grid(bur_elec_x, bur_elec_y, x_grid, y_grid, z_grid,shape = array_shape)
+    else:
+        surf_elec_x = elec_x 
+        surf_elec_y = elec_y 
+        if elec_z is None:
+            surf_elec_z = np.zeros_like(elec_x)
+            elec_z = np.zeros_like(elec_x)
+        else:
+            surf_elec_z = elec_z 
+            elec_z = np.array(elec_z) - np.array(elec_z)#normalise elec_z
+         
     #check directories 
     if path == "exe":
         ewd = os.path.join(
@@ -1881,7 +2071,7 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
         raise Exception("Sorry whole space 3D problems are not implimented yet")
         
     else:
-        node_pos = gw.box_3d([elec_x,elec_y], file_path=file_name, **kwargs)
+        node_pos = gw.box_3d([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
         
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
@@ -1916,20 +2106,19 @@ def tetra_mesh(elec_x,elec_y,elec_z, elec_type = None, shape=None, keep_files=Tr
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
     
-    if shape is None: #we cant rearrange into a nice grid, so just interpolate electrode positions as is. 
-        x_interp = elec_x#np.append(elec_x,add_x)#parameters to be interpolated 
-        y_interp = elec_y#np.append(elec_y,add_y)
-        z_interp = elec_z#np.append(elec_z,add_z)
-        nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp)# use inverse distance
-    
-    else:
-        if not isinstance(shape,tuple) or len(shape) is not 2:
-            raise TypeError("Expected tuple type argument with length of 2 for 'shape'")
-        x_grid = np.reshape(elec_x,shape)
-        y_grid = np.reshape(elec_y,shape)
-        z_grid = np.reshape(elec_z,shape)    
+    if interp_method is 'idw': 
+        x_interp = surf_elec_x#parameters to be interpolated 
+        y_interp = surf_elec_y
+        z_interp = surf_elec_z
+        nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
+    elif interp_method is 'bilinear':
+        if not isinstance(array_shape,tuple) or len(array_shape) is not 2:
+            raise TypeError("Expected tuple type argument for 'array_shape' with length of 2 for 'shape'")
+        x_grid = np.reshape(surf_elec_x,array_shape)
+        y_grid = np.reshape(surf_elec_y,array_shape)
+        z_grid = np.reshape(surf_elec_z,array_shape)    
         #using home grown function to interpolate / extrapolate topography on mesh
-        nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the 
+        nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the unknown coordinates
         
     mesh.node_z = np.array(mesh.node_z) + nodez
     node_z = mesh.node_z
@@ -1998,7 +2187,7 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     fh.close()
 
 #%% parser for reading in mesh.dat like file and returning a mesh.     
-def dat_import(file_path):
+def dat_import_v1(file_path):
     
     def readMeshDat(fname):
         with open(fname, 'r') as f:
@@ -2056,15 +2245,17 @@ def dat_import(file_path):
     
 #%% import a custom mesh, you must know the node positions 
 def custom_mesh_import(file_path, node_pos, flag_3D=False):
-    """ Import user defined mesh, currently supports .msh and .vtk format 
-    for quad, triangular and tetrahedral meshes. 
+    """ 
+    Import user defined mesh, currently supports .msh, .vtk and .dat (native to R2/3t)
+    format for quad, triangular and tetrahedral meshes. The type of file is guessed from the 
+    extension given to the code. 
     
     Parameters
     ---------- 
     file_path: string
         path to file
     flag_3D: bool, optional
-        make this true for 3D meshes
+        make this true for 3D meshes if importing .msh 
         
     Returns
     -------
@@ -2079,14 +2270,17 @@ def custom_mesh_import(file_path, node_pos, flag_3D=False):
         mesh = vtk_import(file_path)
     elif ext == '.msh':
         if flag_3D:
-            gw.msh_parse_3d(file_path)
+            mesh_dict = gw.msh_parse_3d(file_path)
         else:
-            gw.msh_parse(file_path)
+            mesh_dict = gw.msh_parse(file_path)
+        mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
+    elif ext == '.dat':
+        mesh = dat_import(file_path)
     else:
-        avail_ext = ['vtk','.ext']
+        avail_ext = ['vtk','.ext','.dat']
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
-    mesh.add_e_nodes(node_pos)
+    mesh.add_e_nodes(np.array(node_pos))
     
     return mesh
 

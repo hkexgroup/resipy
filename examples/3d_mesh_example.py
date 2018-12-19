@@ -19,6 +19,6 @@ data = pd.read_csv(r"../src/api/test/init_elec_locs.csv")#electrode position fil
 elec_x = np.array(data['x'])
 elec_y = np.array(data['y'])
 elec_z = np.array(data['z'])+2
-amesh = mt.tetra_mesh(elec_x,elec_y,elec_z, shape=(5,32))
-#amesh.write_vtk('mesh3D.vtk')
+amesh = mt.tetra_mesh(elec_x,elec_y,elec_z, interp_method = 'idw', search_radius=20)
+amesh.write_vtk('mesh3D.vtk')
 amesh.show(alpha=0.5,xlim=[min(elec_x),max(elec_x)],ylim=[min(elec_y),max(elec_y)],zlim=[min(elec_z),max(elec_z)])
