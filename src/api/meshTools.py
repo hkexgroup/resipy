@@ -2463,8 +2463,8 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
 """
 
 #%% faster triangular mesh plotting
-mesh = vtk_import('api/test/testTrianMesh.vtk')
-mesh.show()
+#mesh = vtk_import('api/test/testTrianMesh.vtk')
+#mesh.show()
 #
 #nodes = np.array([mesh.node_x, mesh.node_y, mesh.node_z]).T
 #elms = np.array(mesh.con_matrix).T
