@@ -397,11 +397,11 @@ class Mesh_obj:
             edge_color='face'#set the edge colours to the colours of the polygon patches
 
         if contour is False:
-#            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
-#            coll.set_clim(vmin=vmin, vmax=vmax)
-#            ax.add_collection(coll)#blit polygons to axis
-            triang = tri.Triangulation(nodes[:,0], nodes[:,1], connection)
-            coll = ax.tripcolor(triang, X, cmap=color_map, edgecolors=edge_color, linewidth=0.5)
+            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
+            coll.set_clim(vmin=vmin, vmax=vmax)
+            ax.add_collection(coll)#blit polygons to axis
+#            triang = tri.Triangulation(nodes[:,0], nodes[:,1], connection)
+#            coll = ax.tripcolor(triang, X, cmap=color_map, edgecolors=edge_color, linewidth=0.5)
             self.cax = coll
             
         else:#use contour algorithm
