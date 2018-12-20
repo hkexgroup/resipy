@@ -1109,7 +1109,6 @@ class Survey(object):
             protocol.insert(7, 'sn', 1)
             
         if outputname != '':
-            print('writing the file', protocol)
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:

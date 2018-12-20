@@ -533,7 +533,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     elec_type = None # for now
                     mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
                                  path=os.path.join(self.apiPath, 'exe'),
-                                 cl_factor=cl_factor, shape=None, # shape is None -> use IDW
+                                 cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=True,
                                  doi=self.doi-max(elec_z), whole_space=whole_space,
                                  **kwargs)
@@ -1161,7 +1161,10 @@ class R2(object): # R2 master class instanciated by the GUI
             self.meshResults.append(initMesh)
             
         for i in range(100):
-            fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
+            if self.typ[-2] == '3':
+                fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '.vtk')
+            else:
+                fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fresults):
                 print('reading ', fresults)
                 mesh = mt.vtk_import(fresults)
@@ -2105,5 +2108,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 #elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=20)
+#k.createMesh(cl=20) # it runs but vtk and dat are size 0 (mesh related issue)
 #k.invert()
+#k.showResults()
