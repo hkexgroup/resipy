@@ -397,10 +397,13 @@ class Mesh_obj:
             edge_color='face'#set the edge colours to the colours of the polygon patches
 
         if contour is False:
-            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
-            coll.set_clim(vmin=vmin, vmax=vmax)
-            ax.add_collection(coll)#blit polygons to axis
+#            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
+#            coll.set_clim(vmin=vmin, vmax=vmax)
+#            ax.add_collection(coll)#blit polygons to axis
+            triang = tri.Triangulation(nodes[:,0], nodes[:,1], connection)
+            coll = ax.tripcolor(triang, X, cmap=color_map, edgecolors=edge_color, linewidth=0.5)
             self.cax = coll
+            
         else:#use contour algorithm
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[2])
@@ -2458,6 +2461,20 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     ax1.collections[0].facecolors contains the assigned color for each contour
     tcf (output of ax.tricontourf) takes tcf.set_clim()
 """
+
+#%% faster triangular mesh plotting
+mesh = vtk_import('api/test/testTrianMesh.vtk')
+mesh.show()
+#
+#nodes = np.array([mesh.node_x, mesh.node_y, mesh.node_z]).T
+#elms = np.array(mesh.con_matrix).T
+#
+#triang = tri.Triangulation(nodes[:,0], nodes[:,2], elms)
+#
+#fig, ax = plt.subplots()
+#ax.triplot(triang)
+#fig.show()
+#
 
 #%% 3D mesh testing
 #import pandas as pd
