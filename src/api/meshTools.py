@@ -1934,9 +1934,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
 
 #%% 3D tetrahedral mesh 
 def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'idw',
-               surface_refinement = None, mesh_refinement = None,
-               show_output=True, path='exe', dump=print,whole_space=False, padding=20,
-               array_shape=None, search_radius = 10,
+               surface_refinement = None, mesh_refinement = None,show_output=True, 
+               path='exe', dump=print,whole_space=False, padding=20, search_radius = 10,
                **kwargs):
     """ 
     Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
@@ -1945,8 +1944,6 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     
     Uses post processing after mesh generation to super impose topography on to 
     a flat 3D tetrahedral mesh. 
-    
-    ***Buried electrodes not yet supported***
             
     Parameters
     ---------- 
@@ -1965,7 +1962,6 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         is appended to the mesh. Here the topography is added to the mesh in post processing. 
         The options are inverse wieghting distance or bilinear interpolation. 
         if == 'idw': then provide search_radius.  
-        if == 'bilinear' : then provide array_shape
     surface_refinement : np.array, optional 
         Coming soon ... 
     mesh_refinement : np.array, optional
@@ -1982,10 +1978,6 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         the default.
     padding : float, optional
         amount of % the fine mesh region will be extended beyond the extent of the electrode positions
-    array_shape: tuple, optional
-        must be of length  == 2. reshapes the surface electrode input into a grid, which allows for  
-        topography interpolation on an unstructured grid. 
-        (number of electrodes in x direction, number of electrodes in y direction)
     search_radius: float, None, optional
         Defines search radius used in the inverse distance weighting interpolation. 
         If None then no search radius will be used and all points will be considered in the interpolation. 
@@ -2032,18 +2024,13 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 surf_elec_y.append(elec_y[i])
                 surf_elec_z.append(elec_z[i])
         #interpolate in order to normalise buried electrode elevations to 0
+        x_interp = surf_elec_x#parameters to be interpolated 
+        y_interp = surf_elec_y
+        z_interp = surf_elec_z
         if interp_method is 'idw': 
-            x_interp = surf_elec_x#parameters to be interpolated 
-            y_interp = surf_elec_y
-            z_interp = surf_elec_z
             bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
         elif interp_method is 'bilinear':
-            if not isinstance(array_shape,tuple) or len(array_shape) is not 2:
-                raise TypeError("Expected tuple type argument for 'array_shape' with length of 2 for 'shape'")
-            x_grid = np.reshape(surf_elec_x,array_shape)
-            y_grid = np.reshape(surf_elec_y,array_shape)
-            z_grid = np.reshape(surf_elec_z,array_shape)    
-            elec_z = np.array(bur_elec_z) - interp.irregular_grid(bur_elec_x, bur_elec_y, x_grid, y_grid, z_grid,shape = array_shape)
+            bur_elec_z = np.array(bur_elec_z) - interp.bilinear(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
@@ -2108,20 +2095,16 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
-    
+        
+    x_interp = surf_elec_x#parameters to be interpolated 
+    y_interp = surf_elec_y
+    z_interp = surf_elec_z
+    #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method is 'idw': 
-        x_interp = surf_elec_x#parameters to be interpolated 
-        y_interp = surf_elec_y
-        z_interp = surf_elec_z
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
-    elif interp_method is 'bilinear':
-        if not isinstance(array_shape,tuple) or len(array_shape) is not 2:
-            raise TypeError("Expected tuple type argument for 'array_shape' with length of 2 for 'shape'")
-        x_grid = np.reshape(surf_elec_x,array_shape)
-        y_grid = np.reshape(surf_elec_y,array_shape)
-        z_grid = np.reshape(surf_elec_z,array_shape)    
-        #using home grown function to interpolate / extrapolate topography on mesh
-        nodez = interp.irregular_grid(node_x,node_y,x_grid,y_grid,z_grid) # interpolate on a irregular grid, extrapolates the unknown coordinates
+    elif interp_method is 'bilinear':   
+        # interpolate on a irregular grid, extrapolates the unknown coordinates
+        nodez = interp.bilinear(node_x, node_y, x_interp, y_interp, z_interp)
         
     mesh.node_z = np.array(mesh.node_z) + nodez
     node_z = mesh.node_z
