@@ -1,5 +1,7 @@
 ![logo](src/logo.png)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
+
 GUI for R2 family code
 ======================
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
