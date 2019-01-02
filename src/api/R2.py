@@ -4,7 +4,7 @@ Created on Wed May 30 16:48:54 2018 in python 3.6.5
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: jkl
 """
-pyR2_version = 1.05 # pyR2 version - update accordingly 
+pyR2_version = '1.0.2' # pyR2 version (semantic versionning in use) 
 #import relevant modules 
 import os, sys, shutil, platform # python standard libs
 from subprocess import PIPE, call, Popen

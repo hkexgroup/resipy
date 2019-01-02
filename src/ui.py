@@ -387,7 +387,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-#        dimRadio3D.setEnabled(False) # comment this to enable 3D
+        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -3235,7 +3235,7 @@ class App(QMainWindow):
         infoLayout = QVBoxLayout()
         aboutText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
         aboutText.setText('''<h1>About pyR2</h1> \
-                          <p><b>Version: %3.2f</b></p> \
+                          <p><b>Version: %s</b></p> \
                           <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
                           <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
                           <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
