@@ -1,0 +1,15 @@
+v1.0.2
+------
+WPI implementation for 3D survey but not enable in the interface. Different
+forward model are now available with explanation.
+
+
+v1.0.1 (=v1.05 in non semantic versioning)
+------------------------------------------
+Important bug corrections from v1.0.0
+
+
+v1.0.0
+------
+First release version featuring full 2D inversion, time-lapse inversion for both
+DC and IP + filtering options.
