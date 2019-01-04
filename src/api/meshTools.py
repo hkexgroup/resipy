@@ -46,7 +46,6 @@ from api.sliceMesh import sliceMesh # mesh slicing function
 
 #%% create mesh object
 class Mesh_obj:
-    #### TODO : ADD 3D SHOW CAPACITY 
     cax = None 
     zone = None
     attr_cache={}
@@ -721,7 +720,7 @@ class Mesh_obj:
         try:
             polly.set_array(np.array(assign))
         except MemoryError:#catch this error and print something more helpful than matplotlibs output
-            raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview")
+            raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
         polly.set_edgecolor(edge_color)
         polly.set_cmap(color_map) # set color map 
         polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
@@ -926,6 +925,44 @@ class Mesh_obj:
         self.attr_cache[new_key] = new_para
         self.no_attributes += 1
         #return new_para
+        
+    def move_elec_nodes(self, new_x, new_y, new_z):
+        """
+        Move the electrodes to different nodes which are close to the given coordinates. 
+        This is useful for timelapse surveys where the electrodes move through time, 
+        ideally this is implimented on a mesh which is refined near the surface. 
+        
+        Parameters
+        ------------
+        new_x : array like
+            new electrode x coordinates 
+        new_y : array like
+            new electrode y coordinates, if 2D mesh let new_y=None and the array will automatically be
+            assigned an array of zeros. 
+        new_z : array-like
+            new electrode z coordinates 
+            
+        Notes
+        ------------
+        Nothing is returned but the mesh.e_nodes parameter is updated. 
+        #### TODO: Test this function. 
+        """
+        #formalities 
+        if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
+            raise ValueError("mismatch in the length of the new_x, new_y and new_z arrays")
+        if len(new_x) != len(self.elec_x):
+            raise ValueError("mismatch between the length of new electrode position array and old array")
+        if new_y is None:
+            new_y = np.zeros_like(new_x)
+          
+        node_in_mesh = [0]*len(self.e_nodes)    
+        for i in range(len(self.elec_x)):
+            sq_dist = (self.node_x - self.elec_x[i])**2 + (self.node_y - self.elec_y[i])**2 + (self.node_z - self.elec_z[i])**2 # find the minimum square distance
+            node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
+            if node_in_mesh[i] != self.e_nodes[i]:
+                print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
+        
+        self.e_nodes = node_in_mesh # update e_node parameter
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """
@@ -1963,7 +2000,9 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         The options are inverse wieghting distance or bilinear interpolation. 
         if == 'idw': then provide search_radius.  
     surface_refinement : np.array, optional 
-        Coming soon ... 
+        Numpy array with 2 axis, should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
+        Allows for extra refinement for the top surface of the mesh. The points are not added to the mesh, but 
+        considered in post processing in order to super impose topography on the mesh. 
     mesh_refinement : np.array, optional
         Coming soon ... 
     show_ouput : boolean, optional
@@ -2001,6 +2040,15 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         if len(elec_type)==check:
             print("all electrodes are surface electrodes, ignoring the electrode type")
             elec_type = None
+            
+    if surface_refinement is not None:
+        surf_x = surface_refinement[0,:]
+        surf_y = surface_refinement[1,:]
+        surf_z = surface_refinement[2,:]
+    else:
+        surf_x = []
+        surf_y = []
+        surf_z = []
     
     if elec_type is not None:
         warnings.warn("Borehole electrode meshes still in development!")
@@ -2024,9 +2072,9 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 surf_elec_y.append(elec_y[i])
                 surf_elec_z.append(elec_z[i])
         #interpolate in order to normalise buried electrode elevations to 0
-        x_interp = surf_elec_x#parameters to be interpolated 
-        y_interp = surf_elec_y
-        z_interp = surf_elec_z
+        x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
+        y_interp = np.append(surf_elec_y,surf_y)
+        z_interp = np.append(surf_elec_z,surf_z)
         if interp_method is 'idw': 
             bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
         elif interp_method is 'bilinear':
@@ -2096,9 +2144,9 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
-    x_interp = surf_elec_x#parameters to be interpolated 
-    y_interp = surf_elec_y
-    z_interp = surf_elec_z
+    x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
+    y_interp = np.append(surf_elec_y,surf_y)
+    z_interp = np.append(surf_elec_z,surf_z)
     #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method is 'idw': 
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
