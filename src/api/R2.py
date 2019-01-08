@@ -1278,8 +1278,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if ax is None:
             fig, ax = plt.subplots()
         self.mesh.show(ax=ax)
-        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T,
-                                typ='poly')
+        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
+                                typ='poly') # LIMITED FOR 2D case
         selector.setVertices(xy)
         selector.getPointsInside()
         idx = selector.iselect
@@ -1999,8 +1999,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #    nodes = np.genfromtxt(fname, skip_header=numel+1)
 #    return elems, nodes
 
-#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#plt.close('all')
 #k = R2(typ='R2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
@@ -2108,6 +2106,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 #elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=20) # it runs but vtk and dat are size 0 (mesh related issue)
+#k.createMesh(cl=10) # it runs but vtk and dat are size 0 (mesh related issue)
+#k.mesh.write_vtk(os.path.join(k.dirname, 'mesh.vtk'))
 #k.invert()
 #k.showResults()
