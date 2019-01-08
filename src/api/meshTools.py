@@ -10,7 +10,7 @@ to mesh parameters.
 The convention for x y z coordinates is that the z coordinate is the elevation.
 
 Classes: 
-    mesh_obj
+    Mesh
 Functions: 
     tri_cent() - computes the centre point for a 2d triangular element
     vtk_import() - imports a triangular / quad unstructured grid from a vtk file
@@ -45,7 +45,7 @@ import api.interpolation as interp
 from api.sliceMesh import sliceMesh # mesh slicing function
 
 #%% create mesh object
-class Mesh_obj:
+class Mesh:
     cax = None 
     zone = None
     attr_cache={}
@@ -106,7 +106,7 @@ class Mesh_obj:
             
         Returns
         -------
-        Mesh_obj : class
+        Mesh : class
             
         """
         #assign varaibles to the mesh object 
@@ -133,7 +133,7 @@ class Mesh_obj:
             self.mesh_title = '3D_R3t_mesh' 
     
     @classmethod # creates a mesh object from a mesh dictionary
-    def mesh_dict2obj(cls,mesh_info):
+    def mesh_dict2class(cls,mesh_info):
         """ Converts a mesh dictionary produced by the gmsh2r2mesh and
         vtk_import functions into a mesh object, its an alternative way to
          make a mesh object. 
@@ -1431,15 +1431,15 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
-    Mesh = Mesh_obj.mesh_dict2obj(mesh_dict)#convert to mesh object 
+    mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object 
     
     try:
-        Mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
+        mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
     except:
         #print('no sensitivity')
         pass
-    Mesh.mesh_title = title
-    return Mesh
+    mesh.mesh_title = title
+    return mesh
 
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat'):
@@ -1544,7 +1544,7 @@ def dat_import(file_path='mesh.dat'):
         elif npere == 3:
             cell_type = 5
         
-    mesh = Mesh_obj(num_nodes = numnp,#number of nodes
+    mesh = Mesh(num_nodes = numnp,#number of nodes
                  num_elms = numel,#number of elements 
                  node_x = node_x,#x coordinates of nodes 
                  node_y = node_y,#y coordinates of nodes
@@ -1849,8 +1849,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         areas.append(elm_len*elm_hgt)
     centriod_y = [0]*len(centriod_x)
     
-    #make mesh object    
-    Mesh = Mesh_obj(no_nodes,
+    #make mesh class    
+    mesh = Mesh(no_nodes,
                     no_elms,
                     node_x,
                     node_y,
@@ -1870,9 +1870,9 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         sq_dist = (node_x - elec_x[i])**2 + (node_z - elec_z[i])**2 # find the minimum square distance
         node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
             
-    Mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
+    mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
 
-    return Mesh,meshx,meshy,topo,elec_node
+    return mesh,meshx,meshy,topo,elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
 def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
@@ -1959,7 +1959,7 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         
     #convert into mesh.dat 
     mesh_dict = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
-    mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
+    mesh = Mesh.mesh_dict2class(mesh_dict) # convert output of parser into an object
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
     
     if keep_files is False: 
@@ -2136,7 +2136,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         
     #convert into mesh.dat 
     mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
-    mesh = Mesh_obj.mesh_dict2obj(mesh_dict) # convert output of parser into an object
+    mesh = Mesh.mesh_dict2class(mesh_dict) # convert output of parser into an object
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
     node_x = np.array(mesh.node_x)
     node_y = np.array(mesh.node_y)
@@ -2261,7 +2261,7 @@ def dat_import_v1(file_path):
     else: # fill with nan
         areas = np.zeros(elm_number)*np.nan
 
-    mesh = Mesh_obj(num_nodes = no_nodes,#number of nodes
+    mesh = Mesh(num_nodes = no_nodes,#number of nodes
                      num_elms = no_elms,#number of elements 
                      node_x = x_coord,#x coordinates of nodes 
                      node_y = z_coord,#y coordinates of nodes
@@ -2307,14 +2307,14 @@ def custom_mesh_import(file_path, node_pos, flag_3D=False):
             mesh_dict = gw.msh_parse_3d(file_path)
         else:
             mesh_dict = gw.msh_parse(file_path)
-        mesh = Mesh_obj.mesh_dict2obj(mesh_dict)
+        mesh = Mesh.mesh_dict2class(mesh_dict)
     elif ext == '.dat':
         mesh = dat_import(file_path)
     else:
-        avail_ext = ['vtk','.ext','.dat']
+        avail_ext = ['.vtk','.ext','.dat']
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
-    mesh.add_e_nodes(np.array(node_pos))
+    mesh.add_e_nodes(np.array(node_pos)) # add electrode nodes to mesh provided by the user
     
     return mesh
 
