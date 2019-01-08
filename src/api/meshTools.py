@@ -1226,7 +1226,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     except IndexError:#if we get this then there is a white space between the node info and header lines
         node_info=fid.readline().strip().split()#read line 5
         no_nodes=int(node_info[1])      
-    if no_nodes ==0: 
+    if no_nodes == 0: 
         raise ImportError("No nodes in vtk file to import! Aborting... ")
     #now read in node data
     x_coord=[]#make lists for each of the relevant parameters for each node
