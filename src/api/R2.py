@@ -2102,6 +2102,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 
 #%% 3D testing
+<<<<<<< HEAD
 #k = R2(typ='R3t')
 #k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 #elec = np.genfromtxt('api/test/electrodes3D.dat')
@@ -2110,3 +2111,20 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.mesh.write_vtk(os.path.join(k.dirname, 'mesh.vtk'))
 #k.invert()
 #k.showResults()
+||||||| merged common ancestors
+#k = R2(typ='R3t')
+#k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
+#elec = np.genfromtxt('api/test/electrodes3D.dat')
+#k.setElec(elec)
+#k.createMesh(cl=20) # it runs but vtk and dat are size 0 (mesh related issue)
+#k.invert()
+#k.showResults()
+=======
+k = R2(typ='R3t')
+k.createSurvey('test/protocol3D.dat', ftype='Protocol')
+elec = np.genfromtxt('test/electrodes3D.dat')
+k.setElec(elec)
+k.createMesh(cl=4) # it runs but vtk and dat are size 0 (mesh related issue)
+k.invert()
+k.showResults()
+>>>>>>> f023dc009f404fdf2380cb63529405516e558410

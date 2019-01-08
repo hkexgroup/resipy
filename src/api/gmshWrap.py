@@ -1096,6 +1096,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         else:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
     
+    doi = abs(doi)
     #add points below surface to make a rectangular volume         
     no_pts += 1
     loop2_pt_idx=[no_pts]
@@ -1130,7 +1131,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     flank_y = 70 * (x_dist + y_dist)/2
     flank_z = 100*abs(doi)
     fh.write("//Nuemonn boundary points\n")
-    cl2 = cl*cl_factor
+    cl2 = cl*500
     fh.write("cl2 = %.2f;//characteristic length for background region\n"%cl2)
     no_pts += 1
     nmn_pt_idx=[no_pts]
