@@ -1096,6 +1096,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         else:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
     
+    doi = abs(doi)
     #add points below surface to make a rectangular volume         
     no_pts += 1
     loop2_pt_idx=[no_pts]

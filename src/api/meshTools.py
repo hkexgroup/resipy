@@ -1225,7 +1225,9 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         no_nodes=int(node_info[1])
     except IndexError:#if we get this then there is a white space between the node info and header lines
         node_info=fid.readline().strip().split()#read line 5
-        no_nodes=int(node_info[1])
+        no_nodes=int(node_info[1])      
+    if no_nodes ==0: 
+        raise ImportError("No nodes in vtk file to import! Aborting... ")
     #now read in node data
     x_coord=[]#make lists for each of the relevant parameters for each node
     y_coord=[]
@@ -1252,7 +1254,10 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     except IndexError: # quick bug fix
         elm_info=fid.readline().strip().split()#read line with cell data
         no_elms=int(elm_info[1])
-        
+    
+    if no_elms ==0: 
+        raise ImportError("No elements in vtk file to import!")
+    
     no_pts=[]#assign lists to nodes 
     node1=[]
     node2=[]
@@ -2000,7 +2005,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         The options are inverse wieghting distance or bilinear interpolation. 
         if == 'idw': then provide search_radius.  
     surface_refinement : np.array, optional 
-        Numpy array with 2 axis, should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
+        Numpy array of shape (3,n), should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
         Allows for extra refinement for the top surface of the mesh. The points are not added to the mesh, but 
         considered in post processing in order to super impose topography on the mesh. 
     mesh_refinement : np.array, optional
