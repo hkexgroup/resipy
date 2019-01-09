@@ -2113,6 +2113,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.setElec(elec)
 #k.createMesh(cl=15) # it runs but vtk and dat are size 0 (mesh related issue)
 #k.invert()
-#k.showResults()# only works for 2D currently 
+##k.showResults()# only works for 2D currently 
 #mesh = mt.vtk_import(os.path.join(k.dirname, 'f001.vtk'))
 #mesh.show()

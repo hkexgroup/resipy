@@ -1003,10 +1003,11 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
-           file_path='mesh3d.geo',cl=2, cl_factor=500):
+           file_path='mesh3d.geo',cl=-1, cl_factor=2, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
-    Z coordinates should be given as depth below the surface! 
+    Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
+    electrode is buried. 
     
     Parameters
     ----------
@@ -1016,6 +1017,9 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         z is the depth below the surface. 
     padding: float, optional
         Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
+    
+    doi: float, optional 
+        Depth of investigation of the survey. 
     file_path: string, optional 
         name of the generated gmsh file (can include file path also) (optional)
     cl: float, optional
@@ -1026,6 +1030,8 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         mesh, usually set to 2 such that the elements at the DOI are twice as big as those
         at the surface. The reasoning for this is becuase the sensitivity of ERT drops
         off with depth. 
+    mesh_refinement: list of array likes 
+        Coordinates for discrete points in the mesh. 
     
     Returns
     ----------
@@ -1037,10 +1043,9 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
 
     NOTES
     ----------            
-    electrodes and electrode_type (if not None) format: 
+    electrodes format: 
         
             electrodes = [[x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]]
-            electrode_type = ['electrode','electrode','buried',...]
                 
     #### TODO: search through each set of points and check for repeats ?
     """
@@ -1057,6 +1062,18 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
+    
+    dist = np.zeros((len(elec_x),len(elec_x)))    
+    if cl==-1:
+        x1 = np.array(elec_x)
+        y1 = np.array(elec_y)
+        for i in range(len(elec_x)):
+            x2 = elec_x[i]
+            y2 = elec_y[i]
+            dist[:,i] = np.sqrt((x1-x2)**2+(y1-y2)**2)
+        dist_sort = np.unique(dist.flatten())
+        cl = dist_sort[1]/4 # characteristic length is 1/4 the minimum electrode distance
+        print('cl = %f'%cl)        
         
     fh = open(file_path,'w') #file handle
     
@@ -1097,19 +1114,20 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
     
     doi = abs(doi)
-    #add points below surface to make a rectangular volume         
+    #add points below surface to make a rectangular volume  
+    fh.write("cl2=cl*%.2f;//define characteristic length for base of fine mesh region\n" %cl_factor)       
     no_pts += 1
     loop2_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, max_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x, max_y, -doi))
     no_pts += 1
     loop2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, min_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x, min_y, -doi))
     no_pts += 1
     loop2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, min_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x, min_y, -doi))
     no_pts += 1
     loop2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, max_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x, max_y, -doi))
     
     #add line loops to connect the points just made 
     for i in range(4):
@@ -1131,20 +1149,20 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     flank_y = 70 * (x_dist + y_dist)/2
     flank_z = 100*abs(doi)
     fh.write("//Nuemonn boundary points\n")
-    cl2 = cl*500
-    fh.write("cl2 = %.2f;//characteristic length for background region\n"%cl2)
+    cln = cl*500 # nuemom boundary characteristic length 
+    fh.write("cln = %.2f;//characteristic length for background region\n"%cln)
     no_pts += 1
     nmn_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, max_y+flank_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, max_y+flank_y, 0))
     no_pts += 1
     nmn_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, min_y-flank_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, min_y-flank_y, 0))
     no_pts += 1
     nmn_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, min_y-flank_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, min_y-flank_y, 0))
     no_pts += 1
     nmn_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, max_y+flank_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, max_y+flank_y, 0))
     
     for i in range(4):
         no_lns += 1 
@@ -1156,16 +1174,16 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     #base of background region      
     no_pts += 1
     nmn2_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, max_y+flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, max_y+flank_y, -doi - flank_z))
     no_pts += 1
     nmn2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, min_y-flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, min_y-flank_y, -doi - flank_z))
     no_pts += 1
     nmn2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, min_y-flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, min_y-flank_y, -doi - flank_z))
     no_pts += 1
     nmn2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, max_y+flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, max_y+flank_y, -doi - flank_z))
     
     for i in range(4):
         no_lns += 1 
@@ -1322,7 +1340,7 @@ def msh_parse_3d(file_path):
             node4.append(line_data[8]-1)
         else:
             ignored_elements += 1
-    print("ignoring %i non-tetrahedra elements in the mesh file, as they are not required for R2"%ignored_elements)
+    print("ignoring %i non-tetrahedra elements in the mesh file, as they are not required for R3t"%ignored_elements)
     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
     
     #compute element centres 

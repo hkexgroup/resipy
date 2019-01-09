@@ -1621,7 +1621,7 @@ def readR2_sensdat(file_path):
 
         
 #%% build a quad mesh        
-def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.5, doi=-1, pad=2, 
+def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
               surface_x=None,surface_z=None):
     """
     Creates a quaderlateral mesh given the electrode x and y positions. Function
@@ -1760,8 +1760,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     elemy2 = int(elemy/2)
     yy = np.ones(elemy2)*meshy[-1]
     for i in range(1, elemy2):
-        yy[i] = yy[i-1]+dyy*xgf
-        dyy = dyy*xgf
+        yy[i] = yy[i-1]+dyy*ygf
+        dyy = dyy*ygf
     meshy = np.r_[meshy, yy[1:]]
     
     #insert borehole electrodes? if we have boreholes / buried electrodes 
@@ -1842,10 +1842,10 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     areas=[]
     for i in range(no_elms):
         #assuming element centres are the average of the x - y coordinates for the quad
-        n1=(node_x[int(node_mappins[0][i])],node_y[int(node_mappins[0][i])])#in vtk files the 1st element id is 0 
-        n2=(node_x[int(node_mappins[1][i])],node_y[int(node_mappins[1][i])])
-        n3=(node_x[int(node_mappins[2][i])],node_y[int(node_mappins[2][i])])
-        n4=(node_x[int(node_mappins[3][i])],node_y[int(node_mappins[3][i])])
+        n1=(node_x[int(node_mappins[0][i])],node_z[int(node_mappins[0][i])])#in vtk files the 1st element id is 0 
+        n2=(node_x[int(node_mappins[1][i])],node_z[int(node_mappins[1][i])])
+        n3=(node_x[int(node_mappins[2][i])],node_z[int(node_mappins[2][i])])
+        n4=(node_x[int(node_mappins[3][i])],node_z[int(node_mappins[3][i])])
         centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0])))
         centriod_z.append(np.mean((n1[1],n2[1],n3[1],n4[1])))
         #finding element areas, base times height.  
@@ -1975,7 +1975,7 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     return mesh#, mesh_dict['element_ranges']
 
 #%% 3D tetrahedral mesh 
-def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'idw',
+def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'bilinear',
                surface_refinement = None, mesh_refinement = None,show_output=True, 
                path='exe', dump=print,whole_space=False, padding=20, search_radius = 10,
                **kwargs):
