@@ -2103,11 +2103,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% 3D testing
 #k = R2(typ='R3t')
-#k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
-#elec = np.genfromtxt('api/test/electrodes3D.dat')
+#k.createSurvey('test/protocol3D.dat', ftype='Protocol')
+#elec = np.genfromtxt('test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=10) # it runs but vtk and dat are size 0 (mesh related issue)
-#k.mesh.write_vtk(os.path.join(k.dirname, 'mesh.vtk'))
+#k.createMesh(cl=20) # it runs but vtk and dat are size 0 (mesh related issue)
 #k.invert()
-#k.showResults()
-
+##k.showResults()# only works for 2D currently 
+#mesh = mt.vtk_import('invdir/f001.vtk')
+#mesh.show()

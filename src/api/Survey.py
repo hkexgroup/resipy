@@ -1148,7 +1148,7 @@ class Survey(object):
         else:
             print('choose resist')
             resist = self.df['resist'].values
-            clabel = 'Tx Resistance [Ohm.m]'
+            clabel = 'Tx Resistance [$\Omega$]'
         if label == '':
             label = clabel
         inan = np.isnan(resist)
