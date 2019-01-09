@@ -1132,9 +1132,14 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.meshResults) > 0:
             if ylim is None:
                 ylim = [self.doi, np.max(self.elec[:,2])]
-            self.meshResults[index].show(ax=ax, edge_color=edge_color,
-                            attr=attr, sens=sens, color_map=color_map,
-                            ylim=ylim, **kwargs)
+            if self.typ[-1] == '2': # 2D case
+                self.meshResults[index].show(ax=ax, edge_color=edge_color,
+                                attr=attr, sens=sens, color_map=color_map,
+                                ylim=ylim, **kwargs)
+            else: # 3D case
+                self.meshResults[index].show(ax=ax,
+                            attr=attr, color_map=color_map,
+                            **kwargs)
         else:
             print('Unexpected Error')
 
@@ -2103,11 +2108,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% 3D testing
 #k = R2(typ='R3t')
-#k.createSurvey('test/protocol3D.dat', ftype='Protocol')
-#elec = np.genfromtxt('test/electrodes3D.dat')
+#k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
+#elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=20) # it runs but vtk and dat are size 0 (mesh related issue)
+#k.createMesh(cl=15) # it runs but vtk and dat are size 0 (mesh related issue)
 #k.invert()
-##k.showResults()# only works for 2D currently 
-#mesh = mt.vtk_import('invdir/f001.vtk')
+#k.showResults()# only works for 2D currently 
+#mesh = mt.vtk_import(os.path.join(k.dirname, 'f001.vtk'))
 #mesh.show()
