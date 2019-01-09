@@ -22,6 +22,8 @@ def dpdp1(elec_num, a, n):
     elec_id = np.arange(elec_num)+1
     
     if isinstance(a, list) is False:
+        if a < 1:
+            raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
         n_ = np.array(range(0,n))+1
         for j in np.array(range(0,len(n_))):
             A = elec_id
@@ -36,6 +38,8 @@ def dpdp1(elec_num, a, n):
     
     else:
         for i in np.array(range(0,len(a))):
+            if a[i] < 1:
+                raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
             n_ = np.array(range(0,n[i]))+1
             for j in np.array(range(0,len(n_))):
                 A = elec_id
@@ -64,6 +68,8 @@ def dpdp2(elec_num, a, n):
     elec_id = np.arange(elec_num)+1
     
     if isinstance(a, list) is False:
+        if a[0] < 1:
+            raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
         n_ = np.array(range(0,n))+1
         for j in np.array(range(0,len(n_))):
             A = elec_id
@@ -78,6 +84,8 @@ def dpdp2(elec_num, a, n):
     
     else:
         for i in np.array(range(0,len(a))):
+            if a[i] < 1:
+                raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
             n_ = np.array(range(0,n[i]))+1
             for j in np.array(range(0,len(n_))):
                 A = elec_id

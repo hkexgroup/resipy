@@ -1132,9 +1132,14 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.meshResults) > 0:
             if ylim is None:
                 ylim = [self.doi, np.max(self.elec[:,2])]
-            self.meshResults[index].show(ax=ax, edge_color=edge_color,
-                            attr=attr, sens=sens, color_map=color_map,
-                            ylim=ylim, **kwargs)
+            if self.typ[-1] == '2': # 2D case
+                self.meshResults[index].show(ax=ax, edge_color=edge_color,
+                                attr=attr, sens=sens, color_map=color_map,
+                                ylim=ylim, **kwargs)
+            else: # 3D case
+                self.meshResults[index].show(ax=ax,
+                            attr=attr, color_map=color_map,
+                            **kwargs)
         else:
             print('Unexpected Error')
 
@@ -1278,8 +1283,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if ax is None:
             fig, ax = plt.subplots()
         self.mesh.show(ax=ax)
-        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T,
-                                typ='poly')
+        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
+                                typ='poly') # LIMITED FOR 2D case
         selector.setVertices(xy)
         selector.getPointsInside()
         idx = selector.iselect
@@ -1999,8 +2004,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #    nodes = np.genfromtxt(fname, skip_header=numel+1)
 #    return elems, nodes
 
-#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#plt.close('all')
 #k = R2(typ='R2')
 #k.createSurvey('api/test/syscalFile.csv')
 #k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
@@ -2105,9 +2108,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% 3D testing
 #k = R2(typ='R3t')
-#k.createSurvey('test/protocol3D.dat', ftype='Protocol')
-#elec = np.genfromtxt('test/electrodes3D.dat')
+#k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
+#elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=4) # it runs but vtk and dat are size 0 (mesh related issue)
+#k.createMesh(cl=15) # it runs but vtk and dat are size 0 (mesh related issue)
 #k.invert()
-#k.showResults()
+##k.showResults()# only works for 2D currently 
+#mesh = mt.vtk_import(os.path.join(k.dirname, 'f001.vtk'))
+#mesh.show()
