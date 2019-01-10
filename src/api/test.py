@@ -183,24 +183,25 @@ k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
 #k.createMesh(typ='quad',buried=buried)
 k.showMesh()
 xy = k.elec[1:21,[0,2]]
-k.addRegion(xy, res0=18, blocky=True, fixed=True)
-k.param['b_wgt'] = 0.05 # doesn't work
+k.addRegion(xy, res0=18, blocky=True, fixed=False)
+k.param['b_wgt'] = 0.04 # doesn't work
 k.invert()
 k.showResults(sens=False)
 
 
 #%% 3D testing
 
-#print('-------------Testing 3D inversion ------------')
-#k = R2(typ='R3t')
-#k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
-#elec = np.genfromtxt('api/test/electrodes3D.dat')
-#k.setElec(elec)
-#k.createMesh(cl=15) # it runs but vtk and dat are size 0 (mesh related issue)
-#k.invert()
-##k.showResults()# only works for 2D currently 
-#mesh = mt.vtk_import(os.path.join(k.dirname, 'f001.vtk'))
-#mesh.show()
+print('-------------Testing 3D inversion ------------')
+k = R2(typ='R3t')
+k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
+elec = np.genfromtxt('api/test/electrodes3D.dat')
+k.setElec(elec)
+k.createMesh(cl=2)
+k.invert()
+k.showResults() 
+k.meshResults[0].showSlice(axis='z')
+k.meshResults[0].showSlice(axis='x')
+k.meshResults[0].showSlice(axis='y')
 
 
 
