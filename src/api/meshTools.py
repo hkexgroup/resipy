@@ -1449,6 +1449,15 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat'):
     """
+    Import R2/cR2/R3t/cR3t .dat kind of mesh. 
+    Parameters
+    -------------
+    file_path: str
+        Maps to the mesh (.dat) file.
+    Returns
+    -------------
+    mesh: class
+        
     """
     if not isinstance(file_path,str):
         raise TypeError("Expected string type argument for 'file_path'")
@@ -2031,7 +2040,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     Returns
     -------
     mesh3d: class
-    #### TODO : add buried electrode capacity 
+ 
     """
     #formalities 
     if len(elec_x) != len(elec_y):
@@ -2328,6 +2337,16 @@ def custom_mesh_import(file_path, node_pos, flag_3D=False):
 #function for returning the amount of total ram. 
 # we also need to check wine is installed if running on macOs or linux. 
 def systemCheck():
+    """
+    Performs a simple diagnostic of the system, no input commands needed. System
+    info is printed to screen, number of CPUs, memory and OS. This check is 
+    useful for parallel processing. 
+    
+    Returns
+    ------------
+    system_info: dict
+        Dictionary keys refer information about the system 
+    """
     print("________________System-Check__________________")
     #display processor info
     print("Processor info: %s"%platform.processor())
