@@ -2008,7 +2008,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list   
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the working directory.
-    interp_method: string, default ='IDW' optional
+    interp_method: string, default ='bilinear' optional
         Interpolation method to translate mesh nodes in the z direction. In other words the method in which topography 
         is appended to the mesh. Here the topography is added to the mesh in post processing. 
         The options are inverse wieghting distance or bilinear interpolation. 
@@ -2148,7 +2148,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     else:
         call(cmd_line)#run gmsh 
         
-    #convert into mesh.dat 
+    #convert into mesh.dat
     mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
     mesh = Mesh.mesh_dict2class(mesh_dict) # convert output of parser into an object
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
@@ -2158,6 +2158,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
+    print('interpolating topography onto mesh...')
     x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)

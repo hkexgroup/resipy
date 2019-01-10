@@ -527,7 +527,7 @@ class R2(object): # R2 master class instanciated by the GUI
                                  path=os.path.join(self.apiPath, 'exe'),
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=True,
-                                 doi=self.doi-max(elec_z), whole_space=whole_space,
+                                 doi=self.doi-np.max(elec_z), whole_space=whole_space,
                                  **kwargs)
                 if typ == 'tetra': # TODO add buried
                     elec_type = None # for now
@@ -535,7 +535,7 @@ class R2(object): # R2 master class instanciated by the GUI
                                  path=os.path.join(self.apiPath, 'exe'),
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=True,
-                                 doi=self.doi-max(elec_z), whole_space=whole_space,
+                                 doi=self.doi-np.max(elec_z), whole_space=whole_space,
                                  **kwargs)
             except Exception as e:
                 print("Mesh generation failed :", e)   

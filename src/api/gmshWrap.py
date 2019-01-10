@@ -1002,8 +1002,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 
 #%% 3D half space 
 
-def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
-           file_path='mesh3d.geo',cl=-1, cl_factor=2, mesh_refinement=None):
+def box_3d(electrodes, padding = 20, doi = 20,file_path='mesh3d.geo',
+           cl=-1, cl_factor=2,cln_factor=500, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1024,12 +1024,16 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
         name of the generated gmsh file (can include file path also) (optional)
     cl: float, optional
         characteristic length (optional), essentially describes how big the nodes 
-        assocaited elements will be. Usually no bigger than 5. 
+        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
     cl_factor: float, optional 
         This allows for tuning of the incrimental size increase with depth in the 
         mesh, usually set to 2 such that the elements at the DOI are twice as big as those
         at the surface. The reasoning for this is becuase the sensitivity of ERT drops
         off with depth. 
+    cln_factor: float, optional
+        Factor applied to the characteristic length for fine mesh region to compute
+        a characteristic length for background (nuemmon) region
     mesh_refinement: list of array likes 
         Coordinates for discrete points in the mesh. 
     
@@ -1149,7 +1153,7 @@ def box_3d(electrodes, padding = 20, electrode_type = None, doi = 20,
     flank_y = 70 * (x_dist + y_dist)/2
     flank_z = 100*abs(doi)
     fh.write("//Nuemonn boundary points\n")
-    cln = cl*500 # nuemom boundary characteristic length 
+    cln = cl*cln_factor # nuemom boundary characteristic length 
     fh.write("cln = %.2f;//characteristic length for background region\n"%cln)
     no_pts += 1
     nmn_pt_idx=[no_pts]
