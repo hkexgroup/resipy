@@ -121,7 +121,8 @@ def planeintersect(Ax, Ay, Az,
 #%% is inside a volume
 def isinvolume(x,y,z,volume_data,ray_cast=10000):
     """
-    Determine if a point lies inside a bounding volume 
+    Determine if a point lies inside a bounding volume
+    
     Parameters
     ----------
     x: array like, float

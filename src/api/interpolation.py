@@ -50,6 +50,9 @@ def compute(mod,xnew,ynew):
 
 #%% compute distances between points (2D)
 def pdist(x1, y1, x2, y2):
+    """
+    Vectorised distance computation between 2 sets of points, 1 and 2. 
+    """
     return np.sqrt((x1-x2)**2+(y1-y2)**2)
 
 def cdist(x1, y1, x2, y2):
@@ -65,7 +68,36 @@ def cdist(x1, y1, x2, y2):
 #%% bilinear interpolation - use closest 4 points 
 def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     """
-    Compute z values for unstructured data
+    Compute z values for unstructured data using bilinear interpolation. Coordinates
+    outside the bounds of interpolation can be extrapolated using nearest neighbour
+    algorithm on the interpolated and known z coordinates.  
+    
+    Bilinear interpolation requires knowledge of 4 points orientated around the 
+    xyz coordinate to be estimated. 
+    
+    Parameters
+    ------------
+    xnew: array like
+        x coordinates for the interpolated values
+    ynew: array like 
+        y coordinates for the interpolated values
+    znew:
+        z coordinates for the interpolated values 
+    xknown: array like
+        x coordinates for the known values 
+    yknown: array like
+        y coordinates for the known values 
+    zknown: array like
+        z coordinates for the known values 
+    extrapolate: bool, optional
+        Flag for if extrapolation is to be used if new coordinates lie outside 
+        the bounds where it is not possible to interpolate a value. 
+        
+    Returns
+    ------------
+    znew: numpy array
+        z coordinates at xnew and ynew.
+        
     """
     #preallocate array for new z coordinates / interpolated values  
     znew = np.zeros_like(xnew)
@@ -140,6 +172,40 @@ def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     
 #%% inverse weighted distance
 def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate=True):
+    """
+    Compute z values for unstructured data using inverse distance weighting. Coordinates
+    outside the bounds of interpolation can be extrapolated using nearest neighbour
+    algorithm on the interpolated and known z coordinates.  
+    
+    Parameters
+    ------------
+    xnew: array like
+        x coordinates for the interpolated values
+    ynew: array like 
+        y coordinates for the interpolated values
+    znew:
+        z coordinates for the interpolated values 
+    xknown: array like
+        x coordinates for the known values 
+    yknown: array like
+        y coordinates for the known values 
+    zknown: array like
+        z coordinates for the known values 
+    power: float, optional
+        Power the weighting function is raised to. 
+    raduis: float, optional,
+        Search raduis in which points will be selected for IDW interpolation. 
+        By default all points in a 10000 unit raduis are selected. 
+    extrapolate: bool, optional
+        Flag for if extrapolation is to be used if new coordinates lie outside 
+        the bounds where it is not possible to interpolate a value. 
+        
+    Returns
+    ------------
+    znew: numpy array
+        z coordinates at xnew and ynew. 
+        
+    """
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)
     for i,(x,y) in enumerate(zip(xnew, ynew)):
@@ -170,7 +236,32 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
     return znew
 
 #%% pure nearest neighbour interpolation
-def nearest(xnew, ynew, xknown, yknown, zknown):  
+def nearest(xnew, ynew, xknown, yknown, zknown): 
+    """
+    Compute z values for unstructured data using nearest neighbour extrapolation.
+    Suitable where a dense known occur. 
+    
+    Parameters
+    ------------
+    xnew: array like
+        x coordinates for the interpolated values
+    ynew: array like 
+        y coordinates for the interpolated values
+    znew:
+        z coordinates for the interpolated values 
+    xknown: array like
+        x coordinates for the known values 
+    yknown: array like
+        y coordinates for the known values 
+    zknown: array like
+        z coordinates for the known values 
+
+    Returns
+    ------------
+    znew: numpy array
+        z coordinates at xnew and ynew.  
+        
+    """
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)        
     for i in range(len(xnew)):#,ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate

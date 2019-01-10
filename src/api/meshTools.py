@@ -46,6 +46,47 @@ from api.sliceMesh import sliceMesh # mesh slicing function
 
 #%% create mesh object
 class Mesh:
+    """
+    Creates mesh object.
+    
+    Parameters
+    ----------
+    num_nodes : int
+        number of nodes
+    num_elms : int 
+        number of elements 
+    node_x : list, 1d numpy array
+        x coordinates of nodes 
+    node_y : list, 1d numpy array
+        coordinates of nodes
+    node_z : list, 1d numpy array
+        z coordinates of nodes 
+    node_id : list
+        node id number (ie 1,2,3,4,...)
+    elm_id : list
+        element id number 
+    node_data : list of lists of ints 
+        nodes of element vertices in the form [[node1],[node2],[node3],...], each
+        node id should be an integer type. 
+    elm_centre : list of lists of floats
+        centre of elements (x,y)
+    elm_area : list 
+        area of each element
+    cell_type : list of ints
+        code referencing cell geometry (e.g. triangle) according to vtk format
+    cell_attributes : list of floats
+        the values of the attributes given to each cell 
+    atribute_title : string 
+        what is the attribute? we may use conductivity instead of resistivity for example
+    original_file_path : string, optional
+        file path to where the mesh file was originally imported
+    regions : optional
+        element indexes for a material in the mesh (needs further explanation)
+        
+    Returns
+    -------
+    Mesh : class
+    """
     cax = None 
     zone = None
     attr_cache={}
@@ -67,48 +108,7 @@ class Mesh:
                  atribute_title,#what is the attribute? we may use conductivity instead of resistivity for example
                  original_file_path='N/A',
                  regions=None) :
-        """
-        Creates mesh object.
-        
-        Parameters
-        ----------
-        num_nodes : int
-            number of nodes
-        num_elms : int 
-            number of elements 
-        node_x : list, 1d numpy array
-            x coordinates of nodes 
-        node_y : list, 1d numpy array
-            coordinates of nodes
-        node_z : list, 1d numpy array
-            z coordinates of nodes 
-        node_id : list
-            node id number (ie 1,2,3,4,...)
-        elm_id : list
-            element id number 
-        node_data : list of lists of ints 
-            nodes of element vertices in the form [[node1],[node2],[node3],...], each
-            node id should be an integer type. 
-        elm_centre : list of lists of floats
-            centre of elements (x,y)
-        elm_area : list 
-            area of each element
-        cell_type : list of ints
-            code referencing cell geometry (e.g. triangle) according to vtk format
-        cell_attributes : list of floats
-            the values of the attributes given to each cell 
-        atribute_title : string 
-            what is the attribute? we may use conductivity instead of resistivity for example
-        original_file_path : string, optional
-            file path to where the mesh file was originally imported
-        regions : optional
-            element indexes for a material in the mesh (needs further explanation)
-            
-        Returns
-        -------
-        Mesh : class
-            
-        """
+
         #assign varaibles to the mesh object 
         self.num_nodes=num_nodes
         self.num_elms=num_elms
@@ -183,6 +183,14 @@ class Mesh:
     
 
     def add_e_nodes(self,e_nodes):
+        """
+        Assign node numbers to electrodes. 
+        
+        Parameters
+        ------------
+        e_nodes: array like
+            array of ints which index the electrode nodes in a mesh
+        """
         self.e_nodes = e_nodes
         self.elec_x = np.array(self.node_x)[np.array(e_nodes, dtype=int)]
         if self.ndims==3:
@@ -217,6 +225,9 @@ class Mesh:
             return 0
         
     def summary(self,flag=True):
+        """
+        Prints summary information about the mesh
+        """
         #returns summary information about the mesh, flagto print info, change to return string
         out = "\n_______mesh summary_______\n"
         out += "Number of elements: %i\n"%int(self.num_elms)
@@ -235,19 +246,43 @@ class Mesh:
         return self.summary(flag=False) + self.show_avail_attr(flag=False)
             
     def add_attribute(self,values,key):
-        #add a new attribute to mesh 
+        """
+        Add a new attribute to mesh. 
+        
+        Parameters
+        ------------
+        values: array like
+            must have a length which matches the number of elements. Discrete 
+            values which map to the elements. 
+        key: str
+            Name of the attribute, this will be used to reference to the values
+            in other mesh functions. 
+        """
         if len(values)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.no_attributes += 1
-        self.attr_cache[key]=values #allows us to add an attributes to each element.
-        #this function needs fleshing out more to allow custom titles and attribute names
+        try: 
+            self.attr_cache[key]=values #allows us to add an attributes to each element.
+        except AttributeError:
+            self.attr_cache = {}
+            self.attr_cache[key]=values #add attribute 
     
     def add_attr_dict(self,attr_dict):
+        """
+        Mesh attributes are stored inside a dictionary, mesh.attr_cache.
+        
+        Parameters
+        ------------
+        attr_dict: dict 
+            Each key in the dictionary should reference an array like of values. 
+        """
         self.attr_cache=attr_dict
         self.no_attributes = len(attr_dict)
         
     def show_avail_attr(self,flag=True):
-        #show available attributes 
+        """
+        Show available attributes in mesh.attr_cache. 
+        """
         out = '\n______cell attributes_____\n'
         try: 
             for i,key in enumerate(self.attr_cache):
@@ -260,7 +295,9 @@ class Mesh:
             return out
     
     def update_attribute(self,new_attributes,new_title='default'):
-        #allows you to reassign the cell attributes in the mesh object 
+        """
+        Allows you to reassign the default cell attribute in the mesh object.  
+        """
         if len(new_attributes)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.cell_attributes=new_attributes
@@ -822,8 +859,24 @@ class Mesh:
         return material_no
     
     def assign_zone_3D(self,volume_data):
-        """
-        Insert description here
+        """Assign material/region assocations with certain elements in the mesh 
+        say if you have an area you'd like to forward model. 
+        ***3D ONLY***
+        
+        Parameters
+        ----------
+        volume_data : dict
+            Each key contains columns of polygon data for each volume in 
+            the form (polyx, polyy, polyz), the polygon data should be the 
+            face coordinates which bound the volume.
+                        
+        Returns
+        -------
+        material_no : numpy.array
+            Element associations starting at 1. So 1 for the first region 
+            defined in the region_data variable, 2 for the second region 
+            defined and so on. If the element can't be assigned to a region
+            then it'll be left at 0. 
         """
         no_elms=self.num_elms#number of elements 
         elm_xy=self.elm_centre#centriods of mesh elements 
@@ -1053,7 +1106,7 @@ class Mesh:
         """
         Writes a vtk file for the mesh object, everything in the attr_cache
         will be written to file as attributes. We suggest using Paraview 
-        to display the mesh outside of PyR2. It's fast and open source :). 
+        to display the mesh outside of pyR2. It's fast and open source :). 
         
         Parameters
         ------------
@@ -2011,7 +2064,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     interp_method: string, default ='bilinear' optional
         Interpolation method to translate mesh nodes in the z direction. In other words the method in which topography 
         is appended to the mesh. Here the topography is added to the mesh in post processing. 
-        The options are inverse wieghting distance or bilinear interpolation. 
+        The options are inverse wieghting distance, bilinear interpolation or nearest neighbour. 
         if == 'idw': then provide search_radius.  
     surface_refinement : np.array, optional 
         Numpy array of shape (3,n), should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
@@ -2054,6 +2107,9 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         if len(elec_type)==check:
             print("all electrodes are surface electrodes, ignoring the electrode type")
             elec_type = None
+    avail_methods = ['bilinear','idw','nearest']
+    if interp_method not in avail_methods:
+        raise NameError("'%s' is an unrecognised interpretation method"%interp_method)
             
     if surface_refinement is not None:
         surf_x = surface_refinement[0,:]
@@ -2093,6 +2149,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
         elif interp_method is 'bilinear':
             bur_elec_z = np.array(bur_elec_z) - interp.bilinear(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+        elif interp_method is 'nearest':
+            bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
@@ -2165,9 +2223,10 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method is 'idw': 
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
-    elif interp_method is 'bilinear':   
-        # interpolate on a irregular grid, extrapolates the unknown coordinates
+    elif interp_method is 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
         nodez = interp.bilinear(node_x, node_y, x_interp, y_interp, z_interp)
+    elif interp_method is 'nearest':
+        nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp)
         
     mesh.node_z = np.array(mesh.node_z) + nodez
     node_z = mesh.node_z
