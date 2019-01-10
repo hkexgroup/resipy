@@ -2111,8 +2111,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 #elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=15) # it runs but vtk and dat are size 0 (mesh related issue)
+#k.createMesh(cl=2)
 #k.invert()
-##k.showResults()# only works for 2D currently 
-#mesh = mt.vtk_import(os.path.join(k.dirname, 'f001.vtk'))
-#mesh.show()
+#k.showResults() 
+#k.meshResults[0].showSlice(axis='z')
+#k.meshResults[0].showSlice(axis='x')
+#k.meshResults[0].showSlice(axis='y')
