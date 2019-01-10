@@ -2140,7 +2140,6 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         call(cmd_line)#run gmsh 
         
     #convert into mesh.dat
-    print('parsing gmsh...')
     mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
     mesh = Mesh.mesh_dict2class(mesh_dict) # convert output of parser into an object
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 

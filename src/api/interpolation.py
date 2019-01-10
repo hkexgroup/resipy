@@ -72,13 +72,16 @@ def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     znew.fill(np.nan)
     #outside = np.logical_not(inside)
     num_pts = len(xnew)
+    fudgex=0.05#add a bit of padding to prevent artefacts?
+    fudgey=0.05
     #compute new values inside survey
     for i in range(num_pts):
+    #for i in tqdm(range(num_pts),desc='interpolating values',ncols=100):
         #find closest 4 points in each quad
-        quad1 = (xknown < xnew[i]) & (yknown < ynew[i]) # bottom left quad
-        quad2 = (xknown < xnew[i]) & (yknown > ynew[i]) # top left quad
-        quad3 = (xknown > xnew[i]) & (yknown > ynew[i]) # top right quad
-        quad4 = (xknown > xnew[i]) & (yknown < ynew[i]) # top right quad
+        quad1 = (xknown < xnew[i]-fudgex) & (yknown < ynew[i]-fudgey) # bottom left quad
+        quad2 = (xknown < xnew[i]-fudgex) & (yknown > ynew[i]+fudgey) # top left quad
+        quad3 = (xknown > xnew[i]+fudgex) & (yknown > ynew[i]+fudgey) # top right quad
+        quad4 = (xknown > xnew[i]+fudgex) & (yknown < ynew[i]-fudgey) # bottom right quad
         
         dist1 = pdist(xnew[i], ynew[i], xknown[quad1], yknown[quad1])#distances to each quad 
         dist2 = pdist(xnew[i], ynew[i], xknown[quad2], yknown[quad2])
@@ -125,7 +128,8 @@ def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
         extrap_y = ynew[idx_nan]
         extrap_z = znew[idx_nan]
         
-        for i in range(len(extrap_x)):#,ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate
+        for i in range(len(extrap_x)):
+        #for i in tqdm(range(len(extrap_x)),desc='extrapolating unknowns',ncols=100):#go through each extrapolated point and find the closest known coordinate
             dist = pdist(extrap_x[i],extrap_y[i],known_x,known_y)
             ref = np.argmin(dist)
             extrap_z[i] = known_z[ref]
@@ -135,21 +139,15 @@ def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     return znew # return new interpolated values 
     
 #%% inverse weighted distance
-def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = None, extrapolate=True):
+def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate=True):
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)
-    if radius is None:
-        for i,(x,y) in enumerate(zip(xnew, ynew)):#,ncols=100,desc="Interpolating topo"):
-            dist = pdist(x, y, xknown, yknown)
-            # if we consider all the points (might be not good)
-            w = (1/dist)**power # exponent to be chosen
-            znew[i] = np.sum(zknown*w)/np.sum(w)
-    else:
-        for i,(x,y) in enumerate(zip(xnew, ynew)):#,ncols=100,desc="Interpolating topo"):
-            dist = pdist(x, y, xknown, yknown)
-            search = dist<=radius #get boolian array where dist is smaller than search radius 
-            w = (1/dist)**power # exponent to be chosen
-            znew[i] = np.sum(zknown[search]*w[search])/np.sum(w[search])
+    for i,(x,y) in enumerate(zip(xnew, ynew)):
+    #for i,(x,y) in tqdm(enumerate(zip(xnew, ynew)),ncols=100,desc="Interpolating topo"):
+        dist = pdist(x, y, xknown, yknown)
+        search = dist<=radius #get boolian array where dist is smaller than search radius 
+        w = (1/dist)**power # exponent to be chosen
+        znew[i] = np.sum(zknown[search]*w[search])/np.sum(w[search])
         
     idx_nan = np.isnan(znew) # boolian indexes of where nans are
     idx_num = np.where(idx_nan == False)
@@ -169,5 +167,15 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = None, extrapolate=
             extrap_z[i] = known_z[ref]     
         znew[idx_nan] = extrap_z
         
+    return znew
+
+#%% pure nearest neighbour interpolation
+def nearest(xnew, ynew, xknown, yknown, zknown):  
+    znew = np.zeros_like(xnew)
+    znew.fill(np.nan)        
+    for i in range(len(xnew)):#,ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate
+        dist = pdist(xnew[i],ynew[i],xknown,yknown)
+        ref = np.argmin(dist)
+        znew[i] = zknown[ref]             
     return znew
     
