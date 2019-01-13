@@ -1103,7 +1103,7 @@ class R2(object): # R2 master class instanciated by the GUI
             os.remove(os.path.join(self.dirname, 'cR2.exe'))
     
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
-                    sens=True, color_map='viridis', ylim=None, **kwargs):
+                    sens=True, color_map='viridis', zlim=None, **kwargs):
         """ Show the inverteds section.
         
         Parameters
@@ -1130,12 +1130,12 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
-            if ylim is None:
-                ylim = [self.doi, np.max(self.elec[:,2])]
+            if zlim is None:
+                zlim = [self.doi, np.max(self.elec[:,2])]
             if self.typ[-1] == '2': # 2D case
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
-                                ylim=ylim, **kwargs)
+                                zlim=zlim, **kwargs)
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map,
@@ -1155,7 +1155,8 @@ class R2(object): # R2 master class instanciated by the GUI
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.elec_x = self.elec[:,0]
-            mesh.elec_y = self.elec[:,2]
+            mesh.elec_y = self.elec[:,1]
+            mesh.elec_z = self.elec[:,2]
             self.meshResults.append(mesh)
         if self.iForward is True:
 #            initMesh = self.mesh
@@ -1174,7 +1175,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('reading ', fresults)
                 mesh = mt.vtk_import(fresults)
                 mesh.elec_x = self.elec[:,0]
-                mesh.elec_y = self.elec[:,2]
+                mesh.elec_y = self.elec[:,1]
+                mesh.elec_z = self.elec[:,2]
                 self.meshResults.append(mesh)
             else:
                 break
@@ -1999,12 +2001,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #%%
 #k = R2()
 #k.createSurvey('./api/test/syscalFile.csv')
-#k.elec[3,1] = -1
-#buried = np.zeros(k.elec.shape[0], dtype=bool)
-#buried[3] = True
-#k.createMesh('quad', buried=buried)
-#k.write2in()
-#k.invert()
+#k.invert(iplot=True)
 
 #%% forward modelling
 #def readMeshDat(fname):

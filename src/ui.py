@@ -2930,7 +2930,7 @@ class App(QMainWindow):
                 
                 
         def plotSection():
-            if self.r2.typ[-1] == 2: # 2D
+            if self.r2.typ[-1] == '2': # 2D
                 mwInvResult.setCallback(self.r2.showResults)
                 resultStackLayout.setCurrentIndex(0)
             else:
