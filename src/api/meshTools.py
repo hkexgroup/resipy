@@ -679,7 +679,8 @@ class Mesh:
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         ax.set_zlim(zlim) # doesn't seem to work in the UI
-        #set color bar limits 
+        #set color bar limits
+        print('vmin/vmax', vmin, vmax)
         if vmin is None:
             vmin = np.min(X)
         if vmax is None:

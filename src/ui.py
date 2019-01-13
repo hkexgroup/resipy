@@ -126,10 +126,12 @@ class MatplotlibWidget(QWidget):
     def setCallback(self, callback):
         self.callback = callback
         
-    def replot(self, **kwargs):
-#        print('replot:', kwargs)
-        self.figure.clear()
-        ax = self.figure.add_subplot(111)
+    def replot(self, threed=False, **kwargs):
+        self.figure.clear()        
+        if threed is False:
+            ax = self.figure.add_subplot(111)
+        else:
+            ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
@@ -137,7 +139,6 @@ class MatplotlibWidget(QWidget):
         self.canvas.draw()
     
     def clear(self):
-#        print('clearing figure')
         self.axis.clear()
         self.canvas.draw()
         
@@ -343,7 +344,10 @@ class App(QMainWindow):
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
-                
+                dimForward.setEnabled(True)
+                boreholeCheck.setChecked(False)
+                boreholeCheck.setEnabled(True)
+
                 # mesh tab
                 meshQuadGroup.setVisible(True)
                 meshTrianGroup.setVisible(True)
@@ -368,6 +372,9 @@ class App(QMainWindow):
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
+                dimForward.setEnabled(False)
+                boreholeCheck.setChecked(True) # to disable pseudo-section
+                boreholeCheck.setEnabled(False)
                 
                 # mesh tab
                 meshQuadGroup.setVisible(False)
@@ -385,7 +392,7 @@ class App(QMainWindow):
                 btnSave.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
-                sliceAxis.setVisible(True)
+#                sliceAxis.setVisible(True)
                 print(self.typ)
                 
         dimRadio2D = QRadioButton('2D')
@@ -2923,7 +2930,13 @@ class App(QMainWindow):
                 
                 
         def plotSection():
-            mwInvResult.setCallback(self.r2.showResults)
+            if self.r2.typ[-1] == 2: # 2D
+                mwInvResult.setCallback(self.r2.showResults)
+                resultStackLayout.setCurrentIndex(0)
+            else:
+                mwInvResult3D.setCallback(self.r2.showResults)
+                resultStackLayout.setCurrentIndex(1)
+#                mwInvResult.setCallback(self.r2.showSlice)
             if self.r2.iBorehole is False:
                 try:
                     plotInvError()
@@ -2954,8 +2967,7 @@ class App(QMainWindow):
 #            attributeName.currentIndexChanged.connect(changeAttribute)
                 
         
-        def replotSection():
-#            print('replotSection')
+        def replotSection(): # main plotting function
             index = self.displayParams['index']
             edge_color = self.displayParams['edge_color']
             sens = self.displayParams['sens']
@@ -2963,24 +2975,26 @@ class App(QMainWindow):
             contour = self.displayParams['contour']
             vmin = self.displayParams['vmin']
             vmax = self.displayParams['vmax']
-            mwInvResult.replot(index=index, edge_color=edge_color,
-                               contour=contour, sens=sens, attr=attr,
-                               vmin=vmin, vmax=vmax)
+            if self.r2.typ[-1] == '2':
+                mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
+                                   contour=contour, sens=sens, attr=attr,
+                                   vmin=vmin, vmax=vmax)
+            else:
+                mwInvResult3D.replot(threed=True, index=index, attr=attr,
+                                     vmin=vmin, vmax=vmax)
                     
         def msgBox(text):
             msg = QMessageBox()
             msg.setText(text)
             
         def setCBarLimit():
-#            print('setCBarLimit')
             vmax = vmaxEdit.text()
             vmin = vminEdit.text()
-            # ternary operations
             vmax = None if vmax == '' else float(vmax)
             vmin = None if vmin == '' else float(vmin)
             self.displayParams['vmin'] = vmin
             self.displayParams['vmax'] = vmax
-            if contourCheck.isChecked() is True:
+            if (contourCheck.isChecked() is True) or (self.r2.typ[-1] != '2'):
                 replotSection()
             else:
                 mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
@@ -3038,9 +3052,7 @@ class App(QMainWindow):
         
         # option for display
         def displayAttribute(arg='Resistivity(log10)'):
-#            print('displayAttribute arg = ', arg)
             self.attr = list(self.r2.meshResults[self.displayParams['index']].attr_cache)
-#            print('list of attributes availables', self.attr)
             resistIndex = 0
             c = -1
             try:
@@ -3064,10 +3076,8 @@ class App(QMainWindow):
             attributeName.setCurrentIndex(resistIndex)
             attributeName.currentIndexChanged.connect(changeAttribute)
             #sectionId.setCurrentIndex(0)
-#            print('end of displayAttribute')
         
         def changeAttribute(index):
-#            print('changeAttribute', index)
             self.displayParams['attr'] = self.attr[index]
             vminEdit.setText('')
             vmaxEdit.setText('')
@@ -3077,13 +3087,9 @@ class App(QMainWindow):
 
 
         def changeSection(index):
-#            print('changeSection')
             self.displayParams['index'] = index
             displayAttribute(arg=self.displayParams['attr'])
             replotSection()
-            # find a way to keep the current display settings between section
-            # without just replotting it here
-#            mwInvResult.replot()
         
         displayOptions = QHBoxLayout()
             
@@ -3099,11 +3105,9 @@ class App(QMainWindow):
         vminEdit = QLineEdit()
         vminEdit.setToolTip('Set mininum for current scale.')
         vminEdit.setValidator(QDoubleValidator())
-#        vminEdit.textChanged.connect(setCBarLimit)
         vmaxLabel = QLabel('Max:')
         vmaxEdit = QLineEdit()
         vmaxEdit.setToolTip('Set maximum for current color scale.')
-#        vmaxEdit.textChanged.connect(setCBarLimit)
         vmaxEdit.setValidator(QDoubleValidator())
         vMinMaxApply = QPushButton('Apply')
         vMinMaxApply.setAutoDefault(True)
@@ -3197,11 +3201,14 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
         
-        mwInvResult = MatplotlibWidget(navi=True)
-        resultLayout.addWidget(mwInvResult, 90)
-        
-#        invLayout.addLayout(resultLayout, 70)
-        
+        mwInvResult = MatplotlibWidget(navi=True)        
+        mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
+
+        resultStackLayout = QStackedLayout()
+        resultStackLayout.addWidget(mwInvResult)
+        resultStackLayout.addWidget(mwInvResult3D)
+        resultLayout.addLayout(resultStackLayout, 90)
+                
         # in case of error, display R2.out
         r2outLayout = QVBoxLayout()
 

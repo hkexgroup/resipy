@@ -1811,9 +1811,21 @@ class R2(object): # R2 master class instanciated by the GUI
     def showInParaview(self, index=0):
         """ Open paraview to display the .vtk file.
         """
-        fname = 'f{:03d}_res.vtk'.format(index+1)
-        os.system('paraview ' + str(os.path.join(self.dirname, fname)))
+        if self.typ[-1] == '2':
+            fname = 'f{:03d}_res.vtk'.format(index+1)
+        else:
+            fname = 'f{:03d}.vtk'.format(index+1)            
+        Popen(['paraview', os.path.join(self.dirname, fname)])
 
+
+    def showSlice(self, index=0, ax=None, attr=None, axis='z'): 
+        """ Show slice of 3D mesh interactively.
+        """
+        if attr is None:
+            attr = list(self.meshResults[0].attr_cache.keys())[0]
+        self.meshResults[index].showSlice(
+                attr=attr, axis=axis)
+        
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
@@ -1986,7 +1998,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%%
 #k = R2()
-#k.createSurvey('../api/test/syscalFile.csv')
+#k.createSurvey('./api/test/syscalFile.csv')
 #k.elec[3,1] = -1
 #buried = np.zeros(k.elec.shape[0], dtype=bool)
 #buried[3] = True
@@ -2113,7 +2125,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.setElec(elec)
 #k.createMesh(cl=20)
 #k.invert()
-#k.showResults() 
+#k.showResults()
+#k.showSlice(index=0)
 #k.meshResults[0].showSlice(axis='z')
 #k.meshResults[0].showSlice(axis='x')
 #k.meshResults[0].showSlice(axis='y')
