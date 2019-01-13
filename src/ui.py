@@ -62,19 +62,22 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=True):
+    def __init__(self, parent=None, figure=None, navi=False, itight=True, threed=False):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
         self.itight = itight
         if figure is None:
             figure = Figure()
-            axes = figure.add_subplot(111)
+            self.canvas = FigureCanvasQTAgg(figure)
+            if threed is True:
+                axes = figure.add_subplot(111, projection='3d')
+            else:
+                axes = figure.add_subplot(111)
         else:
             axes = figure.get_axes()
-        self.axis = axes
         self.figure = figure
-        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.axis = axes
         
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
@@ -102,17 +105,20 @@ class MatplotlibWidget(QWidget):
         self.canvas.draw()
 
     
-    def plot(self, callback):
+    def plot(self, callback, threed=False):
         ''' call a callback plot function and give it the ax to plot to
         '''
 #        print('plot is called')
-        self.figure.clear()
-        ax = self.figure.add_subplot(111)
-        self.axis = ax
+        self.figure.clear() # need to clear the figure with the colorbar as well
+        if threed is False:
+            ax = self.figure.add_subplot(111)
+        else:
+            ax = self.figure.add_subplot(111, projection='3d')
         self.callback = callback
         callback(ax=ax)
-        ax.set_aspect('auto')
-        ax.set_autoscale_on(False)
+        if threed is False:
+            ax.set_aspect('auto')
+            ax.set_autoscale_on(False)
         if self.itight == True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -387,7 +393,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False) # comment this to enable 3D
+#        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -894,8 +900,9 @@ class App(QMainWindow):
                 return table
             
             def readTable(self, fname, nbElec=None):
-                    df = pd.read_csv(fname, header=None)
-                    tt = df.values
+#                    df = pd.read_csv(fname, header=None)
+#                    tt = df.values
+                    tt = np.genfromtxt(fname)
                     if nbElec is not None:
                         if tt.shape[0] != nbElec:
                             errorDump('The file must have exactly ' + \
@@ -1692,7 +1699,11 @@ class App(QMainWindow):
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
 #            replotMesh()
-#            meshOutputStack.setCurrentIndex(1)
+#            import matplotlib.pyplot as plt
+#            plt.ion()
+#            self.r2.showMesh() # does work !
+            mwMesh3D.plot(self.r2.showMesh, threed=True)
+            meshOutputStack.setCurrentIndex(2)
 
         meshTetra = QPushButton('Tetrahedral Mesh')
         meshTetra.setAutoDefault(True)
@@ -1844,6 +1855,7 @@ class App(QMainWindow):
         meshLayout.addWidget(instructionLabel)
         
         mwMesh = MatplotlibWidget(navi=True)
+        mwMesh3D = MatplotlibWidget(threed=True, navi=True)
         
         meshLogText = QTextEdit()
         meshLogText.setReadOnly(True)
@@ -1869,9 +1881,15 @@ class App(QMainWindow):
         meshPlotLayout.addLayout(regionLayout, 30)
         meshPlot.setLayout(meshPlotLayout)
         
+        meshPlot3D = QWidget()
+        meshPlot3DLayout = QHBoxLayout()
+        meshPlot3DLayout.addWidget(mwMesh3D)
+        meshPlot3D.setLayout(meshPlot3DLayout)
+        
         meshOutputStack = QStackedLayout()
         meshOutputStack.addWidget(meshLogText)
         meshOutputStack.addWidget(meshPlot)
+        meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
         
         meshLayout.addLayout(meshOutputStack, 80)
@@ -3351,8 +3369,14 @@ if __name__ == '__main__':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
+    from mpl_toolkits.mplot3d import axes3d
     progressBar.setValue(2)
     app.processEvents()
+    
+#    import matplotlib.pyplot as plt # this does work
+#    fig = plt.figure()
+#    fig.add_subplot(111, projection='3d')
+#    fig.show()
     
     print('importing numpy')
     import numpy as np

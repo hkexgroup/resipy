@@ -1486,11 +1486,11 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
         """
-        elec = pd.read_csv(fname)
+        elec = np.genfromtxt(fname)
         if elec.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columsn')
         else:
-            self.elec = np.array(elec)
+            self.elec = elec
             
     
     def importSequence(self, fname=''):
@@ -2111,7 +2111,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 #elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=2)
+#k.createMesh(cl=20)
 #k.invert()
 #k.showResults() 
 #k.meshResults[0].showSlice(axis='z')
