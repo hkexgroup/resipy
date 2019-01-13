@@ -1746,7 +1746,7 @@ class App(QMainWindow):
         clFactorSld.setMaximum(10)
         clFactorSld.setValue(4)
   
-        # additional options for triangular mesh
+        # additional options for tetrahedral mesh
         cl3Label = QLabel('Characteristic Length:')
         cl3Edit = QLineEdit()
         cl3Edit.setValidator(QDoubleValidator())
@@ -1755,6 +1755,17 @@ class App(QMainWindow):
         cl3FactorEdit = QLineEdit()
         cl3FactorEdit.setValidator(QDoubleValidator())
         cl3FactorEdit.setText('2')
+        def openMeshParaviewFunc():
+            print('Writing mesh to .vtk first...', end='')
+            meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
+            self.r2.mesh.write_vtk(meshVTK)
+            print('done')
+            try:
+                Popen(['paraview', meshVTK])
+            except Exception as e:
+                print('Error in opening: ', e)
+        openMeshParaview = QPushButton('Open in Paraview')
+        openMeshParaview.clicked.connect(openMeshParaviewFunc)
         
         
         meshOptionQuadLayout = QHBoxLayout()
@@ -1776,7 +1787,7 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3Edit)
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
-        
+        meshOptionTetraLayout.addWidget(openMeshParaview)
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
@@ -3395,6 +3406,7 @@ if __name__ == '__main__':
     app.processEvents()
     from matplotlib import rcParams
     rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+    from subprocess import Popen # used for opening paraview
     
     from api.R2 import R2
     from api.r2help import r2help

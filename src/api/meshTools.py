@@ -678,7 +678,6 @@ class Mesh:
         #set axis limits     
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        print('----------', ax)
         ax.set_zlim(zlim) # doesn't seem to work in the UI
         #set color bar limits 
         if vmin is None:
