@@ -983,7 +983,8 @@ class Mesh:
         """
         Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
-        ideally this is implimented on a mesh which is refined near the surface. 
+        ideally this is implimented on a mesh which is refined near the surface. If 
+        no nodes are assigned to mesh, a mesh.e_nodes variable is created.  
         
         Parameters
         ------------
@@ -997,23 +998,29 @@ class Mesh:
             
         Notes
         ------------
-        Nothing is returned but the mesh.e_nodes parameter is updated. 
+        Nothing is returned but the mesh.e_nodes parameter is updated (or added)
         #### TODO: Test this function. 
         """
         #formalities 
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
             raise ValueError("mismatch in the length of the new_x, new_y and new_z arrays")
-        if len(new_x) != len(self.elec_x):
-            raise ValueError("mismatch between the length of new electrode position array and old array")
+        try:
+            if len(new_x) != len(self.elec_x) or len(new_z) != len(self.e_nodes):
+                raise ValueError("mismatch between the length of new electrode position array and old array")
+            has_nodes = True
+        except AttributeError:
+            has_nodes = False
+            
         if new_y is None:
             new_y = np.zeros_like(new_x)
-          
-        node_in_mesh = [0]*len(self.e_nodes)    
-        for i in range(len(self.elec_x)):
-            sq_dist = (self.node_x - self.elec_x[i])**2 + (self.node_y - self.elec_y[i])**2 + (self.node_z - self.elec_z[i])**2 # find the minimum square distance
+            
+        node_in_mesh = [0]*len(new_x)    
+        for i in range(len(new_x)):
+            sq_dist = (self.node_x - new_x[i])**2 + (self.node_y - new_y[i])**2 + (self.node_z - new_z[i])**2 # find the minimum square distance
             node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
-            if node_in_mesh[i] != self.e_nodes[i]:
-                print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
+            if has_nodes:
+                if node_in_mesh[i] != self.e_nodes[i]:
+                    print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
         
         self.e_nodes = node_in_mesh # update e_node parameter
         
