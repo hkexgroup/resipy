@@ -370,7 +370,7 @@ class Mesh:
              color_bar = color_bar, # pass arguments to 3D function
              xlim = xlim,
              zlim = zlim,
-             #ax = None,
+             ax = ax,
              electrodes = electrodes,
              sens = sens,
              edge_color = edge_color,
@@ -574,8 +574,8 @@ class Mesh:
              xlim = "default",
              ylim = "default",
              zlim = "default", 
-             #ax = None,
-             electrodes = False,
+             ax = None,
+             electrodes = True,
              sens = False,
              edge_color = 'k',
              alpha = 1,
@@ -649,11 +649,15 @@ class Mesh:
                 raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
         
         t0 = time.time() # benchmark function
+        
         #make 3D figure 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        plt.xlabel('x')
-        plt.ylabel('y')
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            fig = ax.figure
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
         
 #        try: # deactivated code 
 #            if xlim=="default":
@@ -674,8 +678,9 @@ class Mesh:
         #set axis limits     
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
-        ax.set_zlim(zlim)
-        #set color bar limits 
+        ax.set_zlim(zlim) # doesn't seem to work in the UI
+        #set color bar limits
+
         if vmin is None:
             vmin = np.min(X)
         if vmax is None:
@@ -2223,7 +2228,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
-    print('interpolating topography onto mesh...')
+    print('interpolating topography onto mesh...', end='')
     x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)
@@ -2234,7 +2239,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         nodez = interp.bilinear(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method is 'nearest':
         nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp)
-        
+    print('done')
+    
     mesh.node_z = np.array(mesh.node_z) + nodez
     node_z = mesh.node_z
     #need to recompute cell centres as well as they will have changed. It's more efficient to recompute them rather than interpolate.

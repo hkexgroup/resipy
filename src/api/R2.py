@@ -1103,7 +1103,7 @@ class R2(object): # R2 master class instanciated by the GUI
             os.remove(os.path.join(self.dirname, 'cR2.exe'))
     
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
-                    sens=True, color_map='viridis', ylim=None, **kwargs):
+                    sens=True, color_map='viridis', zlim=None, **kwargs):
         """ Show the inverteds section.
         
         Parameters
@@ -1130,12 +1130,12 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.meshResults) == 0:
             self.getResults()
         if len(self.meshResults) > 0:
-            if ylim is None:
-                ylim = [self.doi, np.max(self.elec[:,2])]
+            if zlim is None:
+                zlim = [self.doi, np.max(self.elec[:,2])]
             if self.typ[-1] == '2': # 2D case
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
-                                ylim=ylim, **kwargs)
+                                zlim=zlim, **kwargs)
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map,
@@ -1155,7 +1155,8 @@ class R2(object): # R2 master class instanciated by the GUI
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.elec_x = self.elec[:,0]
-            mesh.elec_y = self.elec[:,2]
+            mesh.elec_y = self.elec[:,1]
+            mesh.elec_z = self.elec[:,2]
             self.meshResults.append(mesh)
         if self.iForward is True:
 #            initMesh = self.mesh
@@ -1174,7 +1175,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('reading ', fresults)
                 mesh = mt.vtk_import(fresults)
                 mesh.elec_x = self.elec[:,0]
-                mesh.elec_y = self.elec[:,2]
+                mesh.elec_y = self.elec[:,1]
+                mesh.elec_z = self.elec[:,2]
                 self.meshResults.append(mesh)
             else:
                 break
@@ -1486,11 +1488,11 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
         """
-        elec = pd.read_csv(fname)
+        elec = np.genfromtxt(fname)
         if elec.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columsn')
         else:
-            self.elec = np.array(elec)
+            self.elec = elec
             
     
     def importSequence(self, fname=''):
@@ -1811,9 +1813,21 @@ class R2(object): # R2 master class instanciated by the GUI
     def showInParaview(self, index=0):
         """ Open paraview to display the .vtk file.
         """
-        fname = 'f{:03d}_res.vtk'.format(index+1)
-        os.system('paraview ' + str(os.path.join(self.dirname, fname)))
+        if self.typ[-1] == '2':
+            fname = 'f{:03d}_res.vtk'.format(index+1)
+        else:
+            fname = 'f{:03d}.vtk'.format(index+1)            
+        Popen(['paraview', os.path.join(self.dirname, fname)])
 
+
+    def showSlice(self, index=0, ax=None, attr=None, axis='z'): 
+        """ Show slice of 3D mesh interactively.
+        """
+        if attr is None:
+            attr = list(self.meshResults[0].attr_cache.keys())[0]
+        self.meshResults[index].showSlice(
+                attr=attr, axis=axis)
+        
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
@@ -1986,13 +2000,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%%
 #k = R2()
-#k.createSurvey('../api/test/syscalFile.csv')
-#k.elec[3,1] = -1
-#buried = np.zeros(k.elec.shape[0], dtype=bool)
-#buried[3] = True
-#k.createMesh('quad', buried=buried)
-#k.write2in()
-#k.invert()
+#k.createSurvey('./api/test/syscalFile.csv')
+#k.invert(iplot=True)
 
 #%% forward modelling
 #def readMeshDat(fname):
@@ -2111,9 +2120,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 #elec = np.genfromtxt('api/test/electrodes3D.dat')
 #k.setElec(elec)
-#k.createMesh(cl=2)
+#k.createMesh(cl=20)
 #k.invert()
-#k.showResults() 
+#k.showResults()
+#k.showSlice(index=0)
 #k.meshResults[0].showSlice(axis='z')
 #k.meshResults[0].showSlice(axis='x')
 #k.meshResults[0].showSlice(axis='y')

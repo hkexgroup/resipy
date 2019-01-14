@@ -62,19 +62,22 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=True):
+    def __init__(self, parent=None, figure=None, navi=False, itight=True, threed=False):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
         self.itight = itight
         if figure is None:
             figure = Figure()
-            axes = figure.add_subplot(111)
+            self.canvas = FigureCanvasQTAgg(figure)
+            if threed is True:
+                axes = figure.add_subplot(111, projection='3d')
+            else:
+                axes = figure.add_subplot(111)
         else:
             axes = figure.get_axes()
-        self.axis = axes
         self.figure = figure
-        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.axis = axes
         
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
@@ -102,17 +105,20 @@ class MatplotlibWidget(QWidget):
         self.canvas.draw()
 
     
-    def plot(self, callback):
+    def plot(self, callback, threed=False):
         ''' call a callback plot function and give it the ax to plot to
         '''
 #        print('plot is called')
-        self.figure.clear()
-        ax = self.figure.add_subplot(111)
-        self.axis = ax
+        self.figure.clear() # need to clear the figure with the colorbar as well
+        if threed is False:
+            ax = self.figure.add_subplot(111)
+        else:
+            ax = self.figure.add_subplot(111, projection='3d')
         self.callback = callback
         callback(ax=ax)
-        ax.set_aspect('auto')
-        ax.set_autoscale_on(False)
+        if threed is False:
+            ax.set_aspect('auto')
+            ax.set_autoscale_on(False)
         if self.itight == True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -120,10 +126,12 @@ class MatplotlibWidget(QWidget):
     def setCallback(self, callback):
         self.callback = callback
         
-    def replot(self, **kwargs):
-#        print('replot:', kwargs)
-        self.figure.clear()
-        ax = self.figure.add_subplot(111)
+    def replot(self, threed=False, **kwargs):
+        self.figure.clear()        
+        if threed is False:
+            ax = self.figure.add_subplot(111)
+        else:
+            ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
@@ -131,7 +139,6 @@ class MatplotlibWidget(QWidget):
         self.canvas.draw()
     
     def clear(self):
-#        print('clearing figure')
         self.axis.clear()
         self.canvas.draw()
         
@@ -337,7 +344,10 @@ class App(QMainWindow):
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
-                
+                dimForward.setEnabled(True)
+                boreholeCheck.setChecked(False)
+                boreholeCheck.setEnabled(True)
+
                 # mesh tab
                 meshQuadGroup.setVisible(True)
                 meshTrianGroup.setVisible(True)
@@ -362,6 +372,9 @@ class App(QMainWindow):
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
+                dimForward.setEnabled(False)
+                boreholeCheck.setChecked(True) # to disable pseudo-section
+                boreholeCheck.setEnabled(False)
                 
                 # mesh tab
                 meshQuadGroup.setVisible(False)
@@ -379,7 +392,7 @@ class App(QMainWindow):
                 btnSave.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
-                sliceAxis.setVisible(True)
+#                sliceAxis.setVisible(True)
                 print(self.typ)
                 
         dimRadio2D = QRadioButton('2D')
@@ -387,7 +400,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False) # comment this to enable 3D
+#        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -894,8 +907,9 @@ class App(QMainWindow):
                 return table
             
             def readTable(self, fname, nbElec=None):
-                    df = pd.read_csv(fname, header=None)
-                    tt = df.values
+#                    df = pd.read_csv(fname, header=None)
+#                    tt = df.values
+                    tt = np.genfromtxt(fname)
                     if nbElec is not None:
                         if tt.shape[0] != nbElec:
                             errorDump('The file must have exactly ' + \
@@ -1692,7 +1706,11 @@ class App(QMainWindow):
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
 #            replotMesh()
-#            meshOutputStack.setCurrentIndex(1)
+#            import matplotlib.pyplot as plt
+#            plt.ion()
+#            self.r2.showMesh() # does work !
+            mwMesh3D.plot(self.r2.showMesh, threed=True)
+            meshOutputStack.setCurrentIndex(2)
 
         meshTetra = QPushButton('Tetrahedral Mesh')
         meshTetra.setAutoDefault(True)
@@ -1735,7 +1753,7 @@ class App(QMainWindow):
         clFactorSld.setMaximum(10)
         clFactorSld.setValue(4)
   
-        # additional options for triangular mesh
+        # additional options for tetrahedral mesh
         cl3Label = QLabel('Characteristic Length:')
         cl3Edit = QLineEdit()
         cl3Edit.setValidator(QDoubleValidator())
@@ -1744,6 +1762,17 @@ class App(QMainWindow):
         cl3FactorEdit = QLineEdit()
         cl3FactorEdit.setValidator(QDoubleValidator())
         cl3FactorEdit.setText('2')
+        def openMeshParaviewFunc():
+            print('Writing mesh to .vtk first...', end='')
+            meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
+            self.r2.mesh.write_vtk(meshVTK)
+            print('done')
+            try:
+                Popen(['paraview', meshVTK])
+            except Exception as e:
+                print('Error in opening: ', e)
+        openMeshParaview = QPushButton('Open in Paraview')
+        openMeshParaview.clicked.connect(openMeshParaviewFunc)
         
         
         meshOptionQuadLayout = QHBoxLayout()
@@ -1765,7 +1794,7 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3Edit)
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
-        
+        meshOptionTetraLayout.addWidget(openMeshParaview)
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
@@ -1844,6 +1873,7 @@ class App(QMainWindow):
         meshLayout.addWidget(instructionLabel)
         
         mwMesh = MatplotlibWidget(navi=True)
+        mwMesh3D = MatplotlibWidget(threed=True, navi=True)
         
         meshLogText = QTextEdit()
         meshLogText.setReadOnly(True)
@@ -1869,9 +1899,15 @@ class App(QMainWindow):
         meshPlotLayout.addLayout(regionLayout, 30)
         meshPlot.setLayout(meshPlotLayout)
         
+        meshPlot3D = QWidget()
+        meshPlot3DLayout = QHBoxLayout()
+        meshPlot3DLayout.addWidget(mwMesh3D)
+        meshPlot3D.setLayout(meshPlot3DLayout)
+        
         meshOutputStack = QStackedLayout()
         meshOutputStack.addWidget(meshLogText)
         meshOutputStack.addWidget(meshPlot)
+        meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
         
         meshLayout.addLayout(meshOutputStack, 80)
@@ -2894,7 +2930,13 @@ class App(QMainWindow):
                 
                 
         def plotSection():
-            mwInvResult.setCallback(self.r2.showResults)
+            if self.r2.typ[-1] == '2': # 2D
+                mwInvResult.setCallback(self.r2.showResults)
+                resultStackLayout.setCurrentIndex(0)
+            else:
+                mwInvResult3D.setCallback(self.r2.showResults)
+                resultStackLayout.setCurrentIndex(1)
+#                mwInvResult.setCallback(self.r2.showSlice)
             if self.r2.iBorehole is False:
                 try:
                     plotInvError()
@@ -2925,8 +2967,7 @@ class App(QMainWindow):
 #            attributeName.currentIndexChanged.connect(changeAttribute)
                 
         
-        def replotSection():
-#            print('replotSection')
+        def replotSection(): # main plotting function
             index = self.displayParams['index']
             edge_color = self.displayParams['edge_color']
             sens = self.displayParams['sens']
@@ -2934,24 +2975,26 @@ class App(QMainWindow):
             contour = self.displayParams['contour']
             vmin = self.displayParams['vmin']
             vmax = self.displayParams['vmax']
-            mwInvResult.replot(index=index, edge_color=edge_color,
-                               contour=contour, sens=sens, attr=attr,
-                               vmin=vmin, vmax=vmax)
+            if self.r2.typ[-1] == '2':
+                mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
+                                   contour=contour, sens=sens, attr=attr,
+                                   vmin=vmin, vmax=vmax)
+            else:
+                mwInvResult3D.replot(threed=True, index=index, attr=attr,
+                                     vmin=vmin, vmax=vmax)
                     
         def msgBox(text):
             msg = QMessageBox()
             msg.setText(text)
             
         def setCBarLimit():
-#            print('setCBarLimit')
             vmax = vmaxEdit.text()
             vmin = vminEdit.text()
-            # ternary operations
             vmax = None if vmax == '' else float(vmax)
             vmin = None if vmin == '' else float(vmin)
             self.displayParams['vmin'] = vmin
             self.displayParams['vmax'] = vmax
-            if contourCheck.isChecked() is True:
+            if (contourCheck.isChecked() is True) or (self.r2.typ[-1] != '2'):
                 replotSection()
             else:
                 mwInvResult.setMinMax(vmin=vmin, vmax=vmax) 
@@ -3009,9 +3052,7 @@ class App(QMainWindow):
         
         # option for display
         def displayAttribute(arg='Resistivity(log10)'):
-#            print('displayAttribute arg = ', arg)
             self.attr = list(self.r2.meshResults[self.displayParams['index']].attr_cache)
-#            print('list of attributes availables', self.attr)
             resistIndex = 0
             c = -1
             try:
@@ -3035,10 +3076,8 @@ class App(QMainWindow):
             attributeName.setCurrentIndex(resistIndex)
             attributeName.currentIndexChanged.connect(changeAttribute)
             #sectionId.setCurrentIndex(0)
-#            print('end of displayAttribute')
         
         def changeAttribute(index):
-#            print('changeAttribute', index)
             self.displayParams['attr'] = self.attr[index]
             vminEdit.setText('')
             vmaxEdit.setText('')
@@ -3048,13 +3087,9 @@ class App(QMainWindow):
 
 
         def changeSection(index):
-#            print('changeSection')
             self.displayParams['index'] = index
             displayAttribute(arg=self.displayParams['attr'])
             replotSection()
-            # find a way to keep the current display settings between section
-            # without just replotting it here
-#            mwInvResult.replot()
         
         displayOptions = QHBoxLayout()
             
@@ -3070,11 +3105,9 @@ class App(QMainWindow):
         vminEdit = QLineEdit()
         vminEdit.setToolTip('Set mininum for current scale.')
         vminEdit.setValidator(QDoubleValidator())
-#        vminEdit.textChanged.connect(setCBarLimit)
         vmaxLabel = QLabel('Max:')
         vmaxEdit = QLineEdit()
         vmaxEdit.setToolTip('Set maximum for current color scale.')
-#        vmaxEdit.textChanged.connect(setCBarLimit)
         vmaxEdit.setValidator(QDoubleValidator())
         vMinMaxApply = QPushButton('Apply')
         vMinMaxApply.setAutoDefault(True)
@@ -3168,11 +3201,14 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
         
-        mwInvResult = MatplotlibWidget(navi=True)
-        resultLayout.addWidget(mwInvResult, 90)
-        
-#        invLayout.addLayout(resultLayout, 70)
-        
+        mwInvResult = MatplotlibWidget(navi=True)        
+        mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
+
+        resultStackLayout = QStackedLayout()
+        resultStackLayout.addWidget(mwInvResult)
+        resultStackLayout.addWidget(mwInvResult3D)
+        resultLayout.addLayout(resultStackLayout, 90)
+                
         # in case of error, display R2.out
         r2outLayout = QVBoxLayout()
 
@@ -3351,8 +3387,14 @@ if __name__ == '__main__':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
+    from mpl_toolkits.mplot3d import axes3d
     progressBar.setValue(2)
     app.processEvents()
+    
+#    import matplotlib.pyplot as plt # this does work
+#    fig = plt.figure()
+#    fig.add_subplot(111, projection='3d')
+#    fig.show()
     
     print('importing numpy')
     import numpy as np
@@ -3371,6 +3413,7 @@ if __name__ == '__main__':
     app.processEvents()
     from matplotlib import rcParams
     rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+    from subprocess import Popen # used for opening paraview
     
     from api.R2 import R2
     from api.r2help import r2help
