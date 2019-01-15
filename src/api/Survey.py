@@ -109,6 +109,25 @@ class Survey(object):
 #        self.typ = 'R2' # or cR2 or R3, cR3
 #        self.errTyp = 'none' # type of error to add for DC
 #        self.errTypIP = 'none' # type of error to add for IP phase
+            
+    @classmethod
+    def fromDataframe(cls, df, elec):
+        """
+        Create a survey class from pandas dataframe.
+        """
+        surrogate_file = 'test/protocol.dat'
+        path = os.path.join(os.path.dirname(os.path.realpath(__file__)),surrogate_file) # map to the protocol test file
+        s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
+        s_svy.df = df
+        s_svy.elec = elec
+        s_svy.ndata = 1#len(data)
+        irecip = s_svy.reciprocal()
+        s_svy.basicFilter()
+        return s_svy
+    
+    def __str__(self):
+        out = "Survey class with %i measurements and %i electrodes"%(len(self.df),len(self.elec[:,0]))
+        return out
  
     def checkTxSign(self):
         """ Checking the sign of the transfer resistance.
@@ -1260,9 +1279,9 @@ class Survey(object):
         df = self.df
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         imin = np.min(sch_mat)
-        if imin > 1:
-            print("it looks like scheduling indexing starts at: %i"%imin)
-            print("normalising electrode indexing to start at 1.")
+        if imin != 1:
+            print("It looks like scheduling indexing starts at: %i"%imin)
+            print("...normalising electrode indexing to start at 1.")
         corrected = sch_mat - (imin - 1)
         #return corrected
         df['a'] = corrected[:,0]

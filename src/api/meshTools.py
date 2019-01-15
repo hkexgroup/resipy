@@ -1019,6 +1019,10 @@ class Mesh:
         if new_y is None:
             new_y = np.zeros_like(new_x)
             
+        self.node_x = np.array(self.node_x)
+        self.node_y = np.array(self.node_y)
+        self.node_z = np.array(self.node_z)
+            
         node_in_mesh = [0]*len(new_x)    
         for i in range(len(new_x)):
             sq_dist = (self.node_x - new_x[i])**2 + (self.node_y - new_y[i])**2 + (self.node_z - new_z[i])**2 # find the minimum square distance
@@ -1027,7 +1031,7 @@ class Mesh:
                 if node_in_mesh[i] != self.e_nodes[i]:
                     print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
         
-        self.e_nodes = node_in_mesh # update e_node parameter
+        self.add_e_nodes(node_in_mesh) # update e_node parameter
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """
@@ -1248,8 +1252,7 @@ def tri_cent(p,q,r):
 #%% import a vtk file 
 def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     """
-    Imports a 2d mesh file into the python workspace, can have triangular or quad type elements. 3D meshes 
-    are still a work in progress. 
+    Imports a mesh file into the python workspace, can have triangular, quad or tetraheral shaped elements.
             
     Parameters
     ----------
@@ -1479,8 +1482,8 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     #put in fail safe if no attributes are found        
     if num_attr == 0:
         print("no cell attributes found in vtk file")
-        attr_dict = {"no attributes":float("nan")}
-        values_oi= float("nan")
+        attr_dict = {"no attributes":[float("nan")]*no_elms}
+        values_oi= [0]*no_elms
         parameter_title = "n/a"
     #print("finished importing mesh.\n")
     #information in a dictionary, this is easier to debug than an object in spyder: 
@@ -2365,7 +2368,7 @@ def dat_import_v1(file_path):
 #now do mesh.add_e_nodes to add electrode positions to the mesh. 
     
 #%% import a custom mesh, you must know the node positions 
-def custom_mesh_import(file_path, node_pos, flag_3D=False):
+def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
     """ 
     Import user defined mesh, currently supports .msh, .vtk and .dat (native to R2/3t)
     format for quad, triangular and tetrahedral meshes. The type of file is guessed from the 
@@ -2374,13 +2377,18 @@ def custom_mesh_import(file_path, node_pos, flag_3D=False):
     Parameters
     ---------- 
     file_path: string
-        path to file
+        Path to file.
+    node_pos: array like, optional
+        Array of ints referencing the electrode nodes. If left as none no electrodes 
+        will be added to the mesh class. Consider using mesh.move_elec_nodes()
+        to add nodes to mesh using their xyz coordinates.
     flag_3D: bool, optional
-        make this true for 3D meshes if importing .msh 
+        Make this true for 3D meshes if importing .msh type. 
         
     Returns
     -------
     mesh: class
+        mesh class used in pyR2
         
     """
     if not isinstance(file_path,str):
@@ -2398,10 +2406,11 @@ def custom_mesh_import(file_path, node_pos, flag_3D=False):
     elif ext == '.dat':
         mesh = dat_import(file_path)
     else:
-        avail_ext = ['.vtk','.ext','.dat']
+        avail_ext = ['.vtk','.msh','.dat']
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
-    mesh.add_e_nodes(np.array(node_pos)) # add electrode nodes to mesh provided by the user
+    if node_pos is not None:
+        mesh.add_e_nodes(np.array(node_pos, dtype=int)) # add electrode nodes to mesh provided by the user
     
     return mesh
 
