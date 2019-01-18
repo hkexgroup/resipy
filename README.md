@@ -168,7 +168,7 @@ Below is the usual commands you are likely to go through if you contribute to th
 
 First ensure you have cloned the project and are in the main project directory.
 ```bash
-git clone https://gitlab.com/sagitta1618/r2gui.git
+git clone https://gitlab.com/hkex/pyr2
 cd r2gui
 ```
 Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
