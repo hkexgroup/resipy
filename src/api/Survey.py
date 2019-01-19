@@ -191,6 +191,17 @@ class Survey(object):
         """
         if ftype == 'Syscal':
             elec, data = syscalParser(fname, spacing=spacing)
+        elif ftype =='Protocol':
+            elec, data = protocol3DParser(fname)
+        elif ftype == 'Res2Dinv':
+            elec, data = res2invInputParser(fname)
+        elif ftype == 'BGS Prime':
+            try:
+                elec, data = primeParser(fname)
+            except:
+                elec, data = primeParserTab(fname)
+        elif ftype == 'ProtocolIP':
+            elec, data = protocolParserIP(fname)
         else:
             raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)

@@ -349,6 +349,8 @@ class App(QMainWindow):
                 dimForward.setEnabled(True)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
+                
+                tabPreProcessing.setTabEnabled(0, True)
 
                 # mesh tab
                 meshQuadGroup.setVisible(True)
@@ -382,6 +384,8 @@ class App(QMainWindow):
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
                 
+                tabPreProcessing.setTabEnabled(0, False)
+
                 # mesh tab
                 meshQuadGroup.setVisible(False)
                 meshTrianGroup.setVisible(False)
@@ -400,7 +404,6 @@ class App(QMainWindow):
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
 #                sliceAxis.setVisible(True)
-                print('change 2D/3D:', self.r2.typ, self.typ)
                 
         dimRadio2D = QRadioButton('2D')
         dimRadio2D.setChecked(True)
