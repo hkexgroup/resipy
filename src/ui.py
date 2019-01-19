@@ -337,9 +337,11 @@ class App(QMainWindow):
 #        restartBtn.clicked.connect(restartFunc)
 #        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
         
-        def dimSurvey():                
+        def dimSurvey():
             if dimRadio2D.isChecked():
                 self.typ = self.typ.replace('3t','2')
+                if self.r2 is not None:
+                    self.r2.typ = self.r2.typ.replace('3t','2')
                 # importing tab
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
@@ -356,7 +358,8 @@ class App(QMainWindow):
                 
                 # inversion settings
                 show3DOptions(False)
-                showIpOptions(self.typ[0] == 'c')
+                if self.r2 is not None:
+                    showIpOptions(self.typ[0] == 'c')
                 
                 # inversion tab
                 contourCheck.setVisible(True)
@@ -368,6 +371,9 @@ class App(QMainWindow):
                 print(self.typ)
             else:
                 self.typ = self.typ.replace('2','3t')
+                if self.r2 is not None:
+                    self.r2.typ = self.r2.typ.replace('2', '3t')
+                    
                 # importing tab
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
@@ -384,7 +390,8 @@ class App(QMainWindow):
                 
                 # inversion settings
                 show3DOptions(True)
-                showIpOptions(self.typ[0] == 'c')
+                if self.r2 is not None:
+                    showIpOptions(self.typ[0] == 'c')
                 
                 # inversion tab
                 contourCheck.setVisible(False)
@@ -393,7 +400,7 @@ class App(QMainWindow):
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
 #                sliceAxis.setVisible(True)
-                print(self.typ)
+                print('change 2D/3D:', self.r2.typ, self.typ)
                 
         dimRadio2D = QRadioButton('2D')
         dimRadio2D.setChecked(True)
@@ -723,8 +730,10 @@ class App(QMainWindow):
         hbox4.addWidget(btnInvNow)
         
         def ipCheckFunc(state):
+            print('ipCheck', self.r2.typ)
             if state  == Qt.Checked:
-                self.r2.typ = 'cR2'
+                self.r2.typ = 'c' + self.r2.typ
+                self.typ = 'c' + self.typ
 #                timeLapseCheck.setEnabled(False)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(True)
@@ -742,7 +751,8 @@ class App(QMainWindow):
                 regionTable.setColumnHidden(1, False)
 
             else:
-                self.r2.typ = 'R2'
+                self.r2.typ = self.r2.typ[1:]
+                self.typ = self.typ[1:]
                 showIpOptions(False)
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
@@ -751,6 +761,7 @@ class App(QMainWindow):
                 regionTable.setColumnHidden(1, True)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(False)
+            print('mode', self.r2.typ)
 
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(ipCheckFunc)
@@ -2244,6 +2255,10 @@ class App(QMainWindow):
             if arg == True:
                 a_wgt.setText('0.02')
                 b_wgt.setText('2')
+                if self.r2.typ == 'cR3t':
+                    c_wgt.setText('1')
+                    c_wgt.setVisible(True)
+                    c_wgtLabel.setVisible(True)
                 min_error.setVisible(True)
                 min_errorLabel.setVisible(True)
                 data_type.setVisible(False)
@@ -2251,6 +2266,9 @@ class App(QMainWindow):
             else:
                 a_wgt.setText('0.01')
                 b_wgt.setText('0.02')
+                if self.r2.typ == 'cR3t':
+                    c_wgt.setVisible(False)
+                    c_wgtLabel.setVisible(False)
                 min_error.setVisible(False)
                 min_errorLabel.setVisible(False)
                 data_type.setVisible(True)
@@ -2268,6 +2286,7 @@ class App(QMainWindow):
             settings2D = [flux_typeLabel, flux_type,
                           inv_typeLabel, inv_type,
                           min_errorLabel, min_error,
+                          reg_modeLabel, reg_mode,
                           rho_minLabel, rho_min,
                           rho_maxLabel, rho_max,
                           target_decreaseLabel, target_decrease]
@@ -2625,17 +2644,17 @@ class App(QMainWindow):
         b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(b_wgtLabel, b_wgt)
         
-#        def c_wgtFunc():
-#            self.r2.param['c_wgt'] = float(c_wgt.text())
-#        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
-#        c_wgtLabel.linkActivated.connect(showHelp)
-#        c_wgtLabel.setVisible(False)
-#        c_wgt = QLineEdit()
-#        c_wgt.setValidator(QDoubleValidator())
-#        c_wgt.setText('1')
-#        c_wgt.editingFinished.connect(c_wgtFunc)
-#        c_wgt.setVisible(False)
-#        invForm.addRow(c_wgtLabel, c_wgt)
+        def c_wgtFunc():
+            self.r2.param['c_wgt'] = float(c_wgt.text())
+        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
+        c_wgtLabel.linkActivated.connect(showHelp)
+        c_wgtLabel.setVisible(False)
+        c_wgt = QLineEdit()
+        c_wgt.setValidator(QDoubleValidator())
+        c_wgt.setText('1')
+        c_wgt.editingFinished.connect(c_wgtFunc)
+        c_wgt.setVisible(False)
+        invForm.addRow(c_wgtLabel, c_wgt)
 #        
 #        def d_wgtFunc():
 #            self.r2.param['d_wgt'] = float(d_wgt.text())
