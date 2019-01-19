@@ -217,7 +217,7 @@ def write2Din(param, dirname, typ='R2'):
 
 
 #%%
-def write3Din(param, dirname, typ='R3'):
+def write3Din(param, dirname, typ='R3t'):
     """ Write a .in file with the `param` specified in the `dirname` for 3D survey.
     See `write2in` for detailed documentation.
     """
@@ -263,7 +263,8 @@ def write3Din(param, dirname, typ='R3'):
             param['job_type'], param['singular_type'])
 
     # parameters specific to inversion
-    if typ=='R3':
+    if typ=='R3t':
+        print('hello')
         content = content + '{}\t<< num_regions\n'.format(param['num_regions'])
             
         if param['num_regions'] == 0:
@@ -303,7 +304,7 @@ def write3Din(param, dirname, typ='R3'):
                 content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
                         *param['xy_poly_table'].flatten())
 
-    elif typ == 'cR3':
+    elif typ == 'cR3t':
         content = content + '{}\t<< num_regions\n'.format(param['num_regions'])
         
         if param['num_regions'] == 0:
@@ -357,14 +358,14 @@ def write3Din(param, dirname, typ='R3'):
     return content
 
 #test code
-param = {}
-param['node_elec'] = np.c_[np.arange(24)+1, np.arange(24)+1] # needed
-param['inversion_type'] = 0 # test background regularization
-param['job_type'] = 1 # test forward model
-param['num_regions'] = 0
-param['res0File'] = 'resistivity.dat'
-content = write3Din(param,'.')
-content = write3Din(param,'.', typ = 'cR3') #test cR3.in creation
+#param = {}
+#param['node_elec'] = np.c_[np.arange(24)+1, np.arange(24)+1] # needed
+#param['inversion_type'] = 0 # test background regularization
+#param['job_type'] = 1 # test forward model
+#param['num_regions'] = 0
+#param['res0File'] = 'resistivity.dat'
+#content = write3Din(param,'.')
+#content = write3Din(param,'.', typ = 'cR3t') #test cR3.in creation
 
 
 #%% forward modelling config file 
