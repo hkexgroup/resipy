@@ -808,8 +808,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 n = s.df['n'].values.copy()
                 s.df.loc[ie, 'm'] = n[ie]
                 s.df.loc[ie, 'n'] = m[ie]
-                s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
-                s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
+#                s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
+#                s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
 
         if self.iTimeLapse is True:
             # a bit simplistic but assign error to all based on Transfer resistance
