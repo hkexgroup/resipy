@@ -347,6 +347,7 @@ class App(QMainWindow):
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
                 dimForward.setEnabled(True)
+                dimForward.setChecked(False)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
                 
@@ -380,7 +381,9 @@ class App(QMainWindow):
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
+                dimForward.setChecked(False)
                 dimForward.setEnabled(False)
+                dimInverse.setChecked(True)
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
                 
