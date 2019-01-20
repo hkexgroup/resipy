@@ -697,7 +697,7 @@ class App(QMainWindow):
         buttonf.clicked.connect(getfile)
         buttonf.setToolTip('Select input file (time-lapse: select the directory that contains the data).')
         
-        def getfileR():
+        def getfileR(): # import reciprocal file
             fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
             if fnameRecip != '':
                 buttonfr.setText(os.path.basename(fnameRecip))
@@ -705,7 +705,7 @@ class App(QMainWindow):
                     spacing = None
                 else:
                     spacing = float(spacingEdit.text())
-                self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing)
+                self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing, parser=self.parser)
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                     tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                     plotError()
