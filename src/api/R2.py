@@ -1542,7 +1542,8 @@ class R2(object): # R2 master class instanciated by the GUI
             r = np.array(self.mesh.attr_cache['res0'])
             phase = np.array(self.mesh.attr_cache['phase0'])
             centroids = np.array(self.mesh.elm_centre).T
-            x = np.c_[centroids,
+            x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
+                      centroids[:,2],
                       r,
                       phase, # mrad
                       np.log10(r),
