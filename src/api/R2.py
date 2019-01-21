@@ -430,9 +430,6 @@ class R2(object): # R2 master class instanciated by the GUI
             
         print('computed DOI : {:.2f}'.format(self.doi))
         
-
-        
-        
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
                    cl=-1, dump=print, **kwargs):
         """ Create a mesh.
@@ -603,6 +600,12 @@ class R2(object): # R2 master class instanciated by the GUI
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
         self.resist0 = np.ones(len(self.regions))*100
         
+    def importMesh():
+        """
+        Import mesh
+        import either nodes or coordinates 
+        """
+        pass
         
     def showMesh(self, ax=None):
         """ Display the mesh.
@@ -1480,7 +1483,13 @@ class R2(object): # R2 master class instanciated by the GUI
             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
             qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
         self.sequence = np.vstack(qs)
-    
+        
+    def elec2distance():
+        """
+        Convert 3d xy data in pure x lateral distance.
+        """
+        # TODO: JIMMY #### 
+        pass
     
     def importElec(self, fname=''):
         """ Import electrodes positions.
@@ -1494,8 +1503,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if elec.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columsn')
         else:
-            self.elec = elec
-            
+            self.elec = elec            
     
     def importSequence(self, fname=''):
         """ Import sequence for forward modelling.
@@ -1821,6 +1829,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             fname = 'f{:03d}.vtk'.format(index+1)            
         Popen(['paraview', os.path.join(self.dirname, fname)])
+        #TODO: add capacity for windows - Jimmy #### 
 
 
     def showSlice(self, index=0, ax=None, attr=None, axis='z'): 

@@ -121,7 +121,8 @@ def planeintersect(Ax, Ay, Az,
 #%% is inside a volume
 def isinvolume(x,y,z,volume_data,ray_cast=10000):
     """
-    Determine if a point lies inside a bounding volume
+    Determine if a point lies inside a bounding volume (The code will not check 
+    if supplied planes are bound).
     
     Parameters
     ----------
@@ -132,7 +133,8 @@ def isinvolume(x,y,z,volume_data,ray_cast=10000):
     z: array like, float
         z coordinate of query point
     volume_data: list 
-        contains column of poly_data, in the form (polyx, polyy, polyz)
+        contains column of poly_data, in the form (polyx, polyy, polyz). Each 
+        poly_data argument describes the side of a volume. 
     ray_cast: float, optional
         determines how the far in the x axis a point is ray casted 
     Returns
@@ -145,6 +147,8 @@ def isinvolume(x,y,z,volume_data,ray_cast=10000):
         polygon x coordinates 
     polyy: array like
         polygon y coordinates
+    polyz: array like
+        polygon z coordinates
     """
     if not isinstance(volume_data,list):
         raise TypeError("Expected list type argument for 'volume_data'")
