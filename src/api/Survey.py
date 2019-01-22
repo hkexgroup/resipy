@@ -1327,10 +1327,12 @@ class Survey(object):
         elec = self.elec.copy()
         x = elec[:,0]
         y = elec[:,1]
+        z = elec[:,2]
         
         idx = np.argsort(x) # sort by x axis
         x_sorted = x[idx]
         y_sorted = y[idx]
+        z_sorted = z[idx]
         
         x_abs = np.zeros_like(x, dtype=float)
         #the first entry should be x = 0
@@ -1340,9 +1342,14 @@ class Survey(object):
             sq_dist = delta_x**2 + delta_y**2
             x_abs[i+1] =  x_abs[i] + np.sqrt(sq_dist)
         
-        elec[:,1] = np.zeros_like(x, dtype=float)        
-        elec[:,0] = x_abs[idx] # return values in the order in which they came
-        self.elec = elec
+        # return values in the order in which they came
+        new_elec = np.zeros_like(elec, dtype=float)        
+        for i in range(len(z)):
+            put_back = idx[i] # index to where to the value back again
+            new_elec[put_back,0] = x_abs[i]
+            new_elec[put_back,2] =  z_sorted[i]
+    
+        self.elec = new_elec
 
 """        
     def addModError(self, fname):
