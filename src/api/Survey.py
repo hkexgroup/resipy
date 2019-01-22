@@ -209,12 +209,14 @@ class Survey(object):
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
+        if ftype == 'BGS Prime':
+            self.checkTxSign()
         self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
         self.reciprocal()
         self.basicFilter() # we assume the user input reciprocal data not another
         # normal survey
-        
+
     
     def filterData(self, i2keep):
         """ Filter out the data not retained in `i2keep`.
@@ -1319,6 +1321,37 @@ class Survey(object):
         df['n'] = corrected[:,3]
         self.df = df 
         #return replace,corrected
+    
+    def elec2distance(self):
+        """
+        Convert 3d xy data in pure x lateral distance. Use for 2D data only!
+        """
+        elec = self.elec.copy()
+        x = elec[:,0]
+        y = elec[:,1]
+        z = elec[:,2]
+        
+        idx = np.argsort(x) # sort by x axis
+        x_sorted = x[idx]
+        y_sorted = y[idx]
+        z_sorted = z[idx]
+        
+        x_abs = np.zeros_like(x, dtype=float)
+        #the first entry should be x = 0
+        for i in range(len(x)-1):
+            delta_x = x_sorted[i] - x_sorted[i+1]
+            delta_y = y_sorted[i] - y_sorted[i+1]
+            sq_dist = delta_x**2 + delta_y**2
+            x_abs[i+1] =  x_abs[i] + np.sqrt(sq_dist)
+        
+        # return values in the order in which they came
+        new_elec = np.zeros_like(elec, dtype=float)        
+        for i in range(len(z)):
+            put_back = idx[i] # index to where to the value back again
+            new_elec[put_back,0] = x_abs[i]
+            new_elec[put_back,2] =  z_sorted[i]
+    
+        self.elec = new_elec
 
 """        
     def addModError(self, fname):

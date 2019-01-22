@@ -1004,7 +1004,6 @@ class Mesh:
         Notes
         ------------
         Nothing is returned but the mesh.e_nodes parameter is updated (or added)
-        #### TODO: Test this function. 
         """
         #formalities 
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
@@ -1960,8 +1959,9 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
 def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
              show_output=True, path='exe', dump=print,whole_space=False, **kwargs):
     """ 
-    Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+    Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
+    Uses gmsh version 3.0.6.
             
     Parameters
     ---------- 
@@ -1970,9 +1970,15 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     elec_z: array like 
         electrode y coordinates 
     elec_type: list of strings, optional
-        type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list    
+        List should be the same length as the electrode coordinate argument. Each entry in
+        the list references the type of electrode: 
+            'electrode' = surface electrode coordinate, will be used to construct the topography in the mesh
+            'buried' = buried electrode, placed the mesh surface
+            'borehole' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
+                        borehole numbering starts at 1 and ascends numerically by 1.  
     geom_input : dict, optional
-        Allows for advanced survey geometry in genGeoFile in gmshWrap.py (see notes there).
+        Allows for further customisation of the 2D mesh, its a
+        dictionary contianing surface topography, polygons and boundaries 
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the exe directory.
     show_ouput : boolean, optional
@@ -1991,7 +1997,33 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     Returns
     -------
     mesh: class
-    
+        <pyR2> mesh class
+        
+    NOTES
+    ----------
+     geom_input format:
+        the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
+        currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
+        the first borehole string should be given the key 'borehole1' and so on. The code stops
+        searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
+        and polygons to the mesh. See below example:
+            
+            geom_input = {'surface': [surf_x,surf_z],
+              'boundary1':[bound1x,bound1y],
+              'polygon1':[poly1x,poly1y]} 
+            
+    electrodes and electrode_type (if not None) format: 
+        
+            electrodes = [[x1,x2,x3,...],[y1,y2,y3,...]]
+            electrode_type = ['electrode','electrode','buried',...]
+        
+        like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
+        The code will cycle through each borehole and internally sort them and add them to 
+        the mesh. 
+        
+    The code expects that all polygons, boundaries and electrodes fall within x values 
+    of the actaul survey area. So make sure your topography / surface electrode points cover 
+    the area you are surveying, otherwise some funky errors will occur in the mesh. 
     """
     #check directories 
     if path == "exe":

@@ -225,7 +225,7 @@ def write3Din(param, dirname, typ='R3t'):
     # default
     dparam = {
             'lineTitle':'My beautiful survey',
-            'job_type':1,
+            'job_type':1, # inversion by default
             'singular_type':0,
             'num_regions':1,
             'resis':100.0, # default resistivity for regions Ohm.m
@@ -245,7 +245,9 @@ def write3Din(param, dirname, typ='R3t'):
             'min_step':0.001, # 3D specific
             'a_wgt':0.01,
             'b_wgt':0.02,
-            'c_wgt':1,
+            'c_wgt':1, # cR3t specific
+            'rho_min': -1000, # cR3t specific
+            'rho_max': 1000, # cR3t specific
             'zmin':-10, # 3D specific
             'zmax':0, # 3D specific
             'num_xy_poly':0,
@@ -313,37 +315,41 @@ def write3Din(param, dirname, typ='R3t'):
         else:
             content = content + '{}\t{}\t<< resis, phase\n\n'.format(param['resis'], param['phase'] )  # replace by default rho
             
-            if param['job_type'] == 1:
-                content = content + '{}\t<< data_type\n\n'.format(param['data_type'])
-                content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
-        
-                # type of inversion
-                if param['inverse_type'] == 0: # normal regularization
-                    content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, no_improve, \
-                        max_iterations, error_mod, alpha_aniso\n\n'.format(
-                        param['tolerance'], param['no_improve'], param['max_iter'],
-                        param['error_mod'], param['alpha_aniso'])
-                else: # background regularization or difference inversion
-                    content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<< tolerance, no_improve, \
-                    max_iterations, error_mod, alpha_aniso, alpha_s\n\n'.format(
+        if param['job_type'] == 1:
+            # note that there is no data type in inverse, all is transformed to log by default
+            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
+    
+            # type of inversion
+            if param['inverse_type'] == 0: # normal regularization
+                content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, no_improve, \
+                    max_iterations, error_mod, alpha_aniso\n\n'.format(
                     param['tolerance'], param['no_improve'], param['max_iter'],
-                    param['error_mod'], param['alpha_aniso'], param['alpha_s'])
-                
-                content = content + '{}\t{}\t<< cginv_tolerance, cginv_maxits\n\n'.format(
-                        param['cginv_tolerance'], param['cginv_maxits'])
-                content = content + '{}\t{}\t<< alpha_max, num_alpha_steps\n\n'.format(
-                        param['alpha_max'], param['num_alpha_steps'])
-                content = content + '{}\t<< min_step\n\n'.format(param['min_step'])
-                content = content + '{}\t{}\t<<a_wgt, b_wgt\n\n'.format(param['a_wgt'],
-                                     param['b_wgt'])
-                content = content + '{}\t{}\t<<zmin, zmax\n'.format(param['zmin'],
-                                     param['zmax'])
-                
-                # define polyline
-                content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
-                if param['num_xy_poly'] != 0:
-                    content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
-                            *param['xy_poly_table'].flatten())
+                    param['error_mod'], param['alpha_aniso'])
+            else: # background regularization or difference inversion
+                content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<< tolerance, no_improve, \
+                max_iterations, error_mod, alpha_aniso, alpha_s\n\n'.format(
+                param['tolerance'], param['no_improve'], param['max_iter'],
+                param['error_mod'], param['alpha_aniso'], param['alpha_s'])
+            
+            content = content + '{}\t{}\t<< cginv_tolerance, cginv_maxits\n\n'.format(
+                    param['cginv_tolerance'], param['cginv_maxits'])
+            content = content + '{}\t{}\t<< alpha_max, num_alpha_steps\n\n'.format(
+                    param['alpha_max'], param['num_alpha_steps'])
+            content = content + '{}\t<< min_step\n\n'.format(param['min_step'])
+            
+            # cR3t specific
+            content = content + '{}\t{}\t{}\t{}\t{}\t<<a_wgt, b_wgt, c_wgt, rho_min, rho_max\n\n'.format(
+                            param['a_wgt'], param['b_wgt'], param['c_wgt'],
+                            param['rho_min'], param['rho_max'])
+            
+            content = content + '{}\t{}\t<<zmin, zmax\n'.format(param['zmin'],
+                                 param['zmax'])
+            
+            # define polyline
+            content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
+            if param['num_xy_poly'] != 0:
+                content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
+                        *param['xy_poly_table'].flatten())
     
     # define nodes for electrodes
     param['num_elec'] = param['node_elec'].shape[0]

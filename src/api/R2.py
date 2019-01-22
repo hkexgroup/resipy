@@ -6,7 +6,7 @@ Main R2 class, wraps the other pyR2 modules (API) in to an object orientated app
 """
 pyR2_version = '1.0.3' # pyR2 version (semantic versionning in use) 
 #import relevant modules 
-import os, sys, shutil, platform # python standard libs
+import os, sys, shutil, platform, warnings # python standard libs
 from subprocess import PIPE, call, Popen
 import subprocess
 import numpy as np # import default 3rd party libaries (can be downloaded from conda repositry, incl with winpython)
@@ -600,12 +600,42 @@ class R2(object): # R2 master class instanciated by the GUI
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
         self.resist0 = np.ones(len(self.regions))*100
         
-    def importMesh():
+    def importMesh(self,file_path,node_pos=None,elec=None,flag_3D=False):
         """
-        Import mesh
-        import either nodes or coordinates 
+        Import mesh from .vtk / .msh / .dat, rather than having <pyR2> create
+        one for you.
+        
+        Parameters
+        ------------
+        file_path: str
+            File path mapping to the mesh file
+        node_pos: array like, optional
+            Array of ints referencing the electrode nodes. If left as none no electrodes 
+            will be added to the mesh class. Consider using mesh.move_elec_nodes()
+            to add nodes to mesh using their xyz coordinates.
+        elec: numpy array, optional
+            N*3 numpy array of electrode x,y,z coordinates. Electrode node positions
+            will be computed by finding the nearest nodes to the relevant coordinates.
+        flag_3D: bool, optional
+            Make this true for 3D meshes if importing .msh type. 
+        Returns
+        -----------
+        mesh: class 
+            Added to R2 class
         """
-        pass
+        self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, flag_3D=flag_3D)
+        if elec is not None:
+            self.mesh.move_elec_nodes(elec[:,0],elec[:,1],elec[:,2])
+        
+        #add the electrodes to the R2 class
+        if elec is not None or node_pos is not None: # then electrode positions should be known
+            self.elec = np.array((self.mesh.elec_x, self.mesh.elec_y, self.mesh.elec_z))
+        else:
+            try:
+                elec = self.elec
+                self.mesh.move_elec_nodes(elec[:,0],elec[:,1],elec[:,2])
+            except AttributeError:
+                warnings.warn("No electrode nodes associated with mesh! Electrode positions are unknown!")
         
     def showMesh(self, ax=None):
         """ Display the mesh.
@@ -1483,13 +1513,6 @@ class R2(object): # R2 master class instanciated by the GUI
             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
             qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
         self.sequence = np.vstack(qs)
-        
-    def elec2distance():
-        """
-        Convert 3d xy data in pure x lateral distance.
-        """
-        # TODO: JIMMY #### 
-        pass
     
     def importElec(self, fname=''):
         """ Import electrodes positions.
@@ -2135,6 +2158,23 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.createMesh(cl=2)
 #k.write2in()
 #k.invert()
+#k.showResults()
+#k.showSlice(index=0)
+#k.meshResults[0].showSlice(axis='z')
+#k.meshResults[0].showSlice(axis='x')
+#k.meshResults[0].showSlice(axis='y')
+    
+    
+#%% 3D ip testing
+#k = R2(typ='cR3t')
+#k.createSurvey('api/test/protocol3Dip.dat', ftype='Protocol')
+#elec = np.genfromtxt('api/test/electrodes3Dip.dat')
+#k.setElec(elec)
+#k.createMesh(cl=1)
+#k.showMesh()
+#k.write2in()
+#k.invert()
+#k.showInParaview()
 #k.showResults()
 #k.showSlice(index=0)
 #k.meshResults[0].showSlice(axis='z')
