@@ -209,12 +209,14 @@ class Survey(object):
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
+        if ftype == 'BGS Prime':
+            self.checkTxSign()
         self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
         self.reciprocal()
         self.basicFilter() # we assume the user input reciprocal data not another
         # normal survey
-        
+
     
     def filterData(self, i2keep):
         """ Filter out the data not retained in `i2keep`.

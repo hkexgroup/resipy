@@ -2128,3 +2128,20 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.meshResults[0].showSlice(axis='z')
 #k.meshResults[0].showSlice(axis='x')
 #k.meshResults[0].showSlice(axis='y')
+    
+    
+#%% 3D ip testing
+#k = R2(typ='cR3t')
+#k.createSurvey('api/test/protocol3Dip.dat', ftype='Protocol')
+#elec = np.genfromtxt('api/test/electrodes3Dip.dat')
+#k.setElec(elec)
+#k.createMesh(cl=1)
+#k.showMesh()
+#k.write2in()
+#k.invert()
+#k.showInParaview()
+#k.showResults()
+#k.showSlice(index=0)
+#k.meshResults[0].showSlice(axis='z')
+#k.meshResults[0].showSlice(axis='x')
+#k.meshResults[0].showSlice(axis='y')
