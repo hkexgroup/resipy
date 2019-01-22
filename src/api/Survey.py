@@ -342,7 +342,7 @@ class Survey(object):
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
-#        self.df = self.df.dropna()
+        self.df = self.df.dropna() # NaN values in cause error in error analysis and final protocol outcome
         
         return Ri
 
