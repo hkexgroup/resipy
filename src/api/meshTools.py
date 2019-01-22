@@ -2552,6 +2552,18 @@ info = systemCheck()
     
 #%% find paraview location in windows 
 def find_paraview():
+    """
+    Run on windows to find paraview.exe command
+    Returns
+    ----------
+    found: bool
+        If True the program was able to find where paraview is installed 
+        If false then the program could not find paraview in the default 
+        install locations. 
+    location: str
+        if found == True. The string maps to the paraview executable
+        if found == False. then 'n/a' is returned.   
+    """
     OpSys=platform.system() 
     if OpSys != "Windows":
         raise OSError("This function is only valid on Windows")
