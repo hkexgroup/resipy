@@ -843,6 +843,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 n = s.df['n'].values.copy()
                 s.df.loc[ie, 'm'] = n[ie]
                 s.df.loc[ie, 'n'] = m[ie]
+                # let's change the sign as cR2 will take the log of it anyway
+                # and we are dealing with a magnitude here, not a resistivity
                 s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
                 s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
 
@@ -2168,11 +2170,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #%% 3D ip testing
 #k = R2(typ='cR3t')
 #k.createSurvey('api/test/protocol3Dip.dat', ftype='Protocol')
+#k.surveys[0].kFactor = 1
 #elec = np.genfromtxt('api/test/electrodes3Dip.dat')
 #k.setElec(elec)
-#k.createMesh(cl=1)
+#k.createMesh(cl=.5)
 #k.showMesh()
-#k.write2in()
 #k.invert()
 #k.showInParaview()
 #k.showResults()
