@@ -97,7 +97,7 @@ class Survey(object):
 #        self.resist = self.df['resist'].values
 #        self.dev = self.df['dev'].values
         if ftype == 'BGS Prime':
-            self.checkTxSign()        
+            self.checkTxSign()
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
@@ -105,6 +105,7 @@ class Survey(object):
             self.basicFilter()
         else:
             self.dfphasereset = self.df.copy()
+        
         
 #        self.typ = 'R2' # or cR2 or R3, cR3
 #        self.errTyp = 'none' # type of error to add for DC
@@ -341,7 +342,7 @@ class Survey(object):
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
-        self.df = self.df.dropna()
+#        self.df = self.df.dropna()
         
         return Ri
 
@@ -1144,7 +1145,7 @@ class Survey(object):
             protocol.insert(3, 'sb', 1)
             protocol.insert(5, 'sm', 1)
             protocol.insert(7, 'sn', 1)
-            
+                
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
