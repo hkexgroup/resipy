@@ -1319,6 +1319,30 @@ class Survey(object):
         df['n'] = corrected[:,3]
         self.df = df 
         #return replace,corrected
+    
+    def elec2distance(self):
+        """
+        Convert 3d xy data in pure x lateral distance. Use for 2D data only!
+        """
+        elec = self.elec.copy()
+        x = elec[:,0]
+        y = elec[:,1]
+        
+        idx = np.argsort(x) # sort by x axis
+        x_sorted = x[idx]
+        y_sorted = y[idx]
+        
+        x_abs = np.zeros_like(x, dtype=float)
+        #the first entry should be x = 0
+        for i in range(len(x)-1):
+            delta_x = x_sorted[i] - x_sorted[i+1]
+            delta_y = y_sorted[i] - y_sorted[i+1]
+            sq_dist = delta_x**2 + delta_y**2
+            x_abs[i+1] =  x_abs[i] + np.sqrt(sq_dist)
+        
+        elec[:,1] = np.zeros_like(x, dtype=float)        
+        elec[:,0] = x_abs[idx] # return values in the order in which they came
+        self.elec = elec
 
 """        
     def addModError(self, fname):

@@ -1004,7 +1004,6 @@ class Mesh:
         Notes
         ------------
         Nothing is returned but the mesh.e_nodes parameter is updated (or added)
-        #### TODO: Test this function. 
         """
         #formalities 
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
