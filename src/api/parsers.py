@@ -201,6 +201,8 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
     x = np.genfromtxt(fname, skip_header=1)
     if x.shape[1] > 8: # max for non 3D cases
         colnames = colnames3d
+        if x.shape[1] > len(colnames3d): # we have IP in the file (or error)
+            colnames = np.r_[colnames, ['ip']]
         # remove string effect (faster option but might lead to non-consecutive elec number)
 #        maxElec = np.max(x[:,[2,4,6,8]])
 #        x[:,[2,4,6,8]] = x[:,[1,3,5,7]]*maxElec + x[:,[2,4,6,8]]
@@ -222,7 +224,8 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
         x[:,1:9] = elecs.reshape((-1,8))
         
     df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
-    df['ip'] = np.nan
+    if 'ip' not in df.columns:
+        df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
