@@ -6,7 +6,7 @@ Topography interpolation schemes for pyr2
 @author: jimmy
 """
 import numpy as np
-#from tqdm import tqdm
+#from tqdm import tqdm # progess bar package - disabled 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
 # see solution @ https://math.stackexchange.com/questions/828392/spatial-interpolation-for-irregular-grid
@@ -81,8 +81,6 @@ def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
         x coordinates for the interpolated values
     ynew: array like 
         y coordinates for the interpolated values
-    znew:
-        z coordinates for the interpolated values 
     xknown: array like
         x coordinates for the known values 
     yknown: array like
@@ -183,8 +181,6 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
         x coordinates for the interpolated values
     ynew: array like 
         y coordinates for the interpolated values
-    znew:
-        z coordinates for the interpolated values 
     xknown: array like
         x coordinates for the known values 
     yknown: array like
@@ -239,7 +235,7 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
 def nearest(xnew, ynew, xknown, yknown, zknown): 
     """
     Compute z values for unstructured data using nearest neighbour extrapolation.
-    Suitable where a dense known occur. 
+    Suitable where dense known coordinates occur.ie. in the case of a DEM.  
     
     Parameters
     ------------
@@ -247,8 +243,6 @@ def nearest(xnew, ynew, xknown, yknown, zknown):
         x coordinates for the interpolated values
     ynew: array like 
         y coordinates for the interpolated values
-    znew:
-        z coordinates for the interpolated values 
     xknown: array like
         x coordinates for the known values 
     yknown: array like
