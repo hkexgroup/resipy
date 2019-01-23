@@ -24,11 +24,11 @@ from api.Survey import Survey
 import api.meshTools as mt
 
 print(' -------------- Testing importing vtk --------------')
-fresults = os.path.join('./test/f001_res.vtk')
-if os.path.isfile(fresults):
-    mesh_dict = mt.vtk_import(fresults)#makes a dictionary of a mesh 
-    mesh = mt.Mesh.mesh_dict2obj(mesh_dict)# this is a mesh_obj class instance 
-    mesh.show()
+fresults = os.path.join('./api/test/f001.vtk')
+mesh = mt.vtk_import(fresults)#makes a dictionary of a mesh 
+assert mesh.elm_centre[0][0] == 16.442
+assert np.array(mesh.con_matrix).shape[1] == 1362
+mesh.show()
 
 
 
