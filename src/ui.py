@@ -749,7 +749,8 @@ class App(QMainWindow):
                     showIpOptions(True)
                     mwPseudoIP.setVisible(True)
                     tabPreProcessing.setTabEnabled(1, True)
-                    tabPreProcessing.setTabEnabled(3, True)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                        tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
                     heatRaw()
     #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
                     self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
