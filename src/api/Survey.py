@@ -1301,13 +1301,13 @@ class Survey(object):
         if imin != 1:
             print("It looks like scheduling indexing starts at: %i"%imin)
             print("...normalising electrode indexing to start at 1.")
-        corrected = sch_mat - (imin - 1)
-        #return corrected
-        df['a'] = corrected[:,0]
-        df['b'] = corrected[:,1]
-        df['m'] = corrected[:,2]
-        df['n'] = corrected[:,3]
-        self.df = df 
+            corrected = sch_mat - (imin - 1)
+            #return corrected
+            df['a'] = corrected[:,0]
+            df['b'] = corrected[:,1]
+            df['m'] = corrected[:,2]
+            df['n'] = corrected[:,3]
+            self.df = df 
 
     def swapIndexes(self,old_indx,new_indx): # replace the electrode number in a sequence matrix
         #say for example you have a dud electrode which was replaced by a new electrode number. 
@@ -1322,6 +1322,33 @@ class Survey(object):
         df['n'] = corrected[:,3]
         self.df = df 
         #return replace,corrected
+    
+    def normElecIdx(self):
+        """
+        Normalise the electrode indexing sequencing to start at 1 and ascend
+        consectively (ie 1 , 2 , 3 , 4 ... )
+        
+        Function firstly normalises all indexes so that the lowest electrode 
+        number is 1. Then removes jumps in the electrode indexing. 
+        """
+        #self.zeroIndexes() # normalise the electrode indexes to start at 1 ?
+        df = self.df.copy()
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).flatten()
+        uni_idx = np.unique(sch_mat) # returns sorted and unique array of electrode indexes
+        comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
+        num_elec = len(uni_idx)        
+        count = 0 # rolling total for number of indexes which had to be 'corrected' 
+        for i in range(num_elec):
+            #print(uni_idx[i],comp_idx[i])
+            if uni_idx[i] != comp_idx[i]: # if there is a mis match, put the electrodes in the right order
+                self.swapIndexes(uni_idx[i],comp_idx[i])
+                count += 1 
+                print("electrode number %i changed to %i"%(uni_idx[i],comp_idx[i]))
+        if count > 0:
+            print("%i electrode indexes corrected to be in consective and ascending order"%count)
+        else:
+            print("Electrode indexing appears to be okay")
+    
     
     def elec2distance(self):
         """
