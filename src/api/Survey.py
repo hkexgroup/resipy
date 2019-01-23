@@ -1786,7 +1786,7 @@ class Survey(object):
 #%% test code
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #s = Survey('api/test/syscalFile.csv', ftype='Syscal')
-#s = Survey('api/test/rifleday8.csv', ftype='Syscal')
+#s = Survey('api/test/IP/rifleday8.csv', ftype='Syscal')
 #s = Survey('api/test/protocol3Di.dat', ftype='Protocol')
 #s.manualFiltering()
 #s.dca()

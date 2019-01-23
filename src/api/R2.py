@@ -1990,8 +1990,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #%% test for IP
 #os.chdir('/media/jkl/data/phd/tmp/r2gui/')
 #k = R2(typ='cR2')
-#k.createSurvey('api/test/rifleday8.csv', ftype='Syscal')
-#k.createSurvey('api/test/syscalFileIP.csv')
+#k.createSurvey('api/test/IP/rifleday8.csv', ftype='Syscal')
+#k.createSurvey('api/test/IP/syscalFileIP.csv')
 #k.createMesh('trian')
 #k.write2protocol()
 #k.write2in()
