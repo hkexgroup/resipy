@@ -1160,12 +1160,16 @@ class R2(object): # R2 master class instanciated by the GUI
         color_map : str, optional
             Name of the colormap to be used.
         """
+        if len(self.meshResults) == 0:
+            self.getResults()
         if (attr == '') & (self.typ[0] != 'c'):
             attr = 'Resistivity(log10)'
         if (attr == '') & (self.typ[0] == 'c'):
             attr = 'Sigma_real(log10)'
-        if len(self.meshResults) == 0:
-            self.getResults()
+        keys = list(self.meshResults[index].attr_cache.keys())
+        if attr not in keys:
+            print('Attribute not found, revert to default')
+            attr = keys[0]
         if len(self.meshResults) > 0:
             if zlim is None:
                 zlim = [self.doi, np.max(self.elec[:,2])]
@@ -1861,7 +1865,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Show slice of 3D mesh interactively.
         """
         if attr is None:
-            attr = list(self.meshResults[0].attr_cache.keys())[0]
+            attr = list(self.meshResults[index].attr_cache.keys())[0]
         self.meshResults[index].showSlice(
                 attr=attr, axis=axis)
         

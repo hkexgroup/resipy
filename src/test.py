@@ -11,8 +11,12 @@ RUN ALL SECTION ON THE TEST AND CHECK THE GRAPH PRODUCED
 import numpy as np
 import os
 import matplotlib.pyplot as plt
+plt.ion()
 
-testdir = 'api/test/image/'
+#testdir = 'api/test/image/'
+#if os.path.exists(testdir):
+#    os.remove(testdir)
+#os.mkdir(testdir)
 
 #%% testing the Survey class
 from api.Survey import Survey
@@ -52,11 +56,13 @@ k.createMesh(typ='trian')
 k.showMesh()
 k.pwlfit()
 k.linfit()
+
 #k.lmefit(iplot=True)
 k.write2in()
 k.write2protocol(errTyp='pwl', errTot=True)
 k.invert()
 k.showResults()
+
 
 #%%
 print('-------------Testing borehole------------')
@@ -73,6 +79,7 @@ k.invert()
 k.showIter(index=0)
 k.showIter(index=1)
 k.showResults(sens=False)
+
 
 #%% test for IP
 
@@ -161,13 +168,13 @@ k.invert(iplot=True)
 
 # the forward initial model
 k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
-k.showResults(index=0, attr='Phase(mrad)')
-k.showResults(index=0, attr='Magnitude(Ohm-m)')
+#k.showResults(index=0, attr='Phase(mrad)')
+#k.showResults(index=0, attr='Magnitude(Ohm-m)')
 
 # the inverted
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
-k.showResults(index=1, attr='Phase(mrad)')
-k.showResults(index=1, attr='Magnitude(Ohm-m)')
+#k.showResults(index=1, attr='Phase(mrad)')
+#k.showResults(index=1, attr='Magnitude(Ohm-m)')
 
 
 #%% test Paul River
@@ -190,7 +197,6 @@ k.showResults(sens=False)
 
 
 #%% 3D testing
-
 print('-------------Testing 3D inversion ------------')
 k = R2(typ='R3t')
 k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
@@ -199,10 +205,25 @@ k.setElec(elec)
 k.createMesh(cl=2)
 k.invert()
 k.showResults() 
-k.meshResults[0].showSlice(axis='z')
-k.meshResults[0].showSlice(axis='x')
-k.meshResults[0].showSlice(axis='y')
+k.showSlice(axis='z')
+k.showSlice(axis='x')
+k.showSlice(axis='y')
 
 
+#%% 3D ip testing
+print('-------------Testing 3D IP inversion ------------')
+k = R2(typ='cR3t')
+k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')
+elec = np.genfromtxt('api/test/electrodes3Dip.dat')
+k.setElec(elec)
+k.createMesh(cl=3)
+k.showMesh()
+k.invert()
+k.showResults()
+k.showSlice(index=0)
+k.showSlice(axis='z')
+k.showSlice(axis='x')
+k.showSlice(axis='y')
+k.showInParaview()
 
 
