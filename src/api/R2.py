@@ -734,8 +734,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 r = np.array(self.mesh.attr_cache['r100'])
                 phase = np.array(self.mesh.attr_cache['phase2'])
                 centroids = np.array(self.mesh.elm_centre).T
-                x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
-                          centroids[:,2],
+                centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
+                x = np.c_[centroids2,
                           r,
                           phase, # mrad
                           np.log10(r),
@@ -755,8 +755,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 r = np.array(self.mesh.attr_cache['res0'])
                 phase = np.array(self.mesh.attr_cache['phase0'])
                 centroids = np.array(self.mesh.elm_centre).T
-                x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
-                          centroids[:,2],
+                centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
+                x = np.c_[centroids2,
                           r,
                           phase, # mrad
                           np.log10(r),
@@ -1575,8 +1575,8 @@ class R2(object): # R2 master class instanciated by the GUI
             r = np.array(self.mesh.attr_cache['res0'])
             phase = np.array(self.mesh.attr_cache['phase0'])
             centroids = np.array(self.mesh.elm_centre).T
-            x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
-                      centroids[:,2],
+            centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
+            x = np.c_[centroids2,
                       r,
                       phase, # mrad
                       np.log10(r),
@@ -2169,11 +2169,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     
 #%% 3D ip testing
 #k = R2(typ='cR3t')
-#k.createSurvey('api/test/protocol3Dip.dat', ftype='Protocol')
-#k.surveys[0].kFactor = 1
+#k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')
+#k.surveys[0].kFactor = -1
 #elec = np.genfromtxt('api/test/electrodes3Dip.dat')
 #k.setElec(elec)
-#k.createMesh(cl=.5)
+#k.createMesh(cl=2)
 #k.showMesh()
 #k.invert()
 #k.showInParaview()
