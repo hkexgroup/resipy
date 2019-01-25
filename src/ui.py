@@ -657,6 +657,9 @@ class App(QMainWindow):
                 try:
                     self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                          parser=self.parser)
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
                 except:
                     errorDump('File is not recognized.')
                     pass
@@ -1353,7 +1356,7 @@ class App(QMainWindow):
             if index == 0:
                 a_wgt.setText('0.01')
                 a_wgtFunc()
-                b_wgt.setText('0.02')
+                b_wgt.setText('0.02')                
                 b_wgtFunc()
             else:
                 a_wgt.setText('0.0')
@@ -2264,6 +2267,9 @@ class App(QMainWindow):
             if arg == True:
                 a_wgt.setText('0.02')
                 b_wgt.setText('2')
+                if 'magErr' in self.r2.surveys[0].df.columns:
+                    a_wgt.setText('0.0')
+                    b_wgt.setText('0.0')
                 if self.r2.typ == 'cR3t':
                     c_wgt.setText('1')
                     c_wgt.setVisible(True)
