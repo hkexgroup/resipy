@@ -925,9 +925,9 @@ class App(QMainWindow):
                 return table
             
             def readTable(self, fname, nbElec=None):
-#                    df = pd.read_csv(fname, header=None)
-#                    tt = df.values
-                    tt = np.genfromtxt(fname)
+                    df = pd.read_csv(fname, header=None)
+                    tt = df.values
+#                    tt = np.genfromtxt(fname)
                     if nbElec is not None:
                         if tt.shape[0] != nbElec:
                             errorDump('The file must have exactly ' + \

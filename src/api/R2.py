@@ -201,13 +201,12 @@ class R2(object): # R2 master class instanciated by the GUI
             Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
             M = 3 if x,y,z coordinates are supplied.
         """
+        ok = False
         if self.elec is not None: # then check the shape
             if elec.shape[0] == self.elec.shape[0]:
                 ok = True
             else:
                 print('ERROR : elec, does not match shape from Survey;')
-        else:
-            ok = True
         
         if ok:
             if elec.shape[1] == 2:
@@ -383,7 +382,22 @@ class R2(object): # R2 master class instanciated by the GUI
 #        else:
 #            self.pseudoCallback(**kwargs)
     
-    
+    def filterElec(self, elec=[]):
+        """ Filter out specific electrodes given in all surveys.
+        
+        Parameters
+        ---------
+        elec : list
+            List of electrode number to be removed.
+        
+        """
+        for e in elec:
+            for i, s in enumerate(self.surveys):
+                i2keep = (s.df[['a','b','m','n']].values != e).all(1)
+                s.filterData(i2keep)
+                print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
+        
+        
     def computeDOI(self):
         """ Compute the Depth Of Investigation (DOI).
         """
@@ -734,8 +748,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 r = np.array(self.mesh.attr_cache['r100'])
                 phase = np.array(self.mesh.attr_cache['phase2'])
                 centroids = np.array(self.mesh.elm_centre).T
-                x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
-                          centroids[:,2],
+                centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
+                x = np.c_[centroids2,
                           r,
                           phase, # mrad
                           np.log10(r),
@@ -755,8 +769,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 r = np.array(self.mesh.attr_cache['res0'])
                 phase = np.array(self.mesh.attr_cache['phase0'])
                 centroids = np.array(self.mesh.elm_centre).T
-                x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
-                          centroids[:,2],
+                centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
+                x = np.c_[centroids2,
                           r,
                           phase, # mrad
                           np.log10(r),
@@ -1160,12 +1174,16 @@ class R2(object): # R2 master class instanciated by the GUI
         color_map : str, optional
             Name of the colormap to be used.
         """
+        if len(self.meshResults) == 0:
+            self.getResults()
         if (attr == '') & (self.typ[0] != 'c'):
             attr = 'Resistivity(log10)'
         if (attr == '') & (self.typ[0] == 'c'):
             attr = 'Sigma_real(log10)'
-        if len(self.meshResults) == 0:
-            self.getResults()
+        keys = list(self.meshResults[index].attr_cache.keys())
+        if attr not in keys:
+            print('Attribute not found, revert to default')
+            attr = keys[0]
         if len(self.meshResults) > 0:
             if zlim is None:
                 zlim = [self.doi, np.max(self.elec[:,2])]
@@ -1524,11 +1542,11 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
         """
-        elec = np.genfromtxt(fname)
+        elec = pd.read_csv(fname, header=None).values
         if elec.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columsn')
         else:
-            self.elec = elec            
+            self.setElec(elec)            
     
     def importSequence(self, fname=''):
         """ Import sequence for forward modelling.
@@ -1538,7 +1556,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file to be imported. The file shouldn't have any headers just 4 columns with the 4 electrodes numbers.
         """
-        seq = pd.read_csv(fname)
+        seq = pd.read_csv(fname, header=None)
         if seq.shape[1] != 4:
             raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
         else:
@@ -1575,8 +1593,8 @@ class R2(object): # R2 master class instanciated by the GUI
             r = np.array(self.mesh.attr_cache['res0'])
             phase = np.array(self.mesh.attr_cache['phase0'])
             centroids = np.array(self.mesh.elm_centre).T
-            x = np.c_[centroids[:,0], # Column Y is not needed in res0.dat for 2D
-                      centroids[:,2],
+            centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
+            x = np.c_[centroids2,
                       r,
                       phase, # mrad
                       np.log10(r),
@@ -1861,7 +1879,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Show slice of 3D mesh interactively.
         """
         if attr is None:
-            attr = list(self.meshResults[0].attr_cache.keys())[0]
+            attr = list(self.meshResults[index].attr_cache.keys())[0]
         self.meshResults[index].showSlice(
                 attr=attr, axis=axis)
         
@@ -2169,11 +2187,11 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     
 #%% 3D ip testing
 #k = R2(typ='cR3t')
-#k.createSurvey('api/test/protocol3Dip.dat', ftype='Protocol')
-#k.surveys[0].kFactor = 1
+#k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')
+#k.surveys[0].kFactor = -1
 #elec = np.genfromtxt('api/test/electrodes3Dip.dat')
 #k.setElec(elec)
-#k.createMesh(cl=.5)
+#k.createMesh(cl=2)
 #k.showMesh()
 #k.invert()
 #k.showInParaview()
