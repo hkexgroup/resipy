@@ -201,13 +201,12 @@ class R2(object): # R2 master class instanciated by the GUI
             Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
             M = 3 if x,y,z coordinates are supplied.
         """
+        ok = False
         if self.elec is not None: # then check the shape
             if elec.shape[0] == self.elec.shape[0]:
                 ok = True
             else:
                 print('ERROR : elec, does not match shape from Survey;')
-        else:
-            ok = True
         
         if ok:
             if elec.shape[1] == 2:
@@ -1543,11 +1542,11 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
         """
-        elec = np.genfromtxt(fname)
+        elec = pd.read_csv(fname, header=None).values
         if elec.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columsn')
         else:
-            self.elec = elec            
+            self.setElec(elec)            
     
     def importSequence(self, fname=''):
         """ Import sequence for forward modelling.
@@ -1557,7 +1556,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file to be imported. The file shouldn't have any headers just 4 columns with the 4 electrodes numbers.
         """
-        seq = pd.read_csv(fname)
+        seq = pd.read_csv(fname, header=None)
         if seq.shape[1] != 4:
             raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
         else:

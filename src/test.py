@@ -48,8 +48,7 @@ assert k.surveys[0].df.shape == (308, 18)
 assert np.sum(k.elec[:,2]) == 0 # no z topography by default
 assert np.sum(k.elec[:,1]) == 0 # no y topography by default
 k.pseudo(contour=True)
-topo = np.genfromtxt('./api/test/elecTopo.csv', delimiter=',')
-k.elec[:,[0,2]] = topo[:,[0,1]]
+k.importElec('./api/test/elecTopo.csv')
 k.createMesh(typ='quad',cl=0.1, cl_factor=5)
 k.showMesh()
 k.createMesh(typ='trian')
