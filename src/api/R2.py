@@ -383,7 +383,22 @@ class R2(object): # R2 master class instanciated by the GUI
 #        else:
 #            self.pseudoCallback(**kwargs)
     
-    
+    def filterElec(self, elec=[]):
+        """ Filter out specific electrodes given in all surveys.
+        
+        Parameters
+        ---------
+        elec : list
+            List of electrode number to be removed.
+        
+        """
+        for e in elec:
+            for i, s in enumerate(self.surveys):
+                i2keep = (s.df[['a','b','m','n']].values != e).all(1)
+                s.filterData(i2keep)
+                print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
+        
+        
     def computeDOI(self):
         """ Compute the Depth Of Investigation (DOI).
         """
