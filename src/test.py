@@ -58,7 +58,7 @@ k.linfit()
 
 #k.lmefit(iplot=True)
 k.write2in()
-k.write2protocol(errTyp='pwl', errTot=True)
+#k.write2protocol(errTyp='pwl', errTot=True)
 k.invert()
 k.showResults()
 
