@@ -42,7 +42,7 @@ from api.R2 import R2
 print('-------------Testing simple 2D inversion ------------')
 k = R2()
 assert k.typ == 'R2'
-k.createSurvey('./api/test/syscalFile.csv', ftype='Syscal')
+k.createSurvey('./api/test/syscalFileTopo.csv', ftype='Syscal')
 assert len(k.surveys) == 1
 assert k.surveys[0].df.shape == (308, 18)
 assert np.sum(k.elec[:,2]) == 0 # no z topography by default
@@ -53,8 +53,8 @@ k.createMesh(typ='quad',cl=0.1, cl_factor=5)
 k.showMesh()
 k.createMesh(typ='trian')
 k.showMesh()
-k.pwlfit()
-k.linfit()
+#k.pwlfit()
+#k.linfit()
 
 #k.lmefit(iplot=True)
 k.write2in()
@@ -92,6 +92,7 @@ k.showResults(attr='Magnitude(Ohm-m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
 k.pseudoError()
 
+
 #%% test for timelapse inversion
 
 print('-------------Testing Time-lapse in // ------------')
@@ -104,8 +105,9 @@ k.param['a_wgt'] = 0
 k.param['b_wgt'] = 0
 k.invert(iplot=False, parallel=True)
 k.saveInvPlots(attr='difference(percent)')
-k.showResults(index=3)
 k.showResults(index=1)
+k.showResults(index=2)
+k.showResults(index=3)
 
 
 #%% test for batch inversion
