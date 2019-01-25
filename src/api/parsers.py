@@ -115,11 +115,12 @@ def protocolParser(fname):
                 'm':[0]*num_meas,
                 'n':[0]*num_meas,
                 'resist':[0]*num_meas,
-                'appResist':[0]*num_meas} 
+                'magErr':[0]*num_meas}
+#                'appResist':[0]*num_meas} 
     #determine if apparent resistivity column is present 
-    app_resis_flag = False
-    if len(dump[0])==7:
-        app_resis_flag=True
+#    app_resis_flag = False
+#    if len(dump[0])==7:
+#        app_resis_flag=True
     for i, line in enumerate(dump):
         data = line.split()
         protocol['index'][i] = int(data[0])
@@ -128,10 +129,15 @@ def protocolParser(fname):
         protocol['m'][i] = int(data[3])
         protocol['n'][i] = int(data[4])
         protocol['resist'][i] = float(data[5])
-        if app_resis_flag:
-            protocol['appResist'][i]= float(data[6])
+#        if app_resis_flag:
+#            protocol['appResist'][i]= float(data[6])
+        if len(data) == 7:
+            protocol['magErr'][i] = float(data[6])
     
-    df = pd.DataFrame(protocol)
+    if np.mean(protocol['magErr']) !=0: 
+        df = pd.DataFrame(protocol) 
+    else: 
+        df = pd.DataFrame(protocol).drop(['magErr'], axis = 1)
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
@@ -170,11 +176,13 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
                 'n':[0]*num_meas,
                 'resist':[0]*num_meas,
                 'ip':[0]*num_meas,
-                'appResist':[0]*num_meas} 
+                'magErr':[0]*num_meas,
+                'phiErr':[0]*num_meas}
+#                'appResist':[0]*num_meas} 
     #determine if apparent resistivity column is present 
-    app_resis_flag = False
-    if len(dump[0])==8:
-        app_resis_flag=True
+#    app_resis_flag = False
+#    if len(dump[0])==8:
+#        app_resis_flag=True
     for i, line in enumerate(dump):
         data = line.split()
         protocol['index'][i] = int(data[0])
@@ -184,10 +192,16 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
         protocol['n'][i] = int(data[4])
         protocol['resist'][i] = float(data[5])
         protocol['ip'][i] = float(data[6])
-        if app_resis_flag:
-            protocol['appResist'][i]= float(data[7])
+#        if app_resis_flag:
+#            protocol['appResist'][i]= float(data[7])
+        if len(data) == 9:
+            protocol['magErr'][i] = float(data[7])
+            protocol['phiErr'][i] = float(data[8])
     
-    df = pd.DataFrame(protocol)
+    if np.mean(protocol['phiErr']) and np.mean(protocol['magErr']) !=0: 
+        df = pd.DataFrame(protocol) 
+    else: 
+        df = pd.DataFrame(protocol).drop(['magErr','phiErr'], axis = 1)
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
@@ -197,7 +211,7 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
 #%% 3D protocol parser
 def protocol3DParser(fname): # works for 2D and 3D (no IP)
     colnames3d = np.array(['index','sa', 'a','sb','b','sm', 'm','sn', 'n','resist'])
-    colnames = np.array(['index','a','b','m','n','resist','appResist'])
+    colnames = np.array(['index','a','b','m','n','resist','magErr'])
     x = np.genfromtxt(fname, skip_header=1)
     if x.shape[1] > 8: # max for non 3D cases
         colnames = colnames3d

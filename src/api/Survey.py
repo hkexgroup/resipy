@@ -1140,6 +1140,11 @@ class Survey(object):
                 protocol['R0'] = self.df['resist0'].values
             if ip == True:
                 protocol['Phase'] = -self.kFactor*self.df['ip'].values
+                if 'phiErr' in self.df.columns:
+                    protocol['error'] = self.df['magErr']
+                    protocol['ipError'] = self.df['phiErr']
+            elif 'magErr' in self.df.columns:
+                protocol['error'] = self.df['magErr'] 
                 
         if all(self.elec[:,1] == 0) is False: # it's a 3D example
             protocol.insert(1, 'sa', 1)
