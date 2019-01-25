@@ -1356,7 +1356,7 @@ class App(QMainWindow):
             if index == 0:
                 a_wgt.setText('0.01')
                 a_wgtFunc()
-                b_wgt.setText('0.02')                
+                b_wgt.setText('0.02')
                 b_wgtFunc()
             else:
                 a_wgt.setText('0.0')
