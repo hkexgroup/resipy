@@ -49,6 +49,7 @@ class Survey(object):
             name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
         self.iBorehole = False # True is it's a borehole
+        self.phase_flag = False
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
         
@@ -68,6 +69,7 @@ class Survey(object):
                     elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
+                self.phase_flag = True
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -209,6 +211,7 @@ class Survey(object):
                     elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
+                self.phase_flag = True
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
@@ -1108,8 +1111,10 @@ class Survey(object):
             protocol['R'] = dfg['recipMean'].values
             if res0:
                 protocol['R0'] = dfg['recipMean0'].values
-            if ip == True:
+            if ip == True and self.phase_flag == False:
                 protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
+            elif self.phase_flag == True:
+                protocol['Phase'] = dfg['ip'].values
             if errTyp != 'none':
                 if errTyp == 'obs':
                     protocol['error'] = self.df['recipError'].values[ie]
@@ -1139,7 +1144,10 @@ class Survey(object):
             if res0:
                 protocol['R0'] = self.df['resist0'].values
             if ip == True:
-                protocol['Phase'] = -self.kFactor*self.df['ip'].values
+                if self.phase_flag == False:
+                    protocol['Phase'] = -self.kFactor*self.df['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
+                elif self.phase_flag == True:
+                    protocol['Phase'] = self.df['ip'].values
                 if 'phiErr' in self.df.columns:
                     protocol['error'] = self.df['magErr']
                     protocol['ipError'] = self.df['phiErr']
