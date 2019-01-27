@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+
 import os
 import sys
 import time
@@ -40,6 +41,34 @@ def errorMessage(etype, value, tb):
 def catchErrors():
     sys.excepthook = errorMessage
     threading.Thread.__init__
+
+#%% Update checker
+import urllib
+import webbrowser
+
+def updateChecker():
+    #gets newest version from repository's requiremet.txt
+    try:
+        versionSource = urllib.request.urlopen("https://gitlab.com/hkex/pyr2/raw/master/requirements.txt?inline=false")
+        versionCheck = str(versionSource.read())
+        version = versionCheck.split('\\n')[1] # assuming version number is in 2nd line of requiremet.txt
+        if pyR2_version not in versionCheck:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("pyR2 version %s is available" % (version))
+            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+            msg.setWindowTitle("New version available")
+            bttnUpY = msg.addButton(QMessageBox.Yes)
+            bttnUpY.setText('Update')
+            bttnUpN = msg.addButton(QMessageBox.No)
+            bttnUpN.setText('Ignore')
+            msg.setDefaultButton(bttnUpY)
+            msg.exec_()
+            if msg.clickedButton() != bttnUpN:
+                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
+    except: #if there is no internet connection!
+        return False
+
 #%%
 QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
 
@@ -3456,7 +3485,7 @@ if __name__ == '__main__':
 
     ex = App()
     splash.hide() # hiding the splash screen when finished
-    
+    updateChecker()
     sys.exit(app.exec_())
 
 
