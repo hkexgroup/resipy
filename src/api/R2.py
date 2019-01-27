@@ -609,12 +609,11 @@ class R2(object): # R2 master class instanciated by the GUI
         file_path = os.path.join(self.dirname, name)
         self.mesh.write_dat(file_path)
         
-        
         self.regid = 1 # 1 is the background (no 0 region)
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
         self.resist0 = np.ones(len(self.regions))*100
         
-    def importMesh(self,file_path,node_pos=None,elec=None,flag_3D=False):
+    def importMesh(self,file_path,mesh_type='tetra',node_pos=None,elec=None,flag_3D=False):
         """
         Import mesh from .vtk / .msh / .dat, rather than having <pyR2> create
         one for you.
@@ -623,6 +622,8 @@ class R2(object): # R2 master class instanciated by the GUI
         ------------
         file_path: str
             File path mapping to the mesh file
+        mesh_type: str
+            Type of mesh, 'quad', 'trian', 'tetra'
         node_pos: array like, optional
             Array of ints referencing the electrode nodes. If left as none no electrodes 
             will be added to the mesh class. Consider using mesh.move_elec_nodes()
@@ -650,6 +651,35 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.mesh.move_elec_nodes(elec[:,0],elec[:,1],elec[:,2])
             except AttributeError:
                 warnings.warn("No electrode nodes associated with mesh! Electrode positions are unknown!")
+          
+        #R2 class mesh handling 
+        self.param['mesh'] = self.mesh
+        if mesh_type == 'quad':
+            self.param['mesh_type'] = 4
+        else:
+            self.param['mesh_type'] = 3
+            
+        e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
+        self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+        
+        self.param['num_regions'] = 0
+        self.param['res0File'] = 'res0.dat'
+        numel = self.mesh.num_elms
+        self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
+        self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
+        self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
+        self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
+        
+        name = 'mesh.dat'
+        if self.typ == 'R3t' or self.typ == 'cR3t':
+            name = 'mesh3d.dat'
+        file_path = os.path.join(self.dirname, name)
+        self.mesh.write_dat(file_path)
+        
+        self.regid = 1 # 1 is the background (no 0 region)
+        self.regions = np.ones(len(self.mesh.elm_centre[0]))
+        self.resist0 = np.ones(len(self.regions))*100
         
     def showMesh(self, ax=None):
         """ Display the mesh.

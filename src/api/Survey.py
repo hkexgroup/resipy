@@ -103,10 +103,10 @@ class Survey(object):
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
-        if all(irecip == 0) == False: # contains reciprocal
-            self.basicFilter()
-        else:
-            self.dfphasereset = self.df.copy()
+#        if all(irecip == 0) == False: # contains reciprocal
+#            self.basicFilter()
+#        else:
+#            self.dfphasereset = self.df.copy()
         
         
 #        self.typ = 'R2' # or cR2 or R3, cR3
@@ -1315,6 +1315,15 @@ class Survey(object):
         if imin != 1:
             print("It looks like scheduling indexing starts at: %i"%imin)
             print("...normalising electrode indexing to start at 1.")
+            #check to see if negative electrode numbers occur. 
+            if imin < 0:
+                #check there is a electrode at 0
+                imin_pos = np.min(np.abs(sch_mat))
+                if imin_pos == 1:
+                    print("positive electrode indexes normalised to start at 0")
+                    crr_idx = np.argwhere(sch_mat>0)
+                    sch_mat[crr_idx] -= 1
+                    
             corrected = sch_mat - (imin - 1)
             #return corrected
             df['a'] = corrected[:,0]
@@ -1337,13 +1346,17 @@ class Survey(object):
         self.df = df 
         #return replace,corrected
     
-    def normElecIdx(self):
+    def normElecIdx(self, debug=True):
         """
         Normalise the electrode indexing sequencing to start at 1 and ascend
         consectively (ie 1 , 2 , 3 , 4 ... )
         
         Function firstly normalises all indexes so that the lowest electrode 
         number is 1. Then removes jumps in the electrode indexing. 
+        Parameters
+        -----------
+        debug: bool
+            Output will be printed to console if true. 
         """
         #self.zeroIndexes() # normalise the electrode indexes to start at 1 ?
         df = self.df.copy()
@@ -1357,11 +1370,13 @@ class Survey(object):
             if uni_idx[i] != comp_idx[i]: # if there is a mis match, put the electrodes in the right order
                 self.swapIndexes(uni_idx[i],comp_idx[i])
                 count += 1 
-                print("electrode number %i changed to %i"%(uni_idx[i],comp_idx[i]))
-        if count > 0:
-            print("%i electrode indexes corrected to be in consective and ascending order"%count)
-        else:
-            print("Electrode indexing appears to be okay")
+                if debug:
+                    print("electrode number %i changed to %i"%(uni_idx[i],comp_idx[i]))
+        if debug:
+            if count > 0:
+                print("%i electrode indexes corrected to be in consective and ascending order"%count)
+            else:
+                print("Electrode indexing appears to be okay")
     
     
     def elec2distance(self):
