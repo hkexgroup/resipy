@@ -49,9 +49,9 @@ import webbrowser
 def updateChecker():
     #gets newest version from repository's requiremet.txt
     try:
-        versionSource = urllib.request.urlopen("https://gitlab.com/hkex/pyr2/raw/master/requirements.txt?inline=false")
+        versionSource = urllib.request.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
         versionCheck = str(versionSource.read())
-        version = versionCheck.split('\\n')[1] # assuming version number is in 2nd line of requiremet.txt
+        version = versionCheck.split('\\n')[1].replace("'",'') # assuming version number is in 2nd line of version.txt
         if pyR2_version not in versionCheck:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
@@ -64,7 +64,7 @@ def updateChecker():
             bttnUpN.setText('Ignore')
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
-            if msg.clickedButton() != bttnUpN:
+            if msg.clickedButton() == bttnUpY:
                 webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     except: #if there is no internet connection!
         return False
