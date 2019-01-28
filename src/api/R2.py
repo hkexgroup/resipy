@@ -1461,7 +1461,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.mesh.draw()
             if addAction is not None:
                 addAction()
-        self.mesh.show(ax=ax)
+        self.mesh.show(ax=ax, zlim=self.zlim)
         # we need to assign a selector to self otherwise it's not used
         self.selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
                                      typ=typ, callback=callback)
