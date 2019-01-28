@@ -501,7 +501,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec_type[buried]='buried'
                 
             elec_type = elec_type.tolist()
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,**kwargs)   #generate quad mesh   
+            surface_x = surface[:,0] if surface is not None else None
+            surface_z = surface[:,1] if surface is not None else None
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,
+                                                         surface_x=surface_x, surface_z=surface_z,
+                                                         **kwargs)   #generate quad mesh   
             #update parameters accordingly 
             self.param['meshx'] = meshx
             self.param['meshy'] = meshy
