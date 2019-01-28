@@ -103,10 +103,10 @@ class Survey(object):
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
-#        if all(irecip == 0) == False: # contains reciprocal
-#            self.basicFilter()
-#        else:
-#            self.dfphasereset = self.df.copy()
+        if all(irecip == 0) == False: # contains reciprocal
+            self.basicFilter()
+        else:
+            self.dfphasereset = self.df.copy()
         
         
 #        self.typ = 'R2' # or cR2 or R3, cR3
