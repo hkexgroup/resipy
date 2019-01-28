@@ -47,7 +47,7 @@ import urllib
 import webbrowser
 
 def updateChecker():
-    #gets newest version from repository's requiremet.txt
+    #gets newest version from src/version.txt
     try:
         versionSource = urllib.request.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
         versionCheck = str(versionSource.read())
