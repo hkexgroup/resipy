@@ -204,12 +204,26 @@ k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('api/test/electrodes3D.csv',delimiter=',')
 k.setElec(elec)
 k.createMesh(cl=2)
+#k.mesh.write_vtk('api/test/mesh3D.vtk',title='3D mesh with flat surface')
 k.invert()
 k.showResults() 
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
 
+#%% 3D testing importing a mesh
+print('-------------Testing 3D inversion ------------')
+k = R2(typ='R3t')
+k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
+elec = np.genfromtxt('api/test/electrodes3D.csv',delimiter=',')
+k.setElec(elec)
+k.importMesh('api/test/mesh3D.vtk')
+#k.param = param
+k.invert()
+k.showResults() 
+k.showSlice(axis='z')
+k.showSlice(axis='x')
+k.showSlice(axis='y')
 
 #%% 3D ip testing
 print('-------------Testing 3D IP inversion ------------')
