@@ -1283,7 +1283,6 @@ class Mesh:
                 print("Windows has blocked the use of paraview, try running as admin")
         else:
             Popen(['paraview', fname])
-        #
         
         
 #%% triangle centriod 
@@ -1839,11 +1838,15 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         if len(surface_idx)>0:# then surface electrodes are present
             Ex=np.array(elec_x)[surface_idx]
             Ey=np.array(elec_z)[surface_idx]
+        elif len(surface_idx)== 0 and len(surface_x)>0:
+            #case where you have surface topography but no surface electrodes 
+            Ex=np.array(surface_x)
+            Ey=np.array(surface_z)
+            elec=np.c_[Ex,Ey]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
             Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
             Ey=np.array([elec_z[np.argmax(elec_z)],elec_z[np.argmax(elec_z)]])
-        #elec=np.c_[Ex,Ey]
     else:
         pass
         #elec = np.c_[elec_x,elec_y]
@@ -2623,7 +2626,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
-info = systemCheck()
+#info = systemCheck()
         
 #%% test code for borehole quad mesh
 #elec_x = np.append(np.arange(10),[5.1,5.1,5.1])
