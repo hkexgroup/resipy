@@ -1152,9 +1152,9 @@ class Survey(object):
                 
         else: # so they don't have reciprocal
             x = self.df[['a','b','m','n']].values.astype(int)
-            if (errTyp is None) and ('magErr' in self.df.columns):
+            if (errTyp == 'none') and ('magErr' in self.df.columns):
                 errTyp = 'magErr' # the user defined error is prioritary
-            if (errTypIP is None) and ('phiErr' in self.df.columns):
+            if (errTypIP == 'none') and ('phiErr' in self.df.columns):
                 errTypIP = 'phiErr'
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
