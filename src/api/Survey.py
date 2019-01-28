@@ -359,7 +359,8 @@ class Survey(object):
         # in order to compute error model based on a few reciprocal measurements
         # we fill 'recipMean' column with simple resist measurements for lonely
         # quadrupoles (which do not have reciprocals)
-        self.df['recipMean'][irecip == 0] = self.df['resist'][irecip == 0]
+        inotRecip = irecip == 0
+        self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
         
         return Ri
 
