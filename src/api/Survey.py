@@ -360,7 +360,7 @@ class Survey(object):
         # we fill 'recipMean' column with simple resist measurements for lonely
         # quadrupoles (which do not have reciprocals)
         inotRecip = irecip == 0
-        self.df.loc[inotRecip, 'recipMean'] = self.df[inotRecip, 'resist']
+        self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
         
         return Ri
 
