@@ -240,6 +240,7 @@ k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('api/test/electrodes3D.csv',delimiter=',')
 k.setElec(elec)
 k.importMesh('api/test/mesh3D.vtk')
+#k.write2in()
 #k.param = param
 k.invert()
 k.showResults() 

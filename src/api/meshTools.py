@@ -1221,6 +1221,71 @@ class Mesh:
             
         fh.close()
         
+    @staticmethod   # find paraview location in windows    
+    def findParaview():
+        """
+        Run on windows to find paraview.exe command
+        Returns
+        ----------
+        found: bool
+            If True the program was able to find where paraview is installed 
+            If false then the program could not find paraview in the default 
+            install locations. 
+        location: str
+            if found == True. The string maps to the paraview executable
+            if found == False. then 'n/a' is returned.   
+        """
+        OpSys=platform.system() 
+        if OpSys != "Windows":
+            raise OSError("This function is only valid on Windows")
+        home_dir = os.path.expanduser('~')
+        drive_letter = home_dir.split('\\')[0]
+        #find paraview in program files?
+        path = drive_letter+'\Program Files'
+        contents = os.listdir(path)
+        found = False
+        for i,pname in enumerate(contents):
+            if pname.find("ParaView") != -1:
+                para_dir = os.path.join(path,pname)
+                found = True
+                break
+    
+        if not found:#try looking in x86 porgram files instead
+            path = drive_letter+'\Program Files (x86)'
+            contents = os.listdir(path)
+            for i,pname in enumerate(contents):
+                if pname.find("ParaView") != -1:
+                    para_dir = os.path.join(path,pname)
+                    found = True
+                    break
+        
+        if not found:
+            return False, 'n/a' 
+        else:
+            return True, os.path.join(para_dir,'bin\paraview.exe')
+        #the string output can be run in the console if it is enclosed in speech
+        #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
+        
+    def paraview(self,fname='pyR2_mesh.vtk',loc=None):
+        """
+        """
+        self.write_vtk(fname)
+        op_sys = platform.system()
+        if loc is None and op_sys == "Windows":
+            found, cmd_line = self.findParaview()
+            cmd_line = '"' + cmd_line + '"' #+ ' ' + fname 
+            print(cmd_line)
+            if not found:
+                raise Exception("Could not find where paraview is installed")
+            try:
+                call([cmd_line,fname])
+            except PermissionError:
+                print("Windows has blocked the use of paraview, try running as admin")
+        else:
+            Popen(['paraview', fname])
+        #
+        
+        
 #%% triangle centriod 
 def tri_cent(p,q,r):
     """
@@ -2549,53 +2614,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
 info = systemCheck()
-    
-#%% find paraview location in windows 
-def find_paraview():
-    """
-    Run on windows to find paraview.exe command
-    Returns
-    ----------
-    found: bool
-        If True the program was able to find where paraview is installed 
-        If false then the program could not find paraview in the default 
-        install locations. 
-    location: str
-        if found == True. The string maps to the paraview executable
-        if found == False. then 'n/a' is returned.   
-    """
-    OpSys=platform.system() 
-    if OpSys != "Windows":
-        raise OSError("This function is only valid on Windows")
-    home_dir = os.path.expanduser('~')
-    drive_letter = home_dir.split('\\')[0]
-    #find paraview in program files?
-    path = drive_letter+'\Program Files'
-    contents = os.listdir(path)
-    found = False
-    for i,pname in enumerate(contents):
-        if pname.find("ParaView") != -1:
-            para_dir = os.path.join(path,pname)
-            found = True
-            break
-
-    if not found:#try looking in x86 porgram files instead
-        path = drive_letter+'\Program Files (x86)'
-        contents = os.listdir(path)
-        for i,pname in enumerate(contents):
-            if pname.find("ParaView") != -1:
-                para_dir = os.path.join(path,pname)
-                found = True
-                break
-    
-    if not found:
-        return False, 'n/a' 
-    else:
-        return True, os.path.join(para_dir,'bin\paraview.exe')
-    #the string output can be run in the console if it is enclosed in speech
-    #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
-    
-    
+        
 #%% test code for borehole quad mesh
 #elec_x = np.append(np.arange(10),[5.1,5.1,5.1])
 #elec_y = np.append(np.zeros(10),[-2,-4,-6])

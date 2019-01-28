@@ -270,10 +270,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     flag=flag+(['electrode']*len(elec_x))   
     
     #deal with end case electrodes, check max topo points are outside survey bounds 
-    min_idx = np.argmin(electrodes[0])
-    max_idx = np.argmax(electrodes[0])
     try:
         if min(elec_x) == min(x_pts):
+            min_idx = np.argmin(elec_x)
+            max_idx = np.argmax(elec_z)
             x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.diff(elec_x))) # in this case extend the survey bounds beyond the first electrode 
             y_pts = np.append(y_pts,elec_z[min_idx])
             flag.append('topography point')#add a flag
@@ -282,7 +282,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.diff(elec_x)))
             y_pts = np.append(y_pts,elec_z[max_idx])
             flag.append('topography point')
-    except ValueError: # then there are no surface electrodes, in which case 
+    except ValueError: # then there are no surface electrodes, in which case
+        min_idx = np.argmin(electrodes[0])
+        max_idx = np.argmax(electrodes[0])
         if min(electrodes[0]) == min(x_pts):
             x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*np.mean(np.diff(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
             y_pts = np.append(y_pts,max(electrodes[1])+1)
