@@ -1840,8 +1840,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             Ey=np.array(elec_z)[surface_idx]
         elif len(surface_idx)== 0 and len(surface_x)>0:
             #case where you have surface topography but no surface electrodes 
-            Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
-            Ey=np.array([elec_z[np.argmax(elec_z)],elec_z[np.argmax(elec_z)]])
+            Ex=np.array(surface_x)
+            Ey=np.array(surface_z)
             elec=np.c_[Ex,Ey]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
