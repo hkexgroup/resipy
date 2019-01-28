@@ -615,7 +615,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0 = np.ones(len(self.regions))*100
         
         # define zlim
-        zlimMax = np.max([np.max(elec[:,2]), np.max(surface[:,1])])
+        if surface is not None:
+            zlimMax = np.max([np.max(elec[:,2]), np.max(surface[:,1])])
+        else:
+            zlimMax = np.max(elec[:,2])
         zlimMin = np.min([np.min(elec[:,2]), self.doi])
         self.zlim = [zlimMin, zlimMax]
 
