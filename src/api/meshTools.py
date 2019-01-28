@@ -2527,6 +2527,10 @@ def systemCheck():
         Dictionary keys refer information about the system 
     """
     print("________________System-Check__________________")
+    
+    totalMemory = '' # incase system can't figure it out!
+    num_threads = ''
+    OpSys = ''
     #display processor info
     print("Processor info: %s"%platform.processor())
     num_threads = multiprocessing.cpu_count()
@@ -2599,17 +2603,23 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         
     else:
         raise OSError("unrecognised/unsupported operating system")
+     
+    if totalMemory != '':
+        totalMemory = int(totalMemory)
+        print("Total RAM available: %i Mb"%totalMemory)
         
-    totalMemory = int(totalMemory)
-    print("Total RAM available: %i Mb"%totalMemory)
+        #print some warnings incase the user has a low end PC
+        if totalMemory <= 4000:
+            warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
     
-    #print some warnings incase the user has a low end PC
-    if totalMemory <= 4000:
-        warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
-    if num_threads <=2:
-        warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
+    if num_threads!= '':
+        if num_threads <=2:
+            warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
+            
     if msg_flag:
         print(helpful_msg)
+    
+    
     
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
