@@ -229,7 +229,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None,
-                     parser=None, basicFilter=True):
+                     parser=None, keepAll=False):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -245,10 +245,10 @@ class R2(object): # R2 master class instanciated by the GUI
             Electrode spacing to be passed to the parser function.
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
-        basicFilter: bool, optional
+        keepAll: bool, optional
             Filter out NaN and Inf but also dummy measurements.
         """    
-        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, basicFilter=basicFilter))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, keepAll=keepAll))
         self.surveysInfo.append(info)
         self.setBorehole(self.iBorehole)
         
@@ -273,7 +273,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.addFilteredIP = self.surveys[0].addFilteredIP
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print, basicFilter=True):
+                          parser=None, isurveys=[], dump=print, keepAll=False):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -293,19 +293,19 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump the information message when importing the files.
-        basicFilter: bool, optional
+        keepAll: bool, optional
             Filter out NaN and Inf but also dummy measurements.
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
-                                   parser=parser, dump=dump, basicFilter=basicFilter)
+                                   parser=parser, dump=dump, keepAll=keepAll)
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
-                              spacing=None, parser=None, isurveys=[], dump=print, basicFilter=True):
+                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -326,14 +326,14 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump information message when importing the files.
-        basicFilter: bool, optional
+        keepAll: bool, optional
             Filter out NaN and Inf but also dummy measurements.
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
         for f in files:
-            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, basicFilter=basicFilter)
+            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, keepAll=keepAll)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             dump(f + ' imported')

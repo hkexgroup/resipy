@@ -22,7 +22,7 @@ class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
     """
-    def __init__(self, fname, ftype='', name='', spacing=None, parser=None, basicFilter=True):
+    def __init__(self, fname, ftype='', name='', spacing=None, parser=None, keepAll=True):
         """ Create a Survey object, that contains the data and some basic 
         procedures.
         
@@ -42,6 +42,10 @@ class Survey(object):
             If provided, it should return tuple containing `elec` a 3 columns
             array containing electrodes position and `data` a pandas.DataFrame
             with the `a,b,m,n,resist` columns at least and `ip` if present.
+        keepAll: bool, optional
+            If `True` will keep all the measurements even the ones without
+            reciprocal. Note that if none of the quadrupoles have reciprocal
+            they will all be kept anyway.
         """
         self.elec = []
         self.df = pd.DataFrame()
@@ -103,11 +107,12 @@ class Survey(object):
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
-        if basicFilter is True:
-            if all(irecip == 0) == False: # contains reciprocal
-                self.basicFilter()
-            else:
-                self.dfphasereset = self.df.copy()
+        self.keepAll = keepAll # keep dummy and non reciprocal measurements in
+        
+        if all(irecip == 0) == False: # contains reciprocal
+            self.basicFilter()
+        else:
+            self.dfphasereset = self.df.copy()
         
         
 #        self.typ = 'R2' # or cR2 or R3, cR3
@@ -184,11 +189,13 @@ class Survey(object):
         self.filterData(~ie)
         
         # remove measurement without reciprocal
-        irecip = self.df['irecip'].values
-        self.filterData(irecip != 0) # filter out dummy and non reciprocal
-        if ~np.isnan(np.mean(self.df['recipError'])):
-            self.df = self.df.dropna(subset = ['ip','reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
-        self.dfphasereset = self.df.copy()
+        if self.keepAll is False:
+            print('ah ah let us make some order here !')
+            irecip = self.df['irecip'].values
+            self.filterData(irecip != 0) # filter out dummy and non reciprocal
+            if ~np.isnan(np.mean(self.df['recipError'])):
+                self.df = self.df.dropna(subset = ['ip','reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
+            self.dfphasereset = self.df.copy()
         
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
@@ -349,6 +356,10 @@ class Survey(object):
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
+        # in order to compute error model based on a few reciprocal measurements
+        # we fill 'recipMean' column with simple resist measurements for lonely
+        # quadrupoles (which do not have reciprocals)
+        self.df['recipMean'][irecip == 0] = self.df['resist'][irecip == 0]
         
         return Ri
 
@@ -1105,7 +1116,7 @@ class Survey(object):
         """
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         haveReciprocal = all(self.df['irecip'].values == 0)
-        if haveReciprocal is False: # so we have reciprocals
+        if haveReciprocal is False and self.keepAll is False: # so we have reciprocals and don't want dummy inside
             x = self.df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
@@ -1138,8 +1149,12 @@ class Survey(object):
                     dfg['PhaseError'] = 0.1 # TO BE DELTED
                 protocol['ipError'] = self.df['PhaseError'].values[ie]
                 
-        else: # why don't they have reciprocals my god !!
+        else: # so they don't have reciprocal
             x = self.df[['a','b','m','n']].values.astype(int)
+            if (errTyp is None) and ('magErr' in self.df.columns):
+                errTyp = 'magErr' # the user defined error is prioritary
+            if (errTypIP is None) and ('phiErr' in self.df.columns):
+                errTypIP = 'phiErr'
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             protocol['R'] = self.df['resist'].values
@@ -1151,10 +1166,10 @@ class Survey(object):
                 elif self.phase_flag == True:
                     protocol['Phase'] = self.df['ip'].values
                 if 'phiErr' in self.df.columns:
-                    protocol['error'] = self.df['magErr']
-                    protocol['ipError'] = self.df['phiErr']
-            elif 'magErr' in self.df.columns:
-                protocol['error'] = self.df['magErr'] 
+                    protocol['error'] = self.df[errTyp]
+                    protocol['ipError'] = self.df[errTypIP]
+            elif errTyp != 'none':
+                protocol['error'] = self.df[errTyp] 
                 
         if all(self.elec[:,1] == 0) is False: # it's a 3D example
             protocol.insert(1, 'sa', 1)
