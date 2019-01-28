@@ -228,7 +228,8 @@ class R2(object): # R2 master class instanciated by the GUI
             s.iBorehole = val
     
     
-    def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, parser=None):
+    def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None,
+                     parser=None, basicFilter=True):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -244,8 +245,10 @@ class R2(object): # R2 master class instanciated by the GUI
             Electrode spacing to be passed to the parser function.
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
+        basicFilter: bool, optional
+            Filter out NaN and Inf but also dummy measurements.
         """    
-        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, basicFilter=basicFilter))
         self.surveysInfo.append(info)
         self.setBorehole(self.iBorehole)
         
@@ -270,7 +273,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.addFilteredIP = self.surveys[0].addFilteredIP
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print):
+                          parser=None, isurveys=[], dump=print, basicFilter=True):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -290,16 +293,19 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump the information message when importing the files.
+        basicFilter: bool, optional
+            Filter out NaN and Inf but also dummy measurements.
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
-                                   parser=parser, dump=dump)
+                                   parser=parser, dump=dump, basicFilter=basicFilter)
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
 
 
-    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={}, spacing=None, parser=None, isurveys=[], dump=print):
+    def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
+                              spacing=None, parser=None, isurveys=[], dump=print, basicFilter=True):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -320,12 +326,14 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump information message when importing the files.
+        basicFilter: bool, optional
+            Filter out NaN and Inf but also dummy measurements.
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
         for f in files:
-            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser)
+            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, basicFilter=basicFilter)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             dump(f + ' imported')
@@ -445,6 +453,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         print('computed DOI : {:.2f}'.format(self.doi))
         
+    
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
                    cl=-1, dump=print, **kwargs):
         """ Create a mesh.
@@ -533,25 +542,25 @@ class R2(object): # R2 master class instanciated by the GUI
             #print('elec_type', elec_type)
             ui_dir = os.getcwd()#current working directory (usually the one the ui is running in)
             os.chdir(self.dirname)#change to working directory so that mesh files written in working directory 
-            try:
-                if typ == 'trian':
-                    mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
-                                 path=os.path.join(self.apiPath, 'exe'),
-                                 cl_factor=cl_factor,
-                                 cl=cl, dump=dump, show_output=True,
-                                 doi=self.doi-np.max(elec_z), whole_space=whole_space,
-                                 **kwargs)
-                if typ == 'tetra': # TODO add buried
-                    elec_type = None # for now
-                    mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
-                                 path=os.path.join(self.apiPath, 'exe'),
-                                 cl_factor=cl_factor,
-                                 cl=cl, dump=dump, show_output=True,
-                                 doi=self.doi-np.max(elec_z), whole_space=whole_space,
-                                 **kwargs)
-            except Exception as e:
-                print("Mesh generation failed :", e)   
-                pass
+#            try:
+            if typ == 'trian':
+                mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             cl_factor=cl_factor,
+                             cl=cl, dump=dump, show_output=True,
+                             doi=self.doi-np.max(elec_z), whole_space=whole_space,
+                             **kwargs)
+            if typ == 'tetra': # TODO add buried
+                elec_type = None # for now
+                mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             cl_factor=cl_factor,
+                             cl=cl, dump=dump, show_output=True,
+                             doi=self.doi-np.max(elec_z), whole_space=whole_space,
+                             **kwargs)
+#            except Exception as e:
+#                print("Mesh generation failed :", e)   
+#                pass
             os.chdir(ui_dir)#change back to original directory
             
             self.param['mesh_type'] = 3

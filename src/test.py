@@ -27,7 +27,7 @@ from api.R2 import R2
 
 
 #%% testing the meshTools class
-
+plt.close('all')
 print(' -------------- Testing importing vtk --------------')
 fresults = os.path.join('./api/test/f001.vtk')
 mesh = mt.vtk_import(fresults)#makes a dictionary of a mesh 
@@ -38,15 +38,10 @@ mesh.show()
 
 
 #%% testing the R2 class
-
+plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
 k = R2()
-assert k.typ == 'R2'
 k.createSurvey('./api/test/syscalFileTopo.csv', ftype='Syscal')
-assert len(k.surveys) == 1
-assert k.surveys[0].df.shape == (308, 18)
-assert np.sum(k.elec[:,2]) == 0 # no z topography by default
-assert np.sum(k.elec[:,1]) == 0 # no y topography by default
 k.pseudo(contour=True)
 k.importElec('./api/test/elecTopo.csv')
 k.createMesh(typ='quad',cl=0.1, cl_factor=5)
@@ -64,6 +59,7 @@ k.showResults()
 
 
 #%%
+plt.close('all')
 print('-------------Testing borehole------------')
 k = R2()
 k.createSurvey('./api/test/protocolXbh.dat', ftype='Protocol')
@@ -81,7 +77,7 @@ k.showResults(sens=False)
 
 
 #%% test for IP
-
+plt.close('all')
 print('-------------Testing IP ------------')
 k = R2(typ='cR2')
 #k.createSurvey('api/test/IP/rifleday8.csv', ftype='Syscal')
@@ -94,7 +90,7 @@ k.pseudoError()
 
 
 #%% test for timelapse inversion
-
+plt.close('all')
 print('-------------Testing Time-lapse in // ------------')
 k = R2()
 k.createTimeLapseSurvey('api/test/testTimelapse')
@@ -111,7 +107,7 @@ k.showResults(index=3)
 
 
 #%% test for batch inversion
-
+plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
@@ -148,7 +144,7 @@ k.showResults(index=1)
 #k.invert()
 
 #%% forward modelling
-
+plt.close('all')
 print('-------------Testing Forward DC Modelling ------------')
 k = R2(typ='R2')
 k.createSurvey('api/test/syscalFile.csv')
@@ -179,6 +175,7 @@ k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
 
 #%% test forward IP modelling
+plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
 k = R2(typ='cR2')
 k.createSurvey('api/test/syscalFile.csv')
@@ -201,7 +198,8 @@ k.showResults(index=1, attr='Magnitude(Ohm-m)')
 
 
 #%% test Paul River
-
+from api.R2 import R2
+plt.close('all')
 print('-------------Testing Buried Electrodes in Fixed River ------------')
 k = R2()
 k.createSurvey('./api/test/primeFile.dat', ftype='BGS Prime')
@@ -220,6 +218,7 @@ k.showResults(sens=False)
 
 
 #%% 3D testing
+plt.close('all')
 print('-------------Testing 3D inversion ------------')
 k = R2(typ='R3t')
 k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
@@ -234,6 +233,7 @@ k.showSlice(axis='x')
 k.showSlice(axis='y')
 
 #%% 3D testing importing a mesh
+plt.close('all')
 print('-------------Testing 3D inversion ------------')
 k = R2(typ='R3t')
 k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
@@ -248,6 +248,7 @@ k.showSlice(axis='x')
 k.showSlice(axis='y')
 
 #%% 3D ip testing
+plt.close('all')
 print('-------------Testing 3D IP inversion ------------')
 k = R2(typ='cR3t')
 k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')

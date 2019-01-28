@@ -22,7 +22,7 @@ class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
     """
-    def __init__(self, fname, ftype='', name='', spacing=None, parser=None):
+    def __init__(self, fname, ftype='', name='', spacing=None, parser=None, basicFilter=True):
         """ Create a Survey object, that contains the data and some basic 
         procedures.
         
@@ -103,10 +103,11 @@ class Survey(object):
         irecip = self.reciprocal()
 #        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
         
-        if all(irecip == 0) == False: # contains reciprocal
-            self.basicFilter()
-        else:
-            self.dfphasereset = self.df.copy()
+        if basicFilter is True:
+            if all(irecip == 0) == False: # contains reciprocal
+                self.basicFilter()
+            else:
+                self.dfphasereset = self.df.copy()
         
         
 #        self.typ = 'R2' # or cR2 or R3, cR3
@@ -240,6 +241,7 @@ class Survey(object):
         else:
             self.ndata = len(i2keep)
             self.df = self.df[i2keep]
+            print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
     
     
     def inferType(self):
