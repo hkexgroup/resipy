@@ -12,6 +12,9 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 plt.ion()
+import api.meshTools as mt
+from api.Survey import Survey
+from api.R2 import R2
 
 #testdir = 'api/test/image/'
 #if os.path.exists(testdir):
@@ -19,13 +22,11 @@ plt.ion()
 #os.mkdir(testdir)
 
 #%% testing the Survey class
-from api.Survey import Survey
 
 
 
 
 #%% testing the meshTools class
-import api.meshTools as mt
 
 print(' -------------- Testing importing vtk --------------')
 fresults = os.path.join('./api/test/f001.vtk')
@@ -37,7 +38,6 @@ mesh.show()
 
 
 #%% testing the R2 class
-from api.R2 import R2
 
 print('-------------Testing simple 2D inversion ------------')
 k = R2()
@@ -149,7 +149,7 @@ k.showResults(index=1)
 
 #%% forward modelling
 
-print('-------------Testing Forward Modelling ------------')
+print('-------------Testing Forward DC Modelling ------------')
 k = R2(typ='R2')
 k.createSurvey('api/test/syscalFile.csv')
 k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
@@ -176,6 +176,28 @@ k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 #k.showResults(index=1, attr='Phase(mrad)')
 #k.showResults(index=1, attr='Magnitude(Ohm-m)')
+
+
+#%% test forward IP modelling
+print('-------------Testing Forward IP Modelling ------------')
+k = R2(typ='cR2')
+k.createSurvey('api/test/syscalFile.csv')
+k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
+k.createMesh(typ='trian')
+#
+## full API function
+k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10, -3)
+
+k.forward(iplot=True, noise=0.05)
+k.invert(iplot=True)
+
+# the forward initial model
+k.showResults(index=0, attr='Phase(mrad)')
+k.showResults(index=0, attr='Magnitude(Ohm-m)')
+
+# the inverted
+k.showResults(index=1, attr='Phase(mrad)')
+k.showResults(index=1, attr='Magnitude(Ohm-m)')
 
 
 #%% test Paul River

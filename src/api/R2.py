@@ -155,6 +155,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # to run an inversion (and so need to reset the regions before this)
         self.doi = None
         self.proc = None # where the process to run R2/cR2 will be
+        self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -613,6 +614,12 @@ class R2(object): # R2 master class instanciated by the GUI
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
         self.resist0 = np.ones(len(self.regions))*100
         
+        # define zlim
+        zlimMax = np.max([np.max(elec[:,2]), np.max(surface[:,1])])
+        zlimMin = np.min([np.min(elec[:,2]), self.doi])
+        self.zlim = [zlimMin, zlimMax]
+
+        
     def importMesh(self,file_path,mesh_type='tetra',node_pos=None,elec=None,flag_3D=False):
         """
         Import mesh from .vtk / .msh / .dat, rather than having <pyR2> create
@@ -690,7 +697,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
 #            ylim = (0, 110) # TODO
 #            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
-            self.mesh.show(ax=ax, color_bar=False)
+            self.mesh.show(ax=ax, color_bar=False, zlim=self.zlim)
     
     
     def write2in(self, param={}, typ=''):
@@ -1216,7 +1223,7 @@ class R2(object): # R2 master class instanciated by the GUI
             attr = keys[0]
         if len(self.meshResults) > 0:
             if zlim is None:
-                zlim = [self.doi, np.max(self.elec[:,2])]
+                zlim = self.zlim
             if self.typ[-1] == '2': # 2D case
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
