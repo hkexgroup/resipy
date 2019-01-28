@@ -700,6 +700,13 @@ class R2(object): # R2 master class instanciated by the GUI
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
         self.resist0 = np.ones(len(self.regions))*100
         
+        # define zlim
+        if self.doi == None:
+            self.computeDOI()
+        zlimMax = np.max(elec[:,2])
+        zlimMin = np.min([np.min(elec[:,2]), self.doi])
+        self.zlim = [zlimMin, zlimMax]
+        
     def showMesh(self, ax=None):
         """ Display the mesh.
         """
