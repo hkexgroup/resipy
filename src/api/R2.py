@@ -667,7 +667,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         #add the electrodes to the R2 class
         if elec is not None or node_pos is not None: # then electrode positions should be known
-            self.elec = np.array((self.mesh.elec_x, self.mesh.elec_y, self.mesh.elec_z))
+            self.elec = np.array((self.mesh.elec_x, self.mesh.elec_y, self.mesh.elec_z)).T
         else:
             try:
                 elec = self.elec
@@ -707,8 +707,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # define zlim
         if self.doi == None:
             self.computeDOI()
-        zlimMax = np.max(elec[:,2])
-        zlimMin = np.min([np.min(elec[:,2]), self.doi])
+        zlimMax = np.max(self.elec[:,2])
+        zlimMin = np.min([np.min(self.elec[:,2]), self.doi])
         self.zlim = [zlimMin, zlimMax]
         
     def showMesh(self, ax=None):
