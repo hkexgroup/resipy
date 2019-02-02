@@ -47,7 +47,7 @@ import urllib
 import webbrowser
 
 def updateChecker():
-    #gets newest version from repository's requiremet.txt
+    #gets newest version from src/version.txt
     try:
         versionSource = urllib.request.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
         versionCheck = str(versionSource.read())
@@ -783,6 +783,7 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                         tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
+                        recipfilt.setEnabled(True)
                     heatRaw()
     #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
                     self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -1501,6 +1502,7 @@ class App(QMainWindow):
         recipfilt = QPushButton('Remove reciprocals')
         recipfilt.setToolTip('Reciprocal measurements will not be considered for inversion in pyR2.\nThis filter just visualize the removal')
         recipfilt.setAutoDefault(True)
+        recipfilt.setEnabled(False)
         recipfilt.clicked.connect(removerecip)
 
         nestedfilt = QPushButton('Remove nested')

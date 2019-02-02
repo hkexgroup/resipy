@@ -83,13 +83,13 @@ def syscalParser(fname, spacing=None):
         if arrayMin != 0:
             array -= arrayMin
         espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-        array = np.round(array/espacing+1).astype(int)
+        if spacing is None:
+            spacing = espacing
+        array = np.round(array/spacing+1).astype(int)
         df[['a','b','m','n']] = array
         df['resist'] = df['vp']/df['i']
         imax = int(np.max(array))
         elec = np.zeros((imax,3))
-        if spacing is None:
-            spacing = espacing
         elec[:,0] = np.arange(0,imax)*spacing
                 
         return elec, df

@@ -333,7 +333,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
         for f in files:
-            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, keepAll=keepAll)
+            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             dump(f + ' imported')
@@ -350,7 +350,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create bigSurvey
         print('creating bigSurvey')
-        self.bigSurvey = Survey(os.path.join(dirname, files[0]), ftype=ftype)
+        self.bigSurvey = Survey(os.path.join(dirname, files[0]), ftype=ftype, spacing=spacing)
         # then override the df
         if len(isurveys) == 0: # assume all surveys would be use for error modelling
             isurveys = np.ones(len(self.surveys), dtype=bool)
