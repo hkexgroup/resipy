@@ -1326,19 +1326,28 @@ class Survey(object):
             index = index | (self.array == elec[i]).any(-1)
         self.filterData(~index)
         
-    def zeroIndexes(self): # normalise the indexes the sequence matrix to start at 1 
+    def shuntIndexes(self,debug=True): 
+        """
+        Normalise the indexes the sequence matrix to start at 1 
+        Parameters
+        -------------
+        debug: bool
+            Set to True to print output
+        """
         df = self.df
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         imin = np.min(sch_mat)
         if imin != 1:
-            print("It looks like scheduling indexing starts at: %i"%imin)
-            print("...normalising electrode indexing to start at 1.")
+            if debug:
+                print("It looks like scheduling indexing starts at: %i"%imin)
+                print("...normalising electrode indexing to start at 1.")
             #check to see if negative electrode numbers occur. 
             if imin < 0:
                 #check there is a electrode at 0
                 imin_pos = np.min(np.abs(sch_mat))
                 if imin_pos == 1:
-                    print("positive electrode indexes normalised to start at 0")
+                    if debug:
+                        print("positive electrode indexes firstly shunted to start at 0")
                     crr_idx = np.argwhere(sch_mat>0)
                     sch_mat[crr_idx] -= 1
                     
@@ -1350,8 +1359,18 @@ class Survey(object):
             df['n'] = corrected[:,3]
             self.df = df 
 
-    def swapIndexes(self,old_indx,new_indx): # replace the electrode number in a sequence matrix
-        #say for example you have a dud electrode which was replaced by a new electrode number. 
+    def swapIndexes(self,old_indx,new_indx):
+        """
+        Replace the electrode number in a sequence matrix with another. Survey 
+        dataframe is updated after running. 
+        Parameters
+        ------------
+        old_idx: int
+            Electrode number(or index) to be replaced 
+        new_idx: int
+            Replacement electrode number
+        """
+         
         df = self.df
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         idx = np.argwhere(sch_mat == old_indx)
@@ -1376,7 +1395,6 @@ class Survey(object):
         debug: bool
             Output will be printed to console if true. 
         """
-        #self.zeroIndexes() # normalise the electrode indexes to start at 1 ?
         df = self.df.copy()
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).flatten()
         uni_idx = np.unique(sch_mat) # returns sorted and unique array of electrode indexes

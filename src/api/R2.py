@@ -1943,6 +1943,26 @@ class R2(object): # R2 master class instanciated by the GUI
         self.meshResults[index].showSlice(
                 attr=attr, axis=axis)
         
+    ## Sorting electrode numbers ## 
+    def shuntIndexes(self):
+        """
+        Shunt electrode indexes to start at 1. 
+        """
+        debug=True
+        if len(self.surveys)>1:
+            debug=False
+        for i in len(self.surveys):
+            self.surveys[i].shuntIndexes(debug=debug)
+        
+    def normElecIdx(self):
+        """
+        Normalise electrode indexes to start at 1 in consective and ascending order. 
+        """
+        debug = True
+        if len(self.surveys)>1:
+            debug=False
+        for i in len(self.surveys):
+            self.surveys[i].shuntIndexes(debug=debug)
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
