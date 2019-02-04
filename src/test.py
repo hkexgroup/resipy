@@ -35,8 +35,6 @@ assert mesh.elm_centre[0][0] == 16.442
 assert np.array(mesh.con_matrix).shape[1] == 1362
 mesh.show()
 
-
-
 #%% testing the R2 class
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
@@ -57,7 +55,7 @@ k.write2in()
 #k.write2protocol(errTyp='pwl', errTot=True)
 k.invert()
 k.showResults()
-
+k.showInParaview()
 
 #%%
 plt.close('all')

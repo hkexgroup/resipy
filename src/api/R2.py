@@ -1924,15 +1924,30 @@ class R2(object): # R2 master class instanciated by the GUI
         disp_R2_errors(error_info, ax=ax)
 
 
-    def showInParaview(self, index=0):
+    def showInParaview(self, index=0,Paraview_loc=None):
         """ Open paraview to display the .vtk file.
         """
+        OpSys = platform.system()
         if self.typ[-1] == '2':
             fname = 'f{:03d}_res.vtk'.format(index+1)
         else:
-            fname = 'f{:03d}.vtk'.format(index+1)            
-        Popen(['paraview', os.path.join(self.dirname, fname)])
-        #TODO: add capacity for windows - Jimmy #### 
+            fname = 'f{:03d}.vtk'.format(index+1)  
+        if OpSys == "Windows":
+            found,cmd_line = self.mesh.findParaview()
+            if not found:
+                print("Cannot find paraview location")
+                return
+            cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
+        else:
+            cmd_line = 'paraview ' + os.path.join(self.dirname, fname)
+            
+        try:#try and launch paraview
+            #Popen([cmd_line, os.path.join(self.dirname, fname)])
+            os.popen(cmd_line)
+        except PermissionError:
+            print("Your operating system has blocked launching Paraview")
+            #windows doesnt like calling paraview from python for some reason
+            #will need to look into this further. 
 
 
     def showSlice(self, index=0, ax=None, attr=None, axis='z'): 

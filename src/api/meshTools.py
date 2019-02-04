@@ -90,8 +90,8 @@ class Mesh:
     cax = None 
     zone = None
     attr_cache={}
-    mesh_title = "R2_mesh"
-    no_attributes = 1
+    mesh_title = "pyR2_mesh"
+    no_attributes = 0
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
                  num_elms,#number of elements 
@@ -228,6 +228,7 @@ class Mesh:
         """
         Prints summary information about the mesh
         """
+        self.no_attributes = len(self.attr_cache)
         #returns summary information about the mesh, flagto print info, change to return string
         out = "\n_______mesh summary_______\n"
         out += "Number of elements: %i\n"%int(self.num_elms)
@@ -984,6 +985,62 @@ class Mesh:
         self.no_attributes += 1
         #return new_para
         
+    def computeElmDepth(self,datum_x,datum_y,datum_z, method='bilinear'):
+        """
+        Compute the depth of elements given a datum (or surface).
+        
+        Parameters
+        ------------
+        datum_x: array like
+            X coordinates of datum 
+        datum_y: array like
+            Y coordinates of datum, if using 2D mesh then set to 'None' 
+        datum_z: array like
+            Elevation of datum
+        method: str, optional
+            Method of interpolation used to compute cell depths for a 3D mesh.
+            Ignored for 2D meshes. 
+                'bilinear' - (default) binlinear interpolation
+                'idw' - inverse distance wieghting
+                'nearest' - nearest neighbour interpolation
+        """
+        #formalities and error checking
+        if datum_y is None: # set up y column if not in use
+            datum_y = [0]*len(datum_x)
+        if len(datum_x) != len(datum_y) and len(datum_x) != len(datum_z):
+            raise ValueError("Mis match in array dimensions for datum x y z coordinates.")
+        datum_x = np.array(datum_x)
+        datum_y = np.array(datum_y)
+        datum_z = np.array(datum_z)
+        if self.ndims == 2: # use 2D interpolation
+            elm_x = np.array(self.elm_centre[0])
+            elm_z = np.array(self.elm_centre[2])
+            min_idx = np.argmin(datum_x)
+            max_idx = np.argmax(datum_x)
+            Z = np.interp(elm_x,datum_x,datum_z,left=datum_y[min_idx],right=datum_y[max_idx])
+            depth = Z - elm_z
+            self.attr_cache['depths'] = depth
+            self.no_attributes += 1
+            return depth
+        if self.ndims == 3: # use 3D interpolation
+            elm_x = np.array(self.elm_centre[0])
+            elm_y = np.array(self.elm_centre[1])
+            elm_z = np.array(self.elm_centre[2])  
+            #use interpolation to work out depth to datum 
+            if method == 'bilinear':
+                Z = interp.bilinear(elm_x, elm_y, datum_x, datum_y, datum_z)
+            elif method == 'idw':
+                Z = interp.idw(elm_x, elm_y, datum_x, datum_y, datum_z)
+            elif method == 'nearest':
+                Z = interp.nearest(elm_x, elm_y, datum_x, datum_y, datum_z)
+            else:
+                avail_methods = ['bilinear','idw','nearest']
+                raise NameError("Unknown interpolation method, available methods are %s"%str(avail_methods))
+            depth = Z - elm_z
+            self.attr_cache['depths'] = depth # add cell depths to attribute cache
+            self.no_attributes += 1
+            return depth
+            
     def move_elec_nodes(self, new_x, new_y, new_z):
         """
         Move the electrodes to different nodes which are close to the given coordinates. 
@@ -1268,19 +1325,42 @@ class Mesh:
         
     def paraview(self,fname='pyR2_mesh.vtk',loc=None):
         """
+        Show mesh in paraview 
+        
+        Parameters
+        -----------
+        fname: str,optional
+            A vtk file will be written to working directory and then displayed 
+            using paraview. 
+        loc: str, optional
+            Path to paraview excutable, ignored if not using windows. If not provided
+            the program will attempt to find where paraview is installed automatically. 
         """
-        self.write_vtk(fname)
-        op_sys = platform.system()
-        if loc is None and op_sys == "Windows":
-            found, cmd_line = self.findParaview()
-            cmd_line = '"' + cmd_line + '"' #+ ' ' + fname 
-            print(cmd_line)
-            if not found:
-                raise Exception("Could not find where paraview is installed")
+        #formalities 
+        if not isinstance(fname,str):
+            raise NameError("Excepted string type argument for 'fname'")
+        look4 = True
+        if loc is not None:
+            look4 = False
+            if not isinstance(loc,str):
+                raise NameError("Excepted string type argument for 'loc'")
+                
+        self.write_vtk(fname)#write vtk to working directory with all associated attributes
+        op_sys = platform.system()#find kernal type
+        if op_sys == "Windows":
+            if look4: # find where paraview is installed 
+                found, cmd_line = self.findParaview()
+                cmd_line = '"' + cmd_line + '"' 
+                print('paraview location: %s'%cmd_line) # print location to console
+                if not found: # raise exception?
+                    print("Could not find where paraview is installed")
+                    return # exit function 
+            else:
+                cmd_line = '"' + loc + '"'#use provided location 
             try:
-                call([cmd_line,fname])
+                os.popen(cmd_line+' '+fname)
             except PermissionError:
-                print("Windows has blocked the use of paraview, try running as admin")
+                print("Windows has blocked launching paraview, program try running as admin")      
         else:
             Popen(['paraview', fname])
         
@@ -1329,7 +1409,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     Returns
     -------
     mesh : class 
-        a pyR2 mesh class 
+        a <pyR2> mesh class 
     """
     #open the selected file for reading
     fid=open(file_path,'r')
@@ -1621,17 +1701,7 @@ def dat_import(file_path='mesh.dat'):
             #exec('node%i[i] = int(line[ref])-1'%j)
             node_map[j][i]=int(line[ref])-1
             ref += 1
-#            if i==0:
-#                print(j,ref,node_map[j][i])
-    #make node map
-#    statement = '('
-#    for i in range(npere):
-#        if i==npere-1:
-#            statement += 'node%i) '%i
-#        else:
-#            statement += 'node%i, '%i
-#    node_map = eval(statement)
-        
+
     #read in nodes 
     node_x = [0]*numnp
     node_y = [0]*numnp
