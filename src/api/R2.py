@@ -1951,7 +1951,7 @@ class R2(object): # R2 master class instanciated by the GUI
         debug=True
         if len(self.surveys)>1:
             debug=False
-        for i in len(self.surveys):
+        for i in range(len(self.surveys)):
             self.surveys[i].shuntIndexes(debug=debug)
         
     def normElecIdx(self):
@@ -1961,7 +1961,7 @@ class R2(object): # R2 master class instanciated by the GUI
         debug = True
         if len(self.surveys)>1:
             debug=False
-        for i in len(self.surveys):
+        for i in range(len(self.surveys)):
             self.surveys[i].shuntIndexes(debug=debug)
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):

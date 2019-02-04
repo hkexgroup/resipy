@@ -42,6 +42,7 @@ plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
 k = R2()
 k.createSurvey('./api/test/syscalFileTopo.csv', ftype='Syscal')
+probe = k.surveys[0].df
 k.pseudo(contour=True)
 k.importElec('./api/test/elecTopo.csv')
 k.createMesh(typ='quad',cl=0.1, cl_factor=5)
@@ -119,6 +120,18 @@ k.showResults(index=1)
 #%% test mesh with buried electrodes
 #
 #print('-------------Testing Buried electrodes Inversion ------------')
+k = R2()
+k.createSurvey('api/test/syscalFile.csv')
+elec = k.elec
+elec[:,2] = -0.5 # let's bury them all
+#elec[0,2] = 0
+k.setElec(elec)
+buried = np.ones(elec.shape[0], dtype=bool)
+#buried[[0,-1]] = False # comment it and it will work
+surface = np.array([[0,0],[7,0]])
+k.createMesh(typ='quad', buried=buried, surface=surface)
+k.showMesh()
+
 #k = R2()
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
 #k.elec[:,2] = np.tile(np.arange(0,-12,-1),2)
