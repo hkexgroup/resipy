@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from multiprocessing import Pool
 
-#from scipy import interpolate
-#from scipy import spatial
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -467,7 +465,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
         surface : numpy.array, optional
-            Array with two columns x and y for additional surface points.
+            Array with two or threee columns x, y (optional) and elevation for 
+            additional surface points.
         cl_factor : float, optional
             Characteristic length factor. Only used for triangular mesh to allow
             mesh to be refined close the electrodes and then expand.
@@ -558,6 +557,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec_type = None # for now
                 mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
                              path=os.path.join(self.apiPath, 'exe'),
+                             surface_refinement=surface,
                              cl_factor=cl_factor,
                              cl=cl, dump=dump, show_output=True,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
