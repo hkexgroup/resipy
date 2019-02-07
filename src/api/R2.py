@@ -303,7 +303,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
-                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False):
+                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False,
+                              movingEnodes=False):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -325,7 +326,11 @@ class R2(object): # R2 master class instanciated by the GUI
         dump : function, optional
             Function to dump information message when importing the files.
         keepAll: bool, optional
-            Filter out NaN and Inf but also dummy measurements.
+            If True, filter out NaN and Inf but also dummy measurements.
+        movingEnodes: bool, optional (currently not implimented yet)
+            If True, then the electrode nodes are allowed to change with each survey. 
+            In which case for each time step the nearest node to each electrode
+            coordinate will be found and used in the R2.in file. 
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
@@ -1808,8 +1813,6 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['modErr'] = modErr
         
         # eventually delete the directory to space space
-        
-        
     
     def showIter(self, index=-1, ax=None):
         """ Dispay temporary inverted section after each iteration.
@@ -2036,11 +2039,21 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         Convert 3D electrode XY coordinates into just X coordinates. Use for 
         2D lines only! 
+        If self.elec has been set then each survey will use the electrodes set 
+        in the R2 master class. If not then the R2 master class will take on the
+        elec values set for the first survey in a sequence. 
         """
         if self.typ == 'R3t' or self.typ == 'cR3t':
             raise ValueError("Cannot compress 3D survey coordinates to 2D for a 3D survey type.")
+        #check elec has been assigned already
+        try: # if electrodes are set in the R2 class then use these for each survey
+            for i in range(len(self.surveys)):
+                self.surveys[i].elec = self.elec
+        except AttributeError: #if not already set then assume the electrodes are set for each survey
+            pass
+        
         for i in range(len(self.surveys)):
-            self.surveys[i].elec2distance()
+            self.surveys[i].elec2distance() # go through each survey and compute electrode
         self.elec = self.surveys[0].elec
         
 
