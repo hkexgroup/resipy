@@ -98,7 +98,7 @@ k.pwlfit()
 k.errTyp = 'pwl'
 k.param['a_wgt'] = 0
 k.param['b_wgt'] = 0
-k.invert(iplot=False, parallel=True)
+k.invert(iplot=False, parallel=False)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
