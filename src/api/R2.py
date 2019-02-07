@@ -926,6 +926,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
 
         if self.iTimeLapse is True:
+            if 'reg_mode' is not self.param.keys():
+                self.param['reg_mode'] = 2 # by default it's timelapse (difference)
             # a bit simplistic but assign error to all based on Transfer resistance
 #            allHaveReciprocal = all(self.iTimeLapseReciprocal == True)
             # let's assume it's False all the time for now

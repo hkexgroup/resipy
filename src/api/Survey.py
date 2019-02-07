@@ -188,6 +188,10 @@ class Survey(object):
             print(np.sum(ie), 'measurements with A or B == M or N')
         self.filterData(~ie)
         
+        # we need to redo the reciprocal analysis if we've removed duplicates and ...
+        if ndup > 0 or np.sum(ie) > 0:
+            self.reciprocal()
+        
         # remove measurement without reciprocal
         if self.keepAll is False:
             print('ah ah let us make some order here !')
