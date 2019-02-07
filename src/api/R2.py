@@ -767,6 +767,11 @@ class R2(object): # R2 master class instanciated by the GUI
 #                if 'd_wgt' not in self.param:
 #                    self.param['d_wgt'] = 2
         
+        if self.errTyp != 'none':
+            self.param['a_wgt'] = 0
+            self.param['b_wgt'] = 0
+            
+        
         if self.param['mesh_type'] == 4:
             self.param['zones'] = self.mesh.attr_cache['zones']
             #TODO reshape it to the form of the mesh
