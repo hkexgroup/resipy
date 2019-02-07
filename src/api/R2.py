@@ -26,7 +26,7 @@ import api.meshTools as mt
 from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
-from api.post_processing import import_R2_err_dat, disp_R2_errors
+#from api.post_processing import importR2Err, dispNormErr
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
@@ -1892,14 +1892,21 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         """
-        if self.typ[0] != 'c':
+        if self.typ == 'R2':
             err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
             array = err[:,[-2,-1,-4,-3]].astype(int)
             errors = err[:,0]
-        if self.typ[0] == 'c':
-            err = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat')).values       
-            array = err[:,[2,3,0,1]].astype(int)
-            errors = err[:,4]
+        elif self.typ == 'cR2':
+            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat'))      
+            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
+            errors = np.array(df['Normalised_Error'])
+#            self.pseudoErrorIP()#use this function instead?
+#            return
+        elif self.typ == 'R3t':
+            err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)        
+            array = err[:,[-3,-1,-7,-5]].astype(int)
+            errors = err[:,0]
+            
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
@@ -1908,20 +1915,46 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Display normalized phase error.
         """
         if self.typ == 'cR2':
-            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat')).values       
-            array = df[['C+','C-','P+','P-']].values.astype(int)
-            errors = df['Calculated_Phase']-df['Observed_Phase']
+            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat'))      
+            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int)
+            errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
         spacing = np.diff(self.elec[[0,1],0])
-        pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
+        pseudo(array.T, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
     
         
     def showInversionErrors(self, ax=None):
         """ Display inversion error by measurment numbers.
         """
-        # TODO make it work with cR2
-        file_path = os.path.join(self.dirname, 'f001_err.dat')
-        error_info = import_R2_err_dat(file_path)
-        disp_R2_errors(error_info, ax=ax)
+        if self.typ == 'R2':
+            file_path = os.path.join(self.dirname, 'f001_err.dat')
+            err = np.genfromtxt(file_path,skip_header=1)
+            errors = err[:,0]
+        if self.typ == 'cR2':
+            file_path = os.path.join(self.dirname, 'f001_err.dat')
+            err = np.genfromtxt(file_path,skip_header=1)
+            errors = err[:,4]
+        if self.typ == 'R3t':
+            file_path = os.path.join(self.dirname, 'f001.err')
+            err = np.genfromtxt(file_path,skip_header=1)
+            errors = err[:,0]
+        if self.typ == 'cR3t':
+            file_path = os.path.join(self.dirname, 'f001.err')
+            err = np.genfromtxt(file_path,skip_header=1)
+            errors = err[:,4]
+        measurement_no = np.arange(1,len(errors)+1)
+        #make figure
+        if ax is None: 
+            fig, ax = plt.subplots() 
+        ax.scatter(measurement_no,errors)
+        ax.set_ylabel("Normalised Error")
+        ax.set_xlabel("Measurement Number")
+        #add diagnositic lines
+        y_pos_limit = (3,3)
+        y_neg_limit = (-3,-3)
+        baseline = (0,0)
+        ax.plot((1,measurement_no[-1]),y_pos_limit,'r--')
+        ax.plot((1,measurement_no[-1]),y_neg_limit,'r--')
+        ax.plot((1,measurement_no[-1]),baseline,'k--')
 
 
     def showInParaview(self, index=0,Paraview_loc=None):
@@ -1977,7 +2010,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.surveys)>1:
             debug=False
         for i in range(len(self.surveys)):
-            self.surveys[i].shuntIndexes(debug=debug)
+            self.surveys[i].normElecIdx(debug=debug)
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
