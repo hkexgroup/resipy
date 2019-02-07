@@ -4,7 +4,7 @@ Created on Wed May 30 16:48:54 2018 in python 3.6.5
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: jkl
 """
-pyR2_version = '1.0.3' # pyR2 version (semantic versionning in use) 
+pyR2_version = '1.0.4' # pyR2 version (semantic versionning in use) 
 #import relevant modules 
 import os, sys, shutil, platform, warnings # python standard libs
 from subprocess import PIPE, call, Popen
@@ -1959,6 +1959,13 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def showInParaview(self, index=0,Paraview_loc=None):
         """ Open paraview to display the .vtk file.
+        Parameters
+        -------------
+        index: int, optional
+            Timestep to be shown in paraview (for an individual survey this 1).
+        Paraview_loc: str, optional
+            **Windows ONLY** maps to the excuatable paraview.exe. The program 
+            will attempt to find the location of the paraview install if not given. 
         """
         OpSys = platform.system()
         if self.typ[-1] == '2':
@@ -1966,11 +1973,17 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             fname = 'f{:03d}.vtk'.format(index+1)  
         if OpSys == "Windows":
-            found,cmd_line = self.mesh.findParaview()
-            if not found:
-                print("Cannot find paraview location")
+            if Paraview_loc is None:
+                found,cmd_line = self.mesh.findParaview()
+                if not found:
+                    print("Cannot find paraview location")
+                    return
+                cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
+            elif isinstance(Paraview_loc,str):
+                cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
+            else:
+                print("Cannot find where paraview is installed")
                 return
-            cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
         else:
             cmd_line = 'paraview ' + os.path.join(self.dirname, fname)
             
@@ -2011,6 +2024,19 @@ class R2(object): # R2 master class instanciated by the GUI
             debug=False
         for i in range(len(self.surveys)):
             self.surveys[i].normElecIdx(debug=debug)
+    
+    ## make 3d coordinates for a 2d line in to 2d ##     
+    def elecXY2elecX(self):
+        """
+        Convert 3D electrode XY coordinates into just X coordinates. Use for 
+        2D lines only! 
+        """
+        if self.typ == 'R3t' or self.typ == 'cR3t':
+            raise ValueError("Cannot compress 3D survey coordinates to 2D for a 3D survey type.")
+        for i in range(len(self.surveys)):
+            self.surveys[i].elec2distance()
+        self.elec = self.surveys[0].elec
+        
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
