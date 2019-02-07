@@ -66,6 +66,7 @@ def write2Din(param, dirname, typ='R2'):
             'max_iter':10,
             'error_mod':2,
             'alpha_aniso':1,
+            'alpha_s':10, # penalizing from starting model
             'min_error':0.01, # for IP only
             'a_wgt':0.01, # 0.02 for IP
             'b_wgt':0.02, # 2 for IP
@@ -148,12 +149,19 @@ def write2Din(param, dirname, typ='R2'):
                     param['reg_mode'])
 #        elif typ == 'cR2':
 #            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
-        
-        content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
-                param['tolerance'],
-                param['max_iter'],
-                param['error_mod'],
-                param['alpha_aniso'])
+        if param['reg_mode'] == 1:
+            content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
+                    param['tolerance'],
+                    param['max_iter'],
+                    param['error_mod'],
+                    param['alpha_aniso'],
+                    param['alpha_s'])
+        else:
+            content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
+                    param['tolerance'],
+                    param['max_iter'],
+                    param['error_mod'],
+                    param['alpha_aniso'])
         if typ == 'R2':
             content = content + '{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
                     param['a_wgt'],

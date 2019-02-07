@@ -792,7 +792,10 @@ class R2(object): # R2 master class instanciated by the GUI
             self.configFile = write2in(param, refdir, typ=typ)
             param = self.param.copy()
             param['num_regions'] = 0
-            param['reg_mode'] = 2
+            if 'reg_mode' in self.param.keys():
+                param['reg_mode'] = self.param['reg_mode']
+            else:
+                param['reg_mode'] = 2
             param['res0File'] = 'Start_res.dat'
             write2in(param, self.dirname, typ=typ)
         else:
@@ -946,7 +949,8 @@ class R2(object): # R2 master class instanciated by the GUI
 #                else:
 #                    s.df['index'] = np.arange(1, len(s.df)+1)
 #                    protocol = s.df[['index','a','b','m','n','resist', 'resist0']]
-                protocol = s.write2protocol('', errTyp=errCol, res0=True)
+                res0Bool = False if self.param['reg_mode'] == 1 else True
+                protocol = s.write2protocol('', errTyp=errCol, res0=res0Bool)
                 content = content + str(protocol.shape[0]) + '\n'
                 content = content + protocol.to_csv(sep='\t', header=False, index=False)
                 
