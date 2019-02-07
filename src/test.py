@@ -242,6 +242,8 @@ k.showResults()
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
+k.pseudoError()
+k.showInversionErrors()
 
 #%% 3D testing importing a mesh
 plt.close('all')

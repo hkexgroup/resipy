@@ -1347,7 +1347,7 @@ class Survey(object):
                 imin_pos = np.min(np.abs(sch_mat))
                 if imin_pos == 1:
                     if debug:
-                        print("positive electrode indexes firstly shunted to start at 0")
+                        print("Positive electrode indexes firstly now start at %i"%(abs(imin)+1))
                     crr_idx = np.argwhere(sch_mat>0)
                     sch_mat[crr_idx] -= 1
                     
