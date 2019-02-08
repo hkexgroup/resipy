@@ -13,7 +13,7 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
-from multiprocessing import Pool
+from multiprocessing import Pool, Process, Queue
 
 
 OS = platform.system()
@@ -33,49 +33,58 @@ print('API path = ', apiPath)
 print('pyR2 version = ',str(pyR2_version))
 #info = mt.systemCheck()
 
-
-
-def runDir(dump, dirname):
-    exeName = [f for f in os.listdir(dirname) if f[-4:] == '.exe'][0]
-    print('-------------', exeName)
-    cwd = os.getcwd()
-    os.chdir(dirname)
-    
-    if OS == 'Windows':
-        cmd = [exeName]
-    elif OS == 'Darwin':
-        winePath = []
-        wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-        for stdout_line in iter(wine_path.stdout.readline, ''):
-            winePath.append(stdout_line)
-        if winePath != []:
-            cmd = ['%s' % (winePath[0].strip('\n')), exeName]
-        else:
-            cmd = ['/usr/local/bin/wine', exeName]
-    else:
-        cmd = ['wine',exeName]
         
-    if OS == 'Windows':
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+def workerInversion(path, dump, exeName, qin):
+    os.chdir(path)
     
-    def execute(cmd):
+    for fname in iter(qin.get, 'stop'):
+        # copy the protocol.dat
+        shutil.copy(fname, os.path.join(path, 'protocol.dat'))
+        
+        # run inversion
         if OS == 'Windows':
-            proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+            cmd = [exeName]
+        elif OS == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd = ['%s' % (winePath[0].strip('\n')), exeName]
+            else:
+                cmd = ['/usr/local/bin/wine', exeName]
         else:
-            proc = subprocess.Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
-        for stdout_line in iter(proc.stdout.readline, ""):
-            yield stdout_line
-        proc.stdout.close()
-        return_code = proc.wait()
-        if return_code:
-            print('error on return_code')
-
-    for text in execute(cmd):
-            dump(text.rstrip())
-
-    os.chdir(cwd)
+            cmd = ['wine',exeName]
+            
+        if OS == 'Windows':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         
+        def execute(cmd):
+            if OS == 'Windows':
+                proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+            else:
+                proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
+            for stdout_line in iter(proc.stdout.readline, ""):
+                yield stdout_line
+            proc.stdout.close()
+            return_code = proc.wait()
+            if return_code:
+                print('error on return_code')
+        
+        for text in execute(cmd):
+                dump(text.rstrip())
+    
+        # moving inversion results back
+        originalDir = os.path.dirname(fname)
+        name = os.path.basename(fname).replace('.dat', '')
+        toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat', 'f001_sen.dat',]
+        for f in toMove:
+            shutil.move(os.path.join(path, f),
+                        os.path.join(originalDir, f.replace('f001', name)))
+        shutil.move(os.path.join(path, 'R2.out'),
+                    os.path.join(originalDir, name + '.out'))
+
 
 
 # small useful function for reading and writing mesh.dat
@@ -1104,47 +1113,80 @@ class R2(object): # R2 master class instanciated by the GUI
         idf.append(len(dfall))
         dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
         
-        # create individual dirs
-        toMove = ['R2.exe','cR2.exe','mesh.dat', 'mesh3d','R2.in','cR2.in',
-                  'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 'Start_res.dat']
-        dirs = []
-        for i, df in enumerate(dfs):
-            d = os.path.join(self.dirname, str(i))
-            dirs.append(d)
-            if os.path.exists(d) is True:
-                shutil.rmtree(d)
-            os.mkdir(d)
-            for t in toMove:
-                if os.path.exists(os.path.join(self.dirname, t)) is True:
-                    shutil.copy(os.path.join(self.dirname, t), os.path.join(d, t))
-            outputname = os.path.join(d, 'protocol.dat')
-            with open(outputname, 'w') as f:
-                df.to_csv(f, sep='\t', header=False, index=False)
-                
-        # get number of cores available
+        # writing all protocol.dat
+        files = []
+        for s, df in zip(self.surveys, dfs):
+            outputname = os.path.join(dirname, s.name + '.dat')
+            files.append(outputname)
+            df.to_csv(outputname, sep='\t', header=False, index=False)
+            # header with line count already included
+            
+        queueIn = Queue() # queue
+        
+        # create workers directory
         ncores = mt.systemCheck()['core_count']
-        p = Pool(ncores)
-        p.kill = p.terminate
-        self.proc = p
-#        p.starmap(self.runR2, tuple(zip(dirs, [dump for i in range(len(dirs))])))
-        p.starmap(runDir, tuple(zip([dump]*len(dirs), dirs)))
-
-        
-        # get them all back in the main dirname
-        toMove = ['f001_res.dat','f001_res.vtk','f001_err.dat','f001_sen.dat']
-        r2outText = ''
-        for i, d in enumerate(dirs):
+        procs = []
+        dirs = []
+        for i in range(ncores):
+            # creating the working directory
+            wd = os.path.join(dirname, str(i+1))
+            dirs.append(wd)
+            if os.path.exists(wd):
+                shutil.rmtree(wd)
+            os.mkdir(wd)
+            
+            # copying usefull files from the main directory
+            toMove = ['R2.exe','cR2.exe','mesh.dat', 'mesh3d','R2.in','cR2.in',
+                      'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 'Start_res.dat']
             for f in toMove:
-                shutil.move(os.path.join(d, f), os.path.join(self.dirname, f.replace('001',str(i+1).zfill(3))))
-            with open(os.path.join(d, self.typ + '.out'),'r') as f:
-                r2outText = r2outText + f.read()
-        shutil.move(os.path.join(d, 'electrodes.dat'), os.path.join(self.dirname, 'electrodes.dat'))
-        shutil.move(os.path.join(d, 'electrodes.vtk'), os.path.join(self.dirname, 'electrodes.vtk'))
-        with open(os.path.join(self.dirname, self.typ + '.out'),'w') as f:
-            f.write(r2outText)
+                fname = os.path.join(dirname, f)
+                if os.path.exists(fname):
+                    shutil.copy(fname, os.path.join(wd, f))
+                    
+            # creating the process
+            exeName = self.typ + '.exe'
+            procs.append(Process(target=workerInversion,
+                                 args=(wd, dump, exeName, queueIn)))
+            procs[-1].start()
+            
+        # feed the queue
+        for f in files:
+            queueIn.put(f) # this will trigger the inversion
         
-        # delete the dirs
+        # when finished stop the processes
+        for i in range(ncores):
+            queueIn.put('stop')
+        
+        for p in procs: # this blocks until all processes have finished
+            p.join()
+        
+        class ProcsManagement(object): # little class to handle the kill
+            def __init__(self, procs):
+                self.procs = procs
+            def kill(self):
+                for p in self.procs:
+                    p.terminate()
+                    
+        self.proc = ProcsManagement(procs)
+        
+        # get the files as it was a sequential inversion
+        toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat']
+        r2outText = ''
+        for i, s in enumerate(self.surveys):
+            for ext in toRename:
+                originalFile = os.path.join(dirname,  s.name + ext)
+                newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
+                shutil.move(originalFile, newFile)
+            r2outFile = os.path.join(dirname, s.name + '.out')
+            with open(r2outFile, 'r') as f:
+                r2outText = r2outText + f.read()
+            os.remove(r2outFile)
+        with open(os.path.join(dirname, 'R2.out'), 'w') as f:
+            f.write(r2outText)
+            
+        # delete the dirs and the files
         [shutil.rmtree(d) for d in dirs]
+        [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
         
@@ -2197,9 +2239,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.pseudoError()
 
 #%% test for timelapse inversion
-#k = R2()
+k = R2()
 #k.createTimeLapseSurvey('api/test/testTimelapse') # not for //
-#k.createBatchSurvey('api/test/testTimelapse') # ok for //
+k.createBatchSurvey('api/test/testTimelapse') # ok for //
 #k.linfit()
 #k.pwlfit() # if we do pwlfit then it can't be pickled by multiprocessing 
 #k.errTyp = 'pwl'
@@ -2209,7 +2251,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.showMesh()
 #k.write2in()
 #k.write2protocol()
-#k.invert(iplot=False, parallel=True)
+k.invert(iplot=False, parallel=True)
 #k.saveInvPlots(attr='difference(percent)')
 #k.showResults(index=3)
 #k.showResults(index=1)
