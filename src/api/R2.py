@@ -1175,28 +1175,24 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = ProcsManagement(procs)
         
         # get the files as it was a sequential inversion
-#        toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat']
-#        r2outText = ''
-#        for i, s in enumerate(surveys):
-#            for ext in toRename:
-#                originalFile = os.path.join(dirname,  s.name + ext)
-#                newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
-#                shutil.move(originalFile, newFile)
-#            r2outFile = os.path.join(dirname, s.name + '.out')
-#            with open(r2outFile, 'r') as f:
-#                r2outText = r2outText + f.read()
-#            os.remove(r2outFile)
-#        with open(os.path.join(dirname, 'R2.out'), 'w') as f:
-#            f.write(r2outText)
+        toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat']
+        r2outText = ''
+        for i, s in enumerate(surveys):
+            for ext in toRename:
+                originalFile = os.path.join(dirname,  s.name + ext)
+                newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
+                shutil.move(originalFile, newFile)
+            r2outFile = os.path.join(dirname, s.name + '.out')
+            with open(r2outFile, 'r') as f:
+                r2outText = r2outText + f.read()
+            os.remove(r2outFile)
+        with open(os.path.join(dirname, 'R2.out'), 'w') as f:
+            f.write(r2outText)
         
-        print(files)
-        print(dirs)
-        print(self.iTimeLapse, self.iBatch)
-        print(procs)
             
         # delete the dirs and the files
-#        [shutil.rmtree(d) for d in dirs]
-#        [os.remove(f) for f in files]
+        [shutil.rmtree(d) for d in dirs]
+        [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
         
