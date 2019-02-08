@@ -1098,6 +1098,11 @@ class R2(object): # R2 master class instanciated by the GUI
         if dirname is None:
             dirname = self.dirname
         
+        if self.iTimeLapse is True and self.iBatch is False:
+            surveys = self.surveys[1:]
+        else:
+            surveys = self.surveys
+            
         # copy R2.exe
         exeName = self.typ + '.exe'
         targetName = os.path.join(dirname, exeName)
@@ -1115,7 +1120,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # writing all protocol.dat
         files = []
-        for s, df in zip(self.surveys, dfs):
+        for s, df in zip(surveys, dfs):
             outputname = os.path.join(dirname, s.name + '.dat')
             files.append(outputname)
             df.to_csv(outputname, sep='\t', header=False, index=False)
@@ -1172,7 +1177,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # get the files as it was a sequential inversion
         toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat']
         r2outText = ''
-        for i, s in enumerate(self.surveys):
+        for i, s in enumerate(surveys):
             for ext in toRename:
                 originalFile = os.path.join(dirname,  s.name + ext)
                 newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
@@ -2240,7 +2245,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 
 #%% test for timelapse inversion
 #k = R2()
-#k.createTimeLapseSurvey('api/test/testTimelapse') # not for //
+#k.createTimeLapseSurvey('api/test/testTimelapse') # ok for //
 #k.createBatchSurvey('api/test/testTimelapse') # ok for //
 #k.linfit()
 #k.pwlfit() # if we do pwlfit then it can't be pickled by multiprocessing 
