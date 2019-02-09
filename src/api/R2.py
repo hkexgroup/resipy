@@ -1788,7 +1788,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
-            return np.random.normal(x,level)
+            return np.random.normal(x,x*level)
         addnoise = np.vectorize(addnoise)
         self.noise = noise
         
