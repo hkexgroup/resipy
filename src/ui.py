@@ -169,6 +169,7 @@ class MatplotlibWidget(QWidget):
     
     def clear(self):
         self.axis.clear()
+        self.figure.clear()
         self.canvas.draw()
         
 #
@@ -323,7 +324,6 @@ class App(QMainWindow):
             patch_size_y.setText('1')
             inv_type.setCurrentIndex(1)
             data_type.setCurrentIndex(1)
-            reg_mode.setCurrentIndex(0)
             max_iterations.setText('10')
             error_mod.setCurrentIndex(1)
             alpha_aniso.setText('1.0')
@@ -359,6 +359,7 @@ class App(QMainWindow):
             mwInvResult.clear()
             mwInvError.clear()
             mwInvError2.clear()
+
 
             
 #        restartBtn = QPushButton('Reset UI')
@@ -469,6 +470,9 @@ class App(QMainWindow):
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
                 self.iTimeLapse = True
+                if self.r2 is not None: # if there is already an R2 object
+                    restartFunc()
+                    reg_mode.setCurrentIndex(2)
                 buttonf.setText('Import Data Directory')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
@@ -476,6 +480,9 @@ class App(QMainWindow):
                 batchCheck.setEnabled(False)
             else:
                 self.iTimeLapse = False
+                if self.r2 is not None:
+                    restartFunc()
+                    reg_mode.setCurrentIndex(0)
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
