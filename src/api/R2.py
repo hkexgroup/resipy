@@ -117,7 +117,7 @@ def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
                 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
-    """    
+    """ 
     def __init__(self, dirname='', typ='R2'):
         """ Create an R2 object.
         
@@ -154,6 +154,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.doi = None
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
+        self.movingEnodes=False # allows the electrodes to move inbetween surveys
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -191,7 +192,7 @@ class R2(object): # R2 master class instanciated by the GUI
             os.mkdir(dirname)
         self.dirname = dirname
     
-    def setElec(self, elec):
+    def setElec(self, elec,elecList=None):
         """ Set electrodes.
         
         Parameters
@@ -199,24 +200,49 @@ class R2(object): # R2 master class instanciated by the GUI
         elec : numpy array
             Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
             M = 3 if x,y,z coordinates are supplied.
+        elecList : list, optional
+            If not None then elec is ignored in favour of elecList. This option 
+            is to be used in the advanced use case where electrodes move which 
+            each survey. Each entry of the list is a numpy array the same format
+            of 'elec', which is then assigned to each survey class. 
         """
-        ok = False
-        if self.elec is not None: # then check the shape
-            if elec.shape[0] == self.elec.shape[0]:
-                ok = True
+        if elecList is None:
+            ok = False
+            if self.elec is not None: # then check the shape
+                if elec.shape[0] == self.elec.shape[0]:
+                    ok = True
+                else:
+                    print('ERROR : elec, does not match shape from Survey;')
+            
+            if ok:
+                if elec.shape[1] == 2:
+                    self.elec[:,[0,2]] = elec
+                    for s in self.surveys:
+                        s.elec[:,[0,2]] = elec
+                else:
+                    self.elec = elec
+                    for s in self.surveys:
+                        s.elec = elec
+        else:
+            #some error checking 
+            try:
+                num_surveys = len(self.surveys) # number of surveys
+                if len(elecList) != num_surveys:
+                    raise ValueError("The number of electrode matrices must match the number of surveys")
+            except AttributeError:
+                raise AttributeError("No Survey attribute assocaited with R2 class, make sure you create a survey first")
+            
+            initElec = elecList[0]
+            self.elec = np.zeros((len(initElec),3))
+            if elecList[0].shape[1] == 2:
+                self.elec[:,[0,2]] = initElec # set R2 class electrodes to initial electrode positions
+                for i in range(num_surveys):
+                    self.surveys[i].elec[:,[0,2]] = elecList[i] # if 2D set electrode x and elevation coordinates only
             else:
-                print('ERROR : elec, does not match shape from Survey;')
-        
-        if ok:
-            if elec.shape[1] == 2:
-                self.elec[:,[0,2]] = elec
-                for s in self.surveys:
-                    s.elec[:,[0,2]] = elec
-            else:
-                self.elec = elec
-                for s in self.surveys:
-                    s.elec = elec
-        
+                self.elec = initElec
+                for i in range(num_surveys):
+                    self.surveys[i].elec = elecList[i] # set survey electrodes to each electrode coordinate
+    
         
     def setBorehole(self, val=False):
         """ Set all surveys in borehole type if `True` is passed.
@@ -271,7 +297,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.addFilteredIP = self.surveys[0].addFilteredIP
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print, keepAll=False):
+                          parser=None, isurveys=[], dump=print, keepAll=False,
+                          movingEnodes=False):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -293,6 +320,10 @@ class R2(object): # R2 master class instanciated by the GUI
             Function to dump the information message when importing the files.
         keepAll: bool, optional
             Filter out NaN and Inf but also dummy measurements.
+        movingEnodes: bool, optional (currently not implimented yet)
+            If True, then the electrode nodes are allowed to change with each survey. 
+            In which case for each time step the nearest node to each electrode
+            coordinate will be found and used in the R2.in file. 
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
