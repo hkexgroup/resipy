@@ -1300,14 +1300,19 @@ class R2(object): # R2 master class instanciated by the GUI
         if iplot is True:
             self.showResults()
 
-        files = os.listdir(self.dirname)
-        if 'R2.exe' in files:
-            os.chmod(os.path.join(self.dirname, 'R2.exe'), 0o777)
-            os.remove(os.path.join(self.dirname, 'R2.exe'))
-        if 'cR2.exe' in files:
-            os.chmod(os.path.join(self.dirname, 'cR2.exe'), 0o777)
-            os.remove(os.path.join(self.dirname, 'cR2.exe'))
-    
+        # remove executables (spare disk space)
+        toRemove = ['R2.exe', 'cR2.exe', 'R3t.exe', 'cR3t.exe']
+        for f in  os.listdir(self.dirname):
+            if f in toRemove:
+                os.chmod(os.path.join(self.dirname, f), 0o777)
+                os.remove(os.path.join(self.dirname, f))
+        if self.iTimeLapse is True:
+            for f in os.listdir(os.path.join(self.dirname, 'ref')):
+                if f in toRemove:
+                    os.chmod(os.path.join(self.dirname, f), 0o777)
+                    os.remove(os.path.join(self.dirname, f))
+            
+            
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, **kwargs):
         """ Show the inverteds section.
