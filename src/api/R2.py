@@ -1309,8 +1309,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.iTimeLapse is True:
             for f in os.listdir(os.path.join(self.dirname, 'ref')):
                 if f in toRemove:
-                    os.chmod(os.path.join(self.dirname, f), 0o777)
-                    os.remove(os.path.join(self.dirname, f))
+                    os.chmod(os.path.join(self.dirname, 'ref', f), 0o777)
+                    os.remove(os.path.join(self.dirname, 'ref', f))
             
             
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
