@@ -47,7 +47,7 @@ from api.sliceMesh import sliceMesh # mesh slicing function
 #%% create mesh object
 class Mesh:
     """
-    Creates mesh object.
+    Mesh class.
     
     Parameters
     ----------
@@ -90,7 +90,7 @@ class Mesh:
     cax = None 
     zone = None
     attr_cache={}
-    mesh_title = "pyR2_mesh"
+    mesh_title = "2D_R2_mesh"
     no_attributes = 0
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
@@ -985,6 +985,21 @@ class Mesh:
         self.no_attributes += 1
         #return new_para
         
+    def reciprocal(self,attr="Resistivity",new_key="Conductivity"):
+        """
+        Compute reciprocal for a given attribute (ie 1 over that number)
+        Example is Resistivity to conductivty conversion. 
+        
+        Parameters
+        ------------
+        attr: string
+            mesh attribute to compute reciprocal of
+        new_key: string
+            name of new attribute, 
+        """
+        self.attr_cache[new_key] = 1/np.array(self.attr_cache[attr])
+        self.no_attributes += 1
+        
     def computeElmDepth(self,datum_x,datum_y,datum_z, method='bilinear'):
         """
         Compute the depth of elements given a datum (or surface).
@@ -1041,7 +1056,7 @@ class Mesh:
             self.no_attributes += 1
             return depth
             
-    def move_elec_nodes(self, new_x, new_y, new_z):
+    def move_elec_nodes(self, new_x, new_y, new_z,debug=True):
         """
         Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
@@ -1057,6 +1072,8 @@ class Mesh:
             assigned an array of zeros. 
         new_z : array-like
             new electrode z coordinates 
+        debug : bool, optional
+            Controls if any changes to electrode nodes will be output to console. 
             
         Notes
         ------------
@@ -1083,7 +1100,7 @@ class Mesh:
         for i in range(len(new_x)):
             sq_dist = (self.node_x - new_x[i])**2 + (self.node_y - new_y[i])**2 + (self.node_z - new_z[i])**2 # find the minimum square distance
             node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
-            if has_nodes:
+            if has_nodes and debug:
                 if node_in_mesh[i] != self.e_nodes[i]:
                     print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
         
