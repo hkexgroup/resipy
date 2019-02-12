@@ -2145,6 +2145,16 @@ class R2(object): # R2 master class instanciated by the GUI
             self.surveys[i].elec2distance() # go through each survey and compute electrode
         self.elec = self.surveys[0].elec
         
+    def compCond(self):
+        """Compute conductivities from resistivities for the ERT mesh
+        """
+        if self.typ=='R3t' or self.typ=='cR3t':
+            res_name = 'Resistivity'
+        else:
+            res_name = 'Resistivity(Ohm-m)'
+        for i in range(len(self.meshResults)):
+            self.meshResults[i].reciprocal(res_name,'Conductivity(S/m)')
+        
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
