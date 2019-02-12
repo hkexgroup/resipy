@@ -1319,6 +1319,7 @@ class App(QMainWindow):
         
         manualLayout = QVBoxLayout()
         
+        
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
         
@@ -1327,11 +1328,14 @@ class App(QMainWindow):
             infoDump('Data have been manually filtered.')
             plotManualFiltering()
             plotError()
-            
+        
+        manualTopLayout = QVBoxLayout()
+        manualTopLayout.setAlignment(Qt.AlignTop)
         notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
-        manualLayout.addWidget(notice)
+        manualTopLayout.addWidget(notice)
         
         btnLayout = QHBoxLayout()
+        
         btnStart = QPushButton('Start')
         btnStart.setAutoDefault(True)
         btnStart.clicked.connect(plotManualFiltering)
@@ -1342,11 +1346,14 @@ class App(QMainWindow):
         btnDone.clicked.connect(btnDoneFunc)
         btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
         btnLayout.addWidget(btnDone)
-        manualLayout.addLayout(btnLayout)
+        manualTopLayout.addLayout(btnLayout)
+        manualLayout.addLayout(manualTopLayout, 0) # number is stretch factor
         
+        manualBottompLayout = QVBoxLayout()
         
         mwManualFiltering = MatplotlibWidget(navi=True)
-        manualLayout.addWidget(mwManualFiltering)
+        manualBottompLayout.addWidget(mwManualFiltering)
+        manualLayout.addLayout(manualBottompLayout, 1) # '1' to keep the plot in largest strech
         
         
         errorLayout = QVBoxLayout()
