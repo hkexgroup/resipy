@@ -1738,6 +1738,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         fwdDir = os.path.join(self.dirname, 'fwd')
         if os.path.exists(fwdDir):
+            os.chmod(fwdDir, 0o777) # needed on Windows
             shutil.rmtree(fwdDir)
         os.mkdir(fwdDir)
         
