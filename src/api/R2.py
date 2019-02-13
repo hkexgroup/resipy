@@ -183,7 +183,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 shutil.rmtree(os.path.join(dirname, 'ref'))
             if 'err' in files: # only for error modelling
                 shutil.rmtree(os.path.join(dirname, 'err'))
-            files2remove = ['R2.exe','cR2.exe','R2.in','cR2.in','mesh.dat',
+            files2remove = ['R2.in','cR2.in','mesh.dat','R3t.in', 'cR3t.in',
                             'r100.dat','res0.dat']
             for f in files2remove:
                 if f in files:
@@ -1063,26 +1063,23 @@ class R2(object): # R2 master class instanciated by the GUI
         if dirname == '':
             dirname = self.dirname
         os.chdir(dirname)
-        targetName = os.path.join(dirname, exeName)
         
-        # copy R2.exe
-        if ~os.path.exists(targetName):
-            shutil.copy(os.path.join(self.apiPath, 'exe', exeName), targetName)  
-        
+        # get R2.exe path
+        exePath = os.path.join(self.apiPath, 'exe', exeName)
             
         if OS == 'Windows':
-            cmd = [exeName]
+            cmd = [exePath]
         elif OS == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd = ['%s' % (winePath[0].strip('\n')), exeName]
+                cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = ['/usr/local/bin/wine', exeName]
+                cmd = ['/usr/local/bin/wine', exePath]
         else:
-            cmd = ['wine',exeName]
+            cmd = ['wine',exePath]
             
 #        p = Popen(cmd, stdout=PIPE, shell=False)
 #        while p.poll() is None:
@@ -1137,10 +1134,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         # copy R2.exe
         exeName = self.typ + '.exe'
-        targetName = os.path.join(dirname, exeName)
-        if ~os.path.exists(targetName):
-            shutil.copy(os.path.join(self.apiPath, 'exe', exeName), targetName)  
-        
+        exePath = os.path.join(self.apiPath, 'exe', exeName)
         
         # split the protocol.dat
         dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
@@ -1181,9 +1175,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     shutil.copy(fname, os.path.join(wd, f))
                     
             # creating the process
-            exeName = self.typ + '.exe'
             procs.append(Process(target=workerInversion,
-                                 args=(wd, dump, exeName, queueIn)))
+                                 args=(wd, dump, exePath, queueIn)))
             procs[-1].start()
             
         # feed the queue
@@ -1301,18 +1294,6 @@ class R2(object): # R2 master class instanciated by the GUI
         
         if iplot is True:
             self.showResults()
-
-        # remove executables (spare disk space)
-        toRemove = ['R2.exe', 'cR2.exe', 'R3t.exe', 'cR3t.exe']
-        for f in  os.listdir(self.dirname):
-            if f in toRemove:
-                os.chmod(os.path.join(self.dirname, f), 0o777)
-                os.remove(os.path.join(self.dirname, f))
-        if self.iTimeLapse is True:
-            for f in os.listdir(os.path.join(self.dirname, 'ref')):
-                if f in toRemove:
-                    os.chmod(os.path.join(self.dirname, 'ref', f), 0o777)
-                    os.remove(os.path.join(self.dirname, 'ref', f))
             
             
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -1741,9 +1722,6 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         fwdDir = os.path.join(self.dirname, 'fwd')
         if os.path.exists(fwdDir):
-            for f in os.listdir(fwdDir):
-                if f[-4:] == '.exe':
-                    os.chmod(os.path.join(fwdDir, f), 0o777) # for windows !
             shutil.rmtree(fwdDir)
         os.mkdir(fwdDir)
         
