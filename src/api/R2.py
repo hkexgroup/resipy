@@ -78,7 +78,7 @@ def workerInversion(path, dump, exeName, qin):
         # moving inversion results back
         originalDir = os.path.dirname(fname)
         name = os.path.basename(fname).replace('.dat', '')
-        toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat', 'f001_sen.dat',]
+        toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat', 'f001_sen.dat', 'f001_diffres.dat']
         for f in toMove:
             shutil.move(os.path.join(path, f),
                         os.path.join(originalDir, f.replace('f001', name)))
