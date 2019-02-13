@@ -85,13 +85,19 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
         # moving inversion results back
         originalDir = os.path.dirname(fname)
         name = os.path.basename(fname).replace('.dat', '')
-        toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat', 'f001_sen.dat', 'f001_diffres.dat']
+        toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat',
+                  'f001_sen.dat', 'f001_diffres.dat', 'f001.dat', 'f001.sen',
+                  'f001.err']
         for f in toMove:
             if os.path.exists(os.path.join(path, f)):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
         shutil.move(os.path.join(path, 'R2.out'),
                     os.path.join(originalDir, name + '.out'))
+        shutil.move(os.path.join(path, 'electrodes.dat'),
+                    os.path.join(originalDir, name + 'electrodes.dat'))
+        shutil.move(os.path.join(path, 'electrodes.vtk'),
+                    os.path.join(originalDir, 'electrodes' + name + '.vtk'))
 
 
 
@@ -1238,7 +1244,6 @@ class R2(object): # R2 master class instanciated by the GUI
         with open(os.path.join(dirname, 'R2.out'), 'w') as f:
             f.write(r2outText)
         
-            
         # delete the dirs and the files
         [shutil.rmtree(d) for d in dirs]
         [os.remove(f) for f in files]
