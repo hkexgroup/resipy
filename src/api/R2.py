@@ -1206,13 +1206,14 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = ProcsManagement(procs)
         
         # get the files as it was a sequential inversion
-        toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat']
+        toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
         r2outText = ''
         for i, s in enumerate(surveys):
             for ext in toRename:
                 originalFile = os.path.join(dirname,  s.name + ext)
                 newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
-                shutil.move(originalFile, newFile)
+                if os.path.exists(originalFile):
+                    shutil.move(originalFile, newFile)
             r2outFile = os.path.join(dirname, s.name + '.out')
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
@@ -1640,6 +1641,7 @@ class R2(object): # R2 master class instanciated by the GUI
             phase0[idx] = ipValues[key]
         self.mesh.attr_cache['phase0'] = phase0
         
+        print('assignRes0-------------', np.sum(fixed), np.sum(phase0))
 #        for key in regionValues.keys():
 #            if key in self.regions:
 #                res0list.append(regionValues[key])
