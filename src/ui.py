@@ -3383,8 +3383,7 @@ USA: Trelgol Publishing, (2006).
 </li>
 </ul>
 </p>
-<p>Contributors : Paul McLachlan</p>
-<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>
+<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
 '''%pyR2_version)
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
