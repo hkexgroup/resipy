@@ -1056,7 +1056,7 @@ class Mesh:
             self.no_attributes += 1
             return depth
             
-    def move_elec_nodes(self, new_x, new_y, new_z,debug=True):
+    def move_elec_nodes(self, new_x, new_y, new_z, debug=True):
         """
         Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
@@ -1074,10 +1074,15 @@ class Mesh:
             new electrode z coordinates 
         debug : bool, optional
             Controls if any changes to electrode nodes will be output to console. 
+        Returns
+        ------------
+        node_in_mesh : np array
+            Array of mesh node numbers corresponding to the electrode postions/
+            coordinates.
             
         Notes
         ------------
-        Nothing is returned but the mesh.e_nodes parameter is updated (or added)
+        Mesh.e_nodes parameter is updated (or added) after running function. 
         """
         #formalities 
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
@@ -1105,6 +1110,7 @@ class Mesh:
                     print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
         
         self.add_e_nodes(node_in_mesh) # update e_node parameter
+        return np.array(node_in_mesh, dtype=int)
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """
