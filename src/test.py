@@ -113,6 +113,19 @@ k.showResults(index=3)
 k.showResults(index=1)
 
 
+#%% test for batch inversion with moving electrodes
+plt.close('all')
+print('-------------Testing Batch Inversion ------------')
+k = R2()
+k.createBatchSurvey('api/test/testTimelapse')
+k.createMesh('trian') # make mesh fine enough !
+#for s in k.surveys:
+#    s.elec
+k.invert(parallel=True, iMoveElec=True)
+#k.showResults(index=3)
+#k.showResults(index=1)
+
+
 #%% test mesh with buried electrodes
 #
 #print('-------------Testing Buried electrodes Inversion ------------')

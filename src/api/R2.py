@@ -34,27 +34,34 @@ print('pyR2 version = ',str(pyR2_version))
 #info = mt.systemCheck()
 
         
-def workerInversion(path, dump, exeName, qin):
+def workerInversion(path, dump, exePath, qin, iMoveElec=False):
     os.chdir(path)
     
     for fname in iter(qin.get, 'stop'):
         # copy the protocol.dat
         shutil.copy(fname, os.path.join(path, 'protocol.dat'))
-        
+
+        if iMoveElec is True:
+            exeName = os.path.basename(exePath).replace('.exe','')
+            r2inFile = os.path.join(os.path.dirname(fname),
+                                    exeName +
+                                    os.path.basename(fname).replace('.dat', '.in'))
+            shutil.copy(r2inFile, os.path.join(path, exeName + '.in'))
+            
         # run inversion
         if OS == 'Windows':
-            cmd = [exeName]
+            cmd = [exePath]
         elif OS == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd = ['%s' % (winePath[0].strip('\n')), exeName]
+                cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = ['/usr/local/bin/wine', exeName]
+                cmd = ['/usr/local/bin/wine', exePath]
         else:
-            cmd = ['wine',exeName]
+            cmd = ['wine',exePath]
             
         if OS == 'Windows':
             startupinfo = subprocess.STARTUPINFO()
@@ -769,7 +776,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.mesh.show(ax=ax, color_bar=False, zlim=self.zlim)
     
     
-    def write2in(self, param={}, typ=''):
+    def write2in(self, param={}, typ=None):
         """ Create configuration file for inversion.
         
         Parameters
@@ -779,7 +786,7 @@ class R2(object): # R2 master class instanciated by the GUI
         typ : str, optional
             Type of inversion. By default given by `R2.typ`.
         """
-        if typ == '':
+        if typ is None:
             typ = self.typ
         if all(self.surveys[0].df['irecip'].values == 0):
             if 'a_wgt' not in self.param:
@@ -1113,7 +1120,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     
-    def runParallel(self, dirname=None, dump=print):
+    def runParallel(self, dirname=None, dump=print, iMoveElec=False):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1123,6 +1130,9 @@ class R2(object): # R2 master class instanciated by the GUI
         dump : function, optional
             Function to be passed to `R2.runR2()` for printing output during
             inversion.
+        iMoveElec : bool, optional
+            If `True` will move electrodes according to their position in each
+            `Survey` object.
         """
         if dirname is None:
             dirname = self.dirname
@@ -1132,7 +1142,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             surveys = self.surveys
             
-        # copy R2.exe
+        # create R2.exe path
         exeName = self.typ + '.exe'
         exePath = os.path.join(self.apiPath, 'exe', exeName)
         
@@ -1151,7 +1161,20 @@ class R2(object): # R2 master class instanciated by the GUI
             files.append(outputname)
             df.to_csv(outputname, sep='\t', header=False, index=False)
             # header with line count already included
-            
+        
+        # if iMoveElec is True, writing different R2.in
+        if iMoveElec is True:
+            print('Electrodes position will be updated for each survey')
+            for s in self.surveys:
+                print(s.name, '...', end='')
+                elec = s.elec
+                e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
+                self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes[0])), e_nodes[0], e_nodes[1]].astype(int)
+                write2in(self.param, self.dirname, self.typ)
+                r2file = os.path.join(self.dirname, self.typ + '.in')
+                shutil.move(r2file, r2file.replace('.in', s.name + '.in'))
+                print('done')
+                
         queueIn = Queue() # queue
         
         # create workers directory
@@ -1176,7 +1199,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     
             # creating the process
             procs.append(Process(target=workerInversion,
-                                 args=(wd, dump, exePath, queueIn)))
+                                 args=(wd, dump, exePath, queueIn, iMoveElec)))
             procs[-1].start()
             
         # feed the queue
@@ -1224,7 +1247,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False):
+               parallel=False, iMoveElec=False):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -1245,6 +1268,10 @@ class R2(object): # R2 master class instanciated by the GUI
         parallel : bool, optional
             If `True`, batch and time-lapse survey will be inverted in //. No
             output will be display during inversion.
+        iMoveElec : bool, optional
+            If `True`, then different electrode location will be used for 
+            the different surveys. Electrodes location are specified in the
+            `Survey` object. Only for parallel inversion for now.
         """
         # clean meshResults list
         self.meshResults = []
@@ -1288,7 +1315,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-            self.runParallel(dump=dump)
+            self.runParallel(dump=dump, iMoveElec=iMoveElec)
         else:
             self.runR2(dump=dump)
         
