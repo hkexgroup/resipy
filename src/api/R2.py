@@ -1169,7 +1169,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(s.name, '...', end='')
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
-                self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes[0])), e_nodes[0], e_nodes[1]].astype(int)
+                self.param['node_elec'][:,1] = e_nodes
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', s.name + '.in'))

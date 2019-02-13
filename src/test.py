@@ -118,12 +118,17 @@ plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
-k.createMesh('trian') # make mesh fine enough !
+for s in k.surveys:
+    s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
+k.createMesh('trian')
+#k.createMesh('trian') # make mesh fine enough !
 #for s in k.surveys:
 #    s.elec
 k.invert(parallel=True, iMoveElec=True)
-#k.showResults(index=3)
-#k.showResults(index=1)
+k.showResults(index=0)
+k.showResults(index=1)
+k.showResults(index=2)
+k.showResults(index=3)
 
 
 #%% test mesh with buried electrodes
