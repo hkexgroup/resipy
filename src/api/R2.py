@@ -177,7 +177,6 @@ class R2(object): # R2 master class instanciated by the GUI
         self.doi = None
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
-        self.movingEnodes=False # allows the electrodes to move inbetween surveys
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -320,14 +319,13 @@ class R2(object): # R2 master class instanciated by the GUI
             self.addFilteredIP = self.surveys[0].addFilteredIP
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print, keepAll=False,
-                          movingEnodes=False):
+                          parser=None, isurveys=[], dump=print, keepAll=False):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
         ----------
-        fname : str
-            Filename to be parsed.
+        dirname : str
+            Directory with files to be parsed.
         ftype : str, optional
             Type of file to be parsed. Either 'Syscal' or 'Protocol'.
         info : dict, optional
@@ -343,10 +341,6 @@ class R2(object): # R2 master class instanciated by the GUI
             Function to dump the information message when importing the files.
         keepAll: bool, optional
             Filter out NaN and Inf but also dummy measurements.
-        movingEnodes: bool, optional (currently not implimented yet)
-            If True, then the electrode nodes are allowed to change with each survey. 
-            In which case for each time step the nearest node to each electrode
-            coordinate will be found and used in the R2.in file. 
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
@@ -357,19 +351,19 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
-                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False,
-                              movingEnodes=False):
+                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
         Parameters
         ----------
-        fname : str
-            Filename to be parsed.
+        dirname : str
+            Directory with files to be parsed.
         ftype : str, optional
             Type of file to be parsed. Either 'Syscal' or 'Protocol'.
         info : dict, optional
-            Dictionnary of info about the survey.
+            Dictionnary of info about the survey. Put inverse_type = 1 to allow 
+            for a changing number of measurements between surveys. 
         spacing : float, optional
             Electrode spacing to be passed to the parser function.
         parser : function, optional
@@ -381,14 +375,20 @@ class R2(object): # R2 master class instanciated by the GUI
             Function to dump information message when importing the files.
         keepAll: bool, optional
             If True, filter out NaN and Inf but also dummy measurements.
-        movingEnodes: bool, optional (currently not implimented yet)
-            If True, then the electrode nodes are allowed to change with each survey. 
-            In which case for each time step the nearest node to each electrode
-            coordinate will be found and used in the R2.in file. 
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
+        #check to see if inverse type is in the info. 
+        if 'inverse_type' in info:
+            regMode = int(info['inverse_type'])
+            if regMode<0 or regMode>2:
+                raise ValueError('Inverse type must have a value of 0, 1 or 2')
+            self.param['inverse_type']=regMode
+        else:
+            regMode = int(0)
+            self.param['inverse_type']= regMode # normal regularisation
+            
         for f in files:
             self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
@@ -397,8 +397,8 @@ class R2(object): # R2 master class instanciated by the GUI
             print('---------', f, 'imported')
             if len(self.surveys) == 1:
                 ltime = len(self.surveys[0].df)
-            if len(self.surveys) > 1:
-                if len(self.surveys[-1].df) != ltime:
+            if len(self.surveys) > 1: # check to see if the number of measurements is changing, if so throw an error
+                if len(self.surveys[-1].df) != ltime and regMode != 1: # can have changing number of measurements for constrained inversion
                     print('ERROR:', f, 'survey doesn\'t have the same length')
                     return
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
@@ -1229,7 +1229,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = ProcsManagement(procs)
         
         # get the files as it was a sequential inversion
-        toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
+        if self.typ=='R3t' or self.typ=='cR3t':
+            toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']
+        else:
+            toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
         r2outText = ''
         for i, s in enumerate(surveys):
             for ext in toRename:
@@ -1315,8 +1318,12 @@ class R2(object): # R2 master class instanciated by the GUI
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
             self.runR2(refdir, dump=dump)
-            shutil.copy(os.path.join(refdir, 'f001_res.dat'),
-                    os.path.join(self.dirname, 'Start_res.dat'))
+            if self.typ=='R3t' or self.typ=='cR3t':
+                shutil.copy(os.path.join(refdir, 'f001.dat'),
+                            os.path.join(self.dirname, 'Start_res.dat'))
+            else:
+                shutil.copy(os.path.join(refdir, 'f001_res.dat'),
+                            os.path.join(self.dirname, 'Start_res.dat'))
             
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
@@ -2170,7 +2177,11 @@ class R2(object): # R2 master class instanciated by the GUI
             res_name = 'Resistivity(Ohm-m)'
         for i in range(len(self.meshResults)):
             self.meshResults[i].reciprocal(res_name,'Conductivity(S/m)')
-        
+            
+    def showParam(self):
+        """Print parameters in param
+        """
+        [print(key) for i,key in enumerate(self.param)]
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)
