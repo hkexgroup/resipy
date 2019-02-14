@@ -88,8 +88,8 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
         originalDir = os.path.dirname(fname)
         name = os.path.basename(fname).replace('.dat', '')
         toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat',
-                  'f001_sen.dat', 'f001_diffres.dat', 'f001.dat', 'f001.sen',
-                  'f001.err']
+                  'f001_sen.dat', 'f001_diffres.dat',
+                  'f001.dat', 'f001.sen', 'f001.err', 'f001.vtk'] # all 3D stuff
         for f in toMove:
             if os.path.exists(os.path.join(path, f)):
                 shutil.move(os.path.join(path, f),
@@ -849,16 +849,26 @@ class R2(object): # R2 master class instanciated by the GUI
             param['a_wgt'] = 0.01
             param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
+            if self.typ == 'R3t' or self.typ == 'cR3t':
+                param['zmin'] = np.min(self.mesh.node_z) - 10 # to be sure to have everything
+                param['zmax'] = np.max(self.mesh.node_z) + 10
             param['reg_mode'] = 0 # set by default in ui.py too
-            self.configFile = write2in(param, refdir, typ=typ)
-            param = self.param.copy()
-            param['num_regions'] = 0
-            if 'reg_mode' in self.param.keys():
-                param['reg_mode'] = self.param['reg_mode']
-            else:
-                param['reg_mode'] = 2
-            param['res0File'] = 'Start_res.dat'
-            write2in(param, self.dirname, typ=typ)
+            self.configFile = write2in(param, refdir, typ=typ) # background survey
+            
+            # now prepare the actual timelapse
+            self.param['num_regions'] = 0
+            if 'reg_mode' not in self.param.keys():
+                self.param['reg_mode'] = 2
+            self.param['res0File'] = 'Start_res.dat'
+            if self.typ == 'R3t' or self.typ == 'cR3t':
+                # for R3t/cR3t, there is no regularization mode but just
+                # an inversion_type variable that we need to overwrite based
+                # on the reg_mode
+                if self.param['reg_mode'] == 2:
+                    self.param['inverse_type'] = 2 # difference inversion
+                else:
+                    self.param['inverse_type'] = 1 # constrained to background
+            write2in(self.param, self.dirname, typ=typ) # actual time-lapse
         else:
             self.configFile = write2in(self.param, self.dirname, typ=typ)
         
@@ -1128,7 +1138,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     
-    def runParallel(self, dirname=None, dump=print, iMoveElec=False):
+    def runParallel(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1141,6 +1151,9 @@ class R2(object): # R2 master class instanciated by the GUI
         iMoveElec : bool, optional
             If `True` will move electrodes according to their position in each
             `Survey` object.
+        ncores : int, optional
+            Number or cores to use. If None, the maximum number of cores
+            available will be used.
         """
         if dirname is None:
             dirname = self.dirname
@@ -1186,7 +1199,12 @@ class R2(object): # R2 master class instanciated by the GUI
         queueIn = Queue() # queue
         
         # create workers directory
-        ncores = mt.systemCheck()['core_count']
+        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        if ncores is None:
+            ncores = ncoresAvailable
+        else:
+            if ncores > ncoresAvailable:
+                raise ValueError('Number of cores larger than available')
         procs = []
         dirs = []
         for i in range(ncores):
@@ -1247,10 +1265,10 @@ class R2(object): # R2 master class instanciated by the GUI
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
             os.remove(r2outFile)
-        with open(os.path.join(dirname, 'R2.out'), 'w') as f:
+        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
             f.write(r2outText)
         
-#         delete the dirs and the files
+        # delete the dirs and the files
         [shutil.rmtree(d) for d in dirs]
         [os.remove(f) for f in files]
         
@@ -2084,29 +2102,28 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.plot((1,measurement_no[-1]),baseline,'k--')
 
 
-    def showInParaview(self, index=0,Paraview_loc=None):
+    def showInParaview(self, index=0, paraview_loc=None):
         """ Open paraview to display the .vtk file.
         Parameters
         -------------
         index: int, optional
             Timestep to be shown in paraview (for an individual survey this 1).
-        Paraview_loc: str, optional
+        paraview_loc: str, optional
             **Windows ONLY** maps to the excuatable paraview.exe. The program 
             will attempt to find the location of the paraview install if not given. 
         """
-        OpSys = platform.system()
         if self.typ[-1] == '2':
             fname = 'f{:03d}_res.vtk'.format(index+1)
         else:
             fname = 'f{:03d}.vtk'.format(index+1)  
-        if OpSys == "Windows":
-            if Paraview_loc is None:
+        if OS == "Windows":
+            if paraview_loc is None:
                 found,cmd_line = self.mesh.findParaview()
                 if not found:
                     print("Cannot find paraview location")
                     return
                 cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
-            elif isinstance(Paraview_loc,str):
+            elif isinstance(paraview_loc,str):
                 cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
             else:
                 print("Cannot find where paraview is installed")
