@@ -3322,7 +3322,7 @@ class App(QMainWindow):
         tabs.setTabEnabled(6,False)
         
         invError = QWidget()
-        tabPostProcessing.addTab(invError, 'Psuedo Section Error')
+        tabPostProcessing.addTab(invError, 'Pseudo Section Error')
         invErrorLayout = QVBoxLayout()
         
         def plotInvError():
@@ -3340,7 +3340,11 @@ class App(QMainWindow):
         def plotInvError2():
             mwInvError2.plot(self.r2.showInversionErrors)
         mwInvError2 = MatplotlibWidget(navi=True)
+        invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
+                               'If it\'s not the case try to fit an error model or '
+                               'manually change the a_wgt and b_wgt in inversion settings.')
         invErrorLayout2.addWidget(mwInvError2)
+        invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
         
         
