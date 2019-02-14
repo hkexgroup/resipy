@@ -157,6 +157,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
             dirname = os.path.join(self.apiPath, 'invdir')
+        else:
+            dirname = os.path.abspath(dirname)
+            
         print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
         self.elec = None # will be assigned when creating a survey
@@ -1182,7 +1185,7 @@ class R2(object): # R2 master class instanciated by the GUI
             files.append(outputname)
             df.to_csv(outputname, sep='\t', header=False, index=False)
             # header with line count already included
-        
+                    
         # if iMoveElec is True, writing different R2.in
         if iMoveElec is True:
             print('Electrodes position will be updated for each survey')
