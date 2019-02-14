@@ -41,7 +41,7 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
     
     for fname in iter(qin.get, 'stop'):
         # copy the protocol.dat
-        shutil.copy(fname, os.path.join(path, 'protocol.dat'))
+        shutil.copy(fname, os.path.join(path, 'protocol.dat')) #### TODO: this line is problematic if typ=R3t, iMoveElec = True!
 
         if iMoveElec is True:
             exeName = os.path.basename(exePath).replace('.exe','')
@@ -1198,8 +1198,9 @@ class R2(object): # R2 master class instanciated by the GUI
             os.mkdir(wd)
             
             # copying usefull files from the main directory
-            toMove = ['R2.exe','cR2.exe','mesh.dat', 'mesh3d','R2.in','cR2.in',
-                      'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 'Start_res.dat']
+            toMove = ['mesh.dat', 'mesh3d.dat','R2.in','cR2.in',
+                      'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 
+                      'Start_res.dat']
             for f in toMove:
                 fname = os.path.join(dirname, f)
                 if os.path.exists(fname):
@@ -1249,7 +1250,7 @@ class R2(object): # R2 master class instanciated by the GUI
         with open(os.path.join(dirname, 'R2.out'), 'w') as f:
             f.write(r2outText)
         
-        # delete the dirs and the files
+#         delete the dirs and the files
         [shutil.rmtree(d) for d in dirs]
         [os.remove(f) for f in files]
         
@@ -1390,7 +1391,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.meshResults = [] # make sure we empty the list first
 #        if self.typ == 'R2':
         if self.iTimeLapse == True:
-            fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
+            if self.typ[-2] == '3':
+                fresults = os.path.join(self.dirname, 'ref', 'f001.vtk')
+            else:
+                fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.elec_x = self.elec[:,0]

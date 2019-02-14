@@ -2,29 +2,14 @@
 """
 Created on Wed May 30 10:19:09 2018, python 3.6.5
 @author: jamyd91
-Import a vtk file with an unstructured grid (triangular/quad elements) and 
-creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. Module has capacity to show meshes, inverted results, apply a function 
-to mesh parameters. 
-
+Module handles mesh generation, display, discretisation and post processing. 
 The convention for x y z coordinates is that the z coordinate is the elevation.
-
-Classes: 
-    Mesh
-Functions: 
-    tri_cent() - computes the centre point for a 2d triangular element
-    vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-    readR2_resdat () - reads resistivity values from a R2 file
-    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
-    tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh
 
 Dependencies: 
     numpy (conda lib)
     matplotlib (conda lib)
     gmshWrap(pyR2 api module)
     python3 standard libaries
-
-Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
 import os, platform, warnings, multiprocessing, re, pathlib
@@ -328,8 +313,8 @@ class Mesh:
             `True` to plot colorbar 
         xlim : tuple, optional
             Axis x limits as `(xmin, xmax)`.
-        ylim : tuple, optional
-            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(zmin, zmax)`. 
         ax : matplotlib axis handle, optional
             Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
         electrodes : boolean, optional
