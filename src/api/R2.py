@@ -214,7 +214,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             print('creating the dirname')
             os.mkdir(dirname)
-        self.dirname = dirname
+        self.dirname = os.path.abspath(dirname)
     
     def setElec(self, elec,elecList=None):
         """ Set electrodes.
