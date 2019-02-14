@@ -34,8 +34,10 @@ print('pyR2 version = ',str(pyR2_version))
 #info = mt.systemCheck()
 
         
-def workerInversion(path, dump, exePath, qin, iMoveElec=False):
+def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
     os.chdir(path)
+    if typ is None: # type of .out file will depend on the inversion code being used. 
+        typ = 'R2'
     
     for fname in iter(qin.get, 'stop'):
         # copy the protocol.dat
@@ -92,7 +94,7 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
             if os.path.exists(os.path.join(path, f)):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
-        shutil.move(os.path.join(path, 'R2.out'),
+        shutil.move(os.path.join(path, typ+'.out'),
                     os.path.join(originalDir, name + '.out'))
         shutil.move(os.path.join(path, 'electrodes.dat'),
                     os.path.join(originalDir, name + 'electrodes.dat'))
@@ -1205,7 +1207,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     
             # creating the process
             procs.append(Process(target=workerInversion,
-                                 args=(wd, dump, exePath, queueIn, iMoveElec)))
+                                 args=(wd, dump, exePath, queueIn, self.typ, iMoveElec)))
             procs[-1].start()
             
         # feed the queue
