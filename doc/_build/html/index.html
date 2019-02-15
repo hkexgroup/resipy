@@ -46,6 +46,23 @@ Main R2 class, wraps the other pyR2 modules (API) in to an object orientated app
 <dt id="api.R2.R2">
 <em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em>, <em>typ='R2'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Master class to handle all processing around the inversion codes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str, optional</p>
+<blockquote>
+<div><p>Path of the working directory. Can also be set using <cite>R2.setwd()</cite>.</p>
+</div></blockquote>
+<p><strong>typ</strong> : str, optional</p>
+<blockquote class="last">
+<div><p>Either <cite>R2</cite> or <cite>R3t</cite> for 3D. Complex equivalents are <cite>cR2</cite> and <cite>cR3t</cite>.
+Automatically infered when creating the survey.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
 <code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=1</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
@@ -961,6 +978,44 @@ shade on top of the inverted section.</p>
 <em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>keepAll=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that handles geophysical data and some basic functions. One 
 instance is created for each survey.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote>
+<div><p>Name of the file where the data are.</p>
+</div></blockquote>
+<p><strong>ftype</strong> : str</p>
+<blockquote>
+<div><p>Type of the data file. This setting is not read if a <cite>parser</cite> is
+not <cite>None</cite>.</p>
+</div></blockquote>
+<p><strong>name</strong> : str</p>
+<blockquote>
+<div><p>A personal name for the survey.</p>
+</div></blockquote>
+<p><strong>spacing</strong> : float, optional</p>
+<blockquote>
+<div><p>This will be passed to the parser function to determine the
+electrode positions.</p>
+</div></blockquote>
+<p><strong>parser</strong> : function, optional</p>
+<blockquote>
+<div><p>If provided, it should return tuple containing <cite>elec</cite> a 3 columns
+array containing electrodes position and <cite>data</cite> a pandas.DataFrame
+with the <cite>a,b,m,n,resist</cite> columns at least and <cite>ip</cite> if present.</p>
+</div></blockquote>
+<p><strong>keepAll: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>If <cite>True</cite> will keep all the measurements even the ones without
+reciprocal. Note that if none of the quadrupoles have reciprocal
+they will all be kept anyway.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="api.Survey.Survey.addData">
 <code class="descname">addData</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addData" title="Permalink to this definition">¶</a></dt>

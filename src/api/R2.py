@@ -140,18 +140,16 @@ def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
                 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
+    
+    Parameters
+    ----------
+    dirname : str, optional
+        Path of the working directory. Can also be set using `R2.setwd()`.
+    typ : str, optional
+        Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t`.
+        Automatically infered when creating the survey.
     """ 
     def __init__(self, dirname='', typ='R2'):
-        """ Create an R2 object.
-        
-        Parameters
-        ----------
-        dirname : str, optional
-            Path of the working directory. Can also be set using `R2.setwd()`.
-        typ : str, optional
-            Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t'.
-            Automatically infered when creating the survey.
-        """
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
             dirname = os.path.join(self.apiPath, 'invdir')
