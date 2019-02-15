@@ -1331,12 +1331,12 @@ class Survey(object):
         self.filterData(~index)
         
     def shuntIndexes(self,debug=True): 
-        """
-        Normalise the indexes the sequence matrix to start at 1 
+        """ Normalise the indexes the sequence matrix to start at 1.
+        
         Parameters
-        -------------
+        ----------
         debug: bool
-            Set to True to print output
+            Set to True to print output.
         """
         df = self.df
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
@@ -1364,9 +1364,9 @@ class Survey(object):
             self.df = df 
 
     def swapIndexes(self,old_indx,new_indx):
-        """
-        Replace the electrode number in a sequence matrix with another. Survey 
-        dataframe is updated after running. 
+        """ Replace the electrode number in a sequence matrix with another.
+        Survey dataframe is updated after running. 
+        
         Parameters
         ------------
         old_idx: int
@@ -1388,15 +1388,15 @@ class Survey(object):
         #return replace,corrected
     
     def normElecIdx(self, debug=True):
-        """
-        Normalise the electrode indexing sequencing to start at 1 and ascend
+        """ Normalise the electrode indexing sequencing to start at 1 and ascend
         consectively (ie 1 , 2 , 3 , 4 ... )
         
         Function firstly normalises all indexes so that the lowest electrode 
-        number is 1. Then removes jumps in the electrode indexing. 
+        number is 1. Then removes jumps in the electrode indexing.
+        
         Parameters
         -----------
-        debug: bool
+        debug : bool
             Output will be printed to console if true. 
         """
         df = self.df.copy()

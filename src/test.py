@@ -57,7 +57,7 @@ k.invert()
 k.showResults()
 k.showInParaview()
 
-#%%
+#%% test for borehole
 plt.close('all')
 print('-------------Testing borehole------------')
 k = R2()
@@ -96,7 +96,7 @@ k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
 k.pwlfit()
 k.errTyp = 'pwl'
-k.invert(iplot=False, parallel=True, param={'reg_mode':2})
+k.invert(iplot=False, parallel=True, ncores=3)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
@@ -283,7 +283,7 @@ plt.close('all')
 print('-------------Testing 3D IP inversion ------------')
 k = R2(typ='cR3t')
 k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')
-elec = np.genfromtxt('api/test/electrodes3Dip.dat')
+elec = np.genfromtxt('api/test/electrodes3Dip.csv', delimiter=',')
 k.setElec(elec)
 k.createMesh(cl=3)
 k.showMesh()
@@ -296,7 +296,7 @@ k.showSlice(axis='y')
 k.showInParaview()
 
 
-#%% 3D with moving electrodes (specialy dedicated to Jimmy)
+#%% 3D with moving electrodes (specialy dedicated to Jimmy ;)
 from api.R2 import R2
 plt.close('all')
 print('-------------Testing 3D inversion ------------')

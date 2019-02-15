@@ -13,6 +13,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
   </head><body>
@@ -124,6 +125,12 @@ the phase [mrad].</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.compCond">
+<code class="descname">compCond</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.compCond" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute conductivities from resistivities for the ERT mesh</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.computeDOI">
 <code class="descname">computeDOI</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.computeDOI" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the Depth Of Investigation (DOI).</p>
@@ -137,15 +144,15 @@ the phase [mrad].</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createBatchSurvey">
-<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>keepAll=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read multiples files from a folders (sorted by alphabetical order).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str</p>
 <blockquote>
-<div><p>Filename to be parsed.</p>
+<div><p>Directory with files to be parsed.</p>
 </div></blockquote>
 <p><strong>ftype</strong> : str, optional</p>
 <blockquote>
@@ -169,8 +176,12 @@ the phase [mrad].</p>
 reciprocal measurements. By default all surveys are used.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to dump the information message when importing the files.</p>
+</div></blockquote>
+<p><strong>keepAll: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Filter out NaN and Inf but also dummy measurements.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -198,7 +209,8 @@ length as <cite>R2.elec</cite></p>
 </div></blockquote>
 <p><strong>surface</strong> : numpy.array, optional</p>
 <blockquote>
-<div><p>Array with two columns x and y for additional surface points.</p>
+<div><p>Array with two or threee columns x, y (optional) and elevation for 
+additional surface points.</p>
 </div></blockquote>
 <p><strong>cl_factor</strong> : float, optional</p>
 <blockquote>
@@ -284,7 +296,7 @@ Types of sequences available are : ‘dpdp1’,’dpdp2’,’wenner_alpha’,
 
 <dl class="method">
 <dt id="api.R2.R2.createSurvey">
-<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>keepAll=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -308,8 +320,12 @@ a survey object.</p>
 <div><p>Electrode spacing to be passed to the parser function.</p>
 </div></blockquote>
 <p><strong>parser</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
+</div></blockquote>
+<p><strong>keepAll: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Filter out NaN and Inf but also dummy measurements.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -319,16 +335,16 @@ a survey object.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createTimeLapseSurvey">
-<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>keepAll=False</em>, <em>trim=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str</p>
 <blockquote>
-<div><p>Filename to be parsed.</p>
+<div><p>Directory with files to be parsed.</p>
 </div></blockquote>
 <p><strong>ftype</strong> : str, optional</p>
 <blockquote>
@@ -336,7 +352,8 @@ a survey object.</p>
 </div></blockquote>
 <p><strong>info</strong> : dict, optional</p>
 <blockquote>
-<div><p>Dictionnary of info about the survey.</p>
+<div><p>Dictionnary of info about the survey. Put inverse_type = 1 to allow 
+for a changing number of measurements between surveys.</p>
 </div></blockquote>
 <p><strong>spacing</strong> : float, optional</p>
 <blockquote>
@@ -352,8 +369,47 @@ a survey object.</p>
 reciprocal measurements. By default all surveys are used.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to dump information message when importing the files.</p>
+</div></blockquote>
+<p><strong>keepAll</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, filter out NaN and Inf but also dummy measurements.</p>
+</div></blockquote>
+<p><strong>trim</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>If <cite>True</cite> this ensure that all surveys imported have the same
+length. This is needed for difference inversion (<cite>reg_mode=2</cite>) but
+not for background constrained inversion (<cite>reg_mode=1</cite>) and can be
+disable in this last case.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.elecXY2elecX">
+<code class="descname">elecXY2elecX</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.elecXY2elecX" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert 3D electrode XY coordinates into just X coordinates. Use for 
+2D lines only! 
+If self.elec has been set then each survey will use the electrodes set 
+in the R2 master class. If not then the R2 master class will take on the
+elec values set for the first survey in a sequence.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.filterElec">
+<code class="descname">filterElec</code><span class="sig-paren">(</span><em>elec=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.filterElec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter out specific electrodes given in all surveys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec</strong> : list</p>
+<blockquote class="last">
+<div><p>List of electrode number to be removed.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -414,6 +470,50 @@ them to <cite>R2.meshResults</cite> list.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.importMesh">
+<code class="descname">importMesh</code><span class="sig-paren">(</span><em>file_path</em>, <em>mesh_type='tetra'</em>, <em>node_pos=None</em>, <em>elec=None</em>, <em>flag_3D=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.importMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import mesh from .vtk / .msh / .dat, rather than having &lt;pyR2&gt; create
+one for you.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: str</strong></p>
+<blockquote>
+<div><p>File path mapping to the mesh file</p>
+</div></blockquote>
+<p><strong>mesh_type: str</strong></p>
+<blockquote>
+<div><p>Type of mesh, ‘quad’, ‘trian’, ‘tetra’</p>
+</div></blockquote>
+<p><strong>node_pos: array like, optional</strong></p>
+<blockquote>
+<div><p>Array of ints referencing the electrode nodes. If left as none no electrodes 
+will be added to the mesh class. Consider using mesh.move_elec_nodes()
+to add nodes to mesh using their xyz coordinates.</p>
+</div></blockquote>
+<p><strong>elec: numpy array, optional</strong></p>
+<blockquote>
+<div><p>N*3 numpy array of electrode x,y,z coordinates. Electrode node positions
+will be computed by finding the nearest nodes to the relevant coordinates.</p>
+</div></blockquote>
+<p><strong>flag_3D: bool, optional</strong></p>
+<blockquote>
+<div><p>Make this true for 3D meshes if importing .msh type.</p>
+</div></blockquote>
+<p><strong>Returns</strong></p>
+<p><strong>———–</strong></p>
+<p><strong>mesh: class</strong></p>
+<blockquote class="last">
+<div><p>Added to R2 class</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.importSequence">
 <code class="descname">importSequence</code><span class="sig-paren">(</span><em>fname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.importSequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Import sequence for forward modelling.</p>
@@ -433,7 +533,7 @@ them to <cite>R2.meshResults</cite> list.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.invert">
-<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em>, <em>iMoveElec=False</em>, <em>ncores=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Invert the data, first generate R2.in file, then run
 inversion using appropriate wrapper, then return results.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -461,14 +561,31 @@ inversion using appropriate wrapper, then return results.</p>
 inversion.</p>
 </div></blockquote>
 <p><strong>parallel</strong> : bool, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>If <cite>True</cite>, batch and time-lapse survey will be inverted in //. No
 output will be display during inversion.</p>
+</div></blockquote>
+<p><strong>iMoveElec</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, then different electrode location will be used for 
+the different surveys. Electrodes location are specified in the
+<cite>Survey</cite> object. Only for parallel inversion for now.</p>
+</div></blockquote>
+<p><strong>ncores</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>If <cite>parallel==True</cite> then ncores is the number of cores to use (by
+default all the cores available are used).)</p>
 </div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.normElecIdx">
+<code class="descname">normElecIdx</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.normElecIdx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalise electrode indexes to start at 1 in consective and ascending order.</p>
 </dd></dl>
 
 <dl class="method">
@@ -506,7 +623,7 @@ starting model to invert data from forward modelling.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.runParallel">
-<code class="descname">runParallel</code><span class="sig-paren">(</span><em>dirname=None</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runParallel" title="Permalink to this definition">¶</a></dt>
+<code class="descname">runParallel</code><span class="sig-paren">(</span><em>dirname=None</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>iMoveElec=False</em>, <em>ncores=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runParallel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run R2 in // according to the number of cores available.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -517,9 +634,19 @@ starting model to invert data from forward modelling.</p>
 <div><p>Path of the working directory.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to be passed to <cite>R2.runR2()</cite> for printing output during
 inversion.</p>
+</div></blockquote>
+<p><strong>iMoveElec</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> will move electrodes according to their position in each
+<cite>Survey</cite> object.</p>
+</div></blockquote>
+<p><strong>ncores</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>Number or cores to use. If None, the maximum number of cores
+available will be used.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -576,16 +703,23 @@ are passed to the <cite>showResults()</cite> method.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.setElec">
-<code class="descname">setElec</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setElec" title="Permalink to this definition">¶</a></dt>
+<code class="descname">setElec</code><span class="sig-paren">(</span><em>elec</em>, <em>elecList=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setElec" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set electrodes.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec</strong> : numpy array</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
 M = 3 if x,y,z coordinates are supplied.</p>
+</div></blockquote>
+<p><strong>elecList</strong> : list, optional</p>
+<blockquote class="last">
+<div><p>If not None then elec is ignored in favour of elecList. This option 
+is to be used in the advanced use case where electrodes move which 
+each survey. Each entry of the list is a numpy array the same format
+of ‘elec’, which is then assigned to each survey class.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -613,8 +747,25 @@ M = 3 if x,y,z coordinates are supplied.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.showInParaview">
-<code class="descname">showInParaview</code><span class="sig-paren">(</span><em>index=0</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInParaview" title="Permalink to this definition">¶</a></dt>
+<code class="descname">showInParaview</code><span class="sig-paren">(</span><em>index=0</em>, <em>paraview_loc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInParaview" title="Permalink to this definition">¶</a></dt>
 <dd><p>Open paraview to display the .vtk file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>index: int, optional</strong></p>
+<blockquote>
+<div><p>Timestep to be shown in paraview (for an individual survey this 1).</p>
+</div></blockquote>
+<p><strong>paraview_loc: str, optional</strong></p>
+<blockquote class="last">
+<div><p><strong>Windows ONLY</strong> maps to the excuatable paraview.exe. The program 
+will attempt to find the location of the paraview install if not given.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -649,6 +800,12 @@ M = 3 if x,y,z coordinates are supplied.</p>
 <dt id="api.R2.R2.showMesh">
 <code class="descname">showMesh</code><span class="sig-paren">(</span><em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Display the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.showParam">
+<code class="descname">showParam</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print parameters in param</p>
 </dd></dl>
 
 <dl class="method">
@@ -734,8 +891,14 @@ shade on top of the inverted section.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.shuntIndexes">
+<code class="descname">shuntIndexes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.shuntIndexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shunt electrode indexes to start at 1.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.write2in">
-<code class="descname">write2in</code><span class="sig-paren">(</span><em>param={}</em>, <em>typ=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2in" title="Permalink to this definition">¶</a></dt>
+<code class="descname">write2in</code><span class="sig-paren">(</span><em>param={}</em>, <em>typ=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2in" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create configuration file for inversion.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -795,7 +958,7 @@ shade on top of the inverted section.</p>
 <p>&#64;author: jkl</p>
 <dl class="class">
 <dt id="api.Survey.Survey">
-<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>keepAll=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that handles geophysical data and some basic functions. One 
 instance is created for each survey.</p>
 <dl class="method">
@@ -827,6 +990,12 @@ are not in the same file).</p>
 <dt id="api.Survey.Survey.dca">
 <code class="descname">dca</code><span class="sig-paren">(</span><em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.dca" title="Permalink to this definition">¶</a></dt>
 <dd><p>execute DCA filtering</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.elec2distance">
+<code class="descname">elec2distance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.elec2distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert 3d xy data in pure x lateral distance. Use for 2D data only!</p>
 </dd></dl>
 
 <dl class="method">
@@ -993,6 +1162,27 @@ classes will be computed as 10**class1</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">If <cite>ax</cite> is not None, a matplotlib figure is returned.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.normElecIdx">
+<code class="descname">normElecIdx</code><span class="sig-paren">(</span><em>debug=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.normElecIdx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalise the electrode indexing sequencing to start at 1 and ascend
+consectively (ie 1 , 2 , 3 , 4 … )</p>
+<p>Function firstly normalises all indexes so that the lowest electrode 
+number is 1. Then removes jumps in the electrode indexing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>debug</strong> : bool</p>
+<blockquote class="last">
+<div><p>Output will be printed to console if true.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1192,6 +1382,47 @@ without reciprocal.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.Survey.Survey.shuntIndexes">
+<code class="descname">shuntIndexes</code><span class="sig-paren">(</span><em>debug=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.shuntIndexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalise the indexes the sequence matrix to start at 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>debug: bool</strong></p>
+<blockquote class="last">
+<div><p>Set to True to print output.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.swapIndexes">
+<code class="descname">swapIndexes</code><span class="sig-paren">(</span><em>old_indx</em>, <em>new_indx</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.swapIndexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace the electrode number in a sequence matrix with another.
+Survey dataframe is updated after running.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>old_idx: int</strong></p>
+<blockquote>
+<div><p>Electrode number(or index) to be replaced</p>
+</div></blockquote>
+<p><strong>new_idx: int</strong></p>
+<blockquote class="last">
+<div><p>Replacement electrode number</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.Survey.Survey.write2protocol">
 <code class="descname">write2protocol</code><span class="sig-paren">(</span><em>outputname=''</em>, <em>errTyp='none'</em>, <em>errTot=False</em>, <em>ip=False</em>, <em>errTypIP='none'</em>, <em>res0=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.write2protocol" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a protocol.dat file for R2 or cR2.</p>
@@ -1246,31 +1477,19 @@ if <cite>True</cite>.</p>
 
 <span class="target" id="module-api.meshTools"></span><p>Created on Wed May 30 10:19:09 2018, python 3.6.5
 &#64;author: jamyd91
-Import a vtk file with an unstructured grid (triangular/quad elements) and 
-creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. Module has capacity to show meshes, inverted results, apply a function 
-to mesh parameters.</p>
-<p>The convention for x y z coordinates is that the z coordinate is the elevation.</p>
+Module handles mesh generation, display, discretisation and post processing. 
+The convention for x y z coordinates is that the z coordinate is the elevation.</p>
 <dl class="docutils">
-<dt>Classes: </dt>
-<dd>Mesh</dd>
-<dt>Functions: </dt>
-<dd>tri_cent() - computes the centre point for a 2d triangular element
-vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-readR2_resdat () - reads resistivity values from a R2 file
-quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
-tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</dd>
 <dt>Dependencies: </dt>
 <dd>numpy (conda lib)
 matplotlib (conda lib)
 gmshWrap(pyR2 api module)
 python3 standard libaries</dd>
 </dl>
-<p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
 <dl class="class">
 <dt id="api.meshTools.Mesh">
 <em class="property">class </em><code class="descclassname">api.meshTools.</code><code class="descname">Mesh</code><span class="sig-paren">(</span><em>num_nodes</em>, <em>num_elms</em>, <em>node_x</em>, <em>node_y</em>, <em>node_z</em>, <em>node_id</em>, <em>elm_id</em>, <em>node_data</em>, <em>elm_centre</em>, <em>elm_area</em>, <em>cell_type</em>, <em>cell_attributes</em>, <em>atribute_title</em>, <em>original_file_path='N/A'</em>, <em>regions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates mesh object.</p>
+<dd><p>Mesh class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1537,6 +1756,40 @@ Use the <cite>mesh.show()</cite> (or <cite>.draw()</cite>) function to see the r
 </dd></dl>
 
 <dl class="method">
+<dt id="api.meshTools.Mesh.computeElmDepth">
+<code class="descname">computeElmDepth</code><span class="sig-paren">(</span><em>datum_x</em>, <em>datum_y</em>, <em>datum_z</em>, <em>method='bilinear'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.computeElmDepth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the depth of elements given a datum (or surface).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>datum_x: array like</strong></p>
+<blockquote>
+<div><p>X coordinates of datum</p>
+</div></blockquote>
+<p><strong>datum_y: array like</strong></p>
+<blockquote>
+<div><p>Y coordinates of datum, if using 2D mesh then set to ‘None’</p>
+</div></blockquote>
+<p><strong>datum_z: array like</strong></p>
+<blockquote>
+<div><p>Elevation of datum</p>
+</div></blockquote>
+<p><strong>method: str, optional</strong></p>
+<blockquote class="last">
+<div><p>Method of interpolation used to compute cell depths for a 3D mesh.
+Ignored for 2D meshes. 
+- ‘bilinear’ - (default) binlinear interpolation
+- ‘idw’ - inverse distance wieghting
+- ‘nearest’ - nearest neighbour interpolation</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.meshTools.Mesh.draw">
 <code class="descname">draw</code><span class="sig-paren">(</span><em>attr=None</em>, <em>edge_color='k'</em>, <em>color_map=None</em>, <em>color_bar=False</em>, <em>vmin=None</em>, <em>vmax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.draw" title="Permalink to this definition">¶</a></dt>
 <dd><p>Redraws a mesh over a prexisting figure canvas, this is intended for saving
@@ -1586,14 +1839,38 @@ as the key for this dictionary.</p>
 </table>
 </dd></dl>
 
+<dl class="staticmethod">
+<dt id="api.meshTools.Mesh.findParaview">
+<em class="property">static </em><code class="descname">findParaview</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.findParaview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run on windows to find paraview.exe command.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">found: bool</p>
+<blockquote>
+<div><p>If True the program was able to find where paraview is installed 
+If false then the program could not find paraview in the default 
+install locations.</p>
+</div></blockquote>
+<p>location: str</p>
+<blockquote class="last">
+<div><p>if found == True. The string maps to the paraview executable
+if found == False. then ‘n/a’ is returned.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="classmethod">
 <dt id="api.meshTools.Mesh.mesh_dict2class">
 <em class="property">classmethod </em><code class="descname">mesh_dict2class</code><span class="sig-paren">(</span><em>mesh_info</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.mesh_dict2class" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts a mesh dictionary produced by the gmsh2r2mesh and
-vtk_import functions into a mesh object, its an alternative way to</p>
-<blockquote>
-<div>make a mesh object.</div></blockquote>
-<p><strong>*Intended for development use*</strong></p>
+vtk_import functions into a mesh object, its an alternative way to
+make a mesh object. 
+<strong>*Intended for development use*</strong></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1613,7 +1890,7 @@ vtk_import functions into a mesh object, its an alternative way to</p>
 
 <dl class="method">
 <dt id="api.meshTools.Mesh.move_elec_nodes">
-<code class="descname">move_elec_nodes</code><span class="sig-paren">(</span><em>new_x</em>, <em>new_y</em>, <em>new_z</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.move_elec_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="descname">move_elec_nodes</code><span class="sig-paren">(</span><em>new_x</em>, <em>new_y</em>, <em>new_z</em>, <em>debug=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.move_elec_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Move the electrodes to different nodes which are close to the given coordinates. 
 This is useful for timelapse surveys where the electrodes move through time, 
 ideally this is implimented on a mesh which is refined near the surface. If 
@@ -1632,16 +1909,73 @@ no nodes are assigned to mesh, a mesh.e_nodes variable is created.</p>
 assigned an array of zeros.</p>
 </div></blockquote>
 <p><strong>new_z</strong> : array-like</p>
-<blockquote class="last">
+<blockquote>
 <div><p>new electrode z coordinates</p>
+</div></blockquote>
+<p><strong>debug</strong> : bool, optional</p>
+<blockquote>
+<div><p>Controls if any changes to electrode nodes will be output to console.</p>
+</div></blockquote>
+<p><strong>Returns</strong></p>
+<p><strong>————</strong></p>
+<p><strong>node_in_mesh</strong> : np array</p>
+<blockquote class="last">
+<div><p>Array of mesh node numbers corresponding to the electrode postions/
+coordinates.</p>
 </div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Notes</p>
-<p>Nothing is returned but the mesh.e_nodes parameter is updated (or added)
-#### TODO: Test this function.</p>
+<p>Mesh.e_nodes parameter is updated (or added) after running function.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.paraview">
+<code class="descname">paraview</code><span class="sig-paren">(</span><em>fname='pyR2_mesh.vtk'</em>, <em>loc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.paraview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show mesh in paraview</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname: str,optional</strong></p>
+<blockquote>
+<div><p>A vtk file will be written to working directory and then displayed 
+using paraview.</p>
+</div></blockquote>
+<p><strong>loc: str, optional</strong></p>
+<blockquote class="last">
+<div><p>Path to paraview excutable, ignored if not using windows. If not provided
+the program will attempt to find where paraview is installed automatically.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.reciprocal">
+<code class="descname">reciprocal</code><span class="sig-paren">(</span><em>attr='Resistivity'</em>, <em>new_key='Conductivity'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.reciprocal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute reciprocal for a given attribute (ie 1 over that number)
+Example is Resistivity to conductivty conversion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr: string</strong></p>
+<blockquote>
+<div><p>mesh attribute to compute reciprocal of</p>
+</div></blockquote>
+<p><strong>new_key: string</strong></p>
+<blockquote class="last">
+<div><p>name of new attribute,</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -1664,9 +1998,9 @@ assigned an array of zeros.</p>
 <blockquote>
 <div><p>Axis x limits as <cite>(xmin, xmax)</cite>.</p>
 </div></blockquote>
-<p><strong>ylim</strong> : tuple, optional</p>
+<p><strong>zlim</strong> : tuple, optional</p>
 <blockquote>
-<div><p>Axis y limits as <cite>(ymin, ymax)</cite>.</p>
+<div><p>Axis z limits as <cite>(zmin, zmax)</cite>.</p>
 </div></blockquote>
 <p><strong>ax</strong> : matplotlib axis handle, optional</p>
 <blockquote>
@@ -1990,13 +2324,22 @@ to add nodes to mesh using their xyz coordinates.</p>
 <dl class="function">
 <dt id="api.meshTools.dat_import">
 <code class="descclassname">api.meshTools.</code><code class="descname">dat_import</code><span class="sig-paren">(</span><em>file_path='mesh.dat'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.dat_import" title="Permalink to this definition">¶</a></dt>
-<dd><p>Import R2/cR2/R3t/cR3t .dat kind of mesh. 
-Parameters
-————-
-file_path: str</p>
+<dd><p>Import R2/cR2/R3t/cR3t .dat kind of mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: str</strong></p>
 <blockquote>
-<div>Maps to the mesh (.dat) file.</div></blockquote>
-<p>mesh: class</p>
+<div><p>Maps to the mesh (.dat) file.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh: class</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -2309,8 +2652,9 @@ of the vertices.</p>
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
 <code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_z</em>, <em>elec_type=None</em>, <em>geom_input=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-this function expects the current working directory has path: exe/gmsh.exe.</p>
+<dd><p>Generates a triangular mesh for r2. Returns mesh class …
+this function expects the current working directory has path: exe/gmsh.exe.
+Uses gmsh version 3.0.6.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -2325,11 +2669,17 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 </div></blockquote>
 <p><strong>elec_type: list of strings, optional</strong></p>
 <blockquote>
-<div><p>type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list</p>
+<div><p>List should be the same length as the electrode coordinate argument. Each entry in
+the list references the type of electrode: 
+- ‘electrode’ = surface electrode coordinate, will be used to construct the topography in the mesh
+- ‘buried’ = buried electrode, placed the mesh surface
+- ‘borehole’ = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
+borehole numbering starts at 1 and ascends numerically by 1.</p>
 </div></blockquote>
 <p><strong>geom_input</strong> : dict, optional</p>
 <blockquote>
-<div><p>Allows for advanced survey geometry in genGeoFile in gmshWrap.py (see notes there).</p>
+<div><p>Allows for further customisation of the 2D mesh, its a
+dictionary contianing surface topography, polygons and boundaries</p>
 </div></blockquote>
 <p><strong>keep_files</strong> : boolean, optional</p>
 <blockquote>
@@ -2359,11 +2709,43 @@ the default.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh: class</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh: class</p>
+<blockquote class="last">
+<div><p>&lt;pyR2&gt; mesh class</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Notes</p>
+<dl class="docutils">
+<dt>geom_input format:</dt>
+<dd><p class="first">the code will cycle through numerically ordered keys (strings referencing objects in a dictionary”),
+currently the code expects a ‘surface’ and ‘electrode’ key for surface points and electrodes.
+the first borehole string should be given the key ‘borehole1’ and so on. The code stops
+searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
+and polygons to the mesh. See below example:</p>
+<blockquote class="last">
+<div><dl class="docutils">
+<dt>geom_input = {‘surface’: [surf_x,surf_z],</dt>
+<dd>‘boundary1’:[bound1x,bound1y],
+‘polygon1’:[poly1x,poly1y]}</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<p>electrodes and electrode_type (if not None) format:</p>
+<blockquote>
+<div><blockquote>
+<div>electrodes = [[x1,x2,x3,…],[y1,y2,y3,…]]
+electrode_type = [‘electrode’,’electrode’,’buried’,…]</div></blockquote>
+<p>like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
+The code will cycle through each borehole and internally sort them and add them to 
+the mesh.</p>
+</div></blockquote>
+<p>The code expects that all polygons, boundaries and electrodes fall within x values 
+of the actaul survey area. So make sure your topography / surface electrode points cover 
+the area you are surveying, otherwise some funky errors will occur in the mesh.</p>
 </dd></dl>
 
 <dl class="function">
@@ -2388,7 +2770,7 @@ default cell attribute.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh</strong> : class</p>
 <blockquote class="last">
-<div><p>a pyR2 mesh class</p>
+<div><p>a &lt;pyR2&gt; mesh class</p>
 </div></blockquote>
 </td>
 </tr>
@@ -2412,7 +2794,7 @@ default cell attribute.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="#">Table Of Contents</a></h3>
+  <h3><a href="#">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Welcome to pyR2’s documentation!</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
@@ -2455,7 +2837,7 @@ default cell attribute.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, G. Blanchy, S. Saneiyan, J. Boyd.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.9.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.3.
     </div>
   </body>
 </html>

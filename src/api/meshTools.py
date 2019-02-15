@@ -118,10 +118,10 @@ class Mesh:
             self.mesh_title = '3D_R3t_mesh' 
     
     @classmethod # creates a mesh object from a mesh dictionary
-    def mesh_dict2class(cls,mesh_info):
+    def mesh_dict2class(cls, mesh_info):
         """ Converts a mesh dictionary produced by the gmsh2r2mesh and
         vtk_import functions into a mesh object, its an alternative way to
-         make a mesh object. 
+        make a mesh object. 
         ***Intended for development use***
             
         Parameters
@@ -130,7 +130,7 @@ class Mesh:
             mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers
             
         Returns
-        ---------- 
+        -------
         Mesh: class 
         """
         #check the dictionary is a mesh
@@ -986,11 +986,10 @@ class Mesh:
         self.no_attributes += 1
         
     def computeElmDepth(self,datum_x,datum_y,datum_z, method='bilinear'):
-        """
-        Compute the depth of elements given a datum (or surface).
+        """ Compute the depth of elements given a datum (or surface).
         
         Parameters
-        ------------
+        ----------
         datum_x: array like
             X coordinates of datum 
         datum_y: array like
@@ -1000,9 +999,9 @@ class Mesh:
         method: str, optional
             Method of interpolation used to compute cell depths for a 3D mesh.
             Ignored for 2D meshes. 
-                'bilinear' - (default) binlinear interpolation
-                'idw' - inverse distance wieghting
-                'nearest' - nearest neighbour interpolation
+            - 'bilinear' - (default) binlinear interpolation
+            - 'idw' - inverse distance wieghting
+            - 'nearest' - nearest neighbour interpolation
         """
         #formalities and error checking
         if datum_y is None: # set up y column if not in use
@@ -1288,10 +1287,10 @@ class Mesh:
         
     @staticmethod   # find paraview location in windows    
     def findParaview():
-        """
-        Run on windows to find paraview.exe command
+        """ Run on windows to find paraview.exe command.
+        
         Returns
-        ----------
+        -------
         found: bool
             If True the program was able to find where paraview is installed 
             If false then the program could not find paraview in the default 
@@ -1667,14 +1666,15 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
 
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat'):
-    """
-    Import R2/cR2/R3t/cR3t .dat kind of mesh. 
+    """ Import R2/cR2/R3t/cR3t .dat kind of mesh. 
+    
     Parameters
-    -------------
+    ----------
     file_path: str
         Maps to the mesh (.dat) file.
+    
     Returns
-    -------------
+    -------
     mesh: class
         
     """
@@ -2104,8 +2104,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
 #%% build a triangle mesh - using the gmsh wrapper
 def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
              show_output=True, path='exe', dump=print,whole_space=False, **kwargs):
-    """ 
-    Generates a triangular mesh for r2. Returns mesh class ...
+    """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
     Uses gmsh version 3.0.6.
             
@@ -2118,10 +2117,10 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     elec_type: list of strings, optional
         List should be the same length as the electrode coordinate argument. Each entry in
         the list references the type of electrode: 
-            'electrode' = surface electrode coordinate, will be used to construct the topography in the mesh
-            'buried' = buried electrode, placed the mesh surface
-            'borehole' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
-                        borehole numbering starts at 1 and ascends numerically by 1.  
+        - 'electrode' = surface electrode coordinate, will be used to construct the topography in the mesh
+        - 'buried' = buried electrode, placed the mesh surface
+        - 'borehole' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
+        borehole numbering starts at 1 and ascends numerically by 1.  
     geom_input : dict, optional
         Allows for further customisation of the 2D mesh, its a
         dictionary contianing surface topography, polygons and boundaries 
@@ -2145,9 +2144,9 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     mesh: class
         <pyR2> mesh class
         
-    NOTES
-    ----------
-     geom_input format:
+    Notes
+    -----
+    geom_input format:
         the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
         currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
         the first borehole string should be given the key 'borehole1' and so on. The code stops

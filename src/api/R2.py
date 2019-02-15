@@ -356,7 +356,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
-                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False):
+                              spacing=None, parser=None, isurveys=[],
+                              dump=print, keepAll=False, trim=True):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -378,21 +379,26 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump information message when importing the files.
-        keepAll: bool, optional
-            If True, filter out NaN and Inf but also dummy measurements.
+        keepAll : bool, optional
+            If `True`, filter out NaN and Inf but also dummy measurements.
+        trim : bool, optional
+            If `True` this ensure that all surveys imported have the same
+            length. This is needed for difference inversion (`reg_mode=2`) but
+            not for background constrained inversion (`reg_mode=1`) and can be
+            disable in this last case.
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
-        #check to see if inverse type is in the info. 
-        if 'inverse_type' in info:
-            regMode = int(info['inverse_type'])
-            if regMode<0 or regMode>2:
-                raise ValueError('Inverse type must have a value of 0, 1 or 2')
-            self.param['inverse_type']=regMode
-        else:
-            regMode = int(0)
-            self.param['inverse_type']= regMode # normal regularisation
+#        #check to see if inverse type is in the info. 
+#        if 'inverse_type' in info:
+#            regMode = int(info['inverse_type'])
+#            if regMode<0 or regMode>2:
+#                raise ValueError('Inverse type must have a value of 0, 1 or 2')
+#            self.param['inverse_type']=regMode
+#        else:
+#            regMode = int(0)
+#            self.param['inverse_type']= regMode # normal regularisation
             
         for f in files:
             self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
@@ -403,7 +409,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if len(self.surveys) == 1:
                 ltime = len(self.surveys[0].df)
             if len(self.surveys) > 1: # check to see if the number of measurements is changing, if so throw an error
-                if len(self.surveys[-1].df) != ltime and regMode != 1: # can have changing number of measurements for constrained inversion
+                if len(self.surveys[-1].df) != ltime and trim is True: # can have changing number of measurements for constrained inversion
                     print('ERROR:', f, 'survey doesn\'t have the same length')
                     return
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
@@ -457,7 +463,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Filter out specific electrodes given in all surveys.
         
         Parameters
-        ---------
+        ----------
         elec : list
             List of electrode number to be removed.
         
@@ -1279,7 +1285,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False, iMoveElec=False):
+               parallel=False, iMoveElec=False, ncores=None):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -1304,6 +1310,9 @@ class R2(object): # R2 master class instanciated by the GUI
             If `True`, then different electrode location will be used for 
             the different surveys. Electrodes location are specified in the
             `Survey` object. Only for parallel inversion for now.
+        ncores : int, optional
+            If `parallel==True` then ncores is the number of cores to use (by
+            default all the cores available are used).)
         """
         # clean meshResults list
         self.meshResults = []
@@ -2107,8 +2116,9 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def showInParaview(self, index=0, paraview_loc=None):
         """ Open paraview to display the .vtk file.
+        
         Parameters
-        -------------
+        ----------
         index: int, optional
             Timestep to be shown in paraview (for an individual survey this 1).
         paraview_loc: str, optional
