@@ -31,8 +31,7 @@ from api.sliceMesh import sliceMesh # mesh slicing function
 
 #%% create mesh object
 class Mesh:
-    """
-    Mesh class.
+    """Mesh class.
     
     Parameters
     ----------
@@ -168,8 +167,7 @@ class Mesh:
     
 
     def add_e_nodes(self,e_nodes):
-        """
-        Assign node numbers to electrodes. 
+        """Assign node numbers to electrodes. 
         
         Parameters
         ------------
@@ -210,8 +208,7 @@ class Mesh:
             return 0
         
     def summary(self,flag=True):
-        """
-        Prints summary information about the mesh
+        """Prints summary information about the mesh
         """
         self.no_attributes = len(self.attr_cache)
         #returns summary information about the mesh, flagto print info, change to return string
@@ -232,8 +229,7 @@ class Mesh:
         return self.summary(flag=False) + self.show_avail_attr(flag=False)
             
     def add_attribute(self,values,key):
-        """
-        Add a new attribute to mesh. 
+        """Add a new attribute to mesh. 
         
         Parameters
         ------------
@@ -254,8 +250,7 @@ class Mesh:
             self.attr_cache[key]=values #add attribute 
     
     def add_attr_dict(self,attr_dict):
-        """
-        Mesh attributes are stored inside a dictionary, mesh.attr_cache.
+        """Mesh attributes are stored inside a dictionary, mesh.attr_cache.
         
         Parameters
         ------------
@@ -266,8 +261,7 @@ class Mesh:
         self.no_attributes = len(attr_dict)
         
     def show_avail_attr(self,flag=True):
-        """
-        Show available attributes in mesh.attr_cache. 
+        """Show available attributes in mesh.attr_cache. 
         """
         out = '\n______cell attributes_____\n'
         try: 
@@ -281,8 +275,7 @@ class Mesh:
             return out
     
     def update_attribute(self,new_attributes,new_title='default'):
-        """
-        Allows you to reassign the default cell attribute in the mesh object.  
+        """Allows you to reassign the default cell attribute in the mesh object.  
         """
         if len(new_attributes)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
@@ -1786,8 +1779,7 @@ def dat_import(file_path='mesh.dat'):
            
 #%% Read in resistivity values from R2 output 
 def readR2_resdat(file_path):
-    """
-    Reads resistivity values in f00#_res.dat file output from R2.(2D only)
+    """Reads resistivity values in f00#_res.dat file output from R2.(2D only)
             
     Parameters
     ----------
@@ -1799,6 +1791,7 @@ def readR2_resdat(file_path):
     res_values : list of floats
         Resistivity values returned from the .dat file. 
     """
+    warnings.warn("DEPRECIATION WARNING: readR2_resdat will be no longer handled my meshTools in future updates")
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
     fh=open(file_path,'r')
@@ -1812,8 +1805,7 @@ def readR2_resdat(file_path):
 
 #%% read in sensitivity values 
 def readR2_sensdat(file_path):
-    """
-    Reads sensitivity values in _sens.dat file output from R2.
+    """Reads sensitivity values in _sens.dat file output from R2.
             
     Parameters
     ----------
@@ -1825,6 +1817,7 @@ def readR2_sensdat(file_path):
     res_values : list of floats
         Sensitivity values returned from the .dat file (not log10!).
     """
+    warnings.warn("DEPRECIATION WARNING: readR2_sensdat will be no longer handled my meshTools in future updates")
     if not isinstance (file_path,str):
         raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
     fh=open(file_path,'r')
@@ -1841,8 +1834,7 @@ def readR2_sensdat(file_path):
 #%% build a quad mesh        
 def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
               surface_x=None,surface_z=None):
-    """
-    Creates a quaderlateral mesh given the electrode x and y positions. Function
+    """Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
             
     Parameters

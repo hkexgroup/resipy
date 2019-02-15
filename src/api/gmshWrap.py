@@ -232,7 +232,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         max_idx = np.argmax(elec_x)   
         topo_x = [elec_x[min_idx] - 5*np.mean(np.diff(elec_x)),
                   elec_x[max_idx] + 5*np.mean(np.diff(elec_x))]
-        topo_z = [elec_z[max_idx],elec_z[max_idx]]
+        topo_z = [elec_z[min_idx],elec_z[max_idx]]
     else:
         topo_x = geom_input['surface'][0]
         topo_z = geom_input['surface'][1] 
