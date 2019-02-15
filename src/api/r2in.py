@@ -269,7 +269,7 @@ def write3Din(param, dirname, typ='R3t'):
                 
     content = ''
     content = content + '{}\n\n'.format(param['lineTitle'])
-    content = content + '{}\t{}\t<<job_type, singularity_type\n\n'.format(
+    content = content + '{}\t{}\t<< job_type, singularity_type\n\n'.format(
             param['job_type'], param['singular_type'])
 
     # parameters specific to inversion
@@ -281,7 +281,7 @@ def write3Din(param, dirname, typ='R3t'):
         else:
             content = content + '{:f}\n\n'.format(param['resis']) # replace by default rho
 
-        content = content + '{}\t <<data_type\n'.format(param['data_type'])
+        content = content + '{}\t << data_type\n'.format(param['data_type'])
     
         if param['job_type'] == 1:
             content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])

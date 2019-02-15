@@ -42,12 +42,11 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
     for fname in iter(qin.get, 'stop'):
         # copy the protocol.dat
         shutil.copy(fname, os.path.join(path, 'protocol.dat')) #### TODO: this line is problematic if typ=R3t, iMoveElec = True!
-
+        name = os.path.basename(fname).replace('.dat', '').replace('protocol_','')
         if iMoveElec is True:
             exeName = os.path.basename(exePath).replace('.exe','')
             r2inFile = os.path.join(os.path.dirname(fname),
-                                    exeName +
-                                    os.path.basename(fname).replace('.dat', '.in'))
+                                    exeName + '_' + name + '.in')
             shutil.copy(r2inFile, os.path.join(path, exeName + '.in'))
             
         # run inversion
@@ -86,15 +85,14 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
     
         # moving inversion results back
         originalDir = os.path.dirname(fname)
-        name = os.path.basename(fname).replace('.dat', '')
         toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat',
-                  'f001_sen.dat', 'f001_diffres.dat','f001.vtk','f001.dat', 
-                  'f001.sen', 'f001.err']
+                  'f001_sen.dat', 'f001_diffres.dat',
+                  'f001.dat', 'f001.sen', 'f001.err', 'f001.vtk'] # all 3D stuff
         for f in toMove:
             if os.path.exists(os.path.join(path, f)):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
-        shutil.move(os.path.join(path, typ+'.out'),
+        shutil.move(os.path.join(path, typ + '.out'),
                     os.path.join(originalDir, name + '.out'))
         shutil.move(os.path.join(path, 'electrodes.dat'),
                     os.path.join(originalDir, name + 'electrodes.dat'))
@@ -217,7 +215,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             print('creating the dirname')
             os.mkdir(dirname)
-        self.dirname = dirname
+        self.dirname = os.path.abspath(dirname)
     
     def setElec(self, elec,elecList=None):
         """ Set electrodes.
@@ -356,7 +354,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
-                              spacing=None, parser=None, isurveys=[], dump=print, keepAll=False):
+                              spacing=None, parser=None, isurveys=[],
+                              dump=print, keepAll=False, trim=True):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -378,21 +377,26 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump information message when importing the files.
-        keepAll: bool, optional
-            If True, filter out NaN and Inf but also dummy measurements.
+        keepAll : bool, optional
+            If `True`, filter out NaN and Inf but also dummy measurements.
+        trim : bool, optional
+            If `True` this ensure that all surveys imported have the same
+            length. This is needed for difference inversion (`reg_mode=2`) but
+            not for background constrained inversion (`reg_mode=1`) and can be
+            disable in this last case.
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
-        #check to see if inverse type is in the info. 
-        if 'inverse_type' in info:
-            regMode = int(info['inverse_type'])
-            if regMode<0 or regMode>2:
-                raise ValueError('Inverse type must have a value of 0, 1 or 2')
-            self.param['inverse_type']=regMode
-        else:
-            regMode = int(0)
-            self.param['inverse_type']= regMode # normal regularisation
+#        #check to see if inverse type is in the info. 
+#        if 'inverse_type' in info:
+#            regMode = int(info['inverse_type'])
+#            if regMode<0 or regMode>2:
+#                raise ValueError('Inverse type must have a value of 0, 1 or 2')
+#            self.param['inverse_type']=regMode
+#        else:
+#            regMode = int(0)
+#            self.param['inverse_type']= regMode # normal regularisation
             
         for f in files:
             self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
@@ -403,7 +407,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if len(self.surveys) == 1:
                 ltime = len(self.surveys[0].df)
             if len(self.surveys) > 1: # check to see if the number of measurements is changing, if so throw an error
-                if len(self.surveys[-1].df) != ltime and regMode != 1: # can have changing number of measurements for constrained inversion
+                if len(self.surveys[-1].df) != ltime and trim is True: # can have changing number of measurements for constrained inversion
                     print('ERROR:', f, 'survey doesn\'t have the same length')
                     return
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
@@ -457,7 +461,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Filter out specific electrodes given in all surveys.
         
         Parameters
-        ---------
+        ----------
         elec : list
             List of electrode number to be removed.
         
@@ -852,16 +856,26 @@ class R2(object): # R2 master class instanciated by the GUI
             param['a_wgt'] = 0.01
             param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
+            if self.typ == 'R3t' or self.typ == 'cR3t':
+                param['zmin'] = np.min(self.mesh.node_z) - 10 # to be sure to have everything
+                param['zmax'] = np.max(self.mesh.node_z) + 10
             param['reg_mode'] = 0 # set by default in ui.py too
-            self.configFile = write2in(param, refdir, typ=typ)
-            param = self.param.copy()
-            param['num_regions'] = 0
-            if 'reg_mode' in self.param.keys():
-                param['reg_mode'] = self.param['reg_mode']
-            else:
-                param['reg_mode'] = 2
-            param['res0File'] = 'Start_res.dat'
-            write2in(param, self.dirname, typ=typ)
+            self.configFile = write2in(param, refdir, typ=typ) # background survey
+            
+            # now prepare the actual timelapse
+            self.param['num_regions'] = 0
+            if 'reg_mode' not in self.param.keys():
+                self.param['reg_mode'] = 2
+            self.param['res0File'] = 'Start_res.dat'
+            if self.typ == 'R3t' or self.typ == 'cR3t':
+                # for R3t/cR3t, there is no regularization mode but just
+                # an inversion_type variable that we need to overwrite based
+                # on the reg_mode
+                if self.param['reg_mode'] == 2:
+                    self.param['inverse_type'] = 2 # difference inversion
+                else:
+                    self.param['inverse_type'] = 1 # constrained to background
+            write2in(self.param, self.dirname, typ=typ) # actual time-lapse
         else:
             self.configFile = write2in(self.param, self.dirname, typ=typ)
         
@@ -1131,7 +1145,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     
-    def runParallel(self, dirname=None, dump=print, iMoveElec=False):
+    def runParallel(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1144,6 +1158,9 @@ class R2(object): # R2 master class instanciated by the GUI
         iMoveElec : bool, optional
             If `True` will move electrodes according to their position in each
             `Survey` object.
+        ncores : int, optional
+            Number or cores to use. If None, the maximum number of cores
+            available will be used.
         """
         if dirname is None:
             dirname = self.dirname
@@ -1168,7 +1185,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # writing all protocol.dat
         files = []
         for s, df in zip(surveys, dfs):
-            outputname = os.path.join(dirname, s.name + '.dat')
+            outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
             files.append(outputname)
             df.to_csv(outputname, sep='\t', header=False, index=False)
             # header with line count already included
@@ -1185,13 +1202,18 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.param['zmax'] = max(self.mesh.node_z)+10 # so set min and max to include all the elements 
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
-                shutil.move(r2file, r2file.replace('.in', s.name + '.in'))
+                shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
                 print('done')
         #raise Exception("Stopping")        
         queueIn = Queue() # queue
         
         # create workers directory
-        ncores = mt.systemCheck()['core_count']
+        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        if ncores is None:
+            ncores = ncoresAvailable
+        else:
+            if ncores > ncoresAvailable:
+                raise ValueError('Number of cores larger than available')
         procs = []
         dirs = []
         for i in range(ncores):
@@ -1252,10 +1274,10 @@ class R2(object): # R2 master class instanciated by the GUI
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
             os.remove(r2outFile)
-        with open(os.path.join(dirname, 'R2.out'), 'w') as f:
+        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
             f.write(r2outText)
         
-#         delete the dirs and the files
+        # delete the dirs and the files
         [shutil.rmtree(d) for d in dirs]
         [os.remove(f) for f in files]
         
@@ -1263,7 +1285,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False, iMoveElec=False):
+               parallel=False, iMoveElec=False, ncores=None):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -1288,6 +1310,9 @@ class R2(object): # R2 master class instanciated by the GUI
             If `True`, then different electrode location will be used for 
             the different surveys. Electrodes location are specified in the
             `Survey` object. Only for parallel inversion for now.
+        ncores : int, optional
+            If `parallel==True` then ncores is the number of cores to use (by
+            default all the cores available are used).)
         """
         # clean meshResults list
         self.meshResults = []
@@ -1435,6 +1460,11 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh.elec_x = self.elec[:,0]
 #            mesh.elec_y = self.elec[:,2]
 #            self.meshResults.append(mesh)
+        
+        # compute conductivity in mS/m
+        for mesh in self.meshResults:
+            if 'Resistivity(Ohm-m)' in mesh.attr_cache.keys():
+                mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
 
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
@@ -2089,29 +2119,29 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.plot((1,measurement_no[-1]),baseline,'k--')
 
 
-    def showInParaview(self, index=0,Paraview_loc=None):
+    def showInParaview(self, index=0, paraview_loc=None):
         """ Open paraview to display the .vtk file.
+        
         Parameters
-        -------------
+        ----------
         index: int, optional
             Timestep to be shown in paraview (for an individual survey this 1).
-        Paraview_loc: str, optional
+        paraview_loc: str, optional
             **Windows ONLY** maps to the excuatable paraview.exe. The program 
             will attempt to find the location of the paraview install if not given. 
         """
-        OpSys = platform.system()
         if self.typ[-1] == '2':
             fname = 'f{:03d}_res.vtk'.format(index+1)
         else:
             fname = 'f{:03d}.vtk'.format(index+1)  
-        if OpSys == "Windows":
-            if Paraview_loc is None:
+        if OS == "Windows":
+            if paraview_loc is None:
                 found,cmd_line = self.mesh.findParaview()
                 if not found:
                     print("Cannot find paraview location")
                     return
                 cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
-            elif isinstance(Paraview_loc,str):
+            elif isinstance(paraview_loc,str):
                 cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
             else:
                 print("Cannot find where paraview is installed")

@@ -57,7 +57,7 @@ k.invert()
 k.showResults()
 k.showInParaview()
 
-#%%
+#%% test for borehole
 plt.close('all')
 print('-------------Testing borehole------------')
 k = R2()
@@ -96,7 +96,7 @@ k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
 k.pwlfit()
 k.errTyp = 'pwl'
-k.invert(iplot=False, parallel=True, param={'reg_mode':2})
+k.invert(iplot=False, parallel=True, ncores=3)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
@@ -277,12 +277,13 @@ k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
 
+
 #%% 3D ip testing
 plt.close('all')
 print('-------------Testing 3D IP inversion ------------')
 k = R2(typ='cR3t')
 k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')
-elec = np.genfromtxt('api/test/electrodes3Dip.dat')
+elec = np.genfromtxt('api/test/electrodes3Dip.csv', delimiter=',')
 k.setElec(elec)
 k.createMesh(cl=3)
 k.showMesh()
@@ -294,4 +295,17 @@ k.showSlice(axis='x')
 k.showSlice(axis='y')
 k.showInParaview()
 
+
+#%% 3D with moving electrodes (specialy dedicated to Jimmy ;)
+from api.R2 import R2
+plt.close('all')
+print('-------------Testing 3D inversion ------------')
+k = R2(typ='R3t')
+#k.createBatchSurvey('api/test/3d/data/', ftype='Protocol')
+k.createTimeLapseSurvey('api/test/3d/data/', ftype='Protocol')
+elecList = [np.genfromtxt('api/test/3d/elec/' + f, delimiter=',') for f in os.listdir('api/test/3d/elec/')]
+k.setElec(elec=None, elecList=elecList)
+k.createMesh(cl=2)
+k.invert(parallel=True, iMoveElec=True)
+k.showInParaview()
 
