@@ -42,12 +42,11 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
     for fname in iter(qin.get, 'stop'):
         # copy the protocol.dat
         shutil.copy(fname, os.path.join(path, 'protocol.dat')) #### TODO: this line is problematic if typ=R3t, iMoveElec = True!
-
+        name = os.path.basename(fname).replace('.dat', '').replace('protocol_','')
         if iMoveElec is True:
             exeName = os.path.basename(exePath).replace('.exe','')
             r2inFile = os.path.join(os.path.dirname(fname),
-                                    exeName +
-                                    os.path.basename(fname).replace('.dat', '.in'))
+                                    exeName + '_' + name + '.in')
             shutil.copy(r2inFile, os.path.join(path, exeName + '.in'))
             
         # run inversion
@@ -86,7 +85,6 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
     
         # moving inversion results back
         originalDir = os.path.dirname(fname)
-        name = os.path.basename(fname).replace('.dat', '')
         toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat',
                   'f001_sen.dat', 'f001_diffres.dat',
                   'f001.dat', 'f001.sen', 'f001.err', 'f001.vtk'] # all 3D stuff
@@ -94,7 +92,7 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
             if os.path.exists(os.path.join(path, f)):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
-        shutil.move(os.path.join(path, typ+'.out'),
+        shutil.move(os.path.join(path, typ + '.out'),
                     os.path.join(originalDir, name + '.out'))
         shutil.move(os.path.join(path, 'electrodes.dat'),
                     os.path.join(originalDir, name + 'electrodes.dat'))
@@ -1187,7 +1185,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # writing all protocol.dat
         files = []
         for s, df in zip(surveys, dfs):
-            outputname = os.path.join(dirname, s.name + '.dat')
+            outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
             files.append(outputname)
             df.to_csv(outputname, sep='\t', header=False, index=False)
             # header with line count already included
@@ -1202,7 +1200,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.param['node_elec'][:,1] = e_nodes
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
-                shutil.move(r2file, r2file.replace('.in', s.name + '.in'))
+                shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
                 print('done')
                 
         queueIn = Queue() # queue
