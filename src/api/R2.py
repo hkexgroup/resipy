@@ -1458,6 +1458,11 @@ class R2(object): # R2 master class instanciated by the GUI
 #            mesh.elec_x = self.elec[:,0]
 #            mesh.elec_y = self.elec[:,2]
 #            self.meshResults.append(mesh)
+        
+        # compute conductivity in mS/m
+        for mesh in self.meshResults:
+            if 'Resistivity(Ohm-m)' in mesh.attr_cache.keys():
+                mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
 
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
