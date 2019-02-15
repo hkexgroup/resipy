@@ -1181,11 +1181,13 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 self.param['node_elec'][:,1] = e_nodes
+                self.param['zmin'] = min(self.mesh.node_z)-10 # we must have a constrained inversion 
+                self.param['zmax'] = max(self.mesh.node_z)+10 # so set min and max to include all the elements 
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', s.name + '.in'))
                 print('done')
-                
+        #raise Exception("Stopping")        
         queueIn = Queue() # queue
         
         # create workers directory
