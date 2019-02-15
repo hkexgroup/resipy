@@ -21,32 +21,30 @@ from api.DCA import DCA
 class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
+    
+    Parameters
+    ----------
+    fname : str
+        Name of the file where the data are.
+    ftype : str
+        Type of the data file. This setting is not read if a `parser` is
+        not `None`.
+    name : str
+        A personal name for the survey.
+    spacing : float, optional
+        This will be passed to the parser function to determine the
+        electrode positions.
+    parser : function, optional
+        If provided, it should return tuple containing `elec` a 3 columns
+        array containing electrodes position and `data` a pandas.DataFrame
+        with the `a,b,m,n,resist` columns at least and `ip` if present.
+    keepAll: bool, optional
+        If `True` will keep all the measurements even the ones without
+        reciprocal. Note that if none of the quadrupoles have reciprocal
+        they will all be kept anyway.
     """
+    
     def __init__(self, fname, ftype='', name='', spacing=None, parser=None, keepAll=True):
-        """ Create a Survey object, that contains the data and some basic 
-        procedures.
-        
-        Parameters
-        ----------
-        fname : str
-            Name of the file where the data are.
-        ftype : str
-            Type of the data file. This setting is not read if a `parser` is
-            not `None`.
-        name : str
-            A personal name for the survey.
-        spacing : float, optional
-            This will be passed to the parser function to determine the
-            electrode positions.
-        parser : function, optional
-            If provided, it should return tuple containing `elec` a 3 columns
-            array containing electrodes position and `data` a pandas.DataFrame
-            with the `a,b,m,n,resist` columns at least and `ip` if present.
-        keepAll: bool, optional
-            If `True` will keep all the measurements even the ones without
-            reciprocal. Note that if none of the quadrupoles have reciprocal
-            they will all be kept anyway.
-        """
         self.elec = []
         self.df = pd.DataFrame()
         if name == '':

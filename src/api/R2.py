@@ -140,18 +140,16 @@ def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
                 
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
+    
+    Parameters
+    ----------
+    dirname : str, optional
+        Path of the working directory. Can also be set using `R2.setwd()`.
+    typ : str, optional
+        Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t`.
+        Automatically infered when creating the survey.
     """ 
     def __init__(self, dirname='', typ='R2'):
-        """ Create an R2 object.
-        
-        Parameters
-        ----------
-        dirname : str, optional
-            Path of the working directory. Can also be set using `R2.setwd()`.
-        typ : str, optional
-            Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t'.
-            Automatically infered when creating the survey.
-        """
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
             dirname = os.path.join(self.apiPath, 'invdir')
@@ -1198,8 +1196,6 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 self.param['node_elec'][:,1] = e_nodes
-                self.param['zmin'] = min(self.mesh.node_z)-10 # we must have a constrained inversion 
-                self.param['zmax'] = max(self.mesh.node_z)+10 # so set min and max to include all the elements 
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))

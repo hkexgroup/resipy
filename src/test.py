@@ -54,8 +54,8 @@ k.showMesh()
 k.write2in()
 #k.write2protocol(errTyp='pwl', errTot=True)
 k.invert()
-k.showResults()
-k.showInParaview()
+k.showResults(attr='Conductivity(mS/m)')
+#k.showInParaview()
 
 #%% test for borehole
 plt.close('all')
