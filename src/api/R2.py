@@ -14,6 +14,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from multiprocessing import Pool, Process, Queue
+from threading import Thread
 
 
 OS = platform.system()
@@ -34,7 +35,7 @@ print('pyR2 version = ',str(pyR2_version))
 #info = mt.systemCheck()
 
         
-def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
+def workerInversion(path, dump, exePath, qin, typ=None, iMoveElec=False):
     os.chdir(path)
     if typ is None: # type of .out file will depend on the inversion code being used. 
         typ = 'R2'
@@ -79,7 +80,7 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
             return_code = proc.wait()
             if return_code:
                 print('error on return_code')
-        
+
         for text in execute(cmd):
                 dump(text.rstrip())
     
@@ -98,7 +99,6 @@ def workerInversion(path, dump, exePath, qin, typ = None, iMoveElec=False):
                     os.path.join(originalDir, name + 'electrodes.dat'))
         shutil.move(os.path.join(path, 'electrodes.vtk'),
                     os.path.join(originalDir, 'electrodes' + name + '.vtk'))
-
 
 
 # small useful function for reading and writing mesh.dat
@@ -1142,6 +1142,186 @@ class R2(object): # R2 master class instanciated by the GUI
         os.chdir(cwd)
     
     
+    def runDistributed(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
+        """ run R2 in // according to the number of cores available but in a 
+        non-concurrent way (!= runParallel) -> this works on Windows
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory.
+        dump : function, optional
+            Function to be passed to `R2.runR2()` for printing output during
+            inversion.
+        iMoveElec : bool, optional
+            If `True` will move electrodes according to their position in each
+            `Survey` object.
+        ncores : int, optional
+            Number or cores to use. If None, the maximum number of cores
+            available will be used.
+        """
+        if dirname is None:
+            dirname = self.dirname # use default working directory
+        
+        if self.iTimeLapse is True and self.iBatch is False:
+            surveys = self.surveys[1:] # don't take the first survey
+        else:
+            surveys = self.surveys
+            
+        # create R2/R3t/cR2/cR3.exe path
+        exeName = self.typ + '.exe'
+        exePath = os.path.join(self.apiPath, 'exe', exeName)
+        
+        # split the protocol.dat
+        dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
+                            sep='\t', header=None, engine='python').reset_index()
+        idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
+        idf.append(len(dfall))
+        dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
+        
+        # trick if moving electrodes for each survey (expand e_nodes)
+        node_elec = []
+        c = 0
+        for s, df in zip(surveys, dfs):
+            elec = s.elec
+            e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
+            node_elec.append(e_nodes)
+            df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c
+            c += len(elec)
+        node_elec = np.hstack(node_elec)
+        node_elec = np.c_[np.arange(len(node_elec))+1, node_elec,
+                          np.ones(len(node_elec))].astype(int)
+        if self.param['node_elec'].shape[1] == 3:
+            self.param['node_elec'] = node_elec
+        else:
+            self.param['node_elec'] = node_elec[:,:-1]
+        
+        # write a new R2.in
+        write2in(self.param, self.dirname, self.typ)
+        
+        # prepare the worker directory
+        if ncores is None:
+            ncores = mt.systemCheck()['core_count']
+        perWorker = int(len(dfs)/ncores)
+        if len(dfs) % ncores > 0:
+            perWorker = perWorker + 1 # not sure about that
+        print(perWorker, 'surveys distributed per worker.')
+        dirs = []
+        c = 0
+        assignDir = []
+        for i in range(ncores):
+            cend = c + perWorker
+            if cend > len(dfs):
+                cend = len(dfs)
+            assignDir.append(cend-c)
+            # creating the working directory
+            wd = os.path.join(dirname, str(i+1))
+            dirs.append(wd)
+            if os.path.exists(wd):
+                shutil.rmtree(wd)
+            os.mkdir(wd)
+            
+            # copying usefull files from the main directory
+            toMove = ['mesh.dat', 'mesh3d.dat','R2.in','cR2.in',
+                      'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 
+                      'Start_res.dat']
+            for f in toMove:
+                fname = os.path.join(dirname, f)
+                if os.path.exists(fname):
+                    shutil.copy(fname, os.path.join(wd, f))
+            
+            # reformed protocol.dat
+            df = pd.concat(dfs[c:cend])
+            print(c, '->', cend, 'in', wd)
+            outputname = os.path.join(wd, 'protocol.dat')
+            df.to_csv(outputname, sep='\t', header=False, index=False)
+            # header with line count already included
+            
+            c = cend
+            if cend == len(dfs):
+                break # stop the loop here
+        
+        # run them all in parallel as child processes
+        def dumpOutput(out):
+            for line in iter(out.readline, ''):
+                dump(line.rstrip())
+            out.close()
+            
+            
+            
+        if OS == 'Windows':
+            cmd = [exePath]
+        elif OS == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd = ['%s' % (winePath[0].strip('\n')), exePath]
+            else:
+                cmd = ['/usr/local/bin/wine', exePath]
+        else:
+            cmd = ['wine', exePath]
+            
+        if OS == 'Windows':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            
+        procs = []
+        ts = []
+        for wd in dirs:
+            if OS == 'Windows':
+                p = Popen(cmd, stdout=PIPE, cwd=wd, shell=False, universal_newlines=True, startupinfo=startupinfo)
+            else:
+                p = Popen(cmd, stdout=PIPE, cwd=wd, shell=False, universal_newlines=True)                
+#            p = Popen(['wine', exePath], stdout=PIPE, cwd=wd, shell=False, universal_newlines=True)
+            procs.append(p)
+            t = Thread(target=dumpOutput, args=(p.stdout,))
+            t.daemon = True # thread dies with the program
+            t.start()
+            ts.append(t)
+
+        class ProcsManagement(object): # little class to handle the kill
+            def __init__(self, procs):
+                self.procs = procs
+            def kill(self):
+                for p in self.procs:
+                    p.terminate()
+                    
+        self.proc = ProcsManagement(procs)
+        
+        for p, t in zip(procs, ts): # block until all processes finished
+            p.wait()
+                
+        # get the files as if it was a sequential inversion
+        if self.typ=='R3t' or self.typ=='cR3t':
+            toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']
+        else:
+            toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
+        r2outText = ''
+        c = 0
+        for i, d in enumerate(dirs):
+            for j in range(assignDir[i]):
+                c += 1
+                fname = 'f' + str(j+1).zfill(3)
+#                print('in', d, 'pick', fname, 'for', c)
+                for ext in toRename:
+                    originalFile = os.path.join(d,  fname + ext)
+                    newFile = os.path.join(dirname, 'f' + str(c).zfill(3) + ext)
+                    if os.path.exists(originalFile):
+                        shutil.move(originalFile, newFile)
+                r2outFile = os.path.join(d, self.typ + '.out')
+                with open(r2outFile, 'r') as f:
+                    r2outText = r2outText + f.read()
+        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
+            f.write(r2outText)
+        
+        # delete the dirs and the files
+        [shutil.rmtree(d) for d in dirs]
+        
+        print('----------- END OF DISTRIBUTED INVERSION ----------')
+        
+        
     
     def runParallel(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
         """ Run R2 in // according to the number of cores available.
@@ -1210,6 +1390,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             if ncores > ncoresAvailable:
                 raise ValueError('Number of cores larger than available')
+        
         procs = []
         dirs = []
         for i in range(ncores):
@@ -1228,7 +1409,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 fname = os.path.join(dirname, f)
                 if os.path.exists(fname):
                     shutil.copy(fname, os.path.join(wd, f))
-                    
+            
             # creating the process
             procs.append(Process(target=workerInversion,
                                  args=(wd, dump, exePath, queueIn, self.typ, iMoveElec)))
@@ -1356,7 +1537,8 @@ class R2(object): # R2 master class instanciated by the GUI
             
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-            self.runParallel(dump=dump, iMoveElec=iMoveElec)
+#            self.runParallel(dump=dump, iMoveElec=iMoveElec)
+            self.runDistributed(dump=dump,iMoveElec=iMoveElec)
         else:
             self.runR2(dump=dump)
         
@@ -2355,19 +2537,19 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.pseudoError()
 
 #%% test for timelapse inversion
-#k = R2()
+k = R2()
 #k.createTimeLapseSurvey('api/test/testTimelapse') # ok for //
-#k.createBatchSurvey('api/test/testTimelapse') # ok for //
+k.createBatchSurvey('api/test/testTimelapse') # ok for //
 #k.linfit()
 #k.pwlfit() # if we do pwlfit then it can't be pickled by multiprocessing 
 #k.errTyp = 'pwl'
 #k.param['a_wgt'] = 0
 #k.param['b_wgt'] = 0
-#k.createMesh(typ='trian', cl_factor=5, cl=0.05)
+k.createMesh(typ='trian', cl_factor=5, cl=0.1)
 #k.showMesh()
 #k.write2in()
 #k.write2protocol()
-#k.invert(iplot=False, parallel=True)
+k.invert(iplot=False, parallel=True)
 #k.saveInvPlots(attr='difference(percent)')
 #k.showResults(index=3)
 #k.showResults(index=1)
