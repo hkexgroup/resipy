@@ -469,6 +469,15 @@ class Mesh:
                 ax.plot(self.elec_x,self.elec_z,'ko')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
+
+        # adding interactive display when mouse-over
+        centroids = np.array([self.elm_centre[0], self.elm_centre[2]]).T
+        def format_coord(x, y):
+            dist = np.sqrt(np.sum((centroids - np.array([x, y]))**2, axis=1))
+            imin = np.argmin(dist)
+            return ('x={:.2f} m, elevation={:.2f} m, value={:.3f}'.format(x,y,X[imin]))
+        ax.format_coord = format_coord
+
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))
         
         if iplot == True:
@@ -2720,6 +2729,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
 
 #mesh = vtk_import('api/test/testQuadMesh.vtk')
 #mesh = vtk_import('api/test/testTrianMesh.vtk')
+#mesh.show()
 #mesh = vtk_import('api/invdir/f001_res.vtk')
 #attrs = list(mesh.attr_cache)
 #fig, ax = plt.subplots()
