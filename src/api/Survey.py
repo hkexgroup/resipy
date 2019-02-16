@@ -1200,7 +1200,7 @@ class Survey(object):
         dump(100)
         
         
-    def manualFiltering(self, ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
+    def manualFiltering(self, ax=None, figsize=(12,3), contour=False, log=False, geom=False, label=''):
         """ Manually filters the data visually.
         
         Parameters
@@ -1212,11 +1212,11 @@ class Survey(object):
         -------
             If `ax` is not None, a matplotlib figure is returned.
         """
-        array = self.df[['a','b','m','n']].values
+        array = self.df[['a','b','m','n']].values.astype(int)
         if np.sum(self.df['irecip'].values == 0) == 0:
             print('choose recipError')
-            resist = self.df['recipError'].values # some nan here are not plotted !!!
-            clabel = 'Reciprocal Error [$\Omega$]'
+            resist = self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
+            clabel = 'Reciprocal Error [%]'
         else:
             print('choose resist')
             resist = self.df['resist'].values
@@ -1235,7 +1235,6 @@ class Survey(object):
         # keeping the index to be able to filter out the data ... maybe add
         # a third class of empty points just for NaN
         spacing = np.mean(np.diff(self.elec[:,0]))
-        print(array)
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
         
@@ -1266,20 +1265,15 @@ class Survey(object):
         
         
         def onpick(event):
-            # TODO single doesn't want to change the electrode selection
             if lines[event.artist] == 'data':
-#                print('onpick event', event.ind[0])
-#                print(ipoints[event.ind[0]])
                 xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
                 isame = (xpos == xid) & (ypos == yid)
                 if (ipoints[isame] == True).all():
-#                    print('set to false')
                     setSelect(isame, False)
                 else:
                     setSelect(isame, True)
             
             if lines[event.artist] == 'elec':
-#                print('onpick2', event.ind[0])
                 ie = (array == (event.ind[0]+1)).any(-1)
                 if all(ipoints[ie] == True):
                     setSelect(ie, False)
@@ -1291,7 +1285,6 @@ class Survey(object):
                     eselect[event.ind[0]] = True
                 elecKilled.set_xdata(elecpos[eselect])
                 elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
-#            print('update canvas')
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
