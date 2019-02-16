@@ -2388,8 +2388,6 @@ class App(QMainWindow):
         parallelLabel = QLabel('<a href="parallel">Parallel inversion</a>')
         parallelLabel.linkActivated.connect(showHelp2)
         parallelCheck = QCheckBox()
-        if OS == 'Windows':
-            parallelCheck.setEnabled(False)
         parallelCheck.stateChanged.connect(parallelFunc)
         advForm.addRow(parallelLabel, parallelCheck)
         
