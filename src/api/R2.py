@@ -2537,19 +2537,19 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
 #k.pseudoError()
 
 #%% test for timelapse inversion
-k = R2()
+#k = R2()
 #k.createTimeLapseSurvey('api/test/testTimelapse') # ok for //
-k.createBatchSurvey('api/test/testTimelapse') # ok for //
+#k.createBatchSurvey('api/test/testTimelapse') # ok for //
 #k.linfit()
 #k.pwlfit() # if we do pwlfit then it can't be pickled by multiprocessing 
 #k.errTyp = 'pwl'
 #k.param['a_wgt'] = 0
 #k.param['b_wgt'] = 0
-k.createMesh(typ='trian', cl_factor=5, cl=0.1)
+#k.createMesh(typ='trian', cl_factor=5, cl=0.1)
 #k.showMesh()
 #k.write2in()
 #k.write2protocol()
-k.invert(iplot=False, parallel=True)
+#k.invert(iplot=False, parallel=True)
 #k.saveInvPlots(attr='difference(percent)')
 #k.showResults(index=3)
 #k.showResults(index=1)
