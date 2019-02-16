@@ -2820,7 +2820,6 @@ class App(QMainWindow):
                     if len(a) > 0:
                         if a[0] == 'Initial':
                             try:
-                                mwInvResult.plot(self.r2.showIter)
                                 newFlag = True
                                 self.rms.append(float(a[3]))
                                 self.rmsIndex.append(self.pindex)
@@ -2831,11 +2830,11 @@ class App(QMainWindow):
                                 self.rmsIP.append(float(a[4]))
                                 self.rmsIndexIP.append(self.pindex)
                         if a[0] == 'Processing':
-#                            print('new processing detected')
                             self.pindex = self.pindex + 1
-#                            print('index = ', self.pindex)
                         if a[0] == 'End':
                             self.end = True
+                        if a[0] == 'Iteration':
+                            mwInvResult.plot(self.r2.showIter)
             return newFlag
 
         def plotRMS(ax):

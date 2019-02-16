@@ -2145,7 +2145,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # eventually delete the directory to space space
     
-    def showIter(self, index=-1, ax=None):
+    def showIter(self, index=-2, ax=None):
         """ Dispay temporary inverted section after each iteration.
         
         Parameters
@@ -2164,31 +2164,33 @@ class R2(object): # R2 master class instanciated by the GUI
         files = os.listdir(self.dirname)
         fs = []
         for f in files:
-            if (f[-8:] == '_res.dat') & (len(f) == 16):
+            if (f[-8:] == '_res.dat') & ((len(f) == 16) or (len(f) == 12)):
                 fs.append(f)
         fs = sorted(fs)
         print(fs)
-        if len(fs) > 0:
+        if len(fs) > 1: # the last file is always open and not filled with data
             if self.param['mesh_type'] == 10:
                 self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
                 # TODO change that to full meshTools
                 
             else:
                 x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
+                print(x.shape, 'for', fs[index])
+                if x.shape[0] > 0:
 #                iterNumber = fs[-1].split('_')[0].split('.')[1]
 #                attrName = '$log_{10}(\rho)$ [Ohm.m] (iter {:.0f})'.format(iterNumber) # not sure it is log10
 #                print('iterNumber = ', iterNumber, 'name=', attrName)
 #                self.mesh.add_attr_dict({'iter':x[:,-2]})
 
-                triang = tri.Triangulation(x[:,0],x[:,1])
-                cax = ax.tricontourf(triang, x[:,3], extend='both')
-                fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
-                ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
-                ax.set_aspect('equal')
-                ax.set_xlabel('Distance [m]')
-                ax.set_ylabel('Elevation [m]')
-                if iplot is True:
-                    fig.show()
+                    triang = tri.Triangulation(x[:,0],x[:,1])
+                    cax = ax.tricontourf(triang, x[:,3], extend='both')
+                    fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
+                    ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
+                    ax.set_aspect('equal')
+                    ax.set_xlabel('Distance [m]')
+                    ax.set_ylabel('Elevation [m]')
+                    if iplot is True:
+                        fig.show()
                 
 #                self.mesh.attr_cache['iter'] = x[:,-2]
 #                self.mesh.draw(attr=attrName)
