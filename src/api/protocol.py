@@ -8,16 +8,22 @@ Created on Tue Nov 14 16:05:59 2018
 import numpy as np
 import pandas as pd
 
-#dipole dipole
 def dpdp1(elec_num, a, n):
-    '''
-    genetrates measurement matrix for dipole dipole survey
-    elec_num is number of electrodes
-    a is electode spacing between C and V pairs (a = 1 is the same as skip 0)
-    a should be single integer or list
-    n is the quadrupole seperation
-    n should be single integer or list
-    length of a should match n
+    ''' Generates quadrupole matrix for dipole-dipole survey.
+    
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between C and V pairs in electrode spacing
+        (a = 1 is the same as skip 0).
+    n : int or list of int
+        Quadrupole seperation in electrode spacing.
+    
+    Notes
+    -----
+    Length of `a` should match `n`.
     '''
     elec_id = np.arange(elec_num)+1
     
@@ -57,14 +63,22 @@ def dpdp1(elec_num, a, n):
 
 
 def dpdp2(elec_num, a, n):
-   #genetrates measurement matrix for dipole dipole survey
-    #elec_num is number of electrodes
-    #a is electode spacing between C and V pairs (a = 1 is the same as skip 0)
-    #a should be single integer or list
-    #n is the quadrupole seperation
-    #n should be single integer or list
-    #length of a should match n
+    ''' Generates quadrupole matrix for dipole-dipole survey.
     
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between C and V pairs in electrode spacing
+        (a = 1 is the same as skip 0).
+    n : int or list of int
+        Quadrupole seperation in electrode spacing.
+    
+    Notes
+    -----
+    Length of `a` should match `n`.
+    '''
     elec_id = np.arange(elec_num)+1
     
     if isinstance(a, list) is False:
@@ -101,11 +115,17 @@ def dpdp2(elec_num, a, n):
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,3] <= elec_num]
     return proto_mtrx
 
+
 def wenner_alpha(elec_num, a):
-    #genetrates measurement matrix for dipole dipole survey
-    #elec_num is number of electrodes
-    #a is electode spacing
-    #a can be list or int
+    ''' Generates quadrupole matrix for Wenner alpha survey.
+    
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between electrodes (in electrode spacing).
+   '''
     
     elec_id = np.arange(elec_num)+1
     
@@ -133,12 +153,15 @@ def wenner_alpha(elec_num, a):
     
     
 def wenner_beta(elec_num, a):
-    '''
-    genetrates measurement matrix for dipole dipole survey
-    elec_num is number of electrodes
-    a is electode spacing
-    a can be list or int
-    '''
+    ''' Generates quadrupole matrix for Wenner beta survey.
+    
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between electrodes (in electrode spacing).
+   '''
     
     elec_id = np.arange(elec_num)+1
     
@@ -165,12 +188,15 @@ def wenner_beta(elec_num, a):
     return(proto_mtrx)
     
 def wenner_gamma(elec_num, a):
-    '''
-    genetrates measurement matrix for dipole dipole survey
-    elec_num is number of electrodes
-    a is electode spacing
-    a can be list or int
-    '''
+    ''' Generates quadrupole matrix for Wenner gamma survey.
+    
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between electrodes (in electrode spacing).
+   '''
     
     elec_id = np.arange(elec_num)+1
     
@@ -196,11 +222,20 @@ def wenner_gamma(elec_num, a):
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
     
-def schlum1(elec_num, a, n):
-    #genetrates measurement matrix for dipole dipole survey
-    #elec_num is number of electrodes
-    #a is electode spacing
     
+    
+def schlum1(elec_num, a, n):
+    ''' Generates quadrupole matrix for Schlumberger survey.
+    
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between electrodes (in electrode spacing).
+    n : int or list of int
+        Quadrupole seperation in electrode spacing. 
+   '''
     elec_id = np.arange(elec_num)+1
     
     if isinstance(a, list) is False:
@@ -235,9 +270,17 @@ def schlum1(elec_num, a, n):
     
     
 def schlum2(elec_num, a, n):
-    #genetrates measurement matrix for dipole dipole survey
-    #elec_num is number of electrodes
-    #a is electode spacing
+    ''' Generates quadrupole matrix for Schlumberger survey.
+    
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int or list of int
+        Spacing between electrodes (in electrode spacing).
+    n : int or list of int
+        Quadrupole seperation in electrode spacing. 
+   '''
     
     elec_id = np.arange(elec_num)+1
     
@@ -273,11 +316,20 @@ def schlum2(elec_num, a, n):
     
     
 def multigrad(elec_num, a, n, s):
-    #genetrates measurement matrix for multigradient array Torleif Dahlin
-    #a is spacing between potential electrodes
-    #n is multiplier for a to determine spacing from A to M
-    #s is seperation factor for current electrodes, should be the intermediate numbers 
+    ''' Genetrate measurement matrix for multigradient array Torleif Dahlin.
     
+    Parameters
+    ----------
+    elec_num : int
+        Number of electrodes
+    a : int
+        Spacing between potential electrodes (in electrode spacing).
+    n : int
+        Multiplier for `a` to determine spacing from A to M.
+    s : int
+        Seperation factor for current electrodes, should be the intermediate
+        numbers.
+    '''
     elec_id = np.arange(elec_num)+1
     
     if isinstance(a, list) is False:
