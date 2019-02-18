@@ -174,12 +174,23 @@ k.showMesh()
 plt.close('all')
 print('-------------Testing Forward DC Modelling ------------')
 k = R2(typ='R2')
-k.createSurvey('api/test/syscalFile.csv')
-k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
-k.createMesh(typ='trian')
-#
-## full API function
-k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10, -3)
+k.elec = np.c_[np.linspace(0,23, 24), np.zeros((24, 2))]
+k.createMesh(typ='trian',cl=0.2)
+
+#k.createSequence(params=[('wenner_alpha',1), # uncomment for wenner array
+#                         ('wenner_alpha',2),
+#                         ('wenner_alpha',3),
+#                         ('wenner_alpha',4),
+#                         ('wenner_alpha',5),
+#                         ('wenner_alpha',6),
+#                         ('wenner_alpha',7),
+#                         ('wenner_alpha',8),
+#                         ('wenner_alpha',9),
+#                         ('wenner_alpha',10)])
+
+##full API function
+#k.addRegion(np.array([[5,-2],[10,-2],[10,-4],[5,-4]]), 10)
+k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5]]), 10, -3)
 k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 20, blocky=True, fixed=True)
 k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fixed=False)
 
@@ -191,12 +202,12 @@ k.forward(iplot=True, noise=0.05)
 k.invert(iplot=True)
 
 # the forward initial model
-k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+#k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 #k.showResults(index=0, attr='Phase(mrad)')
 #k.showResults(index=0, attr='Magnitude(Ohm-m)')
 
 # the inverted
-k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=True, vmin=10, vmax=120) # not for cR2
 #k.showResults(index=1, attr='Phase(mrad)')
 #k.showResults(index=1, attr='Magnitude(Ohm-m)')
 

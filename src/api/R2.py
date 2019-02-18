@@ -519,7 +519,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, dump=print, **kwargs):
+                   cl=-1, dump=print, res0=100, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -542,6 +542,10 @@ class R2(object): # R2 master class instanciated by the GUI
         dump : function, optional
             Function to which pass the output during mesh generation. `print()`
              is the default.
+        res0 : float, optional 
+            Starting resistivity for mesh elements. 
+        kwargs: -
+            Keyword arguments to be passed to mesh generation schemes 
         """
         self.computeDOI()
         
@@ -671,7 +675,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param['res0File'] = 'res0.dat'
         
         numel = self.mesh.num_elms
-        self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
         self.mesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
@@ -702,7 +706,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.zlim = [zlimMin, zlimMax]
 
         
-    def importMesh(self,file_path,mesh_type='tetra',node_pos=None,elec=None,flag_3D=False):
+    def importMesh(self,file_path,mesh_type='tetra',node_pos=None,elec=None,
+                   flag_3D=False, res0=100):
         """
         Import mesh from .vtk / .msh / .dat, rather than having <pyR2> create
         one for you.
@@ -722,6 +727,8 @@ class R2(object): # R2 master class instanciated by the GUI
             will be computed by finding the nearest nodes to the relevant coordinates.
         flag_3D: bool, optional
             Make this true for 3D meshes if importing .msh type. 
+        res0 : float, optional 
+            Starting resistivity for mesh elements. 
         Returns
         -----------
         mesh: class 
@@ -754,7 +761,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
         numel = self.mesh.num_elms
-        self.mesh.add_attribute(np.ones(numel)*100, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
         self.mesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
         self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
