@@ -174,8 +174,7 @@ k.showMesh()
 plt.close('all')
 print('-------------Testing Forward DC Modelling ------------')
 k = R2(typ='R2')
-k.createSurvey('api/test/syscalFile.csv')
-k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
+k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.createMesh(typ='trian')
 #
 ## full API function
@@ -186,6 +185,12 @@ k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fi
 ## full GUI function
 #k.createModel() # manually define 3 regions
 #k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
+
+# creating sequence
+k.createSequence([('dpdp1', 1, 8),
+                  ('wenner_alpha', 1),
+                  ('wenner_alpha', 2)])
+    
 
 k.forward(iplot=True, noise=0.05)
 k.invert(iplot=True)

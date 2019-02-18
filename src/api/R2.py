@@ -256,7 +256,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     ok = True
                 else:
                     print('ERROR : elec, does not match shape from Survey;')
-            
+            else: # electrode not difined yet
+                self.elec = elec
             if ok:
                 if elec.shape[1] == 2:
                     self.elec[:,[0,2]] = elec
@@ -1939,6 +1940,13 @@ class R2(object): # R2 master class instanciated by the GUI
             Each tuple is the form (<array_name>, param1, param2, ...)
             Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
             'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+        
+        Examples
+        --------
+        >>> k = R2()
+        >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+        >>> k.createMesh(typ='trian')
+        >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
         """
         qs = []
         nelec = len(self.elec)
