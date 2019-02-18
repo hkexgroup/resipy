@@ -174,8 +174,8 @@ k.showMesh()
 plt.close('all')
 print('-------------Testing Forward DC Modelling ------------')
 k = R2(typ='R2')
-k.elec = np.c_[np.linspace(0,23, 24), np.zeros((24, 2))]
-k.createMesh(typ='trian',cl=0.2)
+k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+k.createMesh(typ='trian')
 
 #k.createSequence(params=[('wenner_alpha',1), # uncomment for wenner array
 #                         ('wenner_alpha',2),
@@ -188,15 +188,20 @@ k.createMesh(typ='trian',cl=0.2)
 #                         ('wenner_alpha',9),
 #                         ('wenner_alpha',10)])
 
-##full API function
-#k.addRegion(np.array([[5,-2],[10,-2],[10,-4],[5,-4]]), 10)
-k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5]]), 10, -3)
+## full API function
+k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10, -3)
 k.addRegion(np.array([[3,-0.5],[3.5,-0.5],[3.5,-1],[3,-1],[3,-0.5]]), 20, blocky=True, fixed=True)
 k.addRegion(np.array([[4,0],[5,0],[5,-0.5],[4,-0.5],[4,0]]), 30, blocky=True, fixed=False)
 
 ## full GUI function
 #k.createModel() # manually define 3 regions
 #k.assignRes0({1:500, 2:20, 3:30}, {1:1, 2:2, 3:1}, {1:False, 2:False, 3:True})
+
+# creating sequence
+k.createSequence([('dpdp1', 1, 8),
+                  ('wenner_alpha', 1),
+                  ('wenner_alpha', 2)])
+    
 
 k.forward(iplot=True, noise=0.05)
 k.invert(iplot=True)

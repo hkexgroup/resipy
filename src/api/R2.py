@@ -35,14 +35,34 @@ print('pyR2 version = ',str(pyR2_version))
 #info = mt.systemCheck()
 
         
-def workerInversion(path, dump, exePath, qin, typ=None, iMoveElec=False):
+def workerInversion(path, dump, exePath, qin, iMoveElec=False):
+    ''' Take protocol.dat from the queue (`qin`) and run inversion in its own
+    working directory and then put the inverted files back to their origin.
+    This function is called by `R2.runParallel()` and shouldn't be used on its
+    own.
+    
+    Parameters
+    ----------
+    path : str
+        Path of the working directory.
+    dump : callable
+        The output of the running inversion will be passed as text to it. By
+        default the `print()` function is used.
+    exePath: str
+        Abslolute path of the executable to be called to run the inversion.
+    qin : queue
+        Queue containing filename of protocol.dat file to be inverted for each
+        survey.
+    iMoveElec : boolean, optional
+        If `True`, each protocol.dat file will have it's own .in file that
+        can provide different electrode positions.
+    '''
     os.chdir(path)
-    if typ is None: # type of .out file will depend on the inversion code being used. 
-        typ = 'R2'
+    typ = os.path.basename(exePath).replace('.exe','')
     
     for fname in iter(qin.get, 'stop'):
         # copy the protocol.dat
-        shutil.copy(fname, os.path.join(path, 'protocol.dat')) #### TODO: this line is problematic if typ=R3t, iMoveElec = True!
+        shutil.copy(fname, os.path.join(path, 'protocol.dat'))
         name = os.path.basename(fname).replace('.dat', '').replace('protocol_','')
         if iMoveElec is True:
             exeName = os.path.basename(exePath).replace('.exe','')
@@ -236,7 +256,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     ok = True
                 else:
                     print('ERROR : elec, does not match shape from Survey;')
-            
+            else: # electrode not difined yet
+                self.elec = elec
             if ok:
                 if elec.shape[1] == 2:
                     self.elec[:,[0,2]] = elec
@@ -1419,7 +1440,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
             # creating the process
             procs.append(Process(target=workerInversion,
-                                 args=(wd, dump, exePath, queueIn, self.typ, iMoveElec)))
+                                 args=(wd, dump, exePath, queueIn, iMoveElec)))
             procs[-1].start()
             
         # feed the queue
@@ -1926,6 +1947,13 @@ class R2(object): # R2 master class instanciated by the GUI
             Each tuple is the form (<array_name>, param1, param2, ...)
             Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
             'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+        
+        Examples
+        --------
+        >>> k = R2()
+        >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+        >>> k.createMesh(typ='trian')
+        >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
         """
         qs = []
         nelec = len(self.elec)
