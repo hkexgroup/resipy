@@ -128,7 +128,7 @@ brew install wine
 
 If all is done with no errors, you are ready to run the gui by: 
 ```
-cd r2gui
+cd pyr2/src
 python ui.py
 ``` 
 You also can run any ```.exe``` files by this command:
@@ -169,7 +169,7 @@ Below is the usual commands you are likely to go through if you contribute to th
 First ensure you have cloned the project and are in the main project directory.
 ```bash
 git clone https://gitlab.com/hkex/pyr2
-cd r2gui
+cd pyr2
 ```
 Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
 If you choose (1) you can create a new branch using:
