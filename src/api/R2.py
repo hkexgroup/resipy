@@ -294,7 +294,14 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iBorehole = val
         for s in self.surveys:
             s.iBorehole = val
-    
+            
+    def setTitle(self,linetitle):
+        """Set the title of the survey name when inverting data. Input is a string.
+        """
+        if isinstance(linetitle,str):
+            self.param['lineTitle']=linetitle
+        else:
+            print("Cannot set Survey title as input is not a string")
     
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None,
                      parser=None, keepAll=False):
@@ -407,16 +414,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
-#        #check to see if inverse type is in the info. 
-#        if 'inverse_type' in info:
-#            regMode = int(info['inverse_type'])
-#            if regMode<0 or regMode>2:
-#                raise ValueError('Inverse type must have a value of 0, 1 or 2')
-#            self.param['inverse_type']=regMode
-#        else:
-#            regMode = int(0)
-#            self.param['inverse_type']= regMode # normal regularisation
-            
+
         for f in files:
             self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
@@ -879,16 +877,20 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(refdir) == False:
                 os.mkdir(refdir)
             param = self.param.copy()
+            #set background survey parameters first 
             param['a_wgt'] = 0.01
             param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
-            if self.typ == 'R3t' or self.typ == 'cR3t':
-                param['zmin'] = np.min(self.mesh.node_z) - 10 # to be sure to have everything
-                param['zmax'] = np.max(self.mesh.node_z) + 10
             param['reg_mode'] = 0 # set by default in ui.py too
+            param['res0File'] = 'res0.dat'
+            if self.typ[-2] == '3':
+                print("Writing background inversion config for 3D inversion!")
+                param['inverse_type'] = 0 # normal regulurisation
+                param['zmin'] = min(self.mesh.node_z)-10 # we want to keep the whole mesh for background regularisation
+                param['zmax'] = max(self.mesh.node_z)+10
             self.configFile = write2in(param, refdir, typ=typ) # background survey
             
-            # now prepare the actual timelapse
+            # now prepare the actual timelapse settings
             self.param['num_regions'] = 0
             if 'reg_mode' not in self.param.keys():
                 self.param['reg_mode'] = 2
@@ -897,7 +899,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 # for R3t/cR3t, there is no regularization mode but just
                 # an inversion_type variable that we need to overwrite based
                 # on the reg_mode
-                if self.param['reg_mode'] == 2:
+                if self.param['reg_mode'] == 2: # notice regularistion mode needs to change 
                     self.param['inverse_type'] = 2 # difference inversion
                 else:
                     self.param['inverse_type'] = 1 # constrained to background
@@ -1351,7 +1353,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     
-    def runParallel(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
+    def runParallel(self, dirname=None, dump=print, iMoveElec=False, 
+                    ncores=None, rmDirTree=False):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1367,6 +1370,8 @@ class R2(object): # R2 master class instanciated by the GUI
         ncores : int, optional
             Number or cores to use. If None, the maximum number of cores
             available will be used.
+        rmDirTree: bool, optional
+            Remove excess directories and files created during parallel inversion
         """
         if dirname is None:
             dirname = self.dirname
@@ -1483,8 +1488,9 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(r2outText)
         
         # delete the dirs and the files
-        [shutil.rmtree(d) for d in dirs]
-        [os.remove(f) for f in files]
+        if rmDirTree:
+            [shutil.rmtree(d) for d in dirs]
+            [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
         
@@ -1555,7 +1561,8 @@ class R2(object): # R2 master class instanciated by the GUI
             refdir = os.path.join(self.dirname, 'ref')
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
-            self.runR2(refdir, dump=dump)
+            self.write2in(param=param)
+            self.runR2(refdir, dump=dump) # this line actaully runs R2
             if self.typ=='R3t' or self.typ=='cR3t':
                 shutil.copy(os.path.join(refdir, 'f001.dat'),
                             os.path.join(self.dirname, 'Start_res.dat'))
@@ -1565,8 +1572,10 @@ class R2(object): # R2 master class instanciated by the GUI
             
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-#            self.runParallel(dump=dump, iMoveElec=iMoveElec)
-            self.runDistributed(dump=dump,iMoveElec=iMoveElec)
+            if platform.system() == "Windows": # distributed processing favoured on windows 
+                self.runDistributed(dump=dump,iMoveElec=iMoveElec)
+            else:
+                self.runParallel(dump=dump, iMoveElec=iMoveElec)
         else:
             self.runR2(dump=dump)
         

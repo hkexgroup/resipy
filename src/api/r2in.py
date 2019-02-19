@@ -232,7 +232,7 @@ def write3Din(param, dirname, typ='R3t'):
 
     # default
     dparam = {
-            'lineTitle':'My beautiful survey',
+            'lineTitle':'My beautiful 3D survey',
             'job_type':1, # inversion by default
             'singular_type':0,
             'num_regions':1,

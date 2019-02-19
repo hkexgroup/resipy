@@ -1117,6 +1117,12 @@ class Survey(object):
         protocol : pandas.DataFrame
             Dataframe which contains the data for the `protocol.dat`. 
         """
+        avail_err = ['none','obs','lme','lin','pwl']
+        if errTyp not in avail_err:
+            content = ''
+            for i in range(len(avail_err)):
+                content += avail_err[i]
+            raise NameError("Unrecognised error type, available types are "+content)
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         haveReciprocal = all(self.df['irecip'].values == 0)
         if haveReciprocal is False and self.keepAll is False: # so we have reciprocals and don't want dummy inside
