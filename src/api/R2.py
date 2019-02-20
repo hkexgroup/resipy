@@ -2465,6 +2465,24 @@ class R2(object): # R2 master class instanciated by the GUI
         for i in range(len(self.meshResults)):
             self.meshResults[i].reciprocal(res_name,'Conductivity(S/m)')
             
+    def compDiff(self):
+        """Compute difference in meshResult parameters 
+        """
+        if not self.iTimeLapse:
+            raise Exception("Difference calculation only available for time lapse surveys")
+        if self.meshResults is None:
+            self.getResults()
+        num_attr = len(self.mesh.attr_cache)
+        num_elm = self.mesh.num_elms
+        baselines = np.zeros((self.mesh.num_elms,len(self.mesh.attr_cache)))
+        for i, key in enumerate(self.meshResults[0].attr_cache):
+            baselines[:,i] = self.meshResults[0].attr_cache[key]
+            meshResults[0].add_attribute(np.zeros((num_elm,1)),'Change('+key+')')
+#        for i in range(len(self.meshResults)):
+#            
+#            step = self.meshResults[i]
+#            for j in range()
+            
     def showParam(self):
         """Print parameters in param
         """
