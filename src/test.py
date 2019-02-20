@@ -108,6 +108,7 @@ plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
+k.param['reg_mode'] = 1 # background regularization
 k.invert(parallel=True)
 k.showResults(index=3)
 k.showResults(index=1)
@@ -322,6 +323,7 @@ k.createTimeLapseSurvey('api/test/3d/data/', ftype='Protocol')
 elecList = [np.genfromtxt('api/test/3d/elec/' + f, delimiter=',') for f in os.listdir('api/test/3d/elec/')]
 k.setElec(elec=None, elecList=elecList)
 k.createMesh(cl=2)
+k.param['reg_mode'] = 1 # background regularization
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
 
