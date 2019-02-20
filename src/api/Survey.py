@@ -1196,7 +1196,10 @@ class Survey(object):
                     protocol['error'] = self.df[errTyp]
                     protocol['ipError'] = self.df[errTypIP]
             elif errTyp != 'none':
-                protocol['error'] = self.df[errTyp] 
+                try: #### TODO: HOTFIX inserted here. Looks like changing the error types above didnt change the key assigned to survey dataframe, hence an error is raised. 
+                    protocol['error'] = self.df[errTyp] 
+                except KeyError:
+                    protocol['error'] = self.df[errTyp+'Error']
                 
         if all(self.elec[:,1] == 0) is False: # it's a 3D example
             protocol.insert(1, 'sa', 1)

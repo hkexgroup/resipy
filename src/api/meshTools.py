@@ -1420,10 +1420,11 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     mesh : class 
         a <pyR2> mesh class 
     """
+    if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
+        raise ImportError("Provided mesh file is empty! Check that (c)R2/3t code has run correctly!")
     #open the selected file for reading
     fid=open(file_path,'r')
     #print("importing vtk mesh file into python workspace...")
-    
     #read in header info and perform checks to make sure things are as expected
     vtk_ver=fid.readline().strip()#read first line
     if vtk_ver.find('vtk')==-1:
