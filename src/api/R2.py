@@ -1412,7 +1412,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(s.name, '...', end='')
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
-                self.param['node_elec'][:,1] = e_nodes
+                self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
+                self.param['inverse_type'] = 1 # regularise against a background model 
                 self.param['reg_mode'] = 1
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
@@ -2465,6 +2466,17 @@ class R2(object): # R2 master class instanciated by the GUI
             res_name = 'Resistivity(Ohm-m)'
         for i in range(len(self.meshResults)):
             self.meshResults[i].reciprocal(res_name,'Conductivity(S/m)')
+            
+    def compDiff(self):
+        """Compute difference in meshResult parameters 
+        """
+        if not self.iTimeLapse:
+            raise Exception("Difference calculation only available for time lapse surveys")
+        if self.meshResults is None:
+            self.getResults()
+        baselines = np.zeros((self.mesh.num_elms,len(self.mesh.attr_cache)))
+        len(self.mesh.attr_cache)
+        for 
             
     def showParam(self):
         """Print parameters in param
