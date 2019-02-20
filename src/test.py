@@ -95,7 +95,7 @@ k = R2()
 k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
 k.pwlfit()
-k.errTyp = 'pwl'
+k.errTyp = 'pwlError'
 k.invert(iplot=False, parallel=True, ncores=3)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
