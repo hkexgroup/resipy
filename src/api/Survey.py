@@ -965,8 +965,26 @@ class Survey(object):
             ax.set_ylabel('Transfert Resistance [Ohm]')
             
 
-    def pseudoSection(self, ax=None, contour=False, log=False, geom=True):
-        ''' create true pseudo graph with points and no interpolation
+    def pseudoSection(self, ax=None, contour=False, log=False, geom=True,
+                      vmin=None, vmax=None):
+        ''' Create a pseudo-section for 2D given electrode positions.
+        
+        Parameters
+        ----------
+        ax : matplotlib.Axes, optional
+            If specified, the plot will be plotted agains this axis.
+        contour : bool, optional
+            If `True`, contour will be plotted. Otherwise, only dots.
+        log : bool, optional
+            If `True`, the log of the resistivity will be taken.
+        geom : bool, optional
+            If `True`, the geometric factor will be computed and applied
+            to the transfer resisttance to obtain apparent resistiivty. If 
+            `False`, only the Tx resistance will be plotted.
+        vmin : float, optional
+            Minimum value for the colorbar.
+        vmax : float, optional
+            Maximum value for the colorbar.
         '''
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
@@ -1003,7 +1021,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             else:
                 fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=resist, s=70)#, norm=mpl.colors.LogNorm())
+            cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('Pseudo Section')
@@ -1022,7 +1040,7 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, resist)
             if ax is None:
                 fig, ax = plt.subplots()
-            cax = ax.contourf(X,Y,Z)
+            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
             ax.set_title('Pseudo Section')
 
     
