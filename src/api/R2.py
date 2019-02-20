@@ -414,6 +414,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
+        if not trim:
+            self.param['reg_mode']=1 # has to be constrained inversion 
 
         for f in files:
             self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
@@ -460,6 +462,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
         self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
+        
+        print("%i survey files imported"%len(self.surveys))
         
 #    def pseudo(self, **kwargs):
 #        """ Create a pseudo section.
@@ -1409,6 +1413,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 self.param['node_elec'][:,1] = e_nodes
+                self.param['reg_mode'] = 1
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
@@ -2412,22 +2417,40 @@ class R2(object): # R2 master class instanciated by the GUI
             self.surveys[i].normElecIdx(debug=debug)
     
     ## make 3d coordinates for a 2d line in to 2d ##     
-    def elecXY2elecX(self):
+    def elecXY2elecX(self,yDominant=False,iMoveElec=False):
         """
         Convert 3D electrode XY coordinates into just X coordinates. Use for 
         2D lines only! 
         If self.elec has been set then each survey will use the electrodes set 
         in the R2 master class. If not then the R2 master class will take on the
         elec values set for the first survey in a sequence. 
+        
+        Parameters
+        -----------
+        yDominant: bool, optional 
+            If electrodes are prodimently spaced in the y direction then set yDominant
+            to True. 
+        iMoveElec: bool, optional 
+            If moving electrodes are present then set to True, so that the same
+            electrode positions are given to each survey.
         """
         if self.typ == 'R3t' or self.typ == 'cR3t':
             raise ValueError("Cannot compress 3D survey coordinates to 2D for a 3D survey type.")
-        #check elec has been assigned already
-        try: # if electrodes are set in the R2 class then use these for each survey
+        
+        if not iMoveElec:#check if elec has been assigned already
+            try: # if electrodes are set in the R2 class then use these for each survey
+                for i in range(len(self.surveys)):
+                    self.surveys[i].elec = self.elec
+            except AttributeError: #if not already set then assume the electrodes are set for each survey
+                pass
+            
+        if yDominant: # swap x and y around in raw coordinates
             for i in range(len(self.surveys)):
-                self.surveys[i].elec = self.elec
-        except AttributeError: #if not already set then assume the electrodes are set for each survey
-            pass
+                elec = self.surveys[i].elec.copy()
+                x = elec[:,0]
+                y = elec[:,1]
+                self.surveys[i].elec[:,0]=y
+                self.surveys[i].elec[:,1]=x
         
         for i in range(len(self.surveys)):
             self.surveys[i].elec2distance() # go through each survey and compute electrode
@@ -2447,6 +2470,19 @@ class R2(object): # R2 master class instanciated by the GUI
         """Print parameters in param
         """
         [print(key) for i,key in enumerate(self.param)]
+    
+    def filterZeroMeasSurveys(self):
+        """Filter out badly behaved surveys, where after all other QC no measurements 
+        are actually left"""
+        count=0
+        survey_len = [len(self.surveys[i].df) for i in range(len(self.surveys))]
+        while min(survey_len)==0:
+            survey_len = [len(self.surveys[i].df) for i in range(len(self.surveys))]
+            if min(survey_len)==0:
+                bad_idx = np.argmin(np.array(survey_len))
+                del(self.surveys[bad_idx])
+                count += 1
+        print("%i surveys removed as they had no measurements!"%count)
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
     nelec = np.max(array)

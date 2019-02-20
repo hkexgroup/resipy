@@ -121,6 +121,8 @@ k.createBatchSurvey('api/test/testTimelapse')
 for s in k.surveys:
     s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
 k.createMesh('trian')
+k.pwlfit()
+k.errTyp = 'pwl'
 #k.createMesh('trian') # make mesh fine enough !
 #for s in k.surveys:
 #    s.elec
