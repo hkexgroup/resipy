@@ -232,7 +232,7 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
     return znew
 
 #%% pure nearest neighbour interpolation
-def nearest(xnew, ynew, xknown, yknown, zknown): 
+def nearest(xnew, ynew, xknown, yknown, zknown, maxDist=None): 
     """
     Compute z values for unstructured data using nearest neighbour extrapolation.
     Suitable where dense known coordinates occur.ie. in the case of a DEM.  
@@ -249,6 +249,10 @@ def nearest(xnew, ynew, xknown, yknown, zknown):
         y coordinates for the known values 
     zknown: array like
         z coordinates for the known values 
+    maxDist : float, optional
+        Maximum distance for nearest neighbour interpolation. If None then this
+        argument is ignored. If given a value then the values outiside the 
+        maximum distance will be returned as NaN. 
 
     Returns
     ------------
@@ -258,9 +262,19 @@ def nearest(xnew, ynew, xknown, yknown, zknown):
     """
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)        
+    if maxDist is None:
+        check=False
+    else:
+        if not isinstance(maxDist,float):# or not isinstance(maxDist,int):
+            raise ValueError("maxDist argument must be of type int or float, not %s"%type(maxDist))
+        check=True
     for i in range(len(xnew)):#,ncols=100,desc="Extrapolating values"):#go through each extrapolated point and find the closest known coordinate
         dist = pdist(xnew[i],ynew[i],xknown,yknown)
         ref = np.argmin(dist)
-        znew[i] = zknown[ref]             
+        znew[i] = zknown[ref] 
+        if check:
+            if dist[ref]>maxDist:
+                znew[i] = float('NaN')
+            
     return znew
     
