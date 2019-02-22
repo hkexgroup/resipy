@@ -1647,6 +1647,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 fresults = os.path.join(self.dirname, 'ref', 'f001_res.vtk')
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
+            mesh.mesh_title = self.surveys[0].name
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,1]
             mesh.elec_z = self.elec[:,2]
@@ -1667,9 +1668,10 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(fresults):
                 print('reading ', fresults)
                 mesh = mt.vtk_import(fresults)
-                mesh.elec_x = self.elec[:,0]
-                mesh.elec_y = self.elec[:,1]
-                mesh.elec_z = self.elec[:,2]
+                mesh.mesh_title = self.surveys[i+1].name
+                mesh.elec_x = self.surveys[i+1].elec[:,0]
+                mesh.elec_y = self.surveys[i+1].elec[:,1]
+                mesh.elec_z = self.surveys[i+1].elec[:,2]
                 self.meshResults.append(mesh)
             else:
                 break
