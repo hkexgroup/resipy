@@ -2476,14 +2476,16 @@ class R2(object): # R2 master class instanciated by the GUI
             self.getResults()
         num_attr = len(self.mesh.attr_cache)
         num_elm = self.mesh.num_elms
-        baselines = np.zeros((self.mesh.num_elms,len(self.mesh.attr_cache)))
+        baselines = np.zeros((num_attr,num_elm))
         for i, key in enumerate(self.meshResults[0].attr_cache):
             baselines[:,i] = self.meshResults[0].attr_cache[key]
-            meshResults[0].add_attribute(np.zeros((num_elm,1)),'Change('+key+')')
-#        for i in range(len(self.meshResults)):
-#            
-#            step = self.meshResults[i]
-#            for j in range()
+            self.meshResults[0].add_attribute(np.zeros((num_elm,1)),'Change('+key+')')
+        for i in range(len(self.meshResults)): 
+            step = self.meshResults[i]
+            for k, key in enumerate(step.attr_cache):
+                #baselines[:,i] = self.meshResults[0].attr_cache[key]
+                change = (np.array(step.attr_cache[key]) -  baselines[:,k])/baselines[:,k] * 100
+                self.meshResults[i].add_attribute(change,'Change('+key+')')
             
     def showParam(self):
         """Print parameters in param
