@@ -1660,7 +1660,7 @@ class R2(object): # R2 master class instanciated by the GUI
             initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
             self.meshResults.append(initMesh)
             
-        for i in range(100):
+        for i in range(999):
             if self.typ[-2] == '3':
                 fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '.vtk')
             else:
@@ -2510,19 +2510,24 @@ class R2(object): # R2 master class instanciated by the GUI
         if crop:
             baselines = baselines[:,inside]
     
-        change = np.zeros_like(baselines)
+        problem = 0
         for i in range(1,len(self.meshResults)): 
             step = self.meshResults[i]
             new_keys = []
             count = 0
-            for j, key in enumerate(baseline_keys):
-                change[count,:] = (np.array(step.attr_cache[key])-baselines[count,:])/baselines[count,:] * 100
-                new_keys.append('Change('+key+')')
-                count += 1
-            count = 0
-            for j, key in enumerate(new_keys):
-                self.meshResults[i].add_attribute(change[count,:],key)
-                count += 1
+            change = np.zeros_like(baselines)
+            try:
+                for j, key in enumerate(baseline_keys):
+                    change[count,:] = (np.array(step.attr_cache[key])-baselines[count,:])/baselines[count,:] * 100
+                    new_keys.append('Change('+key+')')
+                    count += 1
+                count = 0
+                for j, key in enumerate(new_keys):
+                    self.meshResults[i].add_attribute(change[count,:],key)
+                    count += 1
+            except:
+                problem+=1
+                print("there was a problem with computing differences for survey %i"%i)
                 
     def saveVtks(self,dirname,prefix='pyR2output'):
         """Save vtk files of inversion results to a specified directory. Format
@@ -2536,7 +2541,14 @@ class R2(object): # R2 master class instanciated by the GUI
             files will be named "pyR2output"+"xxx.vtk", where x is the survey
             number. For timelapse surveys "...001.vtk" will be the baseline 
             survey.
-        """     
+        """   
+        amtContent = """from paraview.simple import * 
+
+def start_cue(self):
+	global annotations
+	global maxIndex
+	text_obj = Text()#make a text object
+	annotations= []\n"""
         try:
             numResults = len(self.meshResults)
         except AttributeError:
@@ -2546,7 +2558,23 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh = self.meshResults[i]
             file_path = os.path.join(dirname,prefix+'{:0>3d}.vtk'.format(i))
             mesh.write_vtk(file_path,title=mesh.mesh_title)
-        
+            amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+        amtContent += """	maxIndex = len(annotations)
+
+def tick(self):
+	global annotations
+	global maxIndex
+	index = int( self.GetClockTime() )
+	if index >= maxIndex :
+		 index = maxIndex - 1
+	textSource = paraview.simple.FindSource('Text1')
+	textSource.Text = annotations[index]
+
+def end_cue(self): pass
+        """
+        fh = open(os.path.join(dirname,'amt_track.py'),'w')
+        fh.write(amtContent)
+        fh.close()
         
     def showParam(self):
         """Print parameters in param
