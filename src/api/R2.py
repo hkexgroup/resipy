@@ -2518,18 +2518,19 @@ class R2(object): # R2 master class instanciated by the GUI
             new_keys = []
             count = 0
             change = np.zeros_like(baselines)
-            try:
-                for j, key in enumerate(baseline_keys):
+            for j, key in enumerate(baseline_keys):
+                try:
                     change[count,:] = (np.array(step.attr_cache[key])-baselines[count,:])/baselines[count,:] * 100
-                    new_keys.append('Change('+key+')')
-                    count += 1
-                count = 0
-                for j, key in enumerate(new_keys):
-                    self.meshResults[i].add_attribute(change[count,:],key)
-                    count += 1
-            except:
-                problem+=1
-                print("there was a problem with computing differences for survey %i"%i)
+                except KeyError:
+                    problem+=1
+                new_keys.append('Change('+key+')')
+                count += 1
+            count = 0
+            for j, key in enumerate(new_keys):
+                self.meshResults[i].add_attribute(change[count,:],key)
+                count += 1
+        if problem>0:
+            print('Had a problem computing differences for %i attributes'%problem)
                 
     def saveVtks(self,dirname,prefix='pyR2output'):
         """Save vtk files of inversion results to a specified directory. Format

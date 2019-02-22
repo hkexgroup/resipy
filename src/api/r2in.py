@@ -150,7 +150,7 @@ def write2Din(param, dirname, typ='R2'):
 #        elif typ == 'cR2':
 #            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
         if param['reg_mode'] == 1:
-            content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
+            content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso, alpha_s\n\n'.format(
                     param['tolerance'],
                     param['max_iter'],
                     param['error_mod'],
