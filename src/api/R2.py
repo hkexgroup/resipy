@@ -1219,7 +1219,7 @@ class R2(object): # R2 master class instanciated by the GUI
         for s, df in zip(surveys, dfs):
             elec = s.elec
             e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
-            node_elec.append(e_nodes)
+            node_elec.append(e_nodes+1) #add one to be consistent with fortran indexing
             df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c
             c += len(elec)
         node_elec = np.hstack(node_elec)
@@ -1414,12 +1414,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
                 self.param['inverse_type'] = 1 # regularise against a background model 
-                self.param['reg_mode'] = 1
+                #self.param['reg_mode'] = 1
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
-                print('done')
-        #raise Exception("Stopping")        
+                print('done')       
         queueIn = Queue() # queue
         
         # create workers directory
