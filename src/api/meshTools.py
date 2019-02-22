@@ -241,6 +241,7 @@ class Mesh:
             in other mesh functions. 
         """
         if len(values)!=self.num_elms:
+#            print(len(values),self.num_elms)
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.no_attributes += 1
         try: 

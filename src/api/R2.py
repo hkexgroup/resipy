@@ -24,6 +24,7 @@ sys.path.append(os.path.relpath('..'))
 from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
+import api.isinpolygon as iip
 from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
@@ -2473,19 +2474,82 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if not self.iTimeLapse:
             raise Exception("Difference calculation only available for time lapse surveys")
-        if self.meshResults is None:
-            self.getResults()
-        num_attr = len(self.mesh.attr_cache)
-        num_elm = self.mesh.num_elms
-        baselines = np.zeros((self.mesh.num_elms,len(self.mesh.attr_cache)))
+#        if self.meshResults is None:
+#            self.getResults()
+#        elif len(self.meshResults)==0:
+        self.getResults()
+        
+        crop=False
+        if len(self.param['xy_poly_table'])>0:
+            meshx = np.array(self.mesh.elm_centre[0])
+            meshy = np.array(self.mesh.elm_centre[1])
+            meshz = np.array(self.mesh.elm_centre[2])
+            crop=True
+            if self.typ[-2]=='3':
+                inside1 = iip.isinpolygon(meshx,meshy,(self.param['xy_poly_table'][:,0],self.param['xy_poly_table'][:,1]))
+                inside2 = (meshz > self.param['zmin']) & (meshz < self.param['zmax'])
+                inside = (inside1==True) & (inside2==True)
+            else:
+                inside = iip.isinpolygon(meshx,meshz,(self.param['xy_poly_table'][:,0],self.param['xy_poly_table'][:,1]))
+                
+#            ipp.isinpolygon(x,y,poly_data)
+        
+        num_attr = len(self.meshResults[0].attr_cache)
+        num_elm = self.meshResults[0].num_elms
+        baselines = np.zeros((num_attr,num_elm))
         for i, key in enumerate(self.meshResults[0].attr_cache):
-            baselines[:,i] = self.meshResults[0].attr_cache[key]
-            meshResults[0].add_attribute(np.zeros((num_elm,1)),'Change('+key+')')
-#        for i in range(len(self.meshResults)):
-#            
-#            step = self.meshResults[i]
-#            for j in range()
-            
+            baselines[i,:] = self.meshResults[0].attr_cache[key]
+        change = np.zeros_like(baselines)
+        new_keys = []
+        baseline_keys = []
+        for j, key in enumerate(self.meshResults[0].attr_cache):
+            new_keys.append('Change('+key+')')
+            baseline_keys.append(key)
+        for j, key in enumerate(new_keys):
+            self.meshResults[0].add_attribute(change[j,:],key)
+        
+        #filter baseline to just the measurements left over after cropping the mesh
+        if crop:
+            baselines = baselines[:,inside]
+    
+        change = np.zeros_like(baselines)
+        for i in range(1,len(self.meshResults)): 
+            step = self.meshResults[i]
+            new_keys = []
+            count = 0
+            for j, key in enumerate(baseline_keys):
+                change[count,:] = (np.array(step.attr_cache[key])-baselines[count,:])/baselines[count,:] * 100
+                new_keys.append('Change('+key+')')
+                count += 1
+            count = 0
+            for j, key in enumerate(new_keys):
+                self.meshResults[i].add_attribute(change[count,:],key)
+                count += 1
+                
+    def saveVtks(self,dirname,prefix='pyR2output'):
+        """Save vtk files of inversion results to a specified directory. Format
+        for file names will be 'prefix'xxx.vtk. 
+        Parameters
+        ------------
+        dirname: str
+            Direcotry in which results will be saved
+        prefix: str, optional
+            Characters appended to the front of each file name, ie by default
+            files will be named "pyR2output"+"xxx.vtk", where x is the survey
+            number. For timelapse surveys "...001.vtk" will be the baseline 
+            survey.
+        """     
+        try:
+            numResults = len(self.meshResults)
+        except AttributeError:
+            self.getResults()
+            numResults = len(self.meshResults)
+        for i in range(numResults):
+            mesh = self.meshResults[i]
+            file_path = os.path.join(dirname,prefix+'{:0>3d}.vtk'.format(i))
+            mesh.write_vtk(file_path,title=mesh.mesh_title)
+        
+        
     def showParam(self):
         """Print parameters in param
         """
