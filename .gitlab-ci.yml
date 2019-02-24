@@ -1,21 +1,23 @@
-image: ubuntu:14.04
+image: alpine
 
 pages:
   script:
-  - apt-get install python-pip python-dev
-  - pip install sphinx==1.6.7
-  - pip install numpydoc
-  - pip install numpy
-  - pip install matplotlib
-  - pip install PyQt5
-  - pip install pandas
-  - apt-get install make
+  - apk --no-cache add py3-pip python3-dev
+  - pip3 install sphinx==1.6.7
+  - pip3 install numpydoc
+  - pip3 install numpy
+  - pip3 install matplotlib
+  - pip3 install PyQt5
+  - pip3 install pandas
+  - apk --no-cache add make
   - cd doc
   - make html
   - cd ..
   - mv doc/_build/html/ public/
+
   artifacts:
     paths:
     - public
+
   only:
   - master
