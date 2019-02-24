@@ -1,20 +1,13 @@
-image: alpine
+image: debian:3.6-stretch
 
 pages:
   script:
-  - apk --no-cache add py3-pip python3-dev
-  - pip3 install sphinx==1.6.7
-  - pip3 install numpydoc
-  - pip3 install numpy
-  - pip3 install matplotlib
-  - pip3 install PyQt5
-  - pip3 install pandas
-  - apk --no-cache add make
+  - pip install sphinx==1.6.7 numpydoc numpy matplotlib PyQt5 pandas
+  - ls
   - cd doc
   - make html
   - cd ..
   - mv doc/_build/html/ public/
-
   artifacts:
     paths:
     - public
