@@ -8,6 +8,7 @@ pages:
   - make html
   - cd ..
   - mv doc/_build/html/ public/
+  - ls public
   artifacts:
     paths:
     - public
