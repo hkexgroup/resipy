@@ -1,4 +1,4 @@
-image: 3.6-stretch
+image: stretch
 
 pages:
   script:
