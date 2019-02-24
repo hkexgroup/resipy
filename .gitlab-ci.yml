@@ -3,7 +3,7 @@ image: alpine
 pages:
   script:
   - apk --no-cache add py3-pip python3-dev
-  - pip3 install sphinx
+  - pip3 install sphinx==1.6.7
   - apk --no-cache add make
   - cd doc
   - make html
