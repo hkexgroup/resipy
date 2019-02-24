@@ -1,4 +1,4 @@
-image: alpine
+image: 3.6-stretch
 
 pages:
   script:
