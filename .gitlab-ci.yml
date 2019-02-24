@@ -2,11 +2,12 @@ image: alpine
 
 pages:
   script:
-  - apk --no-cache add py3-pip python-dev
+  - apk --no-cache add py2-pip python-dev
   - pip install sphinx
   - apk --no-cache add make
   - cd doc
   - make html
+  - cd ..
   - mv doc/_build/html/ public/
   artifacts:
     paths:
