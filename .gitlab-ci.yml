@@ -1,4 +1,4 @@
-image: python:3.6-stretch
+image: ubuntu:14.04
 
 pages:
   script:
