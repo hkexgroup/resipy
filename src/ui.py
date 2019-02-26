@@ -1270,7 +1270,7 @@ class App(QMainWindow):
                     df['resist'] = df['vp']/df['i']
                 if 'ip' not in df.columns:
                     df['ip'] = 0
-                else: 
+                elif self.inputPhaseFlag == True:
                     df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
                 array = df[['a','b','m','n']].values.copy()
                 arrayMin = np.min(np.unique(np.sort(array.flatten())))
