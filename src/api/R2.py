@@ -1591,6 +1591,10 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
             self.runR2(dump=dump)
+            
+#        if self.iTimeLapse is True: # then move back f000_res.vtk
+#            shutil.copy(os.path.join(refdir, 'f001_res.vtk'),
+#                        os.path.join(self.dirname, 'f000_res.vtk'))
         
         if iplot is True:
             self.showResults()
