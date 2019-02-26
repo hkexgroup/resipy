@@ -1579,10 +1579,10 @@ class R2(object): # R2 master class instanciated by the GUI
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
             if platform.system() == "Windows": # distributed processing favoured on windows 
-                warnings.warn("Parallel processing unstable on windows!")
-                #self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
-            #else:
-            self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+                warnings.warn("Parallel processing unstable on windows! Running distributed processing instead")
+                self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
+            else:
+                self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
             self.runR2(dump=dump)
         
