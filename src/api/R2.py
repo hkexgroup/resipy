@@ -1640,7 +1640,6 @@ class R2(object): # R2 master class instanciated by the GUI
         them to `R2.meshResults` list.
         """
         self.meshResults = [] # make sure we empty the list first
-#        if self.typ == 'R2':
         if self.iTimeLapse == True:
             if self.typ[-2] == '3':
                 fresults = os.path.join(self.dirname, 'ref', 'f001.vtk')
@@ -1661,7 +1660,11 @@ class R2(object): # R2 master class instanciated by the GUI
             initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
             self.meshResults.append(initMesh)
             
-        for i in range(999):
+        for i in range(1000):
+            if self.iTimeLapse is True:
+                j = i + 1
+            else:
+                j = i
             if self.typ[-2] == '3':
                 fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '.vtk')
             else:
@@ -1669,20 +1672,13 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(fresults):
                 print('reading ', fresults)
                 mesh = mt.vtk_import(fresults)
-                mesh.mesh_title = self.surveys[i+1].name
-                mesh.elec_x = self.surveys[i+1].elec[:,0]
-                mesh.elec_y = self.surveys[i+1].elec[:,1]
-                mesh.elec_z = self.surveys[i+1].elec[:,2]
+                mesh.mesh_title = self.surveys[j].name
+                mesh.elec_x = self.surveys[j].elec[:,0]
+                mesh.elec_y = self.surveys[j].elec[:,1]
+                mesh.elec_z = self.surveys[j].elec[:,2]
                 self.meshResults.append(mesh)
             else:
                 break
-#        if self.typ == 'cR2':
-#            fresults = os.path.join(self.dirname, 'f001.vtk')
-#            print('reading ref', fresults)
-#            mesh = mt.vtk_import(fresults)
-#            mesh.elec_x = self.elec[:,0]
-#            mesh.elec_y = self.elec[:,2]
-#            self.meshResults.append(mesh)
         
         # compute conductivity in mS/m
         for mesh in self.meshResults:
