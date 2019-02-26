@@ -198,7 +198,7 @@ class Survey(object):
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['ip','reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
             self.dfphasereset = self.df.copy()
-        
+          
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
         """ Add data to the actual survey (for instance the reciprocal if they
@@ -365,8 +365,27 @@ class Survey(object):
         self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
         
         return Ri
-
     
+    def filterRecip(self,pcnt=20, debug=True):
+        """Filter measurements based on the level reciprocal error. 
+        Parameters
+        -----------
+        pcnt: float, optional
+            Percentage level of reciprocal error in which to filter the measurements
+            Percentage Errors > percentage will be removed. By default the value is 
+            20.
+        debug: bool, optional
+            Print output to screen. Default is True. 
+        """
+        #### TODO: stop filtering if no reciprocals present! 
+        reciprocalErrRel = self.df['reciprocalErrRel']
+        igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
+        df_temp = self.df.copy()
+        self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        if debug:
+            print("%i measurements with greater than %3.1f percentage error removed"%(len(df_temp)-len(self.df),
+                                                                                      pcnt))
+        
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
         """

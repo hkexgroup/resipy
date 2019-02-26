@@ -493,6 +493,12 @@ class R2(object): # R2 master class instanciated by the GUI
                 i2keep = (s.df[['a','b','m','n']].values != e).all(1)
                 s.filterData(i2keep)
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
+    
+    def filterRecip(self,pcnt=20):
+        """Filter on reciprocal errors
+        """
+        for s in self.surveys:
+            s.filterRecip(pcnt)
         
         
     def computeDOI(self):
