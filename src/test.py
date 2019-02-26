@@ -175,6 +175,7 @@ k.showMesh()
 
 #%% forward modelling
 plt.close('all')
+from api.R2 import R2
 print('-------------Testing Forward DC Modelling ------------')
 k = R2(typ='R2')
 k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])

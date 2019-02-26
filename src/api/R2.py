@@ -1665,6 +1665,9 @@ class R2(object): # R2 master class instanciated by the GUI
 #            initMesh.attr_cache['Resistivity(Ohm-m)'] = res0
 #            initMesh.attr_cache['Resistivity(log10)'] = np.log10(res0)
             initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
+            initMesh.elec_x = self.elec[:,0]
+            initMesh.elec_y = self.elec[:,1]
+            initMesh.elec_z = self.elec[:,2]
             self.meshResults.append(initMesh)
             
         for i in range(1000):
@@ -2136,7 +2139,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
         self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
-        self.elec = elec
+        self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
         
         self.pseudo()
         dump('Forward modelling done.')
