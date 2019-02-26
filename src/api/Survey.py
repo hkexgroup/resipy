@@ -522,7 +522,7 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/self.kFactor, self.phiCbarMax/self.kFactor))
+        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/np.abs(self.kFactor), self.phiCbarMax/np.abs(self.kFactor)))
         reciprocalMean = np.abs(temp_df_renge_filter['recipMean'].values)
         phase = np.abs(-self.kFactor*temp_df_renge_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
@@ -901,7 +901,7 @@ class Survey(object):
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*self.kFactor
+        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
@@ -933,9 +933,9 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -1080,7 +1080,7 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
-        ip = self.df['ip'].values            
+        ip = -self.kFactor*self.df['ip'].values            
 
         label = r'$\phi$ [mRad]'
         
@@ -1099,7 +1099,7 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('IP pseudo Section')
+            ax.set_title('Phase shift pseudo Section')
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
         
