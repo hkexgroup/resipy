@@ -493,6 +493,12 @@ class R2(object): # R2 master class instanciated by the GUI
                 i2keep = (s.df[['a','b','m','n']].values != e).all(1)
                 s.filterData(i2keep)
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
+    
+    def filterRecip(self,pcnt=20):
+        """Filter on reciprocal errors
+        """
+        for s in self.surveys:
+            s.filterRecip(pcnt)
         
         
     def computeDOI(self):
@@ -1579,9 +1585,10 @@ class R2(object): # R2 master class instanciated by the GUI
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
             if platform.system() == "Windows": # distributed processing favoured on windows 
-                self.runDistributed(dump=dump,iMoveElec=iMoveElec)
+                warnings.warn("Parallel processing unstable on windows! Running distributed processing instead")
+                self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
             else:
-                self.runParallel(dump=dump, iMoveElec=iMoveElec)
+                self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
             self.runR2(dump=dump)
         

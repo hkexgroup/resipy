@@ -198,7 +198,7 @@ class Survey(object):
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['ip','reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
             self.dfphasereset = self.df.copy()
-        
+          
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
         """ Add data to the actual survey (for instance the reciprocal if they
@@ -365,8 +365,27 @@ class Survey(object):
         self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
         
         return Ri
-
     
+    def filterRecip(self,pcnt=20, debug=True):
+        """Filter measurements based on the level reciprocal error. 
+        Parameters
+        -----------
+        pcnt: float, optional
+            Percentage level of reciprocal error in which to filter the measurements
+            Percentage Errors > percentage will be removed. By default the value is 
+            20.
+        debug: bool, optional
+            Print output to screen. Default is True. 
+        """
+        #### TODO: stop filtering if no reciprocals present! 
+        reciprocalErrRel = self.df['reciprocalErrRel']
+        igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
+        df_temp = self.df.copy()
+        self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        if debug:
+            print("%i measurements with greater than %3.1f percentage error removed"%(len(df_temp)-len(self.df),
+                                                                                      pcnt))
+        
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
         """
@@ -503,7 +522,7 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/self.kFactor, self.phiCbarMax/self.kFactor))
+        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/np.abs(self.kFactor), self.phiCbarMax/np.abs(self.kFactor)))
         reciprocalMean = np.abs(temp_df_renge_filter['recipMean'].values)
         phase = np.abs(-self.kFactor*temp_df_renge_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
@@ -882,7 +901,7 @@ class Survey(object):
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*self.kFactor
+        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
@@ -914,9 +933,9 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -1061,7 +1080,7 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
-        ip = self.df['ip'].values            
+        ip = -self.kFactor*self.df['ip'].values            
 
         label = r'$\phi$ [mRad]'
         
@@ -1080,7 +1099,7 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('IP pseudo Section')
+            ax.set_title('Phase shift pseudo Section')
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
         
