@@ -52,6 +52,7 @@ class Survey(object):
         self.name = name
         self.iBorehole = False # True is it's a borehole
         self.phase_flag = False
+        self.kFactor = 1
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
         
@@ -60,6 +61,7 @@ class Survey(object):
         else:
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname, spacing=spacing)
+                self.kFactor = 1.2
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
@@ -85,7 +87,6 @@ class Survey(object):
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
-        self.kFactor = 1.2
         self.phiCbarmin = 0
         self.phiCbarMax = 25
         self.filt_typ = None
@@ -210,6 +211,7 @@ class Survey(object):
         else:
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname, spacing=spacing)
+                self.kFactor = 1.2
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
@@ -1123,7 +1125,7 @@ class Survey(object):
             ax.set_title('IP pseudo Section')
 #            fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
-
+        print(self.kFactor)
         if ax is None:
             return fig
     
