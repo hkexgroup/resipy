@@ -721,7 +721,8 @@ class App(QMainWindow):
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
                     if self.inputPhaseFlag == True:
-                        self.r2.surveys[0].kFactor = -1
+                        self.r2.surveys[0].kFactor = 1
+
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
@@ -1237,10 +1238,12 @@ class App(QMainWindow):
                 if vals[0] > 0:
                     colIndex.append(vals)
                     newHeaders.append(['ip'])
-                    phiConvFactor.setText('-1')
+                    phiConvFactor.setText('-')
                     phiConvFactor.setEnabled(False)
                     phiConvFactorlabel.setEnabled(False)
                     self.inputPhaseFlag = True
+#                    phivminEdit.setText('0')
+#                    phivmaxEdit.setText('25')
                     
             # TODO need to import the IP coluns as well
             
@@ -1267,6 +1270,8 @@ class App(QMainWindow):
                     df['resist'] = df['vp']/df['i']
                 if 'ip' not in df.columns:
                     df['ip'] = 0
+                elif self.inputPhaseFlag == True:
+                    df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
                 array = df[['a','b','m','n']].values.copy()
                 arrayMin = np.min(np.unique(np.sort(array.flatten())))
                 if arrayMin != 0:
@@ -1519,7 +1524,7 @@ class App(QMainWindow):
         phiConvFactor.setFixedWidth(50)
         phiConvFactor.setValidator(QDoubleValidator())
         phiConvFactor.setText('1.2')
-        phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nk = -1 when importing phase data')
+        phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
         rangelabel = QLabel('     Phase range filtering:')
         phivminlabel = QLabel('-φ min:')
