@@ -582,8 +582,8 @@ class Survey(object):
         coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]))[0] # calculating fitting coefficients (a,m)
         R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
-        ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="bin means")
-        ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power law fit")
+        ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
+        ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power Law Fit")
         ax.set_ylabel(r's($\phi$) [mRad]')
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
@@ -680,8 +680,8 @@ class Survey(object):
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
-        ax.plot(bins[:,0],R_error_predict,'r', label="Power law fit")
+        ax.loglog(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.plot(bins[:,0],R_error_predict,'r', label="Power Law Fit")
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
@@ -769,8 +769,8 @@ class Survey(object):
         coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
-        ax.loglog(bins[:,0],R_error_predict,'r', label="Linear fit")
+        ax.loglog(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.loglog(bins[:,0],R_error_predict,'r', label="Linear Fit")
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
