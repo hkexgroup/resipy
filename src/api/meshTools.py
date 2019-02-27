@@ -1785,62 +1785,98 @@ def dat_import(file_path='mesh.dat'):
                  cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
                  atribute_title='zone')#what is the attribute? we may use conductivity instead of resistivity for example
     
+    mesh.add_attribute(zone,'zone')
+    
     return mesh 
         
            
-#%% Read in resistivity values from R2 output 
-def readR2_resdat(file_path):
-    """Reads resistivity values in f00#_res.dat file output from R2.(2D only)
-            
+#%% Read in E4D / tetgen mesh
+def tetgen_import(file_path):
+    """Import Tetgen mesh into <pyR2>. This isa little different from other 
+    imports as the mesh is described by several files. From pyR2's perspective
+    What is needed is the node(.node) file and element (.ele) files, which 
+    describe the coordinates of mesh nodes and the connection matrix. 
+    
     Parameters
     ----------
-    file_path : string
-        Maps to the _res.dat file.
-            
+    file_path: str
+        Maps to the mesh .node file. The program will automatically find the 
+        corresponding .ele file in the same directory. 
+    
     Returns
     -------
-    res_values : list of floats
-        Resistivity values returned from the .dat file. 
+    mesh: class    
     """
-    warnings.warn("DEPRECIATION WARNING: readR2_resdat will be no longer handled my meshTools in future updates")
-    if not isinstance (file_path,str):
-        raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
-    fh=open(file_path,'r')
-    dump=fh.readlines()
-    fh.close()
-    res_values=[]
-    for i in range(len(dump)):
-        line=dump[i].split()
-        res_values.append(float(line[2]))
-    return res_values   
-
-#%% read in sensitivity values 
-def readR2_sensdat(file_path):
-    """Reads sensitivity values in _sens.dat file output from R2.
+    fh = open(file_path,'r') # open file for read in 
+    header = fh.readline() # header line
+    numnp = int(header.split()[0]) # number of nodes 
+    node_x = [0]*numnp # preallocate array likes for node coordinates 
+    node_y = [0]*numnp
+    node_z = [0]*numnp
+    node_id = [0]*numnp
+    for i in range(numnp): # read through each line and get node coordinates 
+        line = fh.readline().split()
+        node_id[i] = int(line[0])
+        node_x[i] = float(line[1])
+        node_y[i] = float(line[2])
+        node_z[i] = float(line[3])
+    fh.close() #close file 
+    
+    #next we need the connection matrix to describe each of the tetrahedral e
+    #elements
+    file_path2 = file_path.replace('.node','.ele')
+    fh = open(file_path2,'r')# read in element file  
+    header = fh.readline() # read in header line 
+    numel = int(header.split()[0]) # number of elements 
+    npere = 4 # number of nodes per element, in this case E4D uses tetrahedral 
+    #meshes so its always going to be 4. 
+    
+    
+    node_map = np.array([[0]*numel]*npere,dtype=int) # connection matrix mapping elements onto nodes 
+    elm_no = [0]*numel # element number / index 
+    zone = [0]*numel # mesh zone 
+    
+    for i in range(numel):
+        line = fh.readline().split()#read in line data
+        elm_no[i] = int(line[0])
+        zone[i] = int(line[-1])
+        node_map[0][i]=int(line[1])-1
+        node_map[1][i]=int(line[2])-1
+        node_map[2][i]=int(line[3])-1
+        node_map[3][i]=int(line[4])-1
+    
+    #calculate element centres       
+    areas = [0]*numel
+    centriod_x = [0]*numel
+    centriod_y = [0]*numel
+    centriod_z = [0]*numel    
+    for i in range(numel):
+        x_vec = [node_x[node_map[j][i]] for j in range(npere)]
+        y_vec = [node_y[node_map[j][i]] for j in range(npere)]
+        z_vec = [node_z[node_map[j][i]] for j in range(npere)]
+        centriod_x[i] = sum(x_vec)/npere
+        centriod_y[i] = sum(y_vec)/npere
+        centriod_z[i] = sum(z_vec)/npere
             
-    Parameters
-    ----------
-    file_path : string
-        Maps to the _sens.dat file.
-            
-    Returns
-    -------
-    res_values : list of floats
-        Sensitivity values returned from the .dat file (not log10!).
-    """
-    warnings.warn("DEPRECIATION WARNING: readR2_sensdat will be no longer handled my meshTools in future updates")
-    if not isinstance (file_path,str):
-        raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
-    fh=open(file_path,'r')
-    dump=fh.readlines()
-    fh.close()
-    sens_values=[]
-    for i in range(len(dump)):
-        line=dump[i].split()
-        sens_values.append(float(line[2]))
-    return sens_values   
-
-
+    
+    #create mesh instance 
+    mesh = Mesh(num_nodes = numnp,#number of nodes
+             num_elms = numel,#number of elements 
+             node_x = node_x,#x coordinates of nodes 
+             node_y = node_y,#y coordinates of nodes
+             node_z = node_z,#z coordinates of nodes 
+             node_id= node_id,#node id number 
+             elm_id=elm_no,#element id number 
+             node_data=node_map,#nodes of element vertices
+             elm_centre= (centriod_x,centriod_y,centriod_z),#centre of elements (x,y)
+             elm_area = areas,#area of each element
+             cell_type = [10],#according to vtk format
+             cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
+             atribute_title='zone')#what is the attribute? 
+    
+    mesh.add_attribute(zone,'zone')
+    
+    return mesh
         
 #%% build a quad mesh        
 def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
@@ -2584,9 +2620,11 @@ def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
             mesh_dict = gw.msh_parse(file_path)
         mesh = Mesh.mesh_dict2class(mesh_dict)
     elif ext == '.dat':
-        mesh = dat_import(file_path)
+        mesh = dat_import(file_path)   
+    elif ext == '.node':
+        mesh = tetgen_import(file_path)
     else:
-        avail_ext = ['.vtk','.msh','.dat']
+        avail_ext = ['.vtk','.msh','.dat','.node / .exe']
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
     if node_pos is not None:
