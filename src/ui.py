@@ -302,7 +302,11 @@ class App(QMainWindow):
                 phiConvFactor.setText('1')
             else:
                 phiConvFactor.setText('1.2')
-               
+            if self.ftype == 'ProtocolIP':
+                phiConvFactor.setText('-')
+                phiConvFactor.setEnabled(False)
+                phiConvFactorlabel.setEnabled(False)
+                
             # pre-processing
             mwManualFiltering.clear()
             errFitType.currentIndexChanged.disconnect()
@@ -1589,8 +1593,12 @@ class App(QMainWindow):
         def phiCbarDataRange():
             minDataIP = np.min(self.r2.surveys[0].dfOrigin['ip'])
             maxDataIP = np.max(self.r2.surveys[0].dfOrigin['ip'])
-            self.r2.surveys[0].phiCbarmin = minDataIP
-            self.r2.surveys[0].phiCbarMax = maxDataIP
+            if self.ftype == 'ProtocolIP':
+                self.r2.surveys[0].phiCbarmin = -maxDataIP
+                self.r2.surveys[0].phiCbarMax = -minDataIP
+            else:
+                self.r2.surveys[0].phiCbarmin = minDataIP
+                self.r2.surveys[0].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
         

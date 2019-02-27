@@ -51,7 +51,7 @@ class Survey(object):
             name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
         self.iBorehole = False # True is it's a borehole
-        self.phase_flag = False
+        self.protocolIPFlag = False
         self.kFactor = 1
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
@@ -73,7 +73,7 @@ class Survey(object):
                     elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
-                self.phase_flag = True
+                self.protocolIPFlag = True
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -223,7 +223,7 @@ class Survey(object):
                     elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
-                self.phase_flag = True
+                self.protocolIPFlag = True
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
@@ -904,7 +904,10 @@ class Survey(object):
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
+        if self.protocolIPFlag == True:
+            temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*-1
+        else:
+            temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
@@ -936,9 +939,15 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
+            if self.protocolIPFlag == True:
+                self.filterDataIP = self.df.query('ip > %s and ip < %s' % (-phimax, -phimin))
+            else:
+                self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
+            if self.protocolIPFlag == True:
+                self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (-phimax, -phimin))
+            else:
+                self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -1083,7 +1092,10 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
-        ip = -self.kFactor*self.df['ip'].values            
+        if self.protocolIPFlag == True:
+            ip = self.df['ip'].values
+        else:
+            ip = -self.kFactor*self.df['ip'].values
 
         label = r'$\phi$ [mRad]'
         
@@ -1172,9 +1184,9 @@ class Survey(object):
             protocol['R'] = dfg['recipMean'].values
             if res0:
                 protocol['R0'] = dfg['recipMean0'].values
-            if ip == True and self.phase_flag == False:
+            if ip == True and self.protocolIPFlag == False:
                 protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
-            elif self.phase_flag == True:
+            elif self.protocolIPFlag == True:
                 protocol['Phase'] = dfg['ip'].values
             if errTyp != 'none':
                 if errTyp == 'obs':
@@ -1209,9 +1221,9 @@ class Survey(object):
             if res0:
                 protocol['R0'] = self.df['resist0'].values
             if ip == True:
-                if self.phase_flag == False:
+                if self.protocolIPFlag == False:
                     protocol['Phase'] = -self.kFactor*self.df['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
-                elif self.phase_flag == True:
+                elif self.protocolIPFlag == True:
                     protocol['Phase'] = self.df['ip'].values
                 if 'phiErr' in self.df.columns:
                     protocol['error'] = self.df[errTyp]
