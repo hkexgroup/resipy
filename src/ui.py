@@ -733,8 +733,6 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
-                    if self.inputPhaseFlag == True:
-                        self.r2.surveys[0].kFactor = 1
 
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
@@ -1095,6 +1093,7 @@ class App(QMainWindow):
         
         delimiterLabel = QLabel('Delimiter')
         delimiterEdit = QLineEdit('')
+        delimiterEdit.setToolTip(r'For tab delimited data use: \t')
         skipRowsLabel = QLabel('Number of header to skip')
         skipRowsEdit = QLineEdit('0')
         skipRowsEdit.setValidator(QIntValidator())
@@ -1137,14 +1136,16 @@ class App(QMainWindow):
         vpBoxLabel = QLabel('Vp Potential Difference')
         InBoxLabel = QLabel('In Current')
         resistBoxLabel = QLabel('Transfer Resistance')
-        ipStartBoxLabel = QLabel('IP start column')
-        ipEndBoxLabel = QLabel('IP end column')
+#        ipStartBoxLabel = QLabel('IP start column') # we don't need these for now, since DCA only works with syscal files
+#        ipEndBoxLabel = QLabel('IP end column')
         chargeabilityBoxLabel = QLabel('Chargeability')
         phaseBoxLabel = QLabel('Phase shift')
 #        elecSpacingLabel = QLabel('Electrode spacing')
        
-        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
-                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
+#        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
+#                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
+        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel,
+                       chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
         
         aBox = QComboBox()
         bBox = QComboBox()
@@ -1153,18 +1154,22 @@ class App(QMainWindow):
         vpBox = QComboBox()
         InBox = QComboBox()
         resistBox = QComboBox()
-        ipStartBox = QComboBox()
-        ipEndBox = QComboBox()
+#        ipStartBox = QComboBox() # we don't need these for now, since DCA only works with syscal files
+#        ipEndBox = QComboBox()
         chargeabilityBox = QComboBox()
+        chargeabilityBox.setToolTip('input the column containing chargeability (mV/V) values')
         phaseBox = QComboBox()
+        phaseBox.setToolTip('input the column containing phase shift (mRad) values')
 #        elecSpacingEdit = QLineEdit('')
 #        elecSpacingEdit.setEnabled(False)
 #        elecSpacingEdit.setValidator(QDoubleValidator())
 #        elecSpacingEdit.setFixedWidth(80)
 #        elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
         
-        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
-                 ipEndBox, chargeabilityBox, phaseBox]#, elecSpacingEdit]
+#        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
+#                 ipEndBox, chargeabilityBox, phaseBox]#, elecSpacingEdit]
+        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, 
+                 chargeabilityBox, phaseBox]#, elecSpacingEdit]
                 
         def fillBoxes(bs):
             for b in bs:
@@ -1534,6 +1539,7 @@ class App(QMainWindow):
             
         phitoplayout = QHBoxLayout()
         phiConvFactorlabel = QLabel('Conversion factor k (φ = -kM):')
+        phiConvFactorlabel.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor = QLineEdit()
         phiConvFactor.setFixedWidth(50)
         phiConvFactor.setValidator(QDoubleValidator())
