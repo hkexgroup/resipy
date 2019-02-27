@@ -1091,13 +1091,13 @@ class App(QMainWindow):
         customParser = QWidget()
         tabImporting.addTab(customParser, 'Custom Parser')
         
-        delimiterLabel = QLabel('Delimiter')
+        delimiterLabel = QLabel('Delimiter:')
         delimiterEdit = QLineEdit('')
         delimiterEdit.setToolTip(r'For tab delimited data use: \t')
-        skipRowsLabel = QLabel('Number of header to skip')
+        skipRowsLabel = QLabel('Number of header to skip:')
         skipRowsEdit = QLineEdit('0')
         skipRowsEdit.setValidator(QIntValidator())
-        nrowsLabel = QLabel('Number of rows to read')
+        nrowsLabel = QLabel('Number of rows to read:')
         nrowsEdit = QLineEdit('')
         nrowsEdit.setValidator(QIntValidator())
         
@@ -1129,17 +1129,17 @@ class App(QMainWindow):
         parseBtn.clicked.connect(parseBtnFunc)
             
         # have qcombobox to be read for each columns
-        aBoxLabel = QLabel('A (or C1)')
-        bBoxLabel = QLabel('B (or C2)')
-        mBoxLabel = QLabel('M (or P1)')
-        nBoxLabel = QLabel('N (or P2)')
-        vpBoxLabel = QLabel('Vp Potential Difference')
-        InBoxLabel = QLabel('In Current')
-        resistBoxLabel = QLabel('Transfer Resistance')
+        aBoxLabel = QLabel('A (or C1):')
+        bBoxLabel = QLabel('B (or C2):')
+        mBoxLabel = QLabel('M (or P1):')
+        nBoxLabel = QLabel('N (or P2):')
+        vpBoxLabel = QLabel('Vp Potential Difference:')
+        InBoxLabel = QLabel('In Current:')
+        resistBoxLabel = QLabel('Transfer Resistance:')
 #        ipStartBoxLabel = QLabel('IP start column') # we don't need these for now, since DCA only works with syscal files
 #        ipEndBoxLabel = QLabel('IP end column')
-        chargeabilityBoxLabel = QLabel('Chargeability')
-        phaseBoxLabel = QLabel('Phase shift')
+        chargeabilityBoxLabel = QLabel('Chargeability:')
+        phaseBoxLabel = QLabel('Phase shift:')
 #        elecSpacingLabel = QLabel('Electrode spacing')
        
 #        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
@@ -1347,7 +1347,7 @@ class App(QMainWindow):
         for i in range(len(boxes)):
             c = (i % 3)*2 # in 2*3 columns (with labels)
             r = int(i/3) 
-            columnsAssign.addWidget(boxesLabels[i], r, c)
+            columnsAssign.addWidget(boxesLabels[i], r, c, Qt.AlignRight)
             columnsAssign.addWidget(boxes[i], r, c+1)
         parserLayout.addLayout(columnsAssign)
         parserLayout.addWidget(importBtn)
