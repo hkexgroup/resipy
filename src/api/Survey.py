@@ -52,6 +52,7 @@ class Survey(object):
         self.name = name
         self.iBorehole = False # True is it's a borehole
         self.phase_flag = False
+        self.kFactor = 1
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
         
@@ -60,6 +61,7 @@ class Survey(object):
         else:
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname, spacing=spacing)
+                self.kFactor = 1.2
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
@@ -85,7 +87,6 @@ class Survey(object):
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
-        self.kFactor = 1.2
         self.phiCbarmin = 0
         self.phiCbarMax = 25
         self.filt_typ = None
@@ -196,7 +197,7 @@ class Survey(object):
             irecip = self.df['irecip'].values
             self.filterData(irecip != 0) # filter out dummy and non reciprocal
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
-                self.df = self.df.dropna(subset = ['ip','reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
+                self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
             self.dfphasereset = self.df.copy()
           
         
@@ -210,6 +211,7 @@ class Survey(object):
         else:
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname, spacing=spacing)
+                self.kFactor = 1.2
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
@@ -522,9 +524,10 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/self.kFactor, self.phiCbarMax/self.kFactor))
-        reciprocalMean = np.abs(temp_df_renge_filter['recipMean'].values)
-        phase = np.abs(-self.kFactor*temp_df_renge_filter['reci_IP_err'].values)
+        temp_df_range_filter = self.df.copy().query('reci_IP_err>%s & reci_IP_err<%s' % (-1*self.phiCbarMax, self.phiCbarMax))
+        reciprocalMean = np.abs(temp_df_range_filter['recipMean'].values)
+#        phase = np.abs(-1*temp_df_range_filter['reci_IP_err'].values)
+        phase = np.abs(temp_df_range_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
         ax.set_ylabel(r's($\phi$) [mRad]')
@@ -566,9 +569,9 @@ class Survey(object):
             fig, ax = plt.subplots()        
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
-        Rn = np.abs(self.df['resist'])
+        Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -592,7 +595,7 @@ class Survey(object):
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
 #        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
         ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
-        self.df['PhaseError'] = a1*(np.abs(self.df['resist'])**a2)
+        self.df['PhaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['Phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
@@ -614,9 +617,9 @@ class Survey(object):
             fig, ax = plt.subplots()        
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
-        Rn = np.abs(self.df['resist'])
+        Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -641,7 +644,7 @@ class Survey(object):
         #c1 = np.around((coefs_ip[2]),decimals=1)
 #        ax.set_title('Multi bin phase error plot\n(R$^2$ = %s)' % (R2_ip))
         ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
-        self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['resist']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['resist'])) + coefs_ip[2])
+        self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['Phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
@@ -901,7 +904,7 @@ class Survey(object):
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*self.kFactor
+        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
@@ -933,9 +936,9 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         self.addFilteredIP()
             
 #        temp_data = self.filterDataIP_plotOrig
@@ -1080,7 +1083,7 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
-        ip = self.df['ip'].values            
+        ip = -self.kFactor*self.df['ip'].values            
 
         label = r'$\phi$ [mRad]'
         
@@ -1099,7 +1102,7 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('IP pseudo Section')
+            ax.set_title('Phase shift pseudo Section')
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
         
@@ -1122,7 +1125,7 @@ class Survey(object):
             ax.set_title('IP pseudo Section')
 #            fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
-
+        print(self.kFactor)
         if ax is None:
             return fig
     

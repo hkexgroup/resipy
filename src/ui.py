@@ -216,6 +216,7 @@ class App(QMainWindow):
         self.iTimeLapse = False
         self.iBorehole = False
         self.iForward = False
+        self.inputPhaseFlag = False
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
         self.table_widget = QWidget()
@@ -719,6 +720,9 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                    if self.inputPhaseFlag == True:
+                        self.r2.surveys[0].kFactor = 1
+
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
@@ -1123,10 +1127,11 @@ class App(QMainWindow):
         ipStartBoxLabel = QLabel('IP start column')
         ipEndBoxLabel = QLabel('IP end column')
         chargeabilityBoxLabel = QLabel('Chargeability')
+        phaseBoxLabel = QLabel('Phase shift')
 #        elecSpacingLabel = QLabel('Electrode spacing')
        
         boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
-                 ipEndBoxLabel, chargeabilityBoxLabel]#, elecSpacingLabel]
+                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
         
         aBox = QComboBox()
         bBox = QComboBox()
@@ -1138,6 +1143,7 @@ class App(QMainWindow):
         ipStartBox = QComboBox()
         ipEndBox = QComboBox()
         chargeabilityBox = QComboBox()
+        phaseBox = QComboBox()
 #        elecSpacingEdit = QLineEdit('')
 #        elecSpacingEdit.setEnabled(False)
 #        elecSpacingEdit.setValidator(QDoubleValidator())
@@ -1145,7 +1151,7 @@ class App(QMainWindow):
 #        elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
         
         boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
-                 ipEndBox, chargeabilityBox]#, elecSpacingEdit]
+                 ipEndBox, chargeabilityBox, phaseBox]#, elecSpacingEdit]
                 
         def fillBoxes(bs):
             for b in bs:
@@ -1223,6 +1229,22 @@ class App(QMainWindow):
             if vals[0] > 0:
                 colIndex.append(vals)
                 newHeaders.append(['ip'])
+                phiConvFactor.setText('1.2')
+                phiConvFactor.setEnabled(True)
+                phiConvFactorlabel.setEnabled(True)
+                self.inputPhaseFlag = False
+            else:
+                vals = getBoxes([phaseBox])
+                if vals[0] > 0:
+                    colIndex.append(vals)
+                    newHeaders.append(['ip'])
+                    phiConvFactor.setText('-')
+                    phiConvFactor.setEnabled(False)
+                    phiConvFactorlabel.setEnabled(False)
+                    self.inputPhaseFlag = True
+#                    phivminEdit.setText('0')
+#                    phivmaxEdit.setText('25')
+                    
             # TODO need to import the IP coluns as well
             
             colIndex = np.hstack(colIndex)
@@ -1248,6 +1270,8 @@ class App(QMainWindow):
                     df['resist'] = df['vp']/df['i']
                 if 'ip' not in df.columns:
                     df['ip'] = 0
+                elif self.inputPhaseFlag == True:
+                    df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
                 array = df[['a','b','m','n']].values.copy()
                 arrayMin = np.min(np.unique(np.sort(array.flatten())))
                 if arrayMin != 0:
@@ -1500,7 +1524,7 @@ class App(QMainWindow):
         phiConvFactor.setFixedWidth(50)
         phiConvFactor.setValidator(QDoubleValidator())
         phiConvFactor.setText('1.2')
-        phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices')
+        phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
         rangelabel = QLabel('     Phase range filtering:')
         phivminlabel = QLabel('-φ min:')
