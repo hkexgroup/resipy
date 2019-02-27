@@ -281,6 +281,7 @@ class App(QMainWindow):
             else:
                 reg_mode.setCurrentIndex(0)
             # importing
+            self.parser = None
             wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
             buttonf.setText('Import Data')
 #            timeLapseCheck.setChecked(False)
@@ -293,7 +294,15 @@ class App(QMainWindow):
             elecTable.initTable(np.array([['',''],['','']]))
             topoTable.initTable(np.array([['',''],['','']]))
 #            dimInverse.setChecked(True)
-            
+
+            # importing - IP stuff
+            phiConvFactor.setEnabled(True)
+            phiConvFactorlabel.setEnabled(True)
+            if self.ftype != 'Syscal':
+                phiConvFactor.setText('1')
+            else:
+                phiConvFactor.setText('1.2')
+               
             # pre-processing
             mwManualFiltering.clear()
             errFitType.currentIndexChanged.disconnect()
@@ -1202,6 +1211,7 @@ class App(QMainWindow):
         parserTable = ParserTable()
         
         def importBtnFunc():
+            restartFunc()
             self.r2 = R2()
             print('importing data')
             colIndex = []
@@ -1229,7 +1239,7 @@ class App(QMainWindow):
             if vals[0] > 0:
                 colIndex.append(vals)
                 newHeaders.append(['ip'])
-                phiConvFactor.setText('1.2')
+                phiConvFactor.setText('1')
                 phiConvFactor.setEnabled(True)
                 phiConvFactorlabel.setEnabled(True)
                 self.inputPhaseFlag = False
@@ -1242,8 +1252,8 @@ class App(QMainWindow):
                     phiConvFactor.setEnabled(False)
                     phiConvFactorlabel.setEnabled(False)
                     self.inputPhaseFlag = True
-#                    phivminEdit.setText('0')
-#                    phivmaxEdit.setText('25')
+                else:
+                    ipCheck.setChecked(False)
                     
             # TODO need to import the IP coluns as well
             
@@ -1300,7 +1310,7 @@ class App(QMainWindow):
             
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            
+            fileType.setCurrentIndex(5)
             tabImporting.setCurrentIndex(0)
                 
                 
@@ -1533,6 +1543,8 @@ class App(QMainWindow):
         phivmaxlabel = QLabel('-φ max:')
         phivmaxEdit = QLineEdit()
         phivmaxEdit.setValidator(QDoubleValidator())
+        phivminEdit.setText('0')
+        phivmaxEdit.setText('25')
         rangebutton = QPushButton('Apply')
         rangebutton.setAutoDefault(True)
         rangebutton.clicked.connect(phirange)

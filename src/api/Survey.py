@@ -1125,7 +1125,6 @@ class Survey(object):
             ax.set_title('IP pseudo Section')
 #            fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
-        print(self.kFactor)
         if ax is None:
             return fig
     
