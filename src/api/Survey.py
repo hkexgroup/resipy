@@ -183,7 +183,7 @@ class Survey(object):
             irecip = self.df['irecip'].values
             self.filterData(irecip != 0) # non reciprocal (some are dummy)
             if self.elec[:,1].sum() == 0: # it's a 2D case
-                self.filterDummy() # filter dummy by the rule if n < m then it's a dummy
+                self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
             self.dfphasereset = self.df.copy()

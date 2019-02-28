@@ -35,6 +35,7 @@ assert mesh.elm_centre[0][0] == 16.442
 assert np.array(mesh.con_matrix).shape[1] == 1362
 mesh.show()
 
+
 #%% testing the R2 class
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
@@ -124,9 +125,6 @@ for s in k.surveys:
 k.createMesh('trian')
 k.pwlfit()
 k.errTyp = 'pwl'
-#k.createMesh('trian') # make mesh fine enough !
-#for s in k.surveys:
-#    s.elec
 k.invert(parallel=True, iMoveElec=True)
 k.showResults(index=0)
 k.showResults(index=1)
@@ -225,7 +223,6 @@ k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=True, vmin=10, vmax=120) 
 plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
 k = R2(typ='cR2')
-k.createSurvey('api/test/syscalFile.csv')
 k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 k.createMesh(typ='trian')
 #
@@ -281,6 +278,7 @@ k.showSlice(axis='y')
 k.pseudoError()
 k.showInversionErrors()
 
+
 #%% 3D testing importing a mesh
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
@@ -317,7 +315,6 @@ k.showInParaview()
 
 
 #%% 3D with moving electrodes (specialy dedicated to Jimmy ;)
-from api.R2 import R2
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
 k = R2(typ='R3t')
