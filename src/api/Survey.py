@@ -54,7 +54,7 @@ class Survey(object):
         self.protocolIPFlag = False
         self.kFactor = 1
         
-        avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
+        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'ProtocolIP']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -66,11 +66,11 @@ class Survey(object):
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
                 elec, data = res2invInputParser(fname)
-            elif ftype == 'BGS Prime':
-                try:
-                    elec, data = primeParser(fname)
-                except:
-                    elec, data = primeParserTab(fname)
+#            elif ftype == 'BGS Prime':
+#                try:
+#                    elec, data = primeParser(fname)
+#                except:
+#                    elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
                 self.protocolIPFlag = True
@@ -92,31 +92,17 @@ class Survey(object):
         self.filt_typ = None
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
-#        self.filterDataIP_plotOrig = data[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
-#        self.typ = 'R2'
-#        self.errTyp = 'obs'
-#        self.errTypIP = 'none'
-        
-        # to discard for the dataframe structure
-#        self.array = self.df[['a','b','m','n']].values
-#        self.resist = self.df['resist'].values
-#        self.dev = self.df['dev'].values
-        if ftype == 'BGS Prime':
-            self.checkTxSign()
-        irecip = self.reciprocal()
-#        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
-        
+
+#        if ftype == 'BGS Prime':
+#            self.checkTxSign()
+
         self.keepAll = keepAll # keep dummy and non reciprocal measurements in
-        
+        irecip = self.reciprocal()                
         if all(irecip == 0) == False: # contains reciprocal
             self.basicFilter()
         else:
             self.dfphasereset = self.df.copy()
         
-        
-#        self.typ = 'R2' # or cR2 or R3, cR3
-#        self.errTyp = 'none' # type of error to add for DC
-#        self.errTypIP = 'none' # type of error to add for IP phase
             
     @classmethod
     def fromDataframe(cls, df, elec):
@@ -195,7 +181,9 @@ class Survey(object):
         if self.keepAll is False:
             print('ah ah let us make some order here !')
             irecip = self.df['irecip'].values
-            self.filterData(irecip != 0) # filter out dummy and non reciprocal
+            self.filterData(irecip != 0) # non reciprocal (some are dummy)
+            if self.elec[:,1].sum() == 0: # it's a 2D case
+                self.filterDummy() # filter dummy by the rule if n < m then it's a dummy
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
             self.dfphasereset = self.df.copy()
@@ -368,7 +356,16 @@ class Survey(object):
         
         return Ri
     
-    def filterRecip(self,pcnt=20, debug=True):
+    
+    def removeDummy(self):
+        """ Remove measurements where n < m (likely to be dummy measurements
+        added for speed).
+        """
+        i2keep = self.df['n'] > self.df['m']
+        self.filterData(i2keep)
+        
+        
+    def filterRecip(self, pcnt=20, debug=True):
         """Filter measurements based on the level reciprocal error. 
         Parameters
         -----------
@@ -392,47 +389,7 @@ class Survey(object):
         """ Add filtered IP data after IP filtering and pre-processing.
         """
         self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
-        # add Survey.filterDataIP to Survey.df and Survey.dfg
-#        self.df['ip'] = np.nan # remove all IP from Survey.df
-#        i2keepDf = np.zeros(self.df.shape[0], dtype=bool)
-#        i2keepDfg = np.zeros(self.dfg.shape[0], dtype=bool)
-#        ipArray = self.filterDataIP[['a','b','m','n']].values
-#        dfArray = self.df[['a','b','m','n']].values
-#        dfgArray = self.dfg[['a','b','m','n']].values
-#        for i in range(self.filterDataIP.shape[0]):
-##            print(i, end='')
-#            rev1=[0,1,2,3]
-#            rev2=[0,1,3,2]
-#            rev3=[1,0,2,3]
-#            rev4=[1,0,3,2]
-#            index1=(dfArray == ipArray[i,rev1]).all(1)
-#            index2=(dfArray == ipArray[i,rev2]).all(1)
-#            index3=(dfArray == ipArray[i,rev3]).all(1)
-#            index4=(dfArray == ipArray[i,rev4]).all(1)
-#            index=index1|index2|index3|index4
-#            
-#            if np.sum(index) > 0:
-#                self.df.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
-#                i2keepDf[index] = True
-#            
-#            rev1=[0,1,2,3]
-#            rev2=[0,1,3,2]
-#            rev3=[1,0,2,3]
-#            rev4=[1,0,3,2]
-#            index1=(dfgArray == ipArray[i,rev1]).all(1)
-#            index2=(dfgArray == ipArray[i,rev2]).all(1)
-#            index3=(dfgArray == ipArray[i,rev3]).all(1)
-#            index4=(dfgArray == ipArray[i,rev4]).all(1)
-#            index=index1|index2|index3|index4
-#            
-#            if np.sum(index) > 0:
-#                self.dfg.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
-#                i2keepDfg[index] = True
-#            
-#        
-##        print('df deleted = ', np.sum(~i2keepDf), 'dfg : ', np.sum(~i2keepDfg))
-#        self.filterData(i2keepDf)
-#        self.dfg = self.dfg[i2keepDfg] 
+
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None):
@@ -711,47 +668,6 @@ class Survey(object):
         fig : matplotlib figure, optional
             If ax is not specified, the function will return a figure object.
         """
-#        self.errTyp = 'lin'
-        # # linear fit
-        # if 'recipMean' not in self.dfg.columns:
-        #     self.reciprocal()
-        # recipMean = np.abs(self.dfg['recipMean'].values)
-        # recipError = np.abs(self.dfg['recipError'].values)
-
-        # # logspace classes, fit, R^2
-        # xm,ystdErr,nbs=self.logClasses3(recipMean,recipError,np.mean, class1=np.arange(-2,2,0.5))# clength=10)
-        # inan = ~np.isnan(ystdErr)
-        # slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
-        # predy=10**(offset+slope*np.log10(xm[inan]))
-        # # R2 makes sens in linear fitting space only and only for the classes
-        # r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
-        # print('Simple linear log fit : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
-        
-        # predictRecipError = 10**offset*recipMean**slope
-        # self.dfg['linError'] = predictRecipError
-        
-        # if iplot:
-        #     if ax is None:
-        #         fig, ax = plt.subplots()
-        #     ax.loglog(recipMean, recipError, '+', label='raw')
-        #     ax.loglog(xm[inan],ystdErr[inan],'o', label='bin means')
-        #     ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        #     ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        #     ax.loglog(xm[inan],predy,'r-',label='linear regression')
-        #     ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
-        #     ax.legend()
-            
-#            fig,ax=plt.subplots()
-#            isort = np.argsort(recipMean)
-#            ax.plot(recipMean,recipError,'o', label='raw errors')
-#            ax.plot(recipMean,predictRecipError,'o', label='predicted')
-#            ax.plot(recipMean[isort],2*predictRecipError[isort],'-', label='2*prediction')
-#            ax.legend()
-#            ax.set_title('Linear fit prediction')
-#            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-#            ax.set_ylabel('Reciprocal Error [$\Omega$]')
-##            fig.show()
-#            figs.append(fig)
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
@@ -789,7 +705,6 @@ class Survey(object):
     def linfitStd(self, iplot=False):
         # linear fit with std
         ie = self.irecip > 0
-        recipMean0 = np.abs(self.reciprocalMean[ie1])
         recipMean = np.abs(self.reciprocalMean[ie])
         recipError = np.abs(self.reciprocalErr[ie])
         
@@ -832,6 +747,7 @@ class Survey(object):
             figs.append(fig)
             
             return figs
+        
         
     def lmefit(self, iplot=True, ax=None):
         print('NOT IMPLEMENTED YET')
@@ -1115,8 +1031,6 @@ class Survey(object):
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('Phase shift pseudo Section')
-    #        fig.suptitle(self.name, x= 0.2)
-#            fig.tight_layout()
         
         if contour:
             from matplotlib.mlab import griddata
@@ -1130,15 +1044,13 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, ip)
             if ax is None:
                 fig, ax = plt.subplots()
-            figsize=(10,6)
             cax = ax.contourf(X,Y,Z)
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('IP pseudo Section')
-#            fig.suptitle(self.name, x= 0.2)
-#            fig.tight_layout()
         if ax is None:
             return fig
+    
     
     def write2protocol(self, outputname='', errTyp='none', errTot=False,
                        ip=False, errTypIP='none', res0=False):
@@ -1291,9 +1203,6 @@ class Survey(object):
         def setSelect(ie, boolVal):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
-        # TODO find a way to get rid of the NaN before plotting them but still
-        # keeping the index to be able to filter out the data ... maybe add
-        # a third class of empty points just for NaN
         spacing = np.mean(np.diff(self.elec[:,0]))
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
@@ -1312,9 +1221,6 @@ class Survey(object):
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-    #        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
-    #    else:
-    #        label = r'$\rho_a$ [$\Omega.m$]'
         
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
@@ -1359,13 +1265,9 @@ class Survey(object):
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
         cax.figure.canvas.mpl_connect('pick_event', onpick)
-        #for i in range(int(len(array)/2)):
-        #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
         
         killed, = cax.axes.plot([],[],'rx')
         elecKilled, = cax.axes.plot([],[],'rx')
-    #    x = np.array(line.get_xdata())
-    #    y = np.array(line.get_ydata())
         x = cax.get_offsets()[:,0]
         y = cax.get_offsets()[:,1]
         
@@ -1375,18 +1277,18 @@ class Survey(object):
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
     def filterdip(self,elec): # deleted specific elec data
-        #index=(self.array==any(elec)).any(-1)
         index = (self.array == elec[0]).any(-1)
         for i in range(1,len(elec)):
             index = index | (self.array == elec[i]).any(-1)
         self.filterData(~index)
-        
-    def shuntIndexes(self,debug=True): 
+    
+    
+    def shuntIndexes(self, debug=True): 
         """ Normalise the indexes the sequence matrix to start at 1.
         
         Parameters
         ----------
-        debug: bool
+        debug : bool, optional
             Set to True to print output.
         """
         df = self.df
@@ -1414,15 +1316,16 @@ class Survey(object):
             df['n'] = corrected[:,3]
             self.df = df 
 
-    def swapIndexes(self,old_indx,new_indx):
+
+    def swapIndexes(self, old_indx, new_indx):
         """ Replace the electrode number in a sequence matrix with another.
         Survey dataframe is updated after running. 
         
         Parameters
-        ------------
-        old_idx: int
+        ----------
+        old_idx : int
             Electrode number(or index) to be replaced 
-        new_idx: int
+        new_idx : int
             Replacement electrode number
         """
          
@@ -1436,7 +1339,7 @@ class Survey(object):
         df['m'] = corrected[:,2]
         df['n'] = corrected[:,3]
         self.df = df 
-        #return replace,corrected
+        
     
     def normElecIdx(self, debug=True):
         """ Normalise the electrode indexing sequencing to start at 1 and ascend
@@ -1447,8 +1350,8 @@ class Survey(object):
         
         Parameters
         -----------
-        debug : bool
-            Output will be printed to console if true. 
+        debug : bool, optional
+            Output will be printed to console if `True`. 
         """
         df = self.df.copy()
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).flatten()
@@ -1471,8 +1374,8 @@ class Survey(object):
     
     
     def elec2distance(self):
-        """
-        Convert 3d xy data in pure x lateral distance. Use for 2D data only!
+        """ Convert 3d xy data in pure x lateral distance.
+        Use for 2D data only!
         """
         elec = self.elec.copy()
         x = elec[:,0]
@@ -1500,430 +1403,3 @@ class Survey(object):
             new_elec[put_back,2] =  z_sorted[i]
     
         self.elec = new_elec
-
-"""        
-    def addModError(self, fname):
-        # add the modelling error for both normal and reciprocal quadrupoles
-        x = np.genfromtxt(fname)
-        err = np.zeros(self.ndata)*np.nan
-        for i in range(0, self.ndata):
-            index = (self.array[i,:] == x[:,:-1]).all(1)
-            if np.sum(index) == 1:
-                err[i] = x[index,-1]
-            else:
-                print('ERROR : same quadrupoles has', np.sum(index),' modelling error')
-        print(np.sum(self.reciprocalErr < err), '/', self.ndata,
-                     'modelling errors bigger than observed errors')
-        self.modError = err
-        
-    def plotError(self):
-        fig, ax = plt.subplots()
-        ax.loglog(np.abs(self.reciprocalMean), self.reciprocalErr, 'o')
-        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        return fig
-    
-    def toTable(self, outputname=''):
-        # return formated csv with normal and reciprocal
-        narray = self.array[self.irecip > 0]
-        nresist = self.resist[self.irecip > 0]
-        nerror = self.reciprocalErr[self.irecip > 0]
-        rarray = self.array[self.irecip < 0]
-        rresist = self.resist[self.irecip < 0]
-        rerror = self.reciprocalErr[self.irecip <0]
-        # align them
-        ipos = self.irecip[self.irecip > 0]
-        ineg = self.irecip[self.irecip < 0]
-        isortp = np.argsort(ipos)
-        isortn = np.argsort(np.abs(ineg))
-        # sort them
-        table = np.hstack([narray[isortp,:],
-                           nresist[isortp, None],
-                           nerror[isortp, None],
-                           rarray[isortn,:],
-                           rresist[isortn, None],
-                           rerror[isortn, None]])
-        
-        if outputname != '':
-            np.savetxt(outputname, table, fmt='%d %d %d %d %f %f %d %d %d %d %f %f')
-        
-        return table
-    
-    
-    def estimateError(self):
-        # calculate reciprocal error and reciprocal mean
-        #Ri=self.reciprocal()
-        Ri = self.irecip        
-        
-        # create a logical index
-        self.Ri=Ri>0
-                    
-        # remove data where mean(normal,reciprocal) > 100 
-        #reciprocal error
-        goodRecip=np.abs(self.reciprocalErr/self.reciprocalMean)<1    
-        print("reciprocal error > 100% : "+str(len(self.R[~goodRecip])))        
-        self.R[~goodRecip]=np.nan
-        self.reciprocalMean[~goodRecip]=np.nan 
-        self.reciprocalErr[~goodRecip]=np.nan
-        
-        # to use % error, use self.reciprocalErrRel
-        self.xm,self.ystdErr,nbs=self.logClasses(np.abs(self.reciprocalMean),np.abs(self.reciprocalErr),np.std)
-        # sometimes all is no comprised into the bin log scales so
-        # it could happen that some measurements are missing (few)
-        
-        #print 'nbs=',np.sum(nbs)
-        #print 'number of data per class : ', nbs
-        nbs=nbs+1 # to not have weight of zero
-        nbs=nbs+1*np.arange(len(nbs),0,-1) # more weight on small R
-        nbs=nbs/np.sum(nbs) # to have relative weigth
-        inan=~np.isnan(self.ystdErr)
-        
-        #print len(self.reciprocalErr[~np.isnan(self.reciprocalErr)])
-        #print len(goodRecip)
-        
-        # --------------------------linear model fitting
-        # (with standard deviation of error class !)
-        fig,ax=plt.subplots()
-        ax.plot(self.xm[inan],self.ystdErr[inan],'bo')
-        ax.set_title('Raw class with stdErr (not in log scale)')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Standard deviation $\sigma$ [$\Omega$]')
-        #fig.show()
-        
-        fig,ax=plt.subplots()
-        ax.loglog(self.xm[inan],self.ystdErr[inan],'go')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Standard deviation $\sigma$ [$\Omega$]')
-        # linear fit in log space
-        slope,offset=np.polyfit(np.log10(self.xm[inan]),np.log10(self.ystdErr[inan]),1)
-        print('linear fit in log space : \n\t slope = ' + str(slope) + '\n\t offset = ' + str(offset))
-        
-        predy=10**(offset+slope*np.log10(self.xm[inan]))
-        # R2 makes sens in linear fitting space only
-        r2=1-np.sum((np.log10(predy)-np.log10(self.ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(self.ystdErr[inan])))**2)
-        print('R^2 = '+str(r2))
-        ax.loglog(self.xm[inan],predy,'r-',label='linear regression')
-        ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
-        # TODO add nb of points in the class on graph and equation
-        # coming back to non log space
-        a=10**offset
-        b=slope
-        #fig.show()
-        
-        def efunc(x,a,b):
-            return a*x**b
-        
-        self.errModel=efunc
-
-        # graph with 2*std as in BertFile
-        fig, ax = plt.subplots()
-        ax.plot(self.reciprocalMean, self.reciprocalErr, 'ro')
-        ax.plot(self.xm[inan], predy*2, 'b-')
-        ax.plot(self.xm[inan], -predy*2, 'b-')
-        ax.plot(self.xm[inan], predy, 'g-')
-        ax.plot(self.xm[inan], -predy, 'g-')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        #fig.show()
-        
-        
-        '''
-        # exponential model fitting (curve_fit)
-        def func(x,a,b):
-            return a*x**b
-        
-        from scipy.optimize import curve_fit
-        popt0=[offset,slope]
-        popt,pcov=curve_fit(func,self.xm[inan],self.ystdErr[inan])
-        print(popt)
-        fig,ax=plt.subplots()
-        ax.loglog(self.xm[inan],self.ystdErr[inan],'bo')
-        ax.loglog(self.xm[inan],func(self.xm[inan],*popt),'r') # *popt expand terms
-        #ax.loglog(self.xm[inan],popt[0]*self.xm[inan]**popt[1],'p-',label='exponential regression')
-        fig.show()
-        
-        # exponential model fitting (minimize)
-        def objfunc(param): # in log space
-            return np.sum((self.ystdErr[inan]-param[0]*self.xm[inan]**param[1])**2)
-                
-        from scipy.optimize import minimize
-        bnds=((0.0001,1.0),(0.0001,1.0))
-        res=minimize(objfunc,[0.1,0.1],method='TNC',options={'xtol':1e-8})
-        print(res.x)
-        fig,ax=plt.subplots()
-        ax.loglog(self.xm[inan],self.ystdErr[inan],'bo')
-        ax.loglog(self.xm[inan],res.x[0]*self.xm[inan]**res.x[1],'r')
-        #ax.loglog(self.xm[inan],popt[0]*self.xm[inan]**popt[1],'p-',label='exponential regression')
-        fig.show()
-        '''
-        
-        # ------------------simple fit with reciprocal Error (not stdErr)
-        # reciprocalErr VS meanResistivity (linear fit in logscale)
-        fig, ax = plt.subplots()
-        ax.loglog(self.reciprocalMean, self.reciprocalErr, 'b+', label='raw')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        
-        # and now in logclasses
-        xlog, ylog, nbs = self.logClasses(np.abs(self.reciprocalMean), np.abs(self.reciprocalErr),np.mean)
-        inan = ~np.isnan(ylog)
-        slope, offset = np.polyfit(np.log10(xlog[inan]), np.log10(ylog[inan]), 1)
-        ylogPredicted = 10**(offset + slope*np.log10(xlog))
-        print(ylogPredicted.shape)
-        r2=1-np.sum((np.log10(ylogPredicted[inan])-np.log10(ylog[inan]))**2)/np.sum((np.log10(ylogPredicted[inan])-np.mean(np.log10(ylog[inan])))**2)
-        print('Simple linear log fit : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
-        #fig, ax = plt.subplots()
-        ax.loglog(xlog[inan], ylog[inan], 'go', label='binned')
-        ax.loglog(xlog[inan], ylogPredicted[inan], 'r-')
-        ax.set_title('Linear fit in logscale (R$^2$ = {0:.3f})'.format(r2))
-        #ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        #ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        ax.legend()
-        #fig.show()
-        
-        # graph with 2*std as in BertFile
-        ypredict = 10**(offset + slope*np.log10(self.reciprocalMean))
-        self.ypredict = ypredict
-        self.iout = np.zeros(len(self.reciprocalMean), dtype=bool)
-        self.iout[np.abs(self.reciprocalErr) > ypredict*2] = True
-        
-        fig, ax = plt.subplots()
-        ax.plot(self.reciprocalMean, self.reciprocalErr, 'r+')
-        ax.plot(self.reciprocalMean[self.iout], self.reciprocalErr[self.iout], 'k+')
-        ax.plot(xlog[inan], ylogPredicted[inan]*2, 'b-', label='2x')
-        ax.plot(xlog[inan], -ylogPredicted[inan]*2, 'b-')
-        ax.plot(xlog[inan], ylogPredicted[inan], 'g-', label='1x')
-        ax.plot(xlog[inan], -ylogPredicted[inan], 'g-')
-        ax.set_title('Linear fit prediction')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        ax.legend()
-        #fig.show()
-        
-        return a,b # from linear fitting
-    
-    def output(self):
-        ie = self.irecip > 0
-        return np.vstack([self.array[ie], self.reciprocalMean[ie], self.predictErr[ie]])
-                          
-        
-    def predictError(self,a,b):
-        # predict error based on error model
-        self.predictErr=self.errModel(np.abs(self.resist),a,b)
-        
-        fig,ax=plt.subplots()
-        ax.set_title('predicted Error')
-        ax.loglog(self.xm,self.ystdErr,'bo', label='measured')
-        ax.loglog(np.abs(self.resist),self.predicErr,'ro', label='predicted')
-        ax.legend()
-        ax.set_xlabel('Transfer Resistance [$\Omega$]')
-        ax.set_ylabel('Error [%]')
-        return fig
-    
-    
-    def write2protocol(self, outputname='', errTyp='lme', errTot=False):
-        ie = self.irecip > 0 # consider only mean measurement (not reciprocal)
-        n = np.sum(ie)
-        if errTyp=='obs':
-            error = self.reciprocalErr[ie]
-        if errTyp =='lme':
-            error = self.lmeError
-        if errTyp == 'lin':
-            error = self.linError
-#            error = self.linStdError
-        if errTot == True:
-            if len(self.modError) == 0:
-                print('ERROR : you must specify a modelling error')
-            else:
-                error = np.sqrt(error**2 + self.modError[ie]**2)
-        arr = self.array[ie,:]
-        res = self.reciprocalMean[ie]
-        
-        if outputname != '':
-            with open(outputname, 'w') as f:
-                f.write(str(n) + '\n')
-                for i in range(n):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:.0f}\t{5:f}\t{6:f}\n'.format(
-                            i+1, arr[i,0], arr[i,1], arr[i,2], arr[i,3], res[i], error[i]))
-        return np.hstack([arr, res.reshape((len(res), 1)), error.reshape((len(error), 1))])
-        
-    
-    def write2txt(self, outputname='', error=False, errTyp='obs'):
-        ''' write protocol.dat files with errors or not
-        '''
-        if outputname=='':
-            outputname='../output/'+self.name+'.txt'
-        with open(outputname,'w') as f:
-            f.write(str(self.ndata))
-            f.write('\n')
-            for i in range(0,self.ndata):
-                f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:.0f}'.format(i+1,self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3]))
-                if error:
-                    if errTyp == 'obs':
-                        err = self.reciprocalErr
-#                    elif errTyp == 'rel':
-#                        err = 100*self.reciprocalErrRel # in percent
-                    elif errTyp == 'lme':
-                        err = self.lmeError
-                    elif errTyp == 'lin':
-                        err = self.ypredict
-                    
-                    f.write('\t{0:f}\t{1:f}\n'.format(self.resist[i], err[i])) # if self.reciprocalMean -> lost sign !
-                else:
-                    f.write('\t{0:f}\n'.format(self.resist[i]))
-    
-    def write2bert(self, outputname='', position=None):
-        if outputname=='':
-            outputname='../output/'+self.name+'.dat'
-        if position is None:
-            position = self.electrodes
-        with open(outputname,'w') as f:
-            f.write(str(len(position)) + ' # Number of electrodes\n# x y z\n')
-            for j in range(0, position.shape[0]):
-                f.write('{0:.3f}\t{1:.3f}\t{2:.3f}\n'.format(position[j,0], position[j,1], position[j,2]))
-            
-            if (len(self.reciprocalErr)>0)&(np.sum(self.m) > 0):
-                print('PRINT with IP and ERROR')
-                f.write(str(self.ndata) + '# Number of data\n# a b m n R err ip\n')
-                for i in range(0,self.ndata):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:f}\t{5:f}\t{6:f}\n'.format(self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3],self.resist[i], self.reciprocalErr[i], self.m[i]))
-            
-            elif (len(self.reciprocalErr)>0)&(np.sum(self.m) == 0):
-                print('PRINT with ERROR')
-                f.write(str(self.ndata) + '# Number of data\n# a b m n R err\n')
-                for i in range(0,self.ndata):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:f}\t{5:f}\n'.format(self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3],self.resist[i], self.reciprocalErr[i]))
-            
-            else:
-                print('PRINT default')
-                f.write(str(self.ndata) + '# Number of data\n# a b m n R\n')
-                for i in range(0,self.ndata):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:f}\n'.format(self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3],self.resist[i]))
-    
-    
-    def keepRecip(self):
-        ''' filter out all data without reciprocal (dummy measurements)
-        ''''
-        irecip = self.reciprocal()
-        ikeep = irecip > 0
-        self.filterData(ikeep)
-                                                   
-    def append(self, k):
-        self.array = np.r_[self.array, k.array]
-        self.resist = np.r_[self.resist, k.resist]
-        self.i = np.r_[self.i, k.i]
-        self.vp = np.r_[self.vp, k.vp]
-        self.dev = np.r_[self.dev, k.dev]
-        self.sp = np.r_[self.sp, k.sp]
-        self.m = np.r_[self.m, k.m]
-        self.ndata = len(self.array)
-        self.irecip = self.reciprocal()
-    
-        
-    def filterData(self,i2keep):
-        # applied filter to self.array before writing measurment to
-        # inversion files
-        
-        newarray=np.copy(self.array)
-        newresist=np.copy(self.resist)
-        #newcontactr=np.copy(self.contactR)
-
-        #i2keep=self.irecip&self.is2b&self.Ri
-        #i2keep=np.where(i2keep)
-        
-        self.array=newarray[i2keep,:] #ffilter(self.array,i2keep)
-        self.resist=newresist[i2keep] #ffilter(self.resist,i2keep)
-        #self.contactR=newcontactr[i2keep]
-        self.i = self.i[i2keep]
-        self.vp = self.vp[i2keep]
-        self.irecip = self.irecip[i2keep]
-        
-        if len(self.reciprocalErr)>0:
-            newreciperr=np.copy(self.reciprocalErr)
-            newrecipmean=np.copy(self.reciprocalMean)
-            newreciperrrel=np.copy(self.reciprocalErrRel)
-            self.reciprocalErrRel=newreciperrrel[i2keep]
-            self.reciprocalErr=newreciperr[i2keep]
-            self.reciprocalMean=newrecipmean[i2keep]
-        
-        if len(self.modError) > 0:
-            self.modError = self.modError[i2keep]
-            
-        if self.fip>0:
-            newip=np.copy(self.ip)
-            self.ip=newip[i2keep,:] #ffilter(self.ip,i2keep)
-        
-        self.ndata=len(self.array)
-        print(str(len(np.where(~i2keep)[0])) + ' data deleted | ' + str(self.ndata) + ' data kept.')
-        
-        self.irecip = self.reciprocal() # to rebuild self.recipMean and recipError
-        
-    
-    def plotData(self):
-        fig, ax = plt.subplots()
-        ax.plot(self.resist, 'o')
-        index = self.dev > 1
-        print(self.array[index,:])
-        ax.plot(np.where(index)[0], self.resist[index], 'o', label='dev > 1')
-        ax.legend()
-        ax.set_ylabel('Transfer Resistance [$\Omega$]')
-        ax.set_xlabel('Measurements')
-        fig.show()
-        return fig
-
-
-    def errorDist(self):
-        ''' plot the reciprocal relative error distribution and fit a 
-        gaussian model
-        '''
-        fig, ax = plt.subplots()
-        logclassx, logclassy, nbs = self.logClasses(self.reciprocalErrRel,
-                    self.reciprocalErrRel, np.mean)
-        p = ax.plot(np.log10(np.abs(logclassx)), nbs, 'o-', label='reciprocalErrRel')
-        inan = ~np.isnan(nbs)
-        xx = np.log10(logclassx)[inan]
-        popt, pcov = curve_fit(gauss, xx, nbs[inan], [5, 20,-2, 0.5])
-        ax.plot(xx, gauss(xx, popt[0], popt[1], popt[2], popt[3]), '--',
-                          color = p[0].get_color(), label='({0:.2f}, {1:.2f})'.format(popt[2], popt[3]))
-        ax.set_title('PDF')
-        ax.set_xlabel('log$_{10}$(Relative Reciprocal Error) [%]')
-        ax.set_ylabel('Frequency')
-        ax.grid()
-        ax.legend()
-        
-        return fig
-    
-
-
-    
-"""
-       
-
-
-
-        
-#%% test code
-#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#s = Survey('api/test/syscalFile.csv', ftype='Syscal')
-#s = Survey('api/test/IP/rifleday8.csv', ftype='Syscal')
-#s = Survey('api/test/protocol3Di.dat', ftype='Protocol')
-#s.manualFiltering()
-#s.dca()
-#s.lmefit()
-#s.addFilteredIP()
-#s.pwlfit()
-#s.plotIPFit()
-#s.write2protocol('kk.txt', ip=True, errTyp='pwl', errTypIP='pwl')
-#s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
-#s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
-#fig, ax = plt.subplots()
-#fig.suptitle('kkkkkkkkkkkkkk')
-#s.plotError(ax=ax)
-#s.manualFiltering()
-#s.pseudo(contour=True)
-#s.linfit()
-#s.pwlfit()
-#s.plotIPFit()
-#s.write2protocol('api/test/protocol.dat', errTyp='lin', ip=True, errTypIP='pwl')
-#s.dca()
-        
