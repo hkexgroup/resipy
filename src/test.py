@@ -105,11 +105,12 @@ k.showResults(index=3)
 
 
 #%% test for batch inversion
+from api.R2 import R2
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
-k.param['reg_mode'] = 1 # background regularization
+k.createMesh('trian') # runDistributed only works with triangular mesh
 k.invert(parallel=True)
 k.showResults(index=3)
 k.showResults(index=1)

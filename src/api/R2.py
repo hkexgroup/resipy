@@ -1158,6 +1158,7 @@ class R2(object): # R2 master class instanciated by the GUI
         node_elec = np.hstack(node_elec)
         node_elec = np.c_[np.arange(len(node_elec))+1, node_elec,
                           np.ones(len(node_elec))].astype(int)
+        # TODO this works only for triangular mesh
         if self.param['node_elec'].shape[1] == 3:
             self.param['node_elec'] = node_elec
         else:
