@@ -369,6 +369,7 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
             tabPreProcessing.setTabEnabled(3, False)
+            tabPreProcessing.setTabEnabled(4, False)
             
             # mesh
             mwMesh.clear()
@@ -724,7 +725,8 @@ class App(QMainWindow):
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         pass
                     else:
-                        tabPreProcessing.setTabEnabled(2, True)
+                        tabPreProcessing.setTabEnabled(1, True)
+                        tabPreProcessing.setTabEnabled(3, True)
                         plotError()
                     activateTabs(True)
                 except:
@@ -764,7 +766,8 @@ class App(QMainWindow):
                     buttonfr.show()
                 else:
                     buttonfr.hide()
-                    tabPreProcessing.setTabEnabled(2, True)
+                    tabPreProcessing.setTabEnabled(1, True)
+                    tabPreProcessing.setTabEnabled(3, True)
                     plotError()
 #                generateMesh()
                 if boreholeCheck.isChecked() is True:
@@ -806,7 +809,8 @@ class App(QMainWindow):
                     spacing = float(spacingEdit.text())
                 self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing, parser=self.parser)
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
-                    tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
+                    tabPreProcessing.setTabEnabled(1, True)
+                    tabPreProcessing.setTabEnabled(3, True) # no point in doing error processing if there is no reciprocal
                     plotError()
 #                plotManualFiltering()
 
@@ -847,9 +851,9 @@ class App(QMainWindow):
                     phaseplotError()
                     showIpOptions(True)
                     mwPseudoIP.setVisible(True)
-                    tabPreProcessing.setTabEnabled(1, True)
+                    tabPreProcessing.setTabEnabled(2, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
-                        tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
+                        tabPreProcessing.setTabEnabled(4, True) # no reciprocity = no IP error model
                         recipfilt.setEnabled(True)
                     heatRaw()
     #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
@@ -863,8 +867,8 @@ class App(QMainWindow):
                 showIpOptions(False)
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
-                tabPreProcessing.setTabEnabled(1, False)
-                tabPreProcessing.setTabEnabled(3, False)
+                tabPreProcessing.setTabEnabled(2, False)
+                tabPreProcessing.setTabEnabled(4, False)
                 regionTable.setColumnHidden(1, True)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(False)
@@ -1443,7 +1447,78 @@ class App(QMainWindow):
         manualBottompLayout.addWidget(mwManualFiltering)
         manualLayout.addLayout(manualBottompLayout, 1) # '1' to keep the plot in largest strech
         
+        # Error histogram tab
+        recipErrorLayout = QVBoxLayout()
+        recipErrorTopLayout = QVBoxLayout()
         
+        recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Automatic basic filtering removes datapoints with larger than 20% error.</br>')
+        recipErrorTopLayout.addWidget(recipErrorLabel)
+        
+        
+        recipErrorInputlayout = QHBoxLayout()
+#        recipErrorInputlayout.setAlignment(Qt.AlignLeft)
+        
+        recipErrorInputLeftlayout = QHBoxLayout()
+        recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
+        
+        recipErrorInputLeftlayoutL = QHBoxLayout()
+        recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
+        recipErrorInputLabel = QLabel('Percent error threshold:')
+        recipErrorInputLeftlayoutL.addWidget(recipErrorInputLabel)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
+        
+        recipErrorInputLineLayout = QHBoxLayout()
+        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        
+        recipErrorInputLine = QLineEdit('20')
+        recipErrorInputLine.setFixedWidth(100)
+        recipErrorInputLine.setValidator(QDoubleValidator())
+        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
+        recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
+        
+        def errHist():
+            percent = float(recipErrorInputLine.text())
+            self.r2.filterRecip(percent=percent)
+            recipErrorPLot.plot(self.r2.errorDist)
+            if ipCheck.checkState() == Qt.Checked:
+                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                heatFilter()
+            
+        def resetRecipFilter():
+            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+            self.r2.filterRecip(percent=20) # we assume 20% is a default value - always
+            recipErrorPLot.plot(self.r2.errorDist)
+            recipErrorInputLine.setText('20')
+            if ipCheck.checkState() == Qt.Checked:
+                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
+                heatFilter()
+        
+        recipErrorBtnLayout = QHBoxLayout()
+        
+        recipErrorPltbtn = QPushButton('Plot error histogram')
+        recipErrorPltbtn.clicked.connect(errHist)
+        recipErrorPltbtn.setFixedWidth(150)
+        recipErrorBtnLayout.addWidget(recipErrorPltbtn)
+        
+        recipErrorResetbtn = QPushButton('Reset')
+        recipErrorResetbtn.clicked.connect(resetRecipFilter)
+        recipErrorResetbtn.setFixedWidth(150)
+        recipErrorBtnLayout.addWidget(recipErrorResetbtn)
+        
+        
+        recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
+        recipErrorTopLayout.addLayout(recipErrorInputlayout)
+        
+        recipErrorLayout.addLayout(recipErrorTopLayout, 0)
+        
+        recipErrorPlotLayout = QVBoxLayout()
+        recipErrorPLot = MatplotlibWidget(navi=True)
+        recipErrorPlotLayout.addWidget(recipErrorPLot)
+        
+        recipErrorLayout.addLayout(recipErrorPlotLayout, 1)
+        
+        # Resrtance error tab
         errorLayout = QVBoxLayout()
         
         def errorModelSpecified():
@@ -1629,8 +1704,8 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
         
         def filt_reset():
-            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfphasereset.copy()
-            self.r2.surveys[0].df = self.r2.surveys[0].dfphasereset.copy()
+            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
+            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             infoDump('All phase filteres are now reset!')
@@ -1734,6 +1809,11 @@ class App(QMainWindow):
         manualWidget = QWidget()
         manualWidget.setLayout(manualLayout)
         tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
+        
+        recipErrorWidget = QWidget()
+        recipErrorWidget.setLayout(recipErrorLayout)
+        tabPreProcessing.addTab(recipErrorWidget, 'Reciprocal error analysis')
+        
         ipfiltWidget = QWidget()
 #        ipfiltWidget.setVisible(False)
         ipfiltWidget.setLayout(phasefiltlayout)
@@ -1747,9 +1827,10 @@ class App(QMainWindow):
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
 
         tabPreProcessing.setTabEnabled(0, True) # manual DC filter
-        tabPreProcessing.setTabEnabled(1, False) # IP filter
-        tabPreProcessing.setTabEnabled(2, False) # resistivity error model        
-        tabPreProcessing.setTabEnabled(3, False) # IP error model
+        tabPreProcessing.setTabEnabled(1, False)
+        tabPreProcessing.setTabEnabled(2, False) # IP filter
+        tabPreProcessing.setTabEnabled(3, False) # resistivity error model        
+        tabPreProcessing.setTabEnabled(4, False) # IP error model
         
         
         #%% tab MESH

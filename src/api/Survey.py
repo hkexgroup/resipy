@@ -84,7 +84,7 @@ class Survey(object):
                 
         
         self.df = data
-        self.dfphasereset = pd.DataFrame() #for preserving phase reset ability
+        self.dfReset = pd.DataFrame() #for preserving reset ability
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -102,7 +102,7 @@ class Survey(object):
         if all(irecip == 0) == False: # contains reciprocal
             self.basicFilter()
         else:
-            self.dfphasereset = self.df.copy()
+            self.dfReset = self.df.copy()
         
             
     @classmethod
@@ -187,7 +187,7 @@ class Survey(object):
                 self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
-            self.dfphasereset = self.df.copy()
+            self.dfReset = self.df.copy()
           
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
@@ -357,7 +357,7 @@ class Survey(object):
         
         return Ri
     
-    def errorDist(self, errPercent = 20, ax=None):
+    def errorDist(self, ax=None):
         if ax is None:
             fig, ax = plt.subplots()
         
@@ -366,6 +366,7 @@ class Survey(object):
         err_5 = percentError[np.abs(percentError)<=5] # narrowing the fit error for better visualization
         parametricFit = mlab.normpdf(np.arange(-100,100,0.5), np.mean(err_5), np.std(err_5))
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        errPercent = np.max(np.abs(percentError)) + 10
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probablity')
