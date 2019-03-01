@@ -1994,8 +1994,8 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='Protocol')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
-        self.surveys[0].kFactor = 1
-        self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
+        self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
+#        self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
         self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back

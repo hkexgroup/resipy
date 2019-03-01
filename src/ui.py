@@ -1950,7 +1950,7 @@ class App(QMainWindow):
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['|Z| [Ohm.m]', '-φ [mrad]', 'Zones', 'Fixed']
+                self.headers = ['|Z| [Ohm.m]', 'φ [mrad]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
