@@ -54,7 +54,7 @@ class Survey(object):
         self.protocolIPFlag = False
         self.kFactor = 1
         
-        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'ProtocolIP']# add parser types here! 
+        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -66,11 +66,11 @@ class Survey(object):
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
                 elec, data = res2invInputParser(fname)
-#            elif ftype == 'BGS Prime':
-#                try:
-#                    elec, data = primeParser(fname)
-#                except:
-#                    elec, data = primeParserTab(fname)
+            elif ftype == 'BGS Prime':
+                try:
+                    elec, data = primeParser(fname)
+                except:
+                    elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
                 self.protocolIPFlag = True
@@ -93,8 +93,8 @@ class Survey(object):
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
 
-#        if ftype == 'BGS Prime':
-#            self.checkTxSign()
+        if ftype == 'BGS Prime':
+            self.checkTxSign()
 
         self.keepAll = keepAll # keep dummy and non reciprocal measurements in
         irecip = self.reciprocal()                
