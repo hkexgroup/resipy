@@ -464,6 +464,22 @@ class R2(object): # R2 master class instanciated by the GUI
         print("%i survey files imported"%len(self.surveys))
         
     
+#    def matchSurveys(self):
+#        """ Will trim all surveys to get them ready for difference inversion
+#        where all datasets must have the same number of quadrupoles.
+#        """
+#        s0 = self.surveys[0]
+#        ie = np.one(s0.df.shape[0], dtype=bool)
+#        for s in self.surveys[1:]:
+#            if ((s.df[ie]['a'] == s0.df[ie]['a']) &
+#                (s.df[ie]['b'] == s0.df[ie]['b']) &
+#                (s.df[ie]['m'] == s0.df[ie]['m']) &
+#                (s.df[ie]['n'] == s0.df[ie]['n'])):
+#                # TODO
+                
+                
+        
+    
     def filterElec(self, elec=[]):
         """ Filter out specific electrodes given in all surveys.
         
