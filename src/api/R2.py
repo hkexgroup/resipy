@@ -2445,7 +2445,7 @@ class R2(object): # R2 master class instanciated by the GUI
             to True. 
         iMoveElec: bool, optional 
             If moving electrodes are present then set to True, so that the same
-            electrode positions are given to each survey.
+            electrode positions are not given to each survey.
         """
         if self.typ == 'R3t' or self.typ == 'cR3t':
             raise ValueError("Cannot compress 3D survey coordinates to 2D for a 3D survey type.")
@@ -2544,7 +2544,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 
     def saveVtks(self,dirname,prefix='pyR2output'):
         """Save vtk files of inversion results to a specified directory. Format
-        for file names will be 'prefix'xxx.vtk. 
+        for file names will be 'prefix'xxx.vtk. A python script will also be saved
+        to the relevant directory 
         Parameters
         ------------
         dirname: str
