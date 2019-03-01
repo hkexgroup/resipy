@@ -936,7 +936,6 @@ class Survey(object):
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
         resist = self.df['resist'].values
-        array = np.sort(array, axis=1)
         
         if geom: # compute and applied geometric factor
             apos = elecpos[array[:,0]-1]
@@ -955,7 +954,7 @@ class Survey(object):
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
-        
+                
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
@@ -1172,7 +1171,8 @@ class Survey(object):
         dump(100)
         
         
-    def manualFiltering(self, ax=None, figsize=(12,3), contour=False, log=False, geom=False, label=''):
+    def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
+                        log=False, geom=False, label='', vmin=None, vmax=None):
         """ Manually filters the data visually.
         
         Parameters
@@ -1261,7 +1261,8 @@ class Survey(object):
         else:
             fig = ax.figure
         caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
-        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
+        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
+                         vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
         cax.figure.canvas.mpl_connect('pick_event', onpick)
@@ -1276,7 +1277,8 @@ class Survey(object):
         
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
-    def filterdip(self,elec): # deleted specific elec data
+        
+    def filterdip(self, elec): # deleted specific elec data
         index = (self.array == elec[0]).any(-1)
         for i in range(1,len(elec)):
             index = index | (self.array == elec[i]).any(-1)
