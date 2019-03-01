@@ -363,8 +363,7 @@ class Survey(object):
         
         percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
         ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probablity")
-        err_5 = percentError[np.abs(percentError)<=5] # narrowing the fit error for better visualization
-        parametricFit = mlab.normpdf(np.arange(-100,100,0.5), np.mean(err_5), np.std(err_5))
+        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(percentError), np.std(percentError))
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
         errPercent = np.max(np.abs(percentError)) + 10
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))

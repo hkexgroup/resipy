@@ -769,6 +769,7 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(1, True)
                     tabPreProcessing.setTabEnabled(3, True)
                     plotError()
+                    errHist()
 #                generateMesh()
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
@@ -812,6 +813,10 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(1, True)
                     tabPreProcessing.setTabEnabled(3, True) # no point in doing error processing if there is no reciprocal
                     plotError()
+                    if ipCheck.checkState() == Qt.Checked:
+                        tabPreProcessing.setTabEnabled(4, True)
+                        phaseplotError()
+                    errHist()
 #                plotManualFiltering()
 
         buttonfr = QPushButton('If you have a reciprocal dataset upload it here')
@@ -1471,6 +1476,7 @@ class App(QMainWindow):
         recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
         
         recipErrorInputLine = QLineEdit('20')
+        recipErrorInputLine.setToolTip('Default value = 20%')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
         recipErrorInputLineLayout.addWidget(recipErrorInputLine)
@@ -1497,11 +1503,13 @@ class App(QMainWindow):
         recipErrorBtnLayout = QHBoxLayout()
         
         recipErrorPltbtn = QPushButton('Plot error histogram')
+        recipErrorPltbtn.setToolTip('Plotting reciprocal error distribution. <br>Error probablity is highest around zero for a good dataset. </br><br>The narrower the parametric fit, the better.<br>')
         recipErrorPltbtn.clicked.connect(errHist)
         recipErrorPltbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorPltbtn)
         
         recipErrorResetbtn = QPushButton('Reset')
+        recipErrorResetbtn.setToolTip('This will reset back all of your data to <br>their state after automatic basic filtering.</br>')
         recipErrorResetbtn.clicked.connect(resetRecipFilter)
         recipErrorResetbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorResetbtn)
