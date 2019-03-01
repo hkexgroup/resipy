@@ -11,6 +11,7 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 import pandas as pd
 #import statsmodels.formula.api as smf
 
@@ -356,6 +357,23 @@ class Survey(object):
         
         return Ri
     
+    def errorDist(self, errPercent = 20, ax=None):
+        if ax is None:
+            fig, ax = plt.subplots()
+        
+        percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
+        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probablity")
+        err_5 = percentError[np.abs(percentError)<=5] # narrowing the fit error for better visualization
+        parametricFit = mlab.normpdf(np.arange(-100,100,0.5), np.mean(err_5), np.std(err_5))
+        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        ax.set_xlim(-1*(int(errPercent)),int(errPercent))
+        ax.set_xlabel('Error [%]')
+        ax.set_ylabel('Probablity')
+        ax.legend(loc='best', frameon=True)
+        ax.set_title('Error probablity distribution')
+        
+        if ax is None:
+            return fig
     
     def removeDummy(self):
         """ Remove measurements where n < m (likely to be dummy measurements
@@ -377,7 +395,7 @@ class Survey(object):
             Print output to screen. Default is True. 
         """
         #### TODO: stop filtering if no reciprocals present! 
-        reciprocalErrRel = self.df['reciprocalErrRel']
+        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold

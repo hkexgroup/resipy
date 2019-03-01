@@ -333,6 +333,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.pseudoIP = self.surveys[0].pseudoIP
             self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
+            self.errorDist = self.surveys[0].errorDist
             self.linfit = self.surveys[0].linfit
             self.lmefit = self.surveys[0].lmefit
             self.pwlfit = self.surveys[0].pwlfit
@@ -454,6 +455,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.pseudo = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
+        self.errorDist = self.bigSurvey.errorDist
         self.linfit = self.bigSurvey.linfit
         self.lmefit = self.bigSurvey.lmefit
         self.pwlfit = self.bigSurvey.pwlfit
