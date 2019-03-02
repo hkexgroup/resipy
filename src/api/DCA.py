@@ -9,7 +9,10 @@ import numpy as np
 import pandas as pd
 
 #%%
-def positive_test (Dcurve,DecayTime): #calculating decay curve trend - positive trends are bad data
+def positive_test (Dcurve,DecayTime): 
+    """ Calculating TDIP chargeability decay curve trend: 
+        positive (increasing over time) trends are bad data
+    """
     DC_slope = np.zeros(np.shape(Dcurve)[0])
     for i in range(np.shape(Dcurve)[0]):     
         DecayCoefs = np.linalg.lstsq(np.vstack([DecayTime, np.ones(len(DecayTime))]).T,Dcurve.iloc[i,:])[0]
@@ -26,14 +29,17 @@ def linear_coefs (x,y): #linear fit parameteres for decay curve
         coefs = np.array([0,0])
         return
 
-def DCA(data_in, dump=print): #(Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017). Decay curve analysis for data error quantification in time-domain induced polarization imaging. Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
+def DCA(data_in, dump=print): 
+    """ Decay Curve Analysis (Only for Syscal files):
+        calculating master decay curve based on individual decay curves, 
+        then compares individual decay curves with a master decay curve (avg(all good curves)) 
+        and remove data with STD > 2 * STD(dataset).
+    -----------
+    (Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
+    Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
+    Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
+    """
     data = data_in.copy()
-#    cnames = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11',
-#        'M12','M13','M14','M15','M16','M17','M18','M19','M20', 'TM1']
-#    if set(cnames) - set(data.columns):
-#        print('No decay curve found or incomplete set of decay curves!\nExtract the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled!')
-#        return
-#    else:
     decayN = data[['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
                 'M10', 'M11', 'M12', 'M13', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M20']]
     DecayTime_int = data['TM1'][0]
@@ -96,5 +102,3 @@ def DCA(data_in, dump=print): #(Reference: Flores Orozco, A., Gallistl, J., Büc
                                    'Fit_DC_13', 'Fit_DC_14', 'Fit_DC_15', 'Fit_DC_16', 'Fit_DC_17',
                                    'Fit_DC_18', 'Fit_DC_19', 'Fit_DC_20', 'DC_rmsd', 'weight', 'K'], axis = 1).rename(columns = {'An':'a','Bn':'b'})
     return (final_data_dropped)
-#%%
-#test = DCA(df)
