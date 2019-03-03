@@ -783,14 +783,17 @@ class R2(object): # R2 master class instanciated by the GUI
                 warnings.warn("No electrode nodes associated with mesh! Electrode positions are unknown!")
           
         #R2 class mesh handling 
+        e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
         self.param['mesh'] = self.mesh
         if mesh_type == 'quad':
             self.param['mesh_type'] = 4
+            colx = self.mesh.quadMeshNp() # convert nodes into column indexes 
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), np.array(colx), np.ones((len(e_nodes,1)))].astype(int)
+            #will only work for assuming electrodes are a surface array 
         else:
             self.param['mesh_type'] = 3
-            
-        e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
-        self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+        
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
@@ -1361,6 +1364,9 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
+                if int(self.mesh.cell_type[0])==8 or int(self.mesh.cell_type[0])==9:#elements are quads
+                    colx = self.mesh.quadMeshNp() # so find x column indexes instead. Wont support change in electrode elevation
+                    self.param['node_elec'][:,1] = colx
                 self.param['inverse_type'] = 1 # regularise against a background model 
                 #self.param['reg_mode'] = 1
                 write2in(self.param, self.dirname, self.typ)

@@ -1373,7 +1373,36 @@ class Mesh:
                 print("Windows has blocked launching paraview, program try running as admin")      
         else:
             Popen(['paraview', fname])
+            
+    def quadMeshNp(self, topo=None):
+        """Convert mesh nodes into x column indexes in the case of quad meshes. 
+        Does not currently support changes in electrode elevation! 
         
+        Returns
+        ----------
+        colx: list
+            X column indexes for quad mesh 
+        """
+        if int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
+            pass
+        else:
+            raise TypeError('Mesh is not composed of 2D quads')
+        
+        unix = np.unique(self.node_x) # unique x values in the x node coordinates 
+        if topo is None: # find the y column is a little challanging without knowing the original topography 
+            uniz = np.unique(self.node_z) # if you dont know any better then just use the unique z values 
+        else:
+            uniz = topo # ideally use mesh topography 
+        e_nodes = self.e_nodes
+        colx = [0]*len(e_nodes) # column indexes for x coordinates 
+        colz = [0]*len(e_nodes) # column indexes for z coordinates 
+        for i in range(len(e_nodes)):
+            x = self.node_x[e_nodes[i]] # get node x coordinate 
+            z = self.node_z[e_nodes[i]]
+            colx[i] = int(np.argwhere(x==unix) + 1) # find its index 
+            colz[i] = int(np.argwhere(z==uniz) + 1)
+            
+        return colx#,colz # return columns to go in parameters 
         
 #%% triangle centriod 
 def tri_cent(p,q,r):
