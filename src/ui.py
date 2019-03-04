@@ -1461,7 +1461,6 @@ class App(QMainWindow):
         
         
         recipErrorInputlayout = QHBoxLayout()
-#        recipErrorInputlayout.setAlignment(Qt.AlignLeft)
         
         recipErrorInputLeftlayout = QHBoxLayout()
         recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
@@ -1485,21 +1484,25 @@ class App(QMainWindow):
         
         def errHist():
             percent = float(recipErrorInputLine.text())
-            self.r2.filterRecip(percent=percent)
+            msgDump = self.r2.filterRecip(percent=percent)
             recipErrorPLot.plot(self.r2.errorDist)
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                 heatFilter()
+            infoDump(str(msgDump))
             
         def resetRecipFilter():
+            tempNum = len(self.r2.surveys[0].df) # saves the number of measurements before reset
             self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
             self.r2.filterRecip(percent=20) # we assume 20% is a default value - always
+            numRestored = len(self.r2.surveys[0].df) - tempNum
             recipErrorPLot.plot(self.r2.errorDist)
             recipErrorInputLine.setText('20')
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
                 heatFilter()
-        
+            infoDump('%i measurements are restored!' % numRestored)
+            
         recipErrorBtnLayout = QHBoxLayout()
         
         recipErrorPltbtn = QPushButton('Plot error histogram')
@@ -1713,8 +1716,6 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
         
         def filt_reset():
-#            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
-#            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
             self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfPhaseReset.copy()
             self.r2.surveys[0].df = self.r2.surveys[0].dfPhaseReset.copy()
             heatFilter()

@@ -84,8 +84,8 @@ class Survey(object):
                 
         
         self.df = data
-        self.dfReset = pd.DataFrame() #for preserving reset ability
-        self.dfPhaseReset = pd.DataFrame()
+        self.dfReset = pd.DataFrame() #for preserving reset ability after reciprocal filtering
+        self.dfPhaseReset = pd.DataFrame() #for preserving phase reset ability after phase filtering only
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -406,8 +406,9 @@ class Survey(object):
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
         self.dfPhaseReset = self.df.copy()
         if debug:
-            print("%i measurements with greater than %3.1f percentage error removed"%(len(df_temp)-len(self.df),
-                                                                                      pcnt))
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (len(df_temp)-len(self.df),pcnt)
+            print(msgDump)
+            return msgDump
         
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
