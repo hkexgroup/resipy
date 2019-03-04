@@ -1096,13 +1096,13 @@ class Survey(object):
             for i in range(len(avail_err)):
                 content += avail_err[i]
             raise NameError("Unrecognised error type, available types are "+content)
-        ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
+        ie = self.df['irecip'].values != 0 # consider only mean measurement (not reciprocal)
         haveReciprocal = all(self.df['irecip'].values == 0)
         if haveReciprocal is False and self.keepAll is False: # so we have reciprocals and don't want dummy inside
             x = self.df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            dfg = self.df[self.df['irecip'] > 0] 
+            dfg = self.df[self.df['irecip'] != 0] 
             protocol['R'] = dfg['recipMean'].values
             if res0:
                 protocol['R0'] = dfg['recipMean0'].values
