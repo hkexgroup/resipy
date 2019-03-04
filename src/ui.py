@@ -1509,6 +1509,7 @@ class App(QMainWindow):
         recipErrorBtnLayout.addWidget(recipErrorPltbtn)
         
         recipErrorResetbtn = QPushButton('Reset')
+        recipErrorResetbtn.setStyleSheet("color: red")
         recipErrorResetbtn.setToolTip('This will reset back all of your data to <br>their state after automatic basic filtering.</br>')
         recipErrorResetbtn.clicked.connect(resetRecipFilter)
         recipErrorResetbtn.setFixedWidth(150)
@@ -1712,8 +1713,10 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
         
         def filt_reset():
-            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
-            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+#            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
+#            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfPhaseReset.copy()
+            self.r2.surveys[0].df = self.r2.surveys[0].dfPhaseReset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             infoDump('All phase filteres are now reset!')
@@ -1738,7 +1741,7 @@ class App(QMainWindow):
         
         resetlayout = QHBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
-        filtreset.setStyleSheet("background-color: red")
+        filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)

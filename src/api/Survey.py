@@ -85,6 +85,7 @@ class Survey(object):
         
         self.df = data
         self.dfReset = pd.DataFrame() #for preserving reset ability
+        self.dfPhaseReset = pd.DataFrame()
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -403,6 +404,7 @@ class Survey(object):
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        self.dfPhaseReset = self.df.copy()
         if debug:
             print("%i measurements with greater than %3.1f percentage error removed"%(len(df_temp)-len(self.df),
                                                                                       pcnt))
