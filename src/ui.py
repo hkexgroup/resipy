@@ -764,7 +764,9 @@ class App(QMainWindow):
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
 #                    hbox4.addWidget(buttonfr)
                     buttonfr.show()
+                    tabPreProcessing.setTabText(0, 'Manual Filtering')
                 else:
+                    tabPreProcessing.setTabText(0, 'Reciprocal Filtering')
                     buttonfr.hide()
                     tabPreProcessing.setTabEnabled(1, True)
                     tabPreProcessing.setTabEnabled(3, True)
@@ -1482,23 +1484,25 @@ class App(QMainWindow):
         recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
         recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
         
-        def errHist():
+        def recipFilter():
             percent = float(recipErrorInputLine.text())
             msgDump = self.r2.filterRecip(percent=percent)
-            recipErrorPLot.plot(self.r2.errorDist)
+            errHist()
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                 heatFilter()
             infoDump(str(msgDump))
             
-        def resetRecipFilter():
-            tempNum = len(self.r2.surveys[0].df) # saves the number of measurements before reset
-            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
-            self.r2.filterRecip(percent=20) # we assume 20% is a default value - always
-            numRestored = len(self.r2.surveys[0].df) - tempNum
+        def errHist():
             recipErrorPLot.plot(self.r2.errorDist)
+            
+        def resetRecipFilter():
+            numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
+            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+            errHist()
             recipErrorInputLine.setText('20')
             if ipCheck.checkState() == Qt.Checked:
+                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].dfReset.copy()
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
                 heatFilter()
             infoDump('%i measurements are restored!' % numRestored)
@@ -1507,7 +1511,7 @@ class App(QMainWindow):
         
         recipErrorPltbtn = QPushButton('Plot error histogram')
         recipErrorPltbtn.setToolTip('Plotting reciprocal error distribution. <br>Error probablity is highest around zero for a good dataset. </br><br>The narrower the parametric fit, the better.<br>')
-        recipErrorPltbtn.clicked.connect(errHist)
+        recipErrorPltbtn.clicked.connect(recipFilter)
         recipErrorPltbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorPltbtn)
         
@@ -1820,7 +1824,7 @@ class App(QMainWindow):
             
         manualWidget = QWidget()
         manualWidget.setLayout(manualLayout)
-        tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
+        tabPreProcessing.addTab(manualWidget, 'Reciprocal Filtering')
         
         recipErrorWidget = QWidget()
         recipErrorWidget.setLayout(recipErrorLayout)
@@ -3549,18 +3553,8 @@ class App(QMainWindow):
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
                           <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
                           <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+                          <p>Python packages used: numpy, pandas, matplotlib.
 <ul>
-<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
-<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
-<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
-</li>
-<li>
- Wes McKinney.
-<strong>Data Structures for Statistical Computing in Python</strong>,
-Proceedings of the 9th Python in Science Conference, 51-56 (2010)
-(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
-</li>
 <li>
 John D. Hunter.
 <strong>Matplotlib: A 2D Graphics Environment</strong>,
@@ -3574,6 +3568,40 @@ USA: Trelgol Publishing, (2006).
 </p>
 <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
 '''%pyR2_version)
+#        aboutText.setText('''<h1>About pyR2</h1> \
+#                          <p><b>Version: %s</b></p> \
+#                          <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
+#                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
+#                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
+#                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
+#                          <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
+#                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
+#                          <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
+#                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+#<ul>
+#<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
+#<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
+#<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
+#</li>
+#<li>
+# Wes McKinney.
+#<strong>Data Structures for Statistical Computing in Python</strong>,
+#Proceedings of the 9th Python in Science Conference, 51-56 (2010)
+#(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
+#</li>
+#<li>
+#John D. Hunter.
+#<strong>Matplotlib: A 2D Graphics Environment</strong>,
+#Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
+#<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a> 
+#</li>
+#<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
+#USA: Trelgol Publishing, (2006).
+#</li>
+#</ul>
+#</p>
+#<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+#'''%pyR2_version)
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)

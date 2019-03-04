@@ -104,6 +104,7 @@ class Survey(object):
             self.basicFilter()
         else:
             self.dfReset = self.df.copy()
+            self.dfPhaseReset = self.df.copy()
         
             
     @classmethod
@@ -189,6 +190,7 @@ class Survey(object):
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
             self.dfReset = self.df.copy()
+            self.dfPhaseReset = self.df.copy()
           
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
@@ -368,9 +370,12 @@ class Survey(object):
         
         percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
         ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probablity")
-        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(percentError), np.std(percentError))
-        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
         errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
+        if errPercent > 100:
+            errPercent = 100
+        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probablity')
