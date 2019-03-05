@@ -1511,8 +1511,8 @@ class R2(object): # R2 master class instanciated by the GUI
         #the number of electrodes.
         df = self.surveys[0].df
         check = np.array((df['a'],df['b'],df['m'],df['n']))
-        if len(self.elec) != np.max(check):
-            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
+#        if len(self.elec) != np.max(check): # Dont check this! Not least in this way 
+#            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
         dump('done\n')
         
         # runs inversion
@@ -2315,7 +2315,7 @@ class R2(object): # R2 master class instanciated by the GUI
             to True. 
         iMoveElec: bool, optional 
             If moving electrodes are present then set to True, so that the same
-            electrode positions are given to each survey.
+            electrode positions are not given to each survey.
         """
         if self.typ == 'R3t' or self.typ == 'cR3t':
             raise ValueError("Cannot compress 3D survey coordinates to 2D for a 3D survey type.")
@@ -2407,11 +2407,12 @@ class R2(object): # R2 master class instanciated by the GUI
         if problem>0:
             print('Had a problem computing differences for %i attributes'%problem)
                 
-            
-    def saveVtks(self, dirname, prefix='pyR2output'):
-        """ Save vtk files of inversion results to a specified directory. Format
-        for file names will be 'prefix'xxx.vtk. 
-        
+
+    def saveVtks(self,dirname,prefix='pyR2output'):
+        """Save vtk files of inversion results to a specified directory. Format
+        for file names will be 'prefix'xxx.vtk. A python script will also be saved
+        to the relevant directory 
+
         Parameters
         ------------
         dirname: str
