@@ -271,9 +271,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     
     #deal with end case electrodes, check max topo points are outside survey bounds 
     try:
+        min_idx = np.argmin(elec_x)
+        max_idx = np.argmax(elec_z)
         if min(elec_x) == min(x_pts):
-            min_idx = np.argmin(elec_x)
-            max_idx = np.argmax(elec_z)
             x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.diff(elec_x))) # in this case extend the survey bounds beyond the first electrode 
             y_pts = np.append(y_pts,elec_z[min_idx])
             flag.append('topography point')#add a flag
@@ -282,6 +282,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.diff(elec_x)))
             y_pts = np.append(y_pts,elec_z[max_idx])
             flag.append('topography point')
+    
     except ValueError: # then there are no surface electrodes, in which case
         min_idx = np.argmin(electrodes[0])
         max_idx = np.argmax(electrodes[0])
@@ -308,8 +309,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #add flags which distinguish what each point is 
     flag_sort=[flag[i] for i in idx]
     
-    elec_x_cache = elec_x
-    elec_z_cache = elec_z
+    elec_x_cache = x_pts[np.array(flag_sort)=='electrode']
+    elec_z_cache = y_pts[np.array(flag_sort)=='electrode']
     
     #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
     cache_idx=[]

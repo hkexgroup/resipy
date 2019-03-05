@@ -1511,8 +1511,8 @@ class R2(object): # R2 master class instanciated by the GUI
         #the number of electrodes.
         df = self.surveys[0].df
         check = np.array((df['a'],df['b'],df['m'],df['n']))
-        if len(self.elec) != np.max(check):
-            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
+#        if len(self.elec) != np.max(check): # Dont check this! Not least in this way 
+#            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
         dump('done\n')
         
         # runs inversion
