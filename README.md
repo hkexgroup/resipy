@@ -96,8 +96,8 @@ To edit a cell, just double click on it.
 
 
 
-Linux and Mac user
-------------------
+Linux and Mac users
+-------------------
 pyR2 contains executables that are built only for windows. To run them you will need to install *wine*.
 
 ### On Linux

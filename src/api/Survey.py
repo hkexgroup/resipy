@@ -11,6 +11,7 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 import pandas as pd
 #import statsmodels.formula.api as smf
 
@@ -83,7 +84,8 @@ class Survey(object):
                 
         
         self.df = data
-        self.dfphasereset = pd.DataFrame() #for preserving phase reset ability
+        self.dfReset = pd.DataFrame() #for preserving reset ability after reciprocal filtering
+        self.dfPhaseReset = pd.DataFrame() #for preserving phase reset ability after phase filtering only
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -101,7 +103,8 @@ class Survey(object):
         if all(irecip == 0) == False: # contains reciprocal
             self.basicFilter()
         else:
-            self.dfphasereset = self.df.copy()
+            self.dfReset = self.df.copy()
+            self.dfPhaseReset = self.df.copy()
         
             
     @classmethod
@@ -186,7 +189,8 @@ class Survey(object):
                 self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
             if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
                 self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
-            self.dfphasereset = self.df.copy()
+            self.dfReset = self.df.copy()
+            self.dfPhaseReset = self.df.copy()
           
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
@@ -356,6 +360,30 @@ class Survey(object):
         
         return Ri
     
+    def errorDist(self, ax=None):
+        """ Calculate and plots reciprocal error probablity histogram.
+        Good data will have a bell shape (normal) distribution where most datapoints have near
+        zero reciprocal error.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+        
+        percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
+        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probablity")
+        errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
+        errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
+        if errPercent > 100:
+            errPercent = 100
+        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        ax.set_xlim(-1*(int(errPercent)),int(errPercent))
+        ax.set_xlabel('Error [%]')
+        ax.set_ylabel('Probablity')
+        ax.legend(loc='best', frameon=True)
+        ax.set_title('Error probablity distribution')
+        
+        if ax is None:
+            return fig
     
     def removeDummy(self):
         """ Remove measurements where n < m (likely to be dummy measurements
@@ -377,13 +405,15 @@ class Survey(object):
             Print output to screen. Default is True. 
         """
         #### TODO: stop filtering if no reciprocals present! 
-        reciprocalErrRel = self.df['reciprocalErrRel']
+        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        self.dfPhaseReset = self.df.copy()
         if debug:
-            print("%i measurements with greater than %3.1f percentage error removed"%(len(df_temp)-len(self.df),
-                                                                                      pcnt))
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (len(df_temp)-len(self.df),pcnt)
+            print(msgDump)
+            return msgDump
         
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
@@ -458,8 +488,6 @@ class Survey(object):
         reciprocalMean = self.df['recipMean'].values
         reciprocalErr = self.df['recipError'].values
         ax.loglog(np.abs(reciprocalMean), reciprocalErr, 'o')
-#        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
-#        ax.set_ylabel('Reciprocal Error [$\Omega$]')
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')  
         ax.set_title('Observed Errors\n')
@@ -481,9 +509,8 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        temp_df_range_filter = self.df.copy().query('reci_IP_err>%s & reci_IP_err<%s' % (-1*self.phiCbarMax, self.phiCbarMax))
+        temp_df_range_filter = self.df.copy().query('reci_IP_err>%s & reci_IP_err<%s' % (-self.phiCbarMax, self.phiCbarMax))
         reciprocalMean = np.abs(temp_df_range_filter['recipMean'].values)
-#        phase = np.abs(-1*temp_df_range_filter['reci_IP_err'].values)
         phase = np.abs(temp_df_range_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
@@ -510,7 +537,7 @@ class Survey(object):
         return t    
         
     def plotIPFit(self, ax=None):
-        """ Plot the reciprocal phase errors.
+        """ Plot the reciprocal phase errors with a power-law fit.
         
         Parameters
         ----------
@@ -528,7 +555,7 @@ class Survey(object):
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on input  phase range
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -550,7 +577,6 @@ class Survey(object):
         a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
         a4 = np.around(coefs_ip[1], decimals=1)
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-#        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
         ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
         self.df['PhaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['Phase'] = -self.kFactor*self.df['ip']
@@ -558,7 +584,7 @@ class Survey(object):
             return fig   
 
     def plotIPFitParabola(self, ax=None):
-        """ Plot the reciprocal phase errors and fit parabola.
+        """ Plot the reciprocal phase errors with a parabola fit.
         
         Parameters
         ----------
@@ -576,7 +602,7 @@ class Survey(object):
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -596,10 +622,6 @@ class Survey(object):
         a3 = np.around((coefs_ip[0]),decimals=3)
         b3 = np.around((coefs_ip[1]), decimals=3)
         c3 = np.around((coefs_ip[2]),decimals=3)
-        #a1 = np.around((coefs_ip[0]),decimals=1)
-        #b1 = np.around((coefs_ip[1]), decimals=1)
-        #c1 = np.around((coefs_ip[2]),decimals=1)
-#        ax.set_title('Multi bin phase error plot\n(R$^2$ = %s)' % (R2_ip))
         ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
         self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['Phase'] = -self.kFactor*self.df['ip']
@@ -619,7 +641,6 @@ class Survey(object):
         fig : matplotlib figure, optional
             If ax is not specified, the function will return a figure object.
         """
-#        self.errTyp = 'pwl'
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
@@ -648,7 +669,6 @@ class Survey(object):
         a3 = np.around(np.exp(coefs[0]),decimals=1)
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-#        ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))
         ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
         self.df['pwlError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.errorModel = lambda x : a1*(np.abs(x)**a2)
@@ -713,7 +733,7 @@ class Survey(object):
         inan = ~np.isnan(ystdErr)
         slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
         predy=10**(offset+slope*np.log10(xm[inan]))
-        # R2 makes sens in linear fitting space only and only for the classes
+        # R2 makes sense in linear fitting space only and only for the classes
         r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
         print('Simple linear log fit (with std) : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
         
@@ -724,7 +744,7 @@ class Survey(object):
         if iplot:
             figs = []
             fig,ax=plt.subplots()
-#            ax.loglog(recipMean, recipError, '+o') # doesn't make sens because
+#            ax.loglog(recipMean, recipError, '+o') # doesn't make sense because
             # we are plotting the STD of the errors and not the absolute errors
             ax.loglog(xm[inan],ystdErr[inan],'o')
             ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
@@ -795,8 +815,10 @@ class Survey(object):
 #            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
 
     def heatmap(self,ax=None):
-        """ Plot a heatmap based on 
-        Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+        """ Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
+            Orozco, A. F., K. H. Williams, and A. Kemna (2013), 
+            Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, 
+            Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
         
         Parameters
         ----------
@@ -813,7 +835,6 @@ class Survey(object):
             temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
             dflen = len(self.dfOrigin)
         elif self.filt_typ == 'Filtered':
-#            temp_heatmap_recip_filterN = self.filterDataIP_plot
             if self.filterDataIP.empty:
                 temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.df)
@@ -865,30 +886,27 @@ class Survey(object):
             else:
                 self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         self.addFilteredIP()
-            
-#        temp_data = self.filterDataIP_plotOrig
-#        mask = (temp_data.ip < self.phimin) | (temp_data.ip > self.phimax)
-#        temp_data.loc[mask, 'ip'] = np.nan
-#        self.filterDataIP_plot = temp_data
         
     def removerecip(self):
+        """ Removing reciprocal measurements from dataset - only for visualization purposes on heatmap()
+        """
         
         if self.filterDataIP.empty:
             self.filterDataIP = self.df.query('irecip>=0')
         else:
             self.filterDataIP = self.filterDataIP.query('irecip>=0')
-#        self.filterDataIP_plot = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
         self.addFilteredIP()
 
     def removenested(self):
+        """ Removes nested measurements:
+            Where M or N are in between A and B
+        """
         if self.filterDataIP.empty:
-#            self.filterDataIP = self.df.query('m>a & m>b & n>a & n>b')
             temp_data = self.df.copy()
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
             self.filterDataIP = temp_data.dropna(subset = ['ip'])
         else:
-#            self.filterDataIP = self.filterDataIP.query('m>a & m>b & n>a & n>b')
             temp_data = self.filterDataIP.copy()
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
@@ -1087,17 +1105,24 @@ class Survey(object):
                 content += avail_err[i]
             raise NameError("Unrecognised error type, available types are "+content)
         ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
+        neg_flag=False
+        if all(ie==False):
+            ie = self.df['irecip'].values != 0 # take negative recip indexes instead
+            neg_flag=True
         haveReciprocal = all(self.df['irecip'].values == 0)
         if haveReciprocal is False and self.keepAll is False: # so we have reciprocals and don't want dummy inside
             x = self.df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            dfg = self.df[self.df['irecip'] > 0] 
+            if neg_flag:
+                dfg = self.df[self.df['irecip'] != 0] 
+            else:
+                dfg = self.df[self.df['irecip'] > 0] 
             protocol['R'] = dfg['recipMean'].values
             if res0:
                 protocol['R0'] = dfg['recipMean0'].values
             if ip == True and self.protocolIPFlag == False:
-                protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
+                protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" is to change m to phi
             elif self.protocolIPFlag == True:
                 protocol['Phase'] = dfg['ip'].values
             if errTyp != 'none':
@@ -1134,7 +1159,7 @@ class Survey(object):
                 protocol['R0'] = self.df['resist0'].values
             if ip == True:
                 if self.protocolIPFlag == False:
-                    protocol['Phase'] = -self.kFactor*self.df['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
+                    protocol['Phase'] = -self.kFactor*self.df['ip'].values # "-self.kFactor" is to change m to phi
                 elif self.protocolIPFlag == True:
                     protocol['Phase'] = self.df['ip'].values
                 if 'phiErr' in self.df.columns:
@@ -1162,7 +1187,11 @@ class Survey(object):
     
                 
     def dca(self, dump=print):
-        ''' execute DCA filtering
+        ''' execute DCA filtering:
+            Decay Curve Analysis (DCA) based on:
+                Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
+                Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
+                Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1
         '''
         if self.filterDataIP.empty:
             self.filterDataIP = DCA(self.df, dump=dump)

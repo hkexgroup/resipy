@@ -333,6 +333,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.pseudoIP = self.surveys[0].pseudoIP
             self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
+            self.errorDist = self.surveys[0].errorDist
             self.linfit = self.surveys[0].linfit
             self.lmefit = self.surveys[0].lmefit
             self.pwlfit = self.surveys[0].pwlfit
@@ -454,6 +455,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.pseudo = self.surveys[0].pseudo # just display first pseudo section
             
         self.plotError = self.bigSurvey.plotError
+        self.errorDist = self.bigSurvey.errorDist
         self.linfit = self.bigSurvey.linfit
         self.lmefit = self.bigSurvey.lmefit
         self.pwlfit = self.bigSurvey.pwlfit
@@ -506,7 +508,8 @@ class R2(object): # R2 master class instanciated by the GUI
             discarded. 20% by default.
         """
         for s in self.surveys:
-            s.filterRecip(percent)
+            msgDump = s.filterRecip(percent)
+            return msgDump
         
         
     def computeDOI(self):
@@ -781,14 +784,17 @@ class R2(object): # R2 master class instanciated by the GUI
                 warnings.warn("No electrode nodes associated with mesh! Electrode positions are unknown!")
           
         #R2 class mesh handling 
+        e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
         self.param['mesh'] = self.mesh
         if mesh_type == 'quad':
             self.param['mesh_type'] = 4
+            colx = self.mesh.quadMeshNp() # convert nodes into column indexes 
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), np.array(colx), np.ones((len(e_nodes,1)))].astype(int)
+            #will only work for assuming electrodes are a surface array 
         else:
             self.param['mesh_type'] = 3
-            
-        e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
-        self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+        
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
@@ -1359,6 +1365,9 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = s.elec
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
+                if int(self.mesh.cell_type[0])==8 or int(self.mesh.cell_type[0])==9:#elements are quads
+                    colx = self.mesh.quadMeshNp() # so find x column indexes instead. Wont support change in electrode elevation
+                    self.param['node_elec'][:,1] = colx
                 self.param['inverse_type'] = 1 # regularise against a background model 
                 #self.param['reg_mode'] = 1
                 write2in(self.param, self.dirname, self.typ)
@@ -2011,7 +2020,6 @@ class R2(object): # R2 master class instanciated by the GUI
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='Protocol')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
-#        self.surveys[0].df['ip'] *= -1 # there are outputed without sign by default ?
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
         self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
@@ -2416,11 +2424,11 @@ class R2(object): # R2 master class instanciated by the GUI
             survey.
         """   
         amtContent = """from paraview.simple import * 
-                        def start_cue(self):
-                        	global annotations
-                        	global maxIndex
-                        	text_obj = Text()#make a text object
-                        	annotations= []\n"""
+def start_cue(self):
+	global annotations
+	global maxIndex
+	text_obj = Text()#make a text object
+	annotations= []\n"""
         try:
             numResults = len(self.meshResults)
         except AttributeError:
@@ -2432,16 +2440,15 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh.write_vtk(file_path,title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += """	maxIndex = len(annotations)
-                            def tick(self):
-                            	global annotations
-                            	global maxIndex
-                            	index = int( self.GetClockTime() )
-                            	if index >= maxIndex :
-                            		 index = maxIndex - 1
-                            	textSource = paraview.simple.FindSource('Text1')
-                            	textSource.Text = annotations[index]
-                            def end_cue(self): pass
-                                    """
+def tick(self):
+	global annotations
+	global maxIndex
+	index = int( self.GetClockTime() )
+	if index >= maxIndex :
+		 index = maxIndex - 1
+	textSource = paraview.simple.FindSource('Text1')
+	textSource.Text = annotations[index]
+def end_cue(self): pass"""
         fh = open(os.path.join(dirname,'amt_track.py'),'w')
         fh.write(amtContent)
         fh.close()
