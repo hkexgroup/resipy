@@ -245,7 +245,7 @@ class Survey(object):
             self.ndata = len(i2keep)
             self.df = self.df[i2keep]
             print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
-    
+            return np.sum(~i2keep)
     
     def inferType(self):
         """ define the type of the survey
@@ -411,9 +411,10 @@ class Survey(object):
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
         self.dfPhaseReset = self.df.copy()
         if debug:
-            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (len(df_temp)-len(self.df),pcnt)
+            numRemoved = len(df_temp)-len(self.df)
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (numRemoved,pcnt)
             print(msgDump)
-            return msgDump
+            return numRemoved
         
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
@@ -1216,7 +1217,7 @@ class Survey(object):
         array = self.df[['a','b','m','n']].values.astype(int)
         if np.sum(self.df['irecip'].values == 0) == 0:
             print('choose recipError')
-            resist = self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
+            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
             clabel = 'Reciprocal Error [%]'
         else:
             print('choose resist')

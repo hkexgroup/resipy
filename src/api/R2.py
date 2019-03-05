@@ -508,8 +508,8 @@ class R2(object): # R2 master class instanciated by the GUI
             discarded. 20% by default.
         """
         for s in self.surveys:
-            msgDump = s.filterRecip(percent)
-            return msgDump
+            numRemoved = s.filterRecip(percent)
+            return numRemoved
         
         
     def computeDOI(self):
