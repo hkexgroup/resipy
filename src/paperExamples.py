@@ -136,6 +136,7 @@ k.createSequence(params=[('wenner_alpha',1),
                          ('wenner_alpha',10)])
 
 k.forward(iplot=True, noise=0.05)
+#%%
 k.invert(iplot=True)
 k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2

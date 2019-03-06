@@ -91,8 +91,6 @@ class Survey(object):
         if 'phiErr' in self.df.columns:
             self.df['phaseError'] = self.df['phiErr'].copy()
             
-        self.dfReset = pd.DataFrame() #for preserving reset ability after reciprocal filtering
-        self.dfPhaseReset = pd.DataFrame() #for preserving phase reset ability after phase filtering only
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -105,12 +103,10 @@ class Survey(object):
         if ftype == 'BGS Prime':
             self.checkTxSign()
 
-        irecip = self.reciprocal()                
-        if all(irecip == 0) == False: # contains reciprocal
-            self.basicFilter()
-        else:
-            self.dfReset = self.df.copy()
-            self.dfPhaseReset = self.df.copy()
+        # apply basic filtering
+        self.basicFilter()
+        self.dfReset = self.df.copy()
+        self.dfPhaseReset = self.df.copy()
         
             
     @classmethod
