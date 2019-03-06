@@ -1233,8 +1233,9 @@ class Survey(object):
             clabel = 'Reciprocal Error [%]'
         else:
             print('choose resist')
+            geom = True
             resist = self.df['resist'].values
-            clabel = 'Tx Resistance [$\Omega$]'
+            clabel = 'Apparent Resistivity [$\Omega.m$]'
         if label == '':
             label = clabel
         inan = np.isnan(resist)
