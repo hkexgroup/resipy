@@ -1589,7 +1589,7 @@ class App(QMainWindow):
         
         def plotError():
             mwFitError.plot(self.r2.plotError)
-            self.r2.errTyp = 'none'
+            self.r2.err = False
             
 #        def fitLinError():
 #            mwFitError.plot(self.r2.linfit)
@@ -1610,10 +1610,10 @@ class App(QMainWindow):
                 plotError()
             elif index == 1:
                 mwFitError.plot(self.r2.linfit)
-                self.r2.errTyp = 'lin'
+                self.r2.err = True
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
-                self.r2.errTyp = 'pwl'
+                self.r2.err = True
 #            elif index == 3:
 #                print('NOT READY YET')
 #                mwFitError.plot(self.r2.lmefit)
@@ -1659,10 +1659,10 @@ class App(QMainWindow):
                 phaseplotError()
             elif index == 1:
                 mwIPFiltering.plot(self.r2.plotIPFit)
-                self.r2.errTypIP = 'pwlip'
+                self.r2.err = True
             elif index == 2:
                 mwIPFiltering.plot(self.r2.plotIPFitParabola)
-                self.r2.errTypIP = 'pwlip'
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:

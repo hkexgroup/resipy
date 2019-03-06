@@ -2119,7 +2119,6 @@ class R2(object): # R2 master class instanciated by the GUI
             if (f[-8:] == '_res.dat') & ((len(f) == 16) or (len(f) == 12)):
                 fs.append(f)
         fs = sorted(fs)
-        print(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
             if self.param['mesh_type'] == 10:
                 self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
@@ -2127,7 +2126,6 @@ class R2(object): # R2 master class instanciated by the GUI
                 
             else:
                 x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
-                print(x.shape, 'for', fs[index])
                 if x.shape[0] > 0:
                     triang = tri.Triangulation(x[:,0],x[:,1])
                     cax = ax.tricontourf(triang, x[:,3], extend='both')

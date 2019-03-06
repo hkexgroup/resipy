@@ -188,7 +188,8 @@ class Survey(object):
             self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
         
         # create a backup of the clean dataframe
-        self.dfReset = self.df.copy
+        self.dfReset = self.df.copy()
+        self.dfPhaseReset = self.df.copy()
         
         ''' the following piece of code is not useful anymore. The default
         behavior is to keep all measurements except NaN, duplicates, Inf and
