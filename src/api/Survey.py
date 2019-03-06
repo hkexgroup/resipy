@@ -84,7 +84,7 @@ class Survey(object):
 
         
         self.df = data
-
+        
         # add error measured to the error columns (so they can be used if no error model are fitted)
         if 'magErr' in self.df.columns:
             self.df['resError'] = self.df['magErr'].copy()
@@ -105,6 +105,7 @@ class Survey(object):
 
         # apply basic filtering
         self.basicFilter()
+        self.reciprocal()
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
         

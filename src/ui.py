@@ -762,7 +762,7 @@ class App(QMainWindow):
                     pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
-#                    hbox4.addWidget(buttonfr)
+        #                    hbox4.addWidget(buttonfr)
                     buttonfr.show()
                     recipOrNoRecipShow(recipPresence = False)
                 else:
@@ -771,7 +771,7 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
                     errHist()
-#                generateMesh()
+        #                generateMesh()
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
@@ -783,7 +783,7 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
-
+        
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
@@ -857,11 +857,11 @@ class App(QMainWindow):
                     forwardPseudoIP.setVisible(True)
                 else:
                     plotPseudoIP()
-                    phaseplotError()
                     showIpOptions(True)
                     mwPseudoIP.setVisible(True)
                     tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                        phaseplotError()
                         tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
                         recipfilt.setEnabled(True)
                     heatRaw()
@@ -1426,6 +1426,7 @@ class App(QMainWindow):
                 recipErrorInputLine.show()
                 recipErrorInputLine.setText('-')
                 recipErrorPltbtn.setText('Apply filters')
+                recipErrorUnpairedBtn.show()
                 recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
                 recipErrorBottomTabs.setTabEnabled(1, True)
             if recipPresence == False:
@@ -1434,6 +1435,7 @@ class App(QMainWindow):
                 recipErrorInputLabel.hide()
                 recipErrorInputLine.setText('-')
                 recipErrorInputLine.hide()
+                recipErrorUnpairedBtn.hide()
                 recipErrorPltbtn.setText('Remove selected points')
                 recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
                 recipErrorBottomTabs.setTabEnabled(1, False)              
@@ -1537,11 +1539,17 @@ class App(QMainWindow):
         
         def recipErrorUnpairedFunc():
             self.r2.removeUnpaired()
+            if ipCheck.checkState() == Qt.Checked:
+                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
+                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                heatFilter()
+                phaseplotError()
             plotManualFiltering()
             plotError()
             infoDump('Removing unpaired quadrupoles.')
 
         recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
+        recipErrorUnpairedBtn.setFixedWidth(150)
         recipErrorUnpairedBtn.setToolTip('Remove quadrupoles without reciprocals')
         recipErrorUnpairedBtn.clicked.connect(recipErrorUnpairedFunc)
         recipErrorBtnLayout.addWidget(recipErrorUnpairedBtn)
