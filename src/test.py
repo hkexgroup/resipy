@@ -98,9 +98,14 @@ plt.close('all')
 print('----------- Testing ip -----------')
 k = R2(typ='cR2')
 k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
-k.err = True
 k.invert()
 
+
+#%%
+from api.R2 import R2
+k = R2()
+k.createSurvey('/home/jkl/Downloads/2016-03-10.dat', ftype='Protocol')
+k.write2protocol()
 
 #%% test for timelapse inversion
 plt.close('all')

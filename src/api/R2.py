@@ -325,6 +325,16 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveysInfo.append(info)
         self.setBorehole(self.iBorehole)
         
+        # if all survey have magErr and phiErr then put self.err = True
+        ok = True
+        for s in self.surveys:
+            if 'magErr' not in s.df.columns:
+                ok = False
+        if ok is True:
+            print('magErr/phiErr columns detected, will be used in protocol.dat')
+            self.err = True
+            
+        
         # define electrode position according to first survey
         if len(self.surveys) == 1:
             self.elec = self.surveys[0].elec
