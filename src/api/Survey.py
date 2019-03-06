@@ -81,7 +81,12 @@ class Survey(object):
             else:
                 print("Unrecognised ftype, available types are :",avail_ftypes )
                 raise Exception('Sorry this file type is not implemented yet')
-                
+
+        # add error measured to the error columns (so they can be used if no error model are fitted)
+        if 'magErr' in self.df.columns:
+            self.df['resError'] = self.df['magErr'].copy()
+        if 'phiErr' in self.df.columns:
+            self.df['phaseError'] = self.df['phiErr'].copy()
         
         self.df = data
         self.dfReset = pd.DataFrame() #for preserving reset ability
@@ -97,7 +102,6 @@ class Survey(object):
         if ftype == 'BGS Prime':
             self.checkTxSign()
 
-        self.keepAll = keepAll # keep dummy and non reciprocal measurements in
         irecip = self.reciprocal()                
         if all(irecip == 0) == False: # contains reciprocal
             self.basicFilter()
@@ -147,13 +151,13 @@ class Survey(object):
         
         
     def basicFilter(self):
-        """ Remove NaN and Inf values in the data.
+        """ Remove NaN, Inf and duplicates values in the data frame.
         """
         # remove Inf and NaN
         resist = self.df['resist'].values
         iout = np.isnan(resist) | np.isinf(resist)
         if np.sum(iout) > 0:
-            print('Number of BAD transfer resistance data (Inf or NaN) : ', np.sum(iout))
+            print('Survey.basicFilter: Number of Inf or NaN : ', np.sum(iout))
         self.filterData(~iout)
         
         # remove duplicates
@@ -161,33 +165,45 @@ class Survey(object):
         self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0:
-            print(ndup, 'duplicates removed.')
+            print('Survey.basicFilter: ', ndup, 'duplicates removed.')
         
         # remove quadrupoles were A or B are also potential electrodes
         ie1 = self.df['a'].values == self.df['m'].values
         ie2 = self.df['a'].values == self.df['n'].values
         ie3 = self.df['b'].values == self.df['m'].values
         ie4 = self.df['b'].values == self.df['n'].values
-#        ie2 = self.df['b'] == (self.df['m'] | self.df['n'])
         ie = ie1 | ie2 | ie3 | ie4
         if np.sum(ie) > 0:
-            print(np.sum(ie), 'measurements with A or B == M or N')
+            print('Survey.basicFilter: ', np.sum(ie), 'measurements with A or B == M or N')
         self.filterData(~ie)
         
         # we need to redo the reciprocal analysis if we've removed duplicates and ...
         if ndup > 0 or np.sum(ie) > 0:
             self.reciprocal()
         
-        # remove measurement without reciprocal
-        if self.keepAll is False:
-            print('ah ah let us make some order here !')
-            irecip = self.df['irecip'].values
-            self.filterData(irecip != 0) # non reciprocal (some are dummy)
-            if self.elec[:,1].sum() == 0: # it's a 2D case
-                self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
-            if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
-                self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
-            self.dfReset = self.df.copy()
+        # remove dummy for 2D case
+        if self.elec[:,1].sum() == 0: # it's a 2D case
+            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
+        
+        # create a backup of the clean dataframe
+        self.dfReset = self.df.copy
+        
+        ''' the following piece of code is not useful anymore. The default
+        behavior is to keep all measurements except NaN, duplicates, Inf and
+        dummy (2D only) and compute error model on the subset which has
+        reciprocal then apply the error model to all the quadrupoles
+        '''
+        
+#        # remove measurement without reciprocal
+#        if self.keepAll is False:
+#            print('ah ah let us make some order here !')
+#            irecip = self.df['irecip'].values
+#            self.filterData(irecip != 0) # non reciprocal (some are dummy)
+#            if self.elec[:,1].sum() == 0: # it's a 2D case
+#                self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
+#            if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
+#                self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
+#            self.dfReset = self.df.copy()
           
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
@@ -570,8 +586,8 @@ class Survey(object):
         a4 = np.around(coefs_ip[1], decimals=1)
         print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
         ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
-        self.df['PhaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
-        self.df['Phase'] = -self.kFactor*self.df['ip']
+        self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
+        self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
 
@@ -615,10 +631,11 @@ class Survey(object):
         b3 = np.around((coefs_ip[1]), decimals=3)
         c3 = np.around((coefs_ip[2]),decimals=3)
         ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
-        self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
-        self.df['Phase'] = -self.kFactor*self.df['ip']
+        self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
+        self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
+
 
     def pwlfit(self, ax=None):
         """ Fit an power law to the resistivity data.
@@ -662,10 +679,11 @@ class Survey(object):
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
-        self.df['pwlError'] = a1*(np.abs(self.df['recipMean'])**a2)
+        self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
+
 
     def linfit(self, ax=None):
         """ Fit a linear relationship to the resistivity data.
@@ -709,7 +727,7 @@ class Survey(object):
         a4 = np.around(coefs[1], decimals=1)
         print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin Linear plot\n $R_{error}$ = %s$R_{avg}$ %s %s (R$^2$ = %s)' % (a1,self.sign_coef(a2), np.abs(a2),R2))     
-        self.df['linError'] = a1*(np.abs(self.df['recipMean']))+a2
+        self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         self.errorModel = lambda x : a1*(np.abs(x))+a2
         if ax is None:
             return fig                  
@@ -1061,25 +1079,22 @@ class Survey(object):
             return fig
     
     
-    def write2protocol(self, outputname='', errTyp='none', errTot=False,
-                       ip=False, errTypIP='none', res0=False, isubset=None):
+    def write2protocol(self, outputname='', err=False, errTot=False,
+                       ip=False, res0=False, isubset=None):
         """ Write a protocol.dat file for R2 or cR2.
         
         Parameters
         ----------
         outputname : str, optional
             Path of the output file.
-        errTyp : str, optional
-            If `none` no error columns will be added. Other options are : 
-                'lin','lme','pwl'or 'obs'.
+        err : bool, optional
+            If `True`, then the `resError` and `phaseError` (if IP present)
+            will be used in the protocol.dat file.
         errTot : bool, optional
             If `True`, the modelling error will be added to the error from the
             error model to form the *total error*.
         ip : bool, optional
             If `True` and IP columns will be added to the file.
-        errTypIP : str, optional
-            Needs `ip=True` to be taken into account. Specify the string of
-            the error model to apply for IP data.
         res0 : bool, optional
             For time-lapse inversion, the background resistivity will be added 
             if `True`.
@@ -1098,85 +1113,52 @@ class Survey(object):
             df = self.df
         else:
             df = self.df[isubset]
+                                
+        # selecte paired and non-paired quadrupoles
+        ie = df['irecip'].values >= 0 # reciprocal + non-paired
         
-        # check if error type are correctly specified
-        avail_err = ['none','obs','lme','lin','pwl']
-        if errTyp not in avail_err:
-            content = ''
-            for i in range(len(avail_err)):
-                content += avail_err[i]
-            raise NameError("Unrecognised error type, available types are "+content)
+        # write quadrupoles
+        x = df[ie][['a','b','m','n']].values.astype(int)
+        xx = np.c_[1+np.arange(len(x)), x]
+        protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         
-        # TODO this raises a neg_flag but this shouldn't be needed really
-        ie = df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
-        neg_flag=False
-        if all(ie==False):
-            ie = df['irecip'].values != 0 # take negative recip indexes instead
-            neg_flag=True
+        # write transfer resistance
+        protocol['res'] = df[ie]['recipMean'].values # non-paired will be nan
         
-        # check if we have reciprocal (haveReciprocal==True)
-        # and if we want to keep them and discard the non-paired measurements (self.keepAll == False)
-        haveReciprocal = all(df['irecip'].values == 0)
-        if haveReciprocal is False and self.keepAll is False: # so we have reciprocals and don't want dummy inside
-            x = df[['a','b','m','n']].values[ie,:].astype(int)
-            xx = np.c_[1+np.arange(len(x)), x]
-            protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            if neg_flag:
-                dfg = df[df['irecip'] != 0] 
-            else:
-                dfg = df[df['irecip'] > 0] 
-            protocol['R'] = dfg['recipMean'].values
-            if res0:
-                protocol['R0'] = dfg['recipMean0'].values
-            if ip == True and self.protocolIPFlag == False:
-                protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" is to change m to phi
-            elif self.protocolIPFlag == True:
-                protocol['Phase'] = dfg['ip'].values
-            if errTyp != 'none':
-                if errTyp == 'obs':
-                    protocol['error'] = df['recipError'].values[ie]
-                if errTyp =='lme':
-                    protocol['error'] = dfg['lmeError'].values
-                if errTyp == 'lin':
-                    protocol['error'] = dfg['linError'].values
-                if errTyp == 'pwl':
-                    protocol['error'] = dfg['pwlError'].values
-                if errTot == True:
+        # write background transfer resistance
+        if res0 is True: # background for time-lapse and so
+            protocol['res0'] = df[ie]['recipMean0'].values
+        
+        # write phase (and eventually convert chargeability into phase)
+        if ip is True:
+            if self.protocolIPFlag is True: # if imported from Protocol then it's already in phase
+                protocol['phase'] = df[ie]['ip'].values 
+            else: # otherwise it is in chargeability and we need to convert it
+                protocol['phase'] = -self.kFactor*df[ie]['ip'].values # "-self.kFactor" is to change m to phi
+                
+        # write error for DC
+        if err is True:
+            if 'resError' in df.columns: # the columns exists
+                if np.sum(np.isnan(df[ie]['resError'])) == 0: # no NaN inside
+                    protocol['resError'] = df[ie]['resError'].values
+                if errTot == True: # we want to add modelling error to that
                     print('Using total error')
                     if 'modErr' not in df.columns:
-                        print('ERROR : you must specify a modelling error')
-                    else:
-                        protocol['error'] = np.sqrt(protocol['error']**2 + self.df[ie]['modErr'].values**2)
-            if errTypIP != 'none':  # or == 'pwlip'
-                if 'PhaseError' not in df.columns: # TO BE DELETED
-                    dfg['PhaseError'] = 0.1 # TO BE DELTED
-                protocol['ipError'] = df['PhaseError'].values[ie]
+                        raise ValueError('ERROR : you must specify a modelling error')
+                    else: # if present, compute geometric mean of the errors
+                        protocol['resError'] = np.sqrt(protocol['error']**2 + df[ie]['modErr'].values**2)
+            else:
+                raise ValueError('You requested DC error but no error model can be found.')
                 
-        else: # so there is no reciprocals or we want to use all data available (even non-paired)
-            x = df[['a','b','m','n']].values.astype(int)
-            if (errTyp == 'none') and ('magErr' in self.df.columns):
-                errTyp = 'magErr' # the user defined error is prioritary
-            if (errTypIP == 'none') and ('phiErr' in self.df.columns):
-                errTypIP = 'phiErr'
-            xx = np.c_[1+np.arange(len(x)), x]
-            protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            protocol['R'] = df['resist'].values
-            if res0:
-                protocol['R0'] = df['resist0'].values
-            if ip == True:
-                if self.protocolIPFlag == False:
-                    protocol['Phase'] = -self.kFactor*df['ip'].values # "-self.kFactor" is to change m to phi
-                elif self.protocolIPFlag == True:
-                    protocol['Phase'] = df['ip'].values
-                if 'phiErr' in self.df.columns:
-                    protocol['error'] = df[errTyp]
-                    protocol['ipError'] = df[errTypIP]
-            elif errTyp != 'none':
-                try: #### TODO: HOTFIX inserted here. Looks like changing the error types above didnt change the key assigned to survey dataframe, hence an error is raised. 
-                    protocol['error'] = df[errTyp] 
-                except KeyError:
-                    protocol['error'] = df[errTyp+'Error']
-                
+        # write error for IP
+        if (ip is True) and (err is True): # ip is present and we want error
+            if 'phaseError' in df.columns: # column exists
+                if np.sum(np.isnan(df[ie]['phaseError'])) == 0: # no NaN inside
+                    protocol['phaseError'] = df[ie]['phaseError'].values
+            else:
+                raise ValueError('You requested IP error but none can be found.')
+
+                    
         # if it's 3D, we add the line number (all electrode on line 1)
         if all(self.elec[:,1] == 0) is False:
             protocol.insert(1, 'sa', 1)

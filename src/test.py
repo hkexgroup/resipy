@@ -52,7 +52,7 @@ k.showMesh()
 
 #k.lmefit(iplot=True)
 k.write2in()
-#k.write2protocol(errTyp='pwl', errTot=True)
+#k.write2protocol(err=True, errTot=True)
 k.invert()
 k.showResults(attr='Conductivity(mS/m)')
 #k.showInParaview()
@@ -83,6 +83,9 @@ k = R2(typ='cR2')
 #k.createSurvey('api/test/IP/rifleday8.csv', ftype='Syscal')
 k.createSurvey('api/test/IP/syscalFileIP.csv')
 k.createMesh('quad')
+k.pwlfit()
+k.plotIPFit()
+k.err=True
 k.invert()
 k.showResults(attr='Magnitude(Ohm-m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
@@ -124,7 +127,7 @@ for s in k.surveys:
     s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
 k.createMesh('trian')
 k.pwlfit()
-k.errTyp = 'pwl'
+k.err = True
 k.invert(parallel=True, iMoveElec=True)
 k.showResults(index=0)
 k.showResults(index=1)

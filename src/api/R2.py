@@ -183,8 +183,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.typ = typ # or cR2 or R3, cR3
-        self.errTyp = 'none' # type of error to add for DC
-        self.errTypIP = 'none' # type of error to add for IP phase
+        self.err = False # if we want error in protocol.dat or not
         self.iBorehole = False # to tell the software to not plot pseudoSection
         self.iTimeLapse = False # to enable timelapse inversion
         self.iBatch = False # to enable batch inversion
@@ -193,7 +192,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
         # to run an inversion (and so need to reset the regions before this)
-        self.doi = None
+        self.doi = None # depth of investigation below the surface [in survey units]
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         
@@ -232,6 +231,7 @@ class R2(object): # R2 master class instanciated by the GUI
             print('creating the dirname')
             os.mkdir(dirname)
         self.dirname = os.path.abspath(dirname)
+    
     
     def setElec(self, elec,elecList=None):
         """ Set electrodes.
@@ -292,7 +292,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iBorehole = val
         for s in self.surveys:
             s.iBorehole = val
-            
+        
+        
     def setTitle(self,linetitle):
         """Set the title of the survey name when inverting data. Input is a string.
         """
@@ -301,8 +302,9 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             print("Cannot set Survey title as input is not a string")
     
+    
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None,
-                     parser=None, keepAll=False):
+                     parser=None):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -318,10 +320,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Electrode spacing to be passed to the parser function.
         parser : function, optional
             A parser function to be passed to `Survey` constructor.
-        keepAll: bool, optional
-            Filter out NaN and Inf but also dummy measurements.
         """    
-        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, keepAll=keepAll))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser))
         self.surveysInfo.append(info)
         self.setBorehole(self.iBorehole)
         
@@ -346,8 +346,9 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removenested = self.surveys[0].removenested
             self.addFilteredIP = self.surveys[0].addFilteredIP
         
+        
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print, keepAll=False):
+                          parser=None, isurveys=[], dump=print):
         """ Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -367,12 +368,10 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump the information message when importing the files.
-        keepAll: bool, optional
-            Filter out NaN and Inf but also dummy measurements.
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
-                                   parser=parser, dump=dump, keepAll=keepAll)
+                                   parser=parser, dump=dump)
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
@@ -380,7 +379,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
                               spacing=None, parser=None, isurveys=[],
-                              dump=print, keepAll=False, trim=True):
+                              dump=print):
         """ Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -402,32 +401,19 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump information message when importing the files.
-        keepAll : bool, optional
-            If `True`, filter out NaN and Inf but also dummy measurements.
-        trim : bool, optional
-            If `True` this ensure that all surveys imported have the same
-            length. This is needed for difference inversion (`reg_mode=2`) but
-            not for background constrained inversion (`reg_mode=1`) and can be
-            disable in this last case.
         """    
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         files = np.sort(os.listdir(dirname))
-        if not trim:
-            self.param['reg_mode']=1 # has to be constrained inversion 
 
         for f in files:
-            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing, keepAll=keepAll)
+            self.createSurvey(os.path.join(dirname, f), ftype=ftype, parser=parser, spacing=spacing)
             haveReciprocal = all(self.surveys[-1].df['irecip'].values == 0)
             self.iTimeLapseReciprocal.append(haveReciprocal)
             dump(f + ' imported')
             print('---------', f, 'imported')
-            if len(self.surveys) == 1:
-                ltime = len(self.surveys[0].df)
-            if len(self.surveys) > 1: # check to see if the number of measurements is changing, if so throw an error
-                if len(self.surveys[-1].df) != ltime and trim is True: # can have changing number of measurements for constrained inversion
-                    print('ERROR:', f, 'survey doesn\'t have the same length')
-                    return
+            # all surveys are imported whatever their length, they will be matched
+            # later if reg_mode == 2 (difference inversion)
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
         self.elec = self.surveys[0].elec
         self.setBorehole(self.iBorehole)
@@ -488,18 +474,17 @@ class R2(object): # R2 master class instanciated by the GUI
             return x
         
         # get measurements common to all surveys
-        icommon = np.ones(dfs2[0].shape[0], dtype=bool)
         df0 = dfs2[0]
         x0 = cols2str(df0[['a','b','m','n']].values)
+        icommon = np.ones(len(x0), dtype=bool)
         for df in dfs2[1:]:
             x = cols2str(df[['a','b','m','n']].values)
-            ie = np.in1d(x, x0)
+            ie = np.in1d(x0, x)
             icommon = icommon & ie
-#        print('measurements in common = ', np.sum(icommon))
+        print('measurements in common = ', np.sum(icommon))
         
         # create boolean index to match those measurements
         indexes = []
-        x0 = cols2str(df0[['a','b','m','n']].values)
         xcommon = x0[icommon]
         for df in dfs2:
             x = cols2str(df[['a','b','m','n']].values)
@@ -509,7 +494,6 @@ class R2(object): # R2 master class instanciated by the GUI
     
         return indexes               
                     
-        
     
     def filterElec(self, elec=[]):
         """ Filter out specific electrodes given in all surveys.
@@ -874,26 +858,19 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if typ is None:
             typ = self.typ
-        if all(self.surveys[0].df['irecip'].values == 0):
+        if self.err is True:
+            self.param['a_wgt'] = 0
+            self.param['b_wgt'] = 0
+        elif typ[0] != 'c': # DC case
             if 'a_wgt' not in self.param:
                 self.param['a_wgt'] = 0.01
             if 'b_wgt' not in self.param:
                 self.param['b_wgt'] = 0.02
-        if typ == 'cR2':
-            if self.errTypIP != 'none': # we have individual errors
-                if 'a_wgt' not in self.param:
-                    self.param['a_wgt'] = 0
-                if 'b_wgt' not in self.param:
-                    self.param['b_wgt'] = 0
-            else:
-                if 'a_wgt' not in self.param:
-                    self.param['a_wgt'] = 0.02 # variance for magnitude (no more offset)
-                if 'b_wgt' not in self.param:
-                    self.param['b_wgt'] = 2 # mrad
-       
-        if self.errTyp != 'none':
-            self.param['a_wgt'] = 0
-            self.param['b_wgt'] = 0
+        if typ == 'cR2': # TODO what about cR3 ?
+            if 'a_wgt' not in self.param:
+                self.param['a_wgt'] = 0.02 # variance for magnitude (no more offset)
+            if 'b_wgt' not in self.param:
+                self.param['b_wgt'] = 2 # mrad
             
         
         if self.param['mesh_type'] == 4:
@@ -1020,15 +997,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 np.savetxt(f, x2)
             
 
-    def write2protocol(self, errTyp=None, errTypIP=None, errTot=False, **kwargs):
+    def write2protocol(self, err=None, errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
         
         Parameters
         ----------
-        errTyp : str
-            Type of the DC error. Either 'pwl', 'lin', 'obs'.
-        errTypIP : str
-            Type of the IP error. Either 'pwl' or 'hyp'.
+        err : bool, optional
+            If `True` error columns will be written in protocol.dat provided
+            an error model has been fitted or error have been imported.
         errTot : bool, optional
             If `True`, it will compute the modelling error due to the mesh and
             add it to the error from an error model.
@@ -1040,10 +1016,8 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             ipBool = False
 
-        if errTyp is None:
-            errTyp = self.errTyp
-        if errTypIP is None:
-            errTypIP = self.errTypIP
+        if err is None:
+            err = self.err
         
         # important changing sign of resistivity and quadrupoles so to work
         # with complex resistivity
@@ -1070,16 +1044,14 @@ class R2(object): # R2 master class instanciated by the GUI
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
-            errCol = 'none'
             for i, s in enumerate(self.surveys[1:]):
                 s.df['resist0'] = self.surveys[0].df['resist']
                 s.df['recipMean0'] = self.surveys[0].df['recipMean']
-                if errTyp != 'none':
-                    s.df['pwlError'] = self.bigSurvey.errorModel(s.df['resist'].values)
-                    errCol = 'pwl' # we just use this colum to store the error type even if it's not pwl
+                if err is True:
+                    s.df['resError'] = self.bigSurvey.errorModel(s.df['resist'].values)
                 res0Bool = False if self.param['reg_mode'] == 1 else True
-                protocol = s.write2protocol('', errTyp=errCol, res0=res0Bool,
-                                            isubset=indexes[i])
+                protocol = s.write2protocol('', err=err, res0=res0Bool,
+                                            isubset=indexes[i+1])
                 content = content + str(protocol.shape[0]) + '\n'
                 content = content + protocol.to_csv(sep='\t', header=False, index=False)
                 
@@ -1093,7 +1065,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-                    s.write2protocol(os.path.join(refdir, 'protocol.dat'), isubset=indexes[i])
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat')) # no subset for background, just use all
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
         
@@ -1101,10 +1073,9 @@ class R2(object): # R2 master class instanciated by the GUI
         elif self.iBatch is True:
             content = ''
             for i, s in enumerate(self.surveys):
-                if self.errTyp != 'none':
-                    s.df[self.errTyp+'Error'] = self.bigSurvey.errorModel(s.df['resist'].values)
-                df = s.write2protocol(outputname='',
-                    errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)
+                if err is True:
+                    s.df['resError'] = self.bigSurvey.errorModel(s.df['resist'].values)
+                df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
                 content = content + str(len(df)) + '\n'
                 content = content + df.to_csv(sep='\t', header=False, index=False)
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
@@ -1113,7 +1084,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # for normal inversion (one survey) --------------------------
         else:
             self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                    errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)
+                        err=err, ip=ipBool, errTot=errTot)
         
         
     def runR2(self, dirname='', dump=print):
