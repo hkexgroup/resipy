@@ -96,7 +96,7 @@ k.pseudoError()
 #%% test for IP with Sina's data
 plt.close('all')
 print('----------- Testing ip -----------')
-k = R2('cR2')
+k = R2(typ='cR2')
 k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
 k.err = True
 k.invert()
