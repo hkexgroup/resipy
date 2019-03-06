@@ -1444,14 +1444,16 @@ class App(QMainWindow):
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
             
         def errHist():
-            recipErrorPLot.plot(self.r2.errorDist)
+            if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                recipErrorPLot.plot(self.r2.errorDist)
+            else:
+                pass
         
         def recipFilter():
             numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
             if recipErrorInputLine.text() != '-':
                 percent = float(recipErrorInputLine.text())
                 numRecipRemoved = self.r2.filterRecip(percent=percent)
-                errHist()
                 infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements are removed!" % (numRecipRemoved,percent,numSelectRemoved))
             else:
                 infoDump("%i selected measurements are removed!" % (numSelectRemoved))
@@ -1460,6 +1462,7 @@ class App(QMainWindow):
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                 heatFilter()
                 phaseplotError()
+            errHist()
             plotManualFiltering()
             plotError()
             
@@ -1474,6 +1477,7 @@ class App(QMainWindow):
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
                 heatFilter()
                 phaseplotError()
+            errHist()
             plotManualFiltering()
             plotError()
             infoDump('%i measurements are restored!' % numRestored)
@@ -1544,6 +1548,7 @@ class App(QMainWindow):
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                 heatFilter()
                 phaseplotError()
+            errHist()
             plotManualFiltering()
             plotError()
             infoDump('Removing unpaired quadrupoles.')
