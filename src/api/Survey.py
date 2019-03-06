@@ -82,13 +82,15 @@ class Survey(object):
                 print("Unrecognised ftype, available types are :",avail_ftypes )
                 raise Exception('Sorry this file type is not implemented yet')
 
+        
+        self.df = data
+
         # add error measured to the error columns (so they can be used if no error model are fitted)
         if 'magErr' in self.df.columns:
             self.df['resError'] = self.df['magErr'].copy()
         if 'phiErr' in self.df.columns:
             self.df['phaseError'] = self.df['phiErr'].copy()
-        
-        self.df = data
+            
         self.dfReset = pd.DataFrame() #for preserving reset ability after reciprocal filtering
         self.dfPhaseReset = pd.DataFrame() #for preserving phase reset ability after phase filtering only
         self.dfOrigin = data.copy() # unmodified

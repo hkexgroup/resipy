@@ -92,6 +92,16 @@ k.showResults(attr='Phase(mrad)', sens=False)
 k.pseudoError()
 
 
+
+#%% test for IP with Sina's data
+plt.close('all')
+print('----------- Testing ip -----------')
+k = R2('cR2')
+k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
+k.err = True
+k.invert()
+
+
 #%% test for timelapse inversion
 plt.close('all')
 print('-------------Testing Time-lapse in // ------------')
