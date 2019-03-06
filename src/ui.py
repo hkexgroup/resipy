@@ -369,7 +369,7 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
             tabPreProcessing.setTabEnabled(3, False)
-            tabPreProcessing.setTabEnabled(4, False)
+#            tabPreProcessing.setTabEnabled(3, False)
             
             # mesh
             mwMesh.clear()
@@ -725,8 +725,8 @@ class App(QMainWindow):
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         pass
                     else:
-                        tabPreProcessing.setTabEnabled(1, True)
-                        tabPreProcessing.setTabEnabled(3, True)
+#                        tabPreProcessing.setTabEnabled(1, True)
+                        tabPreProcessing.setTabEnabled(2, True)
                         plotError()
                     activateTabs(True)
                 except:
@@ -764,10 +764,11 @@ class App(QMainWindow):
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
 #                    hbox4.addWidget(buttonfr)
                     buttonfr.show()
+                    recipOrNoRecipShow(recipPresence = False)
                 else:
+                    recipOrNoRecipShow(recipPresence = True)
                     buttonfr.hide()
-                    tabPreProcessing.setTabEnabled(1, True)
-                    tabPreProcessing.setTabEnabled(3, True)
+                    tabPreProcessing.setTabEnabled(2, True)
                     plotError()
                     errHist()
 #                generateMesh()
@@ -776,7 +777,7 @@ class App(QMainWindow):
                 else:
                     self.r2.setBorehole(False)
                 plotPseudo()
-#                plotManualFiltering()
+                plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
@@ -810,14 +811,17 @@ class App(QMainWindow):
                     spacing = float(spacingEdit.text())
                 self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing, parser=self.parser)
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
-                    tabPreProcessing.setTabEnabled(1, True)
-                    tabPreProcessing.setTabEnabled(3, True) # no point in doing error processing if there is no reciprocal
+                    recipOrNoRecipShow(recipPresence = True)
+                    tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                     plotError()
                     if ipCheck.checkState() == Qt.Checked:
-                        tabPreProcessing.setTabEnabled(4, True)
+                        tabPreProcessing.setTabEnabled(3, True)
+                        recipfilt.setEnabled(True)
                         phaseplotError()
+                        heatRaw()
+                        heatFilter()
                     errHist()
-#                plotManualFiltering()
+                plotManualFiltering()
 
         buttonfr = QPushButton('If you have a reciprocal dataset upload it here')
         buttonfr.setAutoDefault(True)
@@ -856,9 +860,9 @@ class App(QMainWindow):
                     phaseplotError()
                     showIpOptions(True)
                     mwPseudoIP.setVisible(True)
-                    tabPreProcessing.setTabEnabled(2, True)
+                    tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
-                        tabPreProcessing.setTabEnabled(4, True) # no reciprocity = no IP error model
+                        tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
                         recipfilt.setEnabled(True)
                     heatRaw()
     #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
@@ -872,8 +876,8 @@ class App(QMainWindow):
                 showIpOptions(False)
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
-                tabPreProcessing.setTabEnabled(2, False)
-                tabPreProcessing.setTabEnabled(4, False)
+                tabPreProcessing.setTabEnabled(1, False)
+                tabPreProcessing.setTabEnabled(3, False)
                 regionTable.setColumnHidden(1, True)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(False)
@@ -1414,54 +1418,100 @@ class App(QMainWindow):
         tabs.addTab(tabPreProcessing, 'Pre-processing')
         tabs.setTabEnabled(1,False)
         
-        manualLayout = QVBoxLayout()
-        
-        
+        def recipOrNoRecipShow(recipPresence = True): # changes the reciprocal filtering tab stuff
+            if recipPresence == True:
+                tabPreProcessing.setTabText(0, 'Reciprocal Filtering')
+                recipErrorLabel.setText('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
+                recipErrorInputLabel.show()
+                recipErrorInputLine.show()
+                recipErrorInputLine.setText('-')
+                recipErrorPltbtn.setText('Apply filters')
+                recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
+                recipErrorBottomTabs.setTabEnabled(1, True)
+            if recipPresence == False:
+                tabPreProcessing.setTabText(0, 'Manual Filtering')
+                recipErrorLabel.setText('<b>Select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
+                recipErrorInputLabel.hide()
+                recipErrorInputLine.setText('-')
+                recipErrorInputLine.hide()
+                recipErrorPltbtn.setText('Remove selected points')
+                recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
+                recipErrorBottomTabs.setTabEnabled(1, False)              
+                
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+            
+        def errHist():
+            recipErrorPLot.plot(self.r2.errorDist)
         
-        def btnDoneFunc():
-            self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-            infoDump('Data have been manually filtered.')
+        def recipFilter():
+            numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+            if recipErrorInputLine.text() != '-':
+                percent = float(recipErrorInputLine.text())
+                numRecipRemoved = self.r2.filterRecip(percent=percent)
+                errHist()
+                infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements are removed!" % (numRecipRemoved,percent,numSelectRemoved))
+            else:
+                infoDump("%i selected measurements are removed!" % (numSelectRemoved))
+            if ipCheck.checkState() == Qt.Checked:
+                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
+                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                heatFilter()
+                phaseplotError()
             plotManualFiltering()
             plotError()
+            
+        def resetRecipFilter():
+            numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
+            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+            if recipErrorInputLine.text() != '-':
+                errHist()
+                recipErrorInputLine.setText('-')
+            if ipCheck.checkState() == Qt.Checked:
+                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].dfReset.copy()
+                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
+                heatFilter()
+                phaseplotError()
+            plotManualFiltering()
+            plotError()
+            infoDump('%i measurements are restored!' % numRestored)
+
+#        manualLayout = QVBoxLayout()
+          
+#        def btnDoneFunc():
+#            self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+#            infoDump('Data have been manually filtered.')
+#            plotManualFiltering()
+#            plotError()
+
+#        manualTopLayout = QVBoxLayout()
+#        manualTopLayout.setAlignment(Qt.AlignTop)
+#        notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
+#        manualTopLayout.addWidget(notice)
+#        
+#        btnLayout = QHBoxLayout()
         
-        manualTopLayout = QVBoxLayout()
-        manualTopLayout.setAlignment(Qt.AlignTop)
-        notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
-        manualTopLayout.addWidget(notice)
-        
-        btnLayout = QHBoxLayout()
-        
-        btnStart = QPushButton('Start')
-        btnStart.setAutoDefault(True)
-        btnStart.clicked.connect(plotManualFiltering)
-        btnStart.setToolTip('Plot a clickable pseudo section with electrodes.')
-        btnLayout.addWidget(btnStart)
-        btnDone = QPushButton('Apply')
-        btnDone.setAutoDefault(True)
-        btnDone.clicked.connect(btnDoneFunc)
-        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
-        btnLayout.addWidget(btnDone)
-        manualTopLayout.addLayout(btnLayout)
-        manualLayout.addLayout(manualTopLayout, 0) # number is stretch factor
-        
-        manualBottompLayout = QVBoxLayout()
-        
-        mwManualFiltering = MatplotlibWidget(navi=True)
-        manualBottompLayout.addWidget(mwManualFiltering)
-        manualLayout.addLayout(manualBottompLayout, 1) # '1' to keep the plot in largest strech
-        
-        # Error histogram tab
+#        btnStart = QPushButton('Start')
+#        btnStart.setAutoDefault(True)
+#        btnStart.clicked.connect(plotManualFiltering)
+#        btnStart.setToolTip('Plot a clickable pseudo section with electrodes.')
+#        btnLayout.addWidget(btnStart)
+#        btnDone = QPushButton('Apply')
+#        btnDone.setAutoDefault(True)
+#        btnDone.clicked.connect(btnDoneFunc)
+#        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
+#        btnLayout.addWidget(btnDone)
+#        manualTopLayout.addLayout(btnLayout)
+#        manualLayout.addLayout(manualTopLayout, 0) # number is stretch factor
+     
         recipErrorLayout = QVBoxLayout()
         recipErrorTopLayout = QVBoxLayout()
         
-        recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Automatic basic filtering removes datapoints with larger than 20% error.</br>')
+        recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
         recipErrorTopLayout.addWidget(recipErrorLabel)
         
         
         recipErrorInputlayout = QHBoxLayout()
-#        recipErrorInputlayout.setAlignment(Qt.AlignLeft)
         
         recipErrorInputLeftlayout = QHBoxLayout()
         recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
@@ -1475,41 +1525,25 @@ class App(QMainWindow):
         recipErrorInputLineLayout = QHBoxLayout()
         recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
         
-        recipErrorInputLine = QLineEdit('20')
-        recipErrorInputLine.setToolTip('Default value = 20%')
+        recipErrorInputLine = QLineEdit('-')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
         recipErrorInputLineLayout.addWidget(recipErrorInputLine)
         recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
         recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
-        
-        def errHist():
-            percent = float(recipErrorInputLine.text())
-            self.r2.filterRecip(percent=percent)
-            recipErrorPLot.plot(self.r2.errorDist)
-            if ipCheck.checkState() == Qt.Checked:
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
-                heatFilter()
             
-        def resetRecipFilter():
-            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
-            self.r2.filterRecip(percent=20) # we assume 20% is a default value - always
-            recipErrorPLot.plot(self.r2.errorDist)
-            recipErrorInputLine.setText('20')
-            if ipCheck.checkState() == Qt.Checked:
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
-                heatFilter()
-        
         recipErrorBtnLayout = QHBoxLayout()
+        recipErrorBtnLayout.setAlignment(Qt.AlignRight)
         
-        recipErrorPltbtn = QPushButton('Plot error histogram')
-        recipErrorPltbtn.setToolTip('Plotting reciprocal error distribution. <br>Error probablity is highest around zero for a good dataset. </br><br>The narrower the parametric fit, the better.<br>')
-        recipErrorPltbtn.clicked.connect(errHist)
+        recipErrorPltbtn = QPushButton('Apply filters')
+        recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
+        recipErrorPltbtn.clicked.connect(recipFilter)
         recipErrorPltbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorPltbtn)
         
         recipErrorResetbtn = QPushButton('Reset')
-        recipErrorResetbtn.setToolTip('This will reset back all of your data to <br>their state after automatic basic filtering.</br>')
+        recipErrorResetbtn.setStyleSheet("color: red")
+        recipErrorResetbtn.setToolTip('This will restore all deleted measurements at this stage')
         recipErrorResetbtn.clicked.connect(resetRecipFilter)
         recipErrorResetbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorResetbtn)
@@ -1518,15 +1552,33 @@ class App(QMainWindow):
         recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
         recipErrorTopLayout.addLayout(recipErrorInputlayout)
         
-        recipErrorLayout.addLayout(recipErrorTopLayout, 0)
+        recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
         
         recipErrorPlotLayout = QVBoxLayout()
         recipErrorPLot = MatplotlibWidget(navi=True)
         recipErrorPlotLayout.addWidget(recipErrorPLot)
+               
+        recipErrorBottomLayout = QVBoxLayout()
         
-        recipErrorLayout.addLayout(recipErrorPlotLayout, 1)
+        recipErrorBottomTabs = QTabWidget() 
         
-        # Resrtance error tab
+        recipErrorPseudoPlotLayout = QVBoxLayout()
+        mwManualFiltering = MatplotlibWidget(navi=True)
+        recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
+#        manualPseudoPlotLayout.setLayout(manualBottomLayout)
+        pseudoSectionPlotTab = QWidget()
+        pseudoSectionPlotTab.setLayout(recipErrorPseudoPlotLayout)
+        recipErrorBottomTabs.addTab(pseudoSectionPlotTab, 'Pseudo Section')
+        
+        errorHistogramPlotTab = QWidget()
+        errorHistogramPlotTab.setLayout(recipErrorPlotLayout)
+        recipErrorBottomTabs.addTab(errorHistogramPlotTab, 'Error Histogram')
+        
+        recipErrorBottomLayout.addWidget(recipErrorBottomTabs)
+#        manualBottomLayout.addWidget(mwManualFiltering)
+        recipErrorLayout.addLayout(recipErrorBottomLayout, 1) # '1' to keep the plot in largest strech
+        
+        # Resistance error tab
         errorLayout = QVBoxLayout()
         
         def errorModelSpecified():
@@ -1712,8 +1764,8 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
         
         def filt_reset():
-            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
-            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfPhaseReset.copy()
+            self.r2.surveys[0].df = self.r2.surveys[0].dfPhaseReset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             infoDump('All phase filteres are now reset!')
@@ -1738,7 +1790,7 @@ class App(QMainWindow):
         
         resetlayout = QHBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
-        filtreset.setStyleSheet("background-color: red")
+        filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
@@ -1814,9 +1866,9 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(resetlayout, 2)
         phasefiltlayout.addLayout(ipfiltlayout, 3)
             
-        manualWidget = QWidget()
-        manualWidget.setLayout(manualLayout)
-        tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
+#        manualWidget = QWidget()
+#        manualWidget.setLayout(manualLayout)
+#        tabPreProcessing.addTab(manualWidget, 'Reciprocal Filtering')
         
         recipErrorWidget = QWidget()
         recipErrorWidget.setLayout(recipErrorLayout)
@@ -1834,12 +1886,10 @@ class App(QMainWindow):
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
 
-        tabPreProcessing.setTabEnabled(0, True) # manual DC filter
-        tabPreProcessing.setTabEnabled(1, False)
-        tabPreProcessing.setTabEnabled(2, False) # IP filter
-        tabPreProcessing.setTabEnabled(3, False) # resistivity error model        
-        tabPreProcessing.setTabEnabled(4, False) # IP error model
-        
+        tabPreProcessing.setTabEnabled(0, True) # Reciprocal filter
+        tabPreProcessing.setTabEnabled(1, False) # IP filter
+        tabPreProcessing.setTabEnabled(2, False) # resistivity error model
+        tabPreProcessing.setTabEnabled(3, False) # IP error model        
         
         #%% tab MESH
         tabMesh= QWidget()
@@ -3545,18 +3595,8 @@ class App(QMainWindow):
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
                           <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
                           <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+                          <p>Python packages used: numpy, pandas, matplotlib.
 <ul>
-<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
-<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
-<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
-</li>
-<li>
- Wes McKinney.
-<strong>Data Structures for Statistical Computing in Python</strong>,
-Proceedings of the 9th Python in Science Conference, 51-56 (2010)
-(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
-</li>
 <li>
 John D. Hunter.
 <strong>Matplotlib: A 2D Graphics Environment</strong>,
@@ -3570,6 +3610,40 @@ USA: Trelgol Publishing, (2006).
 </p>
 <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
 '''%pyR2_version)
+#        aboutText.setText('''<h1>About pyR2</h1> \
+#                          <p><b>Version: %s</b></p> \
+#                          <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
+#                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
+#                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
+#                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
+#                          <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
+#                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
+#                          <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
+#                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+#<ul>
+#<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
+#<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
+#<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
+#</li>
+#<li>
+# Wes McKinney.
+#<strong>Data Structures for Statistical Computing in Python</strong>,
+#Proceedings of the 9th Python in Science Conference, 51-56 (2010)
+#(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
+#</li>
+#<li>
+#John D. Hunter.
+#<strong>Matplotlib: A 2D Graphics Environment</strong>,
+#Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
+#<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a> 
+#</li>
+#<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
+#USA: Trelgol Publishing, (2006).
+#</li>
+#</ul>
+#</p>
+#<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+#'''%pyR2_version)
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)

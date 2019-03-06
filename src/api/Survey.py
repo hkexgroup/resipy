@@ -89,7 +89,8 @@ class Survey(object):
             self.df['phaseError'] = self.df['phiErr'].copy()
         
         self.df = data
-        self.dfReset = pd.DataFrame() #for preserving reset ability
+        self.dfReset = pd.DataFrame() #for preserving reset ability after reciprocal filtering
+        self.dfPhaseReset = pd.DataFrame() #for preserving phase reset ability after phase filtering only
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
@@ -107,6 +108,7 @@ class Survey(object):
             self.basicFilter()
         else:
             self.dfReset = self.df.copy()
+            self.dfPhaseReset = self.df.copy()
         
             
     @classmethod
@@ -258,7 +260,7 @@ class Survey(object):
             self.ndata = len(i2keep)
             self.df = self.df[i2keep]
             print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
-    
+            return np.sum(~i2keep)
     
     def inferType(self):
         """ define the type of the survey
@@ -383,9 +385,12 @@ class Survey(object):
         
         percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
         ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probablity")
-        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(percentError), np.std(percentError))
-        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
         errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
+        if errPercent > 100:
+            errPercent = 100
+        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probablity')
@@ -419,9 +424,12 @@ class Survey(object):
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        self.dfPhaseReset = self.df.copy()
         if debug:
-            print("%i measurements with greater than %3.1f percentage error removed"%(len(df_temp)-len(self.df),
-                                                                                      pcnt))
+            numRemoved = len(df_temp)-len(self.df)
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (numRemoved,pcnt)
+            print(msgDump)
+            return numRemoved
         
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
@@ -1207,7 +1215,7 @@ class Survey(object):
         array = self.df[['a','b','m','n']].values.astype(int)
         if np.sum(self.df['irecip'].values == 0) == 0:
             print('choose recipError')
-            resist = self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
+            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
             clabel = 'Reciprocal Error [%]'
         else:
             print('choose resist')
