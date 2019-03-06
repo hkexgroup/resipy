@@ -186,8 +186,8 @@ class Survey(object):
             self.reciprocal()
         
         # remove dummy for 2D case
-#        if self.elec[:,1].sum() == 0: # it's a 2D case
-#            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
+        if self.elec[:,1].sum() == 0: # it's a 2D case
+            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
         
         # create a backup of the clean dataframe
         self.dfReset = self.df.copy()
@@ -404,10 +404,10 @@ class Survey(object):
             return fig
     
     def removeDummy(self):
-        """ Remove measurements where n < m (likely to be dummy measurements
-        added for speed).
+        """ Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
+        measurements added for speed).
         """
-        i2keep = self.df['n'] > self.df['m']
+        i2keep = np.abs(self.df['a'] - self.df['b']) == np.abs(self.df['m'] - self.df['n'])
         self.filterData(i2keep)
         
         
