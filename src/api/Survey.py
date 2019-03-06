@@ -1126,7 +1126,7 @@ class Survey(object):
             df = self.df[isubset]
                                 
         # selecte paired and non-paired quadrupoles
-        ie = df['irecip'].values >= 0 # reciprocal + non-paired
+        ie = df['irecip'].values != 0 # reciprocal + non-paired
         
         # write quadrupoles
         x = df[ie][['a','b','m','n']].values.astype(int)
