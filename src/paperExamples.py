@@ -120,6 +120,21 @@ fig.show()
 
 
 #%% Forward modelling for different array type
+k = R2(typ='R2')
+k.elec = np.c_[np.linspace(0,24, 24), np.zeros((24, 2))]
+k.createMesh(typ='quad')
+k.addRegion(np.array([[5,-1.5],[10,-1.5],[10,-3.5],[5,-3.5]]), 10, -3)
+k.showMesh()
+k.createSequence(params=[('wenner_alpha', [1,2,3])])
+k.forward(iplot=True, noise=0.05)
+k.invert(iplot=True)
+k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
+# graph
+
+k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+
+k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
 
