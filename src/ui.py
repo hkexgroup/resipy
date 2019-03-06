@@ -1535,6 +1535,17 @@ class App(QMainWindow):
         recipErrorBtnLayout = QHBoxLayout()
         recipErrorBtnLayout.setAlignment(Qt.AlignRight)
         
+        def recipErrorUnpairedFunc():
+            self.r2.removeUnpaired()
+            plotManualFiltering()
+            plotError()
+            infoDump('Removing unpaired quadrupoles.')
+
+        recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
+        recipErrorUnpairedBtn.setToolTip('Remove quadrupoles without reciprocals')
+        recipErrorUnpairedBtn.clicked.connect(recipErrorUnpairedFunc)
+        recipErrorBtnLayout.addWidget(recipErrorUnpairedBtn)
+        
         recipErrorPltbtn = QPushButton('Apply filters')
         recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
         recipErrorPltbtn.clicked.connect(recipFilter)

@@ -162,6 +162,7 @@ class Survey(object):
         iout = np.isnan(resist) | np.isinf(resist)
         if np.sum(iout) > 0:
             print('Survey.basicFilter: Number of Inf or NaN : ', np.sum(iout))
+        print('Inf or NaN: ', end='')
         self.filterData(~iout)
         
         # remove duplicates
@@ -179,6 +180,7 @@ class Survey(object):
         ie = ie1 | ie2 | ie3 | ie4
         if np.sum(ie) > 0:
             print('Survey.basicFilter: ', np.sum(ie), 'measurements with A or B == M or N')
+        print('strange quadrupoles: ', end='')
         self.filterData(~ie)
         
         # we need to redo the reciprocal analysis if we've removed duplicates and ...
@@ -265,6 +267,16 @@ class Survey(object):
             print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
             return np.sum(~i2keep)
     
+    
+    def removeUnpaired(self):
+        """ Remove quadrupoles that don't have a reciprocals. This might
+        remove dummy measurements added for sequence optimization.
+        """
+        i2keep = self.df['irecip'] != 0
+        print('removeUnparied:', end='')
+        self.filterData(i2keep)
+        
+        
     def inferType(self):
         """ define the type of the survey
         """

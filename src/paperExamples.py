@@ -37,10 +37,7 @@ k.removenested() # removing nested measurements
 k.iprangefilt(0,25) # setting phase shift range to 0 < -𝟇 < 25
 k.pwlfit() # adding resistance power-law error model to data
 k.plotIPFit() # adding phase power-law error model to data
-k.errTyp = 'pwl' # setting resistance error type flag to power-law
-k.errTypIP = 'pwlip' # setting phase error type flag to power-law
-k.param['a_wgt'] = 0 # "a_wgt" = 0 when there is individual resistance error
-k.param['b_wgt'] = 0 # "b_wgt" = 0 when there is individual phase error
+k.err = True # using error models (DC and IP) - automatically done in the GUI when fitting the error model
 k.createMesh(typ='trian') # create triangular mesh
 k.invert() # run the inversion (and write cR2.in and protocol.dat automatically)
 k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity section
@@ -71,6 +68,7 @@ k.invert(parallel=True) # run the inversion (and write R2.in and protocol.dat au
 k.showResults(index=0) # show the first inverted section
 k.showResults(index=1) # show the second inverted section
 k.showResults(index=1, attr='difference(percent)') # show the differences between the first and second survey
+
 
 #%% graph
 fig, ax = plt.subplots(figsize=(5, 2))
@@ -119,22 +117,50 @@ fig.savefig(figdir + 'fixedRiver.eps')
 fig.show()
 
 
-#%% Forward modelling for different array type
+#%% Forward modelling for dipole-dipole array
 k = R2(typ='R2')
-k.elec = np.c_[np.linspace(0,24, 24), np.zeros((24, 2))]
+k.setElec(np.c_[np.linspace(0,24, 24), np.zeros((24, 2))])
 k.createMesh(typ='quad')
 k.addRegion(np.array([[5,-1.5],[10,-1.5],[10,-3.5],[5,-3.5]]), 10, -3)
 k.showMesh()
-k.createSequence(params=[('wenner_alpha', [1,2,3])])
+
+k.createSequence(params=[('wenner_alpha',1),
+                         ('wenner_alpha',2),
+                         ('wenner_alpha',3),
+                         ('wenner_alpha',4),
+                         ('wenner_alpha',5),
+                         ('wenner_alpha',6),
+                         ('wenner_alpha',7),
+                         ('wenner_alpha',8),
+                         ('wenner_alpha',9),
+                         ('wenner_alpha',10)])
+
 k.forward(iplot=True, noise=0.05)
 k.invert(iplot=True)
 k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
-# graph
+#%% graph
+fig, ax = plt.subplots(figsize=(7, 2))
+k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
+fig.tight_layout()
+fig.savefig(figdir + 'forwardInitialModel.eps')
+fig.show()
 
-k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+fig, ax = plt.subplots(figsize=(7, 2))
+k.surveys[1].pseudo(ax=ax)
+fig.tight_layout()
+fig.savefig(figdir + 'forwardDipDipPseudo.eps')
+fig.show()
 
-k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+fig, ax = plt.subplots(figsize=(7, 2))
+k.showResults(index=1, ax=ax, sens=False)
+fig.tight_layout()
+fig.savefig(figdir + 'forwardDipDipInverted.eps')
+fig.show()
 
+
+
+#%%
+k.createSequence([('dpdp1', 1, 8)])
 

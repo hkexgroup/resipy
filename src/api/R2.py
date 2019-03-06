@@ -533,7 +533,15 @@ class R2(object): # R2 master class instanciated by the GUI
         for s in self.surveys:
             numRemoved = s.filterRecip(percent)
             return numRemoved
-        
+    
+    
+    def removeUnpaired(self):
+        """ Remove quadrupoles that don't have reciprocals. This might
+        remove dummy measurements added for sequence optimization.
+        """
+        for s in self.surveys:
+            s.removeUnpaired()
+            
         
     def computeDOI(self):
         """ Compute the Depth Of Investigation (DOI).
