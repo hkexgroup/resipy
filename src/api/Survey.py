@@ -186,8 +186,8 @@ class Survey(object):
             self.reciprocal()
         
         # remove dummy for 2D case
-        if self.elec[:,1].sum() == 0: # it's a 2D case
-            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
+#        if self.elec[:,1].sum() == 0: # it's a 2D case
+#            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
         
         # create a backup of the clean dataframe
         self.dfReset = self.df.copy()
