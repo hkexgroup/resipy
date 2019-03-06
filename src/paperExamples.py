@@ -136,32 +136,48 @@ k.createSequence(params=[('wenner_alpha',1),
                          ('wenner_alpha',10)])
 
 k.forward(iplot=True, noise=0.05)
-#%%
 k.invert(iplot=True)
 k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
 #%% graph
 fig, ax = plt.subplots(figsize=(7, 2))
-k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
+k.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
 fig.tight_layout()
 fig.savefig(figdir + 'forwardInitialModel.eps')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(7, 2))
-k.surveys[1].pseudo(ax=ax)
+k.surveys[0].pseudo(ax=ax)
 fig.tight_layout()
-fig.savefig(figdir + 'forwardDipDipPseudo.eps')
+fig.savefig(figdir + 'forwardWennerPseudo.eps')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(7, 2))
-k.showResults(index=1, ax=ax, sens=False)
+k.showResults(index=1, ax=ax, sens=False, zlim=[-7,0])
 fig.tight_layout()
-fig.savefig(figdir + 'forwardDipDipInverted.eps')
+fig.savefig(figdir + 'forwardWennerInverted.eps')
 fig.show()
 
 
 
 #%%
 k.createSequence([('dpdp1', 1, 8)])
+
+k.forward(iplot=True, noise=0.05)
+k.invert(iplot=True)
+k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+
+# graph
+fig, ax = plt.subplots(figsize=(7, 2))
+k.surveys[0].pseudo(ax=ax)
+fig.tight_layout()
+fig.savefig(figdir + 'forwardDipDipPseudo.eps')
+fig.show()
+
+fig, ax = plt.subplots(figsize=(7, 2))
+k.showResults(index=1, ax=ax, sens=False, zlim=[-7,0])
+fig.tight_layout()
+fig.savefig(figdir + 'forwardDipDipInverted.eps')
+fig.show()
 

@@ -16,7 +16,8 @@ import pandas as pd
 #import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
-                     primeParser, primeParserTab, protocolParserIP, protocol3DParser)
+                     primeParser, primeParserTab, protocolParserIP,
+                     protocol3DParser, forwardProtocolDC, forwardProtocolIP)
 from api.DCA import DCA
 
 class Survey(object):
@@ -75,6 +76,11 @@ class Survey(object):
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
                 self.protocolIPFlag = True
+            elif ftype == 'forwardProtocolDC':
+                elec, data = forwardProtocolDC(fname)
+#            elif ftype == 'forwardProtocolIP':
+#                self.protocolIPFlag = True
+#                elec, data = forwardProtocolIP(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -998,6 +1004,9 @@ class Survey(object):
             BN = np.abs(bpos-npos)
             K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
             resist = resist*K
+
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
@@ -1009,6 +1018,7 @@ class Survey(object):
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
         
@@ -1038,6 +1048,11 @@ class Survey(object):
                 fig, ax = plt.subplots()
             cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
             ax.set_title('Pseudo Section')
+            
+        ax.set_xlabel('Distance [m]')
+        ax.set_ylabel('Pseudo depth [m]')
+        if ax is None:
+            return fig
 
     
     def pseudoIP(self, ax=None, contour=False): #IP pseudo section
@@ -1071,6 +1086,9 @@ class Survey(object):
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
         
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
+        
         if contour is False:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1097,6 +1115,9 @@ class Survey(object):
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('IP pseudo Section')
+            
+        ax.set_xlabel('Distance [m]')
+        ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
             return fig
     

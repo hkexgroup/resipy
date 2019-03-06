@@ -251,6 +251,27 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
 #elec3, df3 = protocol3DParser('api/test/protocol.dat')
 
 
+#%% forwardProtocolDC/IP parser
+    
+def forwardProtocolDC(fname): # need specific as there is a appRes column
+    x = np.genfromtxt(fname, skip_header=1)
+    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','appRes'])
+    df['ip'] = np.nan
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return elec, df
+    
+
+def forwardProtocolIP(fname): # not needed as the normal parser can do it
+    x = np.genfromtxt(fname, skip_header=1)
+    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','ip','appRes'])
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return elec, df
+
+
 #%% PRIME system parser
 
 def primeParser(fname, espacing=None):
