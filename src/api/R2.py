@@ -6,7 +6,7 @@ Main R2 class, wraps the other pyR2 modules (API) in to an object orientated app
 pyR2_version = '1.0.5' # pyR2 version (semantic versionning in use) 
 
 #import relevant modules 
-import os, sys, shutil, platform, warnings # python standard libs
+import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import subprocess
 import numpy as np # import default 3rd party libaries (can be downloaded from conda repositry, incl with winpython)
@@ -466,20 +466,49 @@ class R2(object): # R2 master class instanciated by the GUI
         print("%i survey files imported"%len(self.surveys))
         
     
-#    def matchSurveys(self):
-#        """ Will trim all surveys to get them ready for difference inversion
-#        where all datasets must have the same number of quadrupoles.
-#        """
-#        s0 = self.surveys[0]
-#        ie = np.one(s0.df.shape[0], dtype=bool)
-#        for s in self.surveys[1:]:
-#            if ((s.df[ie]['a'] == s0.df[ie]['a']) &
-#                (s.df[ie]['b'] == s0.df[ie]['b']) &
-#                (s.df[ie]['m'] == s0.df[ie]['m']) &
-#                (s.df[ie]['n'] == s0.df[ie]['n'])):
-#                # TODO
-                
-                
+    def matchSurveys(self):
+        """ Will trim all surveys to get them ready for difference inversion
+        where all datasets must have the same number of quadrupoles.
+        """
+        print('Matching quadrupoles between surveys for difference inversion ...', end='')
+        t0 = time.time()
+        dfs = [s.df for s in self.surveys]
+        
+        # sort all dataframe (should already be the case)
+        dfs2 = []
+        for df in dfs:
+            dfs2.append(df.sort_values(by=['a','b','m','n']).reset_index(drop=True))
+        
+        # concatenate columns of string
+        def cols2str(cols):
+            cols = cols.astype(str)
+            x = cols[:,0]
+            for i in range(1, cols.shape[1]):
+                x = np.core.defchararray.add(x, cols[:,i])
+            return x
+        
+        # get measurements common to all surveys
+        icommon = np.ones(dfs2[0].shape[0], dtype=bool)
+        df0 = dfs2[0]
+        x0 = cols2str(df0[['a','b','m','n']].values)
+        for df in dfs2[1:]:
+            x = cols2str(df[['a','b','m','n']].values)
+            ie = np.in1d(x, x0)
+            icommon = icommon & ie
+#        print('measurements in common = ', np.sum(icommon))
+        
+        # create boolean index to match those measurements
+        indexes = []
+        x0 = cols2str(df0[['a','b','m','n']].values)
+        xcommon = x0[icommon]
+        for df in dfs2:
+            x = cols2str(df[['a','b','m','n']].values)
+            indexes.append(np.in1d(x, xcommon))
+        
+        print('done in {:.5}s'.format(time.time()-t0)) 
+    
+        return indexes               
+                    
         
     
     def filterElec(self, elec=[]):
@@ -991,7 +1020,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 np.savetxt(f, x2)
             
 
-    def write2protocol(self, errTyp='', errTypIP='', errTot=False, **kwargs):
+    def write2protocol(self, errTyp=None, errTypIP=None, errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
         
         Parameters
@@ -999,16 +1028,21 @@ class R2(object): # R2 master class instanciated by the GUI
         errTyp : str
             Type of the DC error. Either 'pwl', 'lin', 'obs'.
         errTypIP : str
-            Type of the IP error. Either 'pwl'.
+            Type of the IP error. Either 'pwl' or 'hyp'.
+        errTot : bool, optional
+            If `True`, it will compute the modelling error due to the mesh and
+            add it to the error from an error model.
+        **kwargs : optional
+            To be passed to `Survey.write2protocol()`.
         """
         if self.typ[0] == 'c':
             ipBool = True
         else:
             ipBool = False
 
-        if errTyp == '':
+        if errTyp is None:
             errTyp = self.errTyp
-        if errTypIP == '':
+        if errTypIP is None:
             errTypIP = self.errTypIP
         
         # important changing sign of resistivity and quadrupoles so to work
@@ -1025,9 +1059,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
                 s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
 
+        # for time-lapse inversion ------------------------------
         if self.iTimeLapse is True:
             if 'reg_mode' not in self.param.keys():
                 self.param['reg_mode'] = 2 # by default it's timelapse (difference)
+            if self.param['reg_mode'] == 2: # it's a difference inversion
+                indexes = self.matchSurveys()
+            else:
+                indexes = [None]*len(self.surveys)
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
@@ -1039,7 +1078,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     s.df['pwlError'] = self.bigSurvey.errorModel(s.df['resist'].values)
                     errCol = 'pwl' # we just use this colum to store the error type even if it's not pwl
                 res0Bool = False if self.param['reg_mode'] == 1 else True
-                protocol = s.write2protocol('', errTyp=errCol, res0=res0Bool)
+                protocol = s.write2protocol('', errTyp=errCol, res0=res0Bool,
+                                            isubset=indexes[i])
                 content = content + str(protocol.shape[0]) + '\n'
                 content = content + protocol.to_csv(sep='\t', header=False, index=False)
                 
@@ -1053,12 +1093,11 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-                    s.write2protocol(os.path.join(refdir, 'protocol.dat'))
-#                    with open(os.path.join(refdir, 'protocol.dat'), 'w') as f:
-#                        f.write(content) # write the protocol for the reference file
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat'), isubset=indexes[i])
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
-                
+        
+        # for batch inversion -------------------
         elif self.iBatch is True:
             content = ''
             for i, s in enumerate(self.surveys):
@@ -1071,6 +1110,7 @@ class R2(object): # R2 master class instanciated by the GUI
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
         
+        # for normal inversion (one survey) --------------------------
         else:
             self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
                     errTyp=errTyp, ip=ipBool, errTypIP=errTypIP, errTot=errTot)

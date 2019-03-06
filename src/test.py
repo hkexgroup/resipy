@@ -21,8 +21,8 @@ from api.R2 import R2
 #    os.remove(testdir)
 #os.mkdir(testdir)
 
-#%% testing the Survey class
 
+#%% testing Survey class (to be run with pytest)
 
 
 
@@ -41,15 +41,14 @@ plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
 k = R2()
 k.createSurvey('./api/test/syscalFileTopo.csv', ftype='Syscal')
-probe = k.surveys[0].df
 k.pseudo(contour=True)
 k.importElec('./api/test/elecTopo.csv')
 k.createMesh(typ='quad',elemx=4)
 k.showMesh()
 k.createMesh(typ='trian',cl=0.1, cl_factor=5)
 k.showMesh()
-#k.pwlfit()
 #k.linfit()
+#k.pwlfit()
 
 #k.lmefit(iplot=True)
 k.write2in()
@@ -57,6 +56,7 @@ k.write2in()
 k.invert()
 k.showResults(attr='Conductivity(mS/m)')
 #k.showInParaview()
+
 
 #%% test for borehole
 plt.close('all')
@@ -96,7 +96,7 @@ k = R2()
 k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
 k.pwlfit()
-k.errTyp = 'pwlError'
+k.errTyp = 'pwl'
 k.invert(iplot=False, parallel=True, ncores=3)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
@@ -105,7 +105,6 @@ k.showResults(index=3)
 
 
 #%% test for batch inversion
-from api.R2 import R2
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 k = R2()

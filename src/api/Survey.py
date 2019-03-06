@@ -1062,7 +1062,7 @@ class Survey(object):
     
     
     def write2protocol(self, outputname='', errTyp='none', errTot=False,
-                       ip=False, errTypIP='none', res0=False):
+                       ip=False, errTypIP='none', res0=False, isubset=None):
         """ Write a protocol.dat file for R2 or cR2.
         
         Parameters
@@ -1083,32 +1083,48 @@ class Survey(object):
         res0 : bool, optional
             For time-lapse inversion, the background resistivity will be added 
             if `True`.
+        isubset : array_like of bool, optional
+            If specified, it will be used to take a subset of the original
+            array. It can be used for difference inversion to take measurements
+            in common between all the surveys.
             
         Returns
         -------
         protocol : pandas.DataFrame
             Dataframe which contains the data for the `protocol.dat`. 
         """
+        # check if we need to take a subset of the dataframe
+        if isubset is None:
+            df = self.df
+        else:
+            df = self.df[isubset]
+        
+        # check if error type are correctly specified
         avail_err = ['none','obs','lme','lin','pwl']
         if errTyp not in avail_err:
             content = ''
             for i in range(len(avail_err)):
                 content += avail_err[i]
             raise NameError("Unrecognised error type, available types are "+content)
-        ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
+        
+        # TODO this raises a neg_flag but this shouldn't be needed really
+        ie = df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
         neg_flag=False
         if all(ie==False):
-            ie = self.df['irecip'].values != 0 # take negative recip indexes instead
+            ie = df['irecip'].values != 0 # take negative recip indexes instead
             neg_flag=True
-        haveReciprocal = all(self.df['irecip'].values == 0)
+        
+        # check if we have reciprocal (haveReciprocal==True)
+        # and if we want to keep them and discard the non-paired measurements (self.keepAll == False)
+        haveReciprocal = all(df['irecip'].values == 0)
         if haveReciprocal is False and self.keepAll is False: # so we have reciprocals and don't want dummy inside
-            x = self.df[['a','b','m','n']].values[ie,:].astype(int)
+            x = df[['a','b','m','n']].values[ie,:].astype(int)
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
             if neg_flag:
-                dfg = self.df[self.df['irecip'] != 0] 
+                dfg = df[df['irecip'] != 0] 
             else:
-                dfg = self.df[self.df['irecip'] > 0] 
+                dfg = df[df['irecip'] > 0] 
             protocol['R'] = dfg['recipMean'].values
             if res0:
                 protocol['R0'] = dfg['recipMean0'].values
@@ -1118,56 +1134,57 @@ class Survey(object):
                 protocol['Phase'] = dfg['ip'].values
             if errTyp != 'none':
                 if errTyp == 'obs':
-                    protocol['error'] = self.df['recipError'].values[ie]
+                    protocol['error'] = df['recipError'].values[ie]
                 if errTyp =='lme':
                     protocol['error'] = dfg['lmeError'].values
                 if errTyp == 'lin':
                     protocol['error'] = dfg['linError'].values
                 if errTyp == 'pwl':
                     protocol['error'] = dfg['pwlError'].values
-        #            error = self.linStdError
                 if errTot == True:
                     print('Using total error')
-                    if 'modErr' not in self.df.columns:
+                    if 'modErr' not in df.columns:
                         print('ERROR : you must specify a modelling error')
                     else:
                         protocol['error'] = np.sqrt(protocol['error']**2 + self.df[ie]['modErr'].values**2)
             if errTypIP != 'none':  # or == 'pwlip'
-                if 'PhaseError' not in self.df.columns: # TO BE DELETED
+                if 'PhaseError' not in df.columns: # TO BE DELETED
                     dfg['PhaseError'] = 0.1 # TO BE DELTED
-                protocol['ipError'] = self.df['PhaseError'].values[ie]
+                protocol['ipError'] = df['PhaseError'].values[ie]
                 
-        else: # so they don't have reciprocal
-            x = self.df[['a','b','m','n']].values.astype(int)
+        else: # so there is no reciprocals or we want to use all data available (even non-paired)
+            x = df[['a','b','m','n']].values.astype(int)
             if (errTyp == 'none') and ('magErr' in self.df.columns):
                 errTyp = 'magErr' # the user defined error is prioritary
             if (errTypIP == 'none') and ('phiErr' in self.df.columns):
                 errTypIP = 'phiErr'
             xx = np.c_[1+np.arange(len(x)), x]
             protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            protocol['R'] = self.df['resist'].values
+            protocol['R'] = df['resist'].values
             if res0:
-                protocol['R0'] = self.df['resist0'].values
+                protocol['R0'] = df['resist0'].values
             if ip == True:
                 if self.protocolIPFlag == False:
-                    protocol['Phase'] = -self.kFactor*self.df['ip'].values # "-self.kFactor" is to change m to phi
+                    protocol['Phase'] = -self.kFactor*df['ip'].values # "-self.kFactor" is to change m to phi
                 elif self.protocolIPFlag == True:
-                    protocol['Phase'] = self.df['ip'].values
+                    protocol['Phase'] = df['ip'].values
                 if 'phiErr' in self.df.columns:
-                    protocol['error'] = self.df[errTyp]
-                    protocol['ipError'] = self.df[errTypIP]
+                    protocol['error'] = df[errTyp]
+                    protocol['ipError'] = df[errTypIP]
             elif errTyp != 'none':
                 try: #### TODO: HOTFIX inserted here. Looks like changing the error types above didnt change the key assigned to survey dataframe, hence an error is raised. 
-                    protocol['error'] = self.df[errTyp] 
+                    protocol['error'] = df[errTyp] 
                 except KeyError:
-                    protocol['error'] = self.df[errTyp+'Error']
+                    protocol['error'] = df[errTyp+'Error']
                 
-        if all(self.elec[:,1] == 0) is False: # it's a 3D example
+        # if it's 3D, we add the line number (all electrode on line 1)
+        if all(self.elec[:,1] == 0) is False:
             protocol.insert(1, 'sa', 1)
             protocol.insert(3, 'sb', 1)
             protocol.insert(5, 'sm', 1)
             protocol.insert(7, 'sn', 1)
-                
+        
+        # write protocol.dat
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
