@@ -72,9 +72,9 @@ k = R2(typ='cR2')
 #k.createSurvey('api/test/IP/syscalFileIP.csv')
 k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
 k.createMesh('quad')
-k.pwlfit()
-k.plotIPFit()
-k.err=True
+#k.pwlfit()
+#k.plotIPFit()
+k.err=True # there is already error inside the protocol.dat imported
 k.invert()
 k.showResults(attr='Magnitude(Ohm-m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
@@ -96,19 +96,6 @@ k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
 k.showResults(index=3)
-print('elapsed: {:.4}s'.format(time.time() - t0))
-
-
-#%% test for batch inversion
-plt.close('all')
-print('-------------Testing Batch Inversion ------------')
-t0 = time.time()
-k = R2()
-k.createBatchSurvey('api/test/testTimelapse')
-#k.createMesh('trian') # runDistributed only works with triangular mesh
-k.invert(parallel=True)
-k.showResults(index=3)
-k.showResults(index=1)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
