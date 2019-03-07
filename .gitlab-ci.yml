@@ -3,7 +3,7 @@ image: python:3.6-stretch
 pages:
   script:
   - apt-get update
-  - apt-get install wine
+  - apt-get install --assume-yes wine
   - pip install sphinx==1.6.7 numpydoc numpy matplotlib PyQt5 pandas
   - cd src
   - python test.py
