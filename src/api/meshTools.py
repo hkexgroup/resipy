@@ -413,7 +413,11 @@ class Mesh:
             edge_color='face'#set the edge colours to the colours of the polygon patches
 
         if contour is False:
-            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
+            if attr is None: # so the default material
+                cm = plt.get_cmap(color_map, len(np.unique(X))) # this makes a discrete colormap
+            else:
+                cm = color_map
+            coll = PolyCollection(coordinates, array=X, cmap=cm, edgecolors=edge_color,linewidth=0.5)
             coll.set_clim(vmin=vmin, vmax=vmax)
             ax.add_collection(coll)#blit polygons to axis
 #            triang = tri.Triangulation(nodes[:,0], nodes[:,1], connection)
@@ -542,9 +546,18 @@ class Mesh:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
-            
+        
         if color_map != None :
-            self.cax.set_cmap(color_map) # change the color map if the user wants to 
+            if attr is None:
+                cm = plt.get_cmap(color_map, len(np.unique(X)))
+            else:
+                cm = color_map
+            self.cax.set_cmap(cm) # change the color map if the user wants to 
+        else:
+            if attr is None:
+                cm = plt.get_cmap('Spectral', len(np.unique(X)))
+                self.cax.set_cmap(cm)
+        
         
         #following block of code redraws figure 
         self.cax.set_array(X) # set the array of the polygon collection to the new attribute 

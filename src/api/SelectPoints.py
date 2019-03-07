@@ -11,6 +11,7 @@ import numpy as np
 #from matplotlib.widgets import PolygonSelector
 from matplotlib.path import Path
 from matplotlib.patches import Rectangle
+from matplotlib.widgets import Button
 
 class SelectPoints(object):
     """Select indices from a matplotlib collection using `PolygonSelector`.
@@ -41,27 +42,80 @@ class SelectPoints(object):
         self.currentIndex = 1
         self.iselect = np.zeros(len(pts), dtype=bool)
         self.typ = typ
-        self.connect()
         self.callback = callback
         self.canvas.mpl_connect('key_press_event', self.keyPress)
         self.cax = self.ax.plot([],[], 'r.-')
         self.caxSelected = self.ax.plot([],[], 'k+')
         self.rect = None
+        self.xmin = np.nanmin(pts[:,0]) - 10 # padding to get extreme points in the zone
+        self.xmax = np.nanmax(pts[:,0]) + 10
+        self.drawable = True # can draw on canvas
+
+        self.addButtons()
+        self.connect()
+
+        
+    def addButtons(self):
+        self.polyAxes = self.ax.figure.add_axes([0.6, 0.9, 0.1, 0.08])
+        self.rectAxes = self.ax.figure.add_axes([0.7, 0.9, 0.1, 0.08])
+        self.lineAxes = self.ax.figure.add_axes([0.8, 0.9, 0.1, 0.08])
+        self.polyButton = Button(self.polyAxes, 'Poly')
+        self.rectButton = Button(self.rectAxes, 'Rect')
+        self.lineButton = Button(self.lineAxes, 'Line')
+            
         
     def connect(self):
-        if self.typ == 'poly':
-            cid = self.canvas.mpl_connect('button_press_event', self.onPressPoly)
-            self.connections = [(cid,)]
-        elif self.typ == 'rect':
-            self.rect = None
-            cid1 = self.canvas.mpl_connect('button_press_event', self.onPressRect),
-            cid2 = self.canvas.mpl_connect('motion_notify_event', self.onMotionRect)
-            self.connections = [cid1, (cid2,)]
-        else:
-            raise ValueError("Type unknown, choose either 'rect' or 'poly'")
-            
+        self.canvas.mpl_connect('button_press_event', self.onPress)
+        self.canvas.mpl_connect('motion_notify_event', self.onMove)
+#        
+#        if self.typ == 'poly':
+#            cid = self.canvas.mpl_connect('button_press_event', self.onPressPoly)
+#            self.connections = [(cid,)]
+#        elif self.typ == 'rect':
+#            self.rect = None
+#            cid1 = self.canvas.mpl_connect('button_press_event', self.onPressRect),
+#            cid2 = self.canvas.mpl_connect('motion_notify_event', self.onMotionRect)
+#            self.connections = [cid1, (cid2,)]
+#        elif self.typ == 'line':
+#            cid1 = self.canvas.mpl_connect('button_press_event', self.onPressLine)
+#            cid2 = self.canvas.mpl_connect('motion_notify_event', self.onMotionLine)
+#            self.connections = [(cid1,), (cid2,)]
+#        else:
+#            raise ValueError("Type unknown, choose either 'rect' or 'poly'")
+#        
+    
+    def onPress(self, event):
+        if event.inaxes == self.polyAxes:
+            self.typ = 'poly'
+            self.reset()
+            self.drawable = True
+        elif event.inaxes == self.rectAxes:
+            self.typ = 'rect'
+            self.reset()
+            self.drawable = True
+        elif event.inaxes == self.lineAxes:
+            self.typ = 'line'
+            self.reset()
+            self.drawable = True
+        elif event.inaxes == self.ax:
+            if self.drawable is True:
+                if self.typ == 'poly':
+                    self.onPressPoly(event)
+                elif self.typ == 'rect':
+                    self.onPressRect(event)
+                elif self.typ == 'line':
+                    self.onPressLine(event)
+                
+        
+    def onMove(self, event):
+        if self.drawable is True:
+            if self.typ == 'rect':
+                self.onMotionRect(event)
+            elif self.typ == 'line':
+                self.onMotionLine(event)
+        
+    
     def onPressPoly(self, event):
-#        print('Poly: mouse press event detected', event.button, event.xdata, event.ydata)
         if event.button == 1:
             self.vertices.append((event.xdata, event.ydata))
             self.drawPath()
@@ -71,12 +125,9 @@ class SelectPoints(object):
             self.getPointsInside()
             self.disconnect()
     
+    
     def onPressRect(self, event):
-#        print('Rect : mouse press event detected', event.button, event.xdata, event.ydata)
         if self.rect is None:
-#            print('no rect yet, will add it')
-#            self.rect = self.ax.add_artist(Rectangle([event.xdata, event.ydata],
-#                                                0, 0, color='red', alpha=0.3))
             self.rect = self.ax.plot([],[], 'r-')[0]
             self.vertices.append((event.xdata, event.ydata))
             self.drawPath()
@@ -89,11 +140,9 @@ class SelectPoints(object):
             self.getPointsInside()
             self.disconnect()
     
+    
     def onMotionRect(self, event):
-#        print('on motion ...', event.button, event.xdata, event.ydata)
         if (self.rect is not None) & (event.xdata is not None):
-#            self.rect.set_width(event.xdata - self.vertices[0][0])
-#            self.rect.set_height(event.ydata - self.vertices[0][1])
             self.rect.set_xdata([self.vertices[0][0],
                                  event.xdata,
                                  event.xdata,
@@ -105,13 +154,43 @@ class SelectPoints(object):
                                  event.ydata,
                                  self.vertices[0][1]])
             self.canvas.draw()
-        
+    
+    
+    def onPressLine(self, event):
+        if self.rect is None:
+            self.rect = self.ax.plot([],[], 'r-')[0]
+            self.vertices.append((self.xmin, event.ydata))
+            self.vertices.append((self.xmax, event.ydata))
+            self.drawPath()
+        else:
+            self.vertices.append((self.xmax, event.ydata))
+            self.vertices.append((self.xmin, event.ydata))
+            self.drawPath()
+            self.getPointsInside()
+            self.disconnect()
+    
+    
+    def onMotionLine(self, event):
+        if (self.rect is not None) & (event.ydata is not None):
+            self.rect.set_xdata([self.vertices[0][0],
+                                 self.vertices[1][0],
+                                 self.xmax,
+                                 self.xmin,
+                                 self.xmin])
+            self.rect.set_ydata([self.vertices[0][1],
+                                 self.vertices[1][1],
+                                 event.ydata,
+                                 event.ydata,
+                                 self.vertices[0][1]])
+            self.canvas.draw()
+    
     
     def drawPath(self):
         xy = np.array(self.vertices)
         self.cax[0].set_xdata(xy[:,0])
         self.cax[0].set_ydata(xy[:,1])
         self.canvas.draw_idle()
+    
     
     def setVertices(self, xy):
         self.vertices = xy
@@ -120,37 +199,49 @@ class SelectPoints(object):
         self.drawPath()
         self.getPointsInside()
         
+        
     def getPointsInside(self):
         path = Path(self.vertices)
         self.iselect = path.contains_points(self.pts)
         self.caxSelected[0].set_xdata(self.pts[self.iselect, 0])
         self.caxSelected[0].set_ydata(self.pts[self.iselect, 1])
         if self.callback is not None:
-            print('execute callback')
             self.callback(self.iselect)
-            print('end of callback')
         else:
             print(np.sum(self.iselect), 'elements selected')
         self.canvas.draw_idle()
     
+    
     def keyPress(self, event):
         if event.key == 'escape':
-#            print('disconnected')
             self.disconnect()
         if event.key == 'e':
-#            print('connected')
+            self.reset()
+            self.connect()
+        if event.key == 'l':
+            self.typ = 'line'
+            self.reset()
+            self.connect()
+        if event.key == 'r':
+            self.typ = 'rect'
+            self.reset()
+            self.connect()
+        if event.key == 't':
+            self.typ = 'poly'
             self.reset()
             self.connect()
         
+                
         
     def disconnect(self):
-        for cid in self.connections:
-            self.canvas.mpl_disconnect(cid[0])
+        self.drawable = False
+        
         
     def reset(self):
         if self.rect is not None:
             self.rect.set_xdata([])
             self.rect.set_ydata([])
+            self.rect = None
         self.vertices = []
         self.iselect = np.zeros(len(self.pts), dtype=bool)
         self.cax[0].set_xdata([])
@@ -172,10 +263,9 @@ if __name__ == '__main__':
 #    rect = Rectangle([0,0], 1,2, alpha=0.3, color='red')
 #    ax.add_artist(rect)
     
-    def sayHello():
-        name = input('your name: ')
-        print('Hello', name)
-    selector = SelectPoints(ax, pts, typ='rect', callback=sayHello)
+    def sayHello(arg):
+        print('arg = ', arg)
+    selector = SelectPoints(ax, pts, typ='poly', callback=sayHello)
 #
 #    print("Select points in the figure by enclosing them within a polygon.")
 #    print("Press the 'esc' key to start a new polygon.")
