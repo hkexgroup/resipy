@@ -16,25 +16,6 @@ import api.meshTools as mt
 from api.Survey import Survey
 from api.R2 import R2
 
-#testdir = 'api/test/image/'
-#if os.path.exists(testdir):
-#    os.remove(testdir)
-#os.mkdir(testdir)
-
-
-#%% testing Survey class (to be run with pytest)
-
-
-
-#%% testing the meshTools class
-plt.close('all')
-print(' -------------- Testing importing vtk --------------')
-fresults = os.path.join('./api/test/f001.vtk')
-mesh = mt.vtk_import(fresults)#makes a dictionary of a mesh 
-assert mesh.elm_centre[0][0] == 16.442
-assert np.array(mesh.con_matrix).shape[1] == 1362
-mesh.show()
-
 
 #%% testing the R2 class
 plt.close('all')
