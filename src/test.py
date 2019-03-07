@@ -10,16 +10,19 @@ RUN ALL SECTION ON THE TEST AND CHECK THE GRAPH PRODUCED
 
 import numpy as np
 import os
+import time
 import matplotlib.pyplot as plt
 plt.ion()
 import api.meshTools as mt
 from api.Survey import Survey
 from api.R2 import R2
 
+tstart = time.time()
 
 #%% testing the R2 class
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
+t0 = time.time()
 k = R2()
 k.createSurvey('./api/test/syscalFileTopo.csv', ftype='Syscal')
 k.pseudo(contour=True)
@@ -37,11 +40,13 @@ k.write2in()
 k.invert()
 k.showResults(attr='Conductivity(mS/m)')
 #k.showInParaview()
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test for borehole
 plt.close('all')
 print('-------------Testing borehole------------')
+t0 = time.time()
 k = R2()
 k.createSurvey('./api/test/protocolXbh.dat', ftype='forwardProtocolDC')
 x = np.genfromtxt('./api/test/elecXbh.csv', delimiter=',')
@@ -55,14 +60,17 @@ k.invert()
 k.showIter(index=0)
 k.showIter(index=1)
 k.showResults(sens=False)
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test for IP
 plt.close('all')
 print('-------------Testing IP ------------')
+t0 = time.time()
 k = R2(typ='cR2')
 #k.createSurvey('api/test/IP/rifleday8.csv', ftype='Syscal')
-k.createSurvey('api/test/IP/syscalFileIP.csv')
+#k.createSurvey('api/test/IP/syscalFileIP.csv')
+k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
 k.createMesh('quad')
 k.pwlfit()
 k.plotIPFit()
@@ -71,22 +79,13 @@ k.invert()
 k.showResults(attr='Magnitude(Ohm-m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
 k.pseudoError()
-
-
-
-#%% test for IP from protocol with error inside
-plt.close('all')
-print('----------- Testing ip -----------')
-k = R2(typ='cR2')
-k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
-# the previous line detect error in the protocol.dat and set k.err = True
-k.err = False # can be overwritten
-k.invert()
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test for timelapse inversion
 plt.close('all')
 print('-------------Testing Time-lapse in // ------------')
+t0 = time.time()
 k = R2()
 k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
@@ -97,22 +96,26 @@ k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
 k.showResults(index=3)
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test for batch inversion
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
+t0 = time.time()
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
 #k.createMesh('trian') # runDistributed only works with triangular mesh
 k.invert(parallel=True)
 k.showResults(index=3)
 k.showResults(index=1)
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test for batch inversion with moving electrodes
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
+t0 = time.time()
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
 for s in k.surveys:
@@ -125,22 +128,23 @@ k.showResults(index=0)
 k.showResults(index=1)
 k.showResults(index=2)
 k.showResults(index=3)
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test mesh with buried electrodes
 #
 #print('-------------Testing Buried electrodes Inversion ------------')
-k = R2()
-k.createSurvey('api/test/syscalFile.csv')
-elec = k.elec
-elec[:,2] = -0.5 # let's bury them all
-#elec[0,2] = 0
-k.setElec(elec)
-buried = np.ones(elec.shape[0], dtype=bool)
-#buried[[0,-1]] = False # comment it and it will work
-surface = np.array([[0,0],[7,0]])
-k.createMesh(typ='quad', buried=buried, surface=surface)
-k.showMesh()
+#k = R2()
+#k.createSurvey('api/test/syscalFile.csv')
+#elec = k.elec
+#elec[:,2] = -0.5 # let's bury them all
+##elec[0,2] = 0
+#k.setElec(elec)
+#buried = np.ones(elec.shape[0], dtype=bool)
+##buried[[0,-1]] = False # comment it and it will work
+#surface = np.array([[0,0],[7,0]])
+#k.createMesh(typ='quad', buried=buried, surface=surface)
+#k.showMesh()
 
 #k = R2()
 #k.createSurvey('api/test/syscalFile.csv', ftype='Syscal')
@@ -168,8 +172,8 @@ k.showMesh()
 
 #%% forward modelling
 plt.close('all')
-from api.R2 import R2
 print('-------------Testing Forward DC Modelling ------------')
+t0 = time.time()
 k = R2(typ='R2')
 k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.createMesh(typ='trian')
@@ -212,11 +216,13 @@ k.invert(iplot=True)
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=True, vmin=10, vmax=120) # not for cR2
 #k.showResults(index=1, attr='Phase(mrad)')
 #k.showResults(index=1, attr='Magnitude(Ohm-m)')
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test forward IP modelling
 plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
+t0 = time.time()
 k = R2(typ='cR2')
 k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
 k.createMesh(typ='trian')
@@ -234,12 +240,13 @@ k.showResults(index=0, attr='Magnitude(Ohm-m)')
 # the inverted
 k.showResults(index=1, attr='Phase(mrad)')
 k.showResults(index=1, attr='Magnitude(Ohm-m)')
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% test Paul River
-from api.R2 import R2
 plt.close('all')
 print('-------------Testing Buried Electrodes in Fixed River ------------')
+t0 = time.time()
 k = R2()
 k.createSurvey('./api/test/primeFile.dat', ftype='BGS Prime')
 x = np.genfromtxt('./api/test/primePosBuried.csv', delimiter=',')
@@ -254,11 +261,13 @@ k.addRegion(xy, res0=18, blocky=True, fixed=False)
 k.param['b_wgt'] = 0.04 # doesn't work
 k.invert()
 k.showResults(sens=False)
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D testing
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
+t0 = time.time()
 k = R2(typ='R3t')
 k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('api/test/electrodes3D.csv',delimiter=',')
@@ -272,11 +281,13 @@ k.showSlice(axis='x')
 k.showSlice(axis='y')
 k.pseudoError()
 k.showInversionErrors()
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D testing importing a mesh
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
+t0 = time.time()
 k = R2(typ='R3t')
 k.createSurvey('api/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('api/test/electrodes3D.csv',delimiter=',')
@@ -289,11 +300,13 @@ k.showResults()
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D ip testing
 plt.close('all')
 print('-------------Testing 3D IP inversion ------------')
+t0 = time.time()
 k = R2(typ='cR3t')
 k.createSurvey('api/test/IP/protocol3Dip.dat', ftype='Protocol')
 elec = np.genfromtxt('api/test/electrodes3Dip.csv', delimiter=',')
@@ -307,11 +320,13 @@ k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
 k.showInParaview()
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D with moving electrodes (specialy dedicated to Jimmy ;)
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
+t0 = time.time()
 k = R2(typ='R3t')
 #k.createBatchSurvey('api/test/3d/data/', ftype='Protocol')
 k.createTimeLapseSurvey('api/test/3d/data/', ftype='Protocol')
@@ -321,4 +336,8 @@ k.createMesh(cl=2)
 k.param['reg_mode'] = 1 # background regularization
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
+print('elapsed: {:.4}s'.format(time.time() - t0))
 
+
+
+print('total time running the test = {:.4s}'.format(time.time() - tstart))
