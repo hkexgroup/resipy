@@ -193,7 +193,7 @@ class MatplotlibWidget(QWidget):
         if threed is False:
             ax.set_aspect('auto')
             ax.set_autoscale_on(False)
-        if self.itight == True:
+        if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
     
@@ -209,7 +209,8 @@ class MatplotlibWidget(QWidget):
         self.axis = ax
         self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
-#        self.figure.tight_layout()
+        if self.itight is True:
+            self.figure.tight_layout()
         self.canvas.draw()
     
     def clear(self):

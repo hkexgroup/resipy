@@ -877,7 +877,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if typ is None:
             typ = self.typ
-        if self.err is True:
+        if (self.err is True) and ('a_wgt' not in self.param):
             self.param['a_wgt'] = 0
             self.param['b_wgt'] = 0
         elif typ[0] != 'c': # DC case
@@ -885,7 +885,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.param['a_wgt'] = 0.01
             if 'b_wgt' not in self.param:
                 self.param['b_wgt'] = 0.02
-        if typ == 'cR2': # TODO what about cR3 ?
+        elif typ == 'cR2': # TODO what about cR3 ?
             if 'a_wgt' not in self.param:
                 self.param['a_wgt'] = 0.02 # variance for magnitude (no more offset)
             if 'b_wgt' not in self.param:
@@ -2046,7 +2046,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
         else:
-            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='Protocol')
+            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
@@ -2505,7 +2505,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
     resist = resist
-    array = np.sort(array.copy(), axis=1)
     
     if geom: # compute and applied geometric factor
         apos = elecpos[array[:,0]-1]
@@ -2518,6 +2517,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
         BN = np.abs(bpos-npos)
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         resist = resist*K
+
+    array = np.sort(array, axis=1)
         
     if log:
         resist = np.sign(resist)*np.log10(np.abs(resist))
@@ -2542,4 +2543,6 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     cbar = fig.colorbar(cax, ax=ax)
     cbar.set_label(label)
     ax.set_title('Pseudo Section')
+    ax.set_xlabel('Distance [m]')
+    ax.set_ylabel('Pseudo depth [m]')
 
