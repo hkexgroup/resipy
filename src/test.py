@@ -43,7 +43,7 @@ k.showResults(attr='Conductivity(mS/m)')
 plt.close('all')
 print('-------------Testing borehole------------')
 k = R2()
-k.createSurvey('./api/test/protocolXbh.dat', ftype='Protocol')
+k.createSurvey('./api/test/protocolXbh.dat', ftype='forwardProtocolDC')
 x = np.genfromtxt('./api/test/elecXbh.csv', delimiter=',')
 k.elec[:,[0,2]] = x[:,:2]
 buried = x[:,2].astype(bool)
@@ -82,13 +82,6 @@ k.createSurvey('api/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
 # the previous line detect error in the protocol.dat and set k.err = True
 k.err = False # can be overwritten
 k.invert()
-
-
-#%% test for strange survey
-from api.R2 import R2
-k = R2()
-k.createSurvey('api/test/2016-03-10.dat', ftype='Protocol')
-k.write2protocol()
 
 
 #%% test for timelapse inversion
