@@ -12,7 +12,6 @@ import numpy as np
 import os
 import time
 import matplotlib.pyplot as plt
-plt.ion()
 import api.meshTools as mt
 from api.Survey import Survey
 from api.R2 import R2
@@ -327,4 +326,4 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 
-print('total time running the test = {:.4s}'.format(time.time() - tstart))
+print('total time running the test = {:.4f}s'.format(time.time() - tstart))
