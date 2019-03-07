@@ -1202,14 +1202,17 @@ class R2(object): # R2 master class instanciated by the GUI
         c = 0
         for s, df in zip(surveys, dfs):
             elec = s.elec
-            e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
-            node_elec.append(e_nodes+1) #add one to be consistent with fortran indexing
+            if int(self.mesh.cell_type[0])==8 or int(self.mesh.cell_type[0])==9:#elements are quads
+                colx = self.mesh.quadMeshNp() # so find x column indexes instead. Wont support change in electrode elevation
+                node_elec.append(colx)
+            else:
+                e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
+                node_elec.append(e_nodes+1) #add one to be consistent with fortran indexing
             df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c
             c += len(elec)
         node_elec = np.hstack(node_elec)
         node_elec = np.c_[np.arange(len(node_elec))+1, node_elec,
                           np.ones(len(node_elec))].astype(int)
-        # TODO this works only for triangular mesh
         if self.param['node_elec'].shape[1] == 3:
             self.param['node_elec'] = node_elec
         else:
@@ -1831,7 +1834,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if ax is None:
             return fig
             
-        
+    
     def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
         """ Assign starting resitivity values.
         

@@ -117,7 +117,7 @@ k = R2()
 k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
 k.pwlfit()
-k.errTyp = 'pwl'
+k.err = True
 k.invert(iplot=False, parallel=True, ncores=3)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
@@ -130,7 +130,7 @@ plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
-k.createMesh('trian') # runDistributed only works with triangular mesh
+#k.createMesh('trian') # runDistributed only works with triangular mesh
 k.invert(parallel=True)
 k.showResults(index=3)
 k.showResults(index=1)
