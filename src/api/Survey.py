@@ -403,7 +403,7 @@ class Survey(object):
             fig, ax = plt.subplots()
         
         percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
-        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probablity")
+        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probability")
         errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
         errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
         if errPercent > 100:
@@ -412,9 +412,9 @@ class Survey(object):
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
-        ax.set_ylabel('Probablity')
+        ax.set_ylabel('Probability')
         ax.legend(loc='best', frameon=True)
-        ax.set_title('Error probablity distribution')
+        ax.set_title('Error probability distribution')
         
         if ax is None:
             return fig
