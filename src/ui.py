@@ -1666,9 +1666,8 @@ class App(QMainWindow):
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
 #            elif index == 3:
-#                print('NOT READY YET')
 #                mwFitError.plot(self.r2.lmefit)
-#                self.r2.errTyp = 'lme'
+#                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
