@@ -687,7 +687,7 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']].sort_values(by='recipMean').reset_index(drop=True)) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -696,9 +696,12 @@ class Survey(object):
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
-        ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.loglog(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
+        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
         ax.plot(bins[:,0],R_error_predict,'r', label="Power Law Fit")
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
@@ -735,18 +738,21 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']].sort_values(by='recipMean').reset_index(drop=True)) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
-            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
         coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
-        ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.loglog(bins[:,0],bins[:,1],'o',label="Bin Means")
-        ax.loglog(bins[:,0],R_error_predict,'r', label="Linear Fit")
+        ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
+        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.plot(bins[:,0],R_error_predict,'r', label="Linear Fit")
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)

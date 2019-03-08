@@ -721,7 +721,9 @@ class App(QMainWindow):
                     fnamesCombo.clear()
                     for s in self.r2.surveys:
                         fnamesCombo.addItem(s.name)
-                    fnamesCombo.setEnabled(True)
+#                    fnamesCombo.setEnabled(True)
+                    fnamesCombo.show()
+                    fnamesComboLabel.show()
                     buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
                     plotPseudo()
                     elecTable.initTable(self.r2.elec)
@@ -794,7 +796,9 @@ class App(QMainWindow):
                 activateTabs(True)
                 nbElecEdit.setText(str(len(self.r2.elec)))
                 elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
-                fnamesCombo.setEnabled(False)
+#                fnamesCombo.setEnabled(False)
+                fnamesCombo.hide()
+                fnamesComboLabel.hide()
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
@@ -893,16 +897,24 @@ class App(QMainWindow):
         ipCheck.setEnabled(False)
         ipCheck.setToolTip('Check if you have IP data or want IP forward modeling')
         
+        fnamesComboLabel = QLabel('Choose a dataset to plot:')
+        fnamesComboLabel.hide()
         def fnamesComboFunc(index):
             mwPseudo.plot(self.r2.surveys[index].pseudo)
             if self.r2.typ[0] == 'c':
                 mwPseudoIP.plot(self.r2.surveys[index].pseudoIP)
         fnamesCombo = QComboBox()
+        fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        fnamesCombo.setMinimumWidth(150)
         fnamesCombo.currentIndexChanged.connect(fnamesComboFunc)
-        fnamesCombo.setEnabled(False)
+#        fnamesCombo.setEnabled(False)
+        fnamesCombo.hide()
         
         hbox5 = QHBoxLayout()
-        hbox5.addWidget(ipCheck)
+        
+        hbox5.setAlignment(Qt.AlignRight)
+        hbox5.addWidget(ipCheck, Qt.AlignLeft)
+        hbox5.addWidget(fnamesComboLabel)
         hbox5.addWidget(fnamesCombo)
         
         metaLayout = QVBoxLayout()
@@ -3599,13 +3611,13 @@ class App(QMainWindow):
             mwInvError.plot(self.r2.pseudoError)
             
         mwInvError = MatplotlibWidget(navi=True)
-        invErrorLayout.addWidget(mwInvError)
+        invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
-
         
         invError2 = QWidget()
         tabPostProcessing.addTab(invError2, 'Normalised Errors')
         invErrorLayout2 = QVBoxLayout()
+        invErrorLayout2Plot = QVBoxLayout()
         
         def plotInvError2():
             mwInvError2.plot(self.r2.showInversionErrors)
@@ -3613,10 +3625,10 @@ class App(QMainWindow):
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
-        invErrorLayout2.addWidget(mwInvError2)
+        invErrorLayout2Plot.addWidget(mwInvError2, Qt.AlignCenter)
+        invErrorLayout2.addLayout(invErrorLayout2Plot, 1)
         invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
-        
         
         #%% About tab
         
