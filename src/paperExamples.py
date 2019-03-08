@@ -30,15 +30,19 @@ fig.savefig(figdir + 'castle.eps')
 fig.show()
 
 
-#%% IP Calcite precipitation inversion (Somewhere USA)
+#%% IP Calcite precipitation inversion (Rifle, CO, USA)
 k = R2(typ = 'cR2') # initiate an R2 instance (considering there is IP data in the input data)
 k.createSurvey('./api/test/IP/IP_MICP_all.csv', ftype='Syscal') # import data
+k.filterRecip(percent=20) # remove\ing datapoints with > 20% reciprocal error
 k.removenested() # removing nested measurements
-k.iprangefilt(0,25) # setting phase shift range to 0 < -𝟇 < 25
+k.iprangefilt(0,25) # setting phase shift range to 0 < -ϕ < 25
 k.pwlfit() # adding resistance power-law error model to data
 k.plotIPFit() # adding phase power-law error model to data
 k.err = True # using error models (DC and IP) - automatically done in the GUI when fitting the error model
 k.createMesh(typ='trian') # create triangular mesh
+k.param['a_wgt'] = 0 # "a_wgt" = 0 when there is individual resistance error
+k.param['b_wgt'] = 0 # "b_wgt" = 0 when there is individual phase error
+k.param['tolerance'] = 1.2 # based on data, field site and experience
 k.invert() # run the inversion (and write cR2.in and protocol.dat automatically)
 k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity section
 k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
@@ -52,7 +56,7 @@ fig.savefig(figdir + 'micp-sigma.eps')
 fig.show()
 fig, ax = plt.subplots(figsize=(6, 2))
 ax.set_title('(b)')
-k.showResults(attr='Phase(mrad)', zlim=[-8, 0], ax=ax)
+k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax)
 fig.tight_layout()
 fig.savefig(figdir + 'micp-phase.eps')
 fig.show()
