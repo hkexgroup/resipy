@@ -261,8 +261,14 @@ class Survey(object):
             others `False`.
         """
         if len(i2keep) != self.df.shape[0]:
-            raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\
-                             does not match the length of the data (' + str(self.df.shape[0]) +').')
+            if 'ip' not in self.df.columns:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\n'
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').')
+            else:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ') '
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').\n'
+                                 'Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                                 'Reset the filters and redo the filterings, first reciprocity then phase.')
             return
         else:
             self.ndata = len(i2keep)
@@ -278,6 +284,7 @@ class Survey(object):
         i2keep = self.df['irecip'] != 0
         print('removeUnparied:', end='')
         self.filterData(i2keep)
+        return np.sum(~i2keep)
         
         
     def inferType(self):
@@ -440,6 +447,8 @@ class Survey(object):
             Print output to screen. Default is True. 
         """
         #### TODO: stop filtering if no reciprocals present! 
+        if all(np.isnan(self.df['recipError']) == True):
+            raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
         reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
@@ -447,7 +456,7 @@ class Survey(object):
         self.dfPhaseReset = self.df.copy()
         if debug:
             numRemoved = len(df_temp)-len(self.df)
-            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (numRemoved,pcnt)
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error removed!" % (numRemoved,pcnt)
             print(msgDump)
             return numRemoved
         

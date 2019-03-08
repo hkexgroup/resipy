@@ -1477,21 +1477,24 @@ class App(QMainWindow):
                 pass
         
         def recipFilter():
-            numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-            if recipErrorInputLine.text() != '-':
-                percent = float(recipErrorInputLine.text())
-                numRecipRemoved = self.r2.filterRecip(percent=percent)
-                infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements are removed!" % (numRecipRemoved,percent,numSelectRemoved))
-            else:
-                infoDump("%i selected measurements are removed!" % (numSelectRemoved))
-            if ipCheck.checkState() == Qt.Checked:
-                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
-                heatFilter()
-                phaseplotError()
-            errHist()
-            plotManualFiltering()
-            plotError()
+            try:
+                numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+                if recipErrorInputLine.text() != '-':
+                    percent = float(recipErrorInputLine.text())
+                    numRecipRemoved = self.r2.filterRecip(percent=percent)
+                    infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
+                else:
+                    infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                if ipCheck.checkState() == Qt.Checked:
+                    self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
+                    self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                    heatFilter()
+                    phaseplotError()
+                errHist()
+                plotManualFiltering()
+                plotError()
+            except ValueError as e:
+                errorDump(e)
             
         def resetRecipFilter():
             numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
@@ -1507,7 +1510,7 @@ class App(QMainWindow):
             errHist()
             plotManualFiltering()
             plotError()
-            infoDump('%i measurements are restored!' % numRestored)
+            infoDump('%i measurements restored!' % numRestored)
 
 #        manualLayout = QVBoxLayout()
           
@@ -1569,7 +1572,7 @@ class App(QMainWindow):
         recipErrorBtnLayout.setAlignment(Qt.AlignRight)
         
         def recipErrorUnpairedFunc():
-            self.r2.removeUnpaired()
+            numRemoved = self.r2.removeUnpaired()
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -1578,7 +1581,7 @@ class App(QMainWindow):
             errHist()
             plotManualFiltering()
             plotError()
-            infoDump('Removing unpaired quadrupoles.')
+            infoDump('%i unpaired quadrupoles removed!' % numRemoved)
 
         recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         recipErrorUnpairedBtn.setFixedWidth(150)
@@ -3610,13 +3613,13 @@ class App(QMainWindow):
             mwInvError.plot(self.r2.pseudoError)
             
         mwInvError = MatplotlibWidget(navi=True)
-        invErrorLayout.addWidget(mwInvError)
+        invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
-
         
         invError2 = QWidget()
         tabPostProcessing.addTab(invError2, 'Normalised Errors')
         invErrorLayout2 = QVBoxLayout()
+        invErrorLayout2Plot = QVBoxLayout()
         
         def plotInvError2():
             mwInvError2.plot(self.r2.showInversionErrors)
@@ -3624,10 +3627,10 @@ class App(QMainWindow):
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
-        invErrorLayout2.addWidget(mwInvError2)
+        invErrorLayout2Plot.addWidget(mwInvError2, Qt.AlignCenter)
+        invErrorLayout2.addLayout(invErrorLayout2Plot, 1)
         invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
-        
         
         #%% About tab
         

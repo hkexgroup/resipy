@@ -540,7 +540,8 @@ class R2(object): # R2 master class instanciated by the GUI
         remove dummy measurements added for sequence optimization.
         """
         for s in self.surveys:
-            s.removeUnpaired()
+            numRemoved = s.removeUnpaired()
+            return numRemoved
             
         
     def computeDOI(self):
@@ -1543,8 +1544,8 @@ class R2(object): # R2 master class instanciated by the GUI
         #the number of electrodes.
         df = self.surveys[0].df
         check = np.array((df['a'],df['b'],df['m'],df['n']))
-#        if len(self.elec) != np.max(check): # Dont check this! Not least in this way 
-#            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
+        if len(self.elec) < np.max(check): # Make sure there are not more electrodes locations in the schedule file than in R2 class
+            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
         dump('done\n')
         
         # runs inversion
@@ -2093,9 +2094,9 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
                 shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
                             os.path.join(fwdDir, 'mesh.dat'))
-            if os.path.exists(os.path.join(self.dirname, 'mesh3.dat')) is True:
-                shutil.copy(os.path.join(self.dirname, 'mesh3.dat'),
-                            os.path.join(fwdDir, 'mesh3.dat'))
+            if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
+                shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
+                            os.path.join(fwdDir, 'mesh3d.dat'))
             fparam['num_regions'] = 0
             fparam['res0File'] = 'resistivity.dat'
         write2in(fparam, fwdDir, typ=self.typ)
