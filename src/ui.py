@@ -1494,7 +1494,11 @@ class App(QMainWindow):
                 plotManualFiltering()
                 plotError()
             except ValueError as e:
-                errorDump(e)
+                if ipCheck.checkState() != Qt.Checked:
+                    errorDump(e)    
+                else:
+                    errorDump('Index error! Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                              'Reset the filters and redo the filterings, first reciprocity then phase.') 
             
         def resetRecipFilter():
             numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
