@@ -278,6 +278,7 @@ class Survey(object):
         i2keep = self.df['irecip'] != 0
         print('removeUnparied:', end='')
         self.filterData(i2keep)
+        return np.sum(~i2keep)
         
         
     def inferType(self):

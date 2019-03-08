@@ -540,7 +540,8 @@ class R2(object): # R2 master class instanciated by the GUI
         remove dummy measurements added for sequence optimization.
         """
         for s in self.surveys:
-            s.removeUnpaired()
+            numRemoved = s.removeUnpaired()
+            return numRemoved
             
         
     def computeDOI(self):

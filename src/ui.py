@@ -1481,9 +1481,9 @@ class App(QMainWindow):
             if recipErrorInputLine.text() != '-':
                 percent = float(recipErrorInputLine.text())
                 numRecipRemoved = self.r2.filterRecip(percent=percent)
-                infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements are removed!" % (numRecipRemoved,percent,numSelectRemoved))
+                infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
             else:
-                infoDump("%i selected measurements are removed!" % (numSelectRemoved))
+                infoDump("%i selected measurements removed!" % (numSelectRemoved))
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -1507,7 +1507,7 @@ class App(QMainWindow):
             errHist()
             plotManualFiltering()
             plotError()
-            infoDump('%i measurements are restored!' % numRestored)
+            infoDump('%i measurements restored!' % numRestored)
 
 #        manualLayout = QVBoxLayout()
           
@@ -1569,7 +1569,7 @@ class App(QMainWindow):
         recipErrorBtnLayout.setAlignment(Qt.AlignRight)
         
         def recipErrorUnpairedFunc():
-            self.r2.removeUnpaired()
+            numRemoved = self.r2.removeUnpaired()
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -1578,7 +1578,7 @@ class App(QMainWindow):
             errHist()
             plotManualFiltering()
             plotError()
-            infoDump('Removing unpaired quadrupoles.')
+            infoDump('%i unpaired quadrupoles removed!' % numRemoved)
 
         recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         recipErrorUnpairedBtn.setFixedWidth(150)
