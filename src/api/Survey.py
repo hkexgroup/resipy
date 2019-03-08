@@ -440,6 +440,8 @@ class Survey(object):
             Print output to screen. Default is True. 
         """
         #### TODO: stop filtering if no reciprocals present! 
+        if all(np.isnan(self.df['recipError']) == True):
+            raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
         reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
@@ -447,7 +449,7 @@ class Survey(object):
         self.dfPhaseReset = self.df.copy()
         if debug:
             numRemoved = len(df_temp)-len(self.df)
-            msgDump = "%i measurements with greater than %3.1f%% reciprocal error are removed!" % (numRemoved,pcnt)
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error removed!" % (numRemoved,pcnt)
             print(msgDump)
             return numRemoved
         
