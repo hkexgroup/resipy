@@ -261,8 +261,14 @@ class Survey(object):
             others `False`.
         """
         if len(i2keep) != self.df.shape[0]:
-            raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\
-                             does not match the length of the data (' + str(self.df.shape[0]) +').')
+            if 'ip' not in self.df.columns:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\n'
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').')
+            else:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ') '
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').\n'
+                                 'Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                                 'Reset the filters and redo the filterings, first reciprocity then phase.')
             return
         else:
             self.ndata = len(i2keep)
