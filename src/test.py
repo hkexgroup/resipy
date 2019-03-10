@@ -18,6 +18,7 @@ from api.R2 import R2
 
 tstart = time.time()
 
+
 #%% testing the R2 class
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')

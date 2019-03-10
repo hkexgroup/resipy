@@ -1273,7 +1273,7 @@ class Survey(object):
             If `ax` is not None, a matplotlib figure is returned.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        if np.sum(self.df['irecip'].values == 0) == 0:
+        if all(self.df['irecip'].values == 0) is False:
             print('choose recipError')
             resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
             clabel = 'Reciprocal Error [%]'
