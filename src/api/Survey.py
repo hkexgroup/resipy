@@ -1273,15 +1273,15 @@ class Survey(object):
             If `ax` is not None, a matplotlib figure is returned.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        if all(self.df['irecip'].values == 0) is False:
-            print('choose recipError')
-            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
-            clabel = 'Reciprocal Error [%]'
-        else:
-            print('choose resist')
-            geom = True
-            resist = self.df['resist'].values
-            clabel = 'Apparent Resistivity [$\Omega.m$]'
+#        if all(self.df['irecip'].values != 0) is False:
+#            print('choose recipError')
+#            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
+#            clabel = 'Reciprocal Error [%]'
+#        else:
+#            print('choose resist')
+        geom = True
+        resist = self.df['resist'].values
+        clabel = 'Apparent Resistivity [$\Omega.m$]'
         if label == '':
             label = clabel
         inan = np.isnan(resist)
