@@ -1494,7 +1494,11 @@ class App(QMainWindow):
                 plotManualFiltering()
                 plotError()
             except ValueError as e:
-                errorDump(e)
+                if ipCheck.checkState() != Qt.Checked:
+                    errorDump(e)    
+                else:
+                    errorDump('Index error! Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                              'Reset the filters and redo the filterings, first reciprocity then phase.') 
             
         def resetRecipFilter():
             numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
@@ -3705,6 +3709,11 @@ USA: Trelgol Publishing, (2006).
         tabAbout.setLayout(infoLayout)
         
         #%% general Ctrl+Q shortcut + general tab layout
+        if OS == 'Darwin':
+            metaLayout.setSpacing(4)
+            btnInvNow.setStyleSheet('background-color: green; margin-left: 5px; padding: 2px')
+            phasefiltlayout.setSpacing(4)
+            
         layout.addWidget(tabs)
         layout.addWidget(errorLabel)
         self.table_widget.setLayout(layout)
