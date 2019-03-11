@@ -694,16 +694,16 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']].sort_values(by='recipMean').reset_index(drop=True)) # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
-        print(bins)
-        print(np.sum(np.isnan(bins)))
-        print(np.sum(np.isinf(bins)))
+#        print(bins)
+#        print(np.sum(np.isnan(bins)))
+#        print(np.sum(np.isinf(bins)))
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
@@ -752,7 +752,7 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']].sort_values(by='recipMean').reset_index(drop=True)) # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
