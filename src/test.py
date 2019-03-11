@@ -18,6 +18,7 @@ from api.R2 import R2
 
 tstart = time.time()
 
+
 #%% testing the R2 class
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
@@ -251,6 +252,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D testing
+from api.R2 import R2
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
 t0 = time.time()

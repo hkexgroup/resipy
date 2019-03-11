@@ -3,7 +3,7 @@
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-pyR2_version = '1.0.5' # pyR2 version (semantic versionning in use) 
+pyR2_version = '1.1.0' # pyR2 version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -540,7 +540,8 @@ class R2(object): # R2 master class instanciated by the GUI
         remove dummy measurements added for sequence optimization.
         """
         for s in self.surveys:
-            s.removeUnpaired()
+            numRemoved = s.removeUnpaired()
+            return numRemoved
             
         
     def computeDOI(self):
@@ -1067,7 +1068,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.df['resist0'] = self.surveys[0].df['resist']
                 s.df['recipMean0'] = self.surveys[0].df['recipMean']
                 if err is True:
-                    s.df['resError'] = self.bigSurvey.errorModel(s.df['resist'].values)
+                    s.df['resError'] = self.bigSurvey.errorModel(s.df)
                 res0Bool = False if self.param['reg_mode'] == 1 else True
                 protocol = s.write2protocol('', err=err, res0=res0Bool,
                                             isubset=indexes[i+1])
@@ -1093,7 +1094,7 @@ class R2(object): # R2 master class instanciated by the GUI
             content = ''
             for i, s in enumerate(self.surveys):
                 if err is True:
-                    s.df['resError'] = self.bigSurvey.errorModel(s.df['resist'].values)
+                    s.df['resError'] = self.bigSurvey.errorModel(s.df)
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
                 content = content + str(len(df)) + '\n'
                 content = content + df.to_csv(sep='\t', header=False, index=False)

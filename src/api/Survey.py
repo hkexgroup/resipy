@@ -261,8 +261,14 @@ class Survey(object):
             others `False`.
         """
         if len(i2keep) != self.df.shape[0]:
-            raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\
-                             does not match the length of the data (' + str(self.df.shape[0]) +').')
+            if 'ip' not in self.df.columns:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\n'
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').')
+            else:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ') '
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').\n'
+                                 'Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                                 'Reset the filters and redo the filterings, first reciprocity then phase.')
             return
         else:
             self.ndata = len(i2keep)
@@ -278,6 +284,7 @@ class Survey(object):
         i2keep = self.df['irecip'] != 0
         print('removeUnparied:', end='')
         self.filterData(i2keep)
+        return np.sum(~i2keep)
         
         
     def inferType(self):
@@ -687,13 +694,16 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']].sort_values(by='recipMean').reset_index(drop=True)) # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+#        print(bins)
+#        print(np.sum(np.isnan(bins)))
+#        print(np.sum(np.isinf(bins)))
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
@@ -713,7 +723,11 @@ class Survey(object):
         print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
-        self.errorModel = lambda x : a1*(np.abs(x)**a2)
+        def errorModel(df):
+            x = df['recipMean'].values
+            return a1*(np.abs(x)**a2)
+        self.errorModel = errorModel
+#        self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
 
@@ -738,7 +752,7 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']].sort_values(by='recipMean').reset_index(drop=True)) # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -764,9 +778,14 @@ class Survey(object):
         print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
         ax.set_title('Multi bin Linear plot\n $R_{error}$ = %s$R_{avg}$ %s %s (R$^2$ = %s)' % (a1,self.sign_coef(a2), np.abs(a2),R2))     
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
-        self.errorModel = lambda x : a1*(np.abs(x))+a2
+        def errorModel(df):
+            x = df['recipMean'].values
+            return a1*(np.abs(x))+a2
+        self.errorModel = errorModel
+#        self.errorModel = lambda x : a1*(np.abs(x))+a2
         if ax is None:
             return fig                  
+        
         
     def linfitStd(self, iplot=False):
         # linear fit with std
@@ -816,49 +835,47 @@ class Survey(object):
         
         
     def lmefit(self, iplot=True, ax=None):
-        print('NOT IMPLEMENTED YET')
-#        self.errTyp = 'lme'
-#        # fit linear mixed effect model
-#        # NEED filterData() before
-#        # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
+        ''' Fit a linear mixed effect (LME) model by having the electrodes as
+        as random factor.
+        '''
+        print('lmefit NOT IMPLEMENTED YET')
+        # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
 #        
 #        if 'recipMean' not in self.df.columns:
 #            self.reciprocal()
 #        dfg = self.df[self.df['irecip'] > 0]
-#              
 #        
 #        recipMean = np.abs(dfg['recipMean'].values)
 #        recipError = np.abs(dfg['recipError'].values)
-#        irecip = self.df['irecip'].values
-#        array = self.df[['a','b','m','n']].values
+#        array = dfg[['a','b','m','n']].values.astype(int)
 #        
-#        ie = irecip > 0
 #        data = np.vstack([recipMean, recipError]).T
-#        data = np.hstack((data, array[ie]))
-#        df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
-##        cols= ['c1','c2','p1','p2']
-##        df[cols] = df[cols].apply(np.int64)
-##        print(df.to_string())
-#        md = smf.mixedlm('obsErr~avgR', df, groups=df[['c1','c2','p1','p2']])
-##        md = smf.mixedlm('obsErr~avgR', re_formula="~avgR", data=df, groups=df[['c1','c2','p1','p2']])
+#        data = np.hstack((data, array))
+#        df = pd.DataFrame(data, columns=['recipMean','obsErr','a','b','m','n'])
+#        md = smf.mixedlm('obsErr~recipMean', df, groups=df[['a','b','m','n']])
 #        mdf = md.fit()
-#        
 #        print(mdf.summary())
 #        
-#
-#        dfg['lmeError'] = mdf.predict()
+#        if ax is None:
+#            fig, ax = plt.subplots()
+#        else:
+#            fig = ax.figure
+#        ax.plot(df['obsErr'], mdf.predict(), 'o')
+#        ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+#        ax.grid()
+#        ax.legend()
+#        ax.set_title('Linear Mixed Effect Model Fit')
+#        ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+#        ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
 #        
-#        if iplot:
-#            if ax is None:
-#                fig, ax = plt.subplots()
-#
-#            ax.plot(df['obsErr'], mdf.predict(), 'o')
-#            ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-#            ax.grid()
-#            ax.legend()
-#            ax.set_title('Linear Mixed Effect Model Fit')
-#            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-#            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+#        def errorModel(df):
+#            return mdf.predict(np.abs(df[['recipMean','a','b','m','n']]))
+#        self.errorModel = errorModel
+#        self.df['resError'] = self.errorModel(self.df)
+#        
+#        if ax is None:
+#            return fig
+
 
     def heatmap(self,ax=None):
         """ Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
@@ -1256,15 +1273,15 @@ class Survey(object):
             If `ax` is not None, a matplotlib figure is returned.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        if np.sum(self.df['irecip'].values == 0) == 0:
-            print('choose recipError')
-            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
-            clabel = 'Reciprocal Error [%]'
-        else:
-            print('choose resist')
-            geom = True
-            resist = self.df['resist'].values
-            clabel = 'Apparent Resistivity [$\Omega.m$]'
+#        if all(self.df['irecip'].values != 0) is False:
+#            print('choose recipError')
+#            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
+#            clabel = 'Reciprocal Error [%]'
+#        else:
+#            print('choose resist')
+        geom = True
+        resist = self.df['resist'].values
+        clabel = 'Apparent Resistivity [$\Omega.m$]'
         if label == '':
             label = clabel
         inan = np.isnan(resist)
@@ -1477,3 +1494,4 @@ class Survey(object):
             new_elec[put_back,2] =  z_sorted[i]
     
         self.elec = new_elec
+

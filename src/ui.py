@@ -1477,21 +1477,28 @@ class App(QMainWindow):
                 pass
         
         def recipFilter():
-            numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-            if recipErrorInputLine.text() != '-':
-                percent = float(recipErrorInputLine.text())
-                numRecipRemoved = self.r2.filterRecip(percent=percent)
-                infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements are removed!" % (numRecipRemoved,percent,numSelectRemoved))
-            else:
-                infoDump("%i selected measurements are removed!" % (numSelectRemoved))
-            if ipCheck.checkState() == Qt.Checked:
-                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
-                heatFilter()
-                phaseplotError()
-            errHist()
-            plotManualFiltering()
-            plotError()
+            try:
+                numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+                if recipErrorInputLine.text() != '-':
+                    percent = float(recipErrorInputLine.text())
+                    numRecipRemoved = self.r2.filterRecip(percent=percent)
+                    infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
+                else:
+                    infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                if ipCheck.checkState() == Qt.Checked:
+                    self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
+                    self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                    heatFilter()
+                    phaseplotError()
+                errHist()
+                plotManualFiltering()
+                plotError()
+            except ValueError as e:
+                if ipCheck.checkState() != Qt.Checked:
+                    errorDump(e)    
+                else:
+                    errorDump('Index error! Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                              'Reset the filters and redo the filterings, first reciprocity then phase.') 
             
         def resetRecipFilter():
             numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
@@ -1507,7 +1514,7 @@ class App(QMainWindow):
             errHist()
             plotManualFiltering()
             plotError()
-            infoDump('%i measurements are restored!' % numRestored)
+            infoDump('%i measurements restored!' % numRestored)
 
 #        manualLayout = QVBoxLayout()
           
@@ -1569,7 +1576,7 @@ class App(QMainWindow):
         recipErrorBtnLayout.setAlignment(Qt.AlignRight)
         
         def recipErrorUnpairedFunc():
-            self.r2.removeUnpaired()
+            numRemoved = self.r2.removeUnpaired()
             if ipCheck.checkState() == Qt.Checked:
                 self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
                 self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -1578,7 +1585,7 @@ class App(QMainWindow):
             errHist()
             plotManualFiltering()
             plotError()
-            infoDump('Removing unpaired quadrupoles.')
+            infoDump('%i unpaired quadrupoles removed!' % numRemoved)
 
         recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         recipErrorUnpairedBtn.setFixedWidth(150)
@@ -1666,9 +1673,8 @@ class App(QMainWindow):
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
 #            elif index == 3:
-#                print('NOT READY YET')
 #                mwFitError.plot(self.r2.lmefit)
-#                self.r2.errTyp = 'lme'
+#                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -3703,6 +3709,11 @@ USA: Trelgol Publishing, (2006).
         tabAbout.setLayout(infoLayout)
         
         #%% general Ctrl+Q shortcut + general tab layout
+        if OS == 'Darwin':
+            metaLayout.setSpacing(4)
+            btnInvNow.setStyleSheet('background-color: green; margin-left: 5px; padding: 2px')
+            phasefiltlayout.setSpacing(4)
+            
         layout.addWidget(tabs)
         layout.addWidget(errorLabel)
         self.table_widget.setLayout(layout)

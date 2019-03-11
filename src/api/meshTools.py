@@ -571,6 +571,7 @@ class Mesh:
             
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
     
+    
     def show_3D(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
              xlim = "default",
@@ -1702,12 +1703,13 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
-    mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object 
+    mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object
     
+    print(mesh.attr_cache.keys())
     try:
-        mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
+        mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
     except:
-        #print('no sensitivity')
+        print('no sensitivity')
         pass
     mesh.mesh_title = title
     return mesh
