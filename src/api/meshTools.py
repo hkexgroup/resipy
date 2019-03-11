@@ -1110,6 +1110,8 @@ class Mesh:
                     print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
         
         self.add_e_nodes(node_in_mesh) # update e_node parameter
+        if len(np.unique(node_in_mesh)) != len(new_x):
+            warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
