@@ -17,7 +17,8 @@ import pandas as pd
 
 from api.parsers import (syscalParser, protocolParser, res2invInputParser,
                      primeParser, primeParserTab, protocolParserIP,
-                     protocol3DParser, forwardProtocolDC, forwardProtocolIP)
+                     protocol3DParser, forwardProtocolDC, forwardProtocolIP,
+                     abemParser,stingParser)
 from api.DCA import DCA
 
 class Survey(object):
@@ -56,7 +57,8 @@ class Survey(object):
         self.protocolIPFlag = False
         self.kFactor = 1
         
-        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP']# add parser types here! 
+        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
+                        'Sting','ABEM']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -78,6 +80,10 @@ class Survey(object):
                 self.protocolIPFlag = True
             elif ftype == 'forwardProtocolDC':
                 elec, data = forwardProtocolDC(fname)
+            elif ftype == 'Sting':
+                elec, data = stingParser(fname)
+            elif ftype == 'ABEM':
+                elec, data = abemParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)

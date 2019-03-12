@@ -685,6 +685,10 @@ class App(QMainWindow):
             elif index == 4:
                 self.ftype = 'BGS Prime'
             elif index == 5:
+                self.ftype = 'Sting'
+            elif index == 6:
+                self.ftype = 'ABEM'
+            elif index == 6:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -695,6 +699,8 @@ class App(QMainWindow):
         fileType.addItem('Protocol w/ IP')
         fileType.addItem('Res2Dinv')
         fileType.addItem('BGS Prime')
+        fileType.addItem('Sting')
+        fileType.addItem('ABEM')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
