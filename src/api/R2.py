@@ -908,8 +908,12 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(refdir) == False:
                 os.mkdir(refdir)
             param = self.param.copy()
-            param['a_wgt'] = 0.01
-            param['b_wgt'] = 0.02
+            if self.err:
+                param['a_wgt'] = 0
+                param['b_wgt'] = 0
+            else:
+                param['a_wgt'] = 0.01
+                param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
             param['reg_mode'] = 0 # set by default in ui.py too
             param['res0File'] = 'res0.dat'
@@ -1085,7 +1089,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-                    s.write2protocol(os.path.join(refdir, 'protocol.dat')) # no subset for background, just use all
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat'),err=err) # no subset for background, just use all
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
         
