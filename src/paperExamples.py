@@ -24,9 +24,10 @@ k.showResults()
 
 # graph section
 fig, ax = plt.subplots(figsize=(7, 2))
-k.showResults(ax=ax, zlim=[28, 29.6]) # show the inverted section
+k.showResults(ax=ax, zlim=[28, 29.6], sens=False) # show the inverted section
 fig.tight_layout()
 fig.savefig(figdir + 'castle.eps')
+fig.savefig(figdir + 'castle.png')
 fig.show()
 
 
@@ -50,15 +51,17 @@ k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 # graph section
 fig, ax = plt.subplots(figsize=(6, 2))
 ax.set_title('(a)')
-k.showResults(attr='Sigma_real(log10)', zlim=[-8, 0], ax=ax)
+k.showResults(attr='Sigma_real(log10)', zlim=[-8, 0], ax=ax, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'micp-sigma.eps')
+fig.savefig(figdir + 'micp-sigma.png')
 fig.show()
 fig, ax = plt.subplots(figsize=(6, 2))
 ax.set_title('(b)')
-k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax)
+k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'micp-phase.eps')
+fig.savefig(figdir + 'micp-phase.png')
 fig.show()
 
 
@@ -74,26 +77,29 @@ k.showResults(index=1) # show the second inverted section
 k.showResults(index=1, attr='difference(percent)') # show the differences between the first and second survey
 
 
-#%% graph
+# graph
 fig, ax = plt.subplots(figsize=(5, 2))
 ax.set_title('(a) 15th March 2017')
-k.showResults(ax=ax, index=1, attr='difference(percent)', vmin=0, vmax=50)
+k.showResults(ax=ax, index=1, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'woburnMarch.eps')
+fig.savefig(figdir + 'woburnMarch.png')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(5, 2))
 ax.set_title('(b) 27th April 2017')
-k.showResults(ax=ax, index=2, attr='difference(percent)', vmin=0, vmax=50)
+k.showResults(ax=ax, index=2, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'woburnApril.eps')
+fig.savefig(figdir + 'woburnApril.png')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(5, 2))
 ax.set_title('(c) 16th Mai 2017')
-k.showResults(ax=ax, index=3, attr='difference(percent)', vmin=0, vmax=50)
+k.showResults(ax=ax, index=3, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'woburnMai.eps')
+fig.savefig(figdir + 'woburnMai.png')
 fig.show()
 
 
@@ -118,6 +124,7 @@ fig, ax = plt.subplots(figsize=(7, 2))
 k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
 fig.tight_layout()
 fig.savefig(figdir + 'fixedRiver.eps')
+fig.savefig(figdir + 'fixedRiver.png')
 fig.show()
 
 
@@ -144,23 +151,26 @@ k.invert(iplot=True)
 k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
-#%% graph
+# graph
 fig, ax = plt.subplots(figsize=(7, 2))
 k.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
 fig.tight_layout()
 fig.savefig(figdir + 'forwardInitialModel.eps')
+fig.savefig(figdir + 'forwardInitialModel.png')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(7, 2))
 k.surveys[0].pseudo(ax=ax)
 fig.tight_layout()
 fig.savefig(figdir + 'forwardWennerPseudo.eps')
+fig.savefig(figdir + 'forwardWennerPseudo.png')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(7, 2))
 k.showResults(index=1, ax=ax, sens=False, zlim=[-7,0])
 fig.tight_layout()
 fig.savefig(figdir + 'forwardWennerInverted.eps')
+fig.savefig(figdir + 'forwardWennerInverted.png')
 fig.show()
 
 
@@ -177,11 +187,13 @@ fig, ax = plt.subplots(figsize=(7, 2))
 k.surveys[0].pseudo(ax=ax)
 fig.tight_layout()
 fig.savefig(figdir + 'forwardDipDipPseudo.eps')
+fig.savefig(figdir + 'forwardDipDipPseudo.png')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(7, 2))
 k.showResults(index=1, ax=ax, sens=False, zlim=[-7,0])
 fig.tight_layout()
 fig.savefig(figdir + 'forwardDipDipInverted.eps')
+fig.savefig(figdir + 'forwardDipDipInverted.png')
 fig.show()
 
