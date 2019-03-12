@@ -324,7 +324,7 @@ k.createMesh(cl=2)
 k.param['reg_mode'] = 1 # background regularization
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
-print('elapsed: {:.4}s'.format(time.time() - t0))
+#print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 
