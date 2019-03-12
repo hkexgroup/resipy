@@ -1186,6 +1186,7 @@ class App(QMainWindow):
         nrowsEdit = QLineEdit('')
         nrowsEdit.setValidator(QIntValidator())
         
+        self.fnameManual = None
         def openFileBtnFunc(file):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
             if fname != '':
@@ -1196,6 +1197,9 @@ class App(QMainWindow):
         openFileBtn.clicked.connect(openFileBtnFunc)
 
         def parseBtnFunc():
+            if self.fnameManual is None:
+                errorDump('Select a file to parse first.')
+                return
             try:
                 delimiter = delimiterEdit.text()
                 delimiter = None if delimiter == '' else delimiter
@@ -1206,8 +1210,9 @@ class App(QMainWindow):
                 parserTable.readTable(self.fnameManual, delimiter=delimiter,
                                           skiprows=skipRows, nrows=nrows)
                 fillBoxes(boxes) # last one is elecSpacingEdit
+                infoDump('Parsing successful.')
             except ValueError as e:
-                errorDump('Import error:', e)
+                errorDump('Parsing error:' + str(e))
 
         parseBtn = QPushButton('Import')
         parseBtn.setAutoDefault(True)
@@ -1286,7 +1291,7 @@ class App(QMainWindow):
                     df = df.reset_index() # in case all parse columns goes into the index (don't know why)
                     self.setRowCount(df.shape[0])
                     self.setColumnCount(df.shape[1])
-                    self.headers = df.columns.values
+                    self.headers = df.columns.values.astype(str) # make sure it's string
                     self.setHorizontalHeaderLabels(self.headers)
                     tt = df.values
                     self.setTable(tt)            
@@ -1366,6 +1371,7 @@ class App(QMainWindow):
                 espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
+                print('delimiter=', delimiter)
                 df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
                 df = df.reset_index() # solve issue all columns in index
                 oldHeaders = df.columns.values[colIndex]
