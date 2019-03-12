@@ -1568,6 +1568,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if platform.system() == "Windows": # distributed processing favoured on windows 
                 warnings.warn("Parallel processing unstable on windows! Running distributed processing instead")
                 self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
+                #self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
             else:
                 self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
