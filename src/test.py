@@ -217,7 +217,7 @@ k.createMesh(typ='trian')
 ## full API function
 k.addRegion(np.array([[1,0],[2,0],[2,-0.5],[1,-0.5],[1,0]]), 10, -3)
 
-k.forward(iplot=True, noise=0.05)
+k.forward(iplot=True, noise=0.05, noiseIP=1)
 k.invert(iplot=True)
 
 # the forward initial model
