@@ -2297,7 +2297,6 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
-            print('++++', str(line.decode('utf8'))
             dump(line.decode('utf-8'))
     else:
         call(cmd_line)#run gmsh 
