@@ -2496,9 +2496,14 @@ class App(QMainWindow):
         seqOutputLabel = QLabel('')
     
         # add noise possibility
-        noiseLabel = QLabel('Guassian noise to be added to the simulated data:')
+        noiseLabel = QLabel('Proportional noise to be added to simulated Res data:')
         noiseEdit = QLineEdit('0.02')
         noiseEdit.setValidator(QDoubleValidator())
+        
+        # add IP noise
+        noiseLabelIP = QLabel('Absolute noise added to simulated IP data (mrad):')
+        noiseEditIP = QLineEdit('2')
+        noiseEditIP.setValidator(QDoubleValidator())
         
         # add a forward button
         def forwardBtnFunc():
@@ -2518,7 +2523,8 @@ class App(QMainWindow):
                                dict(zip(regid, fixed)),
                                dict(zip(regid, phase0)))
             noise = float(noiseEdit.text())
-            self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
+            noiseIP = float(noiseEditIP.text())
+            self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
@@ -2562,6 +2568,8 @@ class App(QMainWindow):
         
         noiseLayout.addWidget(noiseLabel)
         noiseLayout.addWidget(noiseEdit)
+        noiseLayout.addWidget(noiseLabelIP)
+        noiseLayout.addWidget(noiseEditIP)
         noiseLayout.addWidget(seqOutputLabel)
         
         forwardLayout.addWidget(seqLabel, 5)
