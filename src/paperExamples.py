@@ -138,7 +138,7 @@ fig.show()
 k = R2(typ='R2')
 k.setElec(np.c_[np.linspace(0,24, 24), np.zeros((24, 2))])
 k.createMesh(typ='quad')
-target = np.array([[5,-1.5],[10,-1.5],[10,-3.5],[5,-3.5]])
+target = np.array([[7,-2.2],[12,-2.2],[12,-5],[7,-5]])
 k.addRegion(target, 10, -3)
 k.showMesh()
 
@@ -187,7 +187,7 @@ fig.show()
 
 
 
-#%%
+# now for the dipole dipole
 k.createSequence([('dpdp1', 1, 8)])
 
 k.forward(iplot=True, noise=0.05)
