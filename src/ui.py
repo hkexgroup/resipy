@@ -688,7 +688,7 @@ class App(QMainWindow):
                 self.ftype = 'Sting'
             elif index == 6:
                 self.ftype = 'ABEM'
-            elif index == 6:
+            elif index == 7:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -1684,9 +1684,9 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
-#            elif index == 3:
-#                mwFitError.plot(self.r2.lmefit)
-#                self.r2.err = True
+            elif index == 3:
+                mwFitError.plot(self.r2.lmefit)
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1704,7 +1704,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-#        errFitType.addItem('Linear Mixed Effect')
+        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)

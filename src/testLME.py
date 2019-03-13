@@ -23,7 +23,7 @@ data = np.vstack([recipMean, recipError]).T
 data = np.hstack((data, array))
 df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
 df.to_csv('/home/jkl/Downloads/df.csv')
-groups = df[['c1','c2','p1','p2']]
+groups = df[['c1','c2','p1','p2']].astype(int)
 #print(list(set(groups)))
 #x = [str(a[0]) + str(a[1]) + str(a[2]) + str(a[3]) for a in df[['c1','c2','p1','p2']].values.astype(int)]
 #groups = pd.Series(x, name='g') # this works but not same number of groups ...
@@ -55,3 +55,9 @@ print('++++++++++++++++=', mdf.summary())
     >>> model = sm.MixedLM(endog, exog, groups, vcomp=vc)
     >>> result = model.fit()
 """
+
+
+# SOLUTION: in 0.9.0, commenting the following line in the constructor of the
+# linear mixed effect did it (around line 936)
+#        else:
+#            groups = np.asarray(groups)
