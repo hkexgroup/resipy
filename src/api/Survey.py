@@ -1103,6 +1103,10 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
+        
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
+        
         if self.protocolIPFlag == True:
             ip = self.df['ip'].values
         else:
@@ -1116,9 +1120,6 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
         
         if contour is False:
             if ax is None:
