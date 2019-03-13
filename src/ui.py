@@ -393,8 +393,8 @@ class App(QMainWindow):
             b_wgt.setText('0.02')
 #            c_wgt.setText('1')
 #            d_wgt.setText('2')
-            rho_min.setText('-1000')
-            rho_max.setText('1000')
+            rho_min.setText('-10e10')
+            rho_max.setText('10e10')
             target_decrease.setText('0')
             helpSection2.setText('Click on the labels and help will be displayed here')
             

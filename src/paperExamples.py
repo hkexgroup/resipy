@@ -138,7 +138,7 @@ fig.show()
 k = R2(typ='R2')
 k.setElec(np.c_[np.linspace(0,24, 24), np.zeros((24, 2))])
 k.createMesh(typ='quad')
-target = np.array([[7,-2.2],[12,-2.2],[12,-5],[7,-5]])
+target = np.array([[7,-1],[10,-1],[10,-2],[7,-2]])
 k.addRegion(target, 10, -3)
 k.showMesh()
 
@@ -168,8 +168,8 @@ fig.savefig(figdir + 'forwardInitialModel.png')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(7, 2))
+k.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
 ax.set_title('(b)')
-k.surveys[0].pseudo(ax=ax)
 fig.tight_layout()
 fig.savefig(figdir + 'forwardWennerPseudo.eps')
 fig.savefig(figdir + 'forwardWennerPseudo.png')
@@ -196,8 +196,8 @@ k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
 # graph
 fig, ax = plt.subplots(figsize=(7, 2))
+k.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
 ax.set_title('(d)')
-k.surveys[0].pseudo(ax=ax)
 fig.tight_layout()
 fig.savefig(figdir + 'forwardDipDipPseudo.eps')
 fig.savefig(figdir + 'forwardDipDipPseudo.png')

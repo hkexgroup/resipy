@@ -1317,6 +1317,7 @@ class Survey(object):
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
         
+        array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
