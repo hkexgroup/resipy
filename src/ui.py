@@ -2566,11 +2566,11 @@ class App(QMainWindow):
             qgroup.setLayout(qlayout)
             seqLayout.addWidget(qgroup)
         
-        noiseLayout.addWidget(noiseLabel, 20)
-        noiseLayout.addWidget(noiseEdit, 20)
-        noiseLayout.addWidget(noiseLabelIP, 20)
-        noiseLayout.addWidget(noiseEditIP, 20)
-        noiseLayout.addWidget(seqOutputLabel, 20)
+        noiseLayout.addWidget(noiseLabel)
+        noiseLayout.addWidget(noiseEdit)
+        noiseLayout.addWidget(noiseLabelIP)
+        noiseLayout.addWidget(noiseEditIP)
+        noiseLayout.addWidget(seqOutputLabel)
         
         forwardLayout.addWidget(seqLabel, 5)
         forwardLayout.addLayout(seqLayout, 30)
