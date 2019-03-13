@@ -867,12 +867,12 @@ class App(QMainWindow):
             if state  == Qt.Checked:
                 self.r2.typ = 'c' + self.r2.typ
                 self.typ = 'c' + self.typ
+                showIpOptions(True)
 #                timeLapseCheck.setEnabled(False)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(True)
                 else:
                     plotPseudoIP()
-                    showIpOptions(True)
                     mwPseudoIP.setVisible(True)
                     tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
@@ -2496,12 +2496,12 @@ class App(QMainWindow):
         seqOutputLabel = QLabel('')
     
         # add noise possibility
-        noiseLabel = QLabel('Proportional noise to be added to simulated Res data:')
-        noiseEdit = QLineEdit('0.02')
+        noiseLabel = QLabel('Resistivity noise [%]:')
+        noiseEdit = QLineEdit('2')
         noiseEdit.setValidator(QDoubleValidator())
         
         # add IP noise
-        noiseLabelIP = QLabel('Absolute noise added to simulated IP data (mrad):')
+        noiseLabelIP = QLabel('Phase noise [mrad]:')
         noiseEditIP = QLineEdit('2')
         noiseEditIP.setValidator(QDoubleValidator())
         
@@ -2522,7 +2522,7 @@ class App(QMainWindow):
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)),
                                dict(zip(regid, phase0)))
-            noise = float(noiseEdit.text())
+            noise = float(noiseEdit.text()) / 100 #percentage to proportion
             noiseIP = float(noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
@@ -2566,11 +2566,11 @@ class App(QMainWindow):
             qgroup.setLayout(qlayout)
             seqLayout.addWidget(qgroup)
         
-        noiseLayout.addWidget(noiseLabel)
-        noiseLayout.addWidget(noiseEdit)
-        noiseLayout.addWidget(noiseLabelIP)
-        noiseLayout.addWidget(noiseEditIP)
-        noiseLayout.addWidget(seqOutputLabel)
+        noiseLayout.addWidget(noiseLabel, 20)
+        noiseLayout.addWidget(noiseEdit, 20)
+        noiseLayout.addWidget(noiseLabelIP, 20)
+        noiseLayout.addWidget(noiseEditIP, 20)
+        noiseLayout.addWidget(seqOutputLabel, 20)
         
         forwardLayout.addWidget(seqLabel, 5)
         forwardLayout.addLayout(seqLayout, 30)
@@ -2623,9 +2623,10 @@ class App(QMainWindow):
             if arg == True:
                 a_wgt.setText('0.02')
                 b_wgt.setText('2')
-                if 'magErr' in self.r2.surveys[0].df.columns:
-                    a_wgt.setText('0.0')
-                    b_wgt.setText('0.0')
+                if self.r2.iForward is False:
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
                 if self.r2.typ == 'cR3t':
                     c_wgt.setText('1')
                     c_wgt.setVisible(True)
