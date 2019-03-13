@@ -1123,16 +1123,8 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-<<<<<<< HEAD
-                
-||||||| merged common ancestors
-        
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
-        
-=======
-        
->>>>>>> ff821e0e152bdefc991f1f404cb92aee92f604ba
+
+
         if contour is False:
             if ax is None:
                 fig, ax = plt.subplots()
