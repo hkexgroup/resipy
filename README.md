@@ -26,6 +26,9 @@ Note that Mac and Linux users need to have *wine* installed.
 
 What it can do
 --------------
+<img src='src/image/workflow.png' width="400">
+<figcaption>General workflow available</figcaption>
+
 <img src="src/image/importData.png"  width="700">
 <figcaption>Importing data and plotting pseudo-section. Note that there are option for borehole survey, time-lapse, batch and IP data.</figcaption>
 
