@@ -3,7 +3,7 @@
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-pyR2_version = '1.1.1' # pyR2 version (semantic versionning in use) 
+pyR2_version = '1.1.2' # pyR2 version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
