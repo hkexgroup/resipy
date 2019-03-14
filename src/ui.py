@@ -1616,7 +1616,7 @@ class App(QMainWindow):
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
-                self.r2.elec = elec
+                self.r2.setElec(elec)
 #            nnodes = int(nnodesEdit.text())
 #            if nnodes < 4:
 #                nnodesEdit.setText('4')
@@ -1651,7 +1651,7 @@ class App(QMainWindow):
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
-                self.r2.elec = elec
+                self.r2.setElec(elec)
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
