@@ -2112,7 +2112,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.0, iplot=False, dump=print):
+    def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
         Parameters
@@ -2120,6 +2120,9 @@ class R2(object): # R2 master class instanciated by the GUI
         noise : float, optional 0 <= noise <= 1
             Noise level from a Gaussian distribution that should be applied
             on the forward apparent resistivities obtained. 
+        noiseIP : float, optional
+            Absolute noise level in mrad from a Gaussian distribution that should be applied
+            on the forward phase values obtained. 
         iplot : bool, optional
             If `True` will plot the pseudo section after the forward modelling.
         dump : function, optional
@@ -2203,8 +2206,14 @@ class R2(object): # R2 master class instanciated by the GUI
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
             return x + np.random.randn(1)*x*level
+        
+        def addnoiseIP(x, level=2):
+            return x + np.random.randn(1)*level
+        
         addnoise = np.vectorize(addnoise)
-        self.noise = noise
+        addnoiseIP = np.vectorize(addnoiseIP)
+        self.noise = noise #proportional noise, e.g. 0.05 = 5% noise
+        self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
         elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
@@ -2215,7 +2224,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
-        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
+        self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
         
         self.pseudo()

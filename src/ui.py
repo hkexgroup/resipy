@@ -393,8 +393,8 @@ class App(QMainWindow):
             b_wgt.setText('0.02')
 #            c_wgt.setText('1')
 #            d_wgt.setText('2')
-            rho_min.setText('-1000')
-            rho_max.setText('1000')
+            rho_min.setText('-10e10')
+            rho_max.setText('10e10')
             target_decrease.setText('0')
             helpSection2.setText('Click on the labels and help will be displayed here')
             
@@ -688,7 +688,7 @@ class App(QMainWindow):
                 self.ftype = 'Sting'
             elif index == 6:
                 self.ftype = 'ABEM'
-            elif index == 6:
+            elif index == 7:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -867,12 +867,12 @@ class App(QMainWindow):
             if state  == Qt.Checked:
                 self.r2.typ = 'c' + self.r2.typ
                 self.typ = 'c' + self.typ
+                showIpOptions(True)
 #                timeLapseCheck.setEnabled(False)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(True)
                 else:
                     plotPseudoIP()
-                    showIpOptions(True)
                     mwPseudoIP.setVisible(True)
                     tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
@@ -1192,6 +1192,7 @@ class App(QMainWindow):
         nrowsEdit = QLineEdit('')
         nrowsEdit.setValidator(QIntValidator())
         
+        self.fnameManual = None
         def openFileBtnFunc(file):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
             if fname != '':
@@ -1202,6 +1203,9 @@ class App(QMainWindow):
         openFileBtn.clicked.connect(openFileBtnFunc)
 
         def parseBtnFunc():
+            if self.fnameManual is None:
+                errorDump('Select a file to parse first.')
+                return
             try:
                 delimiter = delimiterEdit.text()
                 delimiter = None if delimiter == '' else delimiter
@@ -1212,8 +1216,9 @@ class App(QMainWindow):
                 parserTable.readTable(self.fnameManual, delimiter=delimiter,
                                           skiprows=skipRows, nrows=nrows)
                 fillBoxes(boxes) # last one is elecSpacingEdit
+                infoDump('Parsing successful.')
             except ValueError as e:
-                errorDump('Import error:', e)
+                errorDump('Parsing error:' + str(e))
 
         parseBtn = QPushButton('Import')
         parseBtn.setAutoDefault(True)
@@ -1292,7 +1297,7 @@ class App(QMainWindow):
                     df = df.reset_index() # in case all parse columns goes into the index (don't know why)
                     self.setRowCount(df.shape[0])
                     self.setColumnCount(df.shape[1])
-                    self.headers = df.columns.values
+                    self.headers = df.columns.values.astype(str) # make sure it's string
                     self.setHorizontalHeaderLabels(self.headers)
                     tt = df.values
                     self.setTable(tt)            
@@ -1372,6 +1377,7 @@ class App(QMainWindow):
                 espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
+                print('delimiter=', delimiter)
                 df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
                 df = df.reset_index() # solve issue all columns in index
                 oldHeaders = df.columns.values[colIndex]
@@ -1678,9 +1684,9 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
-#            elif index == 3:
-#                mwFitError.plot(self.r2.lmefit)
-#                self.r2.err = True
+            elif index == 3:
+                mwFitError.plot(self.r2.lmefit)
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1698,7 +1704,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-#        errFitType.addItem('Linear Mixed Effect')
+        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -2490,9 +2496,14 @@ class App(QMainWindow):
         seqOutputLabel = QLabel('')
     
         # add noise possibility
-        noiseLabel = QLabel('Guassian noise to be added to the simulated data:')
-        noiseEdit = QLineEdit('0.02')
+        noiseLabel = QLabel('Resistivity noise [%]:')
+        noiseEdit = QLineEdit('2')
         noiseEdit.setValidator(QDoubleValidator())
+        
+        # add IP noise
+        noiseLabelIP = QLabel('Phase noise [mrad]:')
+        noiseEditIP = QLineEdit('2')
+        noiseEditIP.setValidator(QDoubleValidator())
         
         # add a forward button
         def forwardBtnFunc():
@@ -2511,8 +2522,9 @@ class App(QMainWindow):
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)),
                                dict(zip(regid, phase0)))
-            noise = float(noiseEdit.text())
-            self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
+            noise = float(noiseEdit.text()) / 100 #percentage to proportion
+            noiseIP = float(noiseEditIP.text())
+            self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
@@ -2556,6 +2568,8 @@ class App(QMainWindow):
         
         noiseLayout.addWidget(noiseLabel)
         noiseLayout.addWidget(noiseEdit)
+        noiseLayout.addWidget(noiseLabelIP)
+        noiseLayout.addWidget(noiseEditIP)
         noiseLayout.addWidget(seqOutputLabel)
         
         forwardLayout.addWidget(seqLabel, 5)
@@ -2609,9 +2623,10 @@ class App(QMainWindow):
             if arg == True:
                 a_wgt.setText('0.02')
                 b_wgt.setText('2')
-                if 'magErr' in self.r2.surveys[0].df.columns:
-                    a_wgt.setText('0.0')
-                    b_wgt.setText('0.0')
+                if self.r2.iForward is False:
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
                 if self.r2.typ == 'cR3t':
                     c_wgt.setText('1')
                     c_wgt.setVisible(True)

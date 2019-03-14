@@ -72,8 +72,8 @@ def write2Din(param, dirname, typ='R2'):
             'b_wgt':0.02, # 2 for IP
 #            'c_wgt':1,
 #            'd_wgt':2,
-            'rho_min':-1000,
-            'rho_max':1000,
+            'rho_min':-1e10,
+            'rho_max':1e10,
             'num_xy_poly':-1,
             'xy_poly_table':np.zeros((5,2)),
             'num_elec':None, #should be define when importing data
@@ -254,8 +254,8 @@ def write3Din(param, dirname, typ='R3t'):
             'a_wgt':0.01,
             'b_wgt':0.02,
             'c_wgt':1, # cR3t specific
-            'rho_min': -1000, # cR3t specific
-            'rho_max': 1000, # cR3t specific
+            'rho_min': -1e10, # cR3t specific
+            'rho_max': 1e10, # cR3t specific
             'zmin':-10, # 3D specific
             'zmax':0, # 3D specific
             'num_xy_poly':0,
