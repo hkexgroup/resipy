@@ -1704,8 +1704,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object
-    
-    print(mesh.attr_cache.keys())
+#    print(mesh.attr_cache.keys())
     try:
         mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
     except:
