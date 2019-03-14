@@ -672,7 +672,8 @@ class App(QMainWindow):
         wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
         
         self.ftype = 'Syscal' # by default
-        
+        self.fformat = 'Comma Separated Values (*.csv)' # default
+
         def fileTypeFunc(index):
             if index == 0:
                 self.ftype = 'Syscal'
