@@ -6,6 +6,7 @@ Created on Thu Jan 10 11:34:56 2019
 @author: jkl
 
 RUN ALL SECTION ON THE TEST AND CHECK THE GRAPH PRODUCED
+
 """
 
 import numpy as np
@@ -329,3 +330,4 @@ k.showInParaview()
 
 
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
+
