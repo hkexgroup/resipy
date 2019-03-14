@@ -4,7 +4,7 @@
 import os
 import sys
 import time
-
+print(__name__)
 #a = time.time()
 print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
