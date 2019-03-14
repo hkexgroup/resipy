@@ -55,7 +55,7 @@ Project structure
 Don't hesitate to consult the [api-structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
 
 
-The full description of the API can be found in the *[documentation](./doc/_build/html/index.html)*.
+The full description of the API can be found in the *[documentation](https://hkex.gitlab.io/pyr2/)*.
 
 
 
