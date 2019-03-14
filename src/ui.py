@@ -3225,6 +3225,7 @@ class App(QMainWindow):
             self.end = False
             outStackLayout.setCurrentIndex(0)
             mwInvResult.clear()
+            self.r2.param['lineTitle'] = titleEdit.text()
             if self.r2.mesh is None:
                 meshQuadFunc() # generate default mesh
 
