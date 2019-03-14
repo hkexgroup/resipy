@@ -676,18 +676,25 @@ class App(QMainWindow):
         def fileTypeFunc(index):
             if index == 0:
                 self.ftype = 'Syscal'
+                self.fformat = 'Comma Separated Values (*.csv)'
             elif index == 1:
                 self.ftype = 'Protocol'
+                self.fformat = 'DAT (Tab delimited) (*.dat)'
             elif index == 2:
                 self.ftype = 'ProtocolIP'
+                self.fformat = 'DAT (Tab delimited) (*.dat)'
             elif index == 3:
                 self.ftype = 'Res2Dinv'
+                self.fformat = 'DAT (*.dat)'
             elif index == 4:
                 self.ftype = 'BGS Prime'
+                self.fformat = 'DAT (*.dat)'
             elif index == 5:
                 self.ftype = 'Sting'
+                self.fformat = ''
             elif index == 6:
                 self.ftype = 'ABEM'
+                self.fformat = ''
             elif index == 7:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
@@ -747,7 +754,7 @@ class App(QMainWindow):
             
         def getfile():
             print('ftype = ', self.ftype)
-            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
             if fname != '':
                 restartFunc()
                 self.datadir = os.path.dirname(fname)
@@ -817,7 +824,7 @@ class App(QMainWindow):
         buttonf.setToolTip('Select input file (time-lapse: select the directory that contains the data).')
         
         def getfileR(): # import reciprocal file
-            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
+            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
                 buttonfr.setText(os.path.basename(fnameRecip))
                 if float(spacingEdit.text()) == -1:
@@ -1416,7 +1423,7 @@ class App(QMainWindow):
             
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            fileType.setCurrentIndex(5)
+            fileType.setCurrentIndex(7)
             tabImporting.setCurrentIndex(0)
                 
                 
