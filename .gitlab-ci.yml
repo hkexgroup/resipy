@@ -6,6 +6,7 @@ pages:
   - apt-get install --assume-yes wine
   - pip install sphinx==1.6.7 numpydoc numpy matplotlib PyQt5 pandas scipy statsmodels
   - cd src
+  - python test.py
   - cd ..
   - ls
   - cd doc
