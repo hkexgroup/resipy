@@ -29,6 +29,7 @@ from api.isinpolygon import isinpolygon, isinvolume, in_box
 import api.interpolation as interp
 from api.sliceMesh import sliceMesh # mesh slicing function
 
+        
 #%% create mesh object
 class Mesh:
     """Mesh class.
@@ -428,7 +429,8 @@ class Mesh:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[2])
             z = np.array(X)
-            triang = tri.Triangulation(x,y)
+            triang = tri.Triangulation(x, y) # as it's based on centroid, some triangles might be out of the survey area
+#            triang = tri.Triangulation(np.array(self.node_x), self.node_y, connection)
             if vmin is None:
                 vmin = np.nanmin(z)
             if vmax is None:
@@ -437,6 +439,26 @@ class Mesh:
                 levels = np.linspace(vmin, vmax, 7)
             else:
                 levels = None
+                
+            # make sure none of the triangle centroids are above the
+            # line of electrodes
+            def cropSurface(triang, xsurf, ysurf):
+                trix = np.mean(triang.x[triang.triangles], axis=1)
+                triy = np.mean(triang.y[triang.triangles], axis=1)
+                
+                i2keep = np.ones(len(trix), dtype=bool)
+                for i in range(len(xsurf)-1):
+                    ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+                    iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+                    ie = ilateral & iabove
+                    i2keep[ie] = False
+                return i2keep
+            
+            try:
+                triang.set_mask(~cropSurface(triang, self.elec_x, self.elec_z))
+            except Exception as e:
+                print('Error in Mesh.show for contouring: ', e)
+
             self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()
