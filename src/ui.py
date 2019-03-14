@@ -1691,9 +1691,9 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
-            elif index == 3:
-                mwFitError.plot(self.r2.lmefit)
-                self.r2.err = True
+#            elif index == 3:
+#                mwFitError.plot(self.r2.lmefit)
+#                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1711,7 +1711,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Linear Mixed Effect')
+#        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -1994,7 +1994,7 @@ class App(QMainWindow):
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
-                self.r2.elec = elec
+                self.r2.setElec(elec)
 #            nnodes = int(nnodesEdit.text())
 #            if nnodes < 4:
 #                nnodesEdit.setText('4')
@@ -2029,7 +2029,7 @@ class App(QMainWindow):
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
-                self.r2.elec = elec
+                self.r2.setElec(elec)
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
