@@ -24,6 +24,7 @@ from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
 import api.isinpolygon as iip
+from api.template import parallelScript 
 from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
@@ -912,8 +913,10 @@ class R2(object): # R2 master class instanciated by the GUI
                 param['a_wgt'] = 0
                 param['b_wgt'] = 0
             else:
-                param['a_wgt'] = 0.01
-                param['b_wgt'] = 0.02
+                if 'a_wgt' not in param:#this allows previously assigned values to be 
+                    param['a_wgt'] = 0.01 # written to the reference.in config file
+                if 'b_wgt' not in param:
+                    param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
             param['reg_mode'] = 0 # set by default in ui.py too
             param['res0File'] = 'res0.dat'
@@ -1491,9 +1494,160 @@ class R2(object): # R2 master class instanciated by the GUI
         
         print('----------- END OF INVERSION IN // ----------')
         
+    def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
+                    ncores=None, rmDirTree=False):
+        """ Run R2 in // according to the number of cores available.
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory.
+        dump : function, optional
+            Function to be passed to `R2.runR2()` for printing output during
+            inversion.
+        iMoveElec : bool, optional
+            If `True` will move electrodes according to their position in each
+            `Survey` object.
+        ncores : int, optional
+            Number or cores to use. If None, the maximum number of cores
+            available will be used.
+        rmDirTree: bool, optional
+            Remove excess directories and files created during parallel inversion
+        """
+        if dirname is None:
+            dirname = self.dirname
+        
+        if self.iTimeLapse is True and self.iBatch is False:
+            surveys = self.surveys[1:] # skips out first survey as this should be inverted seperately as a baseline
+        else:
+            surveys = self.surveys
+            
+        # create R2.exe path
+        exeName = self.typ + '.exe'
+        exePath = os.path.join(self.apiPath, 'exe', exeName)
+        
+        # split the protocol.dat
+        dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
+                            sep='\t', header=None, engine='python').reset_index()
+        
+        idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
+        idf.append(len(dfall))
+        dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
+        
+        # writing all protocol.dat
+        files = []
+        for s, df in zip(surveys, dfs):
+            outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
+            files.append(outputname)
+            df.to_csv(outputname, sep='\t', header=False, index=False)
+            # header with line count already included
+                    
+        # if iMoveElec is True, writing different R2.in
+        if iMoveElec is True:
+            print('Electrodes position will be updated for each survey')
+            for s in self.surveys:
+                print(s.name, '...', end='')
+                elec = s.elec
+                e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
+                self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
+                if int(self.mesh.cell_type[0])==8 or int(self.mesh.cell_type[0])==9:#elements are quads
+                    colx = self.mesh.quadMeshNp() # so find x column indexes instead. Wont support change in electrode elevation
+                    self.param['node_elec'][:,1] = colx
+                self.param['inverse_type'] = 1 # regularise against a background model 
+                #self.param['reg_mode'] = 1
+                write2in(self.param, self.dirname, self.typ)
+                r2file = os.path.join(self.dirname, self.typ + '.in')
+                shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in')) # each file has different node positions
+                print('done')   
+                
+        print('Creating working directories for each inversion...')
+        workerDirs=['']*len(surveys) # number of surveys, preallocate list 
+        toMove = ['mesh.dat', 'mesh3d.dat','R2.in','cR2.in',
+                  'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 
+                  'Start_res.dat']
+        
+        for i,s in enumerate(surveys):
+            workerDirs[i] = os.path.join(self.dirname,'%i'%(i+1)) # add one so starting directory ==1 
+            if not os.path.exists(workerDirs[i]): # make inversion directory 
+                os.mkdir(workerDirs[i])
+            for f in toMove: # copy mesh file, starting resistivity etc... 
+                fname = os.path.join(self.dirname, f)
+                if os.path.exists(fname):
+                    shutil.copy(fname, os.path.join(workerDirs[i], f))
+            #copy over protocol file 
+            fname = os.path.join(self.dirname, 'protocol_' + s.name + '.dat')
+            shutil.copy(fname,os.path.join(workerDirs[i], 'protocol.dat'))
+            #copy .in file if moving electrodes occur
+            if iMoveElec:
+                fname = os.path.join(self.dirname, self.typ + '_' + s.name + '.in')
+                shutil.copy(fname,os.path.join(workerDirs[i], self.typ +'.in'))
+        print('...Done')
+                        
+        # create workers directory
+        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        if ncores is None:
+            ncores = ncoresAvailable
+        else:
+            if ncores > ncoresAvailable:
+                raise ValueError('Number of cores larger than available')
+        
+        #we need to add some formating strings to worker directories in the python script
+        formattedDirs = str(workerDirs).replace('\\\\','\\').replace(',',',\n').replace("'C:","r'C:")
+        
+        
+        #write a parallised python scrip using an imported template 
+        parallel = parallelScript.format(formattedDirs,
+                                         "r'"+exePath+"'",ncores)#format template
+        
+        #according to docs found here: https://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
+        #we need to spawn a whole new python interpreter in order to safely run 
+        #multiprocessing within windows as the os doesnt support forking. 
+        
+        #write python parallel script to file 
+        fh = open('parallelScript.py','w')
+        fh.write(parallel)
+        fh.close()
+        
+        #raise Exception('Stopping here for testing purposes')
+    
+        #now to run the actual inversion     
+        def initiate(): # initaites the script 
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW   
+            proc = Popen('python parallelScript.py', stdout = PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)           
+            for stdout_line in iter(proc.stdout.readline, ""):
+                yield stdout_line
+
+            proc.stdout.close()
+            return_code = proc.wait()
+            if return_code:
+                print('error on return_code')        
+    
+            
+        def run():#run the parallel script 
+            for text in initiate():
+                print(text.rstrip())       
+        run()
+        
+#### TODO: Add capacity to kill pool 
+#        class ProcsManagement(object): # little class to handle the kill
+#            def __init__(self, procs):
+#                self.procs = procs
+#            def kill(self):
+#                for p in self.procs:
+#                    p.terminate()          
+#        self.proc = ProcsManagement(procs)
+          
+        # delete the dirs and the files
+        if rmDirTree:
+            [shutil.rmtree(d) for d in workerDirs]
+            #[os.remove(f) for f in files]
+        
+        print('----------- END OF PARALLISED INVERSION // ----------')
+        
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False, iMoveElec=False, ncores=None):
+               parallel=False, iMoveElec=False, ncores=None, forceParallel=False):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -1569,10 +1723,11 @@ class R2(object): # R2 master class instanciated by the GUI
             
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-            if platform.system() == "Windows": # distributed processing favoured on windows 
-                warnings.warn("Parallel processing unstable on windows! Running distributed processing instead")
-                self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
-                #self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+            if platform.system() == "Windows": # different method needed on windows due to lack of forking
+                if forceParallel:
+                    self.runParallelWindows(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+                else:
+                    self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
             else:
                 self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
