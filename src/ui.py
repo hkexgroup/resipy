@@ -326,7 +326,7 @@ class App(QMainWindow):
                 reg_mode.setCurrentIndex(0)
             # importing
             self.parser = None
-            wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
+            wdBtn.setText('Working directory:' + os.path.basename(self.r2.dirname))
             buttonf.setText('Import Data')
 #            timeLapseCheck.setChecked(False)
 #            boreholeCheck.setChecked(False)
@@ -662,30 +662,38 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
-                wdBtn.setText(fdir + ' (Press to change)')
+                wdBtn.setText(os.path.basename(self.newwd))
             
-        wdBtn = QPushButton('Working directory:' + self.newwd + ' (Press to change)')
+        wdBtn = QPushButton('Working directory:' + os.path.basename(self.newwd))
         wdBtn.setAutoDefault(True)
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
         
         self.ftype = 'Syscal' # by default
-        
+        self.fformat = 'Comma Separated Values (*.csv)' # default
+
         def fileTypeFunc(index):
             if index == 0:
                 self.ftype = 'Syscal'
+                self.fformat = 'Comma Separated Values (*.csv)'
             elif index == 1:
                 self.ftype = 'Protocol'
+                self.fformat = 'DAT (Tab delimited) (*.dat)'
             elif index == 2:
                 self.ftype = 'ProtocolIP'
+                self.fformat = 'DAT (Tab delimited) (*.dat)'
             elif index == 3:
                 self.ftype = 'Res2Dinv'
+                self.fformat = 'DAT (*.dat)'
             elif index == 4:
                 self.ftype = 'BGS Prime'
+                self.fformat = 'DAT (*.dat)'
             elif index == 5:
                 self.ftype = 'Sting'
+                self.fformat = ''
             elif index == 6:
                 self.ftype = 'ABEM'
+                self.fformat = ''
             elif index == 7:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
@@ -745,7 +753,7 @@ class App(QMainWindow):
             
         def getfile():
             print('ftype = ', self.ftype)
-            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
             if fname != '':
                 restartFunc()
                 self.datadir = os.path.dirname(fname)
@@ -815,7 +823,7 @@ class App(QMainWindow):
         buttonf.setToolTip('Select input file (time-lapse: select the directory that contains the data).')
         
         def getfileR(): # import reciprocal file
-            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
+            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
                 buttonfr.setText(os.path.basename(fnameRecip))
                 if float(spacingEdit.text()) == -1:
@@ -854,6 +862,7 @@ class App(QMainWindow):
         btnInvNow.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
         
         hbox4 = QHBoxLayout()
+        hbox4.addWidget(wdBtn)
         hbox4.addWidget(fileType)
 #        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
@@ -925,7 +934,7 @@ class App(QMainWindow):
 #        metaLayout.addLayout(topLayout)
         metaLayout.addLayout(hbox1)
         metaLayout.addLayout(hbox2)
-        metaLayout.addWidget(wdBtn)
+#        metaLayout.addWidget(wdBtn)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
@@ -1414,7 +1423,7 @@ class App(QMainWindow):
             
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            fileType.setCurrentIndex(5)
+            fileType.setCurrentIndex(7)
             tabImporting.setCurrentIndex(0)
                 
                 
@@ -1682,9 +1691,9 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
-            elif index == 3:
-                mwFitError.plot(self.r2.lmefit)
-                self.r2.err = True
+#            elif index == 3:
+#                mwFitError.plot(self.r2.lmefit)
+#                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1702,7 +1711,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Linear Mixed Effect')
+#        errFitType.addItem('Linear Mixed Effect')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -1985,7 +1994,7 @@ class App(QMainWindow):
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
-                self.r2.elec = elec
+                self.r2.setElec(elec)
 #            nnodes = int(nnodesEdit.text())
 #            if nnodes < 4:
 #                nnodesEdit.setText('4')
@@ -2020,7 +2029,7 @@ class App(QMainWindow):
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
-                self.r2.elec = elec
+                self.r2.setElec(elec)
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
@@ -3224,6 +3233,7 @@ class App(QMainWindow):
             self.end = False
             outStackLayout.setCurrentIndex(0)
             mwInvResult.clear()
+            self.r2.param['lineTitle'] = titleEdit.text()
             if self.r2.mesh is None:
                 meshQuadFunc() # generate default mesh
 

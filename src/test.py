@@ -6,6 +6,7 @@ Created on Thu Jan 10 11:34:56 2019
 @author: jkl
 
 RUN ALL SECTION ON THE TEST AND CHECK THE GRAPH PRODUCED
+
 """
 
 import numpy as np
@@ -59,7 +60,7 @@ k.showMesh()
 k.invert()
 k.showIter(index=0)
 k.showIter(index=1)
-k.showResults(sens=False)
+k.showResults(sens=False, contour=True)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -232,22 +233,23 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 
 #%% test Paul River
 plt.close('all')
+from api.R2 import R2
 print('-------------Testing Buried Electrodes in Fixed River ------------')
 t0 = time.time()
 k = R2()
 k.createSurvey('./api/test/primeFile.dat', ftype='BGS Prime')
+# following lines will add electrode position, surface points and specify if electrodes are buried or not. Similar steps are done in the GUI in (a), (b), (c)
 x = np.genfromtxt('./api/test/primePosBuried.csv', delimiter=',')
-k.elec[:,[0,2]] = x[:,:2]
-surface = np.array([[0.7, 92.30],[10.3, 92.30]])
-buried = x[:,2].astype(bool)
+k.elec[:,[0,2]] = x[:,:2] # electrode positions
+surface = np.array([[0.7, 92.30],[10.3, 92.30]]) # additional surface point for the river level
+buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river here)
+k.filterElec([21, 2]) # filter out problematic electrodes 21 and 2
 k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
-k.createMesh(typ='quad',buried=buried)
-k.showMesh()
-xy = k.elec[1:21,[0,2]]
-k.addRegion(xy, res0=18, blocky=True, fixed=False)
-k.param['b_wgt'] = 0.04 # doesn't work
+xy = k.elec[1:21,[0,2]] # adding river water level using 2 topo points
+k.addRegion(xy, res0=32, blocky=True, fixed=True) # fixed river resistivity to 32 Ohm.m
+k.param['b_wgt'] = 0.05 # setting up higher noise level
 k.invert()
-k.showResults(sens=False)
+k.showResults(sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -329,3 +331,4 @@ k.showInParaview()
 
 
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
+

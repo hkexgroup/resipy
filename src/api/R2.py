@@ -3,7 +3,7 @@
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-pyR2_version = '1.1.1' # pyR2 version (semantic versionning in use) 
+pyR2_version = '1.1.3' # pyR2 version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -1799,12 +1799,14 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,1]
             mesh.elec_z = self.elec[:,2]
+            mesh.surface = self.mesh.surface
             self.meshResults.append(mesh)
         if self.iForward is True:
             initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
             initMesh.elec_x = self.elec[:,0]
             initMesh.elec_y = self.elec[:,1]
             initMesh.elec_z = self.elec[:,2]
+            initMesh.surface = self.mesh.surface
             self.meshResults.append(initMesh)
             
         for i in range(1000):
@@ -1823,6 +1825,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh.elec_x = self.surveys[j].elec[:,0]
                 mesh.elec_y = self.surveys[j].elec[:,1]
                 mesh.elec_z = self.surveys[j].elec[:,2]
+                mesh.surface = self.mesh.surface
                 self.meshResults.append(mesh)
             else:
                 break
@@ -2321,6 +2324,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if x.shape[0] > 0:
                     triang = tri.Triangulation(x[:,0],x[:,1])
                     cax = ax.tricontourf(triang, x[:,3], extend='both')
+                    # TODO might want to crop surface here as well
                     fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                     ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                     ax.set_aspect('equal')

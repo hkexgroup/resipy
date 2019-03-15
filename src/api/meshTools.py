@@ -29,6 +29,7 @@ from api.isinpolygon import isinpolygon, isinvolume, in_box
 import api.interpolation as interp
 from api.sliceMesh import sliceMesh # mesh slicing function
 
+        
 #%% create mesh object
 class Mesh:
     """Mesh class.
@@ -109,6 +110,7 @@ class Mesh:
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
         self.regions = regions
+        self.surface = None # surface points for cropping the mesh when contouring
         #decide if mesh is 3D or not 
         if max(node_y) - min(node_y) == 0: # mesh is probably 2D 
             self.ndims=2
@@ -428,7 +430,8 @@ class Mesh:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[2])
             z = np.array(X)
-            triang = tri.Triangulation(x,y)
+            triang = tri.Triangulation(x, y) # as it's based on centroid, some triangles might be out of the survey area
+#            triang = tri.Triangulation(np.array(self.node_x), self.node_y, connection)
             if vmin is None:
                 vmin = np.nanmin(z)
             if vmax is None:
@@ -437,6 +440,26 @@ class Mesh:
                 levels = np.linspace(vmin, vmax, 7)
             else:
                 levels = None
+                
+            # make sure none of the triangle centroids are above the
+            # line of electrodes
+            def cropSurface(triang, xsurf, ysurf):
+                trix = np.mean(triang.x[triang.triangles], axis=1)
+                triy = np.mean(triang.y[triang.triangles], axis=1)
+                
+                i2keep = np.ones(len(trix), dtype=bool)
+                for i in range(len(xsurf)-1):
+                    ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+                    iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+                    ie = ilateral & iabove
+                    i2keep[ie] = False
+                return i2keep
+            
+            try:
+                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+            except Exception as e:
+                print('Error in Mesh.show for contouring: ', e)
+
             self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()
@@ -2183,11 +2206,25 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             
     mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
 
+    # point at the surface
+    xsurf = []
+    zsurf = []
+    for x, z, t in zip(elec_x, elec_z, elec_type):
+        if t == 'electrode': # surface electrode
+            xsurf.append(x)
+            zsurf.append(z)
+    if surface_x is not None:
+        xsurf = xsurf + list(surface_x)
+        zsurf = zsurf + list(surface_z)
+    surfacePoints = np.array([xsurf, zsurf]).T
+    mesh.surface = surfacePoints
+
     return mesh,meshx,meshy,topo,elec_node
+
 
 #%% build a triangle mesh - using the gmsh wrapper
 def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
-             show_output=True, path='exe', dump=print,whole_space=False, **kwargs):
+             show_output=True, path='exe', dump=print, whole_space=False, **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
     Uses gmsh version 3.0.6.
@@ -2310,7 +2347,21 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
 
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
+    # point at the surface
+    xsurf = []
+    zsurf = []
+    for x, z, t in zip(elec_x, elec_z, elec_type):
+        if t == 'electrode': # surface electrode
+            xsurf.append(x)
+            zsurf.append(z)
+    if 'surface' in geom_input.keys():
+        xsurf = xsurf + list(geom_input['surface'][0])
+        zsurf = zsurf + list(geom_input['surface'][1])
+    surfacePoints = np.array([xsurf, zsurf]).T
+    mesh.surface = surfacePoints
+    
     return mesh#, mesh_dict['element_ranges']
+
 
 #%% 3D tetrahedral mesh 
 def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'bilinear',
