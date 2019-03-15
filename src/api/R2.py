@@ -1592,8 +1592,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 raise ValueError('Number of cores larger than available')
         
         #we need to add some formating strings to worker directories in the python script
-        formattedDirs = str(workerDirs).replace('\\\\','\\').replace(',',',\n').replace("'C:","r'C:")
-        
+        drive = self.dirname[0]#get the working drive for the inversion directory 
+        formattedDirs = str(workerDirs).replace('\\\\','\\').replace(',',',\n').replace("'"+drive+":","r'"+drive+":")
         
         #write a parallised python scrip using an imported template 
         parallel = parallelScript.format(formattedDirs,

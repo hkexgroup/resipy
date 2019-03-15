@@ -91,7 +91,7 @@ k.createTimeLapseSurvey('api/test/testTimelapse')
 k.linfit()
 k.pwlfit()
 k.err = True
-k.invert(iplot=False, parallel=True, ncores=3)
+k.invert(iplot=False, parallel=True, ncores=2, forceParallel=True)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
