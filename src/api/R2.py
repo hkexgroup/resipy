@@ -1799,12 +1799,14 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,1]
             mesh.elec_z = self.elec[:,2]
+            mesh.surface = self.mesh.surface
             self.meshResults.append(mesh)
         if self.iForward is True:
             initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
             initMesh.elec_x = self.elec[:,0]
             initMesh.elec_y = self.elec[:,1]
             initMesh.elec_z = self.elec[:,2]
+            initMesh.surface = self.mesh.surface
             self.meshResults.append(initMesh)
             
         for i in range(1000):
@@ -1823,6 +1825,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh.elec_x = self.surveys[j].elec[:,0]
                 mesh.elec_y = self.surveys[j].elec[:,1]
                 mesh.elec_z = self.surveys[j].elec[:,2]
+                mesh.surface = self.mesh.surface
                 self.meshResults.append(mesh)
             else:
                 break
