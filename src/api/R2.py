@@ -2324,6 +2324,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if x.shape[0] > 0:
                     triang = tri.Triangulation(x[:,0],x[:,1])
                     cax = ax.tricontourf(triang, x[:,3], extend='both')
+                    # TODO might want to crop surface here as well
                     fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                     ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                     ax.set_aspect('equal')

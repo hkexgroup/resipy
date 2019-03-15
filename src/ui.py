@@ -328,7 +328,7 @@ class App(QMainWindow):
                 reg_mode.setCurrentIndex(0)
             # importing
             self.parser = None
-            wdBtn.setText('Working directory:' + os.path.basename(self.r2.dirname) + ' (Press to change)')
+            wdBtn.setText('Working directory:' + os.path.basename(self.r2.dirname))
             buttonf.setText('Import Data')
 #            timeLapseCheck.setChecked(False)
 #            boreholeCheck.setChecked(False)
@@ -664,9 +664,9 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
-                wdBtn.setText(fdir + ' (Press to change)')
+                wdBtn.setText(os.path.basename(self.newwd))
             
-        wdBtn = QPushButton('Working directory:' + os.path.basename(self.newwd) + ' (Press to change)')
+        wdBtn = QPushButton('Working directory:' + os.path.basename(self.newwd))
         wdBtn.setAutoDefault(True)
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
@@ -864,6 +864,7 @@ class App(QMainWindow):
         btnInvNow.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
         
         hbox4 = QHBoxLayout()
+        hbox4.addWidget(wdBtn)
         hbox4.addWidget(fileType)
 #        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
@@ -935,7 +936,7 @@ class App(QMainWindow):
 #        metaLayout.addLayout(topLayout)
         metaLayout.addLayout(hbox1)
         metaLayout.addLayout(hbox2)
-        metaLayout.addWidget(wdBtn)
+#        metaLayout.addWidget(wdBtn)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
