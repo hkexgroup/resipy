@@ -1,10 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-
 import os
 import sys
 import time
-print(__name__)
 #a = time.time()
 print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
@@ -3601,7 +3599,7 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
         
-        mwInvResult = MatplotlibWidget(navi=True)        
+        mwInvResult = MatplotlibWidget(navi=True, itight=False)        
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
 
         resultStackLayout = QStackedLayout()
