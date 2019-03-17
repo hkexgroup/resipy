@@ -2362,7 +2362,33 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.meshResults[i].show(ax=ax, **kwargs2)
                 fname = self.surveys[i].name
                 fig.savefig(os.path.join(outputdir, fname + '.png'))
+    
+    
+    def getInvError(self):
+        """ Collect inversion error from _err.dat or .err file after inversion.
         
+        Returns
+        -------
+        array : numpy.array
+            Contains the quadrupoles.
+        errors : numpy.array
+            Vector of normalized error.
+        """
+#        if self.typ == 'R2': # old format
+#            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
+#            array = err[:,[-2,-1,-4,-3]].astype(int)
+#            errors = err[:,0]
+        if self.typ == 'cR2' or self.typ == 'R2':
+            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
+            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
+            errors = np.array(df['Normalised_Error'])
+        elif self.typ == 'R3t' or self.typ == 'cR3t':
+            err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)        
+            array = err[:,[-3,-1,-7,-5]].astype(int)
+            errors = err[:,0]
+            
+        return array, errors
+    
             
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
@@ -2372,22 +2398,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         """
-        if self.typ == 'R2':
-#            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
-#            array = err[:,[-2,-1,-4,-3]].astype(int)
-#            errors = err[:,0]
-            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
-            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
-            errors = np.array(df['Normalised_Error'])
-        elif self.typ == 'cR2':
-            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
-            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
-            errors = np.array(df['Normalised_Error'])
-#            self.pseudoErrorIP()#use this function instead?
-        elif self.typ == 'R3t':
-            err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)        
-            array = err[:,[-3,-1,-7,-5]].astype(int)
-            errors = err[:,0]
+        array, errors = self.getInvError()
             
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
@@ -2407,22 +2418,23 @@ class R2(object): # R2 master class instanciated by the GUI
     def showInversionErrors(self, ax=None):
         """ Display inversion error by measurment numbers.
         """
-        if self.typ == 'R2':
-            file_path = os.path.join(self.dirname, 'f001_err.dat')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,0]
-        if self.typ == 'cR2':
-            file_path = os.path.join(self.dirname, 'f001_err.dat')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,4]
-        if self.typ == 'R3t':
-            file_path = os.path.join(self.dirname, 'f001.err')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,0]
-        if self.typ == 'cR3t':
-            file_path = os.path.join(self.dirname, 'f001.err')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,4]
+#        if self.typ == 'R2':
+#            file_path = os.path.join(self.dirname, 'f001_err.dat')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,0]
+#        if self.typ == 'cR2':
+#            file_path = os.path.join(self.dirname, 'f001_err.dat')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,4]
+#        if self.typ == 'R3t':
+#            file_path = os.path.join(self.dirname, 'f001.err')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,0]
+#        if self.typ == 'cR3t':
+#            file_path = os.path.join(self.dirname, 'f001.err')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,4]
+        _, errors = self.getInvError()
         measurement_no = np.arange(1,len(errors)+1)
         #make figure
         if ax is None: 
@@ -2683,8 +2695,6 @@ def end_cue(self): pass"""
 
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
-    print(array)
-    print(resist.shape)
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
     resist = resist
