@@ -2397,7 +2397,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Display normalized phase error.
         """
         if self.typ == 'cR2':
-            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat'))      
+            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)   
             array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int)
             errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
         spacing = np.diff(self.elec[[0,1],0])
