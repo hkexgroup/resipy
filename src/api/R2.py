@@ -2373,11 +2373,14 @@ class R2(object): # R2 master class instanciated by the GUI
             If specified, the graph will be plotted against `ax`.
         """
         if self.typ == 'R2':
-            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
-            array = err[:,[-2,-1,-4,-3]].astype(int)
-            errors = err[:,0]
+#            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
+#            array = err[:,[-2,-1,-4,-3]].astype(int)
+#            errors = err[:,0]
+            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
+            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
+            errors = np.array(df['Normalised_Error'])
         elif self.typ == 'cR2':
-            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat'))      
+            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
             array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
             errors = np.array(df['Normalised_Error'])
 #            self.pseudoErrorIP()#use this function instead?
@@ -2680,6 +2683,8 @@ def end_cue(self): pass"""
 
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
+    print(array)
+    print(resist.shape)
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
     resist = resist
@@ -2696,7 +2701,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         resist = resist*K
 
-    array = np.sort(array, axis=1)
+#    array = np.sort(array, axis=1)
         
     if log:
         resist = np.sign(resist)*np.log10(np.abs(resist))
