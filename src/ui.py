@@ -3673,6 +3673,50 @@ class App(QMainWindow):
         invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
         
+        
+        #%% Help tab
+        tabHelp = QTabWidget()
+        tabs.addTab(tabHelp, 'Help')
+        
+        helpLayout = QVBoxLayout()
+        helpText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
+        helpText.setText('''
+           <h1>General help</h1>\
+           <p>Below are simple instructions to guide you to through the software.</p>
+           <ul>
+           <li>In the "Importing" tab:
+           <ul>
+           <li>Select if you want a 2D/3D survey, an inverse/forward solution and check if you have borehole/timelapse/batch data.</li>
+           <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
+           <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
+           <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
+           <li>Then one can choose to directly invert with all the default settings or go through the other tabs on the rights.</li>
+           <ul></li>
+           <li>In the "Pre-processing" tab:
+           <ul>
+           <li>The first tab offers manual filtering option based on reciprocal measurements in the dataset (if any).</li>
+           <li>The "Phase Filtering" tab is only enable for IP data and allows precise filtering of IP data (range filtering, removing of nested measuremetns, DCA, ...).</li>
+           <li>The "Resistance Error Model" tab allows to fit a power-law or linear error model to resistance data.</li>
+           <li>The "Phase Error Model" tab allows to fit a power-law or parabolic error model to phase data.</li>
+           </ul></li>
+           <li>In the "Mesh" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
+           region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li>
+           <li>In the "Forward model" tab (only available in forward mode) you can design your sequence and add noise. The resulting synthetic measurements will be\
+           automatically added to as an actual survey in pyR2 and can be inverted directly.</li>
+           <li>In the "Inversion Settings" tab, you can modify all settings for the inversion. Help is available by clicking on the label of each item. The help\
+           generally refers to the document present in the R2/cR3/R3t/cR3t respective manuals.</li>
+           <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
+           then nothing will be printed out until the inversion finished. When the inversion finished you will be able to see the inverted section, open it with Paraview (mainly for 3D)\
+           and save the outputed .vtk file and graphs using the "Save Graphs" button.</li>
+           <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
+           </ul>
+        ''')
+        helpText.setOpenExternalLinks(True)
+        helpText.setWordWrap(True)
+        helpLayout.addWidget(helpText)
+        tabHelp.setLayout(helpLayout)
+        
+        
         #%% About tab
         
         tabAbout = QTabWidget()
