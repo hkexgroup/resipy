@@ -623,12 +623,10 @@ class Survey(object):
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
-        a1 = np.around(np.exp(coefs_ip[0]),decimals=3)
-        a2 = np.around(coefs_ip[1], decimals=3)
-        a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
-        a4 = np.around(coefs_ip[1], decimals=1)
-        print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
+        a1 = np.exp(coefs_ip[0])
+        a2 = coefs_ip[1]
+        print ('Error model is: Sp(m) = {:.2f}*R^{:.2f} (R^2 = {:.2f})'.format(a1,a2,R2_ip))
+        ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.4f})'.format(a1, a2, R2_ip))
         self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -670,10 +668,10 @@ class Survey(object):
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
-        a3 = np.around((coefs_ip[0]),decimals=3)
-        b3 = np.around((coefs_ip[1]), decimals=3)
-        c3 = np.around((coefs_ip[2]),decimals=3)
-        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
+        a3 = coefs_ip[0]
+        b3 = coefs_ip[1]
+        c3 = coefs_ip[2]
+        ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^2${:+.2f}$R${:+.2f} (R$^2$ = {:.4f})'.format(a3, b3, c3, R2_ip))
         self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -722,12 +720,12 @@ class Survey(object):
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
         R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
-        a1 = np.around(np.exp(coefs[0]),decimals=3)
-        a2 = np.around(coefs[1], decimals=3)
-        a3 = np.around(np.exp(coefs[0]),decimals=1)
-        a4 = np.around(coefs[1], decimals=1)
-        print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
+        a1 = np.exp(coefs[0])
+        a2 = coefs[1]
+#        a3 = np.exp(coefs[0])
+#        a4 = coefs[1]
+        print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.4f})'.format(a1,a2,R2))           
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):
             x = df['recipMean'].values
@@ -777,12 +775,10 @@ class Survey(object):
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
         R2= self.R_sqr((bins[:,1]),(R_error_predict))
-        a1 = np.around((coefs[0]),decimals=3)
-        a2 = np.around(coefs[1], decimals=3)
-        a3 = np.around((coefs[0]),decimals=1)
-        a4 = np.around(coefs[1], decimals=1)
-        print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin Linear plot\n $R_{error}$ = %s$R_{avg}$ %s %s (R$^2$ = %s)' % (a1,self.sign_coef(a2), np.abs(a2),R2))     
+        a1 = coefs[0]
+        a2 =coefs[1]
+        print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2f}$R_{{avg}}${:+.2f} (R$^2$ = {:.4f})'.format(a1,a2,R2))           
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         def errorModel(df):
             x = df['recipMean'].values
