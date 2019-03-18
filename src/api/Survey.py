@@ -15,10 +15,10 @@ import matplotlib.mlab as mlab
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from api.parsers import (syscalParser, protocolParser, res2invInputParser,
+from api.parsers import (syscalParser, protocolParser, resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
-                     abemParser,stingParser)
+                     stingParser)
 from api.DCA import DCA
 
 class Survey(object):
@@ -58,7 +58,7 @@ class Survey(object):
         self.kFactor = 1
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting','ABEM']# add parser types here! 
+                        'Sting']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -69,7 +69,7 @@ class Survey(object):
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
-                elec, data = res2invInputParser(fname)
+                elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
                 try:
                     elec, data = primeParser(fname)
@@ -82,8 +82,6 @@ class Survey(object):
                 elec, data = forwardProtocolDC(fname)
             elif ftype == 'Sting':
                 elec, data = stingParser(fname)
-            elif ftype == 'ABEM':
-                elec, data = abemParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)

@@ -692,9 +692,6 @@ class App(QMainWindow):
                 self.ftype = 'Sting'
                 self.fformat = ''
             elif index == 6:
-                self.ftype = 'ABEM'
-                self.fformat = ''
-            elif index == 7:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -706,7 +703,6 @@ class App(QMainWindow):
         fileType.addItem('Res2Dinv')
         fileType.addItem('BGS Prime')
         fileType.addItem('Sting')
-        fileType.addItem('ABEM')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         fileType.setFixedWidth(150)

@@ -371,7 +371,7 @@ def res2invInputParser(file_path):
     Parameters
     -----------
     file_path : string 
-     string mapping to the res2inv input file 
+         string mapping to the res2inv input file 
     
     Returns
     ----------
@@ -482,8 +482,98 @@ def res2invInputParser(file_path):
     
     return elec,df
 
-#%% parse a 2D ABEM file
-def abemParser(fname):
+def res2InvGeneralArray(file_path):
+    """
+    Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+    It looks for the general array format in the .dat file. 
+    
+    Parameters
+    -----------
+    file_path : string 
+         string mapping to the res2inv input file 
+    
+    Returns
+    ----------
+    elec : np array
+        electrode coordinate matrix in the form | x | y | z |
+    df: pandas dataframe
+        dataframe which holds the electrode numbers for in feild measurements and 
+        apparent resistivities (Rho) and transfer resistances 
+    
+    ## TODO : add capacity to read in borehole surveys 
+    """
+    fh = open(file_path,'r')#open file handle for reading
+    dump = fh.readlines()#cache file contents into a list
+    fh.close()#close file handle, free up resources
+    num_meas = int(dump[6])
+    start = 9
+    #general array format given in terms of xz coordinates 
+    xC1 = np.array([0]*num_meas,dtype=float)
+    xC2 = np.array([0]*num_meas,dtype=float)
+    xP1 = np.array([0]*num_meas,dtype=float)
+    xP2 = np.array([0]*num_meas,dtype=float)
+    zC1 = np.array([0]*num_meas,dtype=float)
+    zC2 = np.array([0]*num_meas,dtype=float)
+    zP1 = np.array([0]*num_meas,dtype=float)
+    zP2 = np.array([0]*num_meas,dtype=float)
+    pa = np.array([0]*num_meas,dtype=float)
+    Tr = np.array([0]*num_meas,dtype=float)
+    count = 0
+    for i in range(start,num_meas+start):
+        line = dump[i].split()
+        xC1[count] = float(line[1])
+        zC1[count] = float(line[2])
+        xC2[count] = float(line[3])
+        zC2[count] = float(line[4])
+        xP1[count] = float(line[5])
+        zP1[count] = float(line[6])
+        xP2[count] = float(line[7])
+        zP2[count] = float(line[8])
+        pa[count] = float(line[9])
+        try:
+            k = geom_fac(xC1[count],xC2[count],xP1[count],xP2[count])
+        except:
+            k=float('nan')
+        Tr[count] = pa[count]/k
+        count += 1
+        
+    #convert xz coordinates into electrode numbers 
+    uni_x, inds = np.unique(np.column_stack((xC1,xC2,xP1,xP2)).flatten(),return_index=True)
+    total_z = np.column_stack((zC1,zC2,zP1,zP2)).flatten()
+    uni_z = total_z[inds]
+    uni_list = list(uni_x)
+    num_elec = len(uni_x)
+    
+    C1 = np.array([0]*num_meas)
+    C2 = np.array([0]*num_meas)
+    P1 = np.array([0]*num_meas)
+    P2 = np.array([0]*num_meas)
+    for i in range(num_meas):
+        C1[i] = uni_list.index(xC1[i])+1
+        C2[i] = uni_list.index(xC2[i])+1
+        P1[i] = uni_list.index(xP1[i])+1
+        P2[i] = uni_list.index(xP2[i])+1
+    
+    elec = np.zeros((num_elec,3))
+    elec[:,0] = uni_x
+    elec[:,1] = uni_z
+    
+    #return output in dataframe format
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict['a']=P1
+    data_dict['b']=P2
+    data_dict['n']=C1
+    data_dict['m']=C2
+    data_dict['resist']=Tr
+    data_dict['Rho']=pa
+    data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    return elec,df
+    
+#return dipole dipole survey 
+def res2InvDipoleDipole(fname):
     """Read in 2D ABEM file for a dipole dipole array ONLY. 
     """
     fh = open(fname,'r')
@@ -557,6 +647,30 @@ def abemParser(fname):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
+    return elec,df
+
+def resInvParser(filename):
+    """Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+    
+    Parameters
+    -----------
+    file_path : string 
+         string mapping to the res2inv input file 
+    """
+    fh = open(filename,'r')
+    _ = fh.readline()#title line
+    _ = fh.readline()
+    flag = int(fh.readline())
+    fh.close()
+    if flag == 3: 
+        elec, df = res2InvDipoleDipole(filename)
+    elif flag == 11:
+        elec, df = res2InvGeneralArray(filename)
+    elif flag != 3 or flag != 11:
+        elec, df = res2invInputParser(filename)
+    else:
+        raise ImportError("unsupported type of res inv file (for the moment)")
+        
     return elec,df
 
 #%% parse 3D sting data
