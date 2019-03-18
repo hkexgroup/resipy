@@ -3599,7 +3599,7 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
         
-        mwInvResult = MatplotlibWidget(navi=True)        
+        mwInvResult = MatplotlibWidget(navi=True, itight=False)        
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
 
         resultStackLayout = QStackedLayout()
