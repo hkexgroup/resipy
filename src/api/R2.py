@@ -807,6 +807,10 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh: class 
             Added to R2 class
         """
+        if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+            flag_3D = True
+        else:
+            flag_3D = False
         self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, flag_3D=flag_3D)
         if elec is not None:
             self.mesh.move_elec_nodes(elec[:,0],elec[:,1],elec[:,2])
@@ -860,30 +864,29 @@ class R2(object): # R2 master class instanciated by the GUI
         zlimMin = np.min([np.min(self.elec[:,2]), self.doi])
         self.zlim = [zlimMin, zlimMax]
         
+        
     def showMesh(self, ax=None):
         """ Display the mesh.
         """
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
-#            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
-#            ylim = (0, 110) # TODO
-#            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
+#            if self.typ[-2] == '3':
+#                self.mesh.show(ax=ax, color_bar=False) # show the whole 3D mesh
+                # not just the ROI -> maybe we just want to show ROI actually ... TODO
+#            else:
             self.mesh.show(ax=ax, color_bar=False, zlim=self.zlim)
     
     
-    def write2in(self, param={}, typ=None):
+    def write2in(self, param={}):
         """ Create configuration file for inversion.
         
         Parameters
         ----------
         param : dict
             Dictionnary of parameters and values for the inversion settings.
-        typ : str, optional
-            Type of inversion. By default given by `R2.typ`.
         """
-        if typ is None:
-            typ = self.typ
+        typ = self.typ
         if (self.err is True) and ('a_wgt' not in self.param):
             self.param['a_wgt'] = 0
             self.param['b_wgt'] = 0

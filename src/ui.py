@@ -502,7 +502,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False) # comment this to enable 3D
+#        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -2079,10 +2079,6 @@ class App(QMainWindow):
                 surface = surface[inan,:]
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
-#            replotMesh()
-#            import matplotlib.pyplot as plt
-#            plt.ion()
-#            self.r2.showMesh() # does work !
             mwMesh3D.plot(self.r2.showMesh, threed=True)
             meshOutputStack.setCurrentIndex(2)
 
@@ -2144,11 +2140,23 @@ class App(QMainWindow):
             try:
                 Popen(['paraview', meshVTK])
             except Exception as e:
-                print('Error in opening: ', e)
+                errorDump('Error opening Paraview:' + str(e))
         openMeshParaview = QPushButton('Open in Paraview')
         openMeshParaview.clicked.connect(openMeshParaviewFunc)
         
+        def importCustomMeshFunc():
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir)
+            if fname != '':
+                try:
+                    self.r2.importMesh(fname)
+                    mwMesh3D.plot(self.r2.showMesh, threed=True)
+                    meshOutputStack.setCurrentIndex(2)
+                except Exception as e:
+                    errorDump('Error importing mesh' + str(e))
+        importCustomMeshBtn = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
         
+        # layout
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
 #        meshOptionQuadLayout.addWidget(nnodesEdit)
@@ -2169,6 +2177,7 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
         meshOptionTetraLayout.addWidget(openMeshParaview)
+        meshOptionTetraLayout.addWidget(importCustomMeshBtn)
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
