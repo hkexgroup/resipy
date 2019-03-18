@@ -456,7 +456,6 @@ class App(QMainWindow):
                 # inversion tab
                 contourCheck.setVisible(True)
                 edgeCheck.setVisible(True)
-                btnSave.setVisible(True)
                 sensCheck.setVisible(True)
                 paraviewBtn.setVisible(False)
                 sliceAxis.setVisible(False)
@@ -492,7 +491,6 @@ class App(QMainWindow):
                 # inversion tab
                 contourCheck.setVisible(False)
                 edgeCheck.setVisible(False)
-                btnSave.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
 #                sliceAxis.setVisible(True)
@@ -3578,15 +3576,20 @@ class App(QMainWindow):
         displayOptions.addWidget(paraviewBtn)
             
         def btnSaveGraphs():
-            edge_color = self.displayParams['edge_color']
-            sens = self.displayParams['sens']
-            attr = self.displayParams['attr']
-            contour = self.displayParams['contour']
-            vmin = self.displayParams['vmin']
-            vmax = self.displayParams['vmax']
-            self.r2.saveInvPlots(edge_color=edge_color,
-                               contour=contour, sens=sens, attr=attr,
-                               vmin=vmin, vmax=vmax)
+            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
+            if fdir != '':
+                if self.r2.typ[-1] == '2':
+                    edge_color = self.displayParams['edge_color']
+                    sens = self.displayParams['sens']
+                    attr = self.displayParams['attr']
+                    contour = self.displayParams['contour']
+                    vmin = self.displayParams['vmin']
+                    vmax = self.displayParams['vmax']
+                    self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
+                                       contour=contour, sens=sens, attr=attr,
+                                       vmin=vmin, vmax=vmax)
+                self.r2.saveVtks(fdir)
+            
             infoDump('All graphs saved successfully in the working directory.')
 
         btnSave = QPushButton('Save graphs')

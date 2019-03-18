@@ -2660,14 +2660,10 @@ def start_cue(self):
 	global maxIndex
 	text_obj = Text()#make a text object
 	annotations= []\n"""
-        try:
-            numResults = len(self.meshResults)
-        except AttributeError:
+        if len(self.meshResults) == 0:
             self.getResults()
-            numResults = len(self.meshResults)
-        for i in range(numResults):
-            mesh = self.meshResults[i]
-            file_path = os.path.join(dirname,prefix+'{:0>3d}.vtk'.format(i))
+        for mesh, s in zip(self.meshResults, self.surveys):
+            file_path = os.path.join(dirname, s.name + '.vtk')
             mesh.write_vtk(file_path,title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += """	maxIndex = len(annotations)
