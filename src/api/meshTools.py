@@ -1729,10 +1729,13 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object
 #    print(mesh.attr_cache.keys())
     try:
-        mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
+        if mesh.ndims==2:
+            mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
+        else:
+            mesh.add_sensitivity(mesh.attr_cache['Sensitivity_map(log10)'])
     except:
         print('no sensitivity')
-        pass
+
     mesh.mesh_title = title
     return mesh
 
