@@ -2578,9 +2578,9 @@ class R2(object): # R2 master class instanciated by the GUI
         
         crop=False
         if len(self.param['xy_poly_table'])>0:
-            meshx = np.array(self.mesh.elm_centre[0])
-            meshy = np.array(self.mesh.elm_centre[1])
-            meshz = np.array(self.mesh.elm_centre[2])
+            meshx = np.array(self.meshResults[0].elm_centre[0])
+            meshy = np.array(self.meshResults[0].elm_centre[1])
+            meshz = np.array(self.meshResults[0].elm_centre[2])
             crop=True
             if self.typ[-2]=='3':
                 inside1 = iip.isinpolygon(meshx,meshy,(self.param['xy_poly_table'][:,0],self.param['xy_poly_table'][:,1]))
