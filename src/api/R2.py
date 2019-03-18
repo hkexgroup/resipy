@@ -113,11 +113,11 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
         shutil.move(os.path.join(path, typ + '.out'),
-                    os.path.join(originalDir, name + '.out'))
+                    os.path.join(originalDir, typ + '_' + name + '.out'))
         shutil.move(os.path.join(path, 'electrodes.dat'),
-                    os.path.join(originalDir, name + 'electrodes.dat'))
+                    os.path.join(originalDir, 'electrodes_' + name + '.dat'))
         shutil.move(os.path.join(path, 'electrodes.vtk'),
-                    os.path.join(originalDir, 'electrodes' + name + '.vtk'))
+                    os.path.join(originalDir, 'electrodes_' + name + '.vtk'))
 
 
 # small useful function for reading and writing mesh.dat
@@ -213,9 +213,14 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'ref' in files: # only for timelapse survey
                 shutil.rmtree(os.path.join(dirname, 'ref'))
             if 'err' in files: # only for error modelling
-                shutil.rmtree(os.path.join(dirname, 'err'))
-            files2remove = ['R2.in','cR2.in','mesh.dat','R3t.in', 'cR3t.in',
-                            'r100.dat','res0.dat']
+                shutil.rmtree(os.path.join(dirname, 'err')) 
+            for f in files:
+                if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
+                    os.remove(os.path.join(dirname , f))
+            files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
+                            'R2.out','cR2.out','R3t.out','cR3t.out',
+                            'mesh.dat','r100.dat','res0.dat','Start_res.dat',
+                            'protocol.dat']
             for f in files2remove:
                 if f in files:
                     os.remove(os.path.join(dirname, f))
@@ -1350,7 +1355,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def runParallel(self, dirname=None, dump=print, iMoveElec=False, 
-                    ncores=None, rmDirTree=False):
+                    ncores=None, rmDirTree=True):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1367,7 +1372,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Number or cores to use. If None, the maximum number of cores
             available will be used.
         rmDirTree: bool, optional
-            Remove excess directories and files created during parallel inversion
+            Remove excess directories and files created during parallel.
+            Default is True.
         """
         if dirname is None:
             dirname = self.dirname
@@ -1413,7 +1419,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
-                print('done')       
+                print('done')
         queueIn = Queue() # queue
         
         # create workers directory
@@ -1480,7 +1486,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
                 if os.path.exists(originalFile):
                     shutil.move(originalFile, newFile)
-            r2outFile = os.path.join(dirname, s.name + '.out')
+            r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
+            print(r2outFile)
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
             os.remove(r2outFile)
@@ -1493,7 +1500,8 @@ class R2(object): # R2 master class instanciated by the GUI
             [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
-        
+    
+    
     def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
                     ncores=None, rmDirTree=False):
         """ Run R2 in // according to the number of cores available.
