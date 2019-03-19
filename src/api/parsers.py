@@ -562,8 +562,8 @@ def res2InvGeneralArray(file_path):
     data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
     data_dict['a']=P1
     data_dict['b']=P2
-    data_dict['n']=C1
-    data_dict['m']=C2
+    data_dict['n']=C2
+    data_dict['m']=C1
     data_dict['resist']=Tr
     data_dict['Rho']=pa
     data_dict['dev']=[0]*num_meas
