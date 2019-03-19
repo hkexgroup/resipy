@@ -456,7 +456,6 @@ class App(QMainWindow):
                 # inversion tab
                 contourCheck.setVisible(True)
                 edgeCheck.setVisible(True)
-                btnSave.setVisible(True)
                 sensCheck.setVisible(True)
                 paraviewBtn.setVisible(False)
                 sliceAxis.setVisible(False)
@@ -492,7 +491,6 @@ class App(QMainWindow):
                 # inversion tab
                 contourCheck.setVisible(False)
                 edgeCheck.setVisible(False)
-                btnSave.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
 #                sliceAxis.setVisible(True)
@@ -502,7 +500,7 @@ class App(QMainWindow):
         dimRadio2D.toggled.connect(dimSurvey)
         dimRadio3D = QRadioButton('3D')
         dimRadio3D.setChecked(False)
-        dimRadio3D.setEnabled(False) # comment this to enable 3D
+#        dimRadio3D.setEnabled(False) # comment this to enable 3D
         dimRadio3D.toggled.connect(dimSurvey)
         dimLayout = QHBoxLayout()
         dimLayout.addWidget(dimRadio2D)
@@ -2079,10 +2077,6 @@ class App(QMainWindow):
                 surface = surface[inan,:]
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
-#            replotMesh()
-#            import matplotlib.pyplot as plt
-#            plt.ion()
-#            self.r2.showMesh() # does work !
             mwMesh3D.plot(self.r2.showMesh, threed=True)
             meshOutputStack.setCurrentIndex(2)
 
@@ -2144,11 +2138,23 @@ class App(QMainWindow):
             try:
                 Popen(['paraview', meshVTK])
             except Exception as e:
-                print('Error in opening: ', e)
+                errorDump('Error opening Paraview:' + str(e))
         openMeshParaview = QPushButton('Open in Paraview')
         openMeshParaview.clicked.connect(openMeshParaviewFunc)
         
+        def importCustomMeshFunc():
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir)
+            if fname != '':
+                try:
+                    self.r2.importMesh(fname)
+                    mwMesh3D.plot(self.r2.showMesh, threed=True)
+                    meshOutputStack.setCurrentIndex(2)
+                except Exception as e:
+                    errorDump('Error importing mesh' + str(e))
+        importCustomMeshBtn = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
         
+        # layout
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
 #        meshOptionQuadLayout.addWidget(nnodesEdit)
@@ -2169,6 +2175,7 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
         meshOptionTetraLayout.addWidget(openMeshParaview)
+        meshOptionTetraLayout.addWidget(importCustomMeshBtn)
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
@@ -3569,15 +3576,20 @@ class App(QMainWindow):
         displayOptions.addWidget(paraviewBtn)
             
         def btnSaveGraphs():
-            edge_color = self.displayParams['edge_color']
-            sens = self.displayParams['sens']
-            attr = self.displayParams['attr']
-            contour = self.displayParams['contour']
-            vmin = self.displayParams['vmin']
-            vmax = self.displayParams['vmax']
-            self.r2.saveInvPlots(edge_color=edge_color,
-                               contour=contour, sens=sens, attr=attr,
-                               vmin=vmin, vmax=vmax)
+            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
+            if fdir != '':
+                if self.r2.typ[-1] == '2':
+                    edge_color = self.displayParams['edge_color']
+                    sens = self.displayParams['sens']
+                    attr = self.displayParams['attr']
+                    contour = self.displayParams['contour']
+                    vmin = self.displayParams['vmin']
+                    vmax = self.displayParams['vmax']
+                    self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
+                                       contour=contour, sens=sens, attr=attr,
+                                       vmin=vmin, vmax=vmax)
+                self.r2.saveVtks(fdir)
+            
             infoDump('All graphs saved successfully in the working directory.')
 
         btnSave = QPushButton('Save graphs')
@@ -3660,6 +3672,50 @@ class App(QMainWindow):
         invErrorLayout2.addLayout(invErrorLayout2Plot, 1)
         invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
+        
+        
+        #%% Help tab
+        tabHelp = QTabWidget()
+        tabs.addTab(tabHelp, 'Help')
+        
+        helpLayout = QVBoxLayout()
+        helpText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
+        helpText.setText('''
+           <h1>General help</h1>\
+           <p>Below are simple instructions to guide you to through the software.</p>
+           <ul>
+           <li>In the "Importing" tab:
+           <ul>
+           <li>Select if you want a 2D/3D survey, an inverse/forward solution and check if you have borehole/timelapse/batch data.</li>
+           <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
+           <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
+           <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
+           <li>Then one can choose to directly invert with all the default settings or go through the other tabs on the rights.</li>
+           <ul></li>
+           <li>In the "Pre-processing" tab:
+           <ul>
+           <li>The first tab offers manual filtering option based on reciprocal measurements in the dataset (if any).</li>
+           <li>The "Phase Filtering" tab is only enable for IP data and allows precise filtering of IP data (range filtering, removing of nested measuremetns, DCA, ...).</li>
+           <li>The "Resistance Error Model" tab allows to fit a power-law or linear error model to resistance data.</li>
+           <li>The "Phase Error Model" tab allows to fit a power-law or parabolic error model to phase data.</li>
+           </ul></li>
+           <li>In the "Mesh" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
+           region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li>
+           <li>In the "Forward model" tab (only available in forward mode) you can design your sequence and add noise. The resulting synthetic measurements will be\
+           automatically added to as an actual survey in pyR2 and can be inverted directly.</li>
+           <li>In the "Inversion Settings" tab, you can modify all settings for the inversion. Help is available by clicking on the label of each item. The help\
+           generally refers to the document present in the R2/cR3/R3t/cR3t respective manuals.</li>
+           <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
+           then nothing will be printed out until the inversion finished. When the inversion finished you will be able to see the inverted section, open it with Paraview (mainly for 3D)\
+           and save the outputed .vtk file and graphs using the "Save Graphs" button.</li>
+           <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
+           </ul>
+        ''')
+        helpText.setOpenExternalLinks(True)
+        helpText.setWordWrap(True)
+        helpLayout.addWidget(helpText)
+        tabHelp.setLayout(helpLayout)
+        
         
         #%% About tab
         

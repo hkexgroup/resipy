@@ -113,11 +113,11 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
         shutil.move(os.path.join(path, typ + '.out'),
-                    os.path.join(originalDir, name + '.out'))
+                    os.path.join(originalDir, typ + '_' + name + '.out'))
         shutil.move(os.path.join(path, 'electrodes.dat'),
-                    os.path.join(originalDir, name + 'electrodes.dat'))
+                    os.path.join(originalDir, 'electrodes_' + name + '.dat'))
         shutil.move(os.path.join(path, 'electrodes.vtk'),
-                    os.path.join(originalDir, 'electrodes' + name + '.vtk'))
+                    os.path.join(originalDir, 'electrodes_' + name + '.vtk'))
 
 
 # small useful function for reading and writing mesh.dat
@@ -213,9 +213,14 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'ref' in files: # only for timelapse survey
                 shutil.rmtree(os.path.join(dirname, 'ref'))
             if 'err' in files: # only for error modelling
-                shutil.rmtree(os.path.join(dirname, 'err'))
-            files2remove = ['R2.in','cR2.in','mesh.dat','R3t.in', 'cR3t.in',
-                            'r100.dat','res0.dat']
+                shutil.rmtree(os.path.join(dirname, 'err')) 
+            for f in files:
+                if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
+                    os.remove(os.path.join(dirname , f))
+            files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
+                            'R2.out','cR2.out','R3t.out','cR3t.out',
+                            'mesh.dat','r100.dat','res0.dat','Start_res.dat',
+                            'protocol.dat']
             for f in files2remove:
                 if f in files:
                     os.remove(os.path.join(dirname, f))
@@ -802,6 +807,10 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh: class 
             Added to R2 class
         """
+        if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+            flag_3D = True
+        else:
+            flag_3D = False
         self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, flag_3D=flag_3D)
         if elec is not None:
             self.mesh.move_elec_nodes(elec[:,0],elec[:,1],elec[:,2])
@@ -855,30 +864,29 @@ class R2(object): # R2 master class instanciated by the GUI
         zlimMin = np.min([np.min(self.elec[:,2]), self.doi])
         self.zlim = [zlimMin, zlimMax]
         
+        
     def showMesh(self, ax=None):
         """ Display the mesh.
         """
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
-#            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
-#            ylim = (0, 110) # TODO
-#            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
+#            if self.typ[-2] == '3':
+#                self.mesh.show(ax=ax, color_bar=False) # show the whole 3D mesh
+                # not just the ROI -> maybe we just want to show ROI actually ... TODO
+#            else:
             self.mesh.show(ax=ax, color_bar=False, zlim=self.zlim)
     
     
-    def write2in(self, param={}, typ=None):
+    def write2in(self, param={}):
         """ Create configuration file for inversion.
         
         Parameters
         ----------
         param : dict
             Dictionnary of parameters and values for the inversion settings.
-        typ : str, optional
-            Type of inversion. By default given by `R2.typ`.
         """
-        if typ is None:
-            typ = self.typ
+        typ = self.typ
         if (self.err is True) and ('a_wgt' not in self.param):
             self.param['a_wgt'] = 0
             self.param['b_wgt'] = 0
@@ -1350,7 +1358,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def runParallel(self, dirname=None, dump=print, iMoveElec=False, 
-                    ncores=None, rmDirTree=False):
+                    ncores=None, rmDirTree=True):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1367,7 +1375,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Number or cores to use. If None, the maximum number of cores
             available will be used.
         rmDirTree: bool, optional
-            Remove excess directories and files created during parallel inversion
+            Remove excess directories and files created during parallel.
+            Default is True.
         """
         if dirname is None:
             dirname = self.dirname
@@ -1413,7 +1422,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
-                print('done')       
+                print('done')
         queueIn = Queue() # queue
         
         # create workers directory
@@ -1480,7 +1489,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
                 if os.path.exists(originalFile):
                     shutil.move(originalFile, newFile)
-            r2outFile = os.path.join(dirname, s.name + '.out')
+            r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
+            print(r2outFile)
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
             os.remove(r2outFile)
@@ -1493,7 +1503,8 @@ class R2(object): # R2 master class instanciated by the GUI
             [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
-        
+    
+    
     def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
                     ncores=None, rmDirTree=False):
         """ Run R2 in // according to the number of cores available.
@@ -2645,14 +2656,10 @@ class R2(object): # R2 master class instanciated by the GUI
             survey.
         """   
         amtContent = startAnmt 
-        try:
-            numResults = len(self.meshResults)
-        except AttributeError:
+        if len(self.meshResults) == 0:
             self.getResults()
-            numResults = len(self.meshResults)
-        for i in range(numResults):
-            mesh = self.meshResults[i]
-            file_path = os.path.join(dirname,prefix+'{:0>3d}.vtk'.format(i))
+        for mesh, s in zip(self.meshResults, self.surveys):
+            file_path = os.path.join(dirname, s.name + '.vtk')
             mesh.write_vtk(file_path,title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += endAnmt 

@@ -694,9 +694,11 @@ class Mesh:
 #                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
 #        except AttributeError:
         if xlim=="default":
-            xlim=[min(self.node_x),max(self.node_x)]
+#            xlim=[min(self.node_x),max(self.node_x)]
+            xlim=[min(self.elec_x), max(self.elec_x)]
         if ylim=="default":
-            ylim=[min(self.node_y),max(self.node_y)]
+#            ylim=[min(self.node_y),max(self.node_y)]
+            ylim=[min(self.elec_y), max(self.elec_y)]
 #            if self.ndims==2:
 #                ylim=[min(self.node_y)-1,max(self.node_y)+1]
         if zlim=="default":
@@ -799,8 +801,8 @@ class Mesh:
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
             self.cbar.set_label(color_bar_title) #set colorbar title
             
-        #ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
-            
+#        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
+        
         if sens: #add sensitivity to plot if available
             try:
                 weights = np.array(self.sensitivities) #values assigned to alpha channels 
@@ -816,7 +818,7 @@ class Mesh:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z)+0.01,
+                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z)+0.1,
                            s=20, c='k', marker='o')#note you have to give the points a size otherwise you
                 #get an NoneType Attribute error. 
                 #the matplotlib renderer really doesn't cope well with the addition of the electrodes, 
@@ -2336,7 +2338,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
-            dump(line.decode('utf-8'))
+            if line.decode('utf-8') != '':
+                dump(line.decode('utf-8'))
     else:
         call(cmd_line)#run gmsh 
         
