@@ -1846,7 +1846,14 @@ class R2(object): # R2 master class instanciated by the GUI
         for mesh in self.meshResults:
             if 'Resistivity(Ohm-m)' in mesh.attr_cache.keys():
                 mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
-
+        
+        # compute difference in percent in case of reg_mode == 1
+        if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
+            resRef = np.array(self.meshResults[0].attr_cache['Resistivity(Ohm-m)'])
+            for mesh in self.meshResutls[1:]:
+                res = np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
+                mesh.attr_cache['difference(percent)'] = (res-resRef)/resRef*100
+            
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         """ Show inverted section based on the `_res.dat``file instead of the
