@@ -166,6 +166,40 @@ def protocolParser(fname):
 #protocolParser('api/test/protocol.dat')
 
 
+def protocolParserLME(fname):
+# read LME predicted errors passed back from R, only add LME predictions to df
+# Michael Tso @ 190310
+
+    with open(fname,'r') as fh:
+        num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
+        dump = fh.readlines()
+    protocol = {'index':[0]*num_meas,# protocol dictionary 
+                'a':[0]*num_meas,
+                'b':[0]*num_meas,
+                'm':[0]*num_meas,
+                'n':[0]*num_meas,
+                'resist':[0]*num_meas,
+                'lmeErr':[0]*num_meas}
+
+    for i, line in enumerate(dump):
+        data = line.split()
+        protocol['index'][i] = int(data[0])
+        protocol['a'][i] = int(data[1])
+        protocol['b'][i] = int(data[2])
+        protocol['m'][i] = int(data[3])
+        protocol['n'][i] = int(data[4])
+        protocol['resist'][i] = float(data[5])
+        if len(data) == 7:
+            protocol['lmeErr'][i] = float(data[6])
+    lmeError = protocol['lmeErr']
+    
+    return lmeError
+
+# test code
+#protocolParserLME('api/test/protocol-lmeOut.dat')
+
+
+
 #def protocolParser2(fname): # with pandas = twice slower but same time if we use np.genfromtxt()
 #    colnames = np.array(['index','a','b','m','n','resist','appResist'])
 ##    df = pd.read_csv(fname, header=None, sep='\s+', skiprows=1)

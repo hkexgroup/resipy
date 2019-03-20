@@ -1695,9 +1695,9 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
-#            elif index == 3:
-#                mwFitError.plot(self.r2.lmefit)
-#                self.r2.err = True
+            elif index == 3:
+                mwFitError.plot(self.r2.lmefit)
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1715,7 +1715,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-#        errFitType.addItem('Linear Mixed Effect')
+        errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
