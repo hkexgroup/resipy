@@ -20,10 +20,11 @@ from api.R2 import R2
 tstart = time.time()
 
 #%% very simple example
+from api.R2 import R2
 k = R2()
 k.createSurvey('api/test/syscalFile.csv')
-k.invert()
-k.pseudoError()
+k.lmefit()
+
 
 #%% testing the R2 class
 plt.close('all')

@@ -882,9 +882,8 @@ class Survey(object):
         lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
         self.df['resError'] = lmeError # predicted results, entire survey
 
-    #    print(dfg.sample)
 
- #       df['resError'] = lmeError 
+#        df['resError'] = lmeError 
         
 #        if 'recipMean' not in self.df.columns:
 #            self.reciprocal()
