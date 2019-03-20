@@ -2735,6 +2735,17 @@ class App(QMainWindow):
         advForm.addRow(modErrLabel, modErr)
         self.modErr = False
         
+        def notCroppingFunc(state):
+            if state == Qt.Checked:
+                self.r2.param['num_xy_poly'] = 0
+            else:
+                self.r2.param['num_xy_poly'] = -1 # default
+        notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output vtk</a>')
+        notCroppingLabel.linkActivated.connect(showHelp2)
+        notCropping = QCheckBox()
+        notCropping.stateChanged.connect(notCroppingFunc)
+        advForm.addRow(notCroppingLabel, notCropping)
+        
         def flux_typeFunc(index):
             if index == 0:
                 self.r2.param['flux_type'] = 3
@@ -2913,7 +2924,7 @@ class App(QMainWindow):
         error_mod.addItem('Keep the same weights [0]')
         error_mod.addItem('Update the weights [1]')
         error_mod.addItem('Update the weights (recommended) [2]')
-        error_mod.setCurrentIndex(1)
+        error_mod.setCurrentIndex(2)
         error_mod.currentIndexChanged.connect(error_modFunc)
         advForm.addRow(error_modLabel, error_mod)
         
