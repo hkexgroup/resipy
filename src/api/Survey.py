@@ -839,7 +839,6 @@ class Survey(object):
         as grouping variables.
         '''
         # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
-<<<<<<< src/api/Survey.py
         # requires R
         # statmodels or other python packages can't handle variable interaction yet
 
@@ -886,8 +885,6 @@ class Survey(object):
     #    print(dfg.sample)
 
  #       df['resError'] = lmeError 
-=======
->>>>>>> src/api/Survey.py
         
 #        if 'recipMean' not in self.df.columns:
 #            self.reciprocal()
