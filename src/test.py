@@ -342,15 +342,15 @@ print('total time running the test = {:.4f}s'.format(time.time() - tstart))
 
 
 #%% test timelapse 3D -- takes a long time
-from api.R2 import R2
-k = R2(typ='R3t')
-k.createTimeLapseSurvey('api/test/timelapse3D/dataLeadingRidge')
-k.importElec('api/test/timelapse3D/elecLeadingRidge.csv')
-k.pseudo()
-k.pwlfit()
-k.createMesh('tetra', cl=0.3, cl_factor=5)
-k.showMesh()
-k.invert(parallel=True)
-k.showResults()
-k.showInParaview()
+#from api.R2 import R2
+#k = R2(typ='R3t')
+#k.createBatchSurvey('api/test/timelapse3D/dataLeadingRidge')
+#k.importElec('api/test/timelapse3D/elecLeadingRidge.csv')
+#k.pseudo()
+#k.pwlfit()
+#k.createMesh('tetra', cl=0.3, cl_factor=5)
+#k.showMesh()
+#k.invert(parallel=True)
+#k.showResults()
+#k.showInParaview()
 

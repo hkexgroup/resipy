@@ -1226,7 +1226,10 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 node_elec.append(e_nodes+1) #add one to be consistent with fortran indexing
-            df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c
+            if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+                df.iloc[1:, [2,4,6,8]] = df.iloc[1:, [2,4,6,8]] + c
+            else:
+                df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c                
             c += len(elec)
         node_elec = np.hstack(node_elec)
         node_elec = np.c_[np.arange(len(node_elec))+1, node_elec,
@@ -1500,9 +1503,9 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(r2outText)
         
         # delete the dirs and the files
-#        if rmDirTree:
-#            [shutil.rmtree(d) for d in dirs]
-#            [os.remove(f) for f in files]
+        if rmDirTree:
+            [shutil.rmtree(d) for d in dirs]
+            [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
     
