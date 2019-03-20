@@ -3,7 +3,7 @@
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-pyR2_version = '1.1.0' # pyR2 version (semantic versionning in use) 
+pyR2_version = '1.1.3' # pyR2 version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -24,6 +24,7 @@ from api.Survey import Survey
 from api.r2in import write2in
 import api.meshTools as mt
 import api.isinpolygon as iip
+from api.template import parallelScript, startAnmt, endAnmt
 from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
@@ -112,11 +113,11 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
                 shutil.move(os.path.join(path, f),
                             os.path.join(originalDir, f.replace('f001', name)))
         shutil.move(os.path.join(path, typ + '.out'),
-                    os.path.join(originalDir, name + '.out'))
+                    os.path.join(originalDir, typ + '_' + name + '.out'))
         shutil.move(os.path.join(path, 'electrodes.dat'),
-                    os.path.join(originalDir, name + 'electrodes.dat'))
+                    os.path.join(originalDir, 'electrodes_' + name + '.dat'))
         shutil.move(os.path.join(path, 'electrodes.vtk'),
-                    os.path.join(originalDir, 'electrodes' + name + '.vtk'))
+                    os.path.join(originalDir, 'electrodes_' + name + '.vtk'))
 
 
 # small useful function for reading and writing mesh.dat
@@ -212,9 +213,14 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'ref' in files: # only for timelapse survey
                 shutil.rmtree(os.path.join(dirname, 'ref'))
             if 'err' in files: # only for error modelling
-                shutil.rmtree(os.path.join(dirname, 'err'))
-            files2remove = ['R2.in','cR2.in','mesh.dat','R3t.in', 'cR3t.in',
-                            'r100.dat','res0.dat']
+                shutil.rmtree(os.path.join(dirname, 'err')) 
+            for f in files:
+                if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
+                    os.remove(os.path.join(dirname , f))
+            files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
+                            'R2.out','cR2.out','R3t.out','cR3t.out',
+                            'mesh.dat','r100.dat','res0.dat','Start_res.dat',
+                            'protocol.dat']
             for f in files2remove:
                 if f in files:
                     os.remove(os.path.join(dirname, f))
@@ -449,7 +455,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
         self.pseudo = self.surveys[0].pseudo # just display first pseudo section
-            
+
         self.plotError = self.bigSurvey.plotError
         self.errorDist = self.bigSurvey.errorDist
         self.linfit = self.bigSurvey.linfit
@@ -530,18 +536,20 @@ class R2(object): # R2 master class instanciated by the GUI
             Percentage of reciprocal error above witch a measurement will be
             discarded. 20% by default.
         """
+        numRemoved = 0
         for s in self.surveys:
-            numRemoved = s.filterRecip(percent)
-            return numRemoved
+            numRemoved += s.filterRecip(percent)
+        return numRemoved
     
     
     def removeUnpaired(self):
         """ Remove quadrupoles that don't have reciprocals. This might
         remove dummy measurements added for sequence optimization.
         """
+        numRemoved = 0
         for s in self.surveys:
-            numRemoved = s.removeUnpaired()
-            return numRemoved
+            numRemoved += s.removeUnpaired()
+        return numRemoved
             
         
     def computeDOI(self):
@@ -801,6 +809,10 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh: class 
             Added to R2 class
         """
+        if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+            flag_3D = True
+        else:
+            flag_3D = False
         self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, flag_3D=flag_3D)
         if elec is not None:
             self.mesh.move_elec_nodes(elec[:,0],elec[:,1],elec[:,2])
@@ -854,30 +866,29 @@ class R2(object): # R2 master class instanciated by the GUI
         zlimMin = np.min([np.min(self.elec[:,2]), self.doi])
         self.zlim = [zlimMin, zlimMax]
         
+        
     def showMesh(self, ax=None):
         """ Display the mesh.
         """
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
-#            xlim = (np.min(self.elec[:,0]-20, np.max(self.elec[:,0])))
-#            ylim = (0, 110) # TODO
-#            self.mesh.show(xlim=xlim, ylim=ylim) # add ax argument
+#            if self.typ[-2] == '3':
+#                self.mesh.show(ax=ax, color_bar=False) # show the whole 3D mesh
+                # not just the ROI -> maybe we just want to show ROI actually ... TODO
+#            else:
             self.mesh.show(ax=ax, color_bar=False, zlim=self.zlim)
     
     
-    def write2in(self, param={}, typ=None):
+    def write2in(self, param={}):
         """ Create configuration file for inversion.
         
         Parameters
         ----------
         param : dict
             Dictionnary of parameters and values for the inversion settings.
-        typ : str, optional
-            Type of inversion. By default given by `R2.typ`.
         """
-        if typ is None:
-            typ = self.typ
+        typ = self.typ
         if (self.err is True) and ('a_wgt' not in self.param):
             self.param['a_wgt'] = 0
             self.param['b_wgt'] = 0
@@ -908,8 +919,14 @@ class R2(object): # R2 master class instanciated by the GUI
             if os.path.exists(refdir) == False:
                 os.mkdir(refdir)
             param = self.param.copy()
-            param['a_wgt'] = 0.01
-            param['b_wgt'] = 0.02
+            if self.err:
+                param['a_wgt'] = 0
+                param['b_wgt'] = 0
+            else:
+                if 'a_wgt' not in param:#this allows previously assigned values to be 
+                    param['a_wgt'] = 0.01 # written to the reference.in config file
+                if 'b_wgt' not in param:
+                    param['b_wgt'] = 0.02
             param['num_xy_poly'] = 0
             param['reg_mode'] = 0 # set by default in ui.py too
             param['res0File'] = 'res0.dat'
@@ -1085,7 +1102,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-                    s.write2protocol(os.path.join(refdir, 'protocol.dat')) # no subset for background, just use all
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat'),err=err) # no subset for background, just use all
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
         
@@ -1208,7 +1225,10 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
                 node_elec.append(e_nodes+1) #add one to be consistent with fortran indexing
-            df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c
+            if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+                df.iloc[1:, [2,4,6,8]] = df.iloc[1:, [2,4,6,8]] + c
+            else:
+                df.iloc[1:, 1:5] = df.iloc[1:, 1:5] + c                
             c += len(elec)
         node_elec = np.hstack(node_elec)
         node_elec = np.c_[np.arange(len(node_elec))+1, node_elec,
@@ -1342,7 +1362,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def runParallel(self, dirname=None, dump=print, iMoveElec=False, 
-                    ncores=None, rmDirTree=False):
+                    ncores=None, rmDirTree=True):
         """ Run R2 in // according to the number of cores available.
         
         Parameters
@@ -1359,7 +1379,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Number or cores to use. If None, the maximum number of cores
             available will be used.
         rmDirTree: bool, optional
-            Remove excess directories and files created during parallel inversion
+            Remove excess directories and files created during parallel.
+            Default is True.
         """
         if dirname is None:
             dirname = self.dirname
@@ -1405,7 +1426,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 write2in(self.param, self.dirname, self.typ)
                 r2file = os.path.join(self.dirname, self.typ + '.in')
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
-                print('done')       
+                print('done')
         queueIn = Queue() # queue
         
         # create workers directory
@@ -1472,7 +1493,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
                 if os.path.exists(originalFile):
                     shutil.move(originalFile, newFile)
-            r2outFile = os.path.join(dirname, s.name + '.out')
+            r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
+            print(r2outFile)
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
             os.remove(r2outFile)
@@ -1485,10 +1507,163 @@ class R2(object): # R2 master class instanciated by the GUI
             [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
+    
+    
+    def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
+                    ncores=None, rmDirTree=False):
+        """ Run R2 in // according to the number of cores available.
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory.
+        dump : function, optional
+            Function to be passed to `R2.runR2()` for printing output during
+            inversion.
+        iMoveElec : bool, optional
+            If `True` will move electrodes according to their position in each
+            `Survey` object.
+        ncores : int, optional
+            Number or cores to use. If None, the maximum number of cores
+            available will be used.
+        rmDirTree: bool, optional
+            Remove excess directories and files created during parallel inversion
+        """
+        if dirname is None:
+            dirname = self.dirname
+        
+        if self.iTimeLapse is True and self.iBatch is False:
+            surveys = self.surveys[1:] # skips out first survey as this should be inverted seperately as a baseline
+        else:
+            surveys = self.surveys
+            
+        # create R2.exe path
+        exeName = self.typ + '.exe'
+        exePath = os.path.join(self.apiPath, 'exe', exeName)
+        
+        # split the protocol.dat
+        dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
+                            sep='\t', header=None, engine='python').reset_index()
+        
+        idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
+        idf.append(len(dfall))
+        dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
+        
+        # writing all protocol.dat
+        files = []
+        for s, df in zip(surveys, dfs):
+            outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
+            files.append(outputname)
+            df.to_csv(outputname, sep='\t', header=False, index=False)
+            # header with line count already included
+                    
+        # if iMoveElec is True, writing different R2.in
+        if iMoveElec is True:
+            print('Electrodes position will be updated for each survey')
+            for s in self.surveys:
+                print(s.name, '...', end='')
+                elec = s.elec
+                e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
+                self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
+                if int(self.mesh.cell_type[0])==8 or int(self.mesh.cell_type[0])==9:#elements are quads
+                    colx = self.mesh.quadMeshNp() # so find x column indexes instead. Wont support change in electrode elevation
+                    self.param['node_elec'][:,1] = colx
+                self.param['inverse_type'] = 1 # regularise against a background model 
+                #self.param['reg_mode'] = 1
+                write2in(self.param, self.dirname, self.typ)
+                r2file = os.path.join(self.dirname, self.typ + '.in')
+                shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in')) # each file has different node positions
+                print('done')   
+                
+        print('Creating working directories for each inversion...')
+        workerDirs=['']*len(surveys) # number of surveys, preallocate list 
+        toMove = ['mesh.dat', 'mesh3d.dat','R2.in','cR2.in',
+                  'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 
+                  'Start_res.dat']
+        
+        for i,s in enumerate(surveys):
+            workerDirs[i] = os.path.join(self.dirname,'%i'%(i+1)) # add one so starting directory ==1 
+            if not os.path.exists(workerDirs[i]): # make inversion directory 
+                os.mkdir(workerDirs[i])
+            for f in toMove: # copy mesh file, starting resistivity etc... 
+                fname = os.path.join(self.dirname, f)
+                if os.path.exists(fname):
+                    shutil.copy(fname, os.path.join(workerDirs[i], f))
+            #copy over protocol file 
+            fname = os.path.join(self.dirname, 'protocol_' + s.name + '.dat')
+            shutil.copy(fname,os.path.join(workerDirs[i], 'protocol.dat'))
+            #copy .in file if moving electrodes occur
+            if iMoveElec:
+                fname = os.path.join(self.dirname, self.typ + '_' + s.name + '.in')
+                shutil.copy(fname,os.path.join(workerDirs[i], self.typ +'.in'))
+        print('...Done')
+                        
+        # create workers directory
+        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        if ncores is None:
+            ncores = ncoresAvailable
+        else:
+            if ncores > ncoresAvailable:
+                raise ValueError('Number of cores larger than available')
+        
+        #we need to add some formating strings to worker directories in the python script
+        drive = self.dirname[0]#get the working drive for the inversion directory 
+        formattedDirs = str(workerDirs).replace('\\\\','\\').replace(',',',\n').replace("'"+drive+":","r'"+drive+":")
+        
+        #write a parallised python scrip using an imported template 
+        parallel = parallelScript.format(formattedDirs,
+                                         "r'"+exePath+"'",ncores)#format template
+        
+        #according to docs found here: https://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
+        #we need to spawn a whole new python interpreter in order to safely run 
+        #multiprocessing within windows as the os doesnt support forking. 
+        
+        #write python parallel script to file 
+        fh = open('parallelScript.py','w')
+        fh.write(parallel)
+        fh.close()
+    
+        #now to run the actual inversion     
+        def initiate(): # initaites the script 
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW   
+            #proc = Popen('"'+ sys.executable +' parallelScript.py'+'"', stdout = PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)     
+            proc = Popen('python parallelScript.py', 
+                         stdout = PIPE, shell=False, universal_newlines=True, 
+                         startupinfo=startupinfo)
+            for stdout_line in iter(proc.stdout.readline, ""):
+                yield stdout_line
+
+            proc.stdout.close()
+            return_code = proc.wait()
+            if return_code:
+                print('error on return_code')        
+    
+            
+        def run():#run the parallel script 
+            for text in initiate():
+                print(text.rstrip())       
+        run()
+        
+#### TODO: Add capacity to kill pool 
+#        class ProcsManagement(object): # little class to handle the kill
+#            def __init__(self, procs):
+#                self.procs = procs
+#            def kill(self):
+#                for p in self.procs:
+#                    p.terminate()          
+#        self.proc = ProcsManagement(procs)
+          
+        # delete the dirs and the files
+        if rmDirTree:
+            [shutil.rmtree(d) for d in workerDirs]
+            #[os.remove(f) for f in files]
+        
+        print('----------- END OF PARALLISED INVERSION // ----------')
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False, iMoveElec=False, ncores=None):
+               parallel=False, iMoveElec=False, ncores=None, forceParallel=False):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -1564,9 +1739,11 @@ class R2(object): # R2 master class instanciated by the GUI
             
         dump('-------- Main inversion ---------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-            if platform.system() == "Windows": # distributed processing favoured on windows 
-                warnings.warn("Parallel processing unstable on windows! Running distributed processing instead")
-                self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
+            if platform.system() == "Windows": # different method needed on windows due to lack of forking
+                if forceParallel:
+                    self.runParallelWindows(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+                else:
+                    self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
             else:
                 self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
@@ -1638,12 +1815,14 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh.elec_x = self.elec[:,0]
             mesh.elec_y = self.elec[:,1]
             mesh.elec_z = self.elec[:,2]
+            mesh.surface = self.mesh.surface
             self.meshResults.append(mesh)
         if self.iForward is True:
             initMesh = mt.vtk_import(os.path.join(self.dirname, 'fwd','forward_model.vtk'))
             initMesh.elec_x = self.elec[:,0]
             initMesh.elec_y = self.elec[:,1]
             initMesh.elec_z = self.elec[:,2]
+            initMesh.surface = self.mesh.surface
             self.meshResults.append(initMesh)
             
         for i in range(1000):
@@ -1662,6 +1841,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh.elec_x = self.surveys[j].elec[:,0]
                 mesh.elec_y = self.surveys[j].elec[:,1]
                 mesh.elec_z = self.surveys[j].elec[:,2]
+                mesh.surface = self.mesh.surface
                 self.meshResults.append(mesh)
             else:
                 break
@@ -1670,7 +1850,14 @@ class R2(object): # R2 master class instanciated by the GUI
         for mesh in self.meshResults:
             if 'Resistivity(Ohm-m)' in mesh.attr_cache.keys():
                 mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
-
+        
+        # compute difference in percent in case of reg_mode == 1
+        if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
+            resRef = np.array(self.meshResults[0].attr_cache['Resistivity(Ohm-m)'])
+            for mesh in self.meshResutls[1:]:
+                res = np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
+                mesh.attr_cache['difference(percent)'] = (res-resRef)/resRef*100
+            
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         """ Show inverted section based on the `_res.dat``file instead of the
@@ -1951,7 +2138,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
-    def forward(self, noise=0.0, iplot=False, dump=print):
+    def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
         Parameters
@@ -1959,6 +2146,9 @@ class R2(object): # R2 master class instanciated by the GUI
         noise : float, optional 0 <= noise <= 1
             Noise level from a Gaussian distribution that should be applied
             on the forward apparent resistivities obtained. 
+        noiseIP : float, optional
+            Absolute noise level in mrad from a Gaussian distribution that should be applied
+            on the forward phase values obtained. 
         iplot : bool, optional
             If `True` will plot the pseudo section after the forward modelling.
         dump : function, optional
@@ -2042,8 +2232,14 @@ class R2(object): # R2 master class instanciated by the GUI
         # create a protocol.dat file (overwrite the method)
         def addnoise(x, level=0.05):
             return x + np.random.randn(1)*x*level
+        
+        def addnoiseIP(x, level=2):
+            return x + np.random.randn(1)*level
+        
         addnoise = np.vectorize(addnoise)
-        self.noise = noise
+        addnoiseIP = np.vectorize(addnoiseIP)
+        self.noise = noise #proportional noise, e.g. 0.05 = 5% noise
+        self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
         elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
@@ -2054,7 +2250,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
-        self.surveys[0].df['ip'] = addnoise(self.surveys[0].df['ip'].values, self.noise)
+        self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
         
         self.pseudo()
@@ -2151,6 +2347,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if x.shape[0] > 0:
                     triang = tri.Triangulation(x[:,0],x[:,1])
                     cax = ax.tricontourf(triang, x[:,3], extend='both')
+                    # TODO might want to crop surface here as well
                     fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                     ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                     ax.set_aspect('equal')
@@ -2188,7 +2385,33 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.meshResults[i].show(ax=ax, **kwargs2)
                 fname = self.surveys[i].name
                 fig.savefig(os.path.join(outputdir, fname + '.png'))
+    
+    
+    def getInvError(self):
+        """ Collect inversion error from _err.dat or .err file after inversion.
         
+        Returns
+        -------
+        array : numpy.array
+            Contains the quadrupoles.
+        errors : numpy.array
+            Vector of normalized error.
+        """
+#        if self.typ == 'R2': # old format
+#            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
+#            array = err[:,[-2,-1,-4,-3]].astype(int)
+#            errors = err[:,0]
+        if self.typ == 'cR2' or self.typ == 'R2':
+            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
+            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
+            errors = np.array(df['Normalised_Error'])
+        elif self.typ == 'R3t' or self.typ == 'cR3t':
+            err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)        
+            array = err[:,[-3,-1,-7,-5]].astype(int)
+            errors = err[:,0]
+            
+        return array, errors
+    
             
     def pseudoError(self, ax=None):
         """ Plot pseudo section of errors from file `f001_err.dat`.
@@ -2198,19 +2421,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         """
-        if self.typ == 'R2':
-            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)        
-            array = err[:,[-2,-1,-4,-3]].astype(int)
-            errors = err[:,0]
-        elif self.typ == 'cR2':
-            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat'))      
-            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
-            errors = np.array(df['Normalised_Error'])
-#            self.pseudoErrorIP()#use this function instead?
-        elif self.typ == 'R3t':
-            err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)        
-            array = err[:,[-3,-1,-7,-5]].astype(int)
-            errors = err[:,0]
+        array, errors = self.getInvError()
             
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
@@ -2220,7 +2431,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Display normalized phase error.
         """
         if self.typ == 'cR2':
-            df = pd.read_fwf(os.path.join(self.dirname, 'f001_err.dat'))      
+            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)   
             array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int)
             errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
         spacing = np.diff(self.elec[[0,1],0])
@@ -2230,22 +2441,23 @@ class R2(object): # R2 master class instanciated by the GUI
     def showInversionErrors(self, ax=None):
         """ Display inversion error by measurment numbers.
         """
-        if self.typ == 'R2':
-            file_path = os.path.join(self.dirname, 'f001_err.dat')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,0]
-        if self.typ == 'cR2':
-            file_path = os.path.join(self.dirname, 'f001_err.dat')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,4]
-        if self.typ == 'R3t':
-            file_path = os.path.join(self.dirname, 'f001.err')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,0]
-        if self.typ == 'cR3t':
-            file_path = os.path.join(self.dirname, 'f001.err')
-            err = np.genfromtxt(file_path,skip_header=1)
-            errors = err[:,4]
+#        if self.typ == 'R2':
+#            file_path = os.path.join(self.dirname, 'f001_err.dat')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,0]
+#        if self.typ == 'cR2':
+#            file_path = os.path.join(self.dirname, 'f001_err.dat')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,4]
+#        if self.typ == 'R3t':
+#            file_path = os.path.join(self.dirname, 'f001.err')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,0]
+#        if self.typ == 'cR3t':
+#            file_path = os.path.join(self.dirname, 'f001.err')
+#            err = np.genfromtxt(file_path,skip_header=1)
+#            errors = err[:,4]
+        _, errors = self.getInvError()
         measurement_no = np.arange(1,len(errors)+1)
         #make figure
         if ax is None: 
@@ -2389,9 +2601,9 @@ class R2(object): # R2 master class instanciated by the GUI
         
         crop=False
         if len(self.param['xy_poly_table'])>0:
-            meshx = np.array(self.mesh.elm_centre[0])
-            meshy = np.array(self.mesh.elm_centre[1])
-            meshz = np.array(self.mesh.elm_centre[2])
+            meshx = np.array(self.meshResults[0].elm_centre[0])
+            meshy = np.array(self.meshResults[0].elm_centre[1])
+            meshz = np.array(self.meshResults[0].elm_centre[2])
             crop=True
             if self.typ[-2]=='3':
                 inside1 = iip.isinpolygon(meshx,meshy,(self.param['xy_poly_table'][:,0],self.param['xy_poly_table'][:,1]))
@@ -2454,36 +2666,17 @@ class R2(object): # R2 master class instanciated by the GUI
             number. For timelapse surveys "...001.vtk" will be the baseline 
             survey.
         """   
-        amtContent = """from paraview.simple import * 
-def start_cue(self):
-	global annotations
-	global maxIndex
-	text_obj = Text()#make a text object
-	annotations= []\n"""
-        try:
-            numResults = len(self.meshResults)
-        except AttributeError:
+        amtContent = startAnmt 
+        if len(self.meshResults) == 0:
             self.getResults()
-            numResults = len(self.meshResults)
-        for i in range(numResults):
-            mesh = self.meshResults[i]
-            file_path = os.path.join(dirname,prefix+'{:0>3d}.vtk'.format(i))
+        for mesh, s in zip(self.meshResults, self.surveys):
+            file_path = os.path.join(dirname, s.name + '.vtk')
             mesh.write_vtk(file_path,title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
-        amtContent += """	maxIndex = len(annotations)
-def tick(self):
-	global annotations
-	global maxIndex
-	index = int( self.GetClockTime() )
-	if index >= maxIndex :
-		 index = maxIndex - 1
-	textSource = paraview.simple.FindSource('Text1')
-	textSource.Text = annotations[index]
-def end_cue(self): pass"""
+        amtContent += endAnmt 
         fh = open(os.path.join(dirname,'amt_track.py'),'w')
         fh.write(amtContent)
         fh.close()
-        
         
     def showParam(self):
         """ Print parameters in `R2.param` dictionary.
@@ -2522,7 +2715,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         resist = resist*K
 
-    array = np.sort(array, axis=1)
+#    array = np.sort(array, axis=1)
         
     if log:
         resist = np.sign(resist)*np.log10(np.abs(resist))

@@ -22,7 +22,7 @@ array = dfg[['a','b','m','n']].values.astype(int)
 data = np.vstack([recipMean, recipError]).T
 data = np.hstack((data, array))
 df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
-df.to_csv('/home/tsom/Downloads/df.csv')
+df.to_csv('/home/jkl/Downloads/df.csv')
 groups = df[['c1','c2','p1','p2']].astype(int)
 #print(list(set(groups)))
 #x = [str(a[0]) + str(a[1]) + str(a[2]) + str(a[3]) for a in df[['c1','c2','p1','p2']].values.astype(int)]

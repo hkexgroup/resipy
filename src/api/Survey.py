@@ -15,9 +15,10 @@ import matplotlib.mlab as mlab
 import pandas as pd
 import statsmodels.formula.api as smf
 
-from api.parsers import (syscalParser, protocolParser,protocolParserLME,  res2invInputParser,
+from api.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
-                     protocol3DParser, forwardProtocolDC, forwardProtocolIP)
+                     protocol3DParser, forwardProtocolDC, forwardProtocolIP,
+                     stingParser)
 from api.DCA import DCA
 
 class Survey(object):
@@ -56,7 +57,8 @@ class Survey(object):
         self.protocolIPFlag = False
         self.kFactor = 1
         
-        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP']# add parser types here! 
+        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
+                        'Sting']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -67,7 +69,7 @@ class Survey(object):
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
-                elec, data = res2invInputParser(fname)
+                elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
                 try:
                     elec, data = primeParser(fname)
@@ -78,6 +80,8 @@ class Survey(object):
                 self.protocolIPFlag = True
             elif ftype == 'forwardProtocolDC':
                 elec, data = forwardProtocolDC(fname)
+            elif ftype == 'Sting':
+                elec, data = stingParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)
@@ -282,7 +286,7 @@ class Survey(object):
         remove dummy measurements added for sequence optimization.
         """
         i2keep = self.df['irecip'] != 0
-        print('removeUnparied:', end='')
+        print('removeUnpaired:', end='')
         self.filterData(i2keep)
         return np.sum(~i2keep)
         
@@ -617,12 +621,10 @@ class Survey(object):
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
-        a1 = np.around(np.exp(coefs_ip[0]),decimals=3)
-        a2 = np.around(coefs_ip[1], decimals=3)
-        a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
-        a4 = np.around(coefs_ip[1], decimals=1)
-        print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
+        a1 = np.exp(coefs_ip[0])
+        a2 = coefs_ip[1]
+        print ('Error model is: Sp(m) = {:.2f}*R^{:.2f} (R^2 = {:.2f})'.format(a1,a2,R2_ip))
+        ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.4f})'.format(a1, a2, R2_ip))
         self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -664,10 +666,10 @@ class Survey(object):
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
-        a3 = np.around((coefs_ip[0]),decimals=3)
-        b3 = np.around((coefs_ip[1]), decimals=3)
-        c3 = np.around((coefs_ip[2]),decimals=3)
-        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
+        a3 = coefs_ip[0]
+        b3 = coefs_ip[1]
+        c3 = coefs_ip[2]
+        ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^2${:+.2f}$R${:+.2f} (R$^2$ = {:.4f})'.format(a3, b3, c3, R2_ip))
         self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -716,12 +718,12 @@ class Survey(object):
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
         R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
-        a1 = np.around(np.exp(coefs[0]),decimals=3)
-        a2 = np.around(coefs[1], decimals=3)
-        a3 = np.around(np.exp(coefs[0]),decimals=1)
-        a4 = np.around(coefs[1], decimals=1)
-        print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
+        a1 = np.exp(coefs[0])
+        a2 = coefs[1]
+#        a3 = np.exp(coefs[0])
+#        a4 = coefs[1]
+        print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.4f})'.format(a1,a2,R2))           
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):
             x = df['recipMean'].values
@@ -771,12 +773,10 @@ class Survey(object):
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
         R2= self.R_sqr((bins[:,1]),(R_error_predict))
-        a1 = np.around((coefs[0]),decimals=3)
-        a2 = np.around(coefs[1], decimals=3)
-        a3 = np.around((coefs[0]),decimals=1)
-        a4 = np.around(coefs[1], decimals=1)
-        print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin Linear plot\n $R_{error}$ = %s$R_{avg}$ %s %s (R$^2$ = %s)' % (a1,self.sign_coef(a2), np.abs(a2),R2))     
+        a1 = coefs[0]
+        a2 =coefs[1]
+        print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2f}$R_{{avg}}${:+.2f} (R$^2$ = {:.4f})'.format(a1,a2,R2))           
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         def errorModel(df):
             x = df['recipMean'].values
@@ -839,6 +839,7 @@ class Survey(object):
         as grouping variables.
         '''
         # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
+<<<<<<< src/api/Survey.py
         # requires R
         # statmodels or other python packages can't handle variable interaction yet
 
@@ -885,6 +886,8 @@ class Survey(object):
     #    print(dfg.sample)
 
  #       df['resError'] = lmeError 
+=======
+>>>>>>> src/api/Survey.py
         
 #        if 'recipMean' not in self.df.columns:
 #            self.reciprocal()
@@ -1144,6 +1147,10 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
+        
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
+        
         if self.protocolIPFlag == True:
             ip = self.df['ip'].values
         else:
@@ -1151,16 +1158,17 @@ class Survey(object):
 
         label = r'$\phi$ [mRad]'
         
+
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
-        
+
+
         if contour is False:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1343,6 +1351,8 @@ class Survey(object):
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
         
+        self.eselect = np.zeros(len(elecpos), dtype=bool)
+        
         if geom: # compute and applied geometric factor
             apos = elecpos[array[:,0]-1]
             bpos = elecpos[array[:,1]-1]
@@ -1358,6 +1368,7 @@ class Survey(object):
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
         
+        array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
@@ -1381,12 +1392,12 @@ class Survey(object):
                     setSelect(ie, False)
                 else:
                     setSelect(ie, True)
-                if eselect[event.ind[0]] == True:
-                    eselect[event.ind[0]] = False
+                if self.eselect[event.ind[0]] == True:
+                    self.eselect[event.ind[0]] = False
                 else:
-                    eselect[event.ind[0]] = True
-                elecKilled.set_xdata(elecpos[eselect])
-                elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
+                    self.eselect[event.ind[0]] = True
+                elecKilled.set_xdata(elecpos[self.eselect])
+                elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
@@ -1409,8 +1420,7 @@ class Survey(object):
         y = cax.get_offsets()[:,1]
         
         ipoints = np.zeros(len(y),dtype=bool)
-        eselect = np.zeros(len(elecpos), dtype=bool)
-        
+
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
         
