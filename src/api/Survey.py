@@ -834,9 +834,19 @@ class Survey(object):
             return figs
     
         
-    def lmefit(self, iplot=True, ax=None):
+    def lmefit(self, iplot=True, ax=None, rpath=None):
         ''' Fit a linear mixed effect (LME) model by having the electrodes as
         as grouping variables.
+        
+        Parameters
+        ----------
+        iplot : bool, optional
+            If `True`, then a graph will be plotted.
+        ax : matplotlib.Axes, optional
+            If specified, the graph will be plotted against this axis,
+            otherwise a new figure will be created.
+        rpath : str, optional
+            Paht of the directory with R (for Windows only).
         '''
         # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
         # requires R
@@ -872,7 +882,7 @@ class Survey(object):
             with open(outputname, 'a') as f:
                 self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
                 
-        if OS == 'Windows':
+        if (OS == 'Windows') and (rpath is None):
             R_dir = input("Enter the directory where R.exe is installed: ")
             os.system('R_PATH'+R_dir)
 
