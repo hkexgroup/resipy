@@ -261,6 +261,8 @@ class App(QMainWindow):
         self.iBorehole = False
         self.iForward = False
         self.inputPhaseFlag = False
+        self.iCropping = True # by default crop the mesh
+        self.num_xy_poly = None # to store the values
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
         self.table_widget = QWidget()
@@ -2737,9 +2739,13 @@ class App(QMainWindow):
         
         def notCroppingFunc(state):
             if state == Qt.Checked:
-                self.r2.param['num_xy_poly'] = 0
+                self.iCropping = False
+                if 'num_xy_poly' in self.r2.param:
+                    self.num_xy_poly = self.r2.param['num_xy_poly'] # store value
             else:
-                self.r2.param['num_xy_poly'] = -1 # default
+                self.iCropping = True # default
+                if ('num_xy_poly' in self.r2.param) and (self.num_xy_poly is not None):
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly # restore value
         notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output vtk</a>')
         notCroppingLabel.linkActivated.connect(showHelp2)
         notCropping = QCheckBox()
@@ -3283,7 +3289,14 @@ class App(QMainWindow):
                 cursor.insertText(text+'\n')
                 logText.ensureCursorVisible()
                 QApplication.processEvents()
-                
+            
+            # don't crop the mesh if that's what we'e chosen
+            if self.iCropping is True:
+                if self.num_xy_poly is not None:
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly
+            else:
+                self.r2.param['num_xy_poly'] = 0
+            
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()

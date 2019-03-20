@@ -1032,7 +1032,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 x = np.genfromtxt(f)
                 x2 = np.r_[x[~ifixed,:], x[ifixed,:]]
                 np.savetxt(f, x2)
-            
+                
 
     def write2protocol(self, err=None, errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
