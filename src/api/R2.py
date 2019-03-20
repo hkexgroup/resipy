@@ -1160,7 +1160,6 @@ class R2(object): # R2 master class instanciated by the GUI
                 dump(text.rstrip())
         os.chdir(cwd)
     
-    
     def runDistributed(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
         """ run R2 in // according to the number of cores available but in a 
         non-concurrent way (!= runParallel) -> this works on Windows
