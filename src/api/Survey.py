@@ -286,7 +286,7 @@ class Survey(object):
         remove dummy measurements added for sequence optimization.
         """
         i2keep = self.df['irecip'] != 0
-        print('removeUnparied:', end='')
+        print('removeUnpaired:', end='')
         self.filterData(i2keep)
         return np.sum(~i2keep)
         
@@ -1301,6 +1301,8 @@ class Survey(object):
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
         
+        self.eselect = np.zeros(len(elecpos), dtype=bool)
+        
         if geom: # compute and applied geometric factor
             apos = elecpos[array[:,0]-1]
             bpos = elecpos[array[:,1]-1]
@@ -1340,12 +1342,12 @@ class Survey(object):
                     setSelect(ie, False)
                 else:
                     setSelect(ie, True)
-                if eselect[event.ind[0]] == True:
-                    eselect[event.ind[0]] = False
+                if self.eselect[event.ind[0]] == True:
+                    self.eselect[event.ind[0]] = False
                 else:
-                    eselect[event.ind[0]] = True
-                elecKilled.set_xdata(elecpos[eselect])
-                elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
+                    self.eselect[event.ind[0]] = True
+                elecKilled.set_xdata(elecpos[self.eselect])
+                elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
@@ -1368,8 +1370,7 @@ class Survey(object):
         y = cax.get_offsets()[:,1]
         
         ipoints = np.zeros(len(y),dtype=bool)
-        eselect = np.zeros(len(elecpos), dtype=bool)
-        
+
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
         

@@ -108,11 +108,14 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 #%% test for batch inversion with moving electrodes
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
+from api.R2 import R2
 t0 = time.time()
 k = R2()
 k.createBatchSurvey('api/test/testTimelapse')
 for s in k.surveys:
     s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
+k.removeUnpaired()
+k.filterElec([])
 k.createMesh('trian')
 k.pwlfit()
 k.err = True
@@ -339,17 +342,15 @@ print('total time running the test = {:.4f}s'.format(time.time() - tstart))
 
 
 #%% test timelapse 3D -- takes a long time
-#from api.R2 import R2
-#k = R2(typ='R3t')
-#k.createTimeLapseSurvey('api/test/timelapse3D/dataLeadingRidge')
-#k.importElec('api/test/timelapse3D/elecLeadingRidge.csv')
-#k.pseudo()
-#k.pwlfit()
-#k.createMesh('tetra', cl=0.3, cl_factor=5)
-#k.showMesh()
-#k.invert(parallel=True)
-#k.showResults()
-#k.showInParaview()
-
-
+from api.R2 import R2
+k = R2(typ='R3t')
+k.createTimeLapseSurvey('api/test/timelapse3D/dataLeadingRidge')
+k.importElec('api/test/timelapse3D/elecLeadingRidge.csv')
+k.pseudo()
+k.pwlfit()
+k.createMesh('tetra', cl=0.3, cl_factor=5)
+k.showMesh()
+k.invert(parallel=True)
+k.showResults()
+k.showInParaview()
 

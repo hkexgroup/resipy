@@ -455,7 +455,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
         self.pseudo = self.surveys[0].pseudo # just display first pseudo section
-            
+
         self.plotError = self.bigSurvey.plotError
         self.errorDist = self.bigSurvey.errorDist
         self.linfit = self.bigSurvey.linfit
@@ -536,18 +536,20 @@ class R2(object): # R2 master class instanciated by the GUI
             Percentage of reciprocal error above witch a measurement will be
             discarded. 20% by default.
         """
+        numRemoved = 0
         for s in self.surveys:
-            numRemoved = s.filterRecip(percent)
-            return numRemoved
+            numRemoved += s.filterRecip(percent)
+        return numRemoved
     
     
     def removeUnpaired(self):
         """ Remove quadrupoles that don't have reciprocals. This might
         remove dummy measurements added for sequence optimization.
         """
+        numRemoved = 0
         for s in self.surveys:
-            numRemoved = s.removeUnpaired()
-            return numRemoved
+            numRemoved += s.removeUnpaired()
+        return numRemoved
             
         
     def computeDOI(self):
@@ -1498,9 +1500,9 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(r2outText)
         
         # delete the dirs and the files
-        if rmDirTree:
-            [shutil.rmtree(d) for d in dirs]
-            [os.remove(f) for f in files]
+#        if rmDirTree:
+#            [shutil.rmtree(d) for d in dirs]
+#            [os.remove(f) for f in files]
         
         print('----------- END OF INVERSION IN // ----------')
     

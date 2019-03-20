@@ -740,7 +740,9 @@ class App(QMainWindow):
                     else:
 #                        tabPreProcessing.setTabEnabled(1, True)
                         tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
+                        plotError()                                        
+                        errHist()
+                    plotManualFiltering()
                     activateTabs(True)
                 except:
                     errorDump('File format is not recognized (or directory contains invalid input files)')
@@ -1491,7 +1493,11 @@ class App(QMainWindow):
         
         def recipFilter():
             try:
-                numSelectRemoved = self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+                numSelectRemoved = 0
+                if self.r2.iTimeLapse or self.r2.iBatch: # only remove electrode not single measurements
+                    self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
+                else:
+                    numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
                 if recipErrorInputLine.text() != '-':
                     percent = float(recipErrorInputLine.text())
                     numRecipRemoved = self.r2.filterRecip(percent=percent)
@@ -1499,8 +1505,9 @@ class App(QMainWindow):
                 else:
                     infoDump("%i selected measurements removed!" % (numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
-                    self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
-                    self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                    for s in self.surveys:
+                        s.dfPhaseReset = s.df
+                        s.filterDataIP = s.df
                     heatFilter()
                     phaseplotError()
                 errHist()
@@ -1515,13 +1522,15 @@ class App(QMainWindow):
             
         def resetRecipFilter():
             numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
-            self.r2.surveys[0].df = self.r2.surveys[0].dfReset.copy()
+            for s in self.r2.surveys:
+                s.df = s.dfReset.copy()
             if recipErrorInputLine.text() != '-':
                 errHist()
                 recipErrorInputLine.setText('-')
             if ipCheck.checkState() == Qt.Checked:
-                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].dfReset.copy()
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfReset.copy()
+                for s in self.r2.surveys:
+                    s.dfPhaseReset = s.dfReset.copy()
+                    s.filterDataIP = s.dfReset.copy()
                 heatFilter()
                 phaseplotError()
             errHist()
@@ -1591,8 +1600,9 @@ class App(QMainWindow):
         def recipErrorUnpairedFunc():
             numRemoved = self.r2.removeUnpaired()
             if ipCheck.checkState() == Qt.Checked:
-                self.r2.surveys[0].dfPhaseReset = self.r2.surveys[0].df
-                self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+                for s in self.surveys:
+                    s.dfPhaseReset = s.df
+                    s.filterDataIP = s.df
                 heatFilter()
                 phaseplotError()
             errHist()
