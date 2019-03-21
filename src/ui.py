@@ -2746,7 +2746,7 @@ class App(QMainWindow):
                 self.iCropping = True # default
                 if ('num_xy_poly' in self.r2.param) and (self.num_xy_poly is not None):
                     self.r2.param['num_xy_poly'] = self.num_xy_poly # restore value
-        notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output vtk</a>')
+        notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
         notCroppingLabel.linkActivated.connect(showHelp2)
         notCropping = QCheckBox()
         notCropping.stateChanged.connect(notCroppingFunc)
