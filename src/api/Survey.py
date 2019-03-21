@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
-import statsmodels.formula.api as smf
+#import statsmodels.formula.api as smf
 
 from api.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
