@@ -261,6 +261,8 @@ class App(QMainWindow):
         self.iBorehole = False
         self.iForward = False
         self.inputPhaseFlag = False
+        self.iCropping = True # by default crop the mesh
+        self.num_xy_poly = None # to store the values
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
         self.table_widget = QWidget()
@@ -1695,9 +1697,9 @@ class App(QMainWindow):
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
                 self.r2.err = True
-#            elif index == 3:
-#                mwFitError.plot(self.r2.lmefit)
-#                self.r2.err = True
+            elif index == 3:
+                mwFitError.plot(self.r2.lmefit)
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1715,7 +1717,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-#        errFitType.addItem('Linear Mixed Effect')
+        errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -2738,6 +2740,21 @@ class App(QMainWindow):
         advForm.addRow(modErrLabel, modErr)
         self.modErr = False
         
+        def notCroppingFunc(state):
+            if state == Qt.Checked:
+                self.iCropping = False
+                if 'num_xy_poly' in self.r2.param:
+                    self.num_xy_poly = self.r2.param['num_xy_poly'] # store value
+            else:
+                self.iCropping = True # default
+                if ('num_xy_poly' in self.r2.param) and (self.num_xy_poly is not None):
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly # restore value
+        notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output vtk</a>')
+        notCroppingLabel.linkActivated.connect(showHelp2)
+        notCropping = QCheckBox()
+        notCropping.stateChanged.connect(notCroppingFunc)
+        advForm.addRow(notCroppingLabel, notCropping)
+        
         def flux_typeFunc(index):
             if index == 0:
                 self.r2.param['flux_type'] = 3
@@ -2916,7 +2933,7 @@ class App(QMainWindow):
         error_mod.addItem('Keep the same weights [0]')
         error_mod.addItem('Update the weights [1]')
         error_mod.addItem('Update the weights (recommended) [2]')
-        error_mod.setCurrentIndex(1)
+        error_mod.setCurrentIndex(2)
         error_mod.currentIndexChanged.connect(error_modFunc)
         advForm.addRow(error_modLabel, error_mod)
         
@@ -3275,7 +3292,14 @@ class App(QMainWindow):
                 cursor.insertText(text+'\n')
                 logText.ensureCursorVisible()
                 QApplication.processEvents()
-                
+            
+            # don't crop the mesh if that's what we'e chosen
+            if self.iCropping is True:
+                if self.num_xy_poly is not None:
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly
+            else:
+                self.r2.param['num_xy_poly'] = 0
+            
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()

@@ -66,6 +66,7 @@ r2help = {
                 "is reduced by 50% in the following iteration. If this approach is taken then it is advisable "
                 "to set <code>max_iterations</code> to at least 20.</p>",
 'min_step' : "<p><code>min_step</code> is the minimum step length for attempting to improve solution. This is "
-            "usually set to 0.001 to 0.01.</p>"
+            "usually set to 0.001 to 0.01.</p>",
+'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.'
     }
 

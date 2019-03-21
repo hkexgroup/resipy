@@ -6,16 +6,16 @@ Created on Fri Jun  1 11:21:54 2018
 @author: jkl
 """
 #import sys
-import os
+import sys, os, platform
 #sys.path.append(os.path.relpath('../api'))
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
-#import statsmodels.formula.api as smf
+import statsmodels.formula.api as smf
 
-from api.parsers import (syscalParser, protocolParser, resInvParser,
+from api.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
                      stingParser)
@@ -832,14 +832,68 @@ class Survey(object):
             figs.append(fig)
             
             return figs
+    
         
-        
-    def lmefit(self, iplot=True, ax=None):
+    def lmefit(self, iplot=True, ax=None, rpath=None):
         ''' Fit a linear mixed effect (LME) model by having the electrodes as
-        as random factor.
+        as grouping variables.
+        
+        Parameters
+        ----------
+        iplot : bool, optional
+            If `True`, then a graph will be plotted.
+        ax : matplotlib.Axes, optional
+            If specified, the graph will be plotted against this axis,
+            otherwise a new figure will be created.
+        rpath : str, optional
+            Paht of the directory with R (for Windows only).
         '''
-        print('lmefit NOT IMPLEMENTED YET')
         # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
+        # requires R
+        # statmodels or other python packages can't handle variable interaction yet
+
+        OS = platform.system()
+        
+        if 'recipMean' not in self.df.columns:
+            self.reciprocal()
+        dfg = self.df[self.df['irecip'] > 0]
+        
+        recipMean = np.abs(dfg['recipMean'].values)
+        recipError = np.abs(dfg['recipError'].values)
+        array = dfg[['a','b','m','n']].values.astype(int)        
+        data = np.vstack([recipMean, recipError]).T
+        data = np.hstack((array,data))
+        df = pd.DataFrame(data, columns=['a','b','m','n','recipMean','obsErr'])  
+        df.insert(0, 'idx', df.index + 1)
+        df = df.astype({"idx": int, "a": int, "b": int, "m": int, "n": int})
+        
+        outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeInRecip.dat')
+        if outputname != '':
+            with open(outputname, 'w') as f:
+                f.write(str(len(df)) + '\n')
+            with open(outputname, 'a') as f:
+                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e')
+
+        outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
+        print(list(self.df))
+        if outputname != '':
+            with open(outputname, 'w') as f:
+                f.write(str(len(self.df)) + '\n')
+            with open(outputname, 'a') as f:
+                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
+                
+        if (OS == 'Windows') and (rpath is None):
+            R_dir = input("Enter the directory where R.exe is installed: ")
+            os.system('R_PATH'+R_dir)
+
+        os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
+        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
+        df['resError'] = lmeError # fitted results, only with results
+        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
+        self.df['resError'] = lmeError # predicted results, entire survey
+
+
+#        df['resError'] = lmeError 
         
 #        if 'recipMean' not in self.df.columns:
 #            self.reciprocal()
@@ -855,26 +909,28 @@ class Survey(object):
 #        md = smf.mixedlm('obsErr~recipMean', df, groups=df[['a','b','m','n']])
 #        mdf = md.fit()
 #        print(mdf.summary())
-#        
-#        if ax is None:
-#            fig, ax = plt.subplots()
-#        else:
-#            fig = ax.figure
-#        ax.plot(df['obsErr'], mdf.predict(), 'o')
-#        ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-#        ax.grid()
-#        ax.legend()
-#        ax.set_title('Linear Mixed Effect Model Fit')
-#        ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-#        ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
-#        
+# 
 #        def errorModel(df):
 #            return mdf.predict(np.abs(df[['recipMean','a','b','m','n']]))
 #        self.errorModel = errorModel
 #        self.df['resError'] = self.errorModel(self.df)
-#        
-#        if ax is None:
-#            return fig
+ 
+        
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+        ax.plot(df['obsErr'], df['resError'], 'o')
+        ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+        ax.grid()
+        ax.legend()
+        ax.set_title('Linear Mixed Effect Model Fit')
+        ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+        ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+        
+        if ax is None:
+            return fig
+
 
 
     def heatmap(self,ax=None):

@@ -1041,7 +1041,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 x = np.genfromtxt(f)
                 x2 = np.r_[x[~ifixed,:], x[ifixed,:]]
                 np.savetxt(f, x2)
-            
+                
 
     def write2protocol(self, err=None, errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
@@ -1185,7 +1185,6 @@ class R2(object): # R2 master class instanciated by the GUI
         for text in execute(cmd):
                 dump(text.rstrip())
         os.chdir(cwd)
-    
     
     def runDistributed(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
         """ run R2 in // according to the number of cores available but in a 
