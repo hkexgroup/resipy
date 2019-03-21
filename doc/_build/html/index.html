@@ -13,6 +13,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
   </head><body>
@@ -45,6 +46,23 @@ Main R2 class, wraps the other pyR2 modules (API) in to an object orientated app
 <dt id="api.R2.R2">
 <em class="property">class </em><code class="descclassname">api.R2.</code><code class="descname">R2</code><span class="sig-paren">(</span><em>dirname=''</em>, <em>typ='R2'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2" title="Permalink to this definition">¶</a></dt>
 <dd><p>Master class to handle all processing around the inversion codes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str, optional</p>
+<blockquote>
+<div><p>Path of the working directory. Can also be set using <cite>R2.setwd()</cite>.</p>
+</div></blockquote>
+<p><strong>typ</strong> : str, optional</p>
+<blockquote class="last">
+<div><p>Either <cite>R2</cite> or <cite>R3t</cite> for 3D. Complex equivalents are <cite>cR2</cite> and <cite>cR3t</cite>.
+Automatically infered when creating the survey.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="api.R2.R2.addRegion">
 <code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=1</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
@@ -124,6 +142,12 @@ the phase [mrad].</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.compCond">
+<code class="descname">compCond</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.compCond" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute conductivities from resistivities for the ERT mesh</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.computeDOI">
 <code class="descname">computeDOI</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.computeDOI" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the Depth Of Investigation (DOI).</p>
@@ -137,15 +161,15 @@ the phase [mrad].</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createBatchSurvey">
-<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createBatchSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>keepAll=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createBatchSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read multiples files from a folders (sorted by alphabetical order).</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str</p>
 <blockquote>
-<div><p>Filename to be parsed.</p>
+<div><p>Directory with files to be parsed.</p>
 </div></blockquote>
 <p><strong>ftype</strong> : str, optional</p>
 <blockquote>
@@ -169,8 +193,12 @@ the phase [mrad].</p>
 reciprocal measurements. By default all surveys are used.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to dump the information message when importing the files.</p>
+</div></blockquote>
+<p><strong>keepAll: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Filter out NaN and Inf but also dummy measurements.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -198,7 +226,8 @@ length as <cite>R2.elec</cite></p>
 </div></blockquote>
 <p><strong>surface</strong> : numpy.array, optional</p>
 <blockquote>
-<div><p>Array with two columns x and y for additional surface points.</p>
+<div><p>Array with two or threee columns x, y (optional) and elevation for 
+additional surface points.</p>
 </div></blockquote>
 <p><strong>cl_factor</strong> : float, optional</p>
 <blockquote>
@@ -264,7 +293,7 @@ GUI purpose).</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createSequence">
-<code class="descname">createSequence</code><span class="sig-paren">(</span><em>params=[('dpdp1', 1, 3)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSequence</code><span class="sig-paren">(</span><em>params=[('dpdp1', 1, 8)]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a dipole-dipole sequence.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -284,7 +313,7 @@ Types of sequences available are : ‘dpdp1’,’dpdp2’,’wenner_alpha’,
 
 <dl class="method">
 <dt id="api.R2.R2.createSurvey">
-<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createSurvey</code><span class="sig-paren">(</span><em>fname=''</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>keepAll=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -308,8 +337,12 @@ a survey object.</p>
 <div><p>Electrode spacing to be passed to the parser function.</p>
 </div></blockquote>
 <p><strong>parser</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>A parser function to be passed to <cite>Survey</cite> constructor.</p>
+</div></blockquote>
+<p><strong>keepAll: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Filter out NaN and Inf but also dummy measurements.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -319,16 +352,16 @@ a survey object.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.createTimeLapseSurvey">
-<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createTimeLapseSurvey</code><span class="sig-paren">(</span><em>dirname</em>, <em>ftype='Syscal'</em>, <em>info={}</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>isurveys=[]</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>keepAll=False</em>, <em>trim=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.createTimeLapseSurvey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read electrodes and quadrupoles data and return 
 a survey object.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname</strong> : str</p>
 <blockquote>
-<div><p>Filename to be parsed.</p>
+<div><p>Directory with files to be parsed.</p>
 </div></blockquote>
 <p><strong>ftype</strong> : str, optional</p>
 <blockquote>
@@ -336,7 +369,8 @@ a survey object.</p>
 </div></blockquote>
 <p><strong>info</strong> : dict, optional</p>
 <blockquote>
-<div><p>Dictionnary of info about the survey.</p>
+<div><p>Dictionnary of info about the survey. Put inverse_type = 1 to allow 
+for a changing number of measurements between surveys.</p>
 </div></blockquote>
 <p><strong>spacing</strong> : float, optional</p>
 <blockquote>
@@ -352,8 +386,47 @@ a survey object.</p>
 reciprocal measurements. By default all surveys are used.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to dump information message when importing the files.</p>
+</div></blockquote>
+<p><strong>keepAll</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, filter out NaN and Inf but also dummy measurements.</p>
+</div></blockquote>
+<p><strong>trim</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>If <cite>True</cite> this ensure that all surveys imported have the same
+length. This is needed for difference inversion (<cite>reg_mode=2</cite>) but
+not for background constrained inversion (<cite>reg_mode=1</cite>) and can be
+disable in this last case.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.elecXY2elecX">
+<code class="descname">elecXY2elecX</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.elecXY2elecX" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert 3D electrode XY coordinates into just X coordinates. Use for 
+2D lines only! 
+If self.elec has been set then each survey will use the electrodes set 
+in the R2 master class. If not then the R2 master class will take on the
+elec values set for the first survey in a sequence.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.filterElec">
+<code class="descname">filterElec</code><span class="sig-paren">(</span><em>elec=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.filterElec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter out specific electrodes given in all surveys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec</strong> : list</p>
+<blockquote class="last">
+<div><p>List of electrode number to be removed.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -414,6 +487,50 @@ them to <cite>R2.meshResults</cite> list.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.importMesh">
+<code class="descname">importMesh</code><span class="sig-paren">(</span><em>file_path</em>, <em>mesh_type='tetra'</em>, <em>node_pos=None</em>, <em>elec=None</em>, <em>flag_3D=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.importMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import mesh from .vtk / .msh / .dat, rather than having &lt;pyR2&gt; create
+one for you.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: str</strong></p>
+<blockquote>
+<div><p>File path mapping to the mesh file</p>
+</div></blockquote>
+<p><strong>mesh_type: str</strong></p>
+<blockquote>
+<div><p>Type of mesh, ‘quad’, ‘trian’, ‘tetra’</p>
+</div></blockquote>
+<p><strong>node_pos: array like, optional</strong></p>
+<blockquote>
+<div><p>Array of ints referencing the electrode nodes. If left as none no electrodes 
+will be added to the mesh class. Consider using mesh.move_elec_nodes()
+to add nodes to mesh using their xyz coordinates.</p>
+</div></blockquote>
+<p><strong>elec: numpy array, optional</strong></p>
+<blockquote>
+<div><p>N*3 numpy array of electrode x,y,z coordinates. Electrode node positions
+will be computed by finding the nearest nodes to the relevant coordinates.</p>
+</div></blockquote>
+<p><strong>flag_3D: bool, optional</strong></p>
+<blockquote>
+<div><p>Make this true for 3D meshes if importing .msh type.</p>
+</div></blockquote>
+<p><strong>Returns</strong></p>
+<p><strong>———–</strong></p>
+<p><strong>mesh: class</strong></p>
+<blockquote class="last">
+<div><p>Added to R2 class</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.importSequence">
 <code class="descname">importSequence</code><span class="sig-paren">(</span><em>fname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.importSequence" title="Permalink to this definition">¶</a></dt>
 <dd><p>Import sequence for forward modelling.</p>
@@ -433,7 +550,7 @@ them to <cite>R2.meshResults</cite> list.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.invert">
-<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em>, <em>iMoveElec=False</em>, <em>ncores=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Invert the data, first generate R2.in file, then run
 inversion using appropriate wrapper, then return results.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -461,14 +578,31 @@ inversion using appropriate wrapper, then return results.</p>
 inversion.</p>
 </div></blockquote>
 <p><strong>parallel</strong> : bool, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>If <cite>True</cite>, batch and time-lapse survey will be inverted in //. No
 output will be display during inversion.</p>
+</div></blockquote>
+<p><strong>iMoveElec</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, then different electrode location will be used for 
+the different surveys. Electrodes location are specified in the
+<cite>Survey</cite> object. Only for parallel inversion for now.</p>
+</div></blockquote>
+<p><strong>ncores</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>If <cite>parallel==True</cite> then ncores is the number of cores to use (by
+default all the cores available are used).)</p>
 </div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.normElecIdx">
+<code class="descname">normElecIdx</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.normElecIdx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalise electrode indexes to start at 1 in consective and ascending order.</p>
 </dd></dl>
 
 <dl class="method">
@@ -506,7 +640,7 @@ starting model to invert data from forward modelling.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.runParallel">
-<code class="descname">runParallel</code><span class="sig-paren">(</span><em>dirname=None</em>, <em>dump=&lt;built-in function print&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runParallel" title="Permalink to this definition">¶</a></dt>
+<code class="descname">runParallel</code><span class="sig-paren">(</span><em>dirname=None</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>iMoveElec=False</em>, <em>ncores=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.runParallel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run R2 in // according to the number of cores available.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -517,9 +651,19 @@ starting model to invert data from forward modelling.</p>
 <div><p>Path of the working directory.</p>
 </div></blockquote>
 <p><strong>dump</strong> : function, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Function to be passed to <cite>R2.runR2()</cite> for printing output during
 inversion.</p>
+</div></blockquote>
+<p><strong>iMoveElec</strong> : bool, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite> will move electrodes according to their position in each
+<cite>Survey</cite> object.</p>
+</div></blockquote>
+<p><strong>ncores</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>Number or cores to use. If None, the maximum number of cores
+available will be used.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -576,16 +720,23 @@ are passed to the <cite>showResults()</cite> method.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.setElec">
-<code class="descname">setElec</code><span class="sig-paren">(</span><em>elec</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setElec" title="Permalink to this definition">¶</a></dt>
+<code class="descname">setElec</code><span class="sig-paren">(</span><em>elec</em>, <em>elecList=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.setElec" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set electrodes.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>elec</strong> : numpy array</p>
-<blockquote class="last">
+<blockquote>
 <div><p>Array of NxM dimensions. N = number of electodes, M = 2 for x,y or
 M = 3 if x,y,z coordinates are supplied.</p>
+</div></blockquote>
+<p><strong>elecList</strong> : list, optional</p>
+<blockquote class="last">
+<div><p>If not None then elec is ignored in favour of elecList. This option 
+is to be used in the advanced use case where electrodes move which 
+each survey. Each entry of the list is a numpy array the same format
+of ‘elec’, which is then assigned to each survey class.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -613,8 +764,25 @@ M = 3 if x,y,z coordinates are supplied.</p>
 
 <dl class="method">
 <dt id="api.R2.R2.showInParaview">
-<code class="descname">showInParaview</code><span class="sig-paren">(</span><em>index=0</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInParaview" title="Permalink to this definition">¶</a></dt>
+<code class="descname">showInParaview</code><span class="sig-paren">(</span><em>index=0</em>, <em>paraview_loc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showInParaview" title="Permalink to this definition">¶</a></dt>
 <dd><p>Open paraview to display the .vtk file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>index: int, optional</strong></p>
+<blockquote>
+<div><p>Timestep to be shown in paraview (for an individual survey this 1).</p>
+</div></blockquote>
+<p><strong>paraview_loc: str, optional</strong></p>
+<blockquote class="last">
+<div><p><strong>Windows ONLY</strong> maps to the excuatable paraview.exe. The program 
+will attempt to find the location of the paraview install if not given.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -652,8 +820,14 @@ M = 3 if x,y,z coordinates are supplied.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.showParam">
+<code class="descname">showParam</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showParam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print parameters in param</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.showResults">
-<code class="descname">showResults</code><span class="sig-paren">(</span><em>index=0</em>, <em>ax=None</em>, <em>edge_color='none'</em>, <em>attr=''</em>, <em>sens=True</em>, <em>color_map='viridis'</em>, <em>ylim=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showResults" title="Permalink to this definition">¶</a></dt>
+<code class="descname">showResults</code><span class="sig-paren">(</span><em>index=0</em>, <em>ax=None</em>, <em>edge_color='none'</em>, <em>attr=''</em>, <em>sens=True</em>, <em>color_map='viridis'</em>, <em>zlim=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showResults" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show the inverteds section.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -728,8 +902,20 @@ shade on top of the inverted section.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.R2.R2.showSlice">
+<code class="descname">showSlice</code><span class="sig-paren">(</span><em>index=0</em>, <em>ax=None</em>, <em>attr=None</em>, <em>axis='z'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.showSlice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show slice of 3D mesh interactively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.R2.R2.shuntIndexes">
+<code class="descname">shuntIndexes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.shuntIndexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shunt electrode indexes to start at 1.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.R2.R2.write2in">
-<code class="descname">write2in</code><span class="sig-paren">(</span><em>param={}</em>, <em>typ=''</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2in" title="Permalink to this definition">¶</a></dt>
+<code class="descname">write2in</code><span class="sig-paren">(</span><em>param={}</em>, <em>typ=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.R2.R2.write2in" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create configuration file for inversion.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -789,12 +975,50 @@ shade on top of the inverted section.</p>
 <p>&#64;author: jkl</p>
 <dl class="class">
 <dt id="api.Survey.Survey">
-<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">api.Survey.</code><code class="descname">Survey</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype=''</em>, <em>name=''</em>, <em>spacing=None</em>, <em>parser=None</em>, <em>keepAll=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class that handles geophysical data and some basic functions. One 
 instance is created for each survey.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote>
+<div><p>Name of the file where the data are.</p>
+</div></blockquote>
+<p><strong>ftype</strong> : str</p>
+<blockquote>
+<div><p>Type of the data file. This setting is not read if a <cite>parser</cite> is
+not <cite>None</cite>.</p>
+</div></blockquote>
+<p><strong>name</strong> : str</p>
+<blockquote>
+<div><p>A personal name for the survey.</p>
+</div></blockquote>
+<p><strong>spacing</strong> : float, optional</p>
+<blockquote>
+<div><p>This will be passed to the parser function to determine the
+electrode positions.</p>
+</div></blockquote>
+<p><strong>parser</strong> : function, optional</p>
+<blockquote>
+<div><p>If provided, it should return tuple containing <cite>elec</cite> a 3 columns
+array containing electrodes position and <cite>data</cite> a pandas.DataFrame
+with the <cite>a,b,m,n,resist</cite> columns at least and <cite>ip</cite> if present.</p>
+</div></blockquote>
+<p><strong>keepAll: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>If <cite>True</cite> will keep all the measurements even the ones without
+reciprocal. Note that if none of the quadrupoles have reciprocal
+they will all be kept anyway.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="api.Survey.Survey.addData">
-<code class="descname">addData</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em>, <em>spacing=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addData" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addData</code><span class="sig-paren">(</span><em>fname</em>, <em>ftype='Syscal'</em>, <em>spacing=None</em>, <em>parser=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.addData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add data to the actual survey (for instance the reciprocal if they
 are not in the same file).</p>
 </dd></dl>
@@ -824,6 +1048,12 @@ are not in the same file).</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.Survey.Survey.elec2distance">
+<code class="descname">elec2distance</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.elec2distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert 3d xy data in pure x lateral distance. Use for 2D data only!</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.Survey.Survey.filterData">
 <code class="descname">filterData</code><span class="sig-paren">(</span><em>i2keep</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.filterData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Filter out the data not retained in <cite>i2keep</cite>.</p>
@@ -840,6 +1070,12 @@ others <cite>False</cite>.</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="api.Survey.Survey.fromDataframe">
+<em class="property">classmethod </em><code class="descname">fromDataframe</code><span class="sig-paren">(</span><em>df</em>, <em>elec</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.fromDataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a survey class from pandas dataframe.</p>
 </dd></dl>
 
 <dl class="method">
@@ -981,6 +1217,27 @@ classes will be computed as 10**class1</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">If <cite>ax</cite> is not None, a matplotlib figure is returned.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.normElecIdx">
+<code class="descname">normElecIdx</code><span class="sig-paren">(</span><em>debug=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.normElecIdx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalise the electrode indexing sequencing to start at 1 and ascend
+consectively (ie 1 , 2 , 3 , 4 … )</p>
+<p>Function firstly normalises all indexes so that the lowest electrode 
+number is 1. Then removes jumps in the electrode indexing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>debug</strong> : bool</p>
+<blockquote class="last">
+<div><p>Output will be printed to console if true.</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -1180,6 +1437,47 @@ without reciprocal.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="api.Survey.Survey.shuntIndexes">
+<code class="descname">shuntIndexes</code><span class="sig-paren">(</span><em>debug=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.shuntIndexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalise the indexes the sequence matrix to start at 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>debug: bool</strong></p>
+<blockquote class="last">
+<div><p>Set to True to print output.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.Survey.Survey.swapIndexes">
+<code class="descname">swapIndexes</code><span class="sig-paren">(</span><em>old_indx</em>, <em>new_indx</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.swapIndexes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace the electrode number in a sequence matrix with another.
+Survey dataframe is updated after running.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>old_idx: int</strong></p>
+<blockquote>
+<div><p>Electrode number(or index) to be replaced</p>
+</div></blockquote>
+<p><strong>new_idx: int</strong></p>
+<blockquote class="last">
+<div><p>Replacement electrode number</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="api.Survey.Survey.write2protocol">
 <code class="descname">write2protocol</code><span class="sig-paren">(</span><em>outputname=''</em>, <em>errTyp='none'</em>, <em>errTot=False</em>, <em>ip=False</em>, <em>errTypIP='none'</em>, <em>res0=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.Survey.Survey.write2protocol" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a protocol.dat file for R2 or cR2.</p>
@@ -1234,44 +1532,861 @@ if <cite>True</cite>.</p>
 
 <span class="target" id="module-api.meshTools"></span><p>Created on Wed May 30 10:19:09 2018, python 3.6.5
 &#64;author: jamyd91
-Import a vtk file with an unstructured grid (triangular/quad elements) and 
-creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. Module has capacity to show meshes, inverted results, apply a function 
-to mesh parameters.</p>
+Module handles mesh generation, display, discretisation and post processing. 
+The convention for x y z coordinates is that the z coordinate is the elevation.</p>
 <dl class="docutils">
-<dt>Classes: </dt>
-<dd>mesh_obj</dd>
-<dt>Functions: </dt>
-<dd>tri_cent() - computes the centre point for a 2d triangular element
-vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-readR2_resdat () - reads resistivity values from a R2 file
-quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
-tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh</dd>
 <dt>Dependencies: </dt>
 <dd>numpy (conda lib)
 matplotlib (conda lib)
-scipy (conda lib)
 gmshWrap(pyR2 api module)
 python3 standard libaries</dd>
 </dl>
-<p>Nb: Module has a heavy dependence on numpy and matplotlib packages</p>
-<p>#### TODO: use .exe path in command line rather than changing the working directory”</p>
+<dl class="class">
+<dt id="api.meshTools.Mesh">
+<em class="property">class </em><code class="descclassname">api.meshTools.</code><code class="descname">Mesh</code><span class="sig-paren">(</span><em>num_nodes</em>, <em>num_elms</em>, <em>node_x</em>, <em>node_y</em>, <em>node_z</em>, <em>node_id</em>, <em>elm_id</em>, <em>node_data</em>, <em>elm_centre</em>, <em>elm_area</em>, <em>cell_type</em>, <em>cell_attributes</em>, <em>atribute_title</em>, <em>original_file_path='N/A'</em>, <em>regions=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mesh class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>num_nodes</strong> : int</p>
+<blockquote>
+<div><p>number of nodes</p>
+</div></blockquote>
+<p><strong>num_elms</strong> : int</p>
+<blockquote>
+<div><p>number of elements</p>
+</div></blockquote>
+<p><strong>node_x</strong> : list, 1d numpy array</p>
+<blockquote>
+<div><p>x coordinates of nodes</p>
+</div></blockquote>
+<p><strong>node_y</strong> : list, 1d numpy array</p>
+<blockquote>
+<div><p>coordinates of nodes</p>
+</div></blockquote>
+<p><strong>node_z</strong> : list, 1d numpy array</p>
+<blockquote>
+<div><p>z coordinates of nodes</p>
+</div></blockquote>
+<p><strong>node_id</strong> : list</p>
+<blockquote>
+<div><p>node id number (ie 1,2,3,4,…)</p>
+</div></blockquote>
+<p><strong>elm_id</strong> : list</p>
+<blockquote>
+<div><p>element id number</p>
+</div></blockquote>
+<p><strong>node_data</strong> : list of lists of ints</p>
+<blockquote>
+<div><p>nodes of element vertices in the form [[node1],[node2],[node3],…], each
+node id should be an integer type.</p>
+</div></blockquote>
+<p><strong>elm_centre</strong> : list of lists of floats</p>
+<blockquote>
+<div><p>centre of elements (x,y)</p>
+</div></blockquote>
+<p><strong>elm_area</strong> : list</p>
+<blockquote>
+<div><p>area of each element</p>
+</div></blockquote>
+<p><strong>cell_type</strong> : list of ints</p>
+<blockquote>
+<div><p>code referencing cell geometry (e.g. triangle) according to vtk format</p>
+</div></blockquote>
+<p><strong>cell_attributes</strong> : list of floats</p>
+<blockquote>
+<div><p>the values of the attributes given to each cell</p>
+</div></blockquote>
+<p><strong>atribute_title</strong> : string</p>
+<blockquote>
+<div><p>what is the attribute? we may use conductivity instead of resistivity for example</p>
+</div></blockquote>
+<p><strong>original_file_path</strong> : string, optional</p>
+<blockquote>
+<div><p>file path to where the mesh file was originally imported</p>
+</div></blockquote>
+<p><strong>regions</strong> : optional</p>
+<blockquote>
+<div><p>element indexes for a material in the mesh (needs further explanation)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>Mesh</strong> : class</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="api.meshTools.Mesh.add_attr_dict">
+<code class="descname">add_attr_dict</code><span class="sig-paren">(</span><em>attr_dict</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.add_attr_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mesh attributes are stored inside a dictionary, mesh.attr_cache.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr_dict: dict</strong></p>
+<blockquote class="last">
+<div><p>Each key in the dictionary should reference an array like of values.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.add_attribute">
+<code class="descname">add_attribute</code><span class="sig-paren">(</span><em>values</em>, <em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.add_attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new attribute to mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>values: array like</strong></p>
+<blockquote>
+<div><p>must have a length which matches the number of elements. Discrete 
+values which map to the elements.</p>
+</div></blockquote>
+<p><strong>key: str</strong></p>
+<blockquote class="last">
+<div><p>Name of the attribute, this will be used to reference to the values
+in other mesh functions.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.add_e_nodes">
+<code class="descname">add_e_nodes</code><span class="sig-paren">(</span><em>e_nodes</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.add_e_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign node numbers to electrodes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>e_nodes: array like</strong></p>
+<blockquote class="last">
+<div><p>array of ints which index the electrode nodes in a mesh</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.apply_func">
+<code class="descname">apply_func</code><span class="sig-paren">(</span><em>mesh_paras</em>, <em>material_no</em>, <em>new_key</em>, <em>function</em>, <em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.apply_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a function to a mesh by zone number and mesh parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mesh_paras</strong> : array like</p>
+<blockquote>
+<div><p>Mesh parameters from which new parameters are calculated.</p>
+</div></blockquote>
+<p><strong>material_no</strong> : array like of ints</p>
+<blockquote>
+<div><p>Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
+…ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored.</p>
+</div></blockquote>
+<p><strong>new_key</strong> : string</p>
+<blockquote>
+<div><p>Key assigned to the parameter in the attr_cache. DOES NOT default.</p>
+</div></blockquote>
+<p><strong>function</strong> : function</p>
+<blockquote>
+<div><p>Function to be applied to mesh attributes, first argument must be the mesh parameter.</p>
+</div></blockquote>
+<p><strong>args</strong> : [see function info]</p>
+<blockquote class="last">
+<div><p>All arguments to be passed through function after to modify the mesh parameter,
+… argument must be in the form of [(argA1,argB1),(argA2,argB2)], 
+… where letters are the material, numbers refer to the argument number</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Mesh object will now have the new attribute added once the function is run.
+Use the <cite>mesh.show()</cite> (or <cite>.draw()</cite>) function to see the result.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.assign_zone">
+<code class="descname">assign_zone</code><span class="sig-paren">(</span><em>poly_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.assign_zone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign material/region assocations with certain elements in the mesh 
+say if you have an area you’d like to forward model. 
+<strong>*2D ONLY*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>poly_data</strong> : dictionary</p>
+<blockquote>
+<div><p>Dictionary with the vertices (x,y) of each point in the polygon.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>material_no</strong> : numpy.array</p>
+<blockquote class="last">
+<div><p>Element associations starting at 1. So 1 for the first region 
+defined in the region_data variable, 2 for the second region 
+defined and so on. If the element can’t be assigned to a region
+then it’ll be left at 0.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.assign_zone_3D">
+<code class="descname">assign_zone_3D</code><span class="sig-paren">(</span><em>volume_data</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.assign_zone_3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assign material/region assocations with certain elements in the mesh 
+say if you have an area you’d like to forward model. 
+<strong>*3D ONLY*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>volume_data</strong> : dict</p>
+<blockquote>
+<div><p>Each key contains columns of polygon data for each volume in 
+the form (polyx, polyy, polyz), the polygon data should be the 
+face coordinates which bound the volume.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>material_no</strong> : numpy.array</p>
+<blockquote class="last">
+<div><p>Element associations starting at 1. So 1 for the first region 
+defined in the region_data variable, 2 for the second region 
+defined and so on. If the element can’t be assigned to a region
+then it’ll be left at 0.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.assign_zone_attribute">
+<code class="descname">assign_zone_attribute</code><span class="sig-paren">(</span><em>material_no</em>, <em>attr_list</em>, <em>new_key</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.assign_zone_attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Asssigns values to the mesh which depend on region / material only. E.G 
+a single resistivity value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>material_no</strong> : array or list</p>
+<blockquote>
+<div><p>Integers starting at 0 or 1, and ascend in intervals of 1, which 
+correspond to a material in the mesh returned from assign_attr_ID.
+Should have the same length as the number of elements in the mesh.</p>
+</div></blockquote>
+<p><strong>attr_list</strong> : list</p>
+<blockquote>
+<div><p>Values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
+<cite>[resistivity1,resistivity2,resistivity3]</cite>.</p>
+</div></blockquote>
+<p><strong>new_key</strong> : string</p>
+<blockquote class="last">
+<div><p>Key identifier assigned to the attribute in the attr_cache.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Mesh object will now have the new attribute added once the function is run.
+Use the <cite>mesh.show()</cite> (or <cite>.draw()</cite>) function to see the result.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.computeElmDepth">
+<code class="descname">computeElmDepth</code><span class="sig-paren">(</span><em>datum_x</em>, <em>datum_y</em>, <em>datum_z</em>, <em>method='bilinear'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.computeElmDepth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the depth of elements given a datum (or surface).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>datum_x: array like</strong></p>
+<blockquote>
+<div><p>X coordinates of datum</p>
+</div></blockquote>
+<p><strong>datum_y: array like</strong></p>
+<blockquote>
+<div><p>Y coordinates of datum, if using 2D mesh then set to ‘None’</p>
+</div></blockquote>
+<p><strong>datum_z: array like</strong></p>
+<blockquote>
+<div><p>Elevation of datum</p>
+</div></blockquote>
+<p><strong>method: str, optional</strong></p>
+<blockquote class="last">
+<div><p>Method of interpolation used to compute cell depths for a 3D mesh.
+Ignored for 2D meshes. 
+- ‘bilinear’ - (default) binlinear interpolation
+- ‘idw’ - inverse distance wieghting
+- ‘nearest’ - nearest neighbour interpolation</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.draw">
+<code class="descname">draw</code><span class="sig-paren">(</span><em>attr=None</em>, <em>edge_color='k'</em>, <em>color_map=None</em>, <em>color_bar=False</em>, <em>vmin=None</em>, <em>vmax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redraws a mesh over a prexisting figure canvas, this is intended for saving
+time when plotting each iteration of the resistivity inversion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>color_map</strong> : string, optional</p>
+<blockquote>
+<div><p>color map reference</p>
+</div></blockquote>
+<p><strong>color_bar</strong> : boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> to plot colorbar</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib axis handle, optional</p>
+<blockquote>
+<div><p>Axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
+</div></blockquote>
+<p><strong>edge_color</strong> : string, optional</p>
+<blockquote>
+<div><p>Color of the cell edges, set to <cite>None</cite> if you dont want an edge.</p>
+</div></blockquote>
+<p><strong>vmin</strong> : float, optional</p>
+<blockquote>
+<div><p>Minimum limit for the color bar scale.</p>
+</div></blockquote>
+<p><strong>vmax</strong> : float, optional</p>
+<blockquote>
+<div><p>Maximum limit for the color bar scale.</p>
+</div></blockquote>
+<p><strong>attr</strong> : string, optional</p>
+<blockquote>
+<div><p>Which attribute in the mesh to plot, references a dictionary of attributes. <cite>attr</cite> is passed 
+as the key for this dictionary.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>figure</strong> : matplotlib figure</p>
+<blockquote class="last">
+<div><p>Figure handle for the plotted mesh object.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="api.meshTools.Mesh.findParaview">
+<em class="property">static </em><code class="descname">findParaview</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.findParaview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run on windows to find paraview.exe command.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">found: bool</p>
+<blockquote>
+<div><p>If True the program was able to find where paraview is installed 
+If false then the program could not find paraview in the default 
+install locations.</p>
+</div></blockquote>
+<p>location: str</p>
+<blockquote class="last">
+<div><p>if found == True. The string maps to the paraview executable
+if found == False. then ‘n/a’ is returned.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="api.meshTools.Mesh.mesh_dict2class">
+<em class="property">classmethod </em><code class="descname">mesh_dict2class</code><span class="sig-paren">(</span><em>mesh_info</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.mesh_dict2class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a mesh dictionary produced by the gmsh2r2mesh and
+vtk_import functions into a mesh object, its an alternative way to
+make a mesh object. 
+<strong>*Intended for development use*</strong></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mesh_info: dictionary</strong></p>
+<blockquote>
+<div><p>mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Mesh: class</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.move_elec_nodes">
+<code class="descname">move_elec_nodes</code><span class="sig-paren">(</span><em>new_x</em>, <em>new_y</em>, <em>new_z</em>, <em>debug=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.move_elec_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move the electrodes to different nodes which are close to the given coordinates. 
+This is useful for timelapse surveys where the electrodes move through time, 
+ideally this is implimented on a mesh which is refined near the surface. If 
+no nodes are assigned to mesh, a mesh.e_nodes variable is created.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>new_x</strong> : array like</p>
+<blockquote>
+<div><p>new electrode x coordinates</p>
+</div></blockquote>
+<p><strong>new_y</strong> : array like</p>
+<blockquote>
+<div><p>new electrode y coordinates, if 2D mesh let new_y=None and the array will automatically be
+assigned an array of zeros.</p>
+</div></blockquote>
+<p><strong>new_z</strong> : array-like</p>
+<blockquote>
+<div><p>new electrode z coordinates</p>
+</div></blockquote>
+<p><strong>debug</strong> : bool, optional</p>
+<blockquote>
+<div><p>Controls if any changes to electrode nodes will be output to console.</p>
+</div></blockquote>
+<p><strong>Returns</strong></p>
+<p><strong>————</strong></p>
+<p><strong>node_in_mesh</strong> : np array</p>
+<blockquote class="last">
+<div><p>Array of mesh node numbers corresponding to the electrode postions/
+coordinates.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Mesh.e_nodes parameter is updated (or added) after running function.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.paraview">
+<code class="descname">paraview</code><span class="sig-paren">(</span><em>fname='pyR2_mesh.vtk'</em>, <em>loc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.paraview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show mesh in paraview</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname: str,optional</strong></p>
+<blockquote>
+<div><p>A vtk file will be written to working directory and then displayed 
+using paraview.</p>
+</div></blockquote>
+<p><strong>loc: str, optional</strong></p>
+<blockquote class="last">
+<div><p>Path to paraview excutable, ignored if not using windows. If not provided
+the program will attempt to find where paraview is installed automatically.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.reciprocal">
+<code class="descname">reciprocal</code><span class="sig-paren">(</span><em>attr='Resistivity'</em>, <em>new_key='Conductivity'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.reciprocal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute reciprocal for a given attribute (ie 1 over that number)
+Example is Resistivity to conductivty conversion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr: string</strong></p>
+<blockquote>
+<div><p>mesh attribute to compute reciprocal of</p>
+</div></blockquote>
+<p><strong>new_key: string</strong></p>
+<blockquote class="last">
+<div><p>name of new attribute,</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.show">
+<code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>zlim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays a 2d mesh and attribute.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>color_map</strong> : string, optional</p>
+<blockquote>
+<div><p>color map reference</p>
+</div></blockquote>
+<p><strong>color_bar</strong> : Boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> to plot colorbar</p>
+</div></blockquote>
+<p><strong>xlim</strong> : tuple, optional</p>
+<blockquote>
+<div><p>Axis x limits as <cite>(xmin, xmax)</cite>.</p>
+</div></blockquote>
+<p><strong>zlim</strong> : tuple, optional</p>
+<blockquote>
+<div><p>Axis z limits as <cite>(zmin, zmax)</cite>.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib axis handle, optional</p>
+<blockquote>
+<div><p>Axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
+</div></blockquote>
+<p><strong>electrodes</strong> : boolean, optional</p>
+<blockquote>
+<div><p>Enter true to add electrodes to plot.</p>
+</div></blockquote>
+<p><strong>sens</strong> : boolean, optional</p>
+<blockquote>
+<div><p>Enter true to plot sensitivities.</p>
+</div></blockquote>
+<p><strong>edge_color</strong> : string, optional</p>
+<blockquote>
+<div><p>Color of the cell edges, set to <cite>None</cite> if you dont want an edge.</p>
+</div></blockquote>
+<p><strong>contour</strong> : boolean, optional</p>
+<blockquote>
+<div><p>If <cite>True</cite>, plot filled with contours instead of the mesh.</p>
+</div></blockquote>
+<p><strong>vmin</strong> : float, optional</p>
+<blockquote>
+<div><p>Minimum limit for the color bar scale.</p>
+</div></blockquote>
+<p><strong>vmax</strong> : float, optional</p>
+<blockquote>
+<div><p>Maximum limit for the color bar scale.</p>
+</div></blockquote>
+<p><strong>attr</strong> : string, optional</p>
+<blockquote>
+<div><p>Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+as the key for this dictionary.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>figure</strong> : matplotlib figure</p>
+<blockquote class="last">
+<div><p>Figure handle for the plotted mesh object.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Show a mesh object using matplotlib. The color map variable should be 
+a string refering to the color map you want (default is “jet”).
+As we’re using the matplotlib package here any color map avialable within 
+matplotlib package can be used to display the mesh here also. See: 
+<a class="reference external" href="https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html">https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html</a></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.showSlice">
+<code class="descname">showSlice</code><span class="sig-paren">(</span><em>attr='Resistivity(log10)'</em>, <em>axis='z'</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.showSlice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show 3D mesh slice.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr</strong> : str, optional</p>
+<blockquote>
+<div><p>String the of the variable to plot. Default is <cite>Resistivity(log10)</cite>.</p>
+</div></blockquote>
+<p><strong>axis</strong> : str, optional</p>
+<blockquote>
+<div><p>Axis to be sliced either, x, y or z.</p>
+</div></blockquote>
+<p><strong>vmin</strong> : float, optional</p>
+<blockquote>
+<div><p>Minimum value for colorbar.</p>
+</div></blockquote>
+<p><strong>vmax</strong> : float, optional</p>
+<blockquote>
+<div><p>Maximum value for colorbar.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib.Axis</p>
+<blockquote class="last">
+<div><p>If provided, plot will be drawn on this axis.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.show_3D">
+<code class="descname">show_3D</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>ylim='default'</em>, <em>zlim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>alpha=1</em>, <em>vmax=None</em>, <em>vmin=None</em>, <em>attr=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.show_3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shows a 3D tetrahedral mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>color_map</strong> : string, optional</p>
+<blockquote>
+<div><p>color map reference</p>
+</div></blockquote>
+<p><strong>color_bar</strong> : Boolean, optional</p>
+<blockquote>
+<div><p><cite>True</cite> to plot colorbar</p>
+</div></blockquote>
+<p><strong>xlim</strong> : tuple, optional</p>
+<blockquote>
+<div><p>Axis x limits as <cite>(xmin, xmax)</cite>.</p>
+</div></blockquote>
+<p><strong>ylim</strong> : tuple, optional</p>
+<blockquote>
+<div><p>Axis y limits as <cite>(ymin, ymax)</cite>.</p>
+</div></blockquote>
+<p><strong>zlim</strong> : tuple, optional</p>
+<blockquote>
+<div><p>Axis z limits as <cite>(ymin, ymax)</cite>.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib axis handle, optional</p>
+<blockquote>
+<div><p>Axis handle if preexisting (error will thrown up if not) figure is to be cast to.</p>
+</div></blockquote>
+<p><strong>electrodes</strong> : boolean, optional</p>
+<blockquote>
+<div><p>Enter true to add electrodes to plot (if available in mesh class)</p>
+</div></blockquote>
+<p><strong>sens</strong> : boolean, optional</p>
+<blockquote>
+<div><p>Enter true to plot sensitivities (if available in mesh class). Note that for 3D this doesnt work so well.</p>
+</div></blockquote>
+<p><strong>edge_color</strong> : string, optional</p>
+<blockquote>
+<div><p>Color of the cell edges, set to <cite>None</cite> if you dont want an edge.</p>
+</div></blockquote>
+<p><strong>alpha: float, optional</strong></p>
+<blockquote>
+<div><p>Should be set between 0 and 1. Sets a transparancy value for the element faces.</p>
+</div></blockquote>
+<p><strong>vmin</strong> : float, optional</p>
+<blockquote>
+<div><p>Minimum limit for the color bar scale.</p>
+</div></blockquote>
+<p><strong>vmax</strong> : float, optional</p>
+<blockquote>
+<div><p>Maximum limit for the color bar scale.</p>
+</div></blockquote>
+<p><strong>attr</strong> : string, optional</p>
+<blockquote>
+<div><p>Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+as the key for this dictionary.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>figure</strong> : matplotlib figure</p>
+<blockquote class="last">
+<div><p>Figure handle for the plotted mesh object.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Show a mesh object using matplotlib. The color map variable should be 
+a string refering to the color map you want (default is “jet”).
+As we’re using the matplotlib package here any color map avialable within 
+matplotlib package can be used to display the mesh here also. See: 
+<a class="reference external" href="https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html">https://matplotlib.org/2.0.2/examples/color/colormaps_reference.html</a></p>
+<p>Plotting sensitivies using sens=True is not reccomended. The matplotlib renderer has trouble with it.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.show_avail_attr">
+<code class="descname">show_avail_attr</code><span class="sig-paren">(</span><em>flag=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.show_avail_attr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show available attributes in mesh.attr_cache.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.summary">
+<code class="descname">summary</code><span class="sig-paren">(</span><em>flag=True</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints summary information about the mesh</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.update_attribute">
+<code class="descname">update_attribute</code><span class="sig-paren">(</span><em>new_attributes</em>, <em>new_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.update_attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows you to reassign the default cell attribute in the mesh object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.write_attr">
+<code class="descname">write_attr</code><span class="sig-paren">(</span><em>attr_key</em>, <em>file_name='_res.dat'</em>, <em>file_path='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.write_attr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes a attribute to a _res.dat type file. file_name entered
+seperately because it will be needed for the R2 config file.
+The reason for this function is so you can write a forward model 
+parameter input file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>attr_key</strong> : string</p>
+<blockquote>
+<div><p>Key identifying the attr to be written in the mesh object attr_cache.</p>
+</div></blockquote>
+<p><strong>file_name</strong> : string, optional</p>
+<blockquote>
+<div><p>Name of the _res.dat type file.</p>
+</div></blockquote>
+<p><strong>file_path</strong> : string, optional</p>
+<blockquote class="last">
+<div><p>Directory to which the file will be saved in, if left as none then the
+file will be written in the current working directory.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.write_dat">
+<code class="descname">write_dat</code><span class="sig-paren">(</span><em>file_path='mesh.dat'</em>, <em>param=None</em>, <em>zone=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.write_dat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
+input file for triangle meshes, so this function is only relevant for
+triangle meshes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string, optional</p>
+<blockquote>
+<div><p>Path to the file. By default ‘mesh.dat’ is saved in the working directory.</p>
+</div></blockquote>
+<p><strong>zone</strong> : array like, optional</p>
+<blockquote>
+<div><p>An array of integers which are assocaited with regions/materials in the mesh. 
+Useful in the case of an inversion which has a boundary constraint. 
+You can use assign_zone to give a zone/material number to the mesh, and pass that 
+as the zone argument.</p>
+</div></blockquote>
+<p><strong>param</strong> : array-like, optional</p>
+<blockquote class="last">
+<div><p>Array of parameter number. Set a parameter number to zero fixed its
+conductivity to the starting conductivity.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>mesh.dat like file written to file path. 
+<strong>*IMPORTANT*</strong>
+R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
+so when writing mesh.dat we need to check that the node indexes match up correctly.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="api.meshTools.Mesh.write_vtk">
+<code class="descname">write_vtk</code><span class="sig-paren">(</span><em>file_path='mesh.vtk'</em>, <em>title=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.Mesh.write_vtk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes a vtk file for the mesh object, everything in the attr_cache
+will be written to file as attributes. We suggest using Paraview 
+to display the mesh outside of pyR2. It’s fast and open source :).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path</strong> : string, optional</p>
+<blockquote>
+<div><p>Maps where python will write the file, if left as <cite>default</cite> then mesh.vtk
+will be written the current working directory.</p>
+</div></blockquote>
+<p><strong>title</strong> : string, optional</p>
+<blockquote>
+<div><p>Header string written at the top of the vtk file .</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">vtk: file</p>
+<blockquote class="last">
+<div><p>vtk file written to specified directory.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
 <dl class="function">
 <dt id="api.meshTools.custom_mesh_import">
-<code class="descclassname">api.meshTools.</code><code class="descname">custom_mesh_import</code><span class="sig-paren">(</span><em>file_path</em>, <em>node_pos</em>, <em>flag_3D=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.custom_mesh_import" title="Permalink to this definition">¶</a></dt>
-<dd><p>Import user defined mesh, currently supports .msh and .vtk format 
-for quad, triangular and tetrahedral meshes.</p>
+<code class="descclassname">api.meshTools.</code><code class="descname">custom_mesh_import</code><span class="sig-paren">(</span><em>file_path</em>, <em>node_pos=None</em>, <em>flag_3D=False</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.custom_mesh_import" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import user defined mesh, currently supports .msh, .vtk and .dat (native to R2/3t)
+format for quad, triangular and tetrahedral meshes. The type of file is guessed from the 
+extension given to the code.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: string</strong></p>
 <blockquote>
-<div><p>path to file</p>
+<div><p>Path to file.</p>
+</div></blockquote>
+<p><strong>node_pos: array like, optional</strong></p>
+<blockquote>
+<div><p>Array of ints referencing the electrode nodes. If left as none no electrodes 
+will be added to the mesh class. Consider using mesh.move_elec_nodes()
+to add nodes to mesh using their xyz coordinates.</p>
 </div></blockquote>
 <p><strong>flag_3D: bool, optional</strong></p>
 <blockquote>
-<div><p>make this true for 3D meshes</p>
+<div><p>Make this true for 3D meshes if importing .msh type.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh: class</p>
+<blockquote class="last">
+<div><p>mesh class used in pyR2</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="api.meshTools.dat_import">
+<code class="descclassname">api.meshTools.</code><code class="descname">dat_import</code><span class="sig-paren">(</span><em>file_path='mesh.dat'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.dat_import" title="Permalink to this definition">¶</a></dt>
+<dd><p>Import R2/cR2/R3t/cR3t .dat kind of mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>file_path: str</strong></p>
+<blockquote>
+<div><p>Maps to the mesh (.dat) file.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1323,7 +2438,7 @@ title is the name of the vtk file.</p>
 
 <dl class="function">
 <dt id="api.meshTools.quad_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">quad_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_type=None</em>, <em>elemx=4</em>, <em>xgf=1.5</em>, <em>yf=1.1</em>, <em>ygf=1.5</em>, <em>doi=-1</em>, <em>pad=2</em>, <em>surface_x=None</em>, <em>surface_y=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.quad_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">quad_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_z</em>, <em>elec_type=None</em>, <em>elemx=4</em>, <em>xgf=1.5</em>, <em>yf=1.1</em>, <em>ygf=1.25</em>, <em>doi=-1</em>, <em>pad=2</em>, <em>surface_x=None</em>, <em>surface_z=None</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.quad_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a quaderlateral mesh given the electrode x and y positions. Function
 relies heavily on the numpy package.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -1334,7 +2449,7 @@ relies heavily on the numpy package.</p>
 <blockquote>
 <div><p>Electrode x coordinates</p>
 </div></blockquote>
-<p><strong>elec_y</strong> : list, np array</p>
+<p><strong>elec_z</strong> : list, np array</p>
 <blockquote>
 <div><p>Electrode y coordinates</p>
 </div></blockquote>
@@ -1402,7 +2517,7 @@ an error will be returned if len(surface_x) != len(surface_y)</p>
 <dl class="function">
 <dt id="api.meshTools.readR2_resdat">
 <code class="descclassname">api.meshTools.</code><code class="descname">readR2_resdat</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.readR2_resdat" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reads resistivity values in f00#_res.dat file output from R2.</p>
+<dd><p>Reads resistivity values in f00#_res.dat file output from R2.(2D only)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1448,14 +2563,33 @@ an error will be returned if len(surface_x) != len(surface_y)</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="api.meshTools.systemCheck">
+<code class="descclassname">api.meshTools.</code><code class="descname">systemCheck</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.systemCheck" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a simple diagnostic of the system, no input commands needed. System
+info is printed to screen, number of CPUs, memory and OS. This check is 
+useful for parallel processing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">system_info: dict</p>
+<blockquote class="last">
+<div><p>Dictionary keys refer information about the system</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="api.meshTools.tetra_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tetra_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_z</em>, <em>elec_type=None</em>, <em>shape=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>padding=20</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tetra_mesh" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">api.meshTools.</code><code class="descname">tetra_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_z=None</em>, <em>elec_type=None</em>, <em>keep_files=True</em>, <em>interp_method='bilinear'</em>, <em>surface_refinement=None</em>, <em>mesh_refinement=None</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>padding=20</em>, <em>search_radius=10</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tetra_mesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
 in the working directory. This function expects the current working directory 
 has path: exe/gmsh.exe.</p>
 <p>Uses post processing after mesh generation to super impose topography on to 
 a flat 3D tetrahedral mesh.</p>
-<p><strong>*Buried electrodes not yet supported*</strong></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1476,15 +2610,26 @@ a flat 3D tetrahedral mesh.</p>
 <blockquote>
 <div><p>type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list</p>
 </div></blockquote>
-<p><strong>shape: tuple, optional</strong></p>
-<blockquote>
-<div><p>must be of length  == 2. reshapes the input into a grid, which allows for better 
-topography
-(number of electrodes in x direction, number of electrodes in y direction)</p>
-</div></blockquote>
 <p><strong>keep_files</strong> : boolean, optional</p>
 <blockquote>
-<div><p><cite>True</cite> if the gmsh input and output file is to be stored in the exe directory.</p>
+<div><p><cite>True</cite> if the gmsh input and output file is to be stored in the working directory.</p>
+</div></blockquote>
+<p><strong>interp_method: string, default =’bilinear’ optional</strong></p>
+<blockquote>
+<div><p>Interpolation method to translate mesh nodes in the z direction. In other words the method in which topography 
+is appended to the mesh. Here the topography is added to the mesh in post processing. 
+The options are inverse wieghting distance, bilinear interpolation or nearest neighbour. 
+if == ‘idw’: then provide search_radius.</p>
+</div></blockquote>
+<p><strong>surface_refinement</strong> : np.array, optional</p>
+<blockquote>
+<div><p>Numpy array of shape (3,n), should follow the format np.array([x1,x2,x3,…],[y1,y2,y3,…],[z1,z2,z3,…]).
+Allows for extra refinement for the top surface of the mesh. The points are not added to the mesh, but 
+considered in post processing in order to super impose topography on the mesh.</p>
+</div></blockquote>
+<p><strong>mesh_refinement</strong> : np.array, optional</p>
+<blockquote>
+<div><p>Coming soon …</p>
 </div></blockquote>
 <p><strong>show_ouput</strong> : boolean, optional</p>
 <blockquote>
@@ -1508,14 +2653,18 @@ the default.</p>
 <blockquote>
 <div><p>amount of % the fine mesh region will be extended beyond the extent of the electrode positions</p>
 </div></blockquote>
+<p><strong>search_radius: float, None, optional</strong></p>
+<blockquote>
+<div><p>Defines search radius used in the inverse distance weighting interpolation. 
+If None then no search radius will be used and all points will be considered in the interpolation.</p>
+</div></blockquote>
 <p><strong>**kwargs</strong> : optional</p>
 <blockquote>
 <div><p>Key word arguments to be passed to box_3d.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh3d: class</p>
-<p class="last"><strong>#### TODO</strong> : add buried electrode capacity</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh3d: class</p>
 </td>
 </tr>
 </tbody>
@@ -1557,9 +2706,10 @@ of the vertices.</p>
 
 <dl class="function">
 <dt id="api.meshTools.tri_mesh">
-<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_y</em>, <em>elec_type=None</em>, <em>geom_input=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
-this function expects the current working directory has path: exe/gmsh.exe.</p>
+<code class="descclassname">api.meshTools.</code><code class="descname">tri_mesh</code><span class="sig-paren">(</span><em>elec_x</em>, <em>elec_z</em>, <em>elec_type=None</em>, <em>geom_input=None</em>, <em>keep_files=True</em>, <em>show_output=True</em>, <em>path='exe'</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>whole_space=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.tri_mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a triangular mesh for r2. Returns mesh class …
+this function expects the current working directory has path: exe/gmsh.exe.
+Uses gmsh version 3.0.6.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1568,17 +2718,23 @@ this function expects the current working directory has path: exe/gmsh.exe.</p>
 <blockquote>
 <div><p>electrode x coordinates</p>
 </div></blockquote>
-<p><strong>elec_y: array like</strong></p>
+<p><strong>elec_z: array like</strong></p>
 <blockquote>
 <div><p>electrode y coordinates</p>
 </div></blockquote>
 <p><strong>elec_type: list of strings, optional</strong></p>
 <blockquote>
-<div><p>type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list</p>
+<div><p>List should be the same length as the electrode coordinate argument. Each entry in
+the list references the type of electrode: 
+- ‘electrode’ = surface electrode coordinate, will be used to construct the topography in the mesh
+- ‘buried’ = buried electrode, placed the mesh surface
+- ‘borehole’ = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
+borehole numbering starts at 1 and ascends numerically by 1.</p>
 </div></blockquote>
 <p><strong>geom_input</strong> : dict, optional</p>
 <blockquote>
-<div><p>Allows for advanced survey geometry in genGeoFile in gmshWrap.py (see notes there).</p>
+<div><p>Allows for further customisation of the 2D mesh, its a
+dictionary contianing surface topography, polygons and boundaries</p>
 </div></blockquote>
 <p><strong>keep_files</strong> : boolean, optional</p>
 <blockquote>
@@ -1608,18 +2764,49 @@ the default.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">mesh: class</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">mesh: class</p>
+<blockquote class="last">
+<div><p>&lt;pyR2&gt; mesh class</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
 </table>
+<p class="rubric">Notes</p>
+<dl class="docutils">
+<dt>geom_input format:</dt>
+<dd><p class="first">the code will cycle through numerically ordered keys (strings referencing objects in a dictionary”),
+currently the code expects a ‘surface’ and ‘electrode’ key for surface points and electrodes.
+the first borehole string should be given the key ‘borehole1’ and so on. The code stops
+searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
+and polygons to the mesh. See below example:</p>
+<blockquote class="last">
+<div><dl class="docutils">
+<dt>geom_input = {‘surface’: [surf_x,surf_z],</dt>
+<dd>‘boundary1’:[bound1x,bound1y],
+‘polygon1’:[poly1x,poly1y]}</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<p>electrodes and electrode_type (if not None) format:</p>
+<blockquote>
+<div><blockquote>
+<div>electrodes = [[x1,x2,x3,…],[y1,y2,y3,…]]
+electrode_type = [‘electrode’,’electrode’,’buried’,…]</div></blockquote>
+<p>like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
+The code will cycle through each borehole and internally sort them and add them to 
+the mesh.</p>
+</div></blockquote>
+<p>The code expects that all polygons, boundaries and electrodes fall within x values 
+of the actaul survey area. So make sure your topography / surface electrode points cover 
+the area you are surveying, otherwise some funky errors will occur in the mesh.</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="api.meshTools.vtk_import">
 <code class="descclassname">api.meshTools.</code><code class="descname">vtk_import</code><span class="sig-paren">(</span><em>file_path='mesh.vtk'</em>, <em>parameter_title='default'</em><span class="sig-paren">)</span><a class="headerlink" href="#api.meshTools.vtk_import" title="Permalink to this definition">¶</a></dt>
-<dd><p>Imports a 2d mesh file into the python workspace, can have triangular or quad type elements. 3D meshes 
-are still a work in progress.</p>
+<dd><p>Imports a mesh file into the python workspace, can have triangular, quad or tetraheral shaped elements.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -1638,7 +2825,7 @@ default cell attribute.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mesh</strong> : class</p>
 <blockquote class="last">
-<div><p>a pyR2 mesh class</p>
+<div><p>a &lt;pyR2&gt; mesh class</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1662,7 +2849,7 @@ default cell attribute.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="#">Table Of Contents</a></h3>
+  <h3><a href="#">Table of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Welcome to pyR2’s documentation!</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
@@ -1705,7 +2892,7 @@ default cell attribute.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018, G. Blanchy, S. Saneiyan, J. Boyd.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.9.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.8.3.
     </div>
   </body>
 </html>

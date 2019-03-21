@@ -2,32 +2,17 @@
 """
 Created on Wed May 30 10:19:09 2018, python 3.6.5
 @author: jamyd91
-Import a vtk file with an unstructured grid (triangular/quad elements) and 
-creates a mesh object (with associated functions). The mesh object can have quad or
-triangular elements. Module has capacity to show meshes, inverted results, apply a function 
-to mesh parameters. 
-
+Module handles mesh generation, display, discretisation and post processing. 
 The convention for x y z coordinates is that the z coordinate is the elevation.
-
-Classes: 
-    Mesh
-Functions: 
-    tri_cent() - computes the centre point for a 2d triangular element
-    vtk_import() - imports a triangular / quad unstructured grid from a vtk file
-    readR2_resdat () - reads resistivity values from a R2 file
-    quad_mesh () - creates a quadrilateral mesh given electrode x and y coordinates
-    tri_mesh () - calls gmshWrap and interfaces with gmsh.exe to make a trianglur mesh
 
 Dependencies: 
     numpy (conda lib)
     matplotlib (conda lib)
     gmshWrap(pyR2 api module)
     python3 standard libaries
-
-Nb: Module has a heavy dependence on numpy and matplotlib packages
 """
 #import standard python packages
-import os, platform, warnings, multiprocessing, re
+import os, platform, warnings, multiprocessing, re, pathlib
 from subprocess import PIPE, Popen, call
 import time
 #import matplotlib and numpy packages 
@@ -44,10 +29,10 @@ from api.isinpolygon import isinpolygon, isinvolume, in_box
 import api.interpolation as interp
 from api.sliceMesh import sliceMesh # mesh slicing function
 
+        
 #%% create mesh object
 class Mesh:
-    """
-    Creates mesh object.
+    """Mesh class.
     
     Parameters
     ----------
@@ -90,8 +75,8 @@ class Mesh:
     cax = None 
     zone = None
     attr_cache={}
-    mesh_title = "R2_mesh"
-    no_attributes = 1
+    mesh_title = "2D_R2_mesh"
+    no_attributes = 0
     def __init__(self,#function constructs our mesh object. 
                  num_nodes,#number of nodes
                  num_elms,#number of elements 
@@ -125,6 +110,7 @@ class Mesh:
         self.atribute_title=atribute_title
         self.original_file_path=original_file_path
         self.regions = regions
+        self.surface = None # surface points for cropping the mesh when contouring
         #decide if mesh is 3D or not 
         if max(node_y) - min(node_y) == 0: # mesh is probably 2D 
             self.ndims=2
@@ -133,10 +119,10 @@ class Mesh:
             self.mesh_title = '3D_R3t_mesh' 
     
     @classmethod # creates a mesh object from a mesh dictionary
-    def mesh_dict2class(cls,mesh_info):
+    def mesh_dict2class(cls, mesh_info):
         """ Converts a mesh dictionary produced by the gmsh2r2mesh and
         vtk_import functions into a mesh object, its an alternative way to
-         make a mesh object. 
+        make a mesh object. 
         ***Intended for development use***
             
         Parameters
@@ -145,7 +131,7 @@ class Mesh:
             mesh parameters stored in a dictionary rather than a mesh, useful for debugging parsers
             
         Returns
-        ---------- 
+        -------
         Mesh: class 
         """
         #check the dictionary is a mesh
@@ -183,8 +169,7 @@ class Mesh:
     
 
     def add_e_nodes(self,e_nodes):
-        """
-        Assign node numbers to electrodes. 
+        """Assign node numbers to electrodes. 
         
         Parameters
         ------------
@@ -225,9 +210,9 @@ class Mesh:
             return 0
         
     def summary(self,flag=True):
+        """Prints summary information about the mesh
         """
-        Prints summary information about the mesh
-        """
+        self.no_attributes = len(self.attr_cache)
         #returns summary information about the mesh, flagto print info, change to return string
         out = "\n_______mesh summary_______\n"
         out += "Number of elements: %i\n"%int(self.num_elms)
@@ -246,8 +231,7 @@ class Mesh:
         return self.summary(flag=False) + self.show_avail_attr(flag=False)
             
     def add_attribute(self,values,key):
-        """
-        Add a new attribute to mesh. 
+        """Add a new attribute to mesh. 
         
         Parameters
         ------------
@@ -259,6 +243,7 @@ class Mesh:
             in other mesh functions. 
         """
         if len(values)!=self.num_elms:
+#            print(len(values),self.num_elms)
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.no_attributes += 1
         try: 
@@ -268,8 +253,7 @@ class Mesh:
             self.attr_cache[key]=values #add attribute 
     
     def add_attr_dict(self,attr_dict):
-        """
-        Mesh attributes are stored inside a dictionary, mesh.attr_cache.
+        """Mesh attributes are stored inside a dictionary, mesh.attr_cache.
         
         Parameters
         ------------
@@ -280,8 +264,7 @@ class Mesh:
         self.no_attributes = len(attr_dict)
         
     def show_avail_attr(self,flag=True):
-        """
-        Show available attributes in mesh.attr_cache. 
+        """Show available attributes in mesh.attr_cache. 
         """
         out = '\n______cell attributes_____\n'
         try: 
@@ -295,8 +278,7 @@ class Mesh:
             return out
     
     def update_attribute(self,new_attributes,new_title='default'):
-        """
-        Allows you to reassign the default cell attribute in the mesh object.  
+        """Allows you to reassign the default cell attribute in the mesh object.  
         """
         if len(new_attributes)!=self.num_elms:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
@@ -327,8 +309,8 @@ class Mesh:
             `True` to plot colorbar 
         xlim : tuple, optional
             Axis x limits as `(xmin, xmax)`.
-        ylim : tuple, optional
-            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(zmin, zmax)`. 
         ax : matplotlib axis handle, optional
             Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
         electrodes : boolean, optional
@@ -433,7 +415,11 @@ class Mesh:
             edge_color='face'#set the edge colours to the colours of the polygon patches
 
         if contour is False:
-            coll = PolyCollection(coordinates, array=X, cmap=color_map, edgecolors=edge_color,linewidth=0.5)
+            if attr is None: # so the default material
+                cm = plt.get_cmap(color_map, len(np.unique(X))) # this makes a discrete colormap
+            else:
+                cm = color_map
+            coll = PolyCollection(coordinates, array=X, cmap=cm, edgecolors=edge_color,linewidth=0.5)
             coll.set_clim(vmin=vmin, vmax=vmax)
             ax.add_collection(coll)#blit polygons to axis
 #            triang = tri.Triangulation(nodes[:,0], nodes[:,1], connection)
@@ -444,7 +430,8 @@ class Mesh:
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[2])
             z = np.array(X)
-            triang = tri.Triangulation(x,y)
+            triang = tri.Triangulation(x, y) # as it's based on centroid, some triangles might be out of the survey area
+#            triang = tri.Triangulation(np.array(self.node_x), self.node_y, connection)
             if vmin is None:
                 vmin = np.nanmin(z)
             if vmax is None:
@@ -453,6 +440,26 @@ class Mesh:
                 levels = np.linspace(vmin, vmax, 7)
             else:
                 levels = None
+                
+            # make sure none of the triangle centroids are above the
+            # line of electrodes
+            def cropSurface(triang, xsurf, ysurf):
+                trix = np.mean(triang.x[triang.triangles], axis=1)
+                triy = np.mean(triang.y[triang.triangles], axis=1)
+                
+                i2keep = np.ones(len(trix), dtype=bool)
+                for i in range(len(xsurf)-1):
+                    ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+                    iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+                    ie = ilateral & iabove
+                    i2keep[ie] = False
+                return i2keep
+            
+            try:
+                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+            except Exception as e:
+                print('Error in Mesh.show for contouring: ', e)
+
             self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()
@@ -490,6 +497,15 @@ class Mesh:
                 ax.plot(self.elec_x,self.elec_z,'ko')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
+
+        # adding interactive display when mouse-over
+        centroids = np.array([self.elm_centre[0], self.elm_centre[2]]).T
+        def format_coord(x, y):
+            dist = np.sqrt(np.sum((centroids - np.array([x, y]))**2, axis=1))
+            imin = np.argmin(dist)
+            return ('x={:.2f} m, elevation={:.2f} m, value={:.3f}'.format(x,y,X[imin]))
+        ax.format_coord = format_coord
+
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))
         
         if iplot == True:
@@ -553,9 +569,18 @@ class Mesh:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
-            
+        
         if color_map != None :
-            self.cax.set_cmap(color_map) # change the color map if the user wants to 
+            if attr is None:
+                cm = plt.get_cmap(color_map, len(np.unique(X)))
+            else:
+                cm = color_map
+            self.cax.set_cmap(cm) # change the color map if the user wants to 
+        else:
+            if attr is None:
+                cm = plt.get_cmap('Spectral', len(np.unique(X)))
+                self.cax.set_cmap(cm)
+        
         
         #following block of code redraws figure 
         self.cax.set_array(X) # set the array of the polygon collection to the new attribute 
@@ -568,6 +593,7 @@ class Mesh:
            print("you should have decided you wanted a color bar when using the mesh.show function")
             
         print('Mesh plotted in %6.5f seconds'%(time.time()-a))    
+    
     
     def show_3D(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
@@ -659,20 +685,10 @@ class Mesh:
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         
-#        try: # deactivated code 
-#            if xlim=="default":
-#                xlim=[min(self.elec_x),max(self.elec_x)]
-#            if ylim=="default":
-#                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) 
-#                #print(doiEstimate)
-#                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
-#        except AttributeError:
         if xlim=="default":
-            xlim=[min(self.node_x),max(self.node_x)]
+            xlim=[min(self.elec_x), max(self.elec_x)]
         if ylim=="default":
-            ylim=[min(self.node_y),max(self.node_y)]
-#            if self.ndims==2:
-#                ylim=[min(self.node_y)-1,max(self.node_y)+1]
+            ylim=[min(self.elec_y), max(self.elec_y)]
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
         #set axis limits     
@@ -773,8 +789,8 @@ class Mesh:
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
             self.cbar.set_label(color_bar_title) #set colorbar title
             
-        #ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
-            
+#        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
+        
         if sens: #add sensitivity to plot if available
             try:
                 weights = np.array(self.sensitivities) #values assigned to alpha channels 
@@ -790,11 +806,11 @@ class Mesh:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z)+0.01,
+                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z),
                            s=20, c='k', marker='o')#note you have to give the points a size otherwise you
                 #get an NoneType Attribute error. 
                 #the matplotlib renderer really doesn't cope well with the addition of the electrodes, 
-                #the points are usually masked by the elements hence +0.01 is added to elevation. 
+                #the points are usually masked by the elements...
                 #I reccomend putting an alpha setting on the mesh to view electrodes + mesh together. 
             except AttributeError as e:
                 print("could not plot 3d electrodes, error = "+str(e))
@@ -836,7 +852,7 @@ class Mesh:
             Dictionary with the vertices (x,y) of each point in the polygon.
             
         Returns
-        -------
+        ---------
         material_no : numpy.array
             Element associations starting at 1. So 1 for the first region 
             defined in the region_data variable, 2 for the second region 
@@ -869,14 +885,14 @@ class Mesh:
         ***3D ONLY***
         
         Parameters
-        ----------
+        -----------
         volume_data : dict
             Each key contains columns of polygon data for each volume in 
             the form (polyx, polyy, polyz), the polygon data should be the 
             face coordinates which bound the volume.
                         
         Returns
-        -------
+        -----------
         material_no : numpy.array
             Element associations starting at 1. So 1 for the first region 
             defined in the region_data variable, 2 for the second region 
@@ -964,7 +980,7 @@ class Mesh:
             ... where letters are the material, numbers refer to the argument number
         
         Notes  
-        -----
+        ---------
         Mesh object will now have the new attribute added once the function is run.
         Use the `mesh.show()` (or `.draw()`) function to see the result. 
         """
@@ -984,7 +1000,77 @@ class Mesh:
         self.no_attributes += 1
         #return new_para
         
-    def move_elec_nodes(self, new_x, new_y, new_z):
+    def reciprocal(self,attr="Resistivity",new_key="Conductivity"):
+        """
+        Compute reciprocal for a given attribute (ie 1 over that number)
+        Example is Resistivity to conductivty conversion. 
+        
+        Parameters
+        ----------
+        attr: string
+            mesh attribute to compute reciprocal of
+        new_key: string
+            name of new attribute, 
+        """
+        self.attr_cache[new_key] = 1/np.array(self.attr_cache[attr])
+        self.no_attributes += 1
+        
+    def computeElmDepth(self,datum_x,datum_y,datum_z, method='bilinear'):
+        """ Compute the depth of elements given a datum (or surface).
+        
+        Parameters
+        ----------
+        datum_x: array like
+            X coordinates of datum 
+        datum_y: array like
+            Y coordinates of datum, if using 2D mesh then set to 'None' 
+        datum_z: array like
+            Elevation of datum
+        method: str, optional
+            Method of interpolation used to compute cell depths for a 3D mesh.
+            Ignored for 2D meshes. 
+            - 'bilinear' - (default) binlinear interpolation
+            - 'idw' - inverse distance wieghting
+            - 'nearest' - nearest neighbour interpolation
+        """
+        #formalities and error checking
+        if datum_y is None: # set up y column if not in use
+            datum_y = [0]*len(datum_x)
+        if len(datum_x) != len(datum_y) and len(datum_x) != len(datum_z):
+            raise ValueError("Mis match in array dimensions for datum x y z coordinates.")
+        datum_x = np.array(datum_x)
+        datum_y = np.array(datum_y)
+        datum_z = np.array(datum_z)
+        if self.ndims == 2: # use 2D interpolation
+            elm_x = np.array(self.elm_centre[0])
+            elm_z = np.array(self.elm_centre[2])
+            min_idx = np.argmin(datum_x)
+            max_idx = np.argmax(datum_x)
+            Z = np.interp(elm_x,datum_x,datum_z,left=datum_y[min_idx],right=datum_y[max_idx])
+            depth = Z - elm_z
+            self.attr_cache['depths'] = depth
+            self.no_attributes += 1
+            return depth
+        if self.ndims == 3: # use 3D interpolation
+            elm_x = np.array(self.elm_centre[0])
+            elm_y = np.array(self.elm_centre[1])
+            elm_z = np.array(self.elm_centre[2])  
+            #use interpolation to work out depth to datum 
+            if method == 'bilinear':
+                Z = interp.bilinear(elm_x, elm_y, datum_x, datum_y, datum_z)
+            elif method == 'idw':
+                Z = interp.idw(elm_x, elm_y, datum_x, datum_y, datum_z)
+            elif method == 'nearest':
+                Z = interp.nearest(elm_x, elm_y, datum_x, datum_y, datum_z)
+            else:
+                avail_methods = ['bilinear','idw','nearest']
+                raise NameError("Unknown interpolation method, available methods are %s"%str(avail_methods))
+            depth = Z - elm_z
+            self.attr_cache['depths'] = depth # add cell depths to attribute cache
+            self.no_attributes += 1
+            return depth
+            
+    def move_elec_nodes(self, new_x, new_y, new_z, debug=True):
         """
         Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
@@ -1000,11 +1086,17 @@ class Mesh:
             assigned an array of zeros. 
         new_z : array-like
             new electrode z coordinates 
+        debug : bool, optional
+            Controls if any changes to electrode nodes will be output to console. 
+        Returns
+        ------------
+        node_in_mesh : np array
+            Array of mesh node numbers corresponding to the electrode postions/
+            coordinates.
             
         Notes
         ------------
-        Nothing is returned but the mesh.e_nodes parameter is updated (or added)
-        #### TODO: Test this function. 
+        Mesh.e_nodes parameter is updated (or added) after running function. 
         """
         #formalities 
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
@@ -1027,11 +1119,14 @@ class Mesh:
         for i in range(len(new_x)):
             sq_dist = (self.node_x - new_x[i])**2 + (self.node_y - new_y[i])**2 + (self.node_z - new_z[i])**2 # find the minimum square distance
             node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
-            if has_nodes:
+            if has_nodes and debug:
                 if node_in_mesh[i] != self.e_nodes[i]:
                     print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
         
         self.add_e_nodes(node_in_mesh) # update e_node parameter
+        if len(np.unique(node_in_mesh)) != len(new_x):
+            warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")
+        return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """
@@ -1053,7 +1148,7 @@ class Mesh:
             conductivity to the starting conductivity.
         
         Notes
-        -----
+        ----------
         mesh.dat like file written to file path. 
         ***IMPORTANT***
         R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
@@ -1131,11 +1226,6 @@ class Mesh:
             will be written the current working directory. 
         title : string, optional
             Header string written at the top of the vtk file .
-        
-        Returns
-        ----------
-        vtk: file 
-            vtk file written to specified directory.
         """
         #open file and write header information    
         fh = open(file_path,'w')
@@ -1222,6 +1312,122 @@ class Mesh:
             
         fh.close()
         
+    @staticmethod   # find paraview location in windows    
+    def findParaview():
+        """ Run on windows to find paraview.exe command.
+        
+        Returns
+        -------
+        found: bool
+            If True the program was able to find where paraview is installed 
+            If false then the program could not find paraview in the default 
+            install locations. 
+        location: str
+            if found == True. The string maps to the paraview executable
+            if found == False. then 'n/a' is returned.   
+        """
+        OpSys=platform.system() 
+        if OpSys != "Windows":
+            raise OSError("This function is only valid on Windows")
+        home_dir = os.path.expanduser('~')
+        drive_letter = home_dir.split('\\')[0]
+        #find paraview in program files?
+        path = drive_letter+'\Program Files'
+        contents = os.listdir(path)
+        found = False
+        for i,pname in enumerate(contents):
+            if pname.find("ParaView") != -1:
+                para_dir = os.path.join(path,pname)
+                found = True
+                break
+    
+        if not found:#try looking in x86 porgram files instead
+            path = drive_letter+'\Program Files (x86)'
+            contents = os.listdir(path)
+            for i,pname in enumerate(contents):
+                if pname.find("ParaView") != -1:
+                    para_dir = os.path.join(path,pname)
+                    found = True
+                    break
+        
+        if not found:
+            return False, 'n/a' 
+        else:
+            return True, os.path.join(para_dir,'bin\paraview.exe')
+        #the string output can be run in the console if it is enclosed in speech
+        #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
+        
+    def paraview(self,fname='TRIP4Dmesh.vtk',loc=None):
+        """
+        Show mesh in paraview 
+        
+        Parameters
+        -----------
+        fname: str,optional
+            A vtk file will be written to working directory and then displayed 
+            using paraview. 
+        loc: str, optional
+            Path to paraview excutable, ignored if not using windows. If not provided
+            the program will attempt to find where paraview is installed automatically. 
+        """
+        #formalities 
+        if not isinstance(fname,str):
+            raise NameError("Excepted string type argument for 'fname'")
+        look4 = True
+        if loc is not None:
+            look4 = False
+            if not isinstance(loc,str):
+                raise NameError("Excepted string type argument for 'loc'")
+                
+        self.write_vtk(fname)#write vtk to working directory with all associated attributes
+        op_sys = platform.system()#find kernal type
+        if op_sys == "Windows":
+            if look4: # find where paraview is installed 
+                found, cmd_line = self.findParaview()
+                cmd_line = '"' + cmd_line + '"' 
+                print('paraview location: %s'%cmd_line) # print location to console
+                if not found: # raise exception?
+                    print("Could not find where paraview is installed")
+                    return # exit function 
+            else:
+                cmd_line = '"' + loc + '"'#use provided location 
+            try:
+                os.popen(cmd_line+' '+fname)
+            except PermissionError:
+                print("Windows has blocked launching paraview, program try running as admin")      
+        else:
+            Popen(['paraview', fname])
+            
+    def quadMeshNp(self, topo=None):
+        """Convert mesh nodes into x column indexes in the case of quad meshes. 
+        Does not currently support changes in electrode elevation! 
+        
+        Returns
+        ----------
+        colx: list
+            X column indexes for quad mesh 
+        """
+        if int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
+            pass
+        else:
+            raise TypeError('Mesh is not composed of 2D quads')
+        
+        unix = np.unique(self.node_x) # unique x values in the x node coordinates 
+        if topo is None: # find the y column is a little challanging without knowing the original topography 
+            uniz = np.unique(self.node_z) # if you dont know any better then just use the unique z values 
+        else:
+            uniz = topo # ideally use mesh topography 
+        e_nodes = self.e_nodes
+        colx = [0]*len(e_nodes) # column indexes for x coordinates 
+        colz = [0]*len(e_nodes) # column indexes for z coordinates 
+        for i in range(len(e_nodes)):
+            x = self.node_x[e_nodes[i]] # get node x coordinate 
+            z = self.node_z[e_nodes[i]]
+            colx[i] = int(np.argwhere(x==unix) + 1) # find its index 
+            colz[i] = int(np.argwhere(z==uniz) + 1)
+            
+        return colx#,colz # return columns to go in parameters 
+        
 #%% triangle centriod 
 def tri_cent(p,q,r):
     """
@@ -1266,12 +1472,13 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     Returns
     -------
     mesh : class 
-        a pyR2 mesh class 
+        a <pyR2> mesh class 
     """
+    if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
+        raise ImportError("Provided mesh file is empty! Check that (c)R2/3t code has run correctly!")
     #open the selected file for reading
     fid=open(file_path,'r')
     #print("importing vtk mesh file into python workspace...")
-    
     #read in header info and perform checks to make sure things are as expected
     vtk_ver=fid.readline().strip()#read first line
     if vtk_ver.find('vtk')==-1:
@@ -1504,26 +1711,30 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
-    mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object 
-    
+    mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object
+#    print(mesh.attr_cache.keys())
     try:
-        mesh.add_sensitivity(Mesh.attr_cache['Sensitivity(log10)'])
+        if mesh.ndims==2:
+            mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
+        else:
+            mesh.add_sensitivity(mesh.attr_cache['Sensitivity_map(log10)'])
     except:
-        #print('no sensitivity')
-        pass
+        print('no sensitivity')
+
     mesh.mesh_title = title
     return mesh
 
 #%% import mesh from native .dat format
 def dat_import(file_path='mesh.dat'):
-    """
-    Import R2/cR2/R3t/cR3t .dat kind of mesh. 
+    """ Import R2/cR2/R3t/cR3t .dat kind of mesh. 
+    
     Parameters
-    -------------
+    ----------
     file_path: str
         Maps to the mesh (.dat) file.
+    
     Returns
-    -------------
+    -------
     mesh: class
         
     """
@@ -1558,17 +1769,7 @@ def dat_import(file_path='mesh.dat'):
             #exec('node%i[i] = int(line[ref])-1'%j)
             node_map[j][i]=int(line[ref])-1
             ref += 1
-#            if i==0:
-#                print(j,ref,node_map[j][i])
-    #make node map
-#    statement = '('
-#    for i in range(npere):
-#        if i==npere-1:
-#            statement += 'node%i) '%i
-#        else:
-#            statement += 'node%i, '%i
-#    node_map = eval(statement)
-        
+
     #read in nodes 
     node_x = [0]*numnp
     node_y = [0]*numnp
@@ -1640,68 +1841,103 @@ def dat_import(file_path='mesh.dat'):
                  cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
                  atribute_title='zone')#what is the attribute? we may use conductivity instead of resistivity for example
     
+    mesh.add_attribute(zone,'zone')
+    
     return mesh 
         
            
-#%% Read in resistivity values from R2 output 
-def readR2_resdat(file_path):
-    """
-    Reads resistivity values in f00#_res.dat file output from R2.(2D only)
-            
+#%% Read in E4D / tetgen mesh
+def tetgen_import(file_path):
+    """Import Tetgen mesh into <pyR2>. This isa little different from other 
+    imports as the mesh is described by several files. From pyR2's perspective
+    What is needed is the node(.node) file and element (.ele) files, which 
+    describe the coordinates of mesh nodes and the connection matrix. 
+    
     Parameters
     ----------
-    file_path : string
-        Maps to the _res.dat file.
-            
+    file_path: str
+        Maps to the mesh .node file. The program will automatically find the 
+        corresponding .ele file in the same directory. 
+    
     Returns
     -------
-    res_values : list of floats
-        Resistivity values returned from the .dat file. 
+    mesh: class    
     """
-    if not isinstance (file_path,str):
-        raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
-    fh=open(file_path,'r')
-    dump=fh.readlines()
-    fh.close()
-    res_values=[]
-    for i in range(len(dump)):
-        line=dump[i].split()
-        res_values.append(float(line[2]))
-    return res_values   
-
-#%% read in sensitivity values 
-def readR2_sensdat(file_path):
-    """
-    Reads sensitivity values in _sens.dat file output from R2.
+    fh = open(file_path,'r') # open file for read in 
+    header = fh.readline() # header line
+    numnp = int(header.split()[0]) # number of nodes 
+    node_x = [0]*numnp # preallocate array likes for node coordinates 
+    node_y = [0]*numnp
+    node_z = [0]*numnp
+    node_id = [0]*numnp
+    for i in range(numnp): # read through each line and get node coordinates 
+        line = fh.readline().split()
+        node_id[i] = int(line[0])
+        node_x[i] = float(line[1])
+        node_y[i] = float(line[2])
+        node_z[i] = float(line[3])
+    fh.close() #close file 
+    
+    #next we need the connection matrix to describe each of the tetrahedral e
+    #elements
+    file_path2 = file_path.replace('.node','.ele')
+    fh = open(file_path2,'r')# read in element file  
+    header = fh.readline() # read in header line 
+    numel = int(header.split()[0]) # number of elements 
+    npere = 4 # number of nodes per element, in this case E4D uses tetrahedral 
+    #meshes so its always going to be 4. 
+    
+    
+    node_map = np.array([[0]*numel]*npere,dtype=int) # connection matrix mapping elements onto nodes 
+    elm_no = [0]*numel # element number / index 
+    zone = [0]*numel # mesh zone 
+    
+    for i in range(numel):
+        line = fh.readline().split()#read in line data
+        elm_no[i] = int(line[0])
+        zone[i] = int(line[-1])
+        node_map[0][i]=int(line[1])-1
+        node_map[1][i]=int(line[2])-1
+        node_map[2][i]=int(line[3])-1
+        node_map[3][i]=int(line[4])-1
+    
+    #calculate element centres       
+    areas = [0]*numel
+    centriod_x = [0]*numel
+    centriod_y = [0]*numel
+    centriod_z = [0]*numel    
+    for i in range(numel):
+        x_vec = [node_x[node_map[j][i]] for j in range(npere)]
+        y_vec = [node_y[node_map[j][i]] for j in range(npere)]
+        z_vec = [node_z[node_map[j][i]] for j in range(npere)]
+        centriod_x[i] = sum(x_vec)/npere
+        centriod_y[i] = sum(y_vec)/npere
+        centriod_z[i] = sum(z_vec)/npere
             
-    Parameters
-    ----------
-    file_path : string
-        Maps to the _sens.dat file.
-            
-    Returns
-    -------
-    res_values : list of floats
-        Sensitivity values returned from the .dat file (not log10!).
-    """
-    if not isinstance (file_path,str):
-        raise NameError("file_path variable is not a string, and therefore can't be parsed as a file path")
-    fh=open(file_path,'r')
-    dump=fh.readlines()
-    fh.close()
-    sens_values=[]
-    for i in range(len(dump)):
-        line=dump[i].split()
-        sens_values.append(float(line[2]))
-    return sens_values   
-
-
+    
+    #create mesh instance 
+    mesh = Mesh(num_nodes = numnp,#number of nodes
+             num_elms = numel,#number of elements 
+             node_x = node_x,#x coordinates of nodes 
+             node_y = node_y,#y coordinates of nodes
+             node_z = node_z,#z coordinates of nodes 
+             node_id= node_id,#node id number 
+             elm_id=elm_no,#element id number 
+             node_data=node_map,#nodes of element vertices
+             elm_centre= (centriod_x,centriod_y,centriod_z),#centre of elements (x,y)
+             elm_area = areas,#area of each element
+             cell_type = [10],#according to vtk format
+             cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
+             atribute_title='zone')#what is the attribute? 
+    
+    mesh.add_attribute(zone,'zone')
+    
+    return mesh
         
 #%% build a quad mesh        
 def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
               surface_x=None,surface_z=None):
-    """
-    Creates a quaderlateral mesh given the electrode x and y positions. Function
+    """Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
             
     Parameters
@@ -1775,11 +2011,15 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         if len(surface_idx)>0:# then surface electrodes are present
             Ex=np.array(elec_x)[surface_idx]
             Ey=np.array(elec_z)[surface_idx]
+        elif len(surface_idx)== 0 and len(surface_x)>0:
+            #case where you have surface topography but no surface electrodes 
+            Ex=np.array(surface_x)
+            Ey=np.array(surface_z)
+            elec=np.c_[Ex,Ey]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
             Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
             Ey=np.array([elec_z[np.argmax(elec_z)],elec_z[np.argmax(elec_z)]])
-        #elec=np.c_[Ex,Ey]
     else:
         pass
         #elec = np.c_[elec_x,elec_y]
@@ -1954,14 +2194,28 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             
     mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
 
+    # point at the surface
+    xsurf = []
+    zsurf = []
+    for x, z, t in zip(elec_x, elec_z, elec_type):
+        if t == 'electrode': # surface electrode
+            xsurf.append(x)
+            zsurf.append(z)
+    if surface_x is not None:
+        xsurf = xsurf + list(surface_x)
+        zsurf = zsurf + list(surface_z)
+    surfacePoints = np.array([xsurf, zsurf]).T
+    mesh.surface = surfacePoints
+
     return mesh,meshx,meshy,topo,elec_node
+
 
 #%% build a triangle mesh - using the gmsh wrapper
 def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
-             show_output=True, path='exe', dump=print,whole_space=False, **kwargs):
-    """ 
-    Generates a triangular mesh for r2. returns mesh.dat in the Executables directory 
+             show_output=True, path='exe', dump=print, whole_space=False, **kwargs):
+    """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
+    Uses gmsh version 3.0.6.
             
     Parameters
     ---------- 
@@ -1970,9 +2224,15 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     elec_z: array like 
         electrode y coordinates 
     elec_type: list of strings, optional
-        type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list    
+        List should be the same length as the electrode coordinate argument. Each entry in
+        the list references the type of electrode: 
+        - 'electrode' = surface electrode coordinate, will be used to construct the topography in the mesh
+        - 'buried' = buried electrode, placed the mesh surface
+        - 'borehole' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
+        borehole numbering starts at 1 and ascends numerically by 1.  
     geom_input : dict, optional
-        Allows for advanced survey geometry in genGeoFile in gmshWrap.py (see notes there).
+        Allows for further customisation of the 2D mesh, its a
+        dictionary contianing surface topography, polygons and boundaries 
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the exe directory.
     show_ouput : boolean, optional
@@ -1991,7 +2251,33 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     Returns
     -------
     mesh: class
-    
+        <pyR2> mesh class
+        
+    Notes
+    -----
+    geom_input format:
+        the code will cycle through numerically ordered keys (strings referencing objects in a dictionary"),
+        currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
+        the first borehole string should be given the key 'borehole1' and so on. The code stops
+        searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
+        and polygons to the mesh. See below example:
+            
+            geom_input = {'surface': [surf_x,surf_z],
+              'boundary1':[bound1x,bound1y],
+              'polygon1':[poly1x,poly1y]} 
+            
+    electrodes and electrode_type (if not None) format: 
+        
+            electrodes = [[x1,x2,x3,...],[y1,y2,y3,...]]
+            electrode_type = ['electrode','electrode','buried',...]
+        
+        like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
+        The code will cycle through each borehole and internally sort them and add them to 
+        the mesh. 
+        
+    The code expects that all polygons, boundaries and electrodes fall within x values 
+    of the actaul survey area. So make sure your topography / surface electrode points cover 
+    the area you are surveying, otherwise some funky errors will occur in the mesh. 
     """
     #check directories 
     if path == "exe":
@@ -2035,7 +2321,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
-            dump(line.decode('utf-8'))
+            if line.decode('utf-8') != '':
+                dump(line.decode('utf-8'))
     else:
         call(cmd_line)#run gmsh 
         
@@ -2049,7 +2336,21 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
 
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
+    # point at the surface
+    xsurf = []
+    zsurf = []
+    for x, z, t in zip(elec_x, elec_z, elec_type):
+        if t == 'electrode': # surface electrode
+            xsurf.append(x)
+            zsurf.append(z)
+    if 'surface' in geom_input.keys():
+        xsurf = xsurf + list(geom_input['surface'][0])
+        zsurf = zsurf + list(geom_input['surface'][1])
+    surfacePoints = np.array([xsurf, zsurf]).T
+    mesh.surface = surfacePoints
+    
     return mesh#, mesh_dict['element_ranges']
+
 
 #%% 3D tetrahedral mesh 
 def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'bilinear',
@@ -2404,9 +2705,11 @@ def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
             mesh_dict = gw.msh_parse(file_path)
         mesh = Mesh.mesh_dict2class(mesh_dict)
     elif ext == '.dat':
-        mesh = dat_import(file_path)
+        mesh = dat_import(file_path)   
+    elif ext == '.node':
+        mesh = tetgen_import(file_path)
     else:
-        avail_ext = ['.vtk','.msh','.dat']
+        avail_ext = ['.vtk','.msh','.dat','.node / .exe']
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
     if node_pos is not None:
@@ -2430,6 +2733,10 @@ def systemCheck():
         Dictionary keys refer information about the system 
     """
     print("________________System-Check__________________")
+    
+    totalMemory = '' # incase system can't figure it out!
+    num_threads = ''
+    OpSys = ''
     #display processor info
     print("Processor info: %s"%platform.processor())
     num_threads = multiprocessing.cpu_count()
@@ -2464,8 +2771,8 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
                           
     elif OpSys=="Windows":
         p = Popen('systeminfo', stdout=PIPE, shell=True)
-        info = p.stdout.realines()
-#        info = os.popen("systeminfo").readlines()
+#        info = p.stdout.readlines()
+        info = os.popen("systeminfo").readlines()
         for i,line in enumerate(info):
             if line.find("Total Physical Memory")!=-1:
                 temp = line.split()[3]
@@ -2502,129 +2809,24 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
         
     else:
         raise OSError("unrecognised/unsupported operating system")
+     
+    if totalMemory != '':
+        totalMemory = int(totalMemory)
+        print("Total RAM available: %i Mb"%totalMemory)
         
-    totalMemory = int(totalMemory)
-    print("Total RAM available: %i Mb"%totalMemory)
+        #print some warnings incase the user has a low end PC
+        if totalMemory <= 4000:
+            warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
     
-    #print some warnings incase the user has a low end PC
-    if totalMemory <= 4000:
-        warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
-    if num_threads <=2:
-        warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
+    if num_threads!= '':
+        if num_threads <=2:
+            warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
+            
     if msg_flag:
         print(helpful_msg)
+    
+    
     
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
 #info = systemCheck()
-    
-#%% test code for borehole quad mesh
-#elec_x = np.append(np.arange(10),[5.1,5.1,5.1])
-#elec_y = np.append(np.zeros(10),[-2,-4,-6])
-#elec_type = ['electrode']*10 + ['buried']*3
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(elec_x, elec_y, elec_type = elec_type, elemx=4)
-#mesh.show(color_bar=False)
-
-# %%testing automatic selection
-#plt.ion()
-#from api.SelectPoints import SelectPoints
-#from matplotlib.patches import Rectangle
-#fig, ax = plt.subplots()
-#mesh.show(ax=ax)
-#rect = Rectangle([0,0], 1,-2, alpha=0.3, color='red')
-#ax.add_artist(rect)
-#selector = SelectPoints(ax, np.array(mesh.elm_centre).T, typ='rect')
-
-#elec = np.genfromtxt('api/test/elecTopo.csv', delimiter=',')
-#mesh, meshx, meshy, topo, elec_node = quad_mesh(elec[:,0], elec[:,1], elemx=8)
-#mesh.show(color_bar=False)
-
-#mesh = vtk_import('api/test/testQuadMesh.vtk')
-#mesh = vtk_import('api/test/testTrianMesh.vtk')
-#mesh = vtk_import('api/invdir/f001_res.vtk')
-#attrs = list(mesh.attr_cache)
-#fig, ax = plt.subplots()
-#mesh.show(attr=attrs[0], contour=False, edge_color='none', color_map='viridis', ax=ax, vmin=30, vmax=100)
-#mesh.show(attr=attrs[1], edge_color='none', sens=True, contour=True)
-##mesh.show(attr=attrs[0], color_map='viridis', sens=True, edge_color='none')
-#fig.show()
-##mesh.write_attr(attrs[0], file_name='test_res.dat', file_path='api/test/')
-
-
-#%%
-## First create the x and y coordinates of the points.
-#n_angles = 48
-#n_radii = 8
-#min_radius = 0.25
-#radii = np.linspace(min_radius, 0.95, n_radii)
-#
-#angles = np.linspace(0, 2 * np.pi, n_angles, endpoint=False)
-#angles = np.repeat(angles[..., np.newaxis], n_radii, axis=1)
-#angles[:, 1::2] += np.pi / n_angles
-#
-#x = (radii * np.cos(angles)).flatten()
-#y = (radii * np.sin(angles)).flatten()
-#z = (np.cos(radii) * np.cos(3 * angles)).flatten()
-#
-## Create the Triangulation; no triangles so Delaunay triangulation created.
-#triang = tri.Triangulation(x, y)
-#
-## Mask off unwanted triangles.
-#triang.set_mask(np.hypot(x[triang.triangles].mean(axis=1),
-#                         y[triang.triangles].mean(axis=1))
-#                < min_radius)
-#
-#import matplotlib as mpl
-#from mpl_toolkits.axes_grid1 import make_axes_locatable
-#from matplotlib import ticker
-#fig1, ax1 = plt.subplots()
-#ax1.set_aspect('equal')
-#vmin, vmax = -1, 0.5
-#z[z<vmin] = vmin
-#z[z>vmax] = vmax
-#tcf = ax1.tricontourf(triang, z, levels=np.linspace(vmin, vmax, 10), extend='both')
-##divider = make_axes_locatable(ax1)
-##cax = divider.append_axes("right", size="3%", pad=0.05)
-##cbar = fig1.colorbar(tcf, cax=cax)
-##tick_locator = ticker.MaxNLocator(nbins=5)
-##cbar.locator = tick_locator
-##cbar.update_ticks()
-#cbar = fig1.colorbar(tcf)
-#ax1.tricontour(triang, z, levels=np.linspace(vmin, vmax, 10), colors='k')
-#ax1.set_title('Contour plot of Delaunay triangulation')
-#fig1.show()
-
-""" two solutions:
-    ax1.collections[0].facecolors contains the assigned color for each contour
-    tcf (output of ax.tricontourf) takes tcf.set_clim()
-"""
-
-#%% faster triangular mesh plotting
-#mesh = vtk_import('api/test/testTrianMesh.vtk')
-#mesh.show()
-#
-#nodes = np.array([mesh.node_x, mesh.node_y, mesh.node_z]).T
-#elms = np.array(mesh.con_matrix).T
-#
-#triang = tri.Triangulation(nodes[:,0], nodes[:,2], elms)
-#
-#fig, ax = plt.subplots()
-#ax.triplot(triang)
-#fig.show()
-#
-
-#%% 3D mesh testing
-#import pandas as pd
-#data = pd.read_csv("./api/test/init_elec_locs.csv")#electrode position file
-#
-##reassign the lists to numpy arrays
-#elec_x = np.array(data['x'])
-#elec_y = np.array(data['y'])
-#elec_z = np.array(data['z'])+2
-#mesh = tetra_mesh(elec_x,elec_y,elec_z, cl=10)#, shape=(5,32))
-##mesh.show_3D() # not implemented right now
-
-
-#%% mesh slicing
-#mesh = vtk_import('api/test/mesh3Dinverted.vtk')
-#mesh.showSlice(vmin=1.5, vmax=2.8)

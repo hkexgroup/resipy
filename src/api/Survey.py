@@ -6,61 +6,70 @@ Created on Fri Jun  1 11:21:54 2018
 @author: jkl
 """
 #import sys
-import os
+import sys, os, platform
 #sys.path.append(os.path.relpath('../api'))
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 import pandas as pd
 #import statsmodels.formula.api as smf
 
-from api.parsers import (syscalParser, protocolParser, res2invInputParser,
-                     primeParser, primeParserTab, protocolParserIP, protocol3DParser)
+from api.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
+                     primeParser, primeParserTab, protocolParserIP,
+                     protocol3DParser, forwardProtocolDC, forwardProtocolIP,
+                     stingParser)
 from api.DCA import DCA
 
 class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
+    
+    Parameters
+    ----------
+    fname : str
+        Name of the file where the data are.
+    ftype : str
+        Type of the data file. This setting is not read if a `parser` is
+        not `None`.
+    name : str
+        A personal name for the survey.
+    spacing : float, optional
+        This will be passed to the parser function to determine the
+        electrode positions.
+    parser : function, optional
+        If provided, it should return tuple containing `elec` a 3 columns
+        array containing electrodes position and `data` a pandas.DataFrame
+        with the `a,b,m,n,resist` columns at least and `ip` if present.
+    keepAll: bool, optional
+        If `True` will keep all the measurements even the ones without
+        reciprocal. Note that if none of the quadrupoles have reciprocal
+        they will all be kept anyway.
     """
-    def __init__(self, fname, ftype='', name='', spacing=None, parser=None):
-        """ Create a Survey object, that contains the data and some basic 
-        procedures.
-        
-        Parameters
-        ----------
-        fname : str
-            Name of the file where the data are.
-        ftype : str
-            Type of the data file. This setting is not read if a `parser` is
-            not `None`.
-        name : str
-            A personal name for the survey.
-        spacing : float, optional
-            This will be passed to the parser function to determine the
-            electrode positions.
-        parser : function, optional
-            If provided, it should return tuple containing `elec` a 3 columns
-            array containing electrodes position and `data` a pandas.DataFrame
-            with the `a,b,m,n,resist` columns at least and `ip` if present.
-        """
+    
+    def __init__(self, fname, ftype='', name='', spacing=None, parser=None, keepAll=True):
         self.elec = []
         self.df = pd.DataFrame()
         if name == '':
             name = os.path.basename(os.path.splitext(fname)[0])
         self.name = name
         self.iBorehole = False # True is it's a borehole
+        self.protocolIPFlag = False
+        self.kFactor = 1
         
-        avail_ftypes = ['Syscal','Protocol','Res2Dinv','BGS Prime', 'ProtocolIP']# add parser types here! 
+        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
+                        'Sting']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
         else:
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname, spacing=spacing)
+                self.kFactor = 1.2
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
-                elec, data = res2invInputParser(fname)
+                elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
                 try:
                     elec, data = primeParser(fname)
@@ -68,47 +77,48 @@ class Survey(object):
                     elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
+                self.protocolIPFlag = True
+            elif ftype == 'forwardProtocolDC':
+                elec, data = forwardProtocolDC(fname)
+            elif ftype == 'Sting':
+                elec, data = stingParser(fname)
+#            elif ftype == 'forwardProtocolIP':
+#                self.protocolIPFlag = True
+#                elec, data = forwardProtocolIP(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
             else:
                 print("Unrecognised ftype, available types are :",avail_ftypes )
                 raise Exception('Sorry this file type is not implemented yet')
-                
+
         
         self.df = data
-        self.dfphasereset = pd.DataFrame() #for preserving phase reset ability
+        
+        # add error measured to the error columns (so they can be used if no error model are fitted)
+        if 'magErr' in self.df.columns:
+            self.df['resError'] = self.df['magErr'].copy()
+        if 'phiErr' in self.df.columns:
+            self.df['phaseError'] = self.df['phiErr'].copy()
+            
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
         self.ndata = len(data)
-        self.kFactor = 1.2
         self.phiCbarmin = 0
         self.phiCbarMax = 25
         self.filt_typ = None
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
-#        self.filterDataIP_plotOrig = data[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first').copy()
-#        self.typ = 'R2'
-#        self.errTyp = 'obs'
-#        self.errTypIP = 'none'
-        
-        # to discard for the dataframe structure
-#        self.array = self.df[['a','b','m','n']].values
-#        self.resist = self.df['resist'].values
-#        self.dev = self.df['dev'].values
+
         if ftype == 'BGS Prime':
-            self.checkTxSign()        
-        irecip = self.reciprocal()
-#        self.mask = np.ones(self.ndata, dtype=bool) # mask of used data
+            self.checkTxSign()
+
+        # apply basic filtering
+        self.basicFilter()
+        self.reciprocal()
+        self.dfReset = self.df.copy()
+        self.dfPhaseReset = self.df.copy()
         
-        if all(irecip == 0) == False: # contains reciprocal
-            self.basicFilter()
-        else:
-            self.dfphasereset = self.df.copy()
-        
-#        self.typ = 'R2' # or cR2 or R3, cR3
-#        self.errTyp = 'none' # type of error to add for DC
-#        self.errTypIP = 'none' # type of error to add for IP phase
             
     @classmethod
     def fromDataframe(cls, df, elec):
@@ -152,13 +162,14 @@ class Survey(object):
         
         
     def basicFilter(self):
-        """ Remove NaN and Inf values in the data.
+        """ Remove NaN, Inf and duplicates values in the data frame.
         """
         # remove Inf and NaN
         resist = self.df['resist'].values
         iout = np.isnan(resist) | np.isinf(resist)
         if np.sum(iout) > 0:
-            print('Number of BAD transfer resistance data (Inf or NaN) : ', np.sum(iout))
+            print('Survey.basicFilter: Number of Inf or NaN : ', np.sum(iout))
+        print('Inf or NaN: ', end='')
         self.filterData(~iout)
         
         # remove duplicates
@@ -166,40 +177,83 @@ class Survey(object):
         self.df = self.df.drop_duplicates(subset=['a','b','m','n'], keep = 'first')
         ndup = shapeBefore - self.df.shape[0]
         if ndup > 0:
-            print(ndup, 'duplicates removed.')
+            print('Survey.basicFilter: ', ndup, 'duplicates removed.')
         
         # remove quadrupoles were A or B are also potential electrodes
         ie1 = self.df['a'].values == self.df['m'].values
         ie2 = self.df['a'].values == self.df['n'].values
         ie3 = self.df['b'].values == self.df['m'].values
         ie4 = self.df['b'].values == self.df['n'].values
-#        ie2 = self.df['b'] == (self.df['m'] | self.df['n'])
         ie = ie1 | ie2 | ie3 | ie4
         if np.sum(ie) > 0:
-            print(np.sum(ie), 'measurements with A or B == M or N')
+            print('Survey.basicFilter: ', np.sum(ie), 'measurements with A or B == M or N')
+        print('strange quadrupoles: ', end='')
         self.filterData(~ie)
         
-        # remove measurement without reciprocal
-        irecip = self.df['irecip'].values
-        self.filterData(irecip != 0) # filter out dummy and non reciprocal
-        self.dfphasereset = self.df.copy()
+        # we need to redo the reciprocal analysis if we've removed duplicates and ...
+        if ndup > 0 or np.sum(ie) > 0:
+            self.reciprocal()
         
+        # remove dummy for 2D case
+#        if self.elec[:,1].sum() == 0: # it's a 2D case
+#            self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
         
-    def addData(self, fname, ftype='Syscal', spacing=None):
+        # create a backup of the clean dataframe
+        self.dfReset = self.df.copy()
+        self.dfPhaseReset = self.df.copy()
+        
+        ''' the following piece of code is not useful anymore. The default
+        behavior is to keep all measurements except NaN, duplicates, Inf and
+        dummy (2D only) and compute error model on the subset which has
+        reciprocal then apply the error model to all the quadrupoles
+        '''
+        
+#        # remove measurement without reciprocal
+#        if self.keepAll is False:
+#            print('ah ah let us make some order here !')
+#            irecip = self.df['irecip'].values
+#            self.filterData(irecip != 0) # non reciprocal (some are dummy)
+#            if self.elec[:,1].sum() == 0: # it's a 2D case
+#                self.removeDummy() # filter dummy by the rule if n < m then it's a dummy
+#            if np.isnan(np.mean(self.df['recipError'])):# drop NaNs if present
+#                self.df = self.df.dropna(subset = ['reciprocalErrRel','recipError','recipMean','reci_IP_err']) # NaN values in error columns cause crash in error analysis and final protocol outcome
+#            self.dfReset = self.df.copy()
+          
+        
+    def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
         """ Add data to the actual survey (for instance the reciprocal if they
         are not in the same file).
         """
-        if ftype == 'Syscal':
-            elec, data = syscalParser(fname, spacing=spacing)
+         
+        if parser is not None:
+            elec, data = parser(fname)
         else:
-            raise Exception('Sorry this file type is not implemented yet')
+            if ftype == 'Syscal':
+                elec, data = syscalParser(fname, spacing=spacing)
+                self.kFactor = 1.2
+            elif ftype =='Protocol':
+                elec, data = protocol3DParser(fname)
+            elif ftype == 'Res2Dinv':
+                elec, data = res2invInputParser(fname)
+            elif ftype == 'BGS Prime':
+                try:
+                    elec, data = primeParser(fname)
+                except:
+                    elec, data = primeParserTab(fname)
+            elif ftype == 'ProtocolIP':
+                elec, data = protocolParserIP(fname)
+                self.protocolIPFlag = True
+            else:
+                raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
+        if ftype == 'BGS Prime':
+            self.checkTxSign()
         self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
         self.reciprocal()
         self.basicFilter() # we assume the user input reciprocal data not another
         # normal survey
-        
+
     
     def filterData(self, i2keep):
         """ Filter out the data not retained in `i2keep`.
@@ -211,14 +265,32 @@ class Survey(object):
             others `False`.
         """
         if len(i2keep) != self.df.shape[0]:
-            raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\
-                             does not match the length of the data (' + str(self.df.shape[0]) +').')
+            if 'ip' not in self.df.columns:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ')\n'
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').')
+            else:
+                raise ValueError('The length of index to be kept (' + str(len(i2keep)) + ') '
+                                 'does not match the length of the data (' + str(self.df.shape[0]) +').\n'
+                                 'Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                                 'Reset the filters and redo the filterings, first reciprocity then phase.')
             return
         else:
             self.ndata = len(i2keep)
             self.df = self.df[i2keep]
+            print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
+            return np.sum(~i2keep)
     
     
+    def removeUnpaired(self):
+        """ Remove quadrupoles that don't have a reciprocals. This might
+        remove dummy measurements added for sequence optimization.
+        """
+        i2keep = self.df['irecip'] != 0
+        print('removeUnpaired:', end='')
+        self.filterData(i2keep)
+        return np.sum(~i2keep)
+        
+        
     def inferType(self):
         """ define the type of the survey
         """
@@ -324,55 +396,79 @@ class Survey(object):
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
+        # in order to compute error model based on a few reciprocal measurements
+        # we fill 'recipMean' column with simple resist measurements for lonely
+        # quadrupoles (which do not have reciprocals)
+        inotRecip = irecip == 0
+        self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
         
         return Ri
-
     
+    
+    def errorDist(self, ax=None):
+        """ Calculate and plots reciprocal error probablity histogram.
+        Good data will have a bell shape (normal) distribution where most datapoints have near
+        zero reciprocal error.
+        """
+        if ax is None:
+            fig, ax = plt.subplots()
+        
+        percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
+        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probability")
+        errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
+        errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
+        if errPercent > 100:
+            errPercent = 100
+        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        ax.set_xlim(-1*(int(errPercent)),int(errPercent))
+        ax.set_xlabel('Error [%]')
+        ax.set_ylabel('Probability')
+        ax.legend(loc='best', frameon=True)
+        ax.set_title('Error probability distribution')
+        
+        if ax is None:
+            return fig
+    
+    
+    def removeDummy(self):
+        """ Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
+        measurements added for speed).
+        """
+        i2keep = np.abs(self.df['a'] - self.df['b']) == np.abs(self.df['m'] - self.df['n'])
+        self.filterData(i2keep)
+        
+        
+    def filterRecip(self, pcnt=20, debug=True):
+        """Filter measurements based on the level reciprocal error. 
+        Parameters
+        -----------
+        pcnt: float, optional
+            Percentage level of reciprocal error in which to filter the measurements
+            Percentage Errors > percentage will be removed. By default the value is 
+            20.
+        debug: bool, optional
+            Print output to screen. Default is True. 
+        """
+        #### TODO: stop filtering if no reciprocals present! 
+        if all(np.isnan(self.df['recipError']) == True):
+            raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
+        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
+        igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
+        df_temp = self.df.copy()
+        self.df = df_temp[igood] #keep the indexes where the error is below the threshold
+        self.dfPhaseReset = self.df.copy()
+        if debug:
+            numRemoved = len(df_temp)-len(self.df)
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error removed!" % (numRemoved,pcnt)
+            print(msgDump)
+            return numRemoved
+        
     def addFilteredIP(self):
         """ Add filtered IP data after IP filtering and pre-processing.
         """
         self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
-        # add Survey.filterDataIP to Survey.df and Survey.dfg
-#        self.df['ip'] = np.nan # remove all IP from Survey.df
-#        i2keepDf = np.zeros(self.df.shape[0], dtype=bool)
-#        i2keepDfg = np.zeros(self.dfg.shape[0], dtype=bool)
-#        ipArray = self.filterDataIP[['a','b','m','n']].values
-#        dfArray = self.df[['a','b','m','n']].values
-#        dfgArray = self.dfg[['a','b','m','n']].values
-#        for i in range(self.filterDataIP.shape[0]):
-##            print(i, end='')
-#            rev1=[0,1,2,3]
-#            rev2=[0,1,3,2]
-#            rev3=[1,0,2,3]
-#            rev4=[1,0,3,2]
-#            index1=(dfArray == ipArray[i,rev1]).all(1)
-#            index2=(dfArray == ipArray[i,rev2]).all(1)
-#            index3=(dfArray == ipArray[i,rev3]).all(1)
-#            index4=(dfArray == ipArray[i,rev4]).all(1)
-#            index=index1|index2|index3|index4
-#            
-#            if np.sum(index) > 0:
-#                self.df.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
-#                i2keepDf[index] = True
-#            
-#            rev1=[0,1,2,3]
-#            rev2=[0,1,3,2]
-#            rev3=[1,0,2,3]
-#            rev4=[1,0,3,2]
-#            index1=(dfgArray == ipArray[i,rev1]).all(1)
-#            index2=(dfgArray == ipArray[i,rev2]).all(1)
-#            index3=(dfgArray == ipArray[i,rev3]).all(1)
-#            index4=(dfgArray == ipArray[i,rev4]).all(1)
-#            index=index1|index2|index3|index4
-#            
-#            if np.sum(index) > 0:
-#                self.dfg.loc[index, 'ip'] = self.filterDataIP.iloc[i]['ip']
-#                i2keepDfg[index] = True
-#            
-#        
-##        print('df deleted = ', np.sum(~i2keepDf), 'dfg : ', np.sum(~i2keepDfg))
-#        self.filterData(i2keepDf)
-#        self.dfg = self.dfg[i2keepDfg] 
+
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None):
@@ -441,8 +537,6 @@ class Survey(object):
         reciprocalMean = self.df['recipMean'].values
         reciprocalErr = self.df['recipError'].values
         ax.loglog(np.abs(reciprocalMean), reciprocalErr, 'o')
-#        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
-#        ax.set_ylabel('Reciprocal Error [$\Omega$]')
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')  
         ax.set_title('Observed Errors\n')
@@ -464,9 +558,9 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        temp_df_renge_filter = self.df.copy().query('reci_IP_err>-%s & reci_IP_err<%s' % (self.phiCbarMax/self.kFactor, self.phiCbarMax/self.kFactor))
-        reciprocalMean = np.abs(temp_df_renge_filter['recipMean'].values)
-        phase = np.abs(-self.kFactor*temp_df_renge_filter['reci_IP_err'].values)
+        temp_df_range_filter = self.df.copy().query('reci_IP_err>%s & reci_IP_err<%s' % (-self.phiCbarMax, self.phiCbarMax))
+        reciprocalMean = np.abs(temp_df_range_filter['recipMean'].values)
+        phase = np.abs(temp_df_range_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
         ax.set_ylabel(r's($\phi$) [mRad]')
@@ -492,7 +586,7 @@ class Survey(object):
         return t    
         
     def plotIPFit(self, ax=None):
-        """ Plot the reciprocal phase errors.
+        """ Plot the reciprocal phase errors with a power-law fit.
         
         Parameters
         ----------
@@ -508,9 +602,9 @@ class Survey(object):
             fig, ax = plt.subplots()        
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
-        Rn = np.abs(self.df['resist'])
+        Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on input  phase range
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -521,26 +615,23 @@ class Survey(object):
         coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]))[0] # calculating fitting coefficients (a,m)
         R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
-        ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="bin means")
-        ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power law fit")
+        ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
+        ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power Law Fit")
         ax.set_ylabel(r's($\phi$) [mRad]')
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
-        a1 = np.around(np.exp(coefs_ip[0]),decimals=3)
-        a2 = np.around(coefs_ip[1], decimals=3)
-        a3 = np.around(np.exp(coefs_ip[0]),decimals=1)
-        a4 = np.around(coefs_ip[1], decimals=1)
-        print ('Error model is: Sp(m) = %s*%s^%s (R^2 = %s) \nor simply Sp(m) = %s*%s^%s' % (a1,'R',a2,R2_ip,a3,'R',a4))
-#        ax.set_title('Multi bin phase error plot\na = %s, b = %s (R$^2$ = %s)' % (a1,a2,R2_ip))
-        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^{%s}$ (R$^2$ = %s)' % (a1, a2, R2_ip))
-        self.df['PhaseError'] = a1*(np.abs(self.df['resist'])**a2)
-        self.df['Phase'] = -self.kFactor*self.df['ip']
+        a1 = np.exp(coefs_ip[0])
+        a2 = coefs_ip[1]
+        print ('Error model is: Sp(m) = {:.2f}*R^{:.2f} (R^2 = {:.2f})'.format(a1,a2,R2_ip))
+        ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.4f})'.format(a1, a2, R2_ip))
+        self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
+        self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
 
     def plotIPFitParabola(self, ax=None):
-        """ Plot the reciprocal phase errors and fit parabola.
+        """ Plot the reciprocal phase errors with a parabola fit.
         
         Parameters
         ----------
@@ -556,9 +647,9 @@ class Survey(object):
             fig, ax = plt.subplots()        
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
-        Rn = np.abs(self.df['resist'])
+        Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
-        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'resist':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>-%s & Phase_dicrep<%s' % (self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
+        error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
             ns=i*binsize_ip
@@ -575,18 +666,15 @@ class Survey(object):
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
-        a3 = np.around((coefs_ip[0]),decimals=3)
-        b3 = np.around((coefs_ip[1]), decimals=3)
-        c3 = np.around((coefs_ip[2]),decimals=3)
-        #a1 = np.around((coefs_ip[0]),decimals=1)
-        #b1 = np.around((coefs_ip[1]), decimals=1)
-        #c1 = np.around((coefs_ip[2]),decimals=1)
-#        ax.set_title('Multi bin phase error plot\n(R$^2$ = %s)' % (R2_ip))
-        ax.set_title('Multi bin phase error plot\n s($\phi$) = %s$R^2$ %s %s$R$ %s %s (R$^2$ = %s)' % (a3, self.sign_coef(b3), np.abs(b3), self.sign_coef(c3), np.abs(c3), R2_ip))
-        self.df['PhaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['resist']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['resist'])) + coefs_ip[2])
-        self.df['Phase'] = -self.kFactor*self.df['ip']
+        a3 = coefs_ip[0]
+        b3 = coefs_ip[1]
+        c3 = coefs_ip[2]
+        ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^2${:+.2f}$R${:+.2f} (R$^2$ = {:.4f})'.format(a3, b3, c3, R2_ip))
+        self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
+        self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
             return fig   
+
 
     def pwlfit(self, ax=None):
         """ Fit an power law to the resistivity data.
@@ -601,7 +689,6 @@ class Survey(object):
         fig : matplotlib figure, optional
             If ax is not specified, the function will return a figure object.
         """
-#        self.errTyp = 'pwl'
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
@@ -609,33 +696,43 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+#        print(bins)
+#        print(np.sum(np.isnan(bins)))
+#        print(np.sum(np.isinf(bins)))
         coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
-        ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
-        ax.plot(bins[:,0],R_error_predict,'r', label="Power law fit")
+        ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
+        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.plot(bins[:,0],R_error_predict,'r', label="Power Law Fit")
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
         R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
-        a1 = np.around(np.exp(coefs[0]),decimals=3)
-        a2 = np.around(coefs[1], decimals=3)
-        a3 = np.around(np.exp(coefs[0]),decimals=1)
-        a4 = np.around(coefs[1], decimals=1)
-        print ('Error model is: R_err = %s*%s^%s (R^2 = %s) \nor simply R_err = %s*%s^%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-#        ax.set_title('Multi bin power-law plot\n' + r'$\alpha =  %s, \beta = %s$ (R$^2$ = %s)' % (a1,a2,R2))
-        ax.set_title('Multi bin power-law plot\n $R_{error}$ = %s$R_{avg}^{%s}$ (R$^2$ = %s)' % (a1,a2,R2))           
-        self.df['pwlError'] = a1*(np.abs(self.df['recipMean'])**a2)
-        self.errorModel = lambda x : a1*(np.abs(x)**a2)
+        a1 = np.exp(coefs[0])
+        a2 = coefs[1]
+#        a3 = np.exp(coefs[0])
+#        a4 = coefs[1]
+        print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.4f})'.format(a1,a2,R2))           
+        self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
+        def errorModel(df):
+            x = df['recipMean'].values
+            return a1*(np.abs(x)**a2)
+        self.errorModel = errorModel
+#        self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
+
 
     def linfit(self, ax=None):
         """ Fit a linear relationship to the resistivity data.
@@ -650,47 +747,6 @@ class Survey(object):
         fig : matplotlib figure, optional
             If ax is not specified, the function will return a figure object.
         """
-#        self.errTyp = 'lin'
-        # # linear fit
-        # if 'recipMean' not in self.dfg.columns:
-        #     self.reciprocal()
-        # recipMean = np.abs(self.dfg['recipMean'].values)
-        # recipError = np.abs(self.dfg['recipError'].values)
-
-        # # logspace classes, fit, R^2
-        # xm,ystdErr,nbs=self.logClasses3(recipMean,recipError,np.mean, class1=np.arange(-2,2,0.5))# clength=10)
-        # inan = ~np.isnan(ystdErr)
-        # slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
-        # predy=10**(offset+slope*np.log10(xm[inan]))
-        # # R2 makes sens in linear fitting space only and only for the classes
-        # r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
-        # print('Simple linear log fit : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
-        
-        # predictRecipError = 10**offset*recipMean**slope
-        # self.dfg['linError'] = predictRecipError
-        
-        # if iplot:
-        #     if ax is None:
-        #         fig, ax = plt.subplots()
-        #     ax.loglog(recipMean, recipError, '+', label='raw')
-        #     ax.loglog(xm[inan],ystdErr[inan],'o', label='bin means')
-        #     ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        #     ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        #     ax.loglog(xm[inan],predy,'r-',label='linear regression')
-        #     ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
-        #     ax.legend()
-            
-#            fig,ax=plt.subplots()
-#            isort = np.argsort(recipMean)
-#            ax.plot(recipMean,recipError,'o', label='raw errors')
-#            ax.plot(recipMean,predictRecipError,'o', label='predicted')
-#            ax.plot(recipMean[isort],2*predictRecipError[isort],'-', label='2*prediction')
-#            ax.legend()
-#            ax.set_title('Linear fit prediction')
-#            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-#            ax.set_ylabel('Reciprocal Error [$\Omega$]')
-##            fig.show()
-#            figs.append(fig)
         if ax is None:
             fig, ax = plt.subplots()        
         numbins = 20
@@ -698,37 +754,42 @@ class Survey(object):
             self.reciprocal()
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean') # Sorting data based on R_avg
+        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
-            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
         coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
-        ax.loglog(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.loglog(bins[:,0],bins[:,1],'o',label="bin means")
-        ax.loglog(bins[:,0],R_error_predict,'r', label="Linear fit")
+        ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
+        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
+        ax.plot(bins[:,0],R_error_predict,'r', label="Linear Fit")
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')      
         ax.legend(loc='best', frameon=True)
         R2= self.R_sqr((bins[:,1]),(R_error_predict))
-        a1 = np.around((coefs[0]),decimals=3)
-        a2 = np.around(coefs[1], decimals=3)
-        a3 = np.around((coefs[0]),decimals=1)
-        a4 = np.around(coefs[1], decimals=1)
-        print ('Error model is: R_err = %s*%s+%s (R^2 = %s) \nor simply R_err = %s*%s+%s' % (a1,'(R_n/r)',a2,R2,a3,'(R_n/r)',a4))
-        ax.set_title('Multi bin Linear plot\n $R_{error}$ = %s$R_{avg}$ %s %s (R$^2$ = %s)' % (a1,self.sign_coef(a2), np.abs(a2),R2))     
-        self.df['linError'] = a1*(np.abs(self.df['recipMean']))+a2
-        self.errorModel = lambda x : a1*(np.abs(x))+a2
+        a1 = coefs[0]
+        a2 =coefs[1]
+        print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2f}$R_{{avg}}${:+.2f} (R$^2$ = {:.4f})'.format(a1,a2,R2))           
+        self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
+        def errorModel(df):
+            x = df['recipMean'].values
+            return a1*(np.abs(x))+a2
+        self.errorModel = errorModel
+#        self.errorModel = lambda x : a1*(np.abs(x))+a2
         if ax is None:
             return fig                  
+        
         
     def linfitStd(self, iplot=False):
         # linear fit with std
         ie = self.irecip > 0
-        recipMean0 = np.abs(self.reciprocalMean[ie1])
         recipMean = np.abs(self.reciprocalMean[ie])
         recipError = np.abs(self.reciprocalErr[ie])
         
@@ -737,7 +798,7 @@ class Survey(object):
         inan = ~np.isnan(ystdErr)
         slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
         predy=10**(offset+slope*np.log10(xm[inan]))
-        # R2 makes sens in linear fitting space only and only for the classes
+        # R2 makes sense in linear fitting space only and only for the classes
         r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
         print('Simple linear log fit (with std) : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
         
@@ -748,7 +809,7 @@ class Survey(object):
         if iplot:
             figs = []
             fig,ax=plt.subplots()
-#            ax.loglog(recipMean, recipError, '+o') # doesn't make sens because
+#            ax.loglog(recipMean, recipError, '+o') # doesn't make sense because
             # we are plotting the STD of the errors and not the absolute errors
             ax.loglog(xm[inan],ystdErr[inan],'o')
             ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
@@ -771,55 +832,112 @@ class Survey(object):
             figs.append(fig)
             
             return figs
+    
         
-    def lmefit(self, iplot=True, ax=None):
-        print('NOT IMPLEMENTED YET')
-#        self.errTyp = 'lme'
-#        # fit linear mixed effect model
-#        # NEED filterData() before
-#        # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
-#        
+    def lmefit(self, iplot=True, ax=None, rpath=None):
+        ''' Fit a linear mixed effect (LME) model by having the electrodes as
+        as grouping variables.
+        
+        Parameters
+        ----------
+        iplot : bool, optional
+            If `True`, then a graph will be plotted.
+        ax : matplotlib.Axes, optional
+            If specified, the graph will be plotted against this axis,
+            otherwise a new figure will be created.
+        rpath : str, optional
+            Paht of the directory with R (for Windows only).
+        '''
+        # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
+        # requires R
+        # statmodels or other python packages can't handle variable interaction yet
+
+        OS = platform.system()
+        
+        if 'recipMean' not in self.df.columns:
+            self.reciprocal()
+        dfg = self.df[self.df['irecip'] > 0]
+        
+        recipMean = np.abs(dfg['recipMean'].values)
+        recipError = np.abs(dfg['recipError'].values)
+        array = dfg[['a','b','m','n']].values.astype(int)        
+        data = np.vstack([recipMean, recipError]).T
+        data = np.hstack((array,data))
+        df = pd.DataFrame(data, columns=['a','b','m','n','recipMean','obsErr'])  
+        df.insert(0, 'idx', df.index + 1)
+        df = df.astype({"idx": int, "a": int, "b": int, "m": int, "n": int})
+        
+        outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeInRecip.dat')
+        if outputname != '':
+            with open(outputname, 'w') as f:
+                f.write(str(len(df)) + '\n')
+            with open(outputname, 'a') as f:
+                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e')
+
+        outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
+        print(list(self.df))
+        if outputname != '':
+            with open(outputname, 'w') as f:
+                f.write(str(len(self.df)) + '\n')
+            with open(outputname, 'a') as f:
+                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
+                
+        if (OS == 'Windows') and (rpath is None):
+            R_dir = input("Enter the directory where R.exe is installed: ")
+            os.system('R_PATH'+R_dir)
+
+        os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
+        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
+        df['resError'] = lmeError # fitted results, only with results
+        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
+        self.df['resError'] = lmeError # predicted results, entire survey
+
+
+#        df['resError'] = lmeError 
+        
 #        if 'recipMean' not in self.df.columns:
 #            self.reciprocal()
 #        dfg = self.df[self.df['irecip'] > 0]
-#              
 #        
 #        recipMean = np.abs(dfg['recipMean'].values)
 #        recipError = np.abs(dfg['recipError'].values)
-#        irecip = self.df['irecip'].values
-#        array = self.df[['a','b','m','n']].values
+#        array = dfg[['a','b','m','n']].values.astype(int)
 #        
-#        ie = irecip > 0
 #        data = np.vstack([recipMean, recipError]).T
-#        data = np.hstack((data, array[ie]))
-#        df = pd.DataFrame(data, columns=['avgR','obsErr','c1','c2','p1','p2'])
-##        cols= ['c1','c2','p1','p2']
-##        df[cols] = df[cols].apply(np.int64)
-##        print(df.to_string())
-#        md = smf.mixedlm('obsErr~avgR', df, groups=df[['c1','c2','p1','p2']])
-##        md = smf.mixedlm('obsErr~avgR', re_formula="~avgR", data=df, groups=df[['c1','c2','p1','p2']])
+#        data = np.hstack((data, array))
+#        df = pd.DataFrame(data, columns=['recipMean','obsErr','a','b','m','n'])
+#        md = smf.mixedlm('obsErr~recipMean', df, groups=df[['a','b','m','n']])
 #        mdf = md.fit()
-#        
 #        print(mdf.summary())
-#        
-#
-#        dfg['lmeError'] = mdf.predict()
-#        
-#        if iplot:
-#            if ax is None:
-#                fig, ax = plt.subplots()
-#
-#            ax.plot(df['obsErr'], mdf.predict(), 'o')
-#            ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-#            ax.grid()
-#            ax.legend()
-#            ax.set_title('Linear Mixed Effect Model Fit')
-#            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-#            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+# 
+#        def errorModel(df):
+#            return mdf.predict(np.abs(df[['recipMean','a','b','m','n']]))
+#        self.errorModel = errorModel
+#        self.df['resError'] = self.errorModel(self.df)
+ 
+        
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+        ax.plot(df['obsErr'], df['resError'], 'o')
+        ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+        ax.grid()
+        ax.legend()
+        ax.set_title('Linear Mixed Effect Model Fit')
+        ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+        ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+        
+        if ax is None:
+            return fig
+
+
 
     def heatmap(self,ax=None):
-        """ Plot a heatmap based on 
-        Orozco, A. F., K. H. Williams, and A. Kemna (2013), Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+        """ Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
+            Orozco, A. F., K. H. Williams, and A. Kemna (2013), 
+            Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, 
+            Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
         
         Parameters
         ----------
@@ -836,14 +954,16 @@ class Survey(object):
             temp_heatmap_recip_filterN = self.dfOrigin[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
             dflen = len(self.dfOrigin)
         elif self.filt_typ == 'Filtered':
-#            temp_heatmap_recip_filterN = self.filterDataIP_plot
             if self.filterDataIP.empty:
                 temp_heatmap_recip_filterN = self.df[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.df)
             else:
                 temp_heatmap_recip_filterN = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
                 dflen = len(self.filterDataIP)
-        temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*self.kFactor
+        if self.protocolIPFlag == True:
+            temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*-1
+        else:
+            temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
         heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
@@ -875,34 +995,37 @@ class Survey(object):
             Maximum phase angle [mrad].
         """
         if self.filterDataIP.empty:
-            self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            if self.protocolIPFlag == True:
+                self.filterDataIP = self.df.query('ip > %s and ip < %s' % (-phimax, -phimin))
+            else:
+                self.filterDataIP = self.df.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         else:
-            self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/self.kFactor, phimax/self.kFactor))
+            if self.protocolIPFlag == True:
+                self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (-phimax, -phimin))
+            else:
+                self.filterDataIP = self.filterDataIP.query('ip > %s and ip < %s' % (phimin/np.abs(self.kFactor), phimax/np.abs(self.kFactor)))
         self.addFilteredIP()
-            
-#        temp_data = self.filterDataIP_plotOrig
-#        mask = (temp_data.ip < self.phimin) | (temp_data.ip > self.phimax)
-#        temp_data.loc[mask, 'ip'] = np.nan
-#        self.filterDataIP_plot = temp_data
         
     def removerecip(self):
+        """ Removing reciprocal measurements from dataset - only for visualization purposes on heatmap()
+        """
         
         if self.filterDataIP.empty:
             self.filterDataIP = self.df.query('irecip>=0')
         else:
             self.filterDataIP = self.filterDataIP.query('irecip>=0')
-#        self.filterDataIP_plot = self.filterDataIP[['a','m','ip']].drop_duplicates(subset=['a','m'], keep = 'first')
         self.addFilteredIP()
 
     def removenested(self):
+        """ Removes nested measurements:
+            Where M or N are in between A and B
+        """
         if self.filterDataIP.empty:
-#            self.filterDataIP = self.df.query('m>a & m>b & n>a & n>b')
             temp_data = self.df.copy()
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
             self.filterDataIP = temp_data.dropna(subset = ['ip'])
         else:
-#            self.filterDataIP = self.filterDataIP.query('m>a & m>b & n>a & n>b')
             temp_data = self.filterDataIP.copy()
             mask = (temp_data.m < temp_data.b) & (temp_data.m > temp_data.a) | (temp_data.n < temp_data.b) & (temp_data.n > temp_data.a)
             temp_data.loc[mask, 'ip'] = np.nan
@@ -926,13 +1049,30 @@ class Survey(object):
             ax.set_ylabel('Transfert Resistance [Ohm]')
             
 
-    def pseudoSection(self, ax=None, contour=False, log=False, geom=True):
-        ''' create true pseudo graph with points and no interpolation
+    def pseudoSection(self, ax=None, contour=False, log=False, geom=True,
+                      vmin=None, vmax=None):
+        ''' Create a pseudo-section for 2D given electrode positions.
+        
+        Parameters
+        ----------
+        ax : matplotlib.Axes, optional
+            If specified, the plot will be plotted agains this axis.
+        contour : bool, optional
+            If `True`, contour will be plotted. Otherwise, only dots.
+        log : bool, optional
+            If `True`, the log of the resistivity will be taken.
+        geom : bool, optional
+            If `True`, the geometric factor will be computed and applied
+            to the transfer resisttance to obtain apparent resistiivty. If 
+            `False`, only the Tx resistance will be plotted.
+        vmin : float, optional
+            Minimum value for the colorbar.
+        vmax : float, optional
+            Maximum value for the colorbar.
         '''
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
         resist = self.df['resist'].values
-        array = np.sort(array, axis=1)
         
         if geom: # compute and applied geometric factor
             apos = elecpos[array[:,0]-1]
@@ -945,17 +1085,21 @@ class Survey(object):
             BN = np.abs(bpos-npos)
             K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
             resist = resist*K
+
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
-        
+                
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
         
@@ -964,7 +1108,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             else:
                 fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=resist, s=70)#, norm=mpl.colors.LogNorm())
+            cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('Pseudo Section')
@@ -983,8 +1127,13 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, resist)
             if ax is None:
                 fig, ax = plt.subplots()
-            cax = ax.contourf(X,Y,Z)
+            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
             ax.set_title('Pseudo Section')
+            
+        ax.set_xlabel('Distance [m]')
+        ax.set_ylabel('Pseudo depth [m]')
+        if ax is None:
+            return fig
 
     
     def pseudoIP(self, ax=None, contour=False): #IP pseudo section
@@ -1004,17 +1153,28 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
-        ip = self.df['ip'].values            
+        
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
+        
+        if self.protocolIPFlag == True:
+            ip = self.df['ip'].values
+        else:
+            ip = -self.kFactor*self.df['ip'].values
 
         label = r'$\phi$ [mRad]'
         
+
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
+
+
         if contour is False:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1023,9 +1183,7 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('IP pseudo Section')
-    #        fig.suptitle(self.name, x= 0.2)
-#            fig.tight_layout()
+            ax.set_title('Phase shift pseudo Section')
         
         if contour:
             from matplotlib.mlab import griddata
@@ -1039,94 +1197,105 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, ip)
             if ax is None:
                 fig, ax = plt.subplots()
-            figsize=(10,6)
             cax = ax.contourf(X,Y,Z)
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('IP pseudo Section')
-#            fig.suptitle(self.name, x= 0.2)
-#            fig.tight_layout()
-
+            
+        ax.set_xlabel('Distance [m]')
+        ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
             return fig
     
-    def write2protocol(self, outputname='', errTyp='none', errTot=False,
-                       ip=False, errTypIP='none', res0=False):
+    
+    def write2protocol(self, outputname='', err=False, errTot=False,
+                       ip=False, res0=False, isubset=None):
         """ Write a protocol.dat file for R2 or cR2.
         
         Parameters
         ----------
         outputname : str, optional
             Path of the output file.
-        errTyp : str, optional
-            If `none` no error columns will be added. Other options are : 
-                'lin','lme','pwl'or 'obs'.
+        err : bool, optional
+            If `True`, then the `resError` and `phaseError` (if IP present)
+            will be used in the protocol.dat file.
         errTot : bool, optional
             If `True`, the modelling error will be added to the error from the
             error model to form the *total error*.
         ip : bool, optional
             If `True` and IP columns will be added to the file.
-        errTypIP : str, optional
-            Needs `ip=True` to be taken into account. Specify the string of
-            the error model to apply for IP data.
         res0 : bool, optional
             For time-lapse inversion, the background resistivity will be added 
             if `True`.
+        isubset : array_like of bool, optional
+            If specified, it will be used to take a subset of the original
+            array. It can be used for difference inversion to take measurements
+            in common between all the surveys.
             
         Returns
         -------
         protocol : pandas.DataFrame
             Dataframe which contains the data for the `protocol.dat`. 
         """
-        ie = self.df['irecip'].values > 0 # consider only mean measurement (not reciprocal)
-        haveReciprocal = all(self.df['irecip'].values == 0)
-        if haveReciprocal is False: # so we have reciprocals
-            x = self.df[['a','b','m','n']].values[ie,:].astype(int)
-            xx = np.c_[1+np.arange(len(x)), x]
-            protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            dfg = self.df[self.df['irecip'] > 0] 
-            protocol['R'] = dfg['recipMean'].values
-            if res0:
-                protocol['R0'] = dfg['recipMean0'].values
-            if ip == True:
-                protocol['Phase'] = -self.kFactor*dfg['ip'].values # "-self.kFactor" factor is for IRIS syscal instrument
-            if errTyp != 'none':
-                if errTyp == 'obs':
-                    protocol['error'] = self.df['recipError'].values[ie]
-                if errTyp =='lme':
-                    protocol['error'] = dfg['lmeError'].values
-                if errTyp == 'lin':
-                    protocol['error'] = dfg['linError'].values
-                if errTyp == 'pwl':
-                    protocol['error'] = dfg['pwlError'].values
-        #            error = self.linStdError
-                if errTot == True:
+        # check if we need to take a subset of the dataframe
+        if isubset is None:
+            df = self.df
+        else:
+            df = self.df[isubset]
+                                
+        # selecte paired and non-paired quadrupoles
+        ie = df['irecip'].values >= 0 # reciprocal + non-paired
+        
+        # write quadrupoles
+        x = df[ie][['a','b','m','n']].values.astype(int)
+        xx = np.c_[1+np.arange(len(x)), x]
+        protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
+        
+        # write transfer resistance
+        protocol['res'] = df[ie]['recipMean'].values # non-paired will be nan
+        
+        # write background transfer resistance
+        if res0 is True: # background for time-lapse and so
+            protocol['res0'] = df[ie]['recipMean0'].values
+        
+        # write phase (and eventually convert chargeability into phase)
+        if ip is True:
+            if self.protocolIPFlag is True: # if imported from Protocol then it's already in phase
+                protocol['phase'] = df[ie]['ip'].values 
+            else: # otherwise it is in chargeability and we need to convert it
+                protocol['phase'] = -self.kFactor*df[ie]['ip'].values # "-self.kFactor" is to change m to phi
+                
+        # write error for DC
+        if err is True:
+            if 'resError' in df.columns: # the columns exists
+                if np.sum(np.isnan(df[ie]['resError'])) == 0: # no NaN inside
+                    protocol['resError'] = df[ie]['resError'].values
+                if errTot == True: # we want to add modelling error to that
                     print('Using total error')
-                    if 'modErr' not in self.df.columns:
-                        print('ERROR : you must specify a modelling error')
-                    else:
-                        protocol['error'] = np.sqrt(protocol['error']**2 + self.df[ie]['modErr'].values**2)
-            if errTypIP != 'none':  # or == 'pwlip'
-                if 'PhaseError' not in self.df.columns: # TO BE DELETED
-                    dfg['PhaseError'] = 0.1 # TO BE DELTED
-                protocol['ipError'] = self.df['PhaseError'].values[ie]
+                    if 'modErr' not in df.columns:
+                        raise ValueError('ERROR : you must specify a modelling error')
+                    else: # if present, compute geometric mean of the errors
+                        protocol['resError'] = np.sqrt(protocol['error']**2 + df[ie]['modErr'].values**2)
+            else:
+                raise ValueError('You requested DC error but no error model can be found.')
                 
-        else: # why don't they have reciprocals my god !!
-            x = self.df[['a','b','m','n']].values.astype(int)
-            xx = np.c_[1+np.arange(len(x)), x]
-            protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
-            protocol['R'] = self.df['resist'].values
-            if res0:
-                protocol['R0'] = self.df['resist0'].values
-            if ip == True:
-                protocol['Phase'] = -self.kFactor*self.df['ip'].values
-                
-        if all(self.elec[:,1] == 0) is False: # it's a 3D example
+        # write error for IP
+        if (ip is True) and (err is True): # ip is present and we want error
+            if 'phaseError' in df.columns: # column exists
+                if np.sum(np.isnan(df[ie]['phaseError'])) == 0: # no NaN inside
+                    protocol['phaseError'] = df[ie]['phaseError'].values
+            else:
+                raise ValueError('You requested IP error but none can be found.')
+
+                    
+        # if it's 3D, we add the line number (all electrode on line 1)
+        if all(self.elec[:,1] == 0) is False:
             protocol.insert(1, 'sa', 1)
             protocol.insert(3, 'sb', 1)
             protocol.insert(5, 'sm', 1)
             protocol.insert(7, 'sn', 1)
-            
+        
+        # write protocol.dat
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
@@ -1137,7 +1306,11 @@ class Survey(object):
     
                 
     def dca(self, dump=print):
-        ''' execute DCA filtering
+        ''' execute DCA filtering:
+            Decay Curve Analysis (DCA) based on:
+                Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
+                Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
+                Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1
         '''
         if self.filterDataIP.empty:
             self.filterDataIP = DCA(self.df, dump=dump)
@@ -1147,7 +1320,8 @@ class Survey(object):
         dump(100)
         
         
-    def manualFiltering(self, ax=None, figsize=(12,3), contour=False, log=True, geom=False, label=''):
+    def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
+                        log=False, geom=False, label='', vmin=None, vmax=None):
         """ Manually filters the data visually.
         
         Parameters
@@ -1159,15 +1333,16 @@ class Survey(object):
         -------
             If `ax` is not None, a matplotlib figure is returned.
         """
-        array = self.df[['a','b','m','n']].values
-        if np.sum(self.df['irecip'].values == 0) == 0:
-            print('choose recipError')
-            resist = self.df['recipError'].values # some nan here are not plotted !!!
-            clabel = 'Reciprocal Error [$\Omega$]'
-        else:
-            print('choose resist')
-            resist = self.df['resist'].values
-            clabel = 'Tx Resistance [$\Omega$]'
+        array = self.df[['a','b','m','n']].values.astype(int)
+#        if all(self.df['irecip'].values != 0) is False:
+#            print('choose recipError')
+#            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
+#            clabel = 'Reciprocal Error [%]'
+#        else:
+#            print('choose resist')
+        geom = True
+        resist = self.df['resist'].values
+        clabel = 'Apparent Resistivity [$\Omega.m$]'
         if label == '':
             label = clabel
         inan = np.isnan(resist)
@@ -1178,13 +1353,11 @@ class Survey(object):
         def setSelect(ie, boolVal):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
-        # TODO find a way to get rid of the NaN before plotting them but still
-        # keeping the index to be able to filter out the data ... maybe add
-        # a third class of empty points just for NaN
         spacing = np.mean(np.diff(self.elec[:,0]))
-        print(array)
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
+        
+        self.eselect = np.zeros(len(elecpos), dtype=bool)
         
         if geom: # compute and applied geometric factor
             apos = elecpos[array[:,0]-1]
@@ -1200,10 +1373,8 @@ class Survey(object):
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-    #        label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
-    #    else:
-    #        label = r'$\rho_a$ [$\Omega.m$]'
         
+        array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
@@ -1213,32 +1384,26 @@ class Survey(object):
         
         
         def onpick(event):
-            # TODO single doesn't want to change the electrode selection
             if lines[event.artist] == 'data':
-#                print('onpick event', event.ind[0])
-#                print(ipoints[event.ind[0]])
                 xid, yid = xpos[event.ind[0]], ypos[event.ind[0]]
                 isame = (xpos == xid) & (ypos == yid)
                 if (ipoints[isame] == True).all():
-#                    print('set to false')
                     setSelect(isame, False)
                 else:
                     setSelect(isame, True)
             
             if lines[event.artist] == 'elec':
-#                print('onpick2', event.ind[0])
                 ie = (array == (event.ind[0]+1)).any(-1)
                 if all(ipoints[ie] == True):
                     setSelect(ie, False)
                 else:
                     setSelect(ie, True)
-                if eselect[event.ind[0]] == True:
-                    eselect[event.ind[0]] = False
+                if self.eselect[event.ind[0]] == True:
+                    self.eselect[event.ind[0]] = False
                 else:
-                    eselect[event.ind[0]] = True
-                elecKilled.set_xdata(elecpos[eselect])
-                elecKilled.set_ydata(np.zeros(len(elecpos))[eselect])
-#            print('update canvas')
+                    self.eselect[event.ind[0]] = True
+                elecKilled.set_xdata(elecpos[self.eselect])
+                elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
             killed.figure.canvas.draw()
@@ -1249,49 +1414,75 @@ class Survey(object):
         else:
             fig = ax.figure
         caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
-        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5)
+        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
+                         vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
         cax.figure.canvas.mpl_connect('pick_event', onpick)
-        #for i in range(int(len(array)/2)):
-        #    ax.text(xpos[i], ypos[i], str(array[i,:]), fontsize=8)
         
         killed, = cax.axes.plot([],[],'rx')
         elecKilled, = cax.axes.plot([],[],'rx')
-    #    x = np.array(line.get_xdata())
-    #    y = np.array(line.get_ydata())
         x = cax.get_offsets()[:,0]
         y = cax.get_offsets()[:,1]
         
         ipoints = np.zeros(len(y),dtype=bool)
-        eselect = np.zeros(len(elecpos), dtype=bool)
-        
+
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
-    def filterdip(self,elec): # deleted specific elec data
-        #index=(self.array==any(elec)).any(-1)
+        
+    def filterdip(self, elec): # deleted specific elec data
         index = (self.array == elec[0]).any(-1)
         for i in range(1,len(elec)):
             index = index | (self.array == elec[i]).any(-1)
         self.filterData(~index)
+    
+    
+    def shuntIndexes(self, debug=True): 
+        """ Normalise the indexes the sequence matrix to start at 1.
         
-    def zeroIndexes(self): # normalise the indexes the sequence matrix to start at 1 
+        Parameters
+        ----------
+        debug : bool, optional
+            Set to True to print output.
+        """
         df = self.df
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         imin = np.min(sch_mat)
         if imin != 1:
-            print("It looks like scheduling indexing starts at: %i"%imin)
-            print("...normalising electrode indexing to start at 1.")
-        corrected = sch_mat - (imin - 1)
-        #return corrected
-        df['a'] = corrected[:,0]
-        df['b'] = corrected[:,1]
-        df['m'] = corrected[:,2]
-        df['n'] = corrected[:,3]
-        self.df = df 
+            if debug:
+                print("It looks like scheduling indexing starts at: %i"%imin)
+                print("...normalising electrode indexing to start at 1.")
+            #check to see if negative electrode numbers occur. 
+            if imin < 0:
+                #check there is a electrode at 0
+                imin_pos = np.min(np.abs(sch_mat))
+                if imin_pos == 1:
+                    if debug:
+                        print("Positive electrode indexes firstly now start at %i"%(abs(imin)+1))
+                    crr_idx = np.argwhere(sch_mat>0)
+                    sch_mat[crr_idx] -= 1
+                    
+            corrected = sch_mat - (imin - 1)
+            #return corrected
+            df['a'] = corrected[:,0]
+            df['b'] = corrected[:,1]
+            df['m'] = corrected[:,2]
+            df['n'] = corrected[:,3]
+            self.df = df 
 
-    def swapIndexes(self,old_indx,new_indx): # replace the electrode number in a sequence matrix
-        #say for example you have a dud electrode which was replaced by a new electrode number. 
+
+    def swapIndexes(self, old_indx, new_indx):
+        """ Replace the electrode number in a sequence matrix with another.
+        Survey dataframe is updated after running. 
+        
+        Parameters
+        ----------
+        old_idx : int
+            Electrode number(or index) to be replaced 
+        new_idx : int
+            Replacement electrode number
+        """
+         
         df = self.df
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         idx = np.argwhere(sch_mat == old_indx)
@@ -1302,431 +1493,68 @@ class Survey(object):
         df['m'] = corrected[:,2]
         df['n'] = corrected[:,3]
         self.df = df 
-        #return replace,corrected
-
-"""        
-    def addModError(self, fname):
-        # add the modelling error for both normal and reciprocal quadrupoles
-        x = np.genfromtxt(fname)
-        err = np.zeros(self.ndata)*np.nan
-        for i in range(0, self.ndata):
-            index = (self.array[i,:] == x[:,:-1]).all(1)
-            if np.sum(index) == 1:
-                err[i] = x[index,-1]
+        
+    
+    def normElecIdx(self, debug=True):
+        """ Normalise the electrode indexing sequencing to start at 1 and ascend
+        consectively (ie 1 , 2 , 3 , 4 ... )
+        
+        Function firstly normalises all indexes so that the lowest electrode 
+        number is 1. Then removes jumps in the electrode indexing.
+        
+        Parameters
+        -----------
+        debug : bool, optional
+            Output will be printed to console if `True`. 
+        """
+        df = self.df.copy()
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).flatten()
+        uni_idx = np.unique(sch_mat) # returns sorted and unique array of electrode indexes
+        comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
+        num_elec = len(uni_idx)        
+        count = 0 # rolling total for number of indexes which had to be 'corrected' 
+        for i in range(num_elec):
+            #print(uni_idx[i],comp_idx[i])
+            if uni_idx[i] != comp_idx[i]: # if there is a mis match, put the electrodes in the right order
+                self.swapIndexes(uni_idx[i],comp_idx[i])
+                count += 1 
+                if debug:
+                    print("electrode number %i changed to %i"%(uni_idx[i],comp_idx[i]))
+        if debug:
+            if count > 0:
+                print("%i electrode indexes corrected to be in consective and ascending order"%count)
             else:
-                print('ERROR : same quadrupoles has', np.sum(index),' modelling error')
-        print(np.sum(self.reciprocalErr < err), '/', self.ndata,
-                     'modelling errors bigger than observed errors')
-        self.modError = err
-        
-    def plotError(self):
-        fig, ax = plt.subplots()
-        ax.loglog(np.abs(self.reciprocalMean), self.reciprocalErr, 'o')
-        ax.set_xlabel('Reciprocal Mean [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        return fig
-    
-    def toTable(self, outputname=''):
-        # return formated csv with normal and reciprocal
-        narray = self.array[self.irecip > 0]
-        nresist = self.resist[self.irecip > 0]
-        nerror = self.reciprocalErr[self.irecip > 0]
-        rarray = self.array[self.irecip < 0]
-        rresist = self.resist[self.irecip < 0]
-        rerror = self.reciprocalErr[self.irecip <0]
-        # align them
-        ipos = self.irecip[self.irecip > 0]
-        ineg = self.irecip[self.irecip < 0]
-        isortp = np.argsort(ipos)
-        isortn = np.argsort(np.abs(ineg))
-        # sort them
-        table = np.hstack([narray[isortp,:],
-                           nresist[isortp, None],
-                           nerror[isortp, None],
-                           rarray[isortn,:],
-                           rresist[isortn, None],
-                           rerror[isortn, None]])
-        
-        if outputname != '':
-            np.savetxt(outputname, table, fmt='%d %d %d %d %f %f %d %d %d %d %f %f')
-        
-        return table
+                print("Electrode indexing appears to be okay")
     
     
-    def estimateError(self):
-        # calculate reciprocal error and reciprocal mean
-        #Ri=self.reciprocal()
-        Ri = self.irecip        
+    def elec2distance(self):
+        """ Convert 3d xy data in pure x lateral distance.
+        Use for 2D data only!
+        """
+        elec = self.elec.copy()
+        x = elec[:,0]
+        y = elec[:,1]
+        z = elec[:,2]
         
-        # create a logical index
-        self.Ri=Ri>0
-                    
-        # remove data where mean(normal,reciprocal) > 100 
-        #reciprocal error
-        goodRecip=np.abs(self.reciprocalErr/self.reciprocalMean)<1    
-        print("reciprocal error > 100% : "+str(len(self.R[~goodRecip])))        
-        self.R[~goodRecip]=np.nan
-        self.reciprocalMean[~goodRecip]=np.nan 
-        self.reciprocalErr[~goodRecip]=np.nan
+        idx = np.argsort(x) # sort by x axis
+        x_sorted = x[idx]
+        y_sorted = y[idx]
+        z_sorted = z[idx]
         
-        # to use % error, use self.reciprocalErrRel
-        self.xm,self.ystdErr,nbs=self.logClasses(np.abs(self.reciprocalMean),np.abs(self.reciprocalErr),np.std)
-        # sometimes all is no comprised into the bin log scales so
-        # it could happen that some measurements are missing (few)
+        x_abs = np.zeros_like(x, dtype=float)
+        #the first entry should be x = 0
+        for i in range(len(x)-1):
+            delta_x = x_sorted[i] - x_sorted[i+1]
+            delta_y = y_sorted[i] - y_sorted[i+1]
+            sq_dist = delta_x**2 + delta_y**2
+            x_abs[i+1] =  x_abs[i] + np.sqrt(sq_dist)
         
-        #print 'nbs=',np.sum(nbs)
-        #print 'number of data per class : ', nbs
-        nbs=nbs+1 # to not have weight of zero
-        nbs=nbs+1*np.arange(len(nbs),0,-1) # more weight on small R
-        nbs=nbs/np.sum(nbs) # to have relative weigth
-        inan=~np.isnan(self.ystdErr)
-        
-        #print len(self.reciprocalErr[~np.isnan(self.reciprocalErr)])
-        #print len(goodRecip)
-        
-        # --------------------------linear model fitting
-        # (with standard deviation of error class !)
-        fig,ax=plt.subplots()
-        ax.plot(self.xm[inan],self.ystdErr[inan],'bo')
-        ax.set_title('Raw class with stdErr (not in log scale)')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Standard deviation $\sigma$ [$\Omega$]')
-        #fig.show()
-        
-        fig,ax=plt.subplots()
-        ax.loglog(self.xm[inan],self.ystdErr[inan],'go')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Standard deviation $\sigma$ [$\Omega$]')
-        # linear fit in log space
-        slope,offset=np.polyfit(np.log10(self.xm[inan]),np.log10(self.ystdErr[inan]),1)
-        print('linear fit in log space : \n\t slope = ' + str(slope) + '\n\t offset = ' + str(offset))
-        
-        predy=10**(offset+slope*np.log10(self.xm[inan]))
-        # R2 makes sens in linear fitting space only
-        r2=1-np.sum((np.log10(predy)-np.log10(self.ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(self.ystdErr[inan])))**2)
-        print('R^2 = '+str(r2))
-        ax.loglog(self.xm[inan],predy,'r-',label='linear regression')
-        ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
-        # TODO add nb of points in the class on graph and equation
-        # coming back to non log space
-        a=10**offset
-        b=slope
-        #fig.show()
-        
-        def efunc(x,a,b):
-            return a*x**b
-        
-        self.errModel=efunc
+        # return values in the order in which they came
+        new_elec = np.zeros_like(elec, dtype=float)        
+        for i in range(len(z)):
+            put_back = idx[i] # index to where to the value back again
+            new_elec[put_back,0] = x_abs[i]
+            new_elec[put_back,2] =  z_sorted[i]
+    
+        self.elec = new_elec
 
-        # graph with 2*std as in BertFile
-        fig, ax = plt.subplots()
-        ax.plot(self.reciprocalMean, self.reciprocalErr, 'ro')
-        ax.plot(self.xm[inan], predy*2, 'b-')
-        ax.plot(self.xm[inan], -predy*2, 'b-')
-        ax.plot(self.xm[inan], predy, 'g-')
-        ax.plot(self.xm[inan], -predy, 'g-')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        #fig.show()
-        
-        
-        '''
-        # exponential model fitting (curve_fit)
-        def func(x,a,b):
-            return a*x**b
-        
-        from scipy.optimize import curve_fit
-        popt0=[offset,slope]
-        popt,pcov=curve_fit(func,self.xm[inan],self.ystdErr[inan])
-        print(popt)
-        fig,ax=plt.subplots()
-        ax.loglog(self.xm[inan],self.ystdErr[inan],'bo')
-        ax.loglog(self.xm[inan],func(self.xm[inan],*popt),'r') # *popt expand terms
-        #ax.loglog(self.xm[inan],popt[0]*self.xm[inan]**popt[1],'p-',label='exponential regression')
-        fig.show()
-        
-        # exponential model fitting (minimize)
-        def objfunc(param): # in log space
-            return np.sum((self.ystdErr[inan]-param[0]*self.xm[inan]**param[1])**2)
-                
-        from scipy.optimize import minimize
-        bnds=((0.0001,1.0),(0.0001,1.0))
-        res=minimize(objfunc,[0.1,0.1],method='TNC',options={'xtol':1e-8})
-        print(res.x)
-        fig,ax=plt.subplots()
-        ax.loglog(self.xm[inan],self.ystdErr[inan],'bo')
-        ax.loglog(self.xm[inan],res.x[0]*self.xm[inan]**res.x[1],'r')
-        #ax.loglog(self.xm[inan],popt[0]*self.xm[inan]**popt[1],'p-',label='exponential regression')
-        fig.show()
-        '''
-        
-        # ------------------simple fit with reciprocal Error (not stdErr)
-        # reciprocalErr VS meanResistivity (linear fit in logscale)
-        fig, ax = plt.subplots()
-        ax.loglog(self.reciprocalMean, self.reciprocalErr, 'b+', label='raw')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        
-        # and now in logclasses
-        xlog, ylog, nbs = self.logClasses(np.abs(self.reciprocalMean), np.abs(self.reciprocalErr),np.mean)
-        inan = ~np.isnan(ylog)
-        slope, offset = np.polyfit(np.log10(xlog[inan]), np.log10(ylog[inan]), 1)
-        ylogPredicted = 10**(offset + slope*np.log10(xlog))
-        print(ylogPredicted.shape)
-        r2=1-np.sum((np.log10(ylogPredicted[inan])-np.log10(ylog[inan]))**2)/np.sum((np.log10(ylogPredicted[inan])-np.mean(np.log10(ylog[inan])))**2)
-        print('Simple linear log fit : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
-        #fig, ax = plt.subplots()
-        ax.loglog(xlog[inan], ylog[inan], 'go', label='binned')
-        ax.loglog(xlog[inan], ylogPredicted[inan], 'r-')
-        ax.set_title('Linear fit in logscale (R$^2$ = {0:.3f})'.format(r2))
-        #ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        #ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        ax.legend()
-        #fig.show()
-        
-        # graph with 2*std as in BertFile
-        ypredict = 10**(offset + slope*np.log10(self.reciprocalMean))
-        self.ypredict = ypredict
-        self.iout = np.zeros(len(self.reciprocalMean), dtype=bool)
-        self.iout[np.abs(self.reciprocalErr) > ypredict*2] = True
-        
-        fig, ax = plt.subplots()
-        ax.plot(self.reciprocalMean, self.reciprocalErr, 'r+')
-        ax.plot(self.reciprocalMean[self.iout], self.reciprocalErr[self.iout], 'k+')
-        ax.plot(xlog[inan], ylogPredicted[inan]*2, 'b-', label='2x')
-        ax.plot(xlog[inan], -ylogPredicted[inan]*2, 'b-')
-        ax.plot(xlog[inan], ylogPredicted[inan], 'g-', label='1x')
-        ax.plot(xlog[inan], -ylogPredicted[inan], 'g-')
-        ax.set_title('Linear fit prediction')
-        ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error [$\Omega$]')
-        ax.legend()
-        #fig.show()
-        
-        return a,b # from linear fitting
-    
-    def output(self):
-        ie = self.irecip > 0
-        return np.vstack([self.array[ie], self.reciprocalMean[ie], self.predictErr[ie]])
-                          
-        
-    def predictError(self,a,b):
-        # predict error based on error model
-        self.predictErr=self.errModel(np.abs(self.resist),a,b)
-        
-        fig,ax=plt.subplots()
-        ax.set_title('predicted Error')
-        ax.loglog(self.xm,self.ystdErr,'bo', label='measured')
-        ax.loglog(np.abs(self.resist),self.predicErr,'ro', label='predicted')
-        ax.legend()
-        ax.set_xlabel('Transfer Resistance [$\Omega$]')
-        ax.set_ylabel('Error [%]')
-        return fig
-    
-    
-    def write2protocol(self, outputname='', errTyp='lme', errTot=False):
-        ie = self.irecip > 0 # consider only mean measurement (not reciprocal)
-        n = np.sum(ie)
-        if errTyp=='obs':
-            error = self.reciprocalErr[ie]
-        if errTyp =='lme':
-            error = self.lmeError
-        if errTyp == 'lin':
-            error = self.linError
-#            error = self.linStdError
-        if errTot == True:
-            if len(self.modError) == 0:
-                print('ERROR : you must specify a modelling error')
-            else:
-                error = np.sqrt(error**2 + self.modError[ie]**2)
-        arr = self.array[ie,:]
-        res = self.reciprocalMean[ie]
-        
-        if outputname != '':
-            with open(outputname, 'w') as f:
-                f.write(str(n) + '\n')
-                for i in range(n):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:.0f}\t{5:f}\t{6:f}\n'.format(
-                            i+1, arr[i,0], arr[i,1], arr[i,2], arr[i,3], res[i], error[i]))
-        return np.hstack([arr, res.reshape((len(res), 1)), error.reshape((len(error), 1))])
-        
-    
-    def write2txt(self, outputname='', error=False, errTyp='obs'):
-        ''' write protocol.dat files with errors or not
-        '''
-        if outputname=='':
-            outputname='../output/'+self.name+'.txt'
-        with open(outputname,'w') as f:
-            f.write(str(self.ndata))
-            f.write('\n')
-            for i in range(0,self.ndata):
-                f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:.0f}'.format(i+1,self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3]))
-                if error:
-                    if errTyp == 'obs':
-                        err = self.reciprocalErr
-#                    elif errTyp == 'rel':
-#                        err = 100*self.reciprocalErrRel # in percent
-                    elif errTyp == 'lme':
-                        err = self.lmeError
-                    elif errTyp == 'lin':
-                        err = self.ypredict
-                    
-                    f.write('\t{0:f}\t{1:f}\n'.format(self.resist[i], err[i])) # if self.reciprocalMean -> lost sign !
-                else:
-                    f.write('\t{0:f}\n'.format(self.resist[i]))
-    
-    def write2bert(self, outputname='', position=None):
-        if outputname=='':
-            outputname='../output/'+self.name+'.dat'
-        if position is None:
-            position = self.electrodes
-        with open(outputname,'w') as f:
-            f.write(str(len(position)) + ' # Number of electrodes\n# x y z\n')
-            for j in range(0, position.shape[0]):
-                f.write('{0:.3f}\t{1:.3f}\t{2:.3f}\n'.format(position[j,0], position[j,1], position[j,2]))
-            
-            if (len(self.reciprocalErr)>0)&(np.sum(self.m) > 0):
-                print('PRINT with IP and ERROR')
-                f.write(str(self.ndata) + '# Number of data\n# a b m n R err ip\n')
-                for i in range(0,self.ndata):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:f}\t{5:f}\t{6:f}\n'.format(self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3],self.resist[i], self.reciprocalErr[i], self.m[i]))
-            
-            elif (len(self.reciprocalErr)>0)&(np.sum(self.m) == 0):
-                print('PRINT with ERROR')
-                f.write(str(self.ndata) + '# Number of data\n# a b m n R err\n')
-                for i in range(0,self.ndata):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:f}\t{5:f}\n'.format(self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3],self.resist[i], self.reciprocalErr[i]))
-            
-            else:
-                print('PRINT default')
-                f.write(str(self.ndata) + '# Number of data\n# a b m n R\n')
-                for i in range(0,self.ndata):
-                    f.write('{0:.0f}\t{1:.0f}\t{2:.0f}\t{3:.0f}\t{4:f}\n'.format(self.array[i,0],self.array[i,1],self.array[i,2],self.array[i,3],self.resist[i]))
-    
-    
-    def keepRecip(self):
-        ''' filter out all data without reciprocal (dummy measurements)
-        ''''
-        irecip = self.reciprocal()
-        ikeep = irecip > 0
-        self.filterData(ikeep)
-                                                   
-    def append(self, k):
-        self.array = np.r_[self.array, k.array]
-        self.resist = np.r_[self.resist, k.resist]
-        self.i = np.r_[self.i, k.i]
-        self.vp = np.r_[self.vp, k.vp]
-        self.dev = np.r_[self.dev, k.dev]
-        self.sp = np.r_[self.sp, k.sp]
-        self.m = np.r_[self.m, k.m]
-        self.ndata = len(self.array)
-        self.irecip = self.reciprocal()
-    
-        
-    def filterData(self,i2keep):
-        # applied filter to self.array before writing measurment to
-        # inversion files
-        
-        newarray=np.copy(self.array)
-        newresist=np.copy(self.resist)
-        #newcontactr=np.copy(self.contactR)
-
-        #i2keep=self.irecip&self.is2b&self.Ri
-        #i2keep=np.where(i2keep)
-        
-        self.array=newarray[i2keep,:] #ffilter(self.array,i2keep)
-        self.resist=newresist[i2keep] #ffilter(self.resist,i2keep)
-        #self.contactR=newcontactr[i2keep]
-        self.i = self.i[i2keep]
-        self.vp = self.vp[i2keep]
-        self.irecip = self.irecip[i2keep]
-        
-        if len(self.reciprocalErr)>0:
-            newreciperr=np.copy(self.reciprocalErr)
-            newrecipmean=np.copy(self.reciprocalMean)
-            newreciperrrel=np.copy(self.reciprocalErrRel)
-            self.reciprocalErrRel=newreciperrrel[i2keep]
-            self.reciprocalErr=newreciperr[i2keep]
-            self.reciprocalMean=newrecipmean[i2keep]
-        
-        if len(self.modError) > 0:
-            self.modError = self.modError[i2keep]
-            
-        if self.fip>0:
-            newip=np.copy(self.ip)
-            self.ip=newip[i2keep,:] #ffilter(self.ip,i2keep)
-        
-        self.ndata=len(self.array)
-        print(str(len(np.where(~i2keep)[0])) + ' data deleted | ' + str(self.ndata) + ' data kept.')
-        
-        self.irecip = self.reciprocal() # to rebuild self.recipMean and recipError
-        
-    
-    def plotData(self):
-        fig, ax = plt.subplots()
-        ax.plot(self.resist, 'o')
-        index = self.dev > 1
-        print(self.array[index,:])
-        ax.plot(np.where(index)[0], self.resist[index], 'o', label='dev > 1')
-        ax.legend()
-        ax.set_ylabel('Transfer Resistance [$\Omega$]')
-        ax.set_xlabel('Measurements')
-        fig.show()
-        return fig
-
-
-    def errorDist(self):
-        ''' plot the reciprocal relative error distribution and fit a 
-        gaussian model
-        '''
-        fig, ax = plt.subplots()
-        logclassx, logclassy, nbs = self.logClasses(self.reciprocalErrRel,
-                    self.reciprocalErrRel, np.mean)
-        p = ax.plot(np.log10(np.abs(logclassx)), nbs, 'o-', label='reciprocalErrRel')
-        inan = ~np.isnan(nbs)
-        xx = np.log10(logclassx)[inan]
-        popt, pcov = curve_fit(gauss, xx, nbs[inan], [5, 20,-2, 0.5])
-        ax.plot(xx, gauss(xx, popt[0], popt[1], popt[2], popt[3]), '--',
-                          color = p[0].get_color(), label='({0:.2f}, {1:.2f})'.format(popt[2], popt[3]))
-        ax.set_title('PDF')
-        ax.set_xlabel('log$_{10}$(Relative Reciprocal Error) [%]')
-        ax.set_ylabel('Frequency')
-        ax.grid()
-        ax.legend()
-        
-        return fig
-    
-
-
-    
-"""
-       
-
-
-
-        
-#%% test code
-#os.chdir('/media/jkl/data/phd/tmp/r2gui/')
-#s = Survey('api/test/syscalFile.csv', ftype='Syscal')
-#s = Survey('api/test/rifleday8.csv', ftype='Syscal')
-#s = Survey('api/test/protocol3Di.dat', ftype='Protocol')
-#s.manualFiltering()
-#s.dca()
-#s.lmefit()
-#s.addFilteredIP()
-#s.pwlfit()
-#s.plotIPFit()
-#s.write2protocol('kk.txt', ip=True, errTyp='pwl', errTypIP='pwl')
-#s = Survey('test/syscalFileNormalOnly.csv', ftype='Syscal')
-#s.addData('test/syscalFileReciprocalOnly.csv', ftype='Syscal')
-#fig, ax = plt.subplots()
-#fig.suptitle('kkkkkkkkkkkkkk')
-#s.plotError(ax=ax)
-#s.manualFiltering()
-#s.pseudo(contour=True)
-#s.linfit()
-#s.pwlfit()
-#s.plotIPFit()
-#s.write2protocol('api/test/protocol.dat', errTyp='lin', ip=True, errTypIP='pwl')
-#s.dca()
-        

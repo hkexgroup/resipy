@@ -1,7 +1,5 @@
 ![logo](src/logo.png)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
-
 GUI for R2 family code
 ======================
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
@@ -26,6 +24,9 @@ Note that Mac and Linux users need to have *wine* installed.
 
 What it can do
 --------------
+<img src='src/image/workflow.png' width="400">
+<figcaption>General workflow available</figcaption>
+
 <img src="src/image/importData.png"  width="700">
 <figcaption>Importing data and plotting pseudo-section. Note that there are option for borehole survey, time-lapse, batch and IP data.</figcaption>
 
@@ -52,7 +53,7 @@ Project structure
 Don't hesitate to consult the [api-structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
 
 
-The full description of the API can be found in the *[documentation](./doc/_build/html/index.html)*.
+The full description of the API can be found in the *[documentation](https://hkex.gitlab.io/pyr2/)*.
 
 
 
@@ -96,8 +97,8 @@ To edit a cell, just double click on it.
 
 
 
-Linux and Mac user
-------------------
+Linux and Mac users
+-------------------
 pyR2 contains executables that are built only for windows. To run them you will need to install *wine*.
 
 ### On Linux
@@ -128,7 +129,7 @@ brew install wine
 
 If all is done with no errors, you are ready to run the gui by: 
 ```
-cd r2gui
+cd pyr2/src
 python ui.py
 ``` 
 You also can run any ```.exe``` files by this command:
@@ -169,7 +170,7 @@ Below is the usual commands you are likely to go through if you contribute to th
 First ensure you have cloned the project and are in the main project directory.
 ```bash
 git clone https://gitlab.com/hkex/pyr2
-cd r2gui
+cd pyr2
 ```
 Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
 If you choose (1) you can create a new branch using:

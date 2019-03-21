@@ -14,8 +14,26 @@ import numpy as np
 import pandas as pd
 import os 
 
-#%% function to compute geometric factor - Jimmy B 
+#%% function to compute geometric factor - Jamyd91
 def geom_fac(C1,C2,P1,P2):
+    """Compute geometric factor, as many formats give resistivities in terms of 
+    apparent resistivity. R2 reads in the raw transfer resistances. 
+    Parameters
+    ----------
+    C1: float, np array
+        x position of postive current electrode
+    C2: float, np array
+        x position of negative current electrode
+    P1: float, np array
+        x position of postive potential electrode
+    P2: float, np array
+        x position of negative potential electrode
+        
+    Returns
+    -----------
+    k: float, np array
+        geometric factor to convert transfer resistance into apparent resistivity 
+    """
     Rc1p1 = (C1 - P1)
     Rc2p1 = (C2 - P1)
     Rc1p2 = (C1 - P2)
@@ -83,13 +101,13 @@ def syscalParser(fname, spacing=None):
         if arrayMin != 0:
             array -= arrayMin
         espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-        array = np.round(array/espacing+1).astype(int)
+        if spacing is None:
+            spacing = espacing
+        array = np.round(array/spacing+1).astype(int)
         df[['a','b','m','n']] = array
         df['resist'] = df['vp']/df['i']
         imax = int(np.max(array))
         elec = np.zeros((imax,3))
-        if spacing is None:
-            spacing = espacing
         elec[:,0] = np.arange(0,imax)*spacing
                 
         return elec, df
@@ -115,11 +133,12 @@ def protocolParser(fname):
                 'm':[0]*num_meas,
                 'n':[0]*num_meas,
                 'resist':[0]*num_meas,
-                'appResist':[0]*num_meas} 
+                'magErr':[0]*num_meas}
+#                'appResist':[0]*num_meas} 
     #determine if apparent resistivity column is present 
-    app_resis_flag = False
-    if len(dump[0])==7:
-        app_resis_flag=True
+#    app_resis_flag = False
+#    if len(dump[0])==7:
+#        app_resis_flag=True
     for i, line in enumerate(dump):
         data = line.split()
         protocol['index'][i] = int(data[0])
@@ -128,10 +147,15 @@ def protocolParser(fname):
         protocol['m'][i] = int(data[3])
         protocol['n'][i] = int(data[4])
         protocol['resist'][i] = float(data[5])
-        if app_resis_flag:
-            protocol['appResist'][i]= float(data[6])
+#        if app_resis_flag:
+#            protocol['appResist'][i]= float(data[6])
+        if len(data) == 7:
+            protocol['magErr'][i] = float(data[6])
     
-    df = pd.DataFrame(protocol)
+    if np.mean(protocol['magErr']) !=0: 
+        df = pd.DataFrame(protocol) 
+    else: 
+        df = pd.DataFrame(protocol).drop(['magErr'], axis = 1)
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
@@ -140,6 +164,40 @@ def protocolParser(fname):
 
 # test code
 #protocolParser('api/test/protocol.dat')
+
+
+def protocolParserLME(fname):
+# read LME predicted errors passed back from R, only add LME predictions to df
+# Michael Tso @ 190310
+
+    with open(fname,'r') as fh:
+        num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
+        dump = fh.readlines()
+    protocol = {'index':[0]*num_meas,# protocol dictionary 
+                'a':[0]*num_meas,
+                'b':[0]*num_meas,
+                'm':[0]*num_meas,
+                'n':[0]*num_meas,
+                'resist':[0]*num_meas,
+                'lmeErr':[0]*num_meas}
+
+    for i, line in enumerate(dump):
+        data = line.split()
+        protocol['index'][i] = int(data[0])
+        protocol['a'][i] = int(data[1])
+        protocol['b'][i] = int(data[2])
+        protocol['m'][i] = int(data[3])
+        protocol['n'][i] = int(data[4])
+        protocol['resist'][i] = float(data[5])
+        if len(data) == 7:
+            protocol['lmeErr'][i] = float(data[6])
+    lmeError = protocol['lmeErr']
+    
+    return lmeError
+
+# test code
+#protocolParserLME('api/test/protocol-lmeOut.dat')
+
 
 
 #def protocolParser2(fname): # with pandas = twice slower but same time if we use np.genfromtxt()
@@ -170,11 +228,13 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
                 'n':[0]*num_meas,
                 'resist':[0]*num_meas,
                 'ip':[0]*num_meas,
-                'appResist':[0]*num_meas} 
+                'magErr':[0]*num_meas,
+                'phiErr':[0]*num_meas}
+#                'appResist':[0]*num_meas} 
     #determine if apparent resistivity column is present 
-    app_resis_flag = False
-    if len(dump[0])==8:
-        app_resis_flag=True
+#    app_resis_flag = False
+#    if len(dump[0])==8:
+#        app_resis_flag=True
     for i, line in enumerate(dump):
         data = line.split()
         protocol['index'][i] = int(data[0])
@@ -184,10 +244,16 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
         protocol['n'][i] = int(data[4])
         protocol['resist'][i] = float(data[5])
         protocol['ip'][i] = float(data[6])
-        if app_resis_flag:
-            protocol['appResist'][i]= float(data[7])
+#        if app_resis_flag:
+#            protocol['appResist'][i]= float(data[7])
+        if len(data) == 9:
+            protocol['magErr'][i] = float(data[7])
+            protocol['phiErr'][i] = float(data[8])
     
-    df = pd.DataFrame(protocol)
+    if np.mean(protocol['phiErr']) and np.mean(protocol['magErr']) !=0: 
+        df = pd.DataFrame(protocol) 
+    else: 
+        df = pd.DataFrame(protocol).drop(['magErr','phiErr'], axis = 1)
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
@@ -197,10 +263,12 @@ def protocolParserIP(fname): # just for protocol forward output with cR2
 #%% 3D protocol parser
 def protocol3DParser(fname): # works for 2D and 3D (no IP)
     colnames3d = np.array(['index','sa', 'a','sb','b','sm', 'm','sn', 'n','resist'])
-    colnames = np.array(['index','a','b','m','n','resist','appResist'])
+    colnames = np.array(['index','a','b','m','n','resist','magErr'])
     x = np.genfromtxt(fname, skip_header=1)
     if x.shape[1] > 8: # max for non 3D cases
         colnames = colnames3d
+        if x.shape[1] > len(colnames3d): # we have IP in the file (or error)
+            colnames = np.r_[colnames, ['ip']]
         # remove string effect (faster option but might lead to non-consecutive elec number)
 #        maxElec = np.max(x[:,[2,4,6,8]])
 #        x[:,[2,4,6,8]] = x[:,[1,3,5,7]]*maxElec + x[:,[2,4,6,8]]
@@ -222,7 +290,8 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
         x[:,1:9] = elecs.reshape((-1,8))
         
     df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
-    df['ip'] = np.nan
+    if 'ip' not in df.columns:
+        df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
@@ -232,6 +301,27 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
 #elec1, df1 = protocol3DParser('api/test/protocol3Df.dat')
 #elec2, df2 = protocol3DParser('api/test/protocol3Di.dat')
 #elec3, df3 = protocol3DParser('api/test/protocol.dat')
+
+
+#%% forwardProtocolDC/IP parser
+    
+def forwardProtocolDC(fname): # need specific as there is a appRes column
+    x = np.genfromtxt(fname, skip_header=1)
+    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','appRes'])
+    df['ip'] = np.nan
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return elec, df
+    
+
+def forwardProtocolIP(fname): # not needed as the normal parser can do it
+    x = np.genfromtxt(fname, skip_header=1)
+    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','ip','appRes'])
+    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    elec = np.zeros((len(xElec),3))
+    elec[:,0] = xElec
+    return elec, df
 
 
 #%% PRIME system parser
@@ -315,7 +405,7 @@ def res2invInputParser(file_path):
     Parameters
     -----------
     file_path : string 
-     string mapping to the res2inv input file 
+         string mapping to the res2inv input file 
     
     Returns
     ----------
@@ -426,67 +516,261 @@ def res2invInputParser(file_path):
     
     return elec,df
 
-#%% convert a dataframe output by the parsers into a simple protocal.dat file    
-###DEPRECIATED###
-def dataframe2dat(df,save_path='default',
-                  typ='R2',
-                  ref_flag=False,
-                  err_flag=False):
+def res2InvGeneralArray(file_path):
     """
-    converts a pandas dataframe into a protocol.dat file for R2.exe. 
+    Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+    It looks for the general array format in the .dat file. 
     
     Parameters
     -----------
-    df: pandas dataframe
-        dataframe output by a r2gui parsers
-    save_path: string
-        file path to save location, if left default 'protocal.dat' is written to the working directory 
-    ref_flag: boolian
-        not working currently. if a reference set of transfer resistances is to be used then set to true
-    err_flag: boolian
-        if errors are going to be written to the r2 file. Currently uses 'dev' key in the pandas dataframe
+    file_path : string 
+         string mapping to the res2inv input file 
     
     Returns
-    -----------
-    protocal.dat written to specificied folder/directory
+    ----------
+    elec : np array
+        electrode coordinate matrix in the form | x | y | z |
+    df: pandas dataframe
+        dataframe which holds the electrode numbers for in feild measurements and 
+        apparent resistivities (Rho) and transfer resistances 
+    
+    ## TODO : add capacity to read in borehole surveys 
     """
-    num_meas = len(df)
-    
-    if save_path == 'default':
-        save_path = 'protocol.dat'
-    else:
-        print(os.path.join(save_path,'protocol.dat'))
-        save_path=os.path.join(save_path,'protocol.dat')
+    fh = open(file_path,'r')#open file handle for reading
+    dump = fh.readlines()#cache file contents into a list
+    fh.close()#close file handle, free up resources
+    num_meas = int(dump[6])
+    start = 9
+    #general array format given in terms of xz coordinates 
+    xC1 = np.array([0]*num_meas,dtype=float)
+    xC2 = np.array([0]*num_meas,dtype=float)
+    xP1 = np.array([0]*num_meas,dtype=float)
+    xP2 = np.array([0]*num_meas,dtype=float)
+    zC1 = np.array([0]*num_meas,dtype=float)
+    zC2 = np.array([0]*num_meas,dtype=float)
+    zP1 = np.array([0]*num_meas,dtype=float)
+    zP2 = np.array([0]*num_meas,dtype=float)
+    pa = np.array([0]*num_meas,dtype=float)
+    Tr = np.array([0]*num_meas,dtype=float)
+    count = 0
+    for i in range(start,num_meas+start):
+        line = dump[i].split()
+        xC1[count] = float(line[1])
+        zC1[count] = float(line[2])
+        xC2[count] = float(line[3])
+        zC2[count] = float(line[4])
+        xP1[count] = float(line[5])
+        zP1[count] = float(line[6])
+        xP2[count] = float(line[7])
+        zP2[count] = float(line[8])
+        pa[count] = float(line[9])
+        try:
+            k = geom_fac(xC1[count],xC2[count],xP1[count],xP2[count])
+        except:
+            k=float('nan')
+        Tr[count] = pa[count]/k
+        count += 1
         
-    #the contents of the last 3 columns will depend on survey type and regularisation mode. 
-    if typ=='R2':
-        column6=df['resist']
-    else:
-        column6=df['ip']
+    #convert xz coordinates into electrode numbers 
+    uni_x, inds = np.unique(np.column_stack((xC1,xC2,xP1,xP2)).flatten(),return_index=True)
+    total_z = np.column_stack((zC1,zC2,zP1,zP2)).flatten()
+    uni_z = total_z[inds]
+    uni_list = list(uni_x)
+    num_elec = len(uni_x)
     
-    if ref_flag:
-        column7=[0]*len(column6)# placeholder -- need to identify what jkl calls his reference values 
-        print("ref flag argument currently not supported and has been ignored")
-    else:
-        column7=[0]*len(column6)
-    
-    if err_flag:
-        column8=df['dev']
-    else:
-        column8=[0]*len(column6)
-     
-    fh = open(save_path,'w')
-    
-    fh.write("%i\n"%num_meas)
+    C1 = np.array([0]*num_meas)
+    C2 = np.array([0]*num_meas)
+    P1 = np.array([0]*num_meas)
+    P2 = np.array([0]*num_meas)
     for i in range(num_meas):
-        fh.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
-                 i+1, #measurement number 
-                 df['a'][i],
-                 df['b'][i],
-                 df['m'][i],
-                 df['n'][i],
-                 column6[i],
-                 column7[i],
-                 column8[i]))
-        
+        C1[i] = uni_list.index(xC1[i])+1
+        C2[i] = uni_list.index(xC2[i])+1
+        P1[i] = uni_list.index(xP1[i])+1
+        P2[i] = uni_list.index(xP2[i])+1
+    
+    elec = np.zeros((num_elec,3))
+    elec[:,0] = uni_x
+    elec[:,1] = uni_z
+    
+    #return output in dataframe format
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict['a']=P1
+    data_dict['b']=P2
+    data_dict['n']=C2
+    data_dict['m']=C1
+    data_dict['resist']=Tr
+    data_dict['Rho']=pa
+    data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    return elec,df
+    
+#return dipole dipole survey 
+def res2InvDipoleDipole(fname):
+    """Read in 2D ABEM file for a dipole dipole array ONLY. 
+    """
+    fh = open(fname,'r')
+    dump = fh.readlines()
     fh.close()
+    
+    num_meas = int(dump[3])#number of measurements 
+    a_factor = [0]*num_meas#a spacing value
+    n_factor = [0]*num_meas#n spacing value
+    xpos = [0]*num_meas#leftmost electrode x position 
+    pa = [0]*num_meas# apparent resisitivity 
+    
+    for i in range(num_meas):
+        line = dump[6+i].split()
+        xpos[i] = float(line[0])
+        a_factor[i] = float(line[1])
+        n_factor[i] = float(line[2])
+        pa[i] = float(line[3])
+     
+    end_meas = 6+num_meas
+    num_elec = int(dump[end_meas+1])
+    
+    #get elec coordinates 
+    elec_x =  [0]*num_elec
+    elec_z =  [0]*num_elec   
+    elec_id =  [0]*num_elec
+    
+    for i in range(num_elec):
+        line = dump[end_meas+2+i].split()
+        elec_x[i] = float(line[0])
+        elec_z[i] = float(line[1])
+        elec_id[i] = i+1
+        
+    #elec = np.array([elec_x,[0]*num_elec,elec_z]).T
+    elec = np.array([elec_x,elec_z,[0]*num_elec]).T
+    # convert to quadrapoles 
+        
+    # ABEM general array format is in the form:
+    #no.electrodes | C- | C+ | P+ | P- | apparent.resistivity. 
+    #Note R2 expects the electrode format in the form:
+    #meas.no | P+ | P- | C+ | C- | transfer resistance
+    
+    #a,b,n,m
+    a=[0]*num_meas
+    b=[0]*num_meas
+    n=[0]*num_meas
+    m=[0]*num_meas
+    Tr =[0]*num_meas # transfer resistance
+    
+    for i in range(num_meas):
+        c2_loc = xpos[i] # C- 
+        c1_loc = xpos[i]+a_factor[i] # C+
+        p1_loc = c1_loc + (a_factor[i]*n_factor[i]) # p+
+        p2_loc = p1_loc + a_factor[i] #P- 
+        a[i] = elec_x.index(p1_loc)+1
+        b[i] = elec_x.index(p2_loc)+1
+        m[i] = elec_x.index(c2_loc)+1
+        n[i] = elec_x.index(c1_loc)+1
+        K = geom_fac(c1_loc,c2_loc,p1_loc,p2_loc)
+        Tr[i] = pa[i]/K
+    
+    #put data into correct format
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict['a']=a
+    data_dict['b']=b
+    data_dict['n']=n
+    data_dict['m']=m
+    data_dict['resist']=Tr
+    data_dict['Rho']=pa
+    data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    
+    return elec,df
+
+def resInvParser(filename):
+    """Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+    
+    Parameters
+    -----------
+    file_path : string 
+         string mapping to the res2inv input file 
+    """
+    fh = open(filename,'r')
+    _ = fh.readline()#title line
+    _ = fh.readline()
+    flag = int(fh.readline())
+    fh.close()
+    if flag == 3: 
+        elec, df = res2InvDipoleDipole(filename)
+    elif flag == 11:
+        elec, df = res2InvGeneralArray(filename)
+    elif flag != 3 or flag != 11:
+        elec, df = res2invInputParser(filename)
+    else:
+        raise ImportError("unsupported type of res inv file (for the moment)")
+        
+    return elec,df
+
+#%% parse 3D sting data
+
+def stingParser(fname):
+    """Read in .stg file from sting
+    """
+    fh = open(fname,'r')
+    dump = fh.readlines()
+    fh.close()    
+    
+    num_meas = int(dump[1].split()[-1]) # number of measurements 
+    Tr = [0]*num_meas # transfer resistance - pre allocate arrays to populate after read in 
+    pa = [0]*num_meas # apparent resistivity 
+    meas_id = [0]*num_meas # measurement id number
+    c1_loc = [0]*num_meas
+    c2_loc = [0]*num_meas
+    p1_loc = [0]*num_meas
+    p2_loc = [0]*num_meas
+    
+    for i in range(num_meas):
+        line = dump[i+3].split(',')
+        Tr[i] = float(line[4])
+        c1_loc[i] = float(line[12])#C+
+        c2_loc[i] = float(line[9])#C-
+        p1_loc[i] = float(line[15])#P+
+        p2_loc[i] = float(line[18])#P-
+        meas_id[i] = int(line[0])
+        pa[i] = float(line[7])
+    # sting array format is in the form:
+    #no.electrodes | C- | C+ | P+ | P- | apparent.resistivity. 
+    #Note R2 expects the electrode format in the form:
+    #meas.no | P+ | P- | C+ | C- | transfer resistance
+        
+    loc_array=np.array([c1_loc,c2_loc,p1_loc,p2_loc]).T
+    elec_x=list(np.unique(loc_array.flatten()))
+    
+    elec =np.array([elec_x,np.zeros_like(elec_x),np.zeros_like(elec_x)]).T # electrode array
+    #TODO: return true positions? 
+    
+    a = [0]*num_meas
+    b = [0]*num_meas
+    n = [0]*num_meas
+    m = [0]*num_meas
+    
+    for i in range(num_meas):
+        a[i] = elec_x.index(p1_loc[i])+1
+        b[i] = elec_x.index(p2_loc[i])+1
+        m[i] = elec_x.index(c2_loc[i])+1
+        n[i] = elec_x.index(c1_loc[i])+1
+    
+    #put data into correct format
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict['a']=a
+    data_dict['b']=b
+    data_dict['n']=n
+    data_dict['m']=m
+    data_dict['resist']=Tr
+    data_dict['Rho']=pa
+    data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    
+    return elec,df
+
+#fname = '070708L5_trial1.stg'
+#stingParser(fname)

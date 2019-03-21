@@ -3,7 +3,6 @@
 import os
 import sys
 import time
-
 #a = time.time()
 print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
@@ -29,7 +28,7 @@ def errorMessage(etype, value, tb):
         finalError += errs
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
-    msg.setText("Critical error:")
+    msg.setText("<b>Critical error:</b>")
     msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p><br>''')
     msg.setWindowTitle("Error!")
 #    msg.setWindowFlags(Qt.FramelessWindowHint)
@@ -40,6 +39,79 @@ def errorMessage(etype, value, tb):
 def catchErrors():
     sys.excepthook = errorMessage
     threading.Thread.__init__
+
+#%% Wine Check
+import platform
+from subprocess import PIPE, Popen
+
+def wineCheck():
+    #check operating system 
+    OpSys=platform.system()    
+    #detect wine
+    if OpSys == 'Linux':
+        p = Popen("wine --version", stdout=PIPE, shell=True)
+        is_wine = str(p.stdout.readline())
+        if is_wine.find("wine") == -1:
+            wineMsgBox('Linux')
+        else:
+            pass
+                
+    elif OpSys == 'Darwin':
+        try: 
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+            else:
+                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+
+        except:
+            wineMsgBox('macOS')
+
+def wineMsgBox(platform):
+    msg = QMessageBox()
+    msg.setIcon(QMessageBox.Warning)
+    msg.setText('''<b>No "wine" is installed on your %s</b>''' % (platform))
+    msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
+    msg.setWindowTitle('"Wine" is not detected!')
+    bttnUpY = msg.addButton(QMessageBox.Yes)
+    bttnUpY.setText('Learn more')
+    bttnUpN = msg.addButton(QMessageBox.No)
+    bttnUpN.setText('Continue')
+    msg.setDefaultButton(bttnUpY)
+    msg.exec_()
+    if msg.clickedButton() == bttnUpY:
+        webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+
+#%% Update checker
+import urllib
+import webbrowser
+
+def updateChecker():
+    #gets newest version from src/version.txt
+    try:
+        versionSource = urllib.request.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
+        versionCheck = str(versionSource.read())
+        version = versionCheck.split('\\n')[1].replace("'",'') # assuming version number is in 2nd line of version.txt
+        if pyR2_version not in versionCheck:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText('''<b>pyR2 version %s is available</b>''' % (version))
+            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+            msg.setWindowTitle("New version available")
+            bttnUpY = msg.addButton(QMessageBox.Yes)
+            bttnUpY.setText('Update')
+            bttnUpN = msg.addButton(QMessageBox.No)
+            bttnUpN.setText('Ignore')
+            msg.setDefaultButton(bttnUpY)
+            msg.exec_()
+            if msg.clickedButton() == bttnUpY:
+                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
+    except: #if there is no internet connection!
+        return False
+
 #%%
 QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
 
@@ -119,7 +191,7 @@ class MatplotlibWidget(QWidget):
         if threed is False:
             ax.set_aspect('auto')
             ax.set_autoscale_on(False)
-        if self.itight == True:
+        if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
     
@@ -135,11 +207,13 @@ class MatplotlibWidget(QWidget):
         self.axis = ax
         self.callback(ax=ax, **kwargs)
         ax.set_aspect('auto')
-#        self.figure.tight_layout()
+        if self.itight is True:
+            self.figure.tight_layout()
         self.canvas.draw()
     
     def clear(self):
         self.axis.clear()
+        self.figure.clear()
         self.canvas.draw()
         
 #
@@ -186,6 +260,9 @@ class App(QMainWindow):
         self.iTimeLapse = False
         self.iBorehole = False
         self.iForward = False
+        self.inputPhaseFlag = False
+        self.iCropping = True # by default crop the mesh
+        self.num_xy_poly = None # to store the values
         self.datadir = os.path.join(bundle_dir, 'api', 'test')
         
         self.table_widget = QWidget()
@@ -250,7 +327,8 @@ class App(QMainWindow):
             else:
                 reg_mode.setCurrentIndex(0)
             # importing
-            wdBtn.setText('Working directory:' + self.r2.dirname + ' (Press to change)')
+            self.parser = None
+            wdBtn.setText('Working directory:' + os.path.basename(self.r2.dirname))
             buttonf.setText('Import Data')
 #            timeLapseCheck.setChecked(False)
 #            boreholeCheck.setChecked(False)
@@ -262,7 +340,19 @@ class App(QMainWindow):
             elecTable.initTable(np.array([['',''],['','']]))
             topoTable.initTable(np.array([['',''],['','']]))
 #            dimInverse.setChecked(True)
-            
+
+            # importing - IP stuff
+            phiConvFactor.setEnabled(True)
+            phiConvFactorlabel.setEnabled(True)
+            if self.ftype != 'Syscal':
+                phiConvFactor.setText('1')
+            else:
+                phiConvFactor.setText('1.2')
+            if self.ftype == 'ProtocolIP':
+                phiConvFactor.setText('-')
+                phiConvFactor.setEnabled(False)
+                phiConvFactorlabel.setEnabled(False)
+                
             # pre-processing
             mwManualFiltering.clear()
             errFitType.currentIndexChanged.disconnect()
@@ -280,6 +370,7 @@ class App(QMainWindow):
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
             tabPreProcessing.setTabEnabled(3, False)
+#            tabPreProcessing.setTabEnabled(3, False)
             
             # mesh
             mwMesh.clear()
@@ -294,7 +385,6 @@ class App(QMainWindow):
             patch_size_y.setText('1')
             inv_type.setCurrentIndex(1)
             data_type.setCurrentIndex(1)
-            reg_mode.setCurrentIndex(0)
             max_iterations.setText('10')
             error_mod.setCurrentIndex(1)
             alpha_aniso.setText('1.0')
@@ -303,8 +393,8 @@ class App(QMainWindow):
             b_wgt.setText('0.02')
 #            c_wgt.setText('1')
 #            d_wgt.setText('2')
-            rho_min.setText('-1000')
-            rho_max.setText('1000')
+            rho_min.setText('-10e10')
+            rho_max.setText('10e10')
             target_decrease.setText('0')
             helpSection2.setText('Click on the labels and help will be displayed here')
             
@@ -331,22 +421,28 @@ class App(QMainWindow):
             mwInvError.clear()
             mwInvError2.clear()
 
+
             
 #        restartBtn = QPushButton('Reset UI')
 #        restartBtn.setAutoDefault(True)
 #        restartBtn.clicked.connect(restartFunc)
 #        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
         
-        def dimSurvey():                
+        def dimSurvey():
             if dimRadio2D.isChecked():
                 self.typ = self.typ.replace('3t','2')
+                if self.r2 is not None:
+                    self.r2.typ = self.r2.typ.replace('3t','2')
                 # importing tab
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
                 dimForward.setEnabled(True)
+                dimForward.setChecked(False)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
+                
+                tabPreProcessing.setTabEnabled(0, True)
 
                 # mesh tab
                 meshQuadGroup.setVisible(True)
@@ -356,26 +452,33 @@ class App(QMainWindow):
                 
                 # inversion settings
                 show3DOptions(False)
-                showIpOptions(self.typ[0] == 'c')
+                if self.r2 is not None:
+                    showIpOptions(self.typ[0] == 'c')
                 
                 # inversion tab
                 contourCheck.setVisible(True)
                 edgeCheck.setVisible(True)
-                btnSave.setVisible(True)
                 sensCheck.setVisible(True)
                 paraviewBtn.setVisible(False)
                 sliceAxis.setVisible(False)
                 print(self.typ)
             else:
                 self.typ = self.typ.replace('2','3t')
+                if self.r2 is not None:
+                    self.r2.typ = self.r2.typ.replace('2', '3t')
+                    
                 # importing tab
                 elecTable.initTable(headers=['x','y','z','Buried'])
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
+                dimForward.setChecked(False)
                 dimForward.setEnabled(False)
+                dimInverse.setChecked(True)
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
                 
+                tabPreProcessing.setTabEnabled(0, False)
+
                 # mesh tab
                 meshQuadGroup.setVisible(False)
                 meshTrianGroup.setVisible(False)
@@ -384,16 +487,15 @@ class App(QMainWindow):
                 
                 # inversion settings
                 show3DOptions(True)
-                showIpOptions(self.typ[0] == 'c')
+                if self.r2 is not None:
+                    showIpOptions(self.typ[0] == 'c')
                 
                 # inversion tab
                 contourCheck.setVisible(False)
                 edgeCheck.setVisible(False)
-                btnSave.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
 #                sliceAxis.setVisible(True)
-                print(self.typ)
                 
         dimRadio2D = QRadioButton('2D')
         dimRadio2D.setChecked(True)
@@ -427,6 +529,9 @@ class App(QMainWindow):
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
                 self.iTimeLapse = True
+                if self.r2 is not None: # if there is already an R2 object
+                    restartFunc()
+                    reg_mode.setCurrentIndex(2)
                 buttonf.setText('Import Data Directory')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
@@ -434,6 +539,9 @@ class App(QMainWindow):
                 batchCheck.setEnabled(False)
             else:
                 self.iTimeLapse = False
+                if self.r2 is not None:
+                    restartFunc()
+                    reg_mode.setCurrentIndex(0)
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
@@ -554,27 +662,36 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     self.r2.setwd(fdir)
                 print('Working directory = ', fdir)
-                wdBtn.setText(fdir + ' (Press to change)')
+                wdBtn.setText(os.path.basename(self.newwd))
             
-        wdBtn = QPushButton('Working directory:' + self.newwd + ' (Press to change)')
+        wdBtn = QPushButton('Working directory:' + os.path.basename(self.newwd))
         wdBtn.setAutoDefault(True)
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
         
         self.ftype = 'Syscal' # by default
-        
+        self.fformat = 'Comma Separated Values (*.csv)' # default
+
         def fileTypeFunc(index):
             if index == 0:
                 self.ftype = 'Syscal'
+                self.fformat = 'Comma Separated Values (*.csv)'
             elif index == 1:
                 self.ftype = 'Protocol'
+                self.fformat = 'DAT (Tab delimited) (*.dat)'
             elif index == 2:
                 self.ftype = 'ProtocolIP'
+                self.fformat = 'DAT (Tab delimited) (*.dat)'
             elif index == 3:
                 self.ftype = 'Res2Dinv'
+                self.fformat = 'DAT (*.dat)'
             elif index == 4:
                 self.ftype = 'BGS Prime'
+                self.fformat = 'DAT (*.dat)'
             elif index == 5:
+                self.ftype = 'Sting'
+                self.fformat = ''
+            elif index == 6:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -585,6 +702,7 @@ class App(QMainWindow):
         fileType.addItem('Protocol w/ IP')
         fileType.addItem('Res2Dinv')
         fileType.addItem('BGS Prime')
+        fileType.addItem('Sting')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
@@ -608,23 +726,32 @@ class App(QMainWindow):
                     else:
                         self.r2.createBatchSurvey(fdir, dump=infoDump)
                         infoDump('Batch survey created.')
+                    fnamesCombo.clear()
+                    for s in self.r2.surveys:
+                        fnamesCombo.addItem(s.name)
+#                    fnamesCombo.setEnabled(True)
+                    fnamesCombo.show()
+                    fnamesComboLabel.show()
                     buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
                     plotPseudo()
                     elecTable.initTable(self.r2.elec)
                     tabImporting.setTabEnabled(1,True)
                     btnInvNow.setEnabled(True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        pass
+                        pass # no reciprocals found
                     else:
+#                        tabPreProcessing.setTabEnabled(1, True)
                         tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
+                        plotError()                                        
+                        errHist()
+                    plotManualFiltering()
                     activateTabs(True)
                 except:
                     errorDump('File format is not recognized (or directory contains invalid input files)')
             
         def getfile():
             print('ftype = ', self.ftype)
-            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
             if fname != '':
                 restartFunc()
                 self.datadir = os.path.dirname(fname)
@@ -644,35 +771,44 @@ class App(QMainWindow):
                 try:
                     self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                          parser=self.parser)
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
                 except:
                     errorDump('File is not recognized.')
                     pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
-#                    hbox4.addWidget(buttonfr)
+        #                    hbox4.addWidget(buttonfr)
                     buttonfr.show()
+                    recipOrNoRecipShow(recipPresence = False)
                 else:
+                    recipOrNoRecipShow(recipPresence = True)
                     buttonfr.hide()
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
-#                generateMesh()
+                    errHist()
+        #                generateMesh()
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
                     self.r2.setBorehole(False)
                 plotPseudo()
-#                plotManualFiltering()
+                plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+        
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
                 nbElecEdit.setText(str(len(self.r2.elec)))
                 elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
-                
+#                fnamesCombo.setEnabled(False)
+                fnamesCombo.hide()
+                fnamesComboLabel.hide()
             except Exception as e:
                 print(e)
                 errorDump('Importation failed. File is not being recognized. \
@@ -684,19 +820,27 @@ class App(QMainWindow):
         buttonf.clicked.connect(getfile)
         buttonf.setToolTip('Select input file (time-lapse: select the directory that contains the data).')
         
-        def getfileR():
-            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', directory=self.datadir)
+        def getfileR(): # import reciprocal file
+            fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
                 buttonfr.setText(os.path.basename(fnameRecip))
                 if float(spacingEdit.text()) == -1:
                     spacing = None
                 else:
                     spacing = float(spacingEdit.text())
-                self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing)
+                self.r2.surveys[0].addData(fnameRecip, ftype=self.ftype, spacing=spacing, parser=self.parser)
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                    recipOrNoRecipShow(recipPresence = True)
                     tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
                     plotError()
-#                plotManualFiltering()
+                    if ipCheck.checkState() == Qt.Checked:
+                        tabPreProcessing.setTabEnabled(3, True)
+                        recipfilt.setEnabled(True)
+                        phaseplotError()
+                        heatRaw()
+                        heatFilter()
+                    errHist()
+                plotManualFiltering()
 
         buttonfr = QPushButton('If you have a reciprocal dataset upload it here')
         buttonfr.setAutoDefault(True)
@@ -716,6 +860,7 @@ class App(QMainWindow):
         btnInvNow.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
         
         hbox4 = QHBoxLayout()
+        hbox4.addWidget(wdBtn)
         hbox4.addWidget(fileType)
 #        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
@@ -723,18 +868,22 @@ class App(QMainWindow):
         hbox4.addWidget(btnInvNow)
         
         def ipCheckFunc(state):
+            print('ipCheck', self.r2.typ)
             if state  == Qt.Checked:
-                self.r2.typ = 'cR2'
+                self.r2.typ = 'c' + self.r2.typ
+                self.typ = 'c' + self.typ
+                showIpOptions(True)
 #                timeLapseCheck.setEnabled(False)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(True)
                 else:
                     plotPseudoIP()
-                    phaseplotError()
-                    showIpOptions(True)
                     mwPseudoIP.setVisible(True)
                     tabPreProcessing.setTabEnabled(1, True)
-                    tabPreProcessing.setTabEnabled(3, True)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                        phaseplotError()
+                        tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
+                        recipfilt.setEnabled(True)
                     heatRaw()
     #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
                     self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
@@ -742,7 +891,8 @@ class App(QMainWindow):
                 regionTable.setColumnHidden(1, False)
 
             else:
-                self.r2.typ = 'R2'
+                self.r2.typ = self.r2.typ[1:]
+                self.typ = self.typ[1:]
                 showIpOptions(False)
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
@@ -751,19 +901,38 @@ class App(QMainWindow):
                 regionTable.setColumnHidden(1, True)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(False)
+            print('mode', self.r2.typ)
 
         ipCheck = QCheckBox('Induced Polarization')
         ipCheck.stateChanged.connect(ipCheckFunc)
         ipCheck.setEnabled(False)
         ipCheck.setToolTip('Check if you have IP data or want IP forward modeling')
+        
+        fnamesComboLabel = QLabel('Choose a dataset to plot:')
+        fnamesComboLabel.hide()
+        def fnamesComboFunc(index):
+            mwPseudo.plot(self.r2.surveys[index].pseudo)
+            if self.r2.typ[0] == 'c':
+                mwPseudoIP.plot(self.r2.surveys[index].pseudoIP)
+        fnamesCombo = QComboBox()
+        fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        fnamesCombo.setMinimumWidth(150)
+        fnamesCombo.currentIndexChanged.connect(fnamesComboFunc)
+#        fnamesCombo.setEnabled(False)
+        fnamesCombo.hide()
+        
         hbox5 = QHBoxLayout()
-        hbox5.addWidget(ipCheck)
+        
+        hbox5.setAlignment(Qt.AlignRight)
+        hbox5.addWidget(ipCheck, Qt.AlignLeft)
+        hbox5.addWidget(fnamesComboLabel)
+        hbox5.addWidget(fnamesCombo)
         
         metaLayout = QVBoxLayout()
 #        metaLayout.addLayout(topLayout)
         metaLayout.addLayout(hbox1)
         metaLayout.addLayout(hbox2)
-        metaLayout.addWidget(wdBtn)
+#        metaLayout.addWidget(wdBtn)
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
@@ -907,9 +1076,9 @@ class App(QMainWindow):
                 return table
             
             def readTable(self, fname, nbElec=None):
-#                    df = pd.read_csv(fname, header=None)
-#                    tt = df.values
-                    tt = np.genfromtxt(fname)
+                    df = pd.read_csv(fname, header=None)
+                    tt = df.values
+#                    tt = np.genfromtxt(fname)
                     if nbElec is not None:
                         if tt.shape[0] != nbElec:
                             errorDump('The file must have exactly ' + \
@@ -1018,15 +1187,17 @@ class App(QMainWindow):
         customParser = QWidget()
         tabImporting.addTab(customParser, 'Custom Parser')
         
-        delimiterLabel = QLabel('Delimiter')
+        delimiterLabel = QLabel('Delimiter:')
         delimiterEdit = QLineEdit('')
-        skipRowsLabel = QLabel('Number of header to skip')
+        delimiterEdit.setToolTip(r'For tab delimited data use: \t')
+        skipRowsLabel = QLabel('Number of header to skip:')
         skipRowsEdit = QLineEdit('0')
         skipRowsEdit.setValidator(QIntValidator())
-        nrowsLabel = QLabel('Number of rows to read')
+        nrowsLabel = QLabel('Number of rows to read:')
         nrowsEdit = QLineEdit('')
         nrowsEdit.setValidator(QIntValidator())
         
+        self.fnameManual = None
         def openFileBtnFunc(file):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File')
             if fname != '':
@@ -1037,6 +1208,9 @@ class App(QMainWindow):
         openFileBtn.clicked.connect(openFileBtnFunc)
 
         def parseBtnFunc():
+            if self.fnameManual is None:
+                errorDump('Select a file to parse first.')
+                return
             try:
                 delimiter = delimiterEdit.text()
                 delimiter = None if delimiter == '' else delimiter
@@ -1047,28 +1221,32 @@ class App(QMainWindow):
                 parserTable.readTable(self.fnameManual, delimiter=delimiter,
                                           skiprows=skipRows, nrows=nrows)
                 fillBoxes(boxes) # last one is elecSpacingEdit
+                infoDump('Parsing successful.')
             except ValueError as e:
-                errorDump('Import error:', e)
+                errorDump('Parsing error:' + str(e))
 
         parseBtn = QPushButton('Import')
         parseBtn.setAutoDefault(True)
         parseBtn.clicked.connect(parseBtnFunc)
             
         # have qcombobox to be read for each columns
-        aBoxLabel = QLabel('A (or C1)')
-        bBoxLabel = QLabel('B (or C2)')
-        mBoxLabel = QLabel('M (or P1)')
-        nBoxLabel = QLabel('N (or P2)')
-        vpBoxLabel = QLabel('Vp Potential Difference')
-        InBoxLabel = QLabel('In Current')
-        resistBoxLabel = QLabel('Transfer Resistance')
-        ipStartBoxLabel = QLabel('IP start column')
-        ipEndBoxLabel = QLabel('IP end column')
-        chargeabilityBoxLabel = QLabel('Chargeability')
+        aBoxLabel = QLabel('A (or C1):')
+        bBoxLabel = QLabel('B (or C2):')
+        mBoxLabel = QLabel('M (or P1):')
+        nBoxLabel = QLabel('N (or P2):')
+        vpBoxLabel = QLabel('Vp Potential Difference:')
+        InBoxLabel = QLabel('In Current:')
+        resistBoxLabel = QLabel('Transfer Resistance:')
+#        ipStartBoxLabel = QLabel('IP start column') # we don't need these for now, since DCA only works with syscal files
+#        ipEndBoxLabel = QLabel('IP end column')
+        chargeabilityBoxLabel = QLabel('Chargeability:')
+        phaseBoxLabel = QLabel('Phase shift:')
 #        elecSpacingLabel = QLabel('Electrode spacing')
        
-        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
-                 ipEndBoxLabel, chargeabilityBoxLabel]#, elecSpacingLabel]
+#        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
+#                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
+        boxesLabels = [aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel,
+                       chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
         
         aBox = QComboBox()
         bBox = QComboBox()
@@ -1077,17 +1255,22 @@ class App(QMainWindow):
         vpBox = QComboBox()
         InBox = QComboBox()
         resistBox = QComboBox()
-        ipStartBox = QComboBox()
-        ipEndBox = QComboBox()
+#        ipStartBox = QComboBox() # we don't need these for now, since DCA only works with syscal files
+#        ipEndBox = QComboBox()
         chargeabilityBox = QComboBox()
+        chargeabilityBox.setToolTip('input the column containing chargeability (mV/V) values')
+        phaseBox = QComboBox()
+        phaseBox.setToolTip('input the column containing phase shift (mRad) values')
 #        elecSpacingEdit = QLineEdit('')
 #        elecSpacingEdit.setEnabled(False)
 #        elecSpacingEdit.setValidator(QDoubleValidator())
 #        elecSpacingEdit.setFixedWidth(80)
 #        elecSpacingEdit.setToolTip('Number to divide the selected columns to get electrode number.')
         
-        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
-                 ipEndBox, chargeabilityBox]#, elecSpacingEdit]
+#        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, ipStartBox,
+#                 ipEndBox, chargeabilityBox, phaseBox]#, elecSpacingEdit]
+        boxes = [aBox, bBox, mBox, nBox, vpBox, InBox, resistBox, 
+                 chargeabilityBox, phaseBox]#, elecSpacingEdit]
                 
         def fillBoxes(bs):
             for b in bs:
@@ -1117,7 +1300,9 @@ class App(QMainWindow):
                 if fname != '':
                     df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows)
                     df = df.reset_index() # in case all parse columns goes into the index (don't know why)
-                    self.headers = df.columns.values
+                    self.setRowCount(df.shape[0])
+                    self.setColumnCount(df.shape[1])
+                    self.headers = df.columns.values.astype(str) # make sure it's string
                     self.setHorizontalHeaderLabels(self.headers)
                     tt = df.values
                     self.setTable(tt)            
@@ -1136,6 +1321,7 @@ class App(QMainWindow):
         parserTable = ParserTable()
         
         def importBtnFunc():
+            restartFunc()
             self.r2 = R2()
             print('importing data')
             colIndex = []
@@ -1163,6 +1349,22 @@ class App(QMainWindow):
             if vals[0] > 0:
                 colIndex.append(vals)
                 newHeaders.append(['ip'])
+                phiConvFactor.setText('1')
+                phiConvFactor.setEnabled(True)
+                phiConvFactorlabel.setEnabled(True)
+                self.inputPhaseFlag = False
+            else:
+                vals = getBoxes([phaseBox])
+                if vals[0] > 0:
+                    colIndex.append(vals)
+                    newHeaders.append(['ip'])
+                    phiConvFactor.setText('-')
+                    phiConvFactor.setEnabled(False)
+                    phiConvFactorlabel.setEnabled(False)
+                    self.inputPhaseFlag = True
+                else:
+                    ipCheck.setChecked(False)
+                    
             # TODO need to import the IP coluns as well
             
             colIndex = np.hstack(colIndex)
@@ -1180,6 +1382,7 @@ class App(QMainWindow):
                 espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
                 
                 # parse
+                print('delimiter=', delimiter)
                 df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
                 df = df.reset_index() # solve issue all columns in index
                 oldHeaders = df.columns.values[colIndex]
@@ -1188,6 +1391,8 @@ class App(QMainWindow):
                     df['resist'] = df['vp']/df['i']
                 if 'ip' not in df.columns:
                     df['ip'] = 0
+                elif self.inputPhaseFlag == True:
+                    df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
                 array = df[['a','b','m','n']].values.copy()
                 arrayMin = np.min(np.unique(np.sort(array.flatten())))
                 if arrayMin != 0:
@@ -1216,7 +1421,7 @@ class App(QMainWindow):
             
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            
+            fileType.setCurrentIndex(7)
             tabImporting.setCurrentIndex(0)
                 
                 
@@ -1244,7 +1449,7 @@ class App(QMainWindow):
         for i in range(len(boxes)):
             c = (i % 3)*2 # in 2*3 columns (with labels)
             r = int(i/3) 
-            columnsAssign.addWidget(boxesLabels[i], r, c)
+            columnsAssign.addWidget(boxesLabels[i], r, c, Qt.AlignRight)
             columnsAssign.addWidget(boxes[i], r, c+1)
         parserLayout.addLayout(columnsAssign)
         parserLayout.addWidget(importBtn)
@@ -1257,38 +1462,206 @@ class App(QMainWindow):
         tabs.addTab(tabPreProcessing, 'Pre-processing')
         tabs.setTabEnabled(1,False)
         
-        manualLayout = QVBoxLayout()
-        
+        def recipOrNoRecipShow(recipPresence = True): # changes the reciprocal filtering tab stuff
+            if recipPresence == True:
+                tabPreProcessing.setTabText(0, 'Reciprocal Filtering')
+                recipErrorLabel.setText('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
+                recipErrorInputLabel.show()
+                recipErrorInputLine.show()
+                recipErrorInputLine.setText('-')
+                recipErrorPltbtn.setText('Apply filters')
+                recipErrorUnpairedBtn.show()
+                recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
+                recipErrorBottomTabs.setTabEnabled(1, True)
+            if recipPresence == False:
+                tabPreProcessing.setTabText(0, 'Manual Filtering')
+                recipErrorLabel.setText('<b>Select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
+                recipErrorInputLabel.hide()
+                recipErrorInputLine.setText('-')
+                recipErrorInputLine.hide()
+                recipErrorUnpairedBtn.hide()
+                recipErrorPltbtn.setText('Remove selected points')
+                recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
+                recipErrorBottomTabs.setTabEnabled(1, False)              
+                
         def plotManualFiltering():
             mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+            
+        def errHist():
+            if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                recipErrorPLot.plot(self.r2.errorDist)
+            else:
+                pass
         
-        def btnDoneFunc():
-            self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-            infoDump('Data have been manually filtered.')
+        def recipFilter():
+            try:
+                numSelectRemoved = 0
+                if self.r2.iTimeLapse or self.r2.iBatch: # only remove electrode not single measurements
+                    self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
+                else:
+                    numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+                if recipErrorInputLine.text() != '-':
+                    percent = float(recipErrorInputLine.text())
+                    numRecipRemoved = self.r2.filterRecip(percent=percent)
+                    infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
+                else:
+                    infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                if ipCheck.checkState() == Qt.Checked:
+                    for s in self.surveys:
+                        s.dfPhaseReset = s.df
+                        s.filterDataIP = s.df
+                    heatFilter()
+                    phaseplotError()
+                errHist()
+                plotManualFiltering()
+                plotError()
+            except ValueError as e:
+                if ipCheck.checkState() != Qt.Checked:
+                    errorDump(e)    
+                else:
+                    errorDump('Index error! Reciprocal Filtering cannot be done after Phase Filtering.\n'
+                              'Reset the filters and redo the filterings, first reciprocity then phase.') 
+            
+        def resetRecipFilter():
+            numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
+            for s in self.r2.surveys:
+                s.df = s.dfReset.copy()
+            if recipErrorInputLine.text() != '-':
+                errHist()
+                recipErrorInputLine.setText('-')
+            if ipCheck.checkState() == Qt.Checked:
+                for s in self.r2.surveys:
+                    s.dfPhaseReset = s.dfReset.copy()
+                    s.filterDataIP = s.dfReset.copy()
+                heatFilter()
+                phaseplotError()
+            errHist()
             plotManualFiltering()
             plotError()
+            infoDump('%i measurements restored!' % numRestored)
+
+#        manualLayout = QVBoxLayout()
+          
+#        def btnDoneFunc():
+#            self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+#            infoDump('Data have been manually filtered.')
+#            plotManualFiltering()
+#            plotError()
+
+#        manualTopLayout = QVBoxLayout()
+#        manualTopLayout.setAlignment(Qt.AlignTop)
+#        notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
+#        manualTopLayout.addWidget(notice)
+#        
+#        btnLayout = QHBoxLayout()
+        
+#        btnStart = QPushButton('Start')
+#        btnStart.setAutoDefault(True)
+#        btnStart.clicked.connect(plotManualFiltering)
+#        btnStart.setToolTip('Plot a clickable pseudo section with electrodes.')
+#        btnLayout.addWidget(btnStart)
+#        btnDone = QPushButton('Apply')
+#        btnDone.setAutoDefault(True)
+#        btnDone.clicked.connect(btnDoneFunc)
+#        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
+#        btnLayout.addWidget(btnDone)
+#        manualTopLayout.addLayout(btnLayout)
+#        manualLayout.addLayout(manualTopLayout, 0) # number is stretch factor
+     
+        recipErrorLayout = QVBoxLayout()
+        recipErrorTopLayout = QVBoxLayout()
+        
+        recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
+        recipErrorTopLayout.addWidget(recipErrorLabel)
+        
+        
+        recipErrorInputlayout = QHBoxLayout()
+        
+        recipErrorInputLeftlayout = QHBoxLayout()
+        recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
+        
+        recipErrorInputLeftlayoutL = QHBoxLayout()
+        recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
+        recipErrorInputLabel = QLabel('Percent error threshold:')
+        recipErrorInputLeftlayoutL.addWidget(recipErrorInputLabel)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
+        
+        recipErrorInputLineLayout = QHBoxLayout()
+        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        
+        recipErrorInputLine = QLineEdit('-')
+        recipErrorInputLine.setFixedWidth(100)
+        recipErrorInputLine.setValidator(QDoubleValidator())
+        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
+        recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
             
-        notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
-        manualLayout.addWidget(notice)
+        recipErrorBtnLayout = QHBoxLayout()
+        recipErrorBtnLayout.setAlignment(Qt.AlignRight)
         
-        btnLayout = QHBoxLayout()
-        btnStart = QPushButton('Start')
-        btnStart.setAutoDefault(True)
-        btnStart.clicked.connect(plotManualFiltering)
-        btnStart.setToolTip('Plot a clickable pseudo section with electrodes.')
-        btnLayout.addWidget(btnStart)
-        btnDone = QPushButton('Apply')
-        btnDone.setAutoDefault(True)
-        btnDone.clicked.connect(btnDoneFunc)
-        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
-        btnLayout.addWidget(btnDone)
-        manualLayout.addLayout(btnLayout)
+        def recipErrorUnpairedFunc():
+            numRemoved = self.r2.removeUnpaired()
+            if ipCheck.checkState() == Qt.Checked:
+                for s in self.surveys:
+                    s.dfPhaseReset = s.df
+                    s.filterDataIP = s.df
+                heatFilter()
+                phaseplotError()
+            errHist()
+            plotManualFiltering()
+            plotError()
+            infoDump('%i unpaired quadrupoles removed!' % numRemoved)
+
+        recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
+        recipErrorUnpairedBtn.setFixedWidth(150)
+        recipErrorUnpairedBtn.setToolTip('Remove quadrupoles without reciprocals')
+        recipErrorUnpairedBtn.clicked.connect(recipErrorUnpairedFunc)
+        recipErrorBtnLayout.addWidget(recipErrorUnpairedBtn)
+        
+        recipErrorPltbtn = QPushButton('Apply filters')
+        recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
+        recipErrorPltbtn.clicked.connect(recipFilter)
+        recipErrorPltbtn.setFixedWidth(150)
+        recipErrorBtnLayout.addWidget(recipErrorPltbtn)
+        
+        recipErrorResetbtn = QPushButton('Reset')
+        recipErrorResetbtn.setStyleSheet("color: red")
+        recipErrorResetbtn.setToolTip('This will restore all deleted measurements at this stage')
+        recipErrorResetbtn.clicked.connect(resetRecipFilter)
+        recipErrorResetbtn.setFixedWidth(150)
+        recipErrorBtnLayout.addWidget(recipErrorResetbtn)
         
         
+        recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
+        recipErrorTopLayout.addLayout(recipErrorInputlayout)
+        
+        recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
+        
+        recipErrorPlotLayout = QVBoxLayout()
+        recipErrorPLot = MatplotlibWidget(navi=True)
+        recipErrorPlotLayout.addWidget(recipErrorPLot)
+               
+        recipErrorBottomLayout = QVBoxLayout()
+        
+        recipErrorBottomTabs = QTabWidget() 
+        
+        recipErrorPseudoPlotLayout = QVBoxLayout()
         mwManualFiltering = MatplotlibWidget(navi=True)
-        manualLayout.addWidget(mwManualFiltering)
+        recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
+#        manualPseudoPlotLayout.setLayout(manualBottomLayout)
+        pseudoSectionPlotTab = QWidget()
+        pseudoSectionPlotTab.setLayout(recipErrorPseudoPlotLayout)
+        recipErrorBottomTabs.addTab(pseudoSectionPlotTab, 'Pseudo Section')
         
+        errorHistogramPlotTab = QWidget()
+        errorHistogramPlotTab.setLayout(recipErrorPlotLayout)
+        recipErrorBottomTabs.addTab(errorHistogramPlotTab, 'Error Histogram')
         
+        recipErrorBottomLayout.addWidget(recipErrorBottomTabs)
+#        manualBottomLayout.addWidget(mwManualFiltering)
+        recipErrorLayout.addLayout(recipErrorBottomLayout, 1) # '1' to keep the plot in largest strech
+        
+        # Resistance error tab
         errorLayout = QVBoxLayout()
         
         def errorModelSpecified():
@@ -1299,7 +1672,7 @@ class App(QMainWindow):
         
         def plotError():
             mwFitError.plot(self.r2.plotError)
-            self.r2.errTyp = 'none'
+            self.r2.err = False
             
 #        def fitLinError():
 #            mwFitError.plot(self.r2.linfit)
@@ -1320,14 +1693,13 @@ class App(QMainWindow):
                 plotError()
             elif index == 1:
                 mwFitError.plot(self.r2.linfit)
-                self.r2.errTyp = 'lin'
+                self.r2.err = True
             elif index == 2:
                 mwFitError.plot(self.r2.pwlfit)
-                self.r2.errTyp = 'pwl'
-#            elif index == 3:
-#                print('NOT READY YET')
-#                mwFitError.plot(self.r2.lmefit)
-#                self.r2.errTyp = 'lme'
+                self.r2.err = True
+            elif index == 3:
+                mwFitError.plot(self.r2.lmefit)
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1345,7 +1717,7 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-#        errFitType.addItem('Linear Mixed Effect')
+        errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -1369,10 +1741,10 @@ class App(QMainWindow):
                 phaseplotError()
             elif index == 1:
                 mwIPFiltering.plot(self.r2.plotIPFit)
-                self.r2.errTypIP = 'pwlip'
+                self.r2.err = True
             elif index == 2:
                 mwIPFiltering.plot(self.r2.plotIPFitParabola)
-                self.r2.errTypIP = 'pwlip'
+                self.r2.err = True
             else:
                 print('NOT IMPLEMENTED YET')
             if index == 0:
@@ -1429,11 +1801,12 @@ class App(QMainWindow):
             
         phitoplayout = QHBoxLayout()
         phiConvFactorlabel = QLabel('Conversion factor k (φ = -kM):')
+        phiConvFactorlabel.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor = QLineEdit()
         phiConvFactor.setFixedWidth(50)
         phiConvFactor.setValidator(QDoubleValidator())
         phiConvFactor.setText('1.2')
-        phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices')
+        phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
         rangelabel = QLabel('     Phase range filtering:')
         phivminlabel = QLabel('-φ min:')
@@ -1442,6 +1815,8 @@ class App(QMainWindow):
         phivmaxlabel = QLabel('-φ max:')
         phivmaxEdit = QLineEdit()
         phivmaxEdit.setValidator(QDoubleValidator())
+        phivminEdit.setText('0')
+        phivmaxEdit.setText('25')
         rangebutton = QPushButton('Apply')
         rangebutton.setAutoDefault(True)
         rangebutton.clicked.connect(phirange)
@@ -1449,6 +1824,7 @@ class App(QMainWindow):
         recipfilt = QPushButton('Remove reciprocals')
         recipfilt.setToolTip('Reciprocal measurements will not be considered for inversion in pyR2.\nThis filter just visualize the removal')
         recipfilt.setAutoDefault(True)
+        recipfilt.setEnabled(False)
         recipfilt.clicked.connect(removerecip)
 
         nestedfilt = QPushButton('Remove nested')
@@ -1470,8 +1846,8 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
         
         def filt_reset():
-            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfphasereset.copy()
-            self.r2.surveys[0].df = self.r2.surveys[0].dfphasereset.copy()
+            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfPhaseReset.copy()
+            self.r2.surveys[0].df = self.r2.surveys[0].dfPhaseReset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             infoDump('All phase filteres are now reset!')
@@ -1485,14 +1861,18 @@ class App(QMainWindow):
         def phiCbarDataRange():
             minDataIP = np.min(self.r2.surveys[0].dfOrigin['ip'])
             maxDataIP = np.max(self.r2.surveys[0].dfOrigin['ip'])
-            self.r2.surveys[0].phiCbarmin = minDataIP
-            self.r2.surveys[0].phiCbarMax = maxDataIP
+            if self.ftype == 'ProtocolIP':
+                self.r2.surveys[0].phiCbarmin = -maxDataIP
+                self.r2.surveys[0].phiCbarMax = -minDataIP
+            else:
+                self.r2.surveys[0].phiCbarmin = minDataIP
+                self.r2.surveys[0].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
         
         resetlayout = QHBoxLayout()
         filtreset = QPushButton('Reset all "phase" filters')
-        filtreset.setStyleSheet("background-color: red")
+        filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
@@ -1568,9 +1948,14 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(resetlayout, 2)
         phasefiltlayout.addLayout(ipfiltlayout, 3)
             
-        manualWidget = QWidget()
-        manualWidget.setLayout(manualLayout)
-        tabPreProcessing.addTab(manualWidget, 'Manual Filtering')
+#        manualWidget = QWidget()
+#        manualWidget.setLayout(manualLayout)
+#        tabPreProcessing.addTab(manualWidget, 'Reciprocal Filtering')
+        
+        recipErrorWidget = QWidget()
+        recipErrorWidget.setLayout(recipErrorLayout)
+        tabPreProcessing.addTab(recipErrorWidget, 'Reciprocal error analysis')
+        
         ipfiltWidget = QWidget()
 #        ipfiltWidget.setVisible(False)
         ipfiltWidget.setLayout(phasefiltlayout)
@@ -1583,11 +1968,10 @@ class App(QMainWindow):
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
 
-        tabPreProcessing.setTabEnabled(0, True) # manual DC filter
+        tabPreProcessing.setTabEnabled(0, True) # Reciprocal filter
         tabPreProcessing.setTabEnabled(1, False) # IP filter
-        tabPreProcessing.setTabEnabled(2, False) # resistivity error model        
-        tabPreProcessing.setTabEnabled(3, False) # IP error model
-        
+        tabPreProcessing.setTabEnabled(2, False) # resistivity error model
+        tabPreProcessing.setTabEnabled(3, False) # IP error model        
         
         #%% tab MESH
         tabMesh= QWidget()
@@ -1705,10 +2089,6 @@ class App(QMainWindow):
                 surface = surface[inan,:]
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
-#            replotMesh()
-#            import matplotlib.pyplot as plt
-#            plt.ion()
-#            self.r2.showMesh() # does work !
             mwMesh3D.plot(self.r2.showMesh, threed=True)
             meshOutputStack.setCurrentIndex(2)
 
@@ -1763,18 +2143,33 @@ class App(QMainWindow):
         cl3FactorEdit.setValidator(QDoubleValidator())
         cl3FactorEdit.setText('2')
         def openMeshParaviewFunc():
-            print('Writing mesh to .vtk first...', end='')
             meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
-            self.r2.mesh.write_vtk(meshVTK)
-            print('done')
             try:
-                Popen(['paraview', meshVTK])
+                if platform.system()=="Windows":
+                    self.r2.mesh.paraview(meshVTK)
+                else:
+                    print('Writing mesh to .vtk first...', end='')
+                    self.r2.mesh.write_vtk(meshVTK)
+                    print('done')
+                    Popen(['paraview', meshVTK])
             except Exception as e:
-                print('Error in opening: ', e)
+                errorDump('Error opening Paraview:' + str(e))
         openMeshParaview = QPushButton('Open in Paraview')
         openMeshParaview.clicked.connect(openMeshParaviewFunc)
         
+        def importCustomMeshFunc():
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir)
+            if fname != '':
+                try:
+                    self.r2.importMesh(fname)
+                    mwMesh3D.plot(self.r2.showMesh, threed=True)
+                    meshOutputStack.setCurrentIndex(2)
+                except Exception as e:
+                    errorDump('Error importing mesh' + str(e))
+        importCustomMeshBtn = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
         
+        # layout
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
 #        meshOptionQuadLayout.addWidget(nnodesEdit)
@@ -1795,6 +2190,7 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
         meshOptionTetraLayout.addWidget(openMeshParaview)
+        meshOptionTetraLayout.addWidget(importCustomMeshBtn)
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
@@ -1832,7 +2228,7 @@ class App(QMainWindow):
                 self.ncol = ncol
                 self.setColumnCount(self.ncol)
                 self.setRowCount(self.nrow)
-                self.headers = ['|Z| [Ohm.m]', '-φ [mrad]', 'Zones', 'Fixed']
+                self.headers = ['|Z| [Ohm.m]', 'φ [mrad]', 'Zones', 'Fixed']
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
                 self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
@@ -2125,9 +2521,14 @@ class App(QMainWindow):
         seqOutputLabel = QLabel('')
     
         # add noise possibility
-        noiseLabel = QLabel('Guassian noise to be added to the simulated data:')
-        noiseEdit = QLineEdit('0.02')
+        noiseLabel = QLabel('Resistivity noise [%]:')
+        noiseEdit = QLineEdit('2')
         noiseEdit.setValidator(QDoubleValidator())
+        
+        # add IP noise
+        noiseLabelIP = QLabel('Phase noise [mrad]:')
+        noiseEditIP = QLineEdit('2')
+        noiseEditIP.setValidator(QDoubleValidator())
         
         # add a forward button
         def forwardBtnFunc():
@@ -2146,8 +2547,9 @@ class App(QMainWindow):
                                dict(zip(regid, zones)),
                                dict(zip(regid, fixed)),
                                dict(zip(regid, phase0)))
-            noise = float(noiseEdit.text())
-            self.r2.forward(noise=noise, iplot=False, dump=forwardLogTextFunc)
+            noise = float(noiseEdit.text()) / 100 #percentage to proportion
+            noiseIP = float(noiseEditIP.text())
+            self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             forwardPseudo.plot(self.r2.surveys[0].pseudo)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
@@ -2191,6 +2593,8 @@ class App(QMainWindow):
         
         noiseLayout.addWidget(noiseLabel)
         noiseLayout.addWidget(noiseEdit)
+        noiseLayout.addWidget(noiseLabelIP)
+        noiseLayout.addWidget(noiseEditIP)
         noiseLayout.addWidget(seqOutputLabel)
         
         forwardLayout.addWidget(seqLabel, 5)
@@ -2244,6 +2648,14 @@ class App(QMainWindow):
             if arg == True:
                 a_wgt.setText('0.02')
                 b_wgt.setText('2')
+                if self.r2.iForward is False:
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
+                if self.r2.typ == 'cR3t':
+                    c_wgt.setText('1')
+                    c_wgt.setVisible(True)
+                    c_wgtLabel.setVisible(True)
                 min_error.setVisible(True)
                 min_errorLabel.setVisible(True)
                 data_type.setVisible(False)
@@ -2251,6 +2663,9 @@ class App(QMainWindow):
             else:
                 a_wgt.setText('0.01')
                 b_wgt.setText('0.02')
+                if self.r2.typ == 'cR3t':
+                    c_wgt.setVisible(False)
+                    c_wgtLabel.setVisible(False)
                 min_error.setVisible(False)
                 min_errorLabel.setVisible(False)
                 data_type.setVisible(True)
@@ -2268,6 +2683,7 @@ class App(QMainWindow):
             settings2D = [flux_typeLabel, flux_type,
                           inv_typeLabel, inv_type,
                           min_errorLabel, min_error,
+                          reg_modeLabel, reg_mode,
                           rho_minLabel, rho_min,
                           rho_maxLabel, rho_max,
                           target_decreaseLabel, target_decrease]
@@ -2323,6 +2739,21 @@ class App(QMainWindow):
         modErr.stateChanged.connect(modErrFunc)
         advForm.addRow(modErrLabel, modErr)
         self.modErr = False
+        
+        def notCroppingFunc(state):
+            if state == Qt.Checked:
+                self.iCropping = False
+                if 'num_xy_poly' in self.r2.param:
+                    self.num_xy_poly = self.r2.param['num_xy_poly'] # store value
+            else:
+                self.iCropping = True # default
+                if ('num_xy_poly' in self.r2.param) and (self.num_xy_poly is not None):
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly # restore value
+        notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
+        notCroppingLabel.linkActivated.connect(showHelp2)
+        notCropping = QCheckBox()
+        notCropping.stateChanged.connect(notCroppingFunc)
+        advForm.addRow(notCroppingLabel, notCropping)
         
         def flux_typeFunc(index):
             if index == 0:
@@ -2502,7 +2933,7 @@ class App(QMainWindow):
         error_mod.addItem('Keep the same weights [0]')
         error_mod.addItem('Update the weights [1]')
         error_mod.addItem('Update the weights (recommended) [2]')
-        error_mod.setCurrentIndex(1)
+        error_mod.setCurrentIndex(2)
         error_mod.currentIndexChanged.connect(error_modFunc)
         advForm.addRow(error_modLabel, error_mod)
         
@@ -2625,17 +3056,17 @@ class App(QMainWindow):
         b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(b_wgtLabel, b_wgt)
         
-#        def c_wgtFunc():
-#            self.r2.param['c_wgt'] = float(c_wgt.text())
-#        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
-#        c_wgtLabel.linkActivated.connect(showHelp)
-#        c_wgtLabel.setVisible(False)
-#        c_wgt = QLineEdit()
-#        c_wgt.setValidator(QDoubleValidator())
-#        c_wgt.setText('1')
-#        c_wgt.editingFinished.connect(c_wgtFunc)
-#        c_wgt.setVisible(False)
-#        invForm.addRow(c_wgtLabel, c_wgt)
+        def c_wgtFunc():
+            self.r2.param['c_wgt'] = float(c_wgt.text())
+        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
+        c_wgtLabel.linkActivated.connect(showHelp)
+        c_wgtLabel.setVisible(False)
+        c_wgt = QLineEdit()
+        c_wgt.setValidator(QDoubleValidator())
+        c_wgt.setText('1')
+        c_wgt.editingFinished.connect(c_wgtFunc)
+        c_wgt.setVisible(False)
+        invForm.addRow(c_wgtLabel, c_wgt)
 #        
 #        def d_wgtFunc():
 #            self.r2.param['d_wgt'] = float(d_wgt.text())
@@ -2741,7 +3172,6 @@ class App(QMainWindow):
                     if len(a) > 0:
                         if a[0] == 'Initial':
                             try:
-                                mwInvResult.plot(self.r2.showIter)
                                 newFlag = True
                                 self.rms.append(float(a[3]))
                                 self.rmsIndex.append(self.pindex)
@@ -2752,11 +3182,11 @@ class App(QMainWindow):
                                 self.rmsIP.append(float(a[4]))
                                 self.rmsIndexIP.append(self.pindex)
                         if a[0] == 'Processing':
-#                            print('new processing detected')
                             self.pindex = self.pindex + 1
-#                            print('index = ', self.pindex)
                         if a[0] == 'End':
                             self.end = True
+                        if a[0] == 'Iteration':
+                            mwInvResult.plot(self.r2.showIter)
             return newFlag
 
         def plotRMS(ax):
@@ -2836,6 +3266,7 @@ class App(QMainWindow):
             self.end = False
             outStackLayout.setCurrentIndex(0)
             mwInvResult.clear()
+            self.r2.param['lineTitle'] = titleEdit.text()
             if self.r2.mesh is None:
                 meshQuadFunc() # generate default mesh
 
@@ -2861,7 +3292,14 @@ class App(QMainWindow):
                 cursor.insertText(text+'\n')
                 logText.ensureCursorVisible()
                 QApplication.processEvents()
-                
+            
+            # don't crop the mesh if that's what we'e chosen
+            if self.iCropping is True:
+                if self.num_xy_poly is not None:
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly
+            else:
+                self.r2.param['num_xy_poly'] = 0
+            
             # apply region for initial model
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.r2.createMesh()
@@ -3175,15 +3613,20 @@ class App(QMainWindow):
         displayOptions.addWidget(paraviewBtn)
             
         def btnSaveGraphs():
-            edge_color = self.displayParams['edge_color']
-            sens = self.displayParams['sens']
-            attr = self.displayParams['attr']
-            contour = self.displayParams['contour']
-            vmin = self.displayParams['vmin']
-            vmax = self.displayParams['vmax']
-            self.r2.saveInvPlots(edge_color=edge_color,
-                               contour=contour, sens=sens, attr=attr,
-                               vmin=vmin, vmax=vmax)
+            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
+            if fdir != '':
+                if self.r2.typ[-1] == '2':
+                    edge_color = self.displayParams['edge_color']
+                    sens = self.displayParams['sens']
+                    attr = self.displayParams['attr']
+                    contour = self.displayParams['contour']
+                    vmin = self.displayParams['vmin']
+                    vmax = self.displayParams['vmax']
+                    self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
+                                       contour=contour, sens=sens, attr=attr,
+                                       vmin=vmin, vmax=vmax)
+                self.r2.saveVtks(fdir)
+            
             infoDump('All graphs saved successfully in the working directory.')
 
         btnSave = QPushButton('Save graphs')
@@ -3201,7 +3644,7 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
         
-        mwInvResult = MatplotlibWidget(navi=True)        
+        mwInvResult = MatplotlibWidget(navi=True, itight=False)        
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
 
         resultStackLayout = QStackedLayout()
@@ -3241,26 +3684,74 @@ class App(QMainWindow):
         tabs.setTabEnabled(6,False)
         
         invError = QWidget()
-        tabPostProcessing.addTab(invError, 'Psuedo Section Error')
+        tabPostProcessing.addTab(invError, 'Pseudo Section Error')
         invErrorLayout = QVBoxLayout()
         
         def plotInvError():
             mwInvError.plot(self.r2.pseudoError)
             
         mwInvError = MatplotlibWidget(navi=True)
-        invErrorLayout.addWidget(mwInvError)
+        invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
-
         
         invError2 = QWidget()
         tabPostProcessing.addTab(invError2, 'Normalised Errors')
         invErrorLayout2 = QVBoxLayout()
+        invErrorLayout2Plot = QVBoxLayout()
         
         def plotInvError2():
             mwInvError2.plot(self.r2.showInversionErrors)
         mwInvError2 = MatplotlibWidget(navi=True)
-        invErrorLayout2.addWidget(mwInvError2)
+        invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
+                               'If it\'s not the case try to fit an error model or '
+                               'manually change the a_wgt and b_wgt in inversion settings.')
+        invErrorLayout2Plot.addWidget(mwInvError2, Qt.AlignCenter)
+        invErrorLayout2.addLayout(invErrorLayout2Plot, 1)
+        invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
+        
+        
+        #%% Help tab
+        tabHelp = QTabWidget()
+        tabs.addTab(tabHelp, 'Help')
+        
+        helpLayout = QVBoxLayout()
+        helpText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
+        helpText.setText('''
+           <h1>General help</h1>\
+           <p>Below are simple instructions to guide you to through the software.</p>
+           <ul>
+           <li>In the "Importing" tab:
+           <ul>
+           <li>Select if you want a 2D/3D survey, an inverse/forward solution and check if you have borehole/timelapse/batch data.</li>
+           <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
+           <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
+           <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
+           <li>Then one can choose to directly invert with all the default settings or go through the other tabs on the rights.</li>
+           <ul></li>
+           <li>In the "Pre-processing" tab:
+           <ul>
+           <li>The first tab offers manual filtering option based on reciprocal measurements in the dataset (if any).</li>
+           <li>The "Phase Filtering" tab is only enable for IP data and allows precise filtering of IP data (range filtering, removing of nested measuremetns, DCA, ...).</li>
+           <li>The "Resistance Error Model" tab allows to fit a power-law or linear error model to resistance data.</li>
+           <li>The "Phase Error Model" tab allows to fit a power-law or parabolic error model to phase data.</li>
+           </ul></li>
+           <li>In the "Mesh" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
+           region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li>
+           <li>In the "Forward model" tab (only available in forward mode) you can design your sequence and add noise. The resulting synthetic measurements will be\
+           automatically added to as an actual survey in pyR2 and can be inverted directly.</li>
+           <li>In the "Inversion Settings" tab, you can modify all settings for the inversion. Help is available by clicking on the label of each item. The help\
+           generally refers to the document present in the R2/cR3/R3t/cR3t respective manuals.</li>
+           <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
+           then nothing will be printed out until the inversion finished. When the inversion finished you will be able to see the inverted section, open it with Paraview (mainly for 3D)\
+           and save the outputed .vtk file and graphs using the "Save Graphs" button.</li>
+           <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
+           </ul>
+        ''')
+        helpText.setOpenExternalLinks(True)
+        helpText.setWordWrap(True)
+        helpLayout.addWidget(helpText)
+        tabHelp.setLayout(helpLayout)
         
         
         #%% About tab
@@ -3279,18 +3770,8 @@ class App(QMainWindow):
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
                           <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
                           <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+                          <p>Python packages used: numpy, pandas, matplotlib.
 <ul>
-<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
-<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
-<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
-</li>
-<li>
- Wes McKinney.
-<strong>Data Structures for Statistical Computing in Python</strong>,
-Proceedings of the 9th Python in Science Conference, 51-56 (2010)
-(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
-</li>
 <li>
 John D. Hunter.
 <strong>Matplotlib: A 2D Graphics Environment</strong>,
@@ -3302,9 +3783,42 @@ USA: Trelgol Publishing, (2006).
 </li>
 </ul>
 </p>
-<p>Contributors : Paul McLachlan</p>
-<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan and Jimmy Boyd.<strong></p>
+<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
 '''%pyR2_version)
+#        aboutText.setText('''<h1>About pyR2</h1> \
+#                          <p><b>Version: %s</b></p> \
+#                          <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
+#                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
+#                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
+#                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
+#                          <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
+#                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
+#                          <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
+#                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
+#<ul>
+#<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
+#<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
+#<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
+#</li>
+#<li>
+# Wes McKinney.
+#<strong>Data Structures for Statistical Computing in Python</strong>,
+#Proceedings of the 9th Python in Science Conference, 51-56 (2010)
+#(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
+#</li>
+#<li>
+#John D. Hunter.
+#<strong>Matplotlib: A 2D Graphics Environment</strong>,
+#Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
+#<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a> 
+#</li>
+#<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
+#USA: Trelgol Publishing, (2006).
+#</li>
+#</ul>
+#</p>
+#<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+#'''%pyR2_version)
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
@@ -3313,6 +3827,11 @@ USA: Trelgol Publishing, (2006).
         tabAbout.setLayout(infoLayout)
         
         #%% general Ctrl+Q shortcut + general tab layout
+        if OS == 'Darwin':
+            metaLayout.setSpacing(4)
+            btnInvNow.setStyleSheet('background-color: green; margin-left: 5px; padding: 2px')
+            phasefiltlayout.setSpacing(4)
+            
         layout.addWidget(tabs)
         layout.addWidget(errorLabel)
         self.table_widget.setLayout(layout)
@@ -3422,7 +3941,8 @@ if __name__ == '__main__':
 
     ex = App()
     splash.hide() # hiding the splash screen when finished
-    
+    wineCheck()
+    updateChecker()
     sys.exit(app.exec_())
 
 
