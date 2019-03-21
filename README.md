@@ -1,6 +1,7 @@
 ![logo](src/logo.png)
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gl/hkex%2Fpyr2/master?filepath=jupyter-notebook)
 
 GUI for R2 family code
 ======================
