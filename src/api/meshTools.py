@@ -685,22 +685,10 @@ class Mesh:
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         
-#        try: # deactivated code 
-#            if xlim=="default":
-#                xlim=[min(self.elec_x),max(self.elec_x)]
-#            if ylim=="default":
-#                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) 
-#                #print(doiEstimate)
-#                ylim=[min(self.elec_y)-doiEstimate,max(self.elec_y)]
-#        except AttributeError:
         if xlim=="default":
-#            xlim=[min(self.node_x),max(self.node_x)]
             xlim=[min(self.elec_x), max(self.elec_x)]
         if ylim=="default":
-#            ylim=[min(self.node_y),max(self.node_y)]
             ylim=[min(self.elec_y), max(self.elec_y)]
-#            if self.ndims==2:
-#                ylim=[min(self.node_y)-1,max(self.node_y)+1]
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
         #set axis limits     
@@ -818,11 +806,11 @@ class Mesh:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z)+0.1,
+                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z),
                            s=20, c='k', marker='o')#note you have to give the points a size otherwise you
                 #get an NoneType Attribute error. 
                 #the matplotlib renderer really doesn't cope well with the addition of the electrodes, 
-                #the points are usually masked by the elements hence +0.01 is added to elevation. 
+                #the points are usually masked by the elements...
                 #I reccomend putting an alpha setting on the mesh to view electrodes + mesh together. 
             except AttributeError as e:
                 print("could not plot 3d electrodes, error = "+str(e))
@@ -864,7 +852,7 @@ class Mesh:
             Dictionary with the vertices (x,y) of each point in the polygon.
             
         Returns
-        -------
+        ---------
         material_no : numpy.array
             Element associations starting at 1. So 1 for the first region 
             defined in the region_data variable, 2 for the second region 
@@ -897,14 +885,14 @@ class Mesh:
         ***3D ONLY***
         
         Parameters
-        ----------
+        -----------
         volume_data : dict
             Each key contains columns of polygon data for each volume in 
             the form (polyx, polyy, polyz), the polygon data should be the 
             face coordinates which bound the volume.
                         
         Returns
-        -------
+        -----------
         material_no : numpy.array
             Element associations starting at 1. So 1 for the first region 
             defined in the region_data variable, 2 for the second region 
@@ -992,7 +980,7 @@ class Mesh:
             ... where letters are the material, numbers refer to the argument number
         
         Notes  
-        -----
+        ---------
         Mesh object will now have the new attribute added once the function is run.
         Use the `mesh.show()` (or `.draw()`) function to see the result. 
         """
@@ -1018,7 +1006,7 @@ class Mesh:
         Example is Resistivity to conductivty conversion. 
         
         Parameters
-        ------------
+        ----------
         attr: string
             mesh attribute to compute reciprocal of
         new_key: string
@@ -1160,7 +1148,7 @@ class Mesh:
             conductivity to the starting conductivity.
         
         Notes
-        -----
+        ----------
         mesh.dat like file written to file path. 
         ***IMPORTANT***
         R2/FORTRAN indexing starts at one, in python indexing natively starts at 0
@@ -1238,11 +1226,6 @@ class Mesh:
             will be written the current working directory. 
         title : string, optional
             Header string written at the top of the vtk file .
-        
-        Returns
-        ----------
-        vtk: file 
-            vtk file written to specified directory.
         """
         #open file and write header information    
         fh = open(file_path,'w')
@@ -1374,7 +1357,7 @@ class Mesh:
         #the string output can be run in the console if it is enclosed in speech
         #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
         
-    def paraview(self,fname='pyR2_mesh.vtk',loc=None):
+    def paraview(self,fname='TRIP4Dmesh.vtk',loc=None):
         """
         Show mesh in paraview 
         

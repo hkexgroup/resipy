@@ -34,7 +34,7 @@ def worker(dirname):
     try:
         shutil.copy('f001_res.vtk',r'..\f%003i_res.vtk'%num)
         shutil.copy('f001_res.dat',r'..\f%003i_res.dat'%num)
-        shutil.copy('f001_res.err',r'..\f%003i_res.err'%num)
+        shutil.copy('f001_res.err',r'..\f%003i_err.dat'%num)
     except FileNotFoundError:
         shutil.copy('f001.vtk',r'..\f%003i.vtk'%num)
         shutil.copy('f001.dat',r'..\f%003i.dat'%num)

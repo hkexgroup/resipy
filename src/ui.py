@@ -2141,12 +2141,15 @@ class App(QMainWindow):
         cl3FactorEdit.setValidator(QDoubleValidator())
         cl3FactorEdit.setText('2')
         def openMeshParaviewFunc():
-            print('Writing mesh to .vtk first...', end='')
             meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
-            self.r2.mesh.write_vtk(meshVTK)
-            print('done')
             try:
-                Popen(['paraview', meshVTK])
+                if platform.system()=="Windows":
+                    self.r2.mesh.paraview(meshVTK)
+                else:
+                    print('Writing mesh to .vtk first...', end='')
+                    self.r2.mesh.write_vtk(meshVTK)
+                    print('done')
+                    Popen(['paraview', meshVTK])
             except Exception as e:
                 errorDump('Error opening Paraview:' + str(e))
         openMeshParaview = QPushButton('Open in Paraview')
