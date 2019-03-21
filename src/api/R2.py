@@ -211,9 +211,15 @@ class R2(object): # R2 master class instanciated by the GUI
             # get rid of some stuff
             files = os.listdir(dirname)
             if 'ref' in files: # only for timelapse survey
-                shutil.rmtree(os.path.join(dirname, 'ref'))
+                try:
+                    shutil.rmtree(os.path.join(dirname, 'ref'))
+                except PermissionError:
+                    warnings.warn("OS reports reference inversion directory already in use, try changing the working directory")
             if 'err' in files: # only for error modelling
-                shutil.rmtree(os.path.join(dirname, 'err')) 
+                try:
+                    shutil.rmtree(os.path.join(dirname, 'err')) 
+                except PermissionError:
+                    warnings.warn("OS reports forward modelling directory already in use, try changing the working directory")
             for f in files:
                 if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
                     os.remove(os.path.join(dirname , f))
@@ -223,7 +229,10 @@ class R2(object): # R2 master class instanciated by the GUI
                             'protocol.dat']
             for f in files2remove:
                 if f in files:
-                    os.remove(os.path.join(dirname, f))
+                    try:
+                        os.remove(os.path.join(dirname, f))
+                    except Exception as e:
+                        raise Exception("Error setting up working directories:"+ str(e) + "\n...try changing the working inversion directory")
             def isNumber(x):
                 try:
                     float(x)
@@ -1575,7 +1584,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in')) # each file has different node positions
                 print('done')   
                 
-        print('Creating working directories for each inversion...')
+        print('Creating working directories for each inversion...',end='')
         workerDirs=['']*len(surveys) # number of surveys, preallocate list 
         toMove = ['mesh.dat', 'mesh3d.dat','R2.in','cR2.in',
                   'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 
@@ -1596,7 +1605,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if iMoveElec:
                 fname = os.path.join(self.dirname, self.typ + '_' + s.name + '.in')
                 shutil.copy(fname,os.path.join(workerDirs[i], self.typ +'.in'))
-        print('...Done')
+        print('Done')
                         
         # create workers directory
         ncoresAvailable = ncores = mt.systemCheck()['core_count']
@@ -1614,9 +1623,12 @@ class R2(object): # R2 master class instanciated by the GUI
         parallel = parallelScript.format(formattedDirs,
                                          "r'"+exePath+"'",ncores)#format template
         
-        #according to docs found here: https://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
+        #according to docs found here: 
+        #https://docs.python.org/2/library/multiprocessing.html#multiprocessing-programming
         #we need to spawn a whole new python interpreter in order to safely run 
         #multiprocessing within windows as the os doesnt support forking. 
+        #A workaround I found is here:
+        #https://stackoverflow.com/questions/45110287/workaround-for-using-name-main-in-python-multiprocessing
         
         #write python parallel script to file 
         fh = open('parallelScript.py','w')
@@ -1627,16 +1639,20 @@ class R2(object): # R2 master class instanciated by the GUI
         def initiate(): # initaites the script 
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW   
-            #proc = Popen('"'+ sys.executable +' parallelScript.py'+'"', stdout = PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)     
-            proc = Popen('python parallelScript.py', 
-                         stdout = PIPE, shell=False, universal_newlines=True, 
-                         startupinfo=startupinfo)
-            for stdout_line in iter(proc.stdout.readline, ""):
+#            proc = Popen('python parallelScript.py', #old way 
+#                         stdout = PIPE, shell=False, universal_newlines=True, 
+#                         startupinfo=startupinfo)
+            python_interpreter = sys.executable
+            proc = subprocess.run([python_interpreter, 'parallelScript.py'],
+                                   stdout = PIPE, universal_newlines=True, 
+                                   startupinfo=startupinfo)
+            for stdout_line in iter(proc.stdout):#.readline, ""):
                 yield stdout_line
 
-            proc.stdout.close()
-            return_code = proc.wait()
-            if return_code:
+            #proc.stdout.close()
+            return_code = proc.returncode
+            #print('return code = '+ str(return_code))
+            if return_code < 0 :
                 print('error on return_code')        
     
             
@@ -1853,10 +1869,15 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # compute difference in percent in case of reg_mode == 1
         if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
-            resRef = np.array(self.meshResults[0].attr_cache['Resistivity(Ohm-m)'])
-            for mesh in self.meshResutls[1:]:
-                res = np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
-                mesh.attr_cache['difference(percent)'] = (res-resRef)/resRef*100
+            try: 
+                self.compDiff()
+            except:
+                pass
+#            resRef = np.array(self.meshResults[0].attr_cache['Resistivity(Ohm-m)']) 
+#NOTE: this will not work as the reference array will be bigger than the timesteps if the mesh is cropped
+#            for mesh in self.meshResults[1:]:
+#                res = np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
+#                mesh.attr_cache['difference(percent)'] = (res-resRef)/resRef*100
             
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
@@ -2669,8 +2690,10 @@ class R2(object): # R2 master class instanciated by the GUI
         amtContent = startAnmt 
         if len(self.meshResults) == 0:
             self.getResults()
+        count=0
         for mesh, s in zip(self.meshResults, self.surveys):
-            file_path = os.path.join(dirname, s.name + '.vtk')
+            count+=1
+            file_path = os.path.join(dirname, prefix + '{:03d}.vtk'.format(count))
             mesh.write_vtk(file_path,title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += endAnmt 

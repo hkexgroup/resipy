@@ -641,7 +641,8 @@ def res2InvDipoleDipole(fname):
         elec_z[i] = float(line[1])
         elec_id[i] = i+1
         
-    elec = np.array([elec_x,[0]*num_elec,elec_z]).T
+    #elec = np.array([elec_x,[0]*num_elec,elec_z]).T
+    elec = np.array([elec_x,elec_z,[0]*num_elec]).T
     # convert to quadrapoles 
         
     # ABEM general array format is in the form:
