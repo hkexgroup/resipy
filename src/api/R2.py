@@ -1639,27 +1639,26 @@ class R2(object): # R2 master class instanciated by the GUI
         def initiate(): # initaites the script 
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW   
-#            proc = Popen('python parallelScript.py', #old way 
-#                         stdout = PIPE, shell=False, universal_newlines=True, 
-#                         startupinfo=startupinfo)
             python_interpreter = sys.executable
-            proc = subprocess.run([python_interpreter, 'parallelScript.py'],
-                                   stdout = PIPE, universal_newlines=True, 
-                                   startupinfo=startupinfo)
-            for stdout_line in iter(proc.stdout):#.readline, ""):
-                yield stdout_line
-
-            #proc.stdout.close()
-            return_code = proc.returncode
-            #print('return code = '+ str(return_code))
-            if return_code < 0 :
-                print('error on return_code')        
-    
+#            proc = subprocess.run([python_interpreter, 'parallelScript.py'],#returns a completed process
+#                                   capture_output=True, universal_newlines=True, 
+#                                   startupinfo=startupinfo)
+            proc = subprocess.Popen([python_interpreter, 'parallelScript.py'], stdout=subprocess.PIPE,
+                                 startupinfo=startupinfo, text = True)
             
-        def run():#run the parallel script 
-            for text in initiate():
-                print(text.rstrip())       
-        run()
+            while True:
+                  line = proc.stdout.readline()
+                  if not line:
+                     break
+                  print(line.strip())
+            proc.stdout.close()
+            proc.wait()
+            #print(proc.stdout)
+
+            #if proc.returncode < 0 : # is negative if there was a problem 
+            #    print('error on return_code')        
+    
+        initiate()
         
 #### TODO: Add capacity to kill pool 
 #        class ProcsManagement(object): # little class to handle the kill
@@ -1675,7 +1674,7 @@ class R2(object): # R2 master class instanciated by the GUI
             [shutil.rmtree(d) for d in workerDirs]
             #[os.remove(f) for f in files]
         
-        print('----------- END OF PARALLISED INVERSION // ----------')
+        print('----------- END OF PARALLISED INVERSION -------------')
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
@@ -1740,7 +1739,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # runs inversion
         if self.iTimeLapse == True:
-            dump('---------- Inverting background/reference model ---------\n')
+            dump('------------ INVERTING REFERENCE SURVEY ---------------\n')
             refdir = os.path.join(self.dirname, 'ref')
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
@@ -1752,8 +1751,8 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                             os.path.join(self.dirname, 'Start_res.dat'))
-            
-        dump('-------- Main inversion ---------------\n')
+  
+        dump('--------------------- MAIN INVERSION ------------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
             if platform.system() == "Windows": # different method needed on windows due to lack of forking
                 if forceParallel:
