@@ -248,7 +248,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = os.path.abspath(dirname)
     
     
-    def setElec(self, elec,elecList=None):
+    def setElec(self, elec, elecList=None):
         """ Set electrodes.
         
         Parameters
@@ -267,10 +267,12 @@ class R2(object): # R2 master class instanciated by the GUI
             if self.elec is not None: # then check the shape
                 if elec.shape[0] == self.elec.shape[0]:
                     ok = True
+                elif self.iForward: # in case of forward modelling, changing the number of electrodes is allowed
+                    ok = True
                 else:
                     print('ERROR : elec, does not match shape from Survey;')
-            else: # electrode not difined yet
-                self.elec = elec
+            else:
+                self.elec = elec # first assignement of electrodes
             if ok:
                 if elec.shape[1] == 2:
                     self.elec[:,[0,2]] = elec
