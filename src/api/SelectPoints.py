@@ -271,7 +271,6 @@ if __name__ == '__main__':
 #    print("Press the 'esc' key to start a new polygon.")
 #    print("Try holding the 'shift' key to move all of the vertices.")
 #    print("Try holding the 'ctrl' key to move a single vertex.")
-
     plt.show()
 
 #    selector.setVertices(np.array([[-0.5, -0.5],

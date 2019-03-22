@@ -2268,7 +2268,7 @@ class App(QMainWindow):
         instructionLabel.setWordWrap(True)
         meshLayout.addWidget(instructionLabel)
         
-        mwMesh = MatplotlibWidget(navi=True)
+        mwMesh = MatplotlibWidget(navi=True, itight=False)
         mwMesh3D = MatplotlibWidget(threed=True, navi=True)
         
         meshLogText = QTextEdit()
