@@ -22,7 +22,7 @@ tstart = time.time()
 #%% very simple example
 k = R2()
 k.createSurvey('api/test/syscalFile.csv')
-k.createModel()
+#k.createModel()
 #k.invert()
 #k.pseudoError()
 
