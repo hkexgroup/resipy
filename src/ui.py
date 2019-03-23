@@ -3726,9 +3726,11 @@ class App(QMainWindow):
            <li>Select if you want a 2D/3D survey, an inverse/forward solution and check if you have borehole/timelapse/batch data.</li>
            <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
+           <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</ul></li>
+           <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
            <li>Then one can choose to directly invert with all the default settings or go through the other tabs on the rights.</li>
-           <ul></li>
+           </ul></li>
            <li>In the "Pre-processing" tab:
            <ul>
            <li>The first tab offers manual filtering option based on reciprocal measurements in the dataset (if any).</li>
