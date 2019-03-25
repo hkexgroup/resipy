@@ -2142,7 +2142,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         elec = pd.read_csv(fname, header=None).values
         if elec.shape[1] > 3:
-            raise ValueError('The file should have no more than 3 columsn')
+            raise ValueError('The file should have no more than 3 columns')
         else:
             self.setElec(elec)            
     
