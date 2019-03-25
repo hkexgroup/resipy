@@ -3,7 +3,7 @@
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-pyR2_version = '1.1.3' # pyR2 version (semantic versionning in use) 
+pyR2_version = '1.1.4' # pyR2 version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -248,7 +248,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.dirname = os.path.abspath(dirname)
     
     
-    def setElec(self, elec,elecList=None):
+    def setElec(self, elec, elecList=None):
         """ Set electrodes.
         
         Parameters
@@ -267,10 +267,12 @@ class R2(object): # R2 master class instanciated by the GUI
             if self.elec is not None: # then check the shape
                 if elec.shape[0] == self.elec.shape[0]:
                     ok = True
+                elif self.iForward: # in case of forward modelling, changing the number of electrodes is allowed
+                    ok = True
                 else:
                     print('ERROR : elec, does not match shape from Survey;')
-            else: # electrode not difined yet
-                self.elec = elec
+            else:
+                self.elec = elec # first assignement of electrodes
             if ok:
                 if elec.shape[1] == 2:
                     self.elec[:,[0,2]] = elec
@@ -609,7 +611,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, dump=print, res0=100, **kwargs):
+                   cl=-1, dump=print, res0=100, show_output=True, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -634,6 +636,8 @@ class R2(object): # R2 master class instanciated by the GUI
              is the default.
         res0 : float, optional 
             Starting resistivity for mesh elements. 
+        show_output : bool, optional
+            If `True`, the output of gmsh will be shown on screen.
         kwargs: -
             Keyword arguments to be passed to mesh generation schemes 
         """
@@ -710,7 +714,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True,
+                             cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
             if typ == 'tetra': # TODO add buried
@@ -719,7 +723,7 @@ class R2(object): # R2 master class instanciated by the GUI
                              path=os.path.join(self.apiPath, 'exe'),
                              surface_refinement=surface,
                              cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True,
+                             cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
 #            except Exception as e:
@@ -2131,7 +2135,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         elec = pd.read_csv(fname, header=None).values
         if elec.shape[1] > 3:
-            raise ValueError('The file should have no more than 3 columsn')
+            raise ValueError('The file should have no more than 3 columns')
         else:
             self.setElec(elec)            
     
