@@ -875,7 +875,6 @@ class Survey(object):
                 df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e')
 
         outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
-        print(list(self.df))
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(self.df)) + '\n')
@@ -1128,6 +1127,7 @@ class Survey(object):
             if ax is None:
                 fig, ax = plt.subplots()
             cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
+            fig.colorbar(cax, ax=ax, label=label)
             ax.set_title('Pseudo Section')
             
         ax.set_xlabel('Distance [m]')

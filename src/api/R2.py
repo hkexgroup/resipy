@@ -611,7 +611,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, dump=print, res0=100, **kwargs):
+                   cl=-1, dump=print, res0=100, show_output=True, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -636,6 +636,8 @@ class R2(object): # R2 master class instanciated by the GUI
              is the default.
         res0 : float, optional 
             Starting resistivity for mesh elements. 
+        show_output : bool, optional
+            If `True`, the output of gmsh will be shown on screen.
         kwargs: -
             Keyword arguments to be passed to mesh generation schemes 
         """
@@ -712,7 +714,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
                              path=os.path.join(self.apiPath, 'exe'),
                              cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True,
+                             cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
             if typ == 'tetra': # TODO add buried
@@ -721,7 +723,7 @@ class R2(object): # R2 master class instanciated by the GUI
                              path=os.path.join(self.apiPath, 'exe'),
                              surface_refinement=surface,
                              cl_factor=cl_factor,
-                             cl=cl, dump=dump, show_output=True,
+                             cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
 #            except Exception as e:
