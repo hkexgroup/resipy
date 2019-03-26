@@ -1638,47 +1638,40 @@ class R2(object): # R2 master class instanciated by the GUI
         fh = open('parallelScript.py','w')
         fh.write(parallel)
         fh.close()
-    
-        #now to run the actual inversion     
-        def initiate(): # initaites the script 
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW   
-            python_interpreter = sys.executable
-#            proc = subprocess.run([python_interpreter, 'parallelScript.py'],#returns a completed process
-#                                   capture_output=True, universal_newlines=True, 
-#                                   startupinfo=startupinfo)
-            proc = subprocess.Popen([python_interpreter, 'parallelScript.py'], stdout=subprocess.PIPE,
-                                 startupinfo=startupinfo, text = True)
-            
-            while True:
-                  line = proc.stdout.readline()
-                  if not line:
-                     break
-                  print(line.strip())
-            proc.stdout.close()
-            proc.wait()
-            #print(proc.stdout)
-
-            #if proc.returncode < 0 : # is negative if there was a problem 
-            #    print('error on return_code')        
-    
-        initiate()
         
-#### TODO: Add capacity to kill pool 
-#        class ProcsManagement(object): # little class to handle the kill
-#            def __init__(self, procs):
-#                self.procs = procs
-#            def kill(self):
-#                for p in self.procs:
-#                    p.terminate()          
-#        self.proc = ProcsManagement(procs)
+        #now to run the actual inversion                 
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW   
+        python_interpreter = sys.executable
+        filename = 'parallel.log'
+        with open(filename, 'w') as writer, open(filename, 'r', 1) as reader:
+            p = subprocess.Popen([python_interpreter, 'parallelScript.py'], 
+                                 stdout=writer, 
+                                 universal_newlines=True, 
+                                 startupinfo=startupinfo)
+            while p.poll() is None:
+                sys.stdout.write(reader.read())# Update what is printed to screen
+                time.sleep(0.05)
+            sys.stdout.write(reader.read())#read whats left after the process has finished 
+            
+            return_code = p.wait()
+            if return_code:
+                print('error on return_code')    
+         
+        class ProcsManagement(object): # little class to handle the kill
+            def __init__(self, procs):
+                self.procs = procs
+            def kill(self):
+                for p in self.procs:
+                    p.terminate()          
+        self.proc = ProcsManagement([p])
           
         # delete the dirs and the files
         if rmDirTree:
             [shutil.rmtree(d) for d in workerDirs]
             #[os.remove(f) for f in files]
         
-        print('----------- END OF PARALLISED INVERSION -------------')
+        print('------------- END OF PARALLISED INVERSION -------------')
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,

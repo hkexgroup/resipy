@@ -11,21 +11,16 @@ dirs = {:s}
 def execute(cmd):
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  
-    proc = subprocess.Popen(cmd, stdout = subprocess.PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)           
-    for stdout_line in iter(proc.stdout.readline, ""):
-        yield stdout_line
-    proc.stdout.close()
-    return_code = proc.wait()
-    if return_code:
-        print('error on return_code')        
+    proc = subprocess.run(cmd, startupinfo=startupinfo)           
+    if proc.returncode < 0 : # is negative if there was a problem (using run not Popen)
+        print('error on return_code')     
       
 def worker(dirname):
     exe_loc = {:s}
     os.chdir(dirname)
     num = int(dirname.split('\\')[-1]) # index of the survey
     cmd = '"'+exe_loc+'"'
-    for text in execute(cmd): # EXCUTE THE BINLEY CODE
-        print(text.rstrip())
+    execute(cmd) # EXCUTE THE BINLEY CODE
     #now put files back into main directory as if it was a sequential inversion
     try:
         shutil.copy('f001_res.vtk',r'..\f%003i_res.vtk'%num)
@@ -37,15 +32,37 @@ def worker(dirname):
         shutil.copy('f001.err',r'..\f%003i.err'%num)
     shutil.copy('electrodes.vtk',r'..\electrodes%003i.vtk'%num)
     shutil.copy('electrodes.dat',r'..\electrodes%003i.dat'%num)
+    for f in os.listdir(dirname):
+        if f.endswith('.out'):
+            shutil.copy(f,r'..\inversion%003i.log'%num)
+            
+#def progress(iteration,total): # display a progress bar? not currently in use 
+#    iteration += 1
+#    barLength = 38 # Modify this to change the length of the progress bar
+#    progress = iteration/total
+#    if isinstance(progress, int):
+#        progress = float(progress)
+#    block = int(round(barLength*progress))
+#    counter = ' %i/%i'%(iteration,total)
+#    text = "\rCompleted: [%s]"%("#"*block + "-"*(barLength-block))+counter
+#    sys.stdout.write(text)
+#    sys.stdout.flush()
 
-print('----------- START OF PARALLISED INVERSION -------------')
-print('--------------- PROCESSING %i DATASETS -----------------'%len(dirs))
+to_process=len(dirs)
+print('\n----------- START OF PARALLISED INVERSION -------------',flush=True)
+print('--------------- PROCESSING %i DATASETS -----------------\n'%to_process,flush=True)
 if __name__ == '__main__':
+    #progress(-1,to_process)
     pool = Pool({:d})
     for i,_ in enumerate(pool.imap(worker, dirs)):
-        print('\rCompleted job %i'%(i+1))
+        print('Completed job %i\n'%(i+1),flush=True)
+        #progress(i,to_process)
     pool.close()  
     pool.join()
+else:
+    print("Parallel Script has not been run as main module, therefore parallel process has not been initiated")
+print('\n',flush=True)
+    
 """
 
 startAnmt = """from paraview.simple import * 
