@@ -623,7 +623,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
         surface : numpy.array, optional
-            Array with two or threee columns x, y (optional) and elevation for 
+            Array with two or three columns x, y (optional) and elevation for 
             additional surface points.
         cl_factor : float, optional
             Characteristic length factor. Only used for triangular mesh to allow
@@ -1844,7 +1844,7 @@ class R2(object): # R2 master class instanciated by the GUI
             initMesh.surface = self.mesh.surface
             self.meshResults.append(initMesh)
             
-        for i in range(1000):
+        for i in range(len(self.surveys)):
             if self.iTimeLapse is True:
                 j = i + 1
             else:

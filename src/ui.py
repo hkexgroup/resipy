@@ -134,7 +134,7 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=True, threed=False):
+    def __init__(self, parent=None, figure=None, navi=False, itight=False, threed=False):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
@@ -737,6 +737,7 @@ class App(QMainWindow):
                     elecTable.initTable(self.r2.elec)
                     tabImporting.setTabEnabled(1,True)
                     btnInvNow.setEnabled(True)
+                    nbElecEdit.setText(str(len(self.r2.elec)))
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         pass # no reciprocals found
                     else:
@@ -1115,6 +1116,8 @@ class App(QMainWindow):
                 else:
                     nbElec = None
                 elecTable.readTable(fname, nbElec=nbElec)
+#                if nbElec is None:
+#                    nbElecEdit.setText(str(int(self.r2.elec.shape[0])))
         elecButton = QPushButton('Import from CSV files (no headers)')
         elecButton.setAutoDefault(True)
         elecButton.clicked.connect(elecButtonFunc)
