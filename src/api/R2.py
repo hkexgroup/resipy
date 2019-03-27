@@ -2609,12 +2609,14 @@ class R2(object): # R2 master class instanciated by the GUI
         for i in range(len(self.meshResults)):
             self.meshResults[i].reciprocal(res_name,'Conductivity(S/m)')
             
+            
     def compDiff(self):
         """Compute difference in meshResult parameters 
         """
         if not self.iTimeLapse:
             raise Exception("Difference calculation only available for time lapse surveys")
-        self.getResults()
+        if len(self.meshResults) == 0:
+            self.getResults()
         
         crop=False
         if len(self.param['xy_poly_table'])>0:

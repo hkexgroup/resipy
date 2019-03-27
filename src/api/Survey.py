@@ -143,7 +143,7 @@ class Survey(object):
         """ Checking the sign of the transfer resistance.
         """
         elecpos = self.elec[:,0]
-        array = self.df[['a','b','m','n']].values.copy()
+        array = self.df[['a','b','m','n']].values.copy().astype(int)
         resist = self.df['resist'].values.copy()
         
         apos = elecpos[array[:,0]-1]

@@ -106,6 +106,23 @@ k.showResults(index=3)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
+#%% test for timelapse inversion (reg_mode=1)
+plt.close('all')
+print('-------------Testing Time-lapse in // ------------')
+t0 = time.time()
+k = R2()
+k.createTimeLapseSurvey('api/test/testTimelapse')
+k.linfit()
+k.pwlfit()
+k.err = True
+k.param['reg_mode'] = 1
+k.invert(iplot=False, parallel=True)
+k.showResults(index=1)
+k.showResults(index=2)
+k.showResults(index=3)
+print('elapsed: {:.4}s'.format(time.time() - t0))
+
+
 #%% test for batch inversion with moving electrodes
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
