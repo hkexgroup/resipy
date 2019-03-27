@@ -11,7 +11,11 @@ virtualenv <my_virtual_env> -p python3 # use Python 3 if it's not the default on
 <my_virtual_env>\Scripts\activate.bat #windows version
 source <my_virtual_env>\bin\activate #linux version
 ```
-
+Note: from `virtualenv>12.0.0` there is a bug (https://github.com/pyinstaller/pyinstaller/issues/4064) and `distutils` is not include anymore
+in the virtualenv. The work-around is to downgrade virtualenv to 12.0.0 using pip and then create the virtual enviroment.
+```
+pip install virtualenv==12.0.0
+```
 
 
 # 2. Pyinstaller and packages
