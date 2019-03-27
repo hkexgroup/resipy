@@ -877,6 +877,8 @@ class App(QMainWindow):
 #                timeLapseCheck.setEnabled(False)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(True)
+                    noiseLabelIP.show()
+                    noiseEditIP.show()
                 else:
                     plotPseudoIP()
                     mwPseudoIP.setVisible(True)
@@ -902,6 +904,8 @@ class App(QMainWindow):
                 regionTable.setColumnHidden(1, True)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(False)
+                    noiseLabelIP.hide()
+                    noiseEditIP.hide()
             print('mode', self.r2.typ)
 
         ipCheck = QCheckBox('Induced Polarization')
@@ -2531,6 +2535,8 @@ class App(QMainWindow):
         # add IP noise
         noiseLabelIP = QLabel('Phase noise [mrad]:')
         noiseEditIP = QLineEdit('2')
+        noiseLabelIP.hide()
+        noiseEditIP.hide()
         noiseEditIP.setValidator(QDoubleValidator())
         
         # add a forward button
@@ -3719,6 +3725,7 @@ class App(QMainWindow):
         tabs.addTab(tabHelp, 'Help')
         
         helpLayout = QVBoxLayout()
+        helpLayout.setAlignment(Qt.AlignTop)
         helpText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
         helpText.setText('''
            <h1>General help</h1>\
