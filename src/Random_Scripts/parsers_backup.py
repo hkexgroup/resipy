@@ -3,7 +3,7 @@
 """
 Created on Fri Jun  1 11:23:23 2018
 Handles importing external data files into the R2 api
-@authors: Guillaume, Jimmy, Sina, Pedro Concha 
+@author: jkl 
 
 Currently supports: 
     syscal files
@@ -34,10 +34,10 @@ def geom_fac(C1,C2,P1,P2):
     k: float, np array
         geometric factor to convert transfer resistance into apparent resistivity 
     """
-    Rc1p1 = np.abs(C1 - P1)
-    Rc2p1 = np.abs(C2 - P1)
-    Rc1p2 = np.abs(C1 - P2)
-    Rc2p2 = np.abs(C2 - P2)
+    Rc1p1 = (C1 - P1)
+    Rc2p1 = (C2 - P1)
+    Rc1p2 = (C1 - P2)
+    Rc2p2 = (C2 - P2)
     
     denom = (1/Rc1p1) - (1/Rc2p1) - (1/Rc1p2) + (1/Rc2p2)
     k = (2*np.pi)/denom
@@ -395,7 +395,7 @@ def primeParserTab(fname, espacing = 1):
 ##Test code
 #electrodes, data = primeParserTab("../Data/PRIME/3001_CAN_2017-11-16_005119.tab")
 
-#%% parse input for res2inv (.dat file) - Jimmy B.
+#%% parse input for res2inv (.dat file) - Jimmy B. 
 #jamyd91@bgs.ac.uk
 def res2invInputParser(file_path):
     """
@@ -415,7 +415,7 @@ def res2invInputParser(file_path):
         dataframe which holds the electrode numbers for in feild measurements and 
         apparent resistivities (Rho) and transfer resistances 
     
-    ## TODO : add capacity to read Pole-Pole, Pole-Dipole and borehole surveys 
+    ## TODO : add capacity to read in borehole surveys 
     """
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
@@ -425,303 +425,85 @@ def res2invInputParser(file_path):
     fmt_flag = False # format flag 
     err_flag = False # error estimates flag 
     topo_flag = False # topography flag 
-    start_0_flag = False
-    sur_flag = 0 # survey type
-    x_location = 0 # for data points, 0 for first electrode, 1 for mid-point, 2 for surface distance
-    ip_flag = 0 # 0 for none IP data, 1 if present
-    idx_oi = 0
-    line = dump[idx_oi]
-    sur_name = line.strip() #name of survey
-    idx_oi += 1
-    line = dump[idx_oi]
-    a_spac = float(line) #electrode spacing
-    idx_oi += 1
-    line = dump[idx_oi]
-    array_type = int(line)
-    if array_type in [2,6]:
-        raise ImportError("Not supported")  
-    
-    meas_type_flag = 'appRes' #default  
-    if array_type in [1,3,4,5,7]: 
-        #1:Wenner alfa, 3:DipDip,4:Wenner beta, 5:Wenner gama,
-        #7:Schlumberger, 11:General array, 15:Gradient 
-        idx_oi = 3
-        line = dump[idx_oi]
+    sur_flag = 0 # survey type --> currently unused . 
+    for i,line in enumerate(dump):
+        if line.strip() == "General array format":
+            #print("found array data")
+            idx_oi = i+1 # index of interest
+            fmt_flag = True
+        #find if errors are present 
+        if line.strip() == "Error estimate for data present":
+            err_flag = True
+            print('errors estimates found in file and will be converted into transfer resistance error estimates')
         
-    elif array_type in (11, 15):
-        idx_oi = 6
-        line = dump[idx_oi]
+    #add some protection against a dodgey file 
+    if fmt_flag is False:
+        raise ImportError("Error importing res2dinv input file:"+file_path+"\n the file is either unrecognised or unsupported")        
     
-        meas_type = [int(dump[i+1]) for i in range(len(dump)) if 'Type' in dump[i]] # Looking for app.resistivity/resistiance flag
-           
-        if meas_type != []:
-            if meas_type[0] == 1:
-                meas_type_flag = 'resistance'
-
-        elif meas_type == []:
-            if dump[4] == 1 or dump[5] == 1:
-                meas_type_flag = 'resistance'
-    
-    num_meas = int(line)
-    idx_oi += 1
-    line = dump[idx_oi]
-    x_location = int(line)
-    idx_oi += 1
-
-    ip_flag = False
-    for i in range(len(dump)): 
-        if 'Chargeability' in dump[i]:
-            ip_flag = True
-            factor = 1
-        elif 'Phase' in dump[i]:
-            ip_flag = True
-            factor = -1
-            
-    if ip_flag == True:
-        idx_oi += 4
+    num_meas = int(dump[3])#number of measurements should be stored on the 4th line of the file
+       
+    #find topography? 
+    topo_flag_idx = 6+num_meas
+    if err_flag:#changes if we have an error estimate -_-
+        topo_flag_idx = 9+num_meas        
     else:
-        idx_oi += 1
+        topo_flag_idx = 6+num_meas
     
-    Pa = []
-    x_dump = []
+    if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
+        #print("topography flag activated")
+        topo_flag = True
+        num_elec =  int(dump[topo_flag_idx+1])
+        ex_pos=[0]*num_elec
+        ey_pos=[0]*num_elec
+        ez_pos=[0]*num_elec # actaully we can't have a z coordinate for 2d data so these will remain as zero
+        for i in range(num_elec):
+            ex_pos[i] = float(dump[topo_flag_idx+2+i].strip().split(',')[0])
+            ey_pos[i] = float(dump[topo_flag_idx+2+i].strip().split(',')[1])
+        #print(ex_pos,ey_pos)
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+              
+    #since we dont always have all the electrode indexes we need to determine this
+    #idea here is to extract all the x locations from the general array format
     total_x=np.array(())
-    e_idx = []
-    total_x = np.append(total_x,0)
-    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
-    
+    #print('finding general array electrode coordinates')
     for k in range(num_meas):
-        line = dump[idx_oi + k]
+        line = dump[k+idx_oi]
         vals = line.strip().split()
-        if array_type == 1:# Wenner alfa
-            if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = c1 + a
-                p2 = p1 + a
-                c2 = p2 + a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                mn = (float(vals[1]))
-                p1 = mid_point - mn/2
-                c1 = p1 - mn
-                p2 = p1 + mn
-                c2 = p2 + mn
-        elif array_type == 3:#Dipole-Dipole
-            if x_location == 0:
-                c2 = (float(vals[0]))
-                a = (float(vals[1]))
-                c1 = c2 + a
-                n = (float(vals[2]))
-                p1 = c1 + a * n
-                p2 = p1 + a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                n = (float(vals[2]))
-                c1 = mid_point - n*a/2
-                c2 = c1 - a
-                p1 = c1 + n*a
-                p2 = p1 + a
-        elif array_type == 4:# Wenner beta
-            if x_location == 0:
-                c2 = (float(vals[0]))
-                a = (float(vals[1]))
-                c1 = c2 + a 
-                p1 = c1 + a
-                p2 = p1 + a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                c1 = mid_point - a/2
-                c2 = c1 - a
-                p1 = c1 + a
-                p2 = p1 + a
-        elif array_type == 5:# Wenner gamma
-            if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = c1 + a
-                c2 = p1 + a
-                p2 = c2 + a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = mid_point - a/2
-                c1 = p1 - a
-                c2 = p1 + a
-                p2 = c2 + a
-        elif array_type == 7:#Schlumberger
-            if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                n = (float(vals[2]))
-                p1 = c1 + n * a
-                p2 = p1 + a
-                c2 = p2 + n * a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                n = (float(vals[2]))
-                p1 = mid_point - a/2
-                c1 = p1 - n*a
-                p2 = p1 + a
-                c2 = p2 + n*a
-        elif array_type in (11,15):
-           c1 = (float(vals[1]))
-           if c1 == 0 or start_0_flag:
-               start_0_flag = True
-           c2 = (float(vals[3]))
-           p1 = (float(vals[5]))
-           p2 = (float(vals[7]))
-            
-        x_dump.append(c1)
-        x_dump.append(p1)
-        x_dump.append(p2)
-        x_dump.append(c2)
-        total_x = np.append(total_x,x_dump)
-        #convert the x electrode coordinates into indexes?
-        ex_pos = np.unique(total_x)
-        x_dump.clear()
+        x_dump = [float(vals[1:5][i].split(',')[0]) for i in range(4)] # extract x locations
+        total_x = np.append(total_x,x_dump) # this caches all the x locations 
+    #extract the unique x values using numpy
+    ex_pos = np.unique(total_x)
+    #now we have indexed electrode coordinates in ex_pos :) 
+    if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
+        ey_pos=[0]*num_elec
+        ez_pos=[0]*num_elec  
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
     
+    # loke's general array format is in the form:
+    #no.electrodes | C+ | C- | P+ | P- | apparent.resistivity. 
+    #Note R2 expects the electrode format in the form:
+    #meas.no | P+ | P- | C+ | C- | transfer resistance
+    #print('computing transfer resistances and reading in electrode indexes')
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
     for k in range(num_meas):
-        line = dump[idx_oi + k]
-        vals = line.strip().split()            
-        if array_type == 1:# Wenner alfa
-            Pa.append(float(vals[2]))
-            if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = c1 + a
-                p2 = p1 + a
-                c2 = p2 + a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                mn = (float(vals[1]))
-                p1 = mid_point - mn/2
-                c1 = p1 - mn
-                p2 = p1 + mn
-                c2 = p2 + mn
-            if c1 == 0 or start_0_flag:
-                    start_0_flag = True
-        elif array_type == 3:#Dipole-Dipole
-                Pa.append(float(vals[3]))
-                if x_location == 0:
-                    c2 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    c1 = c2 + a
-                    n = (float(vals[2]))
-                    p1 = c1 + a * n
-                    p2 = p1 + a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    n = (float(vals[2]))
-                    c1 = mid_point - n*a/2
-                    c2 = c1 - a
-                    p1 = c1 + n*a
-                    p2 = p1 + a
-                if c2 == 0 or start_0_flag:
-                        start_0_flag = True
-        elif array_type == 4:# Wenner beta
-                Pa.append(float(vals[2]))
-                if x_location == 0:
-                    c2 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    c1 = c2 + a 
-                    p1 = c1 + a
-                    p2 = p1 + a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    c1 = mid_point - a/2
-                    c2 = c1 - a
-                    p1 = c1 + a
-                    p2 = p1 + a                
-                if c2 == 0 or start_0_flag:
-                    start_0_flag = True
-        elif array_type == 5:# Wenner gamma
-                Pa.append(float(vals[2]))
-                if x_location == 0:
-                    c1 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    p1 = c1 + a
-                    c2 = p1 + a
-                    p2 = c2 + a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    p1 = mid_point - a/2
-                    c1 = p1 - a
-                    c2 = p1 + a
-                    p2 = c2 + a
-                if c1 == 0 or start_0_flag :
-                    start_0_flag = True
-        elif array_type == 7:#Schlumberger
-                Pa.append(float(vals[3]))
-                if x_location == 0:
-                    c1 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    n = (float(vals[2]))
-                    p1 = c1 + n * a
-                    p2 = p1 + a
-                    c2 = p2 + n * a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    n = (float(vals[2]))
-                    p1 = mid_point - a/2
-                    c1 = p1 - n*a
-                    p2 = p1 + a
-                    c2 = p2 + n*a
-                if c1 == 0 or start_0_flag:
-                    start_0_flag = True
-        elif array_type in (11,15):
-           c1 = (float(vals[1]))
-           if c1 == 0 or start_0_flag:
-               start_0_flag = True
-           c2 = (float(vals[3]))
-           p1 = (float(vals[5]))
-           p2 = (float(vals[7]))
-           Pa.append(float(vals[9]))
-            
-        x_dump.append(c1)
-        x_dump.append(p1)
-        x_dump.append(p2)
-        x_dump.append(c2)
-    
-        if start_0_flag:
-            e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
-            e_idx= np.add(e_idx, [1, 1, 1, 1])
-        else:
-            e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
-    
-        data_dict['a'].append(e_idx[0])
-        data_dict['b'].append(e_idx[3])
-        data_dict['m'].append(e_idx[1])
-        data_dict['n'].append(e_idx[2])
+        line = dump[k+idx_oi]
+        vals = line.strip().split()
+        x_dump = [float(vals[1:5][i].split(',')[0]) for i in range(4)]
+        #convert the x electrode coordinates into indexes?
+        e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
+        #add the electrode indexes to the dictionary which will be turned into a dataframe
+        data_dict['a'].append(e_idx[2]+1)
+        data_dict['b'].append(e_idx[3]+1)
+        data_dict['m'].append(e_idx[1]+1)
+        data_dict['n'].append(e_idx[0]+1)
         #convert apparent resistivity back in to transfer resistance
-        if array_type in [1, 7, 11]:
-            K = geom_fac(c1, c2, p1, p2)
-        elif array_type == 3:
-            K = np.pi * n*(n + 1)*(n + 2)*a
-        elif array_type == 4:
-            K = 6 * np.pi * a
-        elif array_type == 5:
-            K = 3 * np.pi * a
-
+        K = geom_fac(x_dump[0],x_dump[1],x_dump[2],x_dump[3])
+        Pa = float(vals[5]) # apparent resistivity value
+        Pt = Pa/K # transfer resistance
         #add apparent and transfer resistances to dictionary
-        if meas_type_flag == 'resistance':
-            R = Pa[k] # transfer resistance
-        else:
-            R = Pa[k]/K
-            
-        data_dict['Rho'].append(Pa[k])
-        data_dict['resist'].append(R)
-        if ip_flag == True:
-            data_dict['ip'].append(factor*float(vals[-1])) # add ip (chargeability) assuming it's last column
-        else:
-            data_dict['ip'].append(0)
-            
+        data_dict['Rho'].append(Pa)
+        data_dict['resist'].append(Pt)
+        data_dict['ip'].append(0)
         if err_flag:
             err_Pa = float(vals[6])
             err_Pt = err_Pa/K
@@ -729,62 +511,200 @@ def res2invInputParser(file_path):
         else:
             data_dict['dev'].append(0)
     
-        x_dump.clear()
-                  
-    num_elec = len(ex_pos)
-    fmt_flag = True
-        
-    topo_flag_idx = idx_oi + num_meas
-    
-    if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
-        #print("topography flag activated")
-        topo_flag = True
-        num_elec_topo =  int(dump[topo_flag_idx+1])
-        ex_pos_topo=[0]*num_elec_topo
-        ey_pos_topo=[0]*num_elec_topo
-        ez_pos_topo=[0]*num_elec_topo # actaully we can't have a z coordinate for 2d data so these will remain as zero
-        ey_pos=[0]*num_elec
-        ez_pos=[0]*num_elec
-        for i in range(num_elec_topo):
-            ex_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[0])
-            ey_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[1])
-            
-        for i in range(num_elec):
-            for j in range(num_elec_topo):
-                if ex_pos[i] == ex_pos_topo[j]:
-                    ey_pos[i] = ey_pos_topo[j]
-        #print(ex_pos,ey_pos)
-        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-              
-       
-    #add some protection against a dodgey file 
-    if fmt_flag is False:
-        raise ImportError("Error importing res2dinv input file:"+file_path+"\n the file is either unrecognised or unsupported")        
-    
-    #now we have indexed electrode coordinates in ex_pos :) 
-    if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
-        ey_pos=[0]*num_elec
-        ez_pos=[0]*num_elec  
-        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-       
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     return elec,df
 
+def res2InvGeneralArray(file_path):
+    """
+    Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+    It looks for the general array format in the .dat file. 
+    
+    Parameters
+    -----------
+    file_path : string 
+         string mapping to the res2inv input file 
+    
+    Returns
+    ----------
+    elec : np array
+        electrode coordinate matrix in the form | x | y | z |
+    df: pandas dataframe
+        dataframe which holds the electrode numbers for in feild measurements and 
+        apparent resistivities (Rho) and transfer resistances 
+    
+    ## TODO : add capacity to read in borehole surveys 
+    """
+    fh = open(file_path,'r')#open file handle for reading
+    dump = fh.readlines()#cache file contents into a list
+    fh.close()#close file handle, free up resources
+    num_meas = int(dump[6])
+    start = 9
+    #general array format given in terms of xz coordinates 
+    xC1 = np.array([0]*num_meas,dtype=float)
+    xC2 = np.array([0]*num_meas,dtype=float)
+    xP1 = np.array([0]*num_meas,dtype=float)
+    xP2 = np.array([0]*num_meas,dtype=float)
+    zC1 = np.array([0]*num_meas,dtype=float)
+    zC2 = np.array([0]*num_meas,dtype=float)
+    zP1 = np.array([0]*num_meas,dtype=float)
+    zP2 = np.array([0]*num_meas,dtype=float)
+    pa = np.array([0]*num_meas,dtype=float)
+    Tr = np.array([0]*num_meas,dtype=float)
+    count = 0
+    for i in range(start,num_meas+start):
+        line = dump[i].split()
+        xC1[count] = float(line[1])
+        zC1[count] = float(line[2])
+        xC2[count] = float(line[3])
+        zC2[count] = float(line[4])
+        xP1[count] = float(line[5])
+        zP1[count] = float(line[6])
+        xP2[count] = float(line[7])
+        zP2[count] = float(line[8])
+        pa[count] = float(line[9])
+        try:
+            k = geom_fac(xC1[count],xC2[count],xP1[count],xP2[count])
+        except:
+            k=float('nan')
+        Tr[count] = pa[count]/k
+        count += 1
+        
+    #convert xz coordinates into electrode numbers 
+    uni_x, inds = np.unique(np.column_stack((xC1,xC2,xP1,xP2)).flatten(),return_index=True)
+    total_z = np.column_stack((zC1,zC2,zP1,zP2)).flatten()
+    uni_z = total_z[inds]
+    uni_list = list(uni_x)
+    num_elec = len(uni_x)
+    
+    C1 = np.array([0]*num_meas)
+    C2 = np.array([0]*num_meas)
+    P1 = np.array([0]*num_meas)
+    P2 = np.array([0]*num_meas)
+    for i in range(num_meas):
+        C1[i] = uni_list.index(xC1[i])+1
+        C2[i] = uni_list.index(xC2[i])+1
+        P1[i] = uni_list.index(xP1[i])+1
+        P2[i] = uni_list.index(xP2[i])+1
+    
+    elec = np.zeros((num_elec,3))
+    elec[:,0] = uni_x
+    elec[:,1] = uni_z
+    
+    #return output in dataframe format
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict['a']=P1
+    data_dict['b']=P2
+    data_dict['n']=C2
+    data_dict['m']=C1
+    data_dict['resist']=Tr
+    data_dict['Rho']=pa
+    data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    return elec,df
+    
+#return dipole dipole survey 
+def res2InvDipoleDipole(fname):
+    """Read in 2D ABEM file for a dipole dipole array ONLY. 
+    """
+    fh = open(fname,'r')
+    dump = fh.readlines()
+    fh.close()
+    
+    num_meas = int(dump[3])#number of measurements 
+    a_factor = [0]*num_meas#a spacing value
+    n_factor = [0]*num_meas#n spacing value
+    xpos = [0]*num_meas#leftmost electrode x position 
+    pa = [0]*num_meas# apparent resisitivity 
+    
+    for i in range(num_meas):
+        line = dump[6+i].split()
+        xpos[i] = float(line[0])
+        a_factor[i] = float(line[1])
+        n_factor[i] = float(line[2])
+        pa[i] = float(line[3])
+     
+    end_meas = 6+num_meas
+    num_elec = int(dump[end_meas+1])
+    
+    #get elec coordinates 
+    elec_x =  [0]*num_elec
+    elec_z =  [0]*num_elec   
+    elec_id =  [0]*num_elec
+    
+    for i in range(num_elec):
+        line = dump[end_meas+2+i].split()
+        elec_x[i] = float(line[0])
+        elec_z[i] = float(line[1])
+        elec_id[i] = i+1
+        
+    #elec = np.array([elec_x,[0]*num_elec,elec_z]).T
+    elec = np.array([elec_x,elec_z,[0]*num_elec]).T
+    # convert to quadrapoles 
+        
+    # ABEM general array format is in the form:
+    #no.electrodes | C- | C+ | P+ | P- | apparent.resistivity. 
+    #Note R2 expects the electrode format in the form:
+    #meas.no | P+ | P- | C+ | C- | transfer resistance
+    
+    #a,b,n,m
+    a=[0]*num_meas
+    b=[0]*num_meas
+    n=[0]*num_meas
+    m=[0]*num_meas
+    Tr =[0]*num_meas # transfer resistance
+    
+    for i in range(num_meas):
+        c2_loc = xpos[i] # C- 
+        c1_loc = xpos[i]+a_factor[i] # C+
+        p1_loc = c1_loc + (a_factor[i]*n_factor[i]) # p+
+        p2_loc = p1_loc + a_factor[i] #P- 
+        a[i] = elec_x.index(p1_loc)+1
+        b[i] = elec_x.index(p2_loc)+1
+        m[i] = elec_x.index(c2_loc)+1
+        n[i] = elec_x.index(c1_loc)+1
+        K = geom_fac(c1_loc,c2_loc,p1_loc,p2_loc)
+        Tr[i] = pa[i]/K
+    
+    #put data into correct format
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict['a']=a
+    data_dict['b']=b
+    data_dict['n']=n
+    data_dict['m']=m
+    data_dict['resist']=Tr
+    data_dict['Rho']=pa
+    data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*num_meas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    
+    return elec,df
 
-def resInvParser(filename): # keeping it for now, in case of Res3DInv files
+def resInvParser(filename):
     """Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
     
     Parameters
     -----------
-    filename : string 
+    file_path : string 
          string mapping to the res2inv input file 
     """
-    try:
+    fh = open(filename,'r')
+    _ = fh.readline()#title line
+    _ = fh.readline()
+    flag = int(fh.readline())
+    fh.close()
+    if flag == 3: 
+        elec, df = res2InvDipoleDipole(filename)
+    elif flag == 11:
+        elec, df = res2InvGeneralArray(filename)
+    elif flag != 3 or flag != 11:
         elec, df = res2invInputParser(filename)
-    except:
-        raise ImportError('Unsupported ResInv file')
+    else:
+        raise ImportError("unsupported type of res inv file (for the moment)")
         
     return elec,df
 
