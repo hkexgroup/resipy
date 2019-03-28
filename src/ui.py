@@ -1722,6 +1722,15 @@ class App(QMainWindow):
                 b_wgt.setText('0.0')
                 b_wgtFunc()
         
+        errFitLabel = QLabel('Select an error model from the drop-down menu. Once\
+                             fitted, the model will generate an error for each quadrupoles\
+                             (even the ones with no reciprocals). This error will\
+                             be written in the <code>protocol.dat</code> file \
+                             and used in the inversion if both <code>a_wgt</code> and\
+                             <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
+        errFitLabel.setWordWrap(True)
+        errorLayout.addWidget(errFitLabel)
+        
         errFitType = QComboBox()
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
@@ -1777,7 +1786,15 @@ class App(QMainWindow):
 #                c_wgt.setText('0.0')
 #                c_wgtFunc()
             
-            
+        iperrFitLabel = QLabel('Select an error model from the drop-down menu. Once\
+                     fitted, the model will generate an error for each quadrupoles\
+                     (even the ones with no reciprocals). This error will\
+                     be written in the <code>protocol.dat</code> file \
+                     and used in the inversion if both <code>a_wgt</code> and\
+                     <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
+        iperrFitLabel.setWordWrap(True)
+        ipLayout.addWidget(iperrFitLabel)
+
         iperrFitType = QComboBox()
         iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
         iperrFitType.addItem('Power law')
