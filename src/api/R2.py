@@ -25,7 +25,7 @@ from api.r2in import write2in
 import api.meshTools as mt
 import api.isinpolygon as iip
 from api.template import parallelScript, startAnmt, endAnmt
-from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta,
+from api.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from api.SelectPoints import SelectPoints
 
@@ -2123,6 +2123,7 @@ class R2(object): # R2 master class instanciated by the GUI
         nelec = len(self.elec)
         fdico = {'dpdp1': dpdp1,
               'dpdp2': dpdp2,
+              'wenner': wenner,
               'wenner_alpha': wenner_alpha,
               'wenner_beta': wenner_beta,
               'wenner_gamma': wenner_gamma,

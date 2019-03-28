@@ -116,6 +116,15 @@ def dpdp2(elec_num, a, n):
     return proto_mtrx
 
 
+def wenner(elec_num, n):
+    ''' Generate quadrupoles matrix for Wenner alpha survey for a = 1 ... n.
+    '''
+    seq = []
+    for a in np.arange(n) + 1:
+        seq.append(wenner_alpha(elec_num, a))
+    return pd.concat(seq).reset_index(drop=True)
+    
+    
 def wenner_alpha(elec_num, a):
     ''' Generates quadrupole matrix for Wenner alpha survey.
     

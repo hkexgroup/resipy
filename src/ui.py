@@ -135,7 +135,7 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=True, threed=False):
+    def __init__(self, parent=None, figure=None, navi=False, itight=False, threed=False):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
@@ -2496,7 +2496,7 @@ class App(QMainWindow):
         seqCustom = SequenceTable(['a','b','m','n'], selfInit=True)
         
         seqTables = {'dpdp1' : seqDipDip,
-                     'wenner_alpha' : seqWenner,
+                     'wenner' : seqWenner,
                      'schlum1' : seqSchlum,
                      'multigrad' : seqMulti,
                      'custSeq' : seqCustom}
