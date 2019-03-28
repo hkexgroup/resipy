@@ -6,12 +6,12 @@ import time
 #a = time.time()
 print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget, 
-    QAction, QTabWidget,QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-    QListWidget, QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
-    QTableWidget, QFormLayout, QShortcut, QTableWidgetItem, QHeaderView, QProgressBar,
-    QStackedLayout, QRadioButton, QGroupBox, QButtonGroup)
-from PyQt5.QtGui import QIcon, QKeySequence, QPixmap, QIntValidator, QDoubleValidator
-from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
+    QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
+    QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
+    QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
+    QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
+from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
+#from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
 from PyQt5.QtCore import Qt
 
 #%% General crash ERROR
@@ -111,7 +111,8 @@ def updateChecker():
                 webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     except: #if there is no internet connection!
         return False
-
+# TODO do this check in a separate thread in case of lagging network
+        
 #%%
 QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
 
@@ -3911,7 +3912,7 @@ if __name__ == '__main__':
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
-    from mpl_toolkits.mplot3d import axes3d
+#    from mpl_toolkits.mplot3d import axes3d
     progressBar.setValue(2)
     app.processEvents()
     
@@ -3929,15 +3930,12 @@ if __name__ == '__main__':
     progressBar.setValue(6)
     app.processEvents()
     print('importing python libraries')
-    import shutil
-    import platform
     OS = platform.system()
     from datetime import datetime
     progressBar.setValue(8)
     app.processEvents()
     from matplotlib import rcParams
     rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
-    from subprocess import Popen # used for opening paraview
     
     from api.R2 import R2
     from api.r2help import r2help

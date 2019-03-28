@@ -597,16 +597,24 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['num_xy_poly'] = 5
             xmin, xmax = np.min(self.elec[:,0]), np.max(self.elec[:,0])
             ymin, ymax = np.min(self.elec[:,1]), np.max(self.elec[:,1])
-            xy_poly_table = np.array([
-            [xmin, ymax],
-            [xmax, ymax],
-            [xmax, ymin],
-            [xmin, ymin],
-            [xmin, ymax]])
-            self.param['xy_poly_table'] = xy_poly_table
-            self.param['zmin'] = self.doi
-            self.param['zmax'] = np.max(self.elec[:,2])
-            
+            zmin, zmax = self.doi, np.max(self.elec[:,2])
+            if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D
+                xy_poly_table = np.array([
+                [xmin, zmax],
+                [xmax, zmax],
+                [xmax, zmin],
+                [xmin, zmin],
+                [xmin, zmax]])
+            else:
+                xy_poly_table = np.array([
+                [xmin, ymax],
+                [xmax, ymax],
+                [xmax, ymin],
+                [xmin, ymin],
+                [xmin, ymax]])
+                self.param['zmin'] = zmin
+                self.param['zmax'] = zmax
+            self.param['xy_poly_table'] = xy_poly_table 
         print('computed DOI : {:.2f}'.format(self.doi))
         
     
@@ -742,14 +750,16 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.param['num_xy_poly'] = 5
             # define xy_poly_table (still need to do it here because param['meshx'] is undefined if triangular mesh)
 #            doi = np.abs(self.elec[0,0]-self.elec[-1,0])/2
-#            ymax = np.max(self.elec[:,1])
-#            ymin = np.min(self.elec[:,1])-doi
+#            xmax = np.max(self.elec[:,0])
+#            xmin = np.min(self.elec[:,0])
+#            zmax = np.max(self.elec[:,1])
+#            zmin = np.min(self.elec[:,1])-self.doi
 #            xy_poly_table = np.array([
-#            [self.elec[0,0], ymax],
-#            [self.elec[-1,0], ymax],
-#            [self.elec[-1,0], ymin],
-#            [self.elec[0,0], ymin],
-#            [self.elec[0,0], ymax]])
+#            [xmin, zmax],
+#            [xmax, zmax],
+#            [xmax, zmin],
+#            [xmin, zmin],
+#            [xmin, zmax]])
 #            self.param['xy_poly_table'] = xy_poly_table
 #            e_nodes = np.arange(len(self.elec))+1
             e_nodes = mesh.e_nodes + 1 # +1 because of indexing staring at 0 in python
@@ -761,6 +771,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                    enodes[buried] = e_nodes[-nburied:]
 #                    e_nodes = enodes
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+        
         
         self.mesh = mesh
         self.param['mesh'] = mesh
