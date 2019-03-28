@@ -1046,6 +1046,21 @@ class Survey(object):
             ax.plot(self.df['resist'].values, '.')
             ax.set_xlabel('Measurements')
             ax.set_ylabel('Transfert Resistance [Ohm]')
+
+
+    def pseudoIP(self, ax=None, bx=None, **kwargs):
+        """ Plot pseudo section if 2D survey or just quadrupoles phase otherwise.
+        """
+        if bx is None:
+            bx = self.iBorehole
+        if bx is False:
+            self.pseudoSection(ax=ax, **kwargs)
+        else:
+            if ax is None:
+                fig, ax = plt.subplots()
+            ax.plot(self.df['ip'].values, '.')
+            ax.set_xlabel('Measurements')
+            ax.set_ylabel('Chargeability [mV/V]')
             
 
     def pseudoSection(self, ax=None, contour=False, log=False, geom=True,
@@ -1136,7 +1151,7 @@ class Survey(object):
             return fig
 
     
-    def pseudoIP(self, ax=None, contour=False): #IP pseudo section
+    def pseudoSectionIP(self, ax=None, contour=False): #IP pseudo section
         """ Create pseudo section of IP data with points (default)
         
         Parameters

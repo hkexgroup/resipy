@@ -564,9 +564,10 @@ class App(QMainWindow):
                     self.r2.setBorehole(False)
             if self.fname is not None:
                     plotPseudo()
-        boreholeCheck = QCheckBox('Borehole Survey')
+                    plotPseudoIP()
+        boreholeCheck = QCheckBox('Unconventional Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
-        boreholeCheck.setToolTip('Check if you have a borehole dataset. This will just change the pseudo-section.')
+        boreholeCheck.setToolTip('Check if you have an unconventional survey (e.g. boreholes).\nThis will just change the pseudo-section.')
 
         def batchCheckFunc(state):
             if state == Qt.Checked:
