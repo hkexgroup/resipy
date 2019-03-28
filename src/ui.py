@@ -1516,7 +1516,7 @@ class App(QMainWindow):
                 else:
                     infoDump("%i selected measurements removed!" % (numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
-                    for s in self.surveys:
+                    for s in self.r2.surveys:
                         s.dfPhaseReset = s.df
                         s.filterDataIP = s.df
                     heatFilter()
@@ -1611,7 +1611,7 @@ class App(QMainWindow):
         def recipErrorUnpairedFunc():
             numRemoved = self.r2.removeUnpaired()
             if ipCheck.checkState() == Qt.Checked:
-                for s in self.surveys:
+                for s in self.r2.surveys:
                     s.dfPhaseReset = s.df
                     s.filterDataIP = s.df
                 heatFilter()
