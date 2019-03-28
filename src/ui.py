@@ -3736,7 +3736,8 @@ class App(QMainWindow):
            <li>Select if you want a 2D/3D survey, an inverse/forward solution and check if you have borehole/timelapse/batch data.</li>
            <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
-           <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</ul></li>
+           <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</li>
+           <li>Note: Res2DInv files are not fully supported, it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
            <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
            <li>Then one can choose to directly invert with all the default settings or go through the other tabs on the rights.</li>
@@ -3796,6 +3797,7 @@ USA: Trelgol Publishing, (2006).
 </ul>
 </p>
 <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+<p>Contributor(s): Pedro Concha</p>
 '''%pyR2_version)
 #        aboutText.setText('''<h1>About pyR2</h1> \
 #                          <p><b>Version: %s</b></p> \
