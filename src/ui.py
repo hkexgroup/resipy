@@ -46,7 +46,7 @@ from subprocess import PIPE, Popen
 
 def wineCheck():
     #check operating system 
-    OpSys=platform.system()    
+    OpSys=platform.system() 
     #detect wine
     if OpSys == 'Linux':
         p = Popen("wine --version", stdout=PIPE, shell=True)
@@ -55,7 +55,7 @@ def wineCheck():
             wineMsgBox('Linux')
         else:
             pass
-                
+              
     elif OpSys == 'Darwin':
         try: 
             winePath = []
@@ -111,7 +111,7 @@ def updateChecker():
                 webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     except: #if there is no internet connection!
         return False
-# TODO do this check in a separate thread in case of lagging network
+
         
 #%%
 QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
@@ -3953,8 +3953,10 @@ if __name__ == '__main__':
 
     ex = App()
     splash.hide() # hiding the splash screen when finished
-    wineCheck()
-    updateChecker()
+    t = threading.Thread(target=wineCheck)
+    t.start()
+    t = threading.Thread(target=updateChecker)
+    t.start()
     sys.exit(app.exec_())
 
 
