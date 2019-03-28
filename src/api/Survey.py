@@ -1054,7 +1054,7 @@ class Survey(object):
         if bx is None:
             bx = self.iBorehole
         if bx is False:
-            self.pseudoSection(ax=ax, **kwargs)
+            self.pseudoSectionIP(ax=ax, **kwargs)
         else:
             if ax is None:
                 fig, ax = plt.subplots()

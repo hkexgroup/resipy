@@ -135,7 +135,7 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=False, threed=False):
+    def __init__(self, parent=None, figure=None, navi=False, itight=True, threed=False):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
@@ -1477,7 +1477,7 @@ class App(QMainWindow):
                 recipErrorLabel.setText('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
                 recipErrorInputLabel.show()
                 recipErrorInputLine.show()
-                recipErrorInputLine.setText('-')
+                recipErrorInputLine.setText('')
                 recipErrorPltbtn.setText('Apply filters')
                 recipErrorUnpairedBtn.show()
                 recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
@@ -1486,7 +1486,7 @@ class App(QMainWindow):
                 tabPreProcessing.setTabText(0, 'Manual Filtering')
                 recipErrorLabel.setText('<b>Select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
                 recipErrorInputLabel.hide()
-                recipErrorInputLine.setText('-')
+                recipErrorInputLine.setText('')
                 recipErrorInputLine.hide()
                 recipErrorUnpairedBtn.hide()
                 recipErrorPltbtn.setText('Remove selected points')
@@ -1509,7 +1509,7 @@ class App(QMainWindow):
                     self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
                 else:
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-                if recipErrorInputLine.text() != '-':
+                if recipErrorInputLine.text() != '':
                     percent = float(recipErrorInputLine.text())
                     numRecipRemoved = self.r2.filterRecip(percent=percent)
                     infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
@@ -1535,9 +1535,9 @@ class App(QMainWindow):
             numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
             for s in self.r2.surveys:
                 s.df = s.dfReset.copy()
-            if recipErrorInputLine.text() != '-':
+            if recipErrorInputLine.text() != '':
                 errHist()
-                recipErrorInputLine.setText('-')
+                recipErrorInputLine.setText('')
             if ipCheck.checkState() == Qt.Checked:
                 for s in self.r2.surveys:
                     s.dfPhaseReset = s.dfReset.copy()
