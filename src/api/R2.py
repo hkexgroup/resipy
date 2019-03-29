@@ -1,4 +1,4 @@
-sho# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
