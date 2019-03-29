@@ -2465,14 +2465,33 @@ class App(QMainWindow):
                 self.nrow = 1
                 self.setRowCount(1)
         
-        seqDipDipLabel = QLabel('Dipole-Dipole')
-        seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
+        seqHelp = {'dipdip' : '<img height=200 src="image/dipdip.png">',
+           'wenner': '<img height=200 src="image/wenner.png">',
+           'schlum': '<img height=200 src="image/schlum.png">',
+           'gradient': '<img height=200 src="image/gradient.png">',
+           'custom': 'Paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-'
+           }
+        
+        def showSeqHelp(arg):
+            if arg in seqHelp.keys():
+                forwardHelpText.setText(seqHelp[arg])
+#                if arg is not 'custome':
+#                    forwardHelpText.setPixmap(QPixmap('image/' + arg + '.png'))
+#                else:
+#                    forwardHelpText.setText(seqHelp[arg])
+                forwardOutputStack.setCurrentIndex(2)
+                QApplication.processEvents()
+        
+        seqDipDipLabel = QLabel('<a href="dipdip">Dipole-Dipole</a>')
+        seqDipDipLabel.linkActivated.connect(showSeqHelp)
+#        seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
         seqDipDip = SequenceTable(['a','n'])
         seqDipDip.setItem(0,0,QTableWidgetItem('1')) #confuses user. user should define the sequence.
         seqDipDip.setItem(0,1,QTableWidgetItem('8'))
         
-        seqWennerLabel = QLabel('Wenner')
-        seqWennerLabel.setToolTip('<img src="image/wenner.png">')
+        seqWennerLabel = QLabel('<a href="wenner">Wenner</a>')
+        seqWennerLabel.linkActivated.connect(showSeqHelp)
+#        seqWennerLabel.setToolTip('<img src="image/wenner.png">')
 #        pixmap = QPixmap('image/wenner.png').scaledToWidth(250)
 #        seqWennerLabel.setPixmap(pixmap)
         
@@ -2483,16 +2502,19 @@ class App(QMainWindow):
         
         seqWenner = SequenceTable(['a'])
         
-        seqSchlumLabel = QLabel('Schlumberger')
-        seqSchlumLabel.setToolTip('<img src="image/schlum.png">')
+        seqSchlumLabel = QLabel('<a href="schlum">Schlumberger</a>')
+        seqSchlumLabel.linkActivated.connect(showSeqHelp)
+#        seqSchlumLabel.setToolTip('<img src="image/schlum.png">')
         seqSchlum = SequenceTable(['a','n'])
         
-        seqMultiLabel = QLabel('Multigradient')
-        seqMultiLabel.setToolTip('<img src="image/gradient.png">')
+        seqMultiLabel = QLabel('<a href="gradient">Multigradient</a>')
+        seqMultiLabel.linkActivated.connect(showSeqHelp)
+#        seqMultiLabel.setToolTip('<img src="image/gradient.png">')
         seqMulti = SequenceTable(['a','n','s'])
 		
-        seqCustomLabel = QLabel('Custom Sequence')
-        seqCustomLabel.setToolTip('paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
+        seqCustomLabel = QLabel('<a href="custom">Custom Sequence</a>')
+        seqCustomLabel.linkActivated.connect(showSeqHelp)
+#        seqCustomLabel.setToolTip('paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
         seqCustom = SequenceTable(['a','b','m','n'], selfInit=True)
         
         seqTables = {'dpdp1' : seqDipDip,
@@ -2506,6 +2528,7 @@ class App(QMainWindow):
                 [seqSchlumLabel, seqSchlum],
                 [seqMultiLabel, seqMulti],
                 [seqCustomLabel, seqCustom]]
+
         
         def seqCreateFunc():
             if self.r2.elec is None:
@@ -2528,8 +2551,6 @@ class App(QMainWindow):
                             params.append((key, *p[i,:]))
                 else:
                     counter += 1
-            print(params)
-            print(counter)
             if params:
                 self.r2.createSequence(params=params)
                 seq_typ = ' generated'
@@ -2604,6 +2625,9 @@ class App(QMainWindow):
             if text == 'Forward modelling done.':
                 forwardOutputStack.setCurrentIndex(1) # switch to graph
 
+        forwardHelpText = QLabel()
+#        forwardHelpText = QTextEdit()
+#        forwardHelpText.setReadOnly(True)
         
         # layout
         forwardLayout = QVBoxLayout()
@@ -2626,7 +2650,7 @@ class App(QMainWindow):
         noiseLayout.addWidget(seqOutputLabel)
         
         forwardLayout.addWidget(seqLabel, 5)
-        forwardLayout.addLayout(seqLayout, 30)
+        forwardLayout.addLayout(seqLayout, 35)
         forwardLayout.addLayout(noiseLayout, 2)
         forwardLayout.addWidget(forwardBtn, 3)
         
@@ -2635,15 +2659,22 @@ class App(QMainWindow):
         forwardPseudoLayout.addWidget(forwardPseudoIP)
         forwardPseudoIP.hide()
         
+        forwardHelpLayout = QVBoxLayout()
+        forwardHelpLayout.addWidget(forwardHelpText)
+        
         forwardPseudos = QWidget()
         forwardPseudos.setLayout(forwardPseudoLayout)
+        
+        forwardHelp = QWidget()
+        forwardHelp.setLayout(forwardHelpLayout)
         
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(forwardLogText)
         forwardOutputStack.addWidget(forwardPseudos)
+        forwardOutputStack.addWidget(forwardHelp)
         forwardOutputStack.setCurrentIndex(0)
         
-        forwardLayout.addLayout(forwardOutputStack, 60)
+        forwardLayout.addLayout(forwardOutputStack, 55)
         
         tabForward.setLayout(forwardLayout)
         
