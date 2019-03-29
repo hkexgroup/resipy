@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+sho# -*- coding: utf-8 -*-
 """
 Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
@@ -2536,7 +2536,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     return
                 cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
             elif isinstance(paraview_loc,str):
-                cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
+                cmd_line = '"' + paraview_loc + '" ' + os.path.join(self.dirname, fname)
             else:
                 print("Cannot find where paraview is installed")
                 return
