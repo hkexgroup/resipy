@@ -3745,7 +3745,8 @@ class App(QMainWindow):
         
         helpLayout = QVBoxLayout()
         helpLayout.setAlignment(Qt.AlignTop)
-        helpText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
+        helpText = QTextEdit()
+        helpText.setReadOnly(True)
         helpText.setText('''
            <h1>General help</h1>\
            <p>Below are simple instructions to guide you to through the software.</p>
@@ -3780,8 +3781,6 @@ class App(QMainWindow):
            <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
            </ul>
         ''')
-        helpText.setOpenExternalLinks(True)
-        helpText.setWordWrap(True)
         helpLayout.addWidget(helpText)
         tabHelp.setLayout(helpLayout)
         
