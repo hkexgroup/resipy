@@ -156,7 +156,13 @@ def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
         with open(fname, 'a') as f:
             f.write(footer)
                 
-                
+
+# distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
+def cdist(a):
+    z = np.array([complex(x[0], x[1]) for x in a])
+    return np.abs(z[...,np.newaxis]-z)
+            
+            
 class R2(object): # R2 master class instanciated by the GUI
     """ Master class to handle all processing around the inversion codes.
     
@@ -726,6 +732,9 @@ class R2(object): # R2 master class instanciated by the GUI
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
             if typ == 'tetra': # TODO add buried
+                if cl == -1:
+                    dist = cdist(self.elec[:,:2]) # half the minimal electrode distance
+                    cl = np.min(dist[dist != 0])
                 elec_type = None # for now
                 mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
                              path=os.path.join(self.apiPath, 'exe'),
