@@ -585,12 +585,13 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['num_xy_poly'] = 5
             ymax = np.max(self.elec[:,2])
             ymin = self.doi
+            xmin, xmax = np.min(self.elec[:,0]), np.max(self.elec[:,0])
             xy_poly_table = np.array([
-            [self.elec[0,0], ymax],
-            [self.elec[-1,0], ymax],
-            [self.elec[-1,0], ymin],
-            [self.elec[0,0], ymin],
-            [self.elec[0,0], ymax]])
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
             self.param['xy_poly_table'] = xy_poly_table
         
         else: # for 3D survey
