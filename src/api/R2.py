@@ -1700,6 +1700,7 @@ class R2(object): # R2 master class instanciated by the GUI
             os.mkdir(wd)
             prepare(wd, f)
             wds.append(wd)
+        wds2 = wds.copy()
                 
                 
         # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
@@ -1736,7 +1737,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 time.sleep(0.05)
         
         
-        for wd, f in zip(wds, files):
+        for wd, f in zip(wds2, files):
             try:
                 retrieve(wd, f)
             except Exception as e:
@@ -1755,25 +1756,25 @@ class R2(object): # R2 master class instanciated by the GUI
 ##                    
 ##        self.proc = ProcsManagement(procs)
 #        
-#        # get the files as it was a sequential inversion
-#        if self.typ=='R3t' or self.typ=='cR3t':
-#            toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']
-#        else:
-#            toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
-#        r2outText = ''
-#        for i, s in enumerate(surveys):
-#            for ext in toRename:
-#                originalFile = os.path.join(dirname,  s.name + ext)
-#                newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
-#                if os.path.exists(originalFile):
-#                    shutil.move(originalFile, newFile)
-#            r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
-#            print(r2outFile)
-#            with open(r2outFile, 'r') as f:
-#                r2outText = r2outText + f.read()
-#            os.remove(r2outFile)
-#        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
-#            f.write(r2outText)
+        # get the files as it was a sequential inversion
+        if self.typ=='R3t' or self.typ=='cR3t':
+            toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']
+        else:
+            toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
+        r2outText = ''
+        for i, s in enumerate(surveys):
+            for ext in toRename:
+                originalFile = os.path.join(dirname,  s.name + ext)
+                newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
+                if os.path.exists(originalFile):
+                    shutil.move(originalFile, newFile)
+            r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
+            print(r2outFile)
+            with open(r2outFile, 'r') as f:
+                r2outText = r2outText + f.read()
+            os.remove(r2outFile)
+        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
+            f.write(r2outText)
 #        
 #        # delete the dirs and the files
 #        if rmDirTree:
@@ -3027,8 +3028,8 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     ax.set_ylabel('Pseudo depth [m]')
 
 
-#t0 = time.time()
-#k = R2()
-#k.createBatchSurvey('./api/test/testTimelapse2')
-#k.invert(parallel=True)
-#print('elapsed {:.3f}s'.format(time.time()-t0))
+t0 = time.time()
+k = R2()
+k.createBatchSurvey('./api/test/testTimelapse')
+k.invert(parallel=True)
+print('elapsed {:.3f}s'.format(time.time()-t0))
