@@ -3027,9 +3027,3 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     ax.set_xlabel('Distance [m]')
     ax.set_ylabel('Pseudo depth [m]')
 
-
-t0 = time.time()
-k = R2()
-k.createBatchSurvey('./api/test/testTimelapse')
-k.invert(parallel=True)
-print('elapsed {:.3f}s'.format(time.time()-t0))
