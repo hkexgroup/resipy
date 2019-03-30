@@ -1543,6 +1543,246 @@ class R2(object): # R2 master class instanciated by the GUI
         print('----------- END OF INVERSION IN // ----------')
     
     
+    def runParallel2(self, dirname=None, dump=print, iMoveElec=False, 
+                    ncores=None, rmDirTree=True):
+        """ Run R2 in // according to the number of cores available.
+        
+        Parameters
+        ----------
+        dirname : str, optional
+            Path of the working directory.
+        dump : function, optional
+            Function to be passed to `R2.runR2()` for printing output during
+            inversion.
+        iMoveElec : bool, optional
+            If `True` will move electrodes according to their position in each
+            `Survey` object.
+        ncores : int, optional
+            Number or cores to use. If None, the maximum number of cores
+            available will be used.
+        rmDirTree: bool, optional
+            Remove excess directories and files created during parallel.
+            Default is True.
+        """
+        if dirname is None:
+            dirname = self.dirname
+        
+        if self.iTimeLapse is True and self.iBatch is False:
+            surveys = self.surveys[1:]
+        else:
+            surveys = self.surveys
+            
+        # create R2.exe path
+        exeName = self.typ + '.exe'
+        exePath = os.path.join(self.apiPath, 'exe', exeName)
+
+        
+        # split the protocol.dat
+        dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
+                            sep='\t', header=None, engine='python').reset_index()
+        
+        idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
+        idf.append(len(dfall))
+        dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
+        
+        # writing all protocol.dat
+        files = []
+        for s, df in zip(surveys, dfs):
+            outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
+            files.append(outputname)
+            df.to_csv(outputname, sep='\t', header=False, index=False)
+            # header with line count already included
+                    
+        # if iMoveElec is True, writing different R2.in
+        if iMoveElec is True:
+            print('Electrodes position will be updated for each survey')
+            for s in self.surveys:
+                print(s.name, '...', end='')
+                elec = s.elec
+                e_nodes = self.mesh.move_elec_nodes(elec[:,0], elec[:,1], elec[:,2])
+                self.param['node_elec'][:,1] = e_nodes + 1 # WE MUST ADD ONE due indexing differences between python and fortran
+                if int(self.mesh.cell_type[0])==8 or int(self.mesh.cell_type[0])==9:#elements are quads
+                    colx = self.mesh.quadMeshNp() # so find x column indexes instead. Wont support change in electrode elevation
+                    self.param['node_elec'][:,1] = colx
+                self.param['inverse_type'] = 1 # regularise against a background model 
+                #self.param['reg_mode'] = 1
+                write2in(self.param, self.dirname, self.typ)
+                r2file = os.path.join(self.dirname, self.typ + '.in')
+                shutil.move(r2file, r2file.replace('.in', '_' + s.name + '.in'))
+                print('done')
+
+        # create workers directory
+        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        if ncores is None:
+            ncores = ncoresAvailable
+        else:
+            if ncores > ncoresAvailable:
+                raise ValueError('Number of cores larger than available')
+        
+        
+        def prepare(wd, fname):
+            # copying usefull files from the main directory
+            toMove = ['mesh.dat', 'mesh3d.dat','R2.in','cR2.in',
+                      'R3t.in', 'cR3t.in', 'res0.dat','resistivity.dat', 
+                      'Start_res.dat']
+            for f in toMove:
+                file = os.path.join(dirname, f)
+                if os.path.exists(file):
+                    shutil.copy(file, os.path.join(wd, f))
+            
+            # copy the protocol.dat
+            shutil.copy(fname, os.path.join(wd, 'protocol.dat'))
+            name = os.path.basename(fname).replace('.dat', '').replace('protocol_','')
+            if iMoveElec is True:
+                r2inFile = os.path.join(os.path.dirname(fname),
+                                        self.typ + '_' + name + '.in')
+                shutil.copy(r2inFile, os.path.join(wd, exeName + '.in'))
+        
+        if OS == 'Windows':
+            cmd = [exePath]
+        elif OS == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd = ['%s' % (winePath[0].strip('\n')), exePath]
+            else:
+                cmd = ['/usr/local/bin/wine', exePath]
+        else:
+            cmd = ['wine',exePath]
+
+        if OS == 'Windows':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+#        
+#        def execute(cmd):
+#            if OS == 'Windows':
+#                proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+#            else:
+#                proc = Popen(cmd, stdout=PIPE, shell=False, universal_newlines=True)                
+#            for stdout_line in iter(proc.stdout.readline, ""):
+#                yield stdout_line
+#            proc.stdout.close()
+#            return_code = proc.wait()
+#            if return_code:
+#                print('error on return_code')
+#
+#        for text in execute(cmd):
+#                dump(text.rstrip())
+#    
+
+        def retrieve(wd, fname):
+            # moving inversion results back
+            name = os.path.basename(fname).replace('.dat', '').replace('protocol_','')
+            originalDir = self.dirname
+            toMove = ['f001_res.dat', 'f001_res.vtk', 'f001_err.dat',
+                      'f001_sen.dat', 'f001_diffres.dat',
+                      'f001.dat', 'f001.sen', 'f001.err', 'f001.vtk'] # all 3D stuff
+            for f in toMove:
+                if os.path.exists(os.path.join(wd, f)):
+                    shutil.move(os.path.join(wd, f),
+                                os.path.join(originalDir, f.replace('f001', name)))
+            shutil.move(os.path.join(wd, self.typ + '.out'),
+                        os.path.join(originalDir, self.typ + '_' + name + '.out'))
+            shutil.move(os.path.join(wd, 'electrodes.dat'),
+                        os.path.join(originalDir, 'electrodes_' + name + '.dat'))
+            shutil.move(os.path.join(wd, 'electrodes.vtk'),
+                        os.path.join(originalDir, 'electrodes_' + name + '.vtk'))
+
+
+        # create all the working directories
+        wds = []
+        for i, f in enumerate(files):
+            wd = os.path.join(self.dirname, str(i+1))
+            if os.path.exists(wd):
+                shutil.rmtree(wd)
+            os.mkdir(wd)
+            prepare(wd, f)
+            wds.append(wd)
+                
+                
+        # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
+        # In an infinite loop, will run an number of process (according to the number of cores)
+        # the loop will check when they finish and start new ones.
+        def done(p):
+            return p.poll() is not None
+        def success(p):
+            return p.returncode == 0
+        def fail():
+            sys.exit(1)
+    
+        procs = []
+        while True:
+            while wds and len(procs) < ncores:
+                wd = wds.pop()
+                print('task', wd)
+                if OS == 'Windows':
+                    proc = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                else:
+                    proc = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True) 
+                procs.append(proc)
+    
+            for p in procs:
+                if done(p):
+                    if success(p):
+                        procs.remove(p)
+                    else:
+                        fail()
+    
+            if not procs and not wds:
+                break
+            else:
+                time.sleep(0.05)
+        
+        
+        for wd, f in zip(wds, files):
+            try:
+                retrieve(wd, f)
+            except Exception as e:
+                print('Error retrieving for ', wd, ':', e)
+                pass
+        
+        # TODO add thread for getting live output
+        # TODO add procs kill managemement
+#        
+##        class ProcsManagement(object): # little class to handle the kill
+##            def __init__(self, procs):
+##                self.procs = procs
+##            def kill(self):
+##                for p in self.procs:
+##                    p.terminate()
+##                    
+##        self.proc = ProcsManagement(procs)
+#        
+#        # get the files as it was a sequential inversion
+#        if self.typ=='R3t' or self.typ=='cR3t':
+#            toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']
+#        else:
+#            toRename = ['_res.dat', '_res.vtk', '_err.dat', '_sen.dat', '_diffres.dat']
+#        r2outText = ''
+#        for i, s in enumerate(surveys):
+#            for ext in toRename:
+#                originalFile = os.path.join(dirname,  s.name + ext)
+#                newFile = os.path.join(dirname, 'f' + str(i+1).zfill(3) + ext)
+#                if os.path.exists(originalFile):
+#                    shutil.move(originalFile, newFile)
+#            r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
+#            print(r2outFile)
+#            with open(r2outFile, 'r') as f:
+#                r2outText = r2outText + f.read()
+#            os.remove(r2outFile)
+#        with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
+#            f.write(r2outText)
+#        
+#        # delete the dirs and the files
+#        if rmDirTree:
+#            [shutil.rmtree(d) for d in dirs]
+#            [os.remove(f) for f in files]
+#        
+#        print('----------- END OF INVERSION IN // ----------')
+    
+    
     def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
                     ncores=None, rmDirTree=False):
         """ Run R2 in // according to the number of cores available.
@@ -1772,13 +2012,13 @@ class R2(object): # R2 master class instanciated by the GUI
   
         dump('--------------------- MAIN INVERSION ------------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-            if platform.system() == "Windows": # different method needed on windows due to lack of forking
-                if forceParallel:
-                    self.runParallelWindows(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
-                else:
-                    self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
-            else:
-                self.runParallel(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+#            if platform.system() == "Windows": # different method needed on windows due to lack of forking
+#                if forceParallel:
+#                    self.runParallelWindows(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+#                else:
+#                    self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
+#            else:
+            self.runParallel2(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
         else:
             self.runR2(dump=dump)
         
@@ -2786,3 +3026,9 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     ax.set_xlabel('Distance [m]')
     ax.set_ylabel('Pseudo depth [m]')
 
+
+#t0 = time.time()
+#k = R2()
+#k.createBatchSurvey('./api/test/testTimelapse2')
+#k.invert(parallel=True)
+#print('elapsed {:.3f}s'.format(time.time()-t0))
