@@ -1636,7 +1636,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if iMoveElec is True:
                 r2inFile = os.path.join(os.path.dirname(fname),
                                         self.typ + '_' + name + '.in')
-                shutil.copy(r2inFile, os.path.join(wd, exeName + '.in'))
+                shutil.copy(r2inFile, os.path.join(wd, self.typ + '.in'))
         
         if OS == 'Windows':
             cmd = [exePath]
