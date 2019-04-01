@@ -298,6 +298,7 @@ class Mesh:
              vmin=None,
              vmax=None,
              attr=None,
+             clabel=None,
              **kwargs):
         """ Displays a 2d mesh and attribute.
         
@@ -328,6 +329,8 @@ class Mesh:
         attr : string, optional
             Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
             as the key for this dictionary.
+        clabel: string, optional
+            Label of the colorbar. Default is the value of `attr` argument.
 
         Returns
         ----------
@@ -374,6 +377,9 @@ class Mesh:
                 color_bar_title = attr
             except (KeyError, AttributeError):
                 raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+        
+        if clabel is not None:
+            color_bar_title = clabel
 
         iplot = False
         if ax is None:
