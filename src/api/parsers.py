@@ -579,8 +579,10 @@ def res2invInputParser(file_path):
         x_dump.append(p2)
         x_dump.append(c2)
         total_x = np.append(total_x,x_dump)
+        total_x = np.around(total_x, decimals = 1)
         #convert the x electrode coordinates into indexes?
         ex_pos = np.unique(total_x)
+        ex_pos = np.around(ex_pos, decimals = 1)
         x_dump.clear()
     
     for k in range(num_meas):
@@ -683,7 +685,11 @@ def res2invInputParser(file_path):
            p1 = (float(vals[5]))
            p2 = (float(vals[7]))
            Pa.append(float(vals[9]))
-            
+        
+        c1 = round(c1, 0)
+        p1 = round(p1, 0)
+        p2 = round(p2, 0)
+        c2 = round(c2, 0)
         x_dump.append(c1)
         x_dump.append(p1)
         x_dump.append(p2)
