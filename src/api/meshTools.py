@@ -2465,6 +2465,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
         y_interp = np.append(surf_elec_y,surf_y)
         z_interp = np.append(surf_elec_z,surf_z)
+        
         if interp_method is 'idw': 
             bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
         elif interp_method is 'bilinear':
@@ -2536,7 +2537,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
-    print('interpolating topography onto mesh...', end='')
+    print('interpolating topography onto mesh using %s interpolation...'%interp_method, end='')
     x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)
@@ -2774,15 +2775,17 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             print("Wine version = "+wine_version)
                           
     elif OpSys=="Windows":
-        p = Popen('systeminfo', stdout=PIPE, shell=True)
-#        info = p.stdout.readlines()
-        info = os.popen("systeminfo").readlines()
-        for i,line in enumerate(info):
-            if line.find("Total Physical Memory")!=-1:
-                temp = line.split()[3]
-                idx = temp.find(',')
-                totalMemory = temp[0:idx]
-                totalMemory += temp[idx+1:]
+        p = Popen('wmic MEMORYCHIP get Capacity', stdout=PIPE)
+        info = p.stdout.readlines()#first entry is the header, subsiquent entries 
+        #correspond to dimm slot capacity in bytes 
+        totalMemory = 0 # memory returned in binary bytes 
+        for i in range(1,len(info)):
+            try:
+                mem=int(info[i].strip())
+                totalMemory += mem
+            except ValueError:
+                break
+        totalMemory = totalMemory/1048576
                 
     elif OpSys=='Darwin':
         sysinfo = []
