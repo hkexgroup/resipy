@@ -94,6 +94,8 @@ class Survey(object):
 
         
         self.df = data
+        for c in ['a','b','m','n']:
+            self.df.loc[:,c] = self.df[c].astype(int)
         
         # add error measured to the error columns (so they can be used if no error model are fitted)
         if 'magErr' in self.df.columns:
@@ -1256,53 +1258,56 @@ class Survey(object):
         protocol : pandas.DataFrame
             Dataframe which contains the data for the `protocol.dat`. 
         """
-        # check if we need to take a subset of the dataframe
+        # check if we need to take a subset of the dataframe (e.g. for timelapse)
         if isubset is None:
-            df = self.df
+            # select half of paired and all non-paired quadrupoles
+            ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
+            df = self.df[ie]
         else:
             df = self.df[isubset]
-                                
-        # selecte paired and non-paired quadrupoles
-        ie = df['irecip'].values >= 0 # reciprocal + non-paired
+            # we need to take all measurements is subset is specified as some
+            # quadrupoles might have reciprocal in one survey (irecip > 0) but
+            # not in the next one (irecip = 0). So we take them all.
+                                        
         
         # write quadrupoles
-        x = df[ie][['a','b','m','n']].values.astype(int)
+        x = df[['a','b','m','n']].values
         xx = np.c_[1+np.arange(len(x)), x]
         protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         
         # write transfer resistance
-        protocol['res'] = df[ie]['recipMean'].values # non-paired will be nan
+        protocol['res'] = df['recipMean'].values # non-paired will be nan
         
         # write background transfer resistance
         if res0 is True: # background for time-lapse and so
-            protocol['res0'] = df[ie]['recipMean0'].values
+            protocol['res0'] = df['recipMean0'].values
         
         # write phase (and eventually convert chargeability into phase)
         if ip is True:
             if self.protocolIPFlag is True: # if imported from Protocol then it's already in phase
-                protocol['phase'] = df[ie]['ip'].values 
+                protocol['phase'] = df['ip'].values 
             else: # otherwise it is in chargeability and we need to convert it
-                protocol['phase'] = -self.kFactor*df[ie]['ip'].values # "-self.kFactor" is to change m to phi
+                protocol['phase'] = -self.kFactor*df['ip'].values # "-self.kFactor" is to change m to phi
                 
         # write error for DC
         if err is True:
             if 'resError' in df.columns: # the columns exists
-                if np.sum(np.isnan(df[ie]['resError'])) == 0: # no NaN inside
-                    protocol['resError'] = df[ie]['resError'].values
+                if np.sum(np.isnan(df['resError'])) == 0: # no NaN inside
+                    protocol['resError'] = df['resError'].values
                 if errTot == True: # we want to add modelling error to that
                     print('Using total error')
                     if 'modErr' not in df.columns:
                         raise ValueError('ERROR : you must specify a modelling error')
                     else: # if present, compute geometric mean of the errors
-                        protocol['resError'] = np.sqrt(protocol['error']**2 + df[ie]['modErr'].values**2)
+                        protocol['resError'] = np.sqrt(protocol['error']**2 + df['modErr'].values**2)
             else:
                 raise ValueError('You requested DC error but no error model can be found.')
                 
         # write error for IP
         if (ip is True) and (err is True): # ip is present and we want error
             if 'phaseError' in df.columns: # column exists
-                if np.sum(np.isnan(df[ie]['phaseError'])) == 0: # no NaN inside
-                    protocol['phaseError'] = df[ie]['phaseError'].values
+                if np.sum(np.isnan(df['phaseError'])) == 0: # no NaN inside
+                    protocol['phaseError'] = df['phaseError'].values
             else:
                 raise ValueError('You requested IP error but none can be found.')
 

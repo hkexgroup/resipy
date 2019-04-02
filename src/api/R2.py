@@ -496,7 +496,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # sort all dataframe (should already be the case)
         dfs2 = []
         for df in dfs:
-            dfs2.append(df.sort_values(by=['a','b','m','n']).reset_index(drop=True))
+            dfs2.append(df)#.sort_values(by=['a','b','m','n']).reset_index(drop=True))
         
         # concatenate columns of string
         def cols2str(cols):
@@ -508,13 +508,13 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # get measurements common to all surveys
         df0 = dfs2[0]
-        x0 = cols2str(df0[['a','b','m','n']].values)
+        x0 = cols2str(df0[['a','b','m','n']].values.astype(int))
         icommon = np.ones(len(x0), dtype=bool)
         for df in dfs2[1:]:
-            x = cols2str(df[['a','b','m','n']].values)
+            x = cols2str(df[['a','b','m','n']].values.astype(int))
             ie = np.in1d(x0, x)
             icommon = icommon & ie
-        print('measurements in common = ', np.sum(icommon))
+        print(np.sum(icommon), 'in common...', end='')
         
         # create boolean index to match those measurements
         indexes = []
@@ -1115,9 +1115,10 @@ class R2(object): # R2 master class instanciated by the GUI
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
+            df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean']]
+            df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0'})
             for i, s in enumerate(self.surveys[1:]):
-                s.df['resist0'] = self.surveys[0].df['resist']
-                s.df['recipMean0'] = self.surveys[0].df['recipMean']
+                s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
                 if err is True:
                     s.df['resError'] = self.bigSurvey.errorModel(s.df)
                 res0Bool = False if self.param['reg_mode'] == 1 else True
@@ -1580,7 +1581,6 @@ class R2(object): # R2 master class instanciated by the GUI
         # split the protocol.dat
         dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
                             sep='\t', header=None, engine='python').reset_index()
-        
         idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
         idf.append(len(dfall))
         dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
@@ -2112,14 +2112,18 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fresults):
-                print('reading ', fresults)
-                mesh = mt.vtk_import(fresults)
-                mesh.mesh_title = self.surveys[j].name
-                mesh.elec_x = self.surveys[j].elec[:,0]
-                mesh.elec_y = self.surveys[j].elec[:,1]
-                mesh.elec_z = self.surveys[j].elec[:,2]
-                mesh.surface = self.mesh.surface
-                self.meshResults.append(mesh)
+                print('reading ', fresults, end='')
+                try:
+                    mesh = mt.vtk_import(fresults)
+                    mesh.mesh_title = self.surveys[j].name
+                    mesh.elec_x = self.surveys[j].elec[:,0]
+                    mesh.elec_y = self.surveys[j].elec[:,1]
+                    mesh.elec_z = self.surveys[j].elec[:,2]
+                    mesh.surface = self.mesh.surface
+                    self.meshResults.append(mesh)
+                    print('done')
+                except Exception as e:
+                    print('failed', e)
             else:
                 break
         
