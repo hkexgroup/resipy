@@ -2028,7 +2028,8 @@ class R2(object): # R2 master class instanciated by the GUI
             
             
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
-                    sens=True, color_map='viridis', zlim=None, **kwargs):
+                    sens=True, color_map='viridis', zlim=None, clabel=None,
+                    **kwargs):
         """ Show the inverteds section.
         
         Parameters
@@ -2047,6 +2048,8 @@ class R2(object): # R2 master class instanciated by the GUI
             a white transparent shade on top of the inverted section.
         color_map : str, optional
             Name of the colormap to be used.
+        clabel : str, optional
+            Label of the colorbar (by default the label is the value of `attr`).
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -2064,10 +2067,10 @@ class R2(object): # R2 master class instanciated by the GUI
             if self.typ[-1] == '2': # 2D case
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
-                                zlim=zlim, **kwargs)
+                                zlim=zlim, clabel=clabel, **kwargs)
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
-                            attr=attr, color_map=color_map,
+                            attr=attr, color_map=color_map, clabel=clabel,
                             **kwargs)
         else:
             print('Unexpected Error')
@@ -2983,6 +2986,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
+    array = np.sort(array, axis=1) # for better presentation, especially Wenner arrays
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
     resist = resist

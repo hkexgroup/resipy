@@ -1151,7 +1151,7 @@ class Survey(object):
             return fig
 
     
-    def pseudoSectionIP(self, ax=None, contour=False): #IP pseudo section
+    def pseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
         """ Create pseudo section of IP data with points (default)
         
         Parameters
@@ -1160,7 +1160,11 @@ class Survey(object):
             If specified, the graph is plotted along this axis.
         contour : bool
             If True, use filled contour instead of points in the pseudosection.
-        
+        vmin : float, optional
+            Miminum value for colorscale.
+        vmax : float, optional
+            Maximum value for colorscale.
+            
         Returns
         -------
         fig : matplotlib figure
@@ -1195,7 +1199,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             else:
                 fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=ip, s=70)#, norm=mpl.colors.LogNorm())
+            cax = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('Phase shift pseudo Section')
@@ -1212,7 +1216,7 @@ class Survey(object):
             X, Y, Z = grid(xpos, ypos, ip)
             if ax is None:
                 fig, ax = plt.subplots()
-            cax = ax.contourf(X,Y,Z)
+            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
             ax.set_title('IP pseudo Section')
