@@ -454,10 +454,8 @@ class Survey(object):
         """
         if all(np.isnan(self.df['recipError']) == True):
             raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
-        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
-        igood = reciprocalErrRel < (pcnt/100) # good indexes to keep
-        inan = np.isnan(reciprocalErrRel) # problem is that NaN (because unparired) are taken out by the previous conditions
-        igood[inan] = True # so we put them back in 
+        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'].replace(np.nan, 0))
+        igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
         self.dfPhaseReset = self.df.copy()
