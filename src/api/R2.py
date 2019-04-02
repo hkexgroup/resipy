@@ -1721,28 +1721,33 @@ class R2(object): # R2 master class instanciated by the GUI
         
         procs = []
         ts = []
+        c = 0
+        print('\r', c, '/', len(wds2), 'inversions completed', end='')
         while True:
             while wds and len(procs) < ncores:
                 wd = wds.pop()
-                print('task', wd)
+#                print('task', wd)
                 if OS == 'Windows':
                     p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
                 else:
                     p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True) 
                 procs.append(p)
-                t = Thread(target=dumpOutput, args=(p.stdout,))
-                t.daemon = True # thread dies with the program
-                t.start()
-                ts.append(t)
+#                t = Thread(target=dumpOutput, args=(p.stdout,))
+#                t.daemon = True # thread dies with the program
+#                t.start()
+#                ts.append(t)
     
             for p in procs:
                 if done(p):
                     if success(p):
                         procs.remove(p)
+                        c = c+1
+                        print('\r', c, '/', len(wds2), 'inversions completed', end='')
                     else:
                         fail()
     
             if not procs and not wds:
+                print('')
                 break
             else:
                 time.sleep(0.05)
@@ -2028,7 +2033,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                else:
 #                    self.runDistributed(dump=dump,iMoveElec=iMoveElec,ncores=ncores)
 #            else:
-            self.runParallel2(dump=dump, iMoveElec=iMoveElec,ncores=ncores)
+            self.runParallel2(dump=dump, iMoveElec=iMoveElec, ncores=ncores)
         else:
             self.runR2(dump=dump)
         
@@ -2121,7 +2126,7 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 fresults = os.path.join(self.dirname, 'f' + str(i+1).zfill(3) + '_res.vtk')
             if os.path.exists(fresults):
-                print('reading ', fresults, end='')
+                print('reading ', fresults, '...', end='')
                 try:
                     mesh = mt.vtk_import(fresults)
                     mesh.mesh_title = self.surveys[j].name
