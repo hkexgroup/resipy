@@ -2832,8 +2832,6 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     if msg_flag:
         print(helpful_msg)
     
-    
-    
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
 #info = systemCheck()

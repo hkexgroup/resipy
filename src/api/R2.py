@@ -2903,7 +2903,7 @@ class R2(object): # R2 master class instanciated by the GUI
         new_keys = []
         baseline_keys = []
         for j, key in enumerate(self.meshResults[0].attr_cache):
-            new_keys.append('Change('+key+')')
+            new_keys.append('Difference('+key+')')
             baseline_keys.append(key)
         for j, key in enumerate(new_keys):
             self.meshResults[0].add_attribute(change[j,:],key)
@@ -2923,7 +2923,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     change[count,:] = (np.array(step.attr_cache[key])-baselines[count,:])/baselines[count,:] * 100
                 except KeyError:
                     problem+=1
-                new_keys.append('Change('+key+')')
+                new_keys.append('Difference('+key+')')
                 count += 1
             count = 0
             for j, key in enumerate(new_keys):
