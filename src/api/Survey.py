@@ -386,7 +386,7 @@ class Survey(object):
             count=count+1
         print(str(notfound)+'/'+str(ndata)+' reciprocal measurements NOT found.')
         reciprocalMean = np.sign(resist)*reciprocalMean # add sign
-        ibad = reciprocalErrRel > 0.2
+        ibad = np.abs(reciprocalErrRel) > 0.2
         print(str(np.sum(ibad)) + ' measurements error > 20 %')
         
         irecip = Ri        
@@ -453,7 +453,7 @@ class Survey(object):
         #### TODO: stop filtering if no reciprocals present! 
         if all(np.isnan(self.df['recipError']) == True):
             raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
-        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'])
+        reciprocalErrRel = np.abs(self.df['reciprocalErrRel'].replace(np.nan, 0))
         igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
