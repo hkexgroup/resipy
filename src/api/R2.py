@@ -2986,6 +2986,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
+    array = np.sort(array, axis=1) # for better presentation, especially Wenner arrays
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
     resist = resist
