@@ -1702,7 +1702,12 @@ class R2(object): # R2 master class instanciated by the GUI
             wds.append(wd)
         wds2 = wds.copy()
                 
-                
+        # run them all in parallel as child processes
+        def dumpOutput(out):
+            for line in iter(out.readline, ''):
+                dump(line.rstrip())
+            out.close()
+            
         # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
         # In an infinite loop, will run an number of process (according to the number of cores)
         # the loop will check when they finish and start new ones.
@@ -1712,17 +1717,23 @@ class R2(object): # R2 master class instanciated by the GUI
             return p.returncode == 0
         def fail():
             sys.exit(1)
-    
+                
+        
         procs = []
+        ts = []
         while True:
             while wds and len(procs) < ncores:
                 wd = wds.pop()
                 print('task', wd)
                 if OS == 'Windows':
-                    proc = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
                 else:
-                    proc = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True) 
-                procs.append(proc)
+                    p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True) 
+                procs.append(p)
+                t = Thread(target=dumpOutput, args=(p.stdout,))
+                t.daemon = True # thread dies with the program
+                t.start()
+                ts.append(t)
     
             for p in procs:
                 if done(p):
@@ -1744,7 +1755,6 @@ class R2(object): # R2 master class instanciated by the GUI
                 print('Error retrieving for ', wd, ':', e)
                 pass
         
-        # TODO add thread for getting live output
         # TODO add procs kill managemement
 #        
 ##        class ProcsManagement(object): # little class to handle the kill
@@ -1769,19 +1779,18 @@ class R2(object): # R2 master class instanciated by the GUI
                 if os.path.exists(originalFile):
                     shutil.move(originalFile, newFile)
             r2outFile = os.path.join(dirname, self.typ + '_' + s.name + '.out')
-            print(r2outFile)
             with open(r2outFile, 'r') as f:
                 r2outText = r2outText + f.read()
             os.remove(r2outFile)
         with open(os.path.join(dirname, self.typ + '.out'), 'w') as f:
             f.write(r2outText)
-#        
-#        # delete the dirs and the files
-#        if rmDirTree:
-#            [shutil.rmtree(d) for d in dirs]
-#            [os.remove(f) for f in files]
-#        
-#        print('----------- END OF INVERSION IN // ----------')
+        
+        # delete the dirs and the files
+        if rmDirTree:
+            [shutil.rmtree(d) for d in wds2]
+            [os.remove(f) for f in files]
+        
+        print('----------- END OF INVERSION IN // ----------')
     
     
     def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
