@@ -3406,8 +3406,8 @@ class App(QMainWindow):
                     plotSection()
                     if self.iForward is True:
                         sectionId.addItem('Initial Model')
-                    for i in range(len(self.r2.surveys)):
-                        sectionId.addItem(self.r2.surveys[i].name)
+                    for mesh in self.r2.meshResults:
+                        sectionId.addItem(mesh.mesh_title)
                     outStackLayout.setCurrentIndex(0)
                     showDisplayOptions(True)
                     btnInvert.setText('Invert')
