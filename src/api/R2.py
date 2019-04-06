@@ -733,9 +733,9 @@ class R2(object): # R2 master class instanciated by the GUI
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
             if typ == 'tetra': # TODO add buried
-                if cl == -1:
-                    dist = cdist(self.elec[:,:2]) # half the minimal electrode distance
-                    cl = np.min(dist[dist != 0])
+#                if cl == -1:
+#                    dist = cdist(self.elec[:,:2]) # half the minimal electrode distance
+#                    cl = np.min(dist[dist != 0])
                 elec_type = None # for now
                 mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
                              path=os.path.join(self.apiPath, 'exe'),
