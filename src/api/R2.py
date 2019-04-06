@@ -1720,7 +1720,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 
         
         procs = []
-        ts = []
+#        ts = []
         c = 0
         print('\r', c, '/', len(wds2), 'inversions completed', end='')
         while True:
@@ -2600,6 +2600,11 @@ class R2(object): # R2 master class instanciated by the GUI
         # write the protocol.dat based on measured sequence
         seq = self.surveys[0].df[['a','b','m','n']].values
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        if all(self.elec[:,1] == 0) is False: # it's a 3D survey
+            protocol.insert(1, 'sa', 1)
+            protocol.insert(3, 'sb', 1)
+            protocol.insert(5, 'sm', 1)
+            protocol.insert(7, 'sn', 1)
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
@@ -2610,11 +2615,14 @@ class R2(object): # R2 master class instanciated by the GUI
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
         
         # get error model
-        x = np.genfromtxt(os.path.join(fwdDir, 'R2_forward.dat'), skip_header=1)
+        x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)
         modErr = np.abs(100-x[:,-1])/100
-        self.surveys[0].df['modErr'] = modErr
+        for s in self.surveys:
+            s.df['modErr'] = modErr
         
-        # eventually delete the directory to space space
+        # eventually delete the directory to spare space
+        shutil.rmtree(fwdDir)
+        
     
     def showIter(self, index=-2, ax=None):
         """ Dispay temporary inverted section after each iteration.

@@ -1298,7 +1298,7 @@ class Survey(object):
                     if 'modErr' not in df.columns:
                         raise ValueError('ERROR : you must specify a modelling error')
                     else: # if present, compute geometric mean of the errors
-                        protocol['resError'] = np.sqrt(protocol['error']**2 + df['modErr'].values**2)
+                        protocol['resError'] = np.sqrt(protocol['resError']**2 + df['modErr'].values**2)
             else:
                 raise ValueError('You requested DC error but no error model can be found.')
                 
