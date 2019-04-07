@@ -340,6 +340,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D with moving electrodes (specialy dedicated to Jimmy ;)
+from api.R2 import R2
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
 t0 = time.time()
@@ -348,7 +349,7 @@ k = R2(typ='R3t')
 k.createTimeLapseSurvey('api/test/3d/data/', ftype='Protocol')
 elecList = [np.genfromtxt('api/test/3d/elec/' + f, delimiter=',') for f in os.listdir('api/test/3d/elec/')]
 k.setElec(elec=None, elecList=elecList)
-k.createMesh(cl=2)
+k.createMesh()#cl=2)
 k.param['reg_mode'] = 1 # background regularization
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
