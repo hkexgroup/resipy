@@ -3890,10 +3890,6 @@ USA: Trelgol Publishing, (2006).
         tabAbout.setLayout(infoLayout)
         
         #%% general Ctrl+Q shortcut + general tab layout
-        if OS == 'Darwin':
-            metaLayout.setSpacing(4)
-            btnInvNow.setStyleSheet('background-color: green; margin-left: 5px; padding: 2px')
-            phasefiltlayout.setSpacing(4)
             
         layout.addWidget(tabs)
         layout.addWidget(errorLabel)
