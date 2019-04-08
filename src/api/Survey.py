@@ -236,7 +236,7 @@ class Survey(object):
             elif ftype =='Protocol':
                 elec, data = protocol3DParser(fname)
             elif ftype == 'Res2Dinv':
-                elec, data = res2invInputParser(fname)
+                elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
                 try:
                     elec, data = primeParser(fname)
