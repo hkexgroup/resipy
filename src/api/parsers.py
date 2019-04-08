@@ -567,12 +567,10 @@ def res2invInputParser(file_path):
                 p2 = p1 + a
                 c2 = p2 + n*a
         elif array_type in (11,15):
-           c1 = (float(vals[1]))
-           if c1 == 0 or start_0_flag:
-               start_0_flag = True
-           c2 = (float(vals[3]))
-           p1 = (float(vals[5]))
-           p2 = (float(vals[7]))
+            c1 = (float(vals[1]))
+            c2 = (float(vals[3]))
+            p1 = (float(vals[5]))
+            p2 = (float(vals[7]))
             
         x_dump.append(c1)
         x_dump.append(p1)
@@ -603,8 +601,7 @@ def res2invInputParser(file_path):
                 c1 = p1 - mn
                 p2 = p1 + mn
                 c2 = p2 + mn
-            if c1 == 0 or start_0_flag:
-                    start_0_flag = True
+
         elif array_type == 3:#Dipole-Dipole
                 Pa.append(float(vals[3]))
                 if x_location == 0:
@@ -622,8 +619,7 @@ def res2invInputParser(file_path):
                     c2 = c1 - a
                     p1 = c1 + n*a
                     p2 = p1 + a
-                if c2 == 0 or start_0_flag:
-                        start_0_flag = True
+
         elif array_type == 4:# Wenner beta
                 Pa.append(float(vals[2]))
                 if x_location == 0:
@@ -638,9 +634,8 @@ def res2invInputParser(file_path):
                     c1 = mid_point - a/2
                     c2 = c1 - a
                     p1 = c1 + a
-                    p2 = p1 + a                
-                if c2 == 0 or start_0_flag:
-                    start_0_flag = True
+                    p2 = p1 + a
+                    
         elif array_type == 5:# Wenner gamma
                 Pa.append(float(vals[2]))
                 if x_location == 0:
@@ -656,8 +651,7 @@ def res2invInputParser(file_path):
                     c1 = p1 - a
                     c2 = p1 + a
                     p2 = c2 + a
-                if c1 == 0 or start_0_flag :
-                    start_0_flag = True
+
         elif array_type == 7:#Schlumberger
                 Pa.append(float(vals[3]))
                 if x_location == 0:
@@ -675,17 +669,15 @@ def res2invInputParser(file_path):
                     c1 = p1 - n*a
                     p2 = p1 + a
                     c2 = p2 + n*a
-                if c1 == 0 or start_0_flag:
-                    start_0_flag = True
+
         elif array_type in (11,15):
-           c1 = (float(vals[1]))
-           if c1 == 0 or start_0_flag:
-               start_0_flag = True
-           c2 = (float(vals[3]))
-           p1 = (float(vals[5]))
-           p2 = (float(vals[7]))
-           Pa.append(float(vals[9]))
-        
+            c1 = (float(vals[1]))
+            c2 = (float(vals[3]))
+            p1 = (float(vals[5]))
+            p2 = (float(vals[7]))
+            Pa.append(float(vals[9]))
+        if any([c1 == 0,c2 == 0,p1 == 0,p2 == 0]):
+            start_0_flag = True
         c1 = round(c1, 0)
         p1 = round(p1, 0)
         p2 = round(p2, 0)
