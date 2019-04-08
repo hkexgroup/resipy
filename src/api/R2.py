@@ -734,7 +734,7 @@ class R2(object): # R2 master class instanciated by the GUI
                              **kwargs)
             if typ == 'tetra': # TODO add buried
 #                if cl == -1:
-#                    dist = cdist(self.elec[:,:2]) # half the minimal electrode distance
+#                    dist = cdist(self.elec[:,:2])/2 # half the minimal electrode distance
 #                    cl = np.min(dist[dist != 0])
                 elec_type = None # for now
                 mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
