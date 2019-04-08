@@ -2218,7 +2218,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         xsurf = xsurf + list(surface_x)
         zsurf = zsurf + list(surface_z)
     surfacePoints = np.array([xsurf, zsurf]).T
-    isort = np.argsor(xsurf)
+    isort = np.argsort(xsurf)
     mesh.surface = surfacePoints[isort, :]
 
     return mesh,meshx,meshy,topo,elec_node
@@ -2361,7 +2361,7 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         xsurf = xsurf + list(geom_input['surface'][0])
         zsurf = zsurf + list(geom_input['surface'][1])
     surfacePoints = np.array([xsurf, zsurf]).T
-    isort = np.argsor(xsurf)
+    isort = np.argsort(xsurf)
     mesh.surface = surfacePoints[isort, :]
 
     
