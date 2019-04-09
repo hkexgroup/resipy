@@ -3527,19 +3527,16 @@ class App(QMainWindow):
             logInversion()
 
         def btnKillFunc():
-            print('pressed killed function !!!!')
-            print(self.r2.proc)
+            print('Killing...', end='')
             if self.r2.proc is not None:
-                print('ok')
                 btnInvert.setText('Invert')
                 btnInvert.setStyleSheet("background-color: green")
                 btnInvert.clicked.disconnect()
                 btnInvert.clicked.connect(btnInvertFunc)
                 QApplication.processEvents()
-                print('processed ventes')
                 self.r2.proc.kill()
-                print('all killed')
                 frozeUI(False)
+                print('done')
 
         btnInvert = QPushButton('Invert')
         btnInvert.setStyleSheet("background-color: green")

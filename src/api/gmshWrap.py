@@ -1009,8 +1009,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 
 #%% 3D half space 
 
-def box_3d(electrodes, padding = 20, doi = 20,file_path='mesh3d.geo',
-           cl=-1, cl_factor=2,cln_factor=500, mesh_refinement=None):
+def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
+           cl=-1, cl_factor=2, cln_factor=500, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1024,7 +1024,6 @@ def box_3d(electrodes, padding = 20, doi = 20,file_path='mesh3d.geo',
         z is the depth below the surface. 
     padding: float, optional
         Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
-    
     doi: float, optional 
         Depth of investigation of the survey. 
     file_path: string, optional 
@@ -1034,9 +1033,9 @@ def box_3d(electrodes, padding = 20, doi = 20,file_path='mesh3d.geo',
         assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
         a characteristic length 1/4 the minimum electrode spacing is computed.
     cl_factor: float, optional 
-        This allows for tuning of the incrimental size increase with depth in the 
+        This allows for tuning of the incremental size increase with depth in the 
         mesh, usually set to 2 such that the elements at the DOI are twice as big as those
-        at the surface. The reasoning for this is becuase the sensitivity of ERT drops
+        at the surface. The reasoning for this is because the sensitivity of ERT drops
         off with depth. 
     cln_factor: float, optional
         Factor applied to the characteristic length for fine mesh region to compute

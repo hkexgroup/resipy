@@ -435,9 +435,17 @@ class Mesh:
         else:#use contour algorithm
             x = np.array(self.elm_centre[0])
             y = np.array(self.elm_centre[2])
-            z = np.array(X)
-            triang = tri.Triangulation(x, y) # as it's based on centroid, some triangles might be out of the survey area
-#            triang = tri.Triangulation(np.array(self.node_x), self.node_y, connection)
+            zCentroid = np.array(X)
+            
+            # interpolate the cell-centered value to the node to be able
+            # to use the triangular mesh already in the grid
+#            z = interp.nearest(self.node_x, self.node_z, x, y, zCentroid)
+#            triang = tri.Triangulation(self.node_x, self.node_z, connection)
+
+            triang = tri.Triangulation(x, y)
+            z = zCentroid
+            
+            # set scale arrangement
             if vmin is None:
                 vmin = np.nanmin(z)
             if vmax is None:
@@ -459,13 +467,19 @@ class Mesh:
                     iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
                     ie = ilateral & iabove
                     i2keep[ie] = False
+                    if np.sum(ie) > 0: # if some triangles are above the min electrode
+                        slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+                        offset = ysurf[i] - slope * xsurf[i]
+                        predy = offset + slope * trix[ie]
+                        ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
+                        i2keep[np.where(ie)[0][ie2]] = True
                 return i2keep
             
             try:
                 triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
             except Exception as e:
                 print('Error in Mesh.show for contouring: ', e)
-
+            
             self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
             
         ax.autoscale()
@@ -2847,3 +2861,4 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
 
 #info = systemCheck()
+    
