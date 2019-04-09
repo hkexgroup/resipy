@@ -602,6 +602,8 @@ class App(QMainWindow):
             tabImporting.setTabEnabled(2,False) # no custom parser needed
             restartFunc() # let's first from previous inversion
             nbElecEdit.setEnabled(True)
+            regionTable.setColumnHidden(2, True)
+            regionTable.setColumnHidden(3, True)
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             ipCheck.setEnabled(True)
             activateTabs(True)
@@ -616,6 +618,8 @@ class App(QMainWindow):
             tabImporting.setTabEnabled(1, False)
             buttonf.setEnabled(True)
             nbElecEdit.setEnabled(False)
+            regionTable.setColumnHidden(2, False)
+            regionTable.setColumnHidden(3, False)
             timeLapseCheck.setEnabled(True)
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,True)
