@@ -416,6 +416,12 @@ class Mesh:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
+#        if attr is not None:
+#            if 'difference' in attr or 'Difference' in attr:
+#                vext = np.max([np.abs(vmin), np.abs(vmax)])
+#                vmin = -vext
+#                vmax = vext
+#                color_map = 'bwr'
         
         if edge_color == None or edge_color=='none' or edge_color=='None':
             edge_color='face'#set the edge colours to the colours of the polygon patches

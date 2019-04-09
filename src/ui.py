@@ -3460,7 +3460,8 @@ class App(QMainWindow):
                 defaultAttr = 'Sigma_real(log10)'
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
-                                  'contour':False, 'vmin':None, 'vmax':None}
+                                  'contour':False, 'vmin':None, 'vmax':None,
+                                  'cmap':'viridis'}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
@@ -3481,13 +3482,14 @@ class App(QMainWindow):
             contour = self.displayParams['contour']
             vmin = self.displayParams['vmin']
             vmax = self.displayParams['vmax']
+            cmap = self.displayParams['cmap']
             if self.r2.typ[-1] == '2':
                 mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
-                                   vmin=vmin, vmax=vmax)
+                                   vmin=vmin, vmax=vmax, color_map=cmap)
             else:
                 mwInvResult3D.replot(threed=True, index=index, attr=attr,
-                                     vmin=vmin, vmax=vmax)
+                                     vmin=vmin, vmax=vmax, color_map=cmap)
 
         def msgBox(text):
             msg = QMessageBox()
@@ -3627,6 +3629,19 @@ class App(QMainWindow):
         displayOptions.addWidget(vmaxLabel)
         displayOptions.addWidget(vmaxEdit, 10)
         displayOptions.addWidget(vMinMaxApply)
+        
+        cmapComboLabel = QLabel('Colormap')
+        cmaps = ['viridis','plasma','seismic', 'winter','automn','jet']
+        def cmapComboFunc(index):
+            self.displayParams['cmap'] = cmaps[index]
+            replotSection()
+        cmapCombo = QComboBox()
+        for cmap in cmaps:
+            cmapCombo.addItem(cmap)
+        cmapCombo.setCurrentIndex(0)
+        cmapCombo.currentIndexChanged.connect(cmapComboFunc)
+        displayOptions.addWidget(cmapComboLabel)
+        displayOptions.addWidget(cmapCombo)
 
         def showEdges(status):
             if status == Qt.Checked:
@@ -3634,7 +3649,7 @@ class App(QMainWindow):
             else:
                 self.displayParams['edge_color'] = 'none'
             replotSection()
-        edgeCheck= QCheckBox('Show edges')
+        edgeCheck= QCheckBox('Edges')
         edgeCheck.setChecked(False)
         edgeCheck.setToolTip('Show edges of each mesh cell.')
         edgeCheck.stateChanged.connect(showEdges)
@@ -3659,7 +3674,7 @@ class App(QMainWindow):
             else:
                 self.displayParams['sens'] = False
             replotSection()
-        sensCheck = QCheckBox('Sensitivity overlay')
+        sensCheck = QCheckBox('Sensitivity')
         sensCheck.setChecked(True)
         sensCheck.stateChanged.connect(showSens)
         sensCheck.setToolTip('Overlay a semi-transparent white sensivity layer.')
@@ -3706,7 +3721,8 @@ class App(QMainWindow):
 
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
-                    edgeCheck, contourCheck, sensCheck, sliceAxis, paraviewBtn, btnSave]
+                    cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis,
+                    paraviewBtn, btnSave]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
