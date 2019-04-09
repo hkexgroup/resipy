@@ -432,55 +432,87 @@ class Mesh:
 #            coll = ax.tripcolor(triang, X, cmap=color_map, edgecolors=edge_color, linewidth=0.5)
             self.cax = coll
             
-        else:#use contour algorithm
-            x = np.array(self.elm_centre[0])
-            y = np.array(self.elm_centre[2])
-            zCentroid = np.array(X)
-            
-            # interpolate the cell-centered value to the node to be able
-            # to use the triangular mesh already in the grid
-#            z = interp.nearest(self.node_x, self.node_z, x, y, zCentroid)
-#            triang = tri.Triangulation(self.node_x, self.node_z, connection)
-
-            triang = tri.Triangulation(x, y)
-            z = zCentroid
+        else:#use contour algorithm (only for 2D and y is considered depth here)
+            xc = np.array(self.elm_centre[0])
+            yc = np.array(self.elm_centre[2])
+            zc = np.array(X)
+            x = np.array(self.node_x)
+            y = np.array(self.node_z)
             
             # set scale arrangement
             if vmin is None:
-                vmin = np.nanmin(z)
+                vmin = np.nanmin(zc)
             if vmax is None:
-                vmax = np.nanmax(z)
+                vmax = np.nanmax(zc)
             if vmax > vmin:
                 levels = np.linspace(vmin, vmax, 7)
             else:
                 levels = None
-                
-            # make sure none of the triangle centroids are above the
-            # line of electrodes
-            def cropSurface(triang, xsurf, ysurf):
-                trix = np.mean(triang.x[triang.triangles], axis=1)
-                triy = np.mean(triang.y[triang.triangles], axis=1)
-                
-                i2keep = np.ones(len(trix), dtype=bool)
-                for i in range(len(xsurf)-1):
-                    ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
-                    iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
-                    ie = ilateral & iabove
-                    i2keep[ie] = False
-                    if np.sum(ie) > 0: # if some triangles are above the min electrode
-                        slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
-                        offset = ysurf[i] - slope * xsurf[i]
-                        predy = offset + slope * trix[ie]
-                        ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
-                        i2keep[np.where(ie)[0][ie2]] = True
-                return i2keep
             
-            try:
-                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-            except Exception as e:
-                print('Error in Mesh.show for contouring: ', e)
+            if self.cell_type[0] == 9: # quadrilateral mesh (exact topo)   
+                # interpolate the cell-centered value to the node to be able
+                # to use the triangular mesh already in the grid
+                z = interp.nearest(x, y, xc, yc, zc)
+                
+                def rebuildRegularGrid(x2, y2, z2):
+                    x2unique = np.unique(x2)
+                    xs = []
+                    for xuni in x2unique: # for loop otherwise dataframe groupby
+                        xs.append(np.where(x2 == xuni)[0])
+                    minLength = np.min([len(a) for a in xs])
+                    xs2 = []
+                    for a in xs:
+                        isort = np.argsort(y2[a])
+                        xs2.append(a[isort][-minLength:])
+                    xs2 = np.vstack(xs2)
+                    X = x2[xs2]
+                    Y = y2[xs2]
+                    Z = z2[xs2]
+                    return X, Y, Z
             
-            self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+                Xi, Yi, Zi = rebuildRegularGrid(x, y, z)
+                self.cax = ax.contourf(Xi, Yi, Zi, levels=levels)
+            
+            
+            elif self.cell_type[0] == 5: # triangular mesh (exact topo)
+                # interpolate the cell-centered value to the node to be able
+                # to use the triangular mesh already in the grid
+                z = interp.nearest(x, y, xc, yc, zc)
+                triang = tri.Triangulation(x, y, connection)
+                
+                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+            
+            else: # fallback mode with tricontourf and cropSurface() (topo based on centroids) 
+                triang = tri.Triangulation(xc, yc) # build grid based on centroids
+                z = zc
+
+                # make sure none of the triangle centroids are above the
+                # line of electrodes
+                def cropSurface(triang, xsurf, ysurf):
+                    trix = np.mean(triang.x[triang.triangles], axis=1)
+                    triy = np.mean(triang.y[triang.triangles], axis=1)
+                    
+                    i2keep = np.ones(len(trix), dtype=bool)
+                    for i in range(len(xsurf)-1):
+                        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+                        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+                        ie = ilateral & iabove
+                        i2keep[ie] = False
+                        if np.sum(ie) > 0: # if some triangles are above the min electrode
+                            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+                            offset = ysurf[i] - slope * xsurf[i]
+                            predy = offset + slope * trix[ie]
+                            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
+                            i2keep[np.where(ie)[0][ie2]] = True
+                    return i2keep
+                
+                try:
+                    triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+                except Exception as e:
+                    print('Error in Mesh.show for contouring: ', e)
+                
+                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+            
             
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
