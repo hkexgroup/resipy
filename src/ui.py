@@ -3631,7 +3631,7 @@ class App(QMainWindow):
         displayOptions.addWidget(vMinMaxApply)
         
         cmapComboLabel = QLabel('Colormap')
-        cmaps = ['viridis','plasma','seismic', 'winter','automn','jet']
+        cmaps = ['viridis','plasma','seismic', 'winter','autumn','jet']
         def cmapComboFunc(index):
             self.displayParams['cmap'] = cmaps[index]
             replotSection()
