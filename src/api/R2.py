@@ -1707,7 +1707,26 @@ class R2(object): # R2 master class instanciated by the GUI
             for line in iter(out.readline, ''):
                 dump(line.rstrip())
             out.close()
-            
+        
+        # create essential attribute
+        self.irunParallel2 = True
+        self.procs = []
+        
+        # kill management
+        class ProcsManagement(object): # little class to handle the kill
+            def __init__(self, r2object):
+                self.r2 = r2object
+            def kill(self):
+                print('killing ...')
+                self.r2.irunParallel2 = False # this will end the infinite loop
+                print('kk')
+                procs = self.r2.procs # and kill the running processes
+                for p in procs:
+                    p.terminate()
+                print('all done')
+                    
+        self.proc = ProcsManagement(self)
+        
         # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
         # In an infinite loop, will run an number of process (according to the number of cores)
         # the loop will check when they finish and start new ones.
@@ -1718,36 +1737,34 @@ class R2(object): # R2 master class instanciated by the GUI
         def fail():
             sys.exit(1)
                 
-        
-        procs = []
 #        ts = []
         c = 0
-        print('\r', c, '/', len(wds2), 'inversions completed', end='')
-        while True:
-            while wds and len(procs) < ncores:
+        dump('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
+        while self.irunParallel2:
+            while wds and len(self.procs) < ncores:
                 wd = wds.pop()
 #                print('task', wd)
                 if OS == 'Windows':
                     p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
                 else:
                     p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True) 
-                procs.append(p)
+                self.procs.append(p)
 #                t = Thread(target=dumpOutput, args=(p.stdout,))
 #                t.daemon = True # thread dies with the program
 #                t.start()
 #                ts.append(t)
     
-            for p in procs:
+            for p in self.procs:
                 if done(p):
                     if success(p):
-                        procs.remove(p)
+                        self.procs.remove(p)
                         c = c+1
-                        print('\r', c, '/', len(wds2), 'inversions completed', end='')
+                        dump('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
                     else:
                         fail()
     
-            if not procs and not wds:
-                print('')
+            if not self.procs and not wds:
+                dump('')
                 break
             else:
                 time.sleep(0.05)
@@ -1759,18 +1776,8 @@ class R2(object): # R2 master class instanciated by the GUI
             except Exception as e:
                 print('Error retrieving for ', wd, ':', e)
                 pass
+                
         
-        # TODO add procs kill managemement
-#        
-##        class ProcsManagement(object): # little class to handle the kill
-##            def __init__(self, procs):
-##                self.procs = procs
-##            def kill(self):
-##                for p in self.procs:
-##                    p.terminate()
-##                    
-##        self.proc = ProcsManagement(procs)
-#        
         # get the files as it was a sequential inversion
         if self.typ=='R3t' or self.typ=='cR3t':
             toRename = ['.dat', '.vtk', '.err', '.sen', '_diffres.dat']

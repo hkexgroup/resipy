@@ -3371,13 +3371,17 @@ class App(QMainWindow):
                                dict(zip(regid, phase0)))
 
 #            f = print if self.parallel is True else func
-            if self.parallel is True:
-                self.r2.invert(iplot=False, dump=print, parallel=True)
+#            if self.parallel is True:
+#                self.r2.invert(iplot=False, dump=print, parallel=True)
+#                with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
+#                    text = f.read()
+#                func(text)
+#            else:
+            self.r2.invert(iplot=False, dump=func, modErr=self.modErr, parallel=self.parallel)
+            if self.parallel is True: # replace the log output by the R2.out
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
                 func(text)
-            else:
-                self.r2.invert(iplot=False, dump=func, modErr=self.modErr)#, parallel=self.parallel)
             self.r2.proc = None
             try:
                 sectionId.currentIndexChanged.disconnect()
@@ -3519,13 +3523,18 @@ class App(QMainWindow):
             logInversion()
 
         def btnKillFunc():
+            print('pressed killed function !!!!')
+            print(self.r2.proc)
             if self.r2.proc is not None:
+                print('ok')
                 btnInvert.setText('Invert')
                 btnInvert.setStyleSheet("background-color: green")
                 btnInvert.clicked.disconnect()
                 btnInvert.clicked.connect(btnInvertFunc)
                 QApplication.processEvents()
+                print('processed ventes')
                 self.r2.proc.kill()
+                print('all killed')
                 frozeUI(False)
 
         btnInvert = QPushButton('Invert')
