@@ -363,8 +363,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.elec = self.surveys[0].elec
             
             # attribute method of Survey object to R2
-            self.pseudoIP = self.surveys[0].pseudoIP
-            self.pseudo = self.surveys[0].pseudo
+#            self.pseudoIP = self.surveys[0].pseudoIP
+#            self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
             self.errorDist = self.surveys[0].errorDist
             self.linfit = self.surveys[0].linfit
@@ -471,7 +471,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
-        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
+#        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
 
         self.plotError = self.bigSurvey.plotError
         self.errorDist = self.bigSurvey.errorDist
@@ -484,7 +484,43 @@ class R2(object): # R2 master class instanciated by the GUI
         
         print("%i survey files imported"%len(self.surveys))
         
+        
+    def pseudo(self, index=0, vmin=None, vmax=None, ax=None):
+        """ Plot pseudo-section with dots.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to be used for the pseudo-section (in case of
+            timelapse or batch).
+        vmin : float, optional
+            Minimum value for colorscale.
+        vmax : float, optional
+            Maximum value for colorscale.
+        ax : matplotlib.Axes, optional
+            If specified, axis along which to plot the graph.
+        """
+        self.surveys[index].pseudo(vmin=vmin, vmax=vmax, ax=ax)
+        
     
+    def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None):
+        """ Plot pseudo-section with dots for IP data.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to be used for the pseudo-section (in case of
+            timelapse or batch).
+        vmin : float, optional
+            Minimum value for colorscale.
+        vmax : float, optional
+            Maximum value for colorscale.
+        ax : matplotlib.Axes, optional
+            If specified, axis along which to plot the graph.
+        """
+        self.surveys[index].pseudoIP(vmin=vmin, vmax=vmax, ax=ax)
+        
+        
     def matchSurveys(self):
         """ Will trim all surveys to get them ready for difference inversion
         where all datasets must have the same number of quadrupoles.

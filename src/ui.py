@@ -736,7 +736,6 @@ class App(QMainWindow):
                     fnamesCombo.clear()
                     for s in self.r2.surveys:
                         fnamesCombo.addItem(s.name)
-#                    fnamesCombo.setEnabled(True)
                     fnamesCombo.show()
                     fnamesComboLabel.show()
                     buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
@@ -881,6 +880,7 @@ class App(QMainWindow):
                 self.r2.typ = 'c' + self.r2.typ
                 self.typ = 'c' + self.typ
                 showIpOptions(True)
+                [p.setVisible(True) for p in [pvminIPLabel, pvminIP, pvmaxIPLabel, pvmaxIP]]
 #                timeLapseCheck.setEnabled(False)
                 if self.r2.iForward == True:
                     forwardPseudoIP.setVisible(True)
@@ -904,6 +904,7 @@ class App(QMainWindow):
                 self.r2.typ = self.r2.typ[1:]
                 self.typ = self.typ[1:]
                 showIpOptions(False)
+                [p.setVisible(False) for p in [pvminIPLabel, pvminIP, pvmaxIPLabel, pvmaxIP]]
 #                timeLapseCheck.setEnabled(True)
                 mwPseudoIP.setVisible(False)
                 tabPreProcessing.setTabEnabled(1, False)
@@ -923,9 +924,12 @@ class App(QMainWindow):
         fnamesComboLabel = QLabel('Choose a dataset to plot:')
         fnamesComboLabel.hide()
         def fnamesComboFunc(index):
-            mwPseudo.plot(self.r2.surveys[index].pseudo)
-            if self.r2.typ[0] == 'c':
-                mwPseudoIP.plot(self.r2.surveys[index].pseudoIP)
+            self.pParams['index'] = index
+            self.pParamsIP['index'] = index
+            plotPseudo()
+#            mwPseudo.plot(self.r2.surveys[index].pseudo)
+#            if self.r2.typ[0] == 'c':
+#                mwPseudoIP.plot(self.r2.surveys[index].pseudoIP)
         fnamesCombo = QComboBox()
         fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         fnamesCombo.setMinimumWidth(150)
@@ -933,10 +937,55 @@ class App(QMainWindow):
 #        fnamesCombo.setEnabled(False)
         fnamesCombo.hide()
 
+        # display options for pseudo-sections
+        pvminLabel = QLabel('ρ<sub>min</sub>')
+        pvmin = QLineEdit()
+        pvmin.setValidator(QDoubleValidator())
+        
+        pvmaxLabel = QLabel('ρ<sub>max</sub>')
+        pvmax = QLineEdit()
+        pvmax.setValidator(QDoubleValidator())
+        
+        pvminIPLabel = QLabel('ΙP<sub>min</sub>')
+        pvminIPLabel.setVisible(False)
+        pvminIP = QLineEdit()
+        pvminIP.setValidator(QDoubleValidator())
+        pvminIP.setVisible(False)
+        
+        pvmaxIPLabel = QLabel('IP<sub>max</sub>')
+        pvmaxIPLabel.setVisible(False)
+        pvmaxIP = QLineEdit()
+        pvmaxIP.setValidator(QDoubleValidator())
+        pvmaxIP.setVisible(False)
+        
+        self.pParams = {'index':0, 'vmin':None, 'vmax':None}
+        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None}
+        def prescaleBtnFunc():
+            if self.r2 is not None:
+                self.pParams['vmin'] = float(pvmin.text()) if pvmin.text() != '' else None
+                self.pParams['vmax'] = float(pvmax.text()) if pvmax.text() != '' else None
+                self.pParamsIP['vmin'] = float(pvminIP.text()) if pvminIP.text() != '' else None
+                self.pParamsIP['vmax'] = float(pvmaxIP.text()) if pvmaxIP.text() != '' else None    
+                plotPseudo()
+                if self.r2.typ[0] == 'c':
+                    plotPseudoIP()
+            QApplication.processEvents()
+        prescaleBtn = QPushButton('Apply')
+        prescaleBtn.setAutoDefault(True)
+        prescaleBtn.clicked.connect(prescaleBtnFunc)
+        
         hbox5 = QHBoxLayout()
-
         hbox5.setAlignment(Qt.AlignRight)
         hbox5.addWidget(ipCheck, Qt.AlignLeft)
+        hbox5.addWidget(pvminLabel)
+        hbox5.addWidget(pvmin)
+        hbox5.addWidget(pvmaxLabel)
+        hbox5.addWidget(pvmax)
+        hbox5.addWidget(pvminIPLabel)
+        hbox5.addWidget(pvminIP)
+        hbox5.addWidget(pvmaxIPLabel)
+        hbox5.addWidget(pvmaxIP)
+        hbox5.addWidget(prescaleBtn)
         hbox5.addWidget(fnamesComboLabel)
         hbox5.addWidget(fnamesCombo)
 
@@ -951,10 +1000,12 @@ class App(QMainWindow):
 
 
         def plotPseudo():
-            mwPseudo.plot(self.r2.pseudo)
+            mwPseudo.setCallback(self.r2.pseudo)
+            mwPseudo.replot(**self.pParams)
 
         def plotPseudoIP():
-            mwPseudoIP.plot(self.r2.pseudoIP)
+            mwPseudoIP.setCallback(self.r2.pseudoIP)
+            mwPseudoIP.replot(**self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
 
