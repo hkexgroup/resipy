@@ -477,7 +477,7 @@ class Mesh:
                     return X, Y, Z
             
                 Xi, Yi, Zi = rebuildRegularGrid(x, y, z)
-                self.cax = ax.contourf(Xi, Yi, Zi, levels=levels)
+                self.cax = ax.contourf(Xi, Yi, Zi, levels=levels, cmap=color_map)
             
             
             elif self.cell_type[0] == 5: # triangular mesh (exact topo)
