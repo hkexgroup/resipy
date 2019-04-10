@@ -485,7 +485,7 @@ class R2(object): # R2 master class instanciated by the GUI
         print("%i survey files imported"%len(self.surveys))
         
         
-    def pseudo(self, index=0, vmin=None, vmax=None, ax=None):
+    def pseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """ Plot pseudo-section with dots.
         
         Parameters
@@ -499,11 +499,13 @@ class R2(object): # R2 master class instanciated by the GUI
             Maximum value for colorscale.
         ax : matplotlib.Axes, optional
             If specified, axis along which to plot the graph.
+        **kwargs : optional
+            Passed to `Survey.pseudo()`.
         """
-        self.surveys[index].pseudo(vmin=vmin, vmax=vmax, ax=ax)
+        self.surveys[index].pseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
         
     
-    def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None):
+    def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """ Plot pseudo-section with dots for IP data.
         
         Parameters
@@ -517,8 +519,10 @@ class R2(object): # R2 master class instanciated by the GUI
             Maximum value for colorscale.
         ax : matplotlib.Axes, optional
             If specified, axis along which to plot the graph.
+        **kwargs : optional
+            Passed to `Survey.pseudo()`.
         """
-        self.surveys[index].pseudoIP(vmin=vmin, vmax=vmax, ax=ax)
+        self.surveys[index].pseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
         
         
     def matchSurveys(self):
