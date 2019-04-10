@@ -1158,6 +1158,10 @@ class R2(object): # R2 master class instanciated by the GUI
             df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean']]
             df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0'})
             for i, s in enumerate(self.surveys[1:]):
+                if 'resist0' in s.df.columns:
+                    s.df.drop('resist0')
+                if 'recipMean0' in s.df.columns:
+                    s.df.drop('recipMean0')
                 s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
                 if err is True:
                     s.df['resError'] = self.bigSurvey.errorModel(s.df)
