@@ -1776,14 +1776,14 @@ class R2(object): # R2 master class instanciated by the GUI
         # the loop will check when they finish and start new ones.
         def done(p):
             return p.poll() is not None
-        def success(p):
-            return p.returncode == 0
-        def fail():
-            sys.exit(1)
+#        def success(p):
+#            return p.returncode == 0 # this doesn't work so well in compiled windows binaries
+#        def fail():
+#            sys.exit(1)
                 
 #        ts = []
         c = 0
-        dump('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
+        dump('{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
         while self.irunParallel2:
             while wds and len(self.procs) < ncores:
                 wd = wds.pop()
@@ -1800,12 +1800,9 @@ class R2(object): # R2 master class instanciated by the GUI
     
             for p in self.procs:
                 if done(p):
-                    if success(p):
-                        self.procs.remove(p)
-                        c = c+1
-                        dump('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
-                    else:
-                        fail()
+                    self.procs.remove(p)
+                    c = c+1
+                    dump('{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
     
             if not self.procs and not wds:
                 dump('')
