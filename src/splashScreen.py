@@ -67,6 +67,7 @@ class MyZipFile(ZipFile):
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
 #    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png')))
 
     splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
