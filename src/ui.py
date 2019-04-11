@@ -4087,16 +4087,20 @@ USA: Trelgol Publishing, (2006).
                     is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
     
             except:
-                wineInstalled(False)
+                wineInstalled = False
         return wineInstalled
 
 
     def checkWineShow(self, wineInstalled):
         print('is wine installed?', wineInstalled)
+        if OS == 'Linux':
+            OpSys = 'Linux'
+        elif OS == 'Darwin':
+            OpSys = 'macOS'
         if wineInstalled is False:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
-            msg.setText('''<b>No "wine" is installed on your %s</b>''' % (platform))
+            msg.setText('''<b>No "wine" is installed on your %s</b>''' % (OpSys))
             msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
             msg.setWindowTitle('"Wine" is not detected!')
             bttnUpY = msg.addButton(QMessageBox.Yes)
