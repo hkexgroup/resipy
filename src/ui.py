@@ -14,6 +14,7 @@ from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySe
 from PyQt5.QtCore import QThread, pyqtSignal#, QProcess, QSize
 from PyQt5.QtCore import Qt
 
+
 #%% General crash ERROR
 import threading
 import traceback
@@ -40,81 +41,79 @@ def catchErrors():
     sys.excepthook = errorMessage
     threading.Thread.__init__
 
-#%% Wine Check
-import platform
-from subprocess import PIPE, Popen
-
-def wineCheck():
-    #check operating system
-    OpSys=platform.system()
-    #detect wine
-    if OpSys == 'Linux':
-        p = Popen("wine --version", stdout=PIPE, shell=True)
-        is_wine = str(p.stdout.readline())
-        if is_wine.find("wine") == -1:
-            wineMsgBox('Linux')
-        else:
-            pass
-
-    elif OpSys == 'Darwin':
-        try:
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            else:
-                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
-
-        except:
-            wineMsgBox('macOS')
-
-def wineMsgBox(platform):
-    msg = QMessageBox()
-    msg.setIcon(QMessageBox.Warning)
-    msg.setText('''<b>No "wine" is installed on your %s</b>''' % (platform))
-    msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
-    msg.setWindowTitle('"Wine" is not detected!')
-    bttnUpY = msg.addButton(QMessageBox.Yes)
-    bttnUpY.setText('Learn more')
-    bttnUpN = msg.addButton(QMessageBox.No)
-    bttnUpN.setText('Continue')
-    msg.setDefaultButton(bttnUpY)
-    msg.exec_()
-    if msg.clickedButton() == bttnUpY:
-        webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+#%%
+#def wineCheck():
+#    #check operating system
+#    OpSys=platform.system()
+#    #detect wine
+#    if OpSys == 'Linux':
+#        p = Popen("wine --version", stdout=PIPE, shell=True)
+#        is_wine = str(p.stdout.readline())
+#        if is_wine.find("wine") == -1:
+#            wineMsgBox('Linux')
+#        else:
+#            pass
+#
+#    elif OpSys == 'Darwin':
+#        try:
+#            winePath = []
+#            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+#            for stdout_line in iter(wine_path.stdout.readline, ''):
+#                winePath.append(stdout_line)
+#            if winePath != []:
+#                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+#            else:
+#                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+#
+#        except:
+#            wineMsgBox('macOS')
+#
+#def wineMsgBox(platform):
+#    msg = QMessageBox()
+#    msg.setIcon(QMessageBox.Warning)
+#    msg.setText('''<b>No "wine" is installed on your %s</b>''' % (platform))
+#    msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
+#    msg.setWindowTitle('"Wine" is not detected!')
+#    bttnUpY = msg.addButton(QMessageBox.Yes)
+#    bttnUpY.setText('Learn more')
+#    bttnUpN = msg.addButton(QMessageBox.No)
+#    bttnUpN.setText('Continue')
+#    msg.setDefaultButton(bttnUpY)
+#    msg.exec_()
+#    if msg.clickedButton() == bttnUpY:
+#        webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
 
 #%% Update checker
-from urllib import request as urlRequest
-import webbrowser
 
-def updateChecker():
-    #gets newest version from src/version.txt
-    try:
-        versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
-        versionCheck = versionSource.read().decode()
-        version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
-        print('online version :', version)
-        if pyR2_version != versionCheck:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setText('''<b>pyR2 version %s is available</b>''' % (version))
-            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
-            msg.setWindowTitle("New version available")
-            bttnUpY = msg.addButton(QMessageBox.Yes)
-            bttnUpY.setText('Update')
-            bttnUpN = msg.addButton(QMessageBox.No)
-            bttnUpN.setText('Ignore')
-            msg.setDefaultButton(bttnUpY)
-            msg.exec_()
-            if msg.clickedButton() == bttnUpY:
-                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
-    except: #if there is no internet connection!
-        pass
+#def updateChecker():
+#    #gets newest version from src/version.txt
+#    try:
+#        versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
+#        versionCheck = versionSource.read().decode()
+#        version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
+#        print('online version :', version)
+#        if pyR2_version != versionCheck:
+#            msg = QMessageBox()
+#            msg.setIcon(QMessageBox.Information)
+#            msg.setText('''<b>pyR2 version %s is available</b>''' % (version))
+#            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+#            msg.setWindowTitle("New version available")
+#            bttnUpY = msg.addButton(QMessageBox.Yes)
+#            bttnUpY.setText('Update')
+#            bttnUpN = msg.addButton(QMessageBox.No)
+#            bttnUpN.setText('Ignore')
+#            msg.setDefaultButton(bttnUpY)
+#            msg.exec_()
+#            if msg.clickedButton() == bttnUpY:
+#                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
+#    except: #if there is no internet connection!
+#        pass
 
 
 class customThread(QThread):
+    ''' class needed to run out of main thread computation and then emit
+    signal to the main GUI thread to display message box.
+    '''
     signal = pyqtSignal('PyQt_PyObject')
 
     def __init__(self, func):
@@ -267,8 +266,9 @@ class App(QMainWindow):
         tupdate.signal.connect(self.updateCheckerShow)
         tupdate.start()
         
-#        twine = customThread(checkWine)
-#        twine.signal.connect(self.showWine)
+        twine = customThread(self.checkWine)
+        twine.signal.connect(self.checkWineShow)
+        twine.start()
         
         self.setWindowTitle('pyR2')
         self.setGeometry(100,100,1100,600)
@@ -4003,6 +4003,7 @@ USA: Trelgol Publishing, (2006).
             self.close()
 
 #%% updater function and wine check
+    # based on https://kushaldas.in/posts/pyqt5-thread-example.html
     def updateChecker(self): # check for new updates on gitlab
         version = pyR2_version
         try:
@@ -4030,6 +4031,53 @@ USA: Trelgol Publishing, (2006).
             if msg.clickedButton() == bttnUpY:
                 webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     
+    def checkWine(self): # check if wine is installed, on Unix system
+        #check operating system
+        OpSys=platform.system()
+        wineInstalled = True
+        #detect wine
+        if OpSys == 'Linux':
+            p = Popen("wine --version", stdout=PIPE, shell=True)
+            is_wine = str(p.stdout.readline())
+            if is_wine.find("wine") == -1:
+                wineInstalled = False
+            else:
+                pass
+    
+        elif OpSys == 'Darwin':
+            try:
+                winePath = []
+                wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+                for stdout_line in iter(wine_path.stdout.readline, ''):
+                    winePath.append(stdout_line)
+                if winePath != []:
+                    is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                else:
+                    is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+    
+            except:
+                wineInstalled(False)
+        return wineInstalled
+
+
+    def checkWineShow(self, wineInstalled):
+        print('is wine installed?', wineInstalled)
+        if wineInstalled is False:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText('''<b>No "wine" is installed on your %s</b>''' % (platform))
+            msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
+            msg.setWindowTitle('"Wine" is not detected!')
+            bttnUpY = msg.addButton(QMessageBox.Yes)
+            bttnUpY.setText('Learn more')
+            bttnUpN = msg.addButton(QMessageBox.No)
+            bttnUpN.setText('Continue')
+            msg.setDefaultButton(bttnUpY)
+            msg.exec_()
+            if msg.clickedButton() == bttnUpY:
+                webbrowser.open('https://www.winehq.org/')
+#                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+
     
 '''
 class MyTableWidget(QWidget):
@@ -4110,12 +4158,18 @@ if __name__ == '__main__':
     progressBar.setValue(6)
     app.processEvents()
     print('importing python libraries')
-    OS = platform.system()
     from datetime import datetime
     progressBar.setValue(8)
     app.processEvents()
     from matplotlib import rcParams
     rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+
+    # library needed for update checker + wine checker
+    import platform
+    OS = platform.system()
+    from subprocess import PIPE, Popen
+    from urllib import request as urlRequest
+    import webbrowser
 
     from api.R2 import R2
     from api.r2help import r2help
@@ -4125,18 +4179,4 @@ if __name__ == '__main__':
     ex = App()
     splash.hide() # hiding the splash screen when finished
     
-    # run the checks in a separate thread that emit a signal to the main ui
-#    t = threading.Thread(target=wineCheck)
-#    t.start()
-#    t = threading.Thread(target=updateChecker)
-#    t.start()
     sys.exit(app.exec_())
-
-
-
-#%%
-#table = QTableWidget(10, 3)
-#table.setVisible(False)
-#table.setItem(0,0,QTableWidgetItem('4.3'))
-#table.setItem(1,1,QTableWidgetItem('2.3'))
-#print(table.item(0,0).text())
