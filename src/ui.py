@@ -94,7 +94,7 @@ def updateChecker():
     try:
         versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
         versionCheck = versionSource.read().decode()
-        version = versionCheck.split('\\n')[1] # assuming version number is in 2nd line of version.txt
+        version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
         print('online version :', version)
         if pyR2_version != versionCheck:
             msg = QMessageBox()
