@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
     QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
-#from PyQt5.QtCore import QThread, pyqtSignal, QProcess, QSize
+from PyQt5.QtCore import QThread, pyqtSignal#, QProcess, QSize
 from PyQt5.QtCore import Qt
 
 #%% General crash ERROR
@@ -112,6 +112,18 @@ def updateChecker():
                 webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     except: #if there is no internet connection!
         pass
+
+
+class customThread(QThread):
+    signal = pyqtSignal('PyQt_PyObject')
+
+    def __init__(self, func):
+        QThread.__init__(self)
+        self.func = func
+
+    def run(self):
+        output = self.func()
+        self.signal.emit(output) # inform the main thread of the output
 
 
 #%%
@@ -250,6 +262,14 @@ class App(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
+        # do the checks for wine and updates in seperate thread
+        tupdate = customThread(self.updateChecker)
+        tupdate.signal.connect(self.updateCheckerShow)
+        tupdate.start()
+        
+#        twine = customThread(checkWine)
+#        twine.signal.connect(self.showWine)
+        
         self.setWindowTitle('pyR2')
         self.setGeometry(100,100,1100,600)
         self.newwd = os.path.join(bundle_dir, 'api', 'invdir')
@@ -3982,7 +4002,35 @@ USA: Trelgol Publishing, (2006).
         if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_W):
             self.close()
 
-
+#%% updater function and wine check
+    def updateChecker(self): # check for new updates on gitlab
+        version = pyR2_version
+        try:
+            versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
+            versionCheck = versionSource.read().decode()
+            version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
+            print('online version :', version)
+        except:
+            pass
+        return version
+    
+    def updateCheckerShow(self, version):
+        if pyR2_version != version:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText('''<b>pyR2 version %s is available</b>''' % (version))
+            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+            msg.setWindowTitle("New version available")
+            bttnUpY = msg.addButton(QMessageBox.Yes)
+            bttnUpY.setText('Update')
+            bttnUpN = msg.addButton(QMessageBox.No)
+            bttnUpN.setText('Ignore')
+            msg.setDefaultButton(bttnUpY)
+            msg.exec_()
+            if msg.clickedButton() == bttnUpY:
+                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
+    
+    
 '''
 class MyTableWidget(QWidget):
 
@@ -4076,10 +4124,12 @@ if __name__ == '__main__':
 
     ex = App()
     splash.hide() # hiding the splash screen when finished
-    t = threading.Thread(target=wineCheck)
-    t.start()
-    t = threading.Thread(target=updateChecker)
-    t.start()
+    
+    # run the checks in a separate thread that emit a signal to the main ui
+#    t = threading.Thread(target=wineCheck)
+#    t.start()
+#    t = threading.Thread(target=updateChecker)
+#    t.start()
     sys.exit(app.exec_())
 
 
