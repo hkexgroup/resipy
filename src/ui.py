@@ -1484,44 +1484,48 @@ class App(QMainWindow):
 
             def parserFunc(fname):
                 # retrieve usefull values
-                delimiter = self.delimiter
-                delimiter = None if delimiter == '' else delimiter
-                skipRows = skipRowsEdit.text()
-                skipRows = None if skipRows == '' else int(skipRows)
-                nrows = nrowsEdit.text()
-                nrows = None if nrows == '' else int(nrows)
-                espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
+                try:
+                    delimiter = self.delimiter
+                    delimiter = None if delimiter == '' else delimiter
+                    skipRows = skipRowsEdit.text()
+                    skipRows = None if skipRows == '' else int(skipRows)
+                    nrows = nrowsEdit.text()
+                    nrows = None if nrows == '' else int(nrows)
+                    espacing = None #if elecSpacingEdit.text() == '' else float(elecSpacingEdit.text())
+    
+                    # parse
+                    print('delimiter=', delimiter)
+                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
+                    df = df.reset_index() # solve issue all columns in index
+                    oldHeaders = df.columns.values[colIndex]
+                    df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
+                    if 'resist' not in df.columns:
+                        df['resist'] = df['vp']/df['i']
+                    if 'ip' not in df.columns:
+                        df['ip'] = 0
+                    elif self.inputPhaseFlag == True:
+                        df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
+                    array = df[['a','b','m','n']].values.copy()
+                    arrayMin = np.min(np.unique(np.sort(array.flatten())))
+                    if arrayMin != 0:
+                        array -= arrayMin
+                    if espacing is None:
+                        espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
+                    array = np.round(array/espacing+1).astype(int)
+                    df[['a','b','m','n']] = array
+                    imax = int(np.max(array))
+    #                if np.sum(array == 0) > 0:
+    #                    print('add 1 as there is electrodes at zeros')
+    #                    imax = imax+1
+                    elec = np.zeros((imax,3))
+                    elec[:,0] = np.arange(0,imax)*espacing
+                    nbElecEdit.setText('%s' % (len(elec)))
+    #                nbElecEdit.setEnabled(False)
+                    elecDx.setText('%s' % (espacing))
+                    return elec, df
+                except:
+                    errorDump("Import Failed: 'nan' values must be removed before importation. Use the 'Number of rows to read or skip' to remove 'nan's.")
 
-                # parse
-                print('delimiter=', delimiter)
-                df = pd.read_csv(fname, delimiter=delimiter, skiprows=skipRows, nrows=nrows)
-                df = df.reset_index() # solve issue all columns in index
-                oldHeaders = df.columns.values[colIndex]
-                df = df.rename(columns=dict(zip(oldHeaders, newHeaders)))
-                if 'resist' not in df.columns:
-                    df['resist'] = df['vp']/df['i']
-                if 'ip' not in df.columns:
-                    df['ip'] = 0
-                elif self.inputPhaseFlag == True:
-                    df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
-                array = df[['a','b','m','n']].values.copy()
-                arrayMin = np.min(np.unique(np.sort(array.flatten())))
-                if arrayMin != 0:
-                    array -= arrayMin
-                if espacing is None:
-                    espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-                array = np.round(array/espacing+1).astype(int)
-                df[['a','b','m','n']] = array
-                imax = int(np.max(array))
-#                if np.sum(array == 0) > 0:
-#                    print('add 1 as there is electrodes at zeros')
-#                    imax = imax+1
-                elec = np.zeros((imax,3))
-                elec[:,0] = np.arange(0,imax)*espacing
-                nbElecEdit.setText('%s' % (len(elec)))
-#                nbElecEdit.setEnabled(False)
-                elecDx.setText('%s' % (espacing))
-                return elec, df
 
             self.parser = parserFunc
 
