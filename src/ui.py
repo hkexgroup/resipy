@@ -1271,10 +1271,36 @@ class App(QMainWindow):
         #%% sub tab for custom importing
         customParser = QWidget()
         tabImporting.addTab(customParser, 'Custom Parser')
+        
+        self.delimiter = ''
+        def delimFunc(index):
+            delimiterBox.hide()
+            if index == 0:
+                self.delimiter = ''
+            if index == 1: 
+                self.delimiter = ','
+            elif index == 2: 
+                self.delimiter = '\t'
+            elif index == 3: 
+                self.delimiter = '\s+'
+            elif index == 4: 
+                self.delimiter = ';'
+            elif index == 5:
+                delimiterBox.show()
+                self.delimiter = delimiterBox.text()
 
+        delimiterMenue = QComboBox()
+        delimiterMenue.setMinimumWidth(200)
+        delimiterMenue.addItems(['Select delimiter','Comma','Tab','Space','Semicolon', 'Other'])
+        delimiterMenue.currentIndexChanged.connect(delimFunc)
+        
+        delimiterBox = QLineEdit()
+        delimiterBox.setFixedWidth(100)
+        delimiterBox.hide()
+        
         delimiterLabel = QLabel('Delimiter:')
-        delimiterEdit = QLineEdit('')
-        delimiterEdit.setToolTip(r'For tab delimited data use: \t')
+#        delimiterEdit = QLineEdit('')
+#        delimiterEdit.setToolTip(r'For tab delimited data use: \t')
         skipRowsLabel = QLabel('Number of header to skip:')
         skipRowsEdit = QLineEdit('0')
         skipRowsEdit.setValidator(QIntValidator())
@@ -1297,7 +1323,7 @@ class App(QMainWindow):
                 errorDump('Select a file to parse first.')
                 return
             try:
-                delimiter = delimiterEdit.text()
+                delimiter = self.delimiter
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
@@ -1458,7 +1484,7 @@ class App(QMainWindow):
 
             def parserFunc(fname):
                 # retrieve usefull values
-                delimiter = delimiterEdit.text()
+                delimiter = self.delimiter
                 delimiter = None if delimiter == '' else delimiter
                 skipRows = skipRowsEdit.text()
                 skipRows = None if skipRows == '' else int(skipRows)
@@ -1506,7 +1532,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            fileType.setCurrentIndex(7)
+            fileType.setCurrentIndex(6)
             tabImporting.setCurrentIndex(0)
 
 
@@ -1522,7 +1548,8 @@ class App(QMainWindow):
 
         parserLayout.addWidget(openFileBtn)
         parserOptions.addWidget(delimiterLabel)
-        parserOptions.addWidget(delimiterEdit)
+        parserOptions.addWidget(delimiterMenue)
+        parserOptions.addWidget(delimiterBox)
         parserOptions.addWidget(skipRowsLabel)
         parserOptions.addWidget(skipRowsEdit)
         parserOptions.addWidget(nrowsLabel)
