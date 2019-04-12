@@ -451,7 +451,7 @@ class Mesh:
             if vmax is None:
                 vmax = np.nanmax(zc)
             if vmax > vmin:
-                levels = np.linspace(vmin, vmax, 7)
+                levels = np.linspace(vmin, vmax, 14) # to have 2 contours between two cbar values!
             else:
                 levels = None
             
