@@ -40,7 +40,11 @@ def errorMessage(etype, value, tb):
 def catchErrors():
     sys.excepthook = errorMessage
     threading.Thread.__init__
-
+#%%get relative path of images
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 #%%
 #def wineCheck():
 #    #check operating system
@@ -2571,13 +2575,18 @@ class App(QMainWindow):
             def reset(self):
                 self.nrow = 1
                 self.setRowCount(1)
-
-        seqHelp = {'dipdip' : '<img height=200 src="image/dipdip.png">',
-           'wenner': '<img height=200 src="image/wenner.png">',
-           'schlum': '<img height=200 src="image/schlum.png">',
-           'gradient': '<img height=200 src="image/gradient.png">',
+                
+        DpDp = resource_path('image/dipdip.png')
+        Wenner = resource_path('image/wenner.png')
+        Schlum = resource_path('image/schlum.png')
+        Gradient = resource_path('image/gradient.png')
+        
+        seqHelp = {'dipdip' : '<img height=200 src="%s">' % DpDp,
+           'wenner': '<img height=200 src="%s">' % Wenner,
+           'schlum': '<img height=200 src="%s">' % Schlum,
+           'gradient': '<img height=200 src="%s">' % Gradient,
            'custom': 'Paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-'
-           }
+            }
 
         def showSeqHelp(arg):
             if arg in seqHelp.keys():
