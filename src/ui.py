@@ -3976,6 +3976,7 @@ USA: Trelgol Publishing, (2006).
 </p>
 <p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
 <p>Contributor(s): Pedro Concha</p>
+<p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
 '''%pyR2_version)
 #        aboutText.setText('''<h1>About pyR2</h1> \
 #                          <p><b>Version: %s</b></p> \
