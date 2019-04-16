@@ -1,0 +1,6 @@
+please find gmsh at http://gmsh.info/#Download
+The download contains a zip file with the gmsh.exe inside. This is what we will
+use for generating triangular meshes. 
+
+In terms of licesning, gmsh is under a GNU license. It can be redistrubeted 
+freely so long as the R2gui project is open source (which it is)

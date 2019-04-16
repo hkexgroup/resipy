@@ -1,0 +1,70 @@
+
+
+ >> R 3 t     E R T    M o d e l    v1.8 <<
+
+ >> Date: 08-01-2019
+ >> Cylinder problem in tetrahedral mesh                                            
+ >> T e t r a h e d r a l   E l e m e n t   M e s h <<
+
+
+ >> Parameterisation
+    Total number of parameters:                  25685
+    Number of elements with fixed resistivity:       0
+    Number of parameter regularisation zones:        1
+    Regularisation zone   1   alpha scalar:        1.0
+
+ >> L o g - D a t a   I n v e r s i o n <<
+ >> N o r m a l   R e g u l a r i s a t i o n <<
+    For   1000 measurements the memory needed is:          0.213 Gb
+    For   2000 measurements the memory needed is:          0.419 Gb
+    For   5000 measurements the memory needed is:          1.036 Gb
+    For  10000 measurements the memory needed is:          2.064 Gb
+
+ >> Number of measurements read:  644
+
+ >> Total Memory required is:          0.140 Gb
+
+
+ Processing frame   1 - output to file f001.dat
+
+   Iteration   1
+     Initial RMS Misfit:         4.59      Number of data ignored:     0
+     Alpha:        207.3981        RMS Misfit:       0.993  CG its:  106
+     Step length set to      1.000
+     Final RMS Misfit:        0.99
+     Data misfit:           635.59
+     Model misfit:          488.41
+     Total misfit:         1124.00
+     Step length set to      0.978
+     Final RMS Misfit:        1.00
+
+ Solution converged - Outputing results to file
+
+ Calculating sensitivity map
+
+ End of data:  Terminating
+
+
+    Timing Summary
+    ==============
+    Total time taken:                                26. s
+
+    Percent time taken forming element equations:    0.1 %
+    Percent time taken solving forward  equations:   8.4 %
+    Percent time taken forming Jacobian:             7.9 %
+    Percent time taken solving inverse equations:   12.7 %
+
+    Timing Details
+    ==============
+    Number of calls to form element equations:         4
+    Average time taken in call:                      0.0 s
+    Number of calls to solve forward equations:      300
+    Average time taken in call:                      0.0 s
+    Number of calls to form Jacobian:                  1
+    Average time taken in call:                      2.1 s
+    Number of calls to solve inverse equations:        1
+    Average time taken in call:                      3.3 s
+
+
+ >> Program ended normally
+
