@@ -4155,7 +4155,7 @@ if __name__ == '__main__':
     catchErrors()
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'icon.png'))) # that's the true app icon
+    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
     print(os.path.join(bundle_dir, 'logo.png'))
     splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
