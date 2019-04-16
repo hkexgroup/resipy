@@ -121,9 +121,9 @@ if __name__ == "__main__":
     uncompress_size = sum((file.file_size for file in zf.infolist()))
     extracted_size = 0
 
-    percentage = 0
     for file in zf.infolist():
         extracted_size += file.file_size
+        percentage = extracted_size/uncompress_size*100
         progressBar.setValue(percentage)
         if percentage > 50 and percentage < 70:
             splash.showMessage("Copying temp files", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
