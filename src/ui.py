@@ -4157,7 +4157,7 @@ if __name__ == '__main__':
     catchErrors()
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
+    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'icon.png'))) # that's the true app icon
     print(os.path.join(bundle_dir, 'logo.png'))
     splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
@@ -4167,13 +4167,13 @@ if __name__ == '__main__':
     # adding progress bar
     progressBar = QProgressBar(splash)
     progressBar.setMaximum(10)
-    progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
+    progressBar.setGeometry(100, splash_pix.height() - 50, splash_pix.width() - 200, 20)
 
     # splash.setMask(splash_pix.mask())
     from api.R2 import pyR2_version
 
     splash.show()
-    splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
+    splash.showMessage("Loading libraries", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     app.processEvents()
 
     # in this section all import are made except the one for pyQt
@@ -4218,6 +4218,7 @@ if __name__ == '__main__':
 
     from api.R2 import R2
     from api.r2help import r2help
+    splash.showMessage("RESIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()
 

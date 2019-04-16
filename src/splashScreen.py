@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # splash = QSplashScreen(splash_pix)
     # adding progress bar
     progressBar = QProgressBar(splash)
-    progressBar.setMaximum(10)
+#    progressBar.setMaximum(10)
     progressBar.setGeometry(0, splash.height() - 50, splash.width(), 20)
 #    progressBar.setGeometry(150, 320, 200, 18)
     # splash.setMask(splash_pix.mask())
@@ -123,8 +123,17 @@ if __name__ == "__main__":
 
     for file in zf.infolist():
         extracted_size += file.file_size
-        percentage = extracted_size * 100/uncompress_size
-        progressBar.setValue(percentage/10)
+        progressBar.setValue(percentage)
+        if percentage > 50 and percentage < 70:
+            splash.showMessage("Copying temp files", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 70 and percentage < 80:
+            splash.showMessage("Checking files", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 80 and percentage < 90:
+            splash.showMessage("Loading PyQt", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 90 and percentage < 98:
+            splash.showMessage("Loading App", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 98:
+            splash.showMessage("Almost there!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
         app.processEvents()
         zf.extract(file, extractDir)
     zf.close()
