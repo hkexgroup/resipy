@@ -274,9 +274,9 @@ class App(QMainWindow):
         twine.signal.connect(self.checkWineShow)
         twine.start()
         
-        self.setWindowTitle('pyR2')
+        self.setWindowTitle('ResIPy')
         self.setGeometry(100,100,1100,600)
-        self.newwd = os.path.join(bundle_dir, 'api', 'invdir')
+        self.newwd = os.path.join(bundle_dir, 'resipy', 'invdir')
 
         self.r2 = None
         self.typ = 'R2'
@@ -289,7 +289,7 @@ class App(QMainWindow):
         self.inputPhaseFlag = False
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
-        self.datadir = os.path.join(bundle_dir, 'api', 'test')
+        self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
 
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -3416,10 +3416,10 @@ class App(QMainWindow):
 #                dirname = self.r2.dirname
 #            exeName = self.r2.typ + '.exe'
 #            if frozen == 'not':
-#                shutil.copy(os.path.join('api','exe', exeName),
+#                shutil.copy(os.path.join('resipy','exe', exeName),
 #                    os.path.join(dirname, exeName))
 #            else:
-#                shutil.copy(os.path.join(bundle_dir, 'api', 'exe', exeName),
+#                shutil.copy(os.path.join(bundle_dir, 'resipy', 'exe', exeName),
 #                    os.path.join(dirname, exeName))
 #            process = QProcess(self)
 #            process.setWorkingDirectory(dirname)
@@ -4170,7 +4170,7 @@ if __name__ == '__main__':
     progressBar.setGeometry(0, splash_pix.height() - 50, splash_pix.width(), 20)
 
     # splash.setMask(splash_pix.mask())
-    from api.R2 import pyR2_version
+    from resipy.R2 import pyR2_version
 
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom, Qt.white)
@@ -4216,8 +4216,8 @@ if __name__ == '__main__':
     from urllib import request as urlRequest
     import webbrowser
 
-    from api.R2 import R2
-    from api.r2help import r2help
+    from resipy.R2 import R2
+    from resipy.r2help import r2help
     progressBar.setValue(10)
     app.processEvents()
 

@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['splashScreen.py'],
-             pathex=['/media/jkl/data/phd/tmp/r2gui'],
+             pathex=['./resipy'],
              binaries=[],
              datas=[('./ui.zip','.'),
                     ('./logo.png','.')],
@@ -22,10 +22,10 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='pyR2-launch',
+          name='ResIPy-launch',
           debug=False,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
           console=False,
-          icon='r2icon.ico')
+          icon='logo.ico')

@@ -8,15 +8,15 @@ Created on Fri Mar  1 15:08:19 2019
 
 import numpy as np
 import matplotlib.pyplot as plt
-from api.R2 import R2
+from resipy.R2 import R2
 plt.ioff() # this disable interactive plotting
 
 figdir = './image/paper/'
 
 #%% 2D topo at Lancaster Castle Hill (Lancaster UK)
 k = R2() # initiate an R2 instance
-k.createSurvey('./api/test/syscalFileTopo.csv', ftype='Syscal') # import data
-k.setElec(np.genfromtxt('./api/test/elecTopo.csv', delimiter=','))
+k.createSurvey('./resipy/test/syscalFileTopo.csv', ftype='Syscal') # import data
+k.setElec(np.genfromtxt('./resipy/test/elecTopo.csv', delimiter=','))
 k.pwlfit() # fit a power law
 k.createMesh(typ='trian') # create quadrilateral mesh
 k.invert() # run the inversion
@@ -33,7 +33,7 @@ fig.show()
 
 #%% IP Calcite precipitation inversion (Rifle, CO, USA)
 k = R2(typ = 'cR2') # initiate an R2 instance (considering there is IP data in the input data)
-k.createSurvey('./api/test/IP/IP_MICP_all.csv', ftype='Syscal') # import data
+k.createSurvey('./resipy/test/IP/IP_MICP_all.csv', ftype='Syscal') # import data
 k.filterRecip(percent=20) # remove\ing datapoints with > 20% reciprocal error
 k.removenested() # removing nested measurements
 k.iprangefilt(0,25) # setting phase shift range to 0 < -ϕ < 25
@@ -67,7 +67,7 @@ fig.show()
 
 #%% Time-lapse RWU at Woburn (UK)
 k = R2() # initiate an R2 instance
-k.createTimeLapseSurvey('./api/test/testTimelapse', ftype='Syscal') # import directory with the data
+k.createTimeLapseSurvey('./resipy/test/testTimelapse', ftype='Syscal') # import directory with the data
 k.pwlfit() # fit a power-law
 k.createMesh(typ='trian', cl=0.02, cl_factor=20) # create a triangular mesh with a characteristic length of 0.5
 k.showMesh()
@@ -105,9 +105,9 @@ fig.show()
 
 #%% ERT in River at Boxford (UK) with fixed region
 k = R2()
-k.createSurvey('./api/test/primeFile.dat', ftype='BGS Prime')
+k.createSurvey('./resipy/test/primeFile.dat', ftype='BGS Prime')
 # following lines will add electrode position, surface points and specify if electrodes are buried or not. Similar steps are done in the GUI in (a), (b), (c)
-x = np.genfromtxt('./api/test/primePosBuried.csv', delimiter=',')
+x = np.genfromtxt('./resipy/test/primePosBuried.csv', delimiter=',')
 k.elec[:,[0,2]] = x[:,:2] # electrode positions
 surface = np.array([[0.7, 92.30],[10.3, 92.30]]) # additional surface point for the river level
 buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river here)
