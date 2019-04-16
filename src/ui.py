@@ -76,7 +76,7 @@ def resource_path(relative_path):
 #    msg = QMessageBox()
 #    msg.setIcon(QMessageBox.Warning)
 #    msg.setText('''<b>No "wine" is installed on your %s</b>''' % (platform))
-#    msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
+#    msg.setInformativeText('''ResIPy needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
 #    msg.setWindowTitle('"Wine" is not detected!')
 #    bttnUpY = msg.addButton(QMessageBox.Yes)
 #    bttnUpY.setText('Learn more')
@@ -96,11 +96,11 @@ def resource_path(relative_path):
 #        versionCheck = versionSource.read().decode()
 #        version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
 #        print('online version :', version)
-#        if pyR2_version != versionCheck:
+#        if ResIPy_version != versionCheck:
 #            msg = QMessageBox()
 #            msg.setIcon(QMessageBox.Information)
-#            msg.setText('''<b>pyR2 version %s is available</b>''' % (version))
-#            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+#            msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
+#            msg.setInformativeText('''Please download the latest version of ResIPy at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
 #            msg.setWindowTitle("New version available")
 #            bttnUpY = msg.addButton(QMessageBox.Yes)
 #            bttnUpY.setText('Update')
@@ -1959,7 +1959,7 @@ class App(QMainWindow):
         rangebutton.clicked.connect(phirange)
 
         recipfilt = QPushButton('Remove reciprocals')
-        recipfilt.setToolTip('Reciprocal measurements will not be considered for inversion in pyR2.\nThis filter just visualize the removal')
+        recipfilt.setToolTip('Reciprocal measurements will not be considered for inversion in ResIPy.\nThis filter just visualize the removal')
         recipfilt.setAutoDefault(True)
         recipfilt.setEnabled(False)
         recipfilt.clicked.connect(removerecip)
@@ -3941,7 +3941,7 @@ class App(QMainWindow):
            <li>In the "Mesh" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
            region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li>
            <li>In the "Forward model" tab (only available in forward mode) you can design your sequence and add noise. The resulting synthetic measurements will be\
-           automatically added to as an actual survey in pyR2 and can be inverted directly.</li>
+           automatically added to as an actual survey in ResIPy and can be inverted directly.</li>
            <li>In the "Inversion Settings" tab, you can modify all settings for the inversion. Help is available by clicking on the label of each item. The help\
            generally refers to the document present in the R2/cR3/R3t/cR3t respective manuals.</li>
            <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
@@ -3961,14 +3961,14 @@ class App(QMainWindow):
 
         infoLayout = QVBoxLayout()
         aboutText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
-        aboutText.setText('''<h1>About pyR2 </h1> \
+        aboutText.setText('''<h1>About ResIPy </h1> \
                           <p><b>Version: %s</b></p> \
-                          <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
+                          <p><i>ResIPy is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
                           <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
                           <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
-                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
+                          <p>ResIPy uses R2 and cR2 codes developed by Andrew Binley:</p> \
                           <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
-                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
+                          <p>For generation of triangular mesh, ResIPy uses "Gmsh" software:</p> \
                           <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
                           <p>Python packages used: numpy, pandas, matplotlib.
 <ul>
@@ -3983,13 +3983,13 @@ USA: Trelgol Publishing, (2006).
 </li>
 </ul>
 </p>
-<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+<p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
 <p>Contributor(s): Pedro Concha</p>
 <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
-'''%pyR2_version)
-#        aboutText.setText('''<h1>About pyR2</h1> \
+'''%ResIPy_version)
+#        aboutText.setText('''<h1>About ResIPy</h1> \
 #                          <p><b>Version: %s</b></p> \
-#                          <p><i>pyR2 is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
+#                          <p><i>ResIPy is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
 #                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
 #                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
 #                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
@@ -4019,8 +4019,6 @@ USA: Trelgol Publishing, (2006).
 #</li>
 #</ul>
 #</p>
-#<p><strong>pyR2's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-#''')
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
@@ -4046,7 +4044,7 @@ USA: Trelgol Publishing, (2006).
 #%% updater function and wine check
     # based on https://kushaldas.in/posts/pyqt5-thread-example.html
     def updateChecker(self): # check for new updates on gitlab
-        version = pyR2_version
+        version = ResIPy_version
         try:
             versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
             versionCheck = versionSource.read().decode()
@@ -4057,11 +4055,11 @@ USA: Trelgol Publishing, (2006).
         return version
     
     def updateCheckerShow(self, version):
-        if pyR2_version != version:
+        if ResIPy_version != version:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
-            msg.setText('''<b>pyR2 version %s is available</b>''' % (version))
-            msg.setInformativeText('''Please download the latest version of pyR2 at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+            msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
+            msg.setInformativeText('''Please download the latest version of ResIPy at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
             msg.setWindowTitle("New version available")
             bttnUpY = msg.addButton(QMessageBox.Yes)
             bttnUpY.setText('Update')
@@ -4111,7 +4109,7 @@ USA: Trelgol Publishing, (2006).
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
             msg.setText('''<b>No "wine" is installed on your %s</b>''' % (OpSys))
-            msg.setInformativeText('''pyR2 needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
+            msg.setInformativeText('''ResIPy needs "wine" to run properly,<br>without "wine", no inversion or triangular meshing is possible.<br>''')
             msg.setWindowTitle('"Wine" is not detected!')
             bttnUpY = msg.addButton(QMessageBox.Yes)
             bttnUpY.setText('Learn more')
@@ -4170,7 +4168,7 @@ if __name__ == '__main__':
     progressBar.setGeometry(100, splash_pix.height() - 50, splash_pix.width() - 200, 20)
 
     # splash.setMask(splash_pix.mask())
-    from resipy.R2 import pyR2_version
+    from resipy.R2 import ResIPy_version
 
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom | Qt.AlignCenter, Qt.black)

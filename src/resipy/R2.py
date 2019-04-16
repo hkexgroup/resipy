@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Main R2 class, wraps the other pyR2 modules (API) in to an object orientated approach
+Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-pyR2_version = '1.1.5' # pyR2 version (semantic versionning in use) 
+ResIPy_version = '1.1.5' # ResIPy version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -19,7 +19,7 @@ from threading import Thread
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
 
-#import pyR2 resipy packages 
+#import ResIPy resipy packages 
 from resipy.Survey import Survey
 from resipy.r2in import write2in
 import resipy.meshTools as mt
@@ -31,7 +31,7 @@ from resipy.SelectPoints import SelectPoints
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
-print('pyR2 version = ',str(pyR2_version))
+print('ResIPy version = ',str(ResIPy_version))
 
         
 def workerInversion(path, dump, exePath, qin, iMoveElec=False):
@@ -858,7 +858,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def importMesh(self,file_path,mesh_type='tetra',node_pos=None,elec=None,
                    flag_3D=False, res0=100):
         """
-        Import mesh from .vtk / .msh / .dat, rather than having <pyR2> create
+        Import mesh from .vtk / .msh / .dat, rather than having <ResIPy> create
         one for you.
         
         Parameters
@@ -2055,7 +2055,7 @@ class R2(object): # R2 master class instanciated by the GUI
         df = self.surveys[0].df
         check = np.array((df['a'],df['b'],df['m'],df['n']))
         if len(self.elec) < np.max(check): # Make sure there are not more electrodes locations in the schedule file than in R2 class
-            raise Exception("The number of electrodes given to pyR2 (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
+            raise Exception("The number of electrodes given to ResIPy (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
         dump('done\n')
         
         # runs inversion
@@ -3010,7 +3010,7 @@ class R2(object): # R2 master class instanciated by the GUI
             print('Had a problem computing differences for %i attributes'%problem)
                 
 
-    def saveVtks(self,dirname,prefix='pyR2output'):
+    def saveVtks(self,dirname,prefix='ResIPyoutput'):
         """Save vtk files of inversion results to a specified directory. Format
         for file names will be 'prefix'xxx.vtk. A python script will also be saved
         to the relevant directory 
@@ -3021,7 +3021,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Direcotry in which results will be saved
         prefix: str, optional
             Characters appended to the front of each file name, ie by default
-            files will be named "pyR2output"+"xxx.vtk", where x is the survey
+            files will be named "ResIPyoutput"+"xxx.vtk", where x is the survey
             number. For timelapse surveys "...001.vtk" will be the baseline 
             survey.
         """   

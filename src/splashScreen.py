@@ -70,7 +70,7 @@ if __name__ == "__main__":
     app.setStyle('Fusion')
 #    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png')))
 
-    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
 #    splash = MySplashScreen('chicken.gif', Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
@@ -115,12 +115,13 @@ if __name__ == "__main__":
     zf = MyZipFile(os.path.join(bundle_dir, 'ui.zip'),'r')
     extractDir = os.path.join(bundle_dir, 'ui')
     if os.path.exists(extractDir):
-#        print('overwritting pyR2 dir')
+#        print('overwritting ResIPy dir')
         shutil.rmtree(extractDir)
     os.mkdir(extractDir)
     uncompress_size = sum((file.file_size for file in zf.infolist()))
     extracted_size = 0
 
+    percentage = 0
     for file in zf.infolist():
         extracted_size += file.file_size
         progressBar.setValue(percentage)
@@ -146,9 +147,9 @@ if __name__ == "__main__":
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
     if OS == 'Linux':
-        os.system(os.path.join(appDir, 'pyR2'))
+        os.system(os.path.join(appDir, 'ResIPy'))
     else:
-        Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
+        Popen(os.path.join(appDir, 'ResIPy'), shell=False, stdout=None, stdin=None) # this works now as well !
     # this last one doesn't work on linux WHEN COMPILED and I don't know why
 
 #  need to comment the following lines as the exit signal is given by the main app
