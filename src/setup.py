@@ -1,13 +1,13 @@
 # to build run : python3 setup.py sdist bdist_wheel
 import setuptools
-from resipy.R2 import pyR2_version
+from resipy.R2 import ResIPy_version
 
-with open("README.md", "r") as fh:
+with open("../README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="ResIPy",
-    version=pyR2_version,
+    version=ResIPy_version,
     author="HKEx",
     description="API for ERT inversion (DC/IP)",
     long_description=long_description,
