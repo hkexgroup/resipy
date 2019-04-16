@@ -79,12 +79,12 @@ if __name__ == "__main__":
     # adding progress bar
     progressBar = QProgressBar(splash)
 #    progressBar.setMaximum(10)
-    progressBar.setGeometry(0, splash.height() - 50, splash.width(), 20)
+    progressBar.setGeometry(100, splash_pix.height() - 50, splash_pix.width() - 200, 20)
 #    progressBar.setGeometry(150, 320, 200, 18)
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.white)
+    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     app.processEvents()
     
 #    initLoop = Qt.QEventLoop()
