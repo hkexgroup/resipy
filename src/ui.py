@@ -4157,7 +4157,7 @@ if __name__ == '__main__':
     app.setStyle('Fusion')
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
     print(os.path.join(bundle_dir, 'logo.png'))
-    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.setEnabled(False)
@@ -4216,6 +4216,7 @@ if __name__ == '__main__':
 
     from resipy.R2 import R2
     from resipy.r2help import r2help
+    splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()
 
