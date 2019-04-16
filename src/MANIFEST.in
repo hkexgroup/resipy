@@ -1,0 +1,4 @@
+include image/*.png
+include resipy/exe/*.exe
+recursive-include resipy/test/*
+
