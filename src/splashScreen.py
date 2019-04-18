@@ -73,7 +73,7 @@ if __name__ == "__main__":
     splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
 #    splash = MySplashScreen('chicken.gif', Qt.WindowStaysOnTopHint)
-    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
     splash.setEnabled(False)
     # splash = QSplashScreen(splash_pix)
     # adding progress bar
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.black | Qt.Tool)
+    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     app.processEvents()
     
 #    initLoop = Qt.QEventLoop()
