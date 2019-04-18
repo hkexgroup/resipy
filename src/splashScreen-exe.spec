@@ -28,4 +28,5 @@ exe = EXE(pyz,
           upx=True,
           runtime_tmpdir=None,
           console=False,
+		  version='Version.details',
           icon='logo.ico')
