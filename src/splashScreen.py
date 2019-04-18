@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.black | Qt.Tool)
     app.processEvents()
     
 #    initLoop = Qt.QEventLoop()
