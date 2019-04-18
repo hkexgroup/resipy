@@ -1117,12 +1117,17 @@ class Survey(object):
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
+
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.get_figure()
+       
         if contour is False:
-            if ax is None:
-                fig, ax = plt.subplots()
-            else:
-                fig = ax.get_figure()
+#            if ax is None:
+#                fig, ax = plt.subplots()
+#            else:
+#                fig = ax.get_figure()
             cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
@@ -1140,8 +1145,8 @@ class Survey(object):
                 X, Y = np.meshgrid(xi, yi)
                 return X, Y, Z
             X, Y, Z = grid(xpos, ypos, resist)
-            if ax is None:
-                fig, ax = plt.subplots()
+#            if ax is None:
+#                fig, ax = plt.subplots()
             cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
             fig.colorbar(cax, ax=ax, label=label)
             ax.set_title('Pseudo Section')
@@ -1194,12 +1199,16 @@ class Survey(object):
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.get_figure()
 
         if contour is False:
-            if ax is None:
-                fig, ax = plt.subplots()
-            else:
-                fig = ax.get_figure()
+#            if ax is None:
+#                fig, ax = plt.subplots()
+#            else:
+#                fig = ax.get_figure()
             cax = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
@@ -1215,8 +1224,8 @@ class Survey(object):
                 X, Y = np.meshgrid(xi, yi)
                 return X, Y, Z
             X, Y, Z = grid(xpos, ypos, ip)
-            if ax is None:
-                fig, ax = plt.subplots()
+#            if ax is None:
+#                fig, ax = plt.subplots()
             cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)

@@ -361,6 +361,7 @@ class App(QMainWindow):
 #            batchCheck.setChecked(False)
             ipCheck.setChecked(False)
             ipCheck.setEnabled(False)
+            psContourCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
             elecTable.initTable(np.array([['',''],['','']]))
@@ -630,6 +631,7 @@ class App(QMainWindow):
             regionTable.setColumnHidden(3, True)
             tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             ipCheck.setEnabled(True)
+            psContourCheck.setEnabled(False)
             activateTabs(True)
 
         def dimInverseFunc():
@@ -793,6 +795,7 @@ class App(QMainWindow):
                 self.r2.surveys = []
             try:
                 ipCheck.setEnabled(True)
+                psContourCheck.setEnabled(True)
                 self.fname = fname
                 buttonf.setText(os.path.basename(self.fname) + ' (Press to change)')
                 if float(spacingEdit.text()) == -1:
@@ -960,8 +963,23 @@ class App(QMainWindow):
         fnamesCombo.currentIndexChanged.connect(fnamesComboFunc)
 #        fnamesCombo.setEnabled(False)
         fnamesCombo.hide()
-
+        
+        def psContourFunc(state):
+            if state  == Qt.Checked:
+                self.pParams['contour'] = True
+                self.pParamsIP['contour'] = True
+            else:
+                self.pParams['contour'] = False
+                self.pParamsIP['contour'] = False
+            plotPseudo()
+            plotPseudoIP()
+        
         # display options for pseudo-sections
+        psContourCheck = QCheckBox('Contour')
+        psContourCheck.stateChanged.connect(psContourFunc)
+        psContourCheck.setEnabled(False)
+        psContourCheck.setToolTip('Check/uncheck to contour pseudo section plots')
+        
         pvminLabel = QLabel('ρ<sub>min</sub>')
         pvmin = QLineEdit()
         pvmin.setValidator(QDoubleValidator())
@@ -1001,6 +1019,7 @@ class App(QMainWindow):
         hbox5 = QHBoxLayout()
         hbox5.setAlignment(Qt.AlignRight)
         hbox5.addWidget(ipCheck, Qt.AlignLeft)
+        hbox5.addWidget(psContourCheck)
         hbox5.addWidget(pvminLabel)
         hbox5.addWidget(pvmin)
         hbox5.addWidget(pvmaxLabel)
