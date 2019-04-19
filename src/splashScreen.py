@@ -67,23 +67,24 @@ class MyZipFile(ZipFile):
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
+    app.setStyle('Fusion')
 #    app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png')))
 
-    splash_pix = QPixmap(os.path.join(bundle_dir, 'logo.png'))
+    splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
 #    splash = MySplashScreen('chicken.gif', Qt.WindowStaysOnTopHint)
-    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint | Qt.Tool)
     splash.setEnabled(False)
     # splash = QSplashScreen(splash_pix)
     # adding progress bar
     progressBar = QProgressBar(splash)
-    progressBar.setMaximum(10)
-    progressBar.setGeometry(0, splash.height() - 50, splash.width(), 20)
+#    progressBar.setMaximum(10)
+    progressBar.setGeometry(100, splash_pix.height() - 50, splash_pix.width() - 200, 20)
 #    progressBar.setGeometry(150, 320, 200, 18)
     # splash.setMask(splash_pix.mask())
 
     splash.show()
-    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.white)
+    splash.showMessage("Expanding app", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     app.processEvents()
     
 #    initLoop = Qt.QEventLoop()
@@ -114,7 +115,7 @@ if __name__ == "__main__":
     zf = MyZipFile(os.path.join(bundle_dir, 'ui.zip'),'r')
     extractDir = os.path.join(bundle_dir, 'ui')
     if os.path.exists(extractDir):
-#        print('overwritting pyR2 dir')
+#        print('overwritting ResIPy dir')
         shutil.rmtree(extractDir)
     os.mkdir(extractDir)
     uncompress_size = sum((file.file_size for file in zf.infolist()))
@@ -122,8 +123,18 @@ if __name__ == "__main__":
 
     for file in zf.infolist():
         extracted_size += file.file_size
-        percentage = extracted_size * 100/uncompress_size
-        progressBar.setValue(percentage/10)
+        percentage = extracted_size/uncompress_size*100
+        progressBar.setValue(percentage)
+        if percentage > 50 and percentage < 70:
+            splash.showMessage("Copying temp files", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 70 and percentage < 80:
+            splash.showMessage("Checking files", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 80 and percentage < 90:
+            splash.showMessage("Loading PyQt", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 90 and percentage < 98:
+            splash.showMessage("Loading App", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
+        if percentage >= 98:
+            splash.showMessage("Almost there!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
         app.processEvents()
         zf.extract(file, extractDir)
     zf.close()
@@ -136,9 +147,9 @@ if __name__ == "__main__":
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
     if OS == 'Linux':
-        os.system(os.path.join(appDir, 'pyR2'))
+        os.system(os.path.join(appDir, 'ResIPy'))
     else:
-        Popen(os.path.join(appDir, 'pyR2'), shell=False, stdout=None, stdin=None) # this works now as well !
+        Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
     # this last one doesn't work on linux WHEN COMPILED and I don't know why
 
 #  need to comment the following lines as the exit signal is given by the main app

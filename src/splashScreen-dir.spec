@@ -4,10 +4,10 @@ block_cipher = None
 
 
 a = Analysis(['splashScreen.py'],
-             pathex=['/media/jkl/data/phd/tmp/r2gui'],
+             pathex=['./resipy/'],
              binaries=[],
              datas=[('./ui.zip','.'),
-                    ('./logo.png','.')],
+                    ('./loadingLogo.png','.')],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
@@ -20,7 +20,7 @@ pyz = PYZ(a.pure, a.zipped_data,
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='pyR2-launch',
+          name='ResIPy-launch',
           debug=False,
           strip=False,
           upx=True,
@@ -31,4 +31,4 @@ coll = COLLECT(exe,
                a.datas,
                strip=False,
                upx=True,
-               name='pyR2-launch')
+               name='ResIPy-launch')

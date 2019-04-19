@@ -2,17 +2,19 @@
 
 GUI for R2 family code
 ======================
+(Note that **ResIPy** was called **pyR2** before 2019-04-16)
+
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
 provides a standalone graphical user interface (GUI) along with a python API (Application Programming Interface)
 for use in jupyter notebook.
 
 
-pyR2 aims to be 
+ResIPy aims to be 
 - (1) **simple and intuitive** to use (you can invert your data in one-click with all default settings)
 - (2) but still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
 
 
-pyR2 is an open-source project, everyone is welcome to contribute.
+ResIPy is an open-source project, everyone is welcome to contribute.
 
 You can download the latest versions using the links below:
 - [**Windows standalone**](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
@@ -99,7 +101,7 @@ To edit a cell, just double click on it.
 
 Linux and Mac users
 -------------------
-pyR2 contains executables that are built only for windows. To run them you will need to install *wine*.
+ResIPy contains executables that are built only for windows. To run them you will need to install *wine*.
 
 ### On Linux
 
