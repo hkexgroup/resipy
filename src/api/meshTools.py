@@ -1732,8 +1732,9 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         else:
             mesh.add_sensitivity(mesh.attr_cache['Sensitivity_map(log10)'])
     except:
-        print('no sensitivity')
-
+        #print('no sensitivity')
+        pass 
+    
     mesh.mesh_title = title
     return mesh
 
