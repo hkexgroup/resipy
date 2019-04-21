@@ -443,10 +443,11 @@ class Survey(object):
         
     def filterRecip(self, pcnt=20, debug=True):
         """Filter measurements based on the level reciprocal error. 
+        
         Parameters
         -----------
         pcnt: float, optional
-            Percentage level of reciprocal error in which to filter the measurements
+            Percentage level of reciprocal error in which to filter the measurements.
             Percentage Errors > percentage will be removed. By default the value is 
             20.
         debug: bool, optional
@@ -1338,11 +1339,10 @@ class Survey(object):
     
                 
     def dca(self, dump=print):
-        ''' execute DCA filtering:
-            Decay Curve Analysis (DCA) based on:
-                Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
-                Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
-                Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1
+        ''' Execute DCA filtering. Decay Curve Analysis (DCA) based on.
+            Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
+            Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
+            Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1
         '''
         if self.filterDataIP.empty:
             self.filterDataIP = DCA(self.df, dump=dump)
