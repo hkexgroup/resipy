@@ -1082,7 +1082,7 @@ def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
             y2 = elec_y[i]
             dist[:,i] = np.sqrt((x1-x2)**2+(y1-y2)**2)
         dist_sort = np.unique(dist.flatten())
-        cl = dist_sort[0]/4 # characteristic length is 1/4 the minimum electrode distance
+        cl = dist_sort[0]/2 # characteristic length is 1/4 the minimum electrode distance
         print('cl = %f'%cl)        
         
     fh = open(file_path,'w') #file handle
