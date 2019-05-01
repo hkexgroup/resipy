@@ -398,7 +398,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
-    e_spacing=abs(np.mean(np.diff(elec_x)))
+    e_spacing=abs(np.mean(np.diff(np.unique(elec_x))))
     if np.isnan(e_spacing):#catch error where e_spacing is nan if no surface electrodes 
         e_spacing=abs(np.mean(np.diff(np.unique(electrodes[0]))))
     flank=e_spacing*100
@@ -505,7 +505,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         fh.write("//end of buried electrodes.\n")
         elec_x_cache = np.append(elec_x_cache,buried_x)
         elec_z_cache = np.append(elec_z_cache,buried_z)
-                   
         
     no_plane = 2 # number of plane surfaces so far
     fh.write("\n//Adding polygons?\n")
@@ -555,7 +554,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     while True:
         count += 1        
         key = 'boundary'+str(count)
-
         try:
             bdx = geom_input[key][0]
             bdy = geom_input[key][1]
