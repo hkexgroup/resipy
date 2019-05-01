@@ -1802,6 +1802,7 @@ class App(QMainWindow):
 
         # Resistance error tab
         errorLayout = QVBoxLayout()
+        errorLayout.setAlignment(Qt.AlignTop)
 
         def errorModelSpecified():
             a_wgt.setText('0.0')
@@ -1869,12 +1870,15 @@ class App(QMainWindow):
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
-
+        
+        errorPlotLayout = QVBoxLayout()
         mwFitError = MatplotlibWidget(navi=True)
-        errorLayout.addWidget(mwFitError)
+        errorPlotLayout.addWidget(mwFitError)
+        errorLayout.addLayout(errorPlotLayout, 1)
 
 
         ipLayout = QVBoxLayout()
+        ipLayout.setAlignment(Qt.AlignTop)
 
         def phaseplotError():
             mwIPFiltering.plot(self.r2.phaseplotError)
@@ -1932,9 +1936,11 @@ class App(QMainWindow):
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
         iperrFitType.setToolTip('Select an error model for IP.')
         ipLayout.addWidget(iperrFitType)
-
+        
+        ipErrPlotLayout = QVBoxLayout()
         mwIPFiltering = MatplotlibWidget(navi=True)
-        ipLayout.addWidget(mwIPFiltering)
+        ipErrPlotLayout.addWidget(mwIPFiltering)
+        ipLayout.addLayout(ipErrPlotLayout,1)
 
         phasefiltlayout = QVBoxLayout()
 

@@ -230,8 +230,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     if 'surface' not in geom_input:
         min_idx = np.argmin(elec_x)
         max_idx = np.argmax(elec_x)   
-        topo_x = [elec_x[min_idx] - 5*np.mean(np.diff(elec_x)),
-                  elec_x[max_idx] + 5*np.mean(np.diff(elec_x))]
+        topo_x = [elec_x[min_idx] - 5*np.mean(np.diff(np.unique(elec_x))),
+                  elec_x[max_idx] + 5*np.mean(np.diff(np.unique(elec_x)))]
         topo_z = [elec_z[min_idx],elec_z[max_idx]]
     else:
         topo_x = geom_input['surface'][0]
@@ -259,8 +259,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #start to write the file  
     fh = open(file_path,'w') #file handle
     
-    fh.write("//Gmsh wrapper code version 1.0 (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
-    fh.write("//2D mesh coordinates\n")
+    fh.write("//2D mesh script for ResIPy (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
     fh.write("//Define surface points\n")
     #we have surface topograpghy, and electrode positions to make use of here:
@@ -398,7 +397,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
-    e_spacing=abs(np.mean(np.diff(elec_x)))
+    e_spacing=abs(np.mean(np.diff(np.unique(elec_x))))
     if np.isnan(e_spacing):#catch error where e_spacing is nan if no surface electrodes 
         e_spacing=abs(np.mean(np.diff(np.unique(electrodes[0]))))
     flank=e_spacing*100
@@ -505,7 +504,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         fh.write("//end of buried electrodes.\n")
         elec_x_cache = np.append(elec_x_cache,buried_x)
         elec_z_cache = np.append(elec_z_cache,buried_z)
-                   
         
     no_plane = 2 # number of plane surfaces so far
     fh.write("\n//Adding polygons?\n")
@@ -555,7 +553,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     while True:
         count += 1        
         key = 'boundary'+str(count)
-
         try:
             bdx = geom_input[key][0]
             bdy = geom_input[key][1]
@@ -888,8 +885,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
          
     #Nuemon boundary 
-    flank_x = 100*x_dist
-    flank_z = 100*z_dist 
+    flank_x = 80*x_dist
+    flank_z = 50*z_dist 
     fh.write("//Nuemonn boundary \n")
     cl2 = cl*150
     fh.write("cl2 = %.2f;\n"%cl2)
@@ -1010,7 +1007,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
-           cl=-1, cl_factor=2, cln_factor=500, mesh_refinement=None):
+           cl=-1, cl_factor=3, cln_factor=400, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1087,8 +1084,7 @@ def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
         
     fh = open(file_path,'w') #file handle
     
-    fh.write("//3D half space problem for pyr2 - no topography\n")
-    fh.write("//3D mesh coordinates\n")
+    fh.write("//3D half space problem mesh for ResIPy - no topography\n")
     fh.write("cl=%.2f;//define characteristic length for fine mesh region\n" %cl)
     
     #create square around all of the electrodes
@@ -1155,9 +1151,9 @@ def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
     fh.write("//End fine mesh region points\n" )
         
     #Nuemon boundary 
-    flank_x = 70 * (x_dist + y_dist)/2
-    flank_y = 70 * (x_dist + y_dist)/2
-    flank_z = 100*abs(doi)
+    flank_x = 30 * (x_dist + y_dist)/2
+    flank_y = 30 * (x_dist + y_dist)/2
+    flank_z = 25*abs(doi)
     fh.write("//Nuemonn boundary points\n")
     cln = cl*cln_factor # nuemom boundary characteristic length 
     fh.write("cln = %.2f;//characteristic length for background region\n"%cln)

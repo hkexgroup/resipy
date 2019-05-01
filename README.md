@@ -19,9 +19,11 @@ ResIPy is an open-source project, everyone is welcome to contribute.
 You can download the latest versions using the links below:
 - [**Windows standalone**](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
 - [**macOS app**](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
-- [**Linux standalone**](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm)
+- [**Linux standalone** (tested on Debian10 and Ubuntu18.04.2)](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm)
 
-Note that Mac and Linux users need to have *wine* installed.
+Notes that Mac and Linux:
+- you will need to have *wine* installed as the executable beneath are compiled for Windows
+- if you get a 'command not found' error, you might need to allow executable permission to the binary using `sudo chmod 775 ResIPy`
 
 
 What it can do
