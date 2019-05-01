@@ -6,8 +6,8 @@ import time
 #a = time.time()
 print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget,
-    QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-    QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
+    QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
+    QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame,
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
     QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
@@ -3333,6 +3333,10 @@ class App(QMainWindow):
 #        tabInversion.setStyleSheet('background-color:red')
         tabs.addTab(tabInversion, '&Inversion')
         tabs.setTabEnabled(5, False)
+        
+        splitterMainLayout = QHBoxLayout()
+        
+        topSplitter = QSplitter(Qt.Vertical)
 
         invLayout = QVBoxLayout()
 
@@ -3688,7 +3692,7 @@ class App(QMainWindow):
 
         logLayout.setStretch(0, 60)
         logLayout.setStretch(1, 40)
-        invLayout.addLayout(logLayout, 25)
+        invLayout.addLayout(logLayout)
 
         # option for display
         def displayAttribute(arg='Resistivity(log10)'):
@@ -3862,11 +3866,24 @@ class App(QMainWindow):
 
         mwInvResult = MatplotlibWidget(navi=True, itight=False)
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
-
+                
+        bottomSplitter = QSplitter(Qt.Horizontal)
+        
+        bottomLSplitter = QWidget()
+        bottomSplitter.addWidget(bottomLSplitter)
+        
+        bottomRSplitter = QWidget()
+        
         resultStackLayout = QStackedLayout()
         resultStackLayout.addWidget(mwInvResult)
         resultStackLayout.addWidget(mwInvResult3D)
-        resultLayout.addLayout(resultStackLayout, 90)
+        
+        bottomRSplitter.setLayout(resultStackLayout)
+        bottomSplitter.addWidget(bottomRSplitter)
+        
+        bottomSplitter.setSizes([0,1100])
+        resultLayout.addWidget(bottomSplitter)
+#        resultLayout.addLayout(resultStackLayout, 90)
 
         # in case of error, display R2.out
         r2outLayout = QVBoxLayout()
@@ -3887,11 +3904,23 @@ class App(QMainWindow):
         outStackLayout.addWidget(resultWidget)
         outStackLayout.addWidget(r2outWidget)
         outStackLayout.setCurrentIndex(0)
+        
+        topInvLayout = QWidget()
+        topInvLayout.setLayout(invLayout)
+        
+        topSplitter.addWidget(topInvLayout)
+        
+        bottomInvLayout = QWidget()
+        bottomInvLayout.setLayout(outStackLayout)
+        
+        topSplitter.addWidget(bottomInvLayout)
+        
+        topSplitter.setSizes([100,250])
+        splitterMainLayout.addWidget(topSplitter)
 
-        invLayout.addLayout(outStackLayout, 75)
+#        invLayout.addLayout(outStackLayout, 75)
 
-
-        tabInversion.setLayout(invLayout)
+        tabInversion.setLayout(splitterMainLayout)
 
 
         #%% tab 6 POSTPROCESSING
@@ -3966,6 +3995,7 @@ class App(QMainWindow):
            <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
            then nothing will be printed out until the inversion finished. When the inversion finished you will be able to see the inverted section, open it with Paraview (mainly for 3D)\
            and save the outputed .vtk file and graphs using the "Save Graphs" button.</li>
+           <ul><li>Plot aspect ratio can be changed by dragging  left handle to right or left and top handle (above plot options) up and down.</li></ul>
            <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
            </ul>
         ''')
