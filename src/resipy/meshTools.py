@@ -1422,7 +1422,7 @@ class Mesh:
         #the string output can be run in the console if it is enclosed in speech
         #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
         
-    def paraview(self,fname='TRIP4Dmesh.vtk',loc=None):
+    def paraview(self,fname='ResIPy_mesh.vtk',loc=None):
         """
         Show mesh in paraview 
         

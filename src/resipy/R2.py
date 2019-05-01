@@ -666,7 +666,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, dump=print, res0=100, show_output=True, **kwargs):
+                   cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
         """ Create a mesh.
         
         Parameters
@@ -696,7 +696,12 @@ class R2(object): # R2 master class instanciated by the GUI
         kwargs: -
             Keyword arguments to be passed to mesh generation schemes 
         """
-        self.computeDOI()
+        if doi is None:# compute depth of investigation if it is not given
+            self.computeDOI()
+        else:
+            if not isinstance(doi,float) or not isinstance(doi,int):
+                raise ValueError("Depth of investigation (doi) value is needs to be float or int type")
+            self.doi = doi
         
         if typ == 'default':
             if all(self.elec[:,1] == 0): # it's a 2D mesh
@@ -1999,7 +2004,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False, iMoveElec=False, ncores=None, forceParallel=False):
+               parallel=False, iMoveElec=False, ncores=None, forceParallel=False,
+               rmDirTree=True):
         """ Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
@@ -2026,7 +2032,9 @@ class R2(object): # R2 master class instanciated by the GUI
             `Survey` object. Only for parallel inversion for now.
         ncores : int, optional
             If `parallel==True` then ncores is the number of cores to use (by
-            default all the cores available are used).)
+            default all the cores available are used).
+        rmDirTree: bool, optional
+            Remove excess directories and files created during parallel inversion
         """
         # clean meshResults list
         self.meshResults = []
