@@ -7,8 +7,8 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="resipy",
-#    version=ResIPy_version,
-    version="1.1.11",
+    version=ResIPy_version,
+#    version="1.1.11",
     author="HKEx",
     description="API for resistivity and IP inversion/modelling around R2 codes",
     long_description=long_description,

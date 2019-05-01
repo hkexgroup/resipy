@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
+#from scipy.stats import norm
 #import statsmodels.formula.api as smf
 
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
