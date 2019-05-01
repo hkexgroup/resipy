@@ -151,7 +151,8 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=False, threed=False):
+    def __init__(self, parent=None, figure=None, navi=False, itight=False,
+                 threed=False, aspect='equal'):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
@@ -167,7 +168,7 @@ class MatplotlibWidget(QWidget):
             axes = figure.get_axes()
         self.figure = figure
         self.axis = axes
-
+        self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
 
@@ -205,9 +206,10 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.callback = callback
         callback(ax=ax)
-        if threed is False:
-            ax.set_aspect('auto')
-            ax.set_autoscale_on(False)
+#        if threed is False:
+#            ax.set_aspect('equal')
+#            ax.set_autoscale_on(False)
+        ax.set_aspect(self.aspect)
         if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -223,7 +225,7 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
-        ax.set_aspect('auto')
+        ax.set_aspect(self.aspect)
         if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -3693,7 +3695,7 @@ class App(QMainWindow):
         logText.setReadOnly(True)
         logLayout.addWidget(logText)
 
-        mwRMS = MatplotlibWidget(navi=False, itight=False)
+        mwRMS = MatplotlibWidget(navi=False, itight=False, aspect='auto')
         logLayout.addWidget(mwRMS)
 
         logLayout.setStretch(0, 60)

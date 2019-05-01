@@ -517,7 +517,7 @@ class Mesh:
                 except Exception as e:
                     print('Error in Mesh.show for contouring: ', e)
                 
-                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=cm)
             
             
         ax.autoscale()

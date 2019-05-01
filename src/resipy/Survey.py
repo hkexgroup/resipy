@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
-#from scipy.stats import norm
+from scipy.stats import norm
 #import statsmodels.formula.api as smf
 
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
@@ -418,12 +418,12 @@ class Survey(object):
             fig, ax = plt.subplots()
         
         percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
-        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probability")
+        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),density=True,alpha=.3,label="Probability")
         errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
         errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
         if errPercent > 100:
             errPercent = 100
-        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
         # TODO the mlab.normpdf is deprecated and will be removed !
         # change to scipy.stats.norm() instead -> need to add scipy dependency
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
