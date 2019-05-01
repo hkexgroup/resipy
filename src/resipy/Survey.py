@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
 from scipy.stats import norm
+from scipy.stats.kde import gaussian_kde
 #import statsmodels.formula.api as smf
 
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
@@ -424,9 +425,11 @@ class Survey(object):
         if errPercent > 100:
             errPercent = 100
         parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        KDEfit = gaussian_kde(errMax)
         # TODO the mlab.normpdf is deprecated and will be removed !
         # change to scipy.stats.norm() instead -> need to add scipy dependency
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'k',label="KDE fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probability')
