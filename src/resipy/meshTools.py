@@ -299,6 +299,7 @@ class Mesh:
              vmax=None,
              attr=None,
              clabel=None,
+             hor_cbar=False,
              **kwargs):
         """ Displays a 2d mesh and attribute.
         
@@ -331,7 +332,10 @@ class Mesh:
             as the key for this dictionary.
         clabel: string, optional
             Label of the colorbar. Default is the value of `attr` argument.
-
+        hor_cbar: boolean, optional
+            'True' to make a horizontal color bar at the bottom of the plot, default
+            is vertical color bar to the right of the plot. 
+        
         Returns
         ----------
         figure : matplotlib figure 
@@ -528,7 +532,10 @@ class Mesh:
         ax.set_ylabel('Elevation [m]')
         
         if color_bar:#add the color bar 
-            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
+            cbar_horizontal = 'vertical'
+            if hor_cbar: # change orientation if true 
+                cbar_horizontal = 'horizontal'
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f',orientation=cbar_horizontal)
             self.cbar.set_label(color_bar_title) #set colorbar title
 
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
