@@ -22,6 +22,7 @@ from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  res
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
                      stingParser)
 from resipy.DCA import DCA
+from resipy.interpolation import bilinear
 
 class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
@@ -1144,14 +1145,16 @@ class Survey(object):
 #            fig.tight_layout()
         
         if contour:
-            from matplotlib.mlab import griddata
+            #from matplotlib.mlab import griddata
             def grid(x, y, z, resX=100, resY=100):
                 "Convert 3 column data to matplotlib grid"
                 xi = np.linspace(min(x), max(x), resX)
                 yi = np.linspace(min(y), max(y), resY)
-                Z = griddata(x, y, z, xi, yi, interp='linear')
                 X, Y = np.meshgrid(xi, yi)
-                return X, Y, Z
+                #Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
+                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
+                #favouring the home grown approach here becuase it doesnt throw warning
+                return X, Y, Z.reshape(X.shape)
             X, Y, Z = grid(xpos, ypos, resist)
 #            if ax is None:
 #                fig, ax = plt.subplots()
@@ -1223,14 +1226,16 @@ class Survey(object):
             ax.set_title('Phase shift pseudo Section')
         
         if contour:
-            from matplotlib.mlab import griddata
+            #from matplotlib.mlab import griddata
             def grid(x, y, z, resX=100, resY=100):
                 "Convert 3 column data to matplotlib grid"
                 xi = np.linspace(min(x), max(x), resX)
                 yi = np.linspace(min(y), max(y), resY)
-                Z = griddata(x, y, z, xi, yi, interp='linear')
                 X, Y = np.meshgrid(xi, yi)
-                return X, Y, Z
+                #Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
+                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
+                #favouring the home grown approach here becuase it doesnt throw warning
+                return X, Y, Z.reshape(X.shape)
             X, Y, Z = grid(xpos, ypos, ip)
 #            if ax is None:
 #                fig, ax = plt.subplots()
