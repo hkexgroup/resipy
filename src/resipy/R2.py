@@ -33,6 +33,36 @@ apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
 print('ResIPy version = ',str(ResIPy_version))
 
+
+#%% wine check
+def wineCheck():
+    #check operating system
+    OpSys=platform.system()
+    #detect wine
+    if OpSys == 'Linux':
+        p = Popen("wine --version", stdout=PIPE, shell=True)
+        is_wine = str(p.stdout.readline())
+        if is_wine.find("wine") == -1:
+            print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `sudo apt-get install wine-stable`.')
+        else:
+            pass
+
+    elif OpSys == 'Darwin':
+        try:
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+            else:
+                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+
+        except:
+            print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `brew install wine`.')
+
+wineCheck()
+#%%
         
 def workerInversion(path, dump, exePath, qin, iMoveElec=False):
     ''' Take protocol.dat from the queue (`qin`) and run inversion in its own
@@ -466,7 +496,7 @@ class R2(object): # R2 master class instanciated by the GUI
             ineg = df2['irecip'].values < 0
             df2.loc[ipos, 'irecip'] = df2[ipos]['irecip'] + c
             df2.loc[ineg, 'irecip'] = df2[ineg]['irecip'] - c
-            df = df.append(df2)
+            df = df.append(df2, sort=True) # sort to silence the future warning if concatenation axis is not aligned
             c = c + df2.shape[0]
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()

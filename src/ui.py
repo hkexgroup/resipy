@@ -1069,10 +1069,10 @@ class App(QMainWindow):
 
         pseudoLayout = QHBoxLayout()
 
-        mwPseudo = MatplotlibWidget(navi=True)
+        mwPseudo = MatplotlibWidget(navi=True, aspect='auto')
         pseudoLayout.addWidget(mwPseudo)
 
-        mwPseudoIP = MatplotlibWidget(navi=True)
+        mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
         mwPseudoIP.setVisible(False)
         pseudoLayout.addWidget(mwPseudoIP)
 
@@ -1794,7 +1794,7 @@ class App(QMainWindow):
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
         recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True, aspect = 'auto')
+        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto')
         recipErrorPlotLayout.addWidget(recipErrorPLot)
 
         recipErrorBottomLayout = QVBoxLayout()
@@ -1802,7 +1802,7 @@ class App(QMainWindow):
         recipErrorBottomTabs = QTabWidget()
 
         recipErrorPseudoPlotLayout = QVBoxLayout()
-        mwManualFiltering = MatplotlibWidget(navi=True)
+        mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto')
         recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
 #        manualPseudoPlotLayout.setLayout(manualBottomLayout)
         pseudoSectionPlotTab = QWidget()
@@ -1889,7 +1889,7 @@ class App(QMainWindow):
         errorLayout.addWidget(errFitType)
         
         errorPlotLayout = QVBoxLayout()
-        mwFitError = MatplotlibWidget(navi=True, aspect = 'auto')
+        mwFitError = MatplotlibWidget(navi=True, aspect='auto')
         errorPlotLayout.addWidget(mwFitError)
         errorLayout.addLayout(errorPlotLayout, 1)
 
@@ -1955,7 +1955,7 @@ class App(QMainWindow):
         ipLayout.addWidget(iperrFitType)
         
         ipErrPlotLayout = QVBoxLayout()
-        mwIPFiltering = MatplotlibWidget(navi=True, aspect = 'auto')
+        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto')
         ipErrPlotLayout.addWidget(mwIPFiltering)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
@@ -2097,8 +2097,8 @@ class App(QMainWindow):
 #            self.r2.surveys[0].cbar = True
             filt_hmp.plot(self.r2.heatmap)
 
-        raw_hmp = MatplotlibWidget(navi=True)
-        filt_hmp = MatplotlibWidget(navi=True)
+        raw_hmp = MatplotlibWidget(navi=True, aspect='auto')
+        filt_hmp = MatplotlibWidget(navi=True, aspect='auto')
         ipfiltlayout.addWidget(raw_hmp)
         ipfiltlayout.addWidget(filt_hmp)
 
@@ -2769,8 +2769,8 @@ class App(QMainWindow):
         forwardBtn.clicked.connect(forwardBtnFunc)
         forwardBtn.setStyleSheet('background-color: green')
 
-        forwardPseudo = MatplotlibWidget(navi=True)
-        forwardPseudoIP = MatplotlibWidget(navi=True)
+        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto')
+        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
         forwardPseudoIP.setVisible(False)
 
         forwardLogText = QTextEdit()
@@ -3959,7 +3959,7 @@ class App(QMainWindow):
         def plotInvError():
             mwInvError.plot(self.r2.pseudoError, aspect = self.plotAspect)
 
-        mwInvError = MatplotlibWidget(navi=True)
+        mwInvError = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
 
@@ -3970,7 +3970,7 @@ class App(QMainWindow):
 
         def plotInvError2():
             mwInvError2.plot(self.r2.showInversionErrors)
-        mwInvError2 = MatplotlibWidget(navi=True, aspect = 'auto')
+        mwInvError2 = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
