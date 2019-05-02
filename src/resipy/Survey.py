@@ -13,6 +13,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
+from scipy.stats import norm
+from scipy.stats.kde import gaussian_kde
 #import statsmodels.formula.api as smf
 
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
@@ -388,7 +390,8 @@ class Survey(object):
             count=count+1
         print(str(notfound)+'/'+str(ndata)+' reciprocal measurements NOT found.')
         reciprocalMean = np.sign(resist)*reciprocalMean # add sign
-        ibad = np.abs(reciprocalErrRel) > 0.2
+#        ibad = np.abs(reciprocalErrRel) > 0.2 # error if np.nan in this
+        ibad = np.array([np.abs(a) > 0.2 if ~np.isnan(a) else False for a in reciprocalErrRel])
         print(str(np.sum(ibad)) + ' measurements error > 20 %')
         
         irecip = Ri        
@@ -416,13 +419,17 @@ class Survey(object):
             fig, ax = plt.subplots()
         
         percentError = 100*self.df['reciprocalErrRel'].replace([np.inf,-np.inf], np.nan).dropna() # nan and inf values must be removed
-        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),normed=True,alpha=.3,label="Probability")
+        ax.hist(percentError,bins=(np.arange(-100,100,0.5)),density=True,alpha=.3,label="Probability")
         errMax = percentError[np.abs(percentError) <= 100] # don't want to show data that has 1000% error
         errPercent = np.max(np.abs(percentError)) + 10 # limits the histogram's X axis
         if errPercent > 100:
             errPercent = 100
-        parametricFit = mlab.normpdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
+        KDEfit = gaussian_kde(errMax)
+        # TODO the mlab.normpdf is deprecated and will be removed !
+        # change to scipy.stats.norm() instead -> need to add scipy dependency
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
+        ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'k',label="KDE fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probability')
@@ -614,7 +621,7 @@ class Survey(object):
             bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
             bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
         bins_ip = bins_ip.dropna()
-        coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]))[0] # calculating fitting coefficients (a,m)
+        coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)
         R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
@@ -708,7 +715,7 @@ class Survey(object):
 #        print(bins)
 #        print(np.sum(np.isnan(bins)))
 #        print(np.sum(np.isinf(bins)))
-        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]))[0] # calculating fitting coefficients (a,m)       
+        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
@@ -763,7 +770,7 @@ class Survey(object):
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
-        coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1])[0] # calculating fitting coefficients (a,m) 
+        coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1], rcond=None)[0] # calculating fitting coefficients (a,m) 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")

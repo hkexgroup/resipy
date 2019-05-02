@@ -6,8 +6,8 @@ import time
 #a = time.time()
 print('importing pyqt')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget,
-    QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox,
-    QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout,
+    QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
+    QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame,
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
     QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
@@ -151,7 +151,8 @@ print( 'os.getcwd is', os.getcwd() )
 
 
 class MatplotlibWidget(QWidget):
-    def __init__(self, parent=None, figure=None, navi=False, itight=False, threed=False):
+    def __init__(self, parent=None, figure=None, navi=False, itight=False,
+                 threed=False, aspect='equal'):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
@@ -167,7 +168,7 @@ class MatplotlibWidget(QWidget):
             axes = figure.get_axes()
         self.figure = figure
         self.axis = axes
-
+        self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
 
@@ -205,9 +206,10 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.callback = callback
         callback(ax=ax)
-        if threed is False:
-            ax.set_aspect('auto')
-            ax.set_autoscale_on(False)
+#        if threed is False:
+#            ax.set_aspect('equal')
+#            ax.set_autoscale_on(False)
+        ax.set_aspect(self.aspect)
         if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -223,7 +225,7 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
-        ax.set_aspect('auto')
+        ax.set_aspect(self.aspect)
         if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -1777,7 +1779,7 @@ class App(QMainWindow):
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
         recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True)
+        recipErrorPLot = MatplotlibWidget(navi=True, aspect = 'auto')
         recipErrorPlotLayout.addWidget(recipErrorPLot)
 
         recipErrorBottomLayout = QVBoxLayout()
@@ -1872,7 +1874,7 @@ class App(QMainWindow):
         errorLayout.addWidget(errFitType)
         
         errorPlotLayout = QVBoxLayout()
-        mwFitError = MatplotlibWidget(navi=True)
+        mwFitError = MatplotlibWidget(navi=True, aspect = 'auto')
         errorPlotLayout.addWidget(mwFitError)
         errorLayout.addLayout(errorPlotLayout, 1)
 
@@ -1938,7 +1940,7 @@ class App(QMainWindow):
         ipLayout.addWidget(iperrFitType)
         
         ipErrPlotLayout = QVBoxLayout()
-        mwIPFiltering = MatplotlibWidget(navi=True)
+        mwIPFiltering = MatplotlibWidget(navi=True, aspect = 'auto')
         ipErrPlotLayout.addWidget(mwIPFiltering)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
@@ -3339,6 +3341,10 @@ class App(QMainWindow):
 #        tabInversion.setStyleSheet('background-color:red')
         tabs.addTab(tabInversion, '&Inversion')
         tabs.setTabEnabled(5, False)
+        
+        splitterMainLayout = QHBoxLayout()
+        
+        topSplitter = QSplitter(Qt.Vertical)
 
         invLayout = QVBoxLayout()
 
@@ -3689,12 +3695,12 @@ class App(QMainWindow):
         logText.setReadOnly(True)
         logLayout.addWidget(logText)
 
-        mwRMS = MatplotlibWidget(navi=False, itight=False)
+        mwRMS = MatplotlibWidget(navi=False, itight=False, aspect='auto')
         logLayout.addWidget(mwRMS)
 
         logLayout.setStretch(0, 60)
         logLayout.setStretch(1, 40)
-        invLayout.addLayout(logLayout, 25)
+        invLayout.addLayout(logLayout)
 
         # option for display
         def displayAttribute(arg='Resistivity(log10)'):
@@ -3868,11 +3874,24 @@ class App(QMainWindow):
 
         mwInvResult = MatplotlibWidget(navi=True, itight=False)
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
-
+                
+        bottomSplitter = QSplitter(Qt.Horizontal)
+        
+        bottomLSplitter = QWidget()
+        bottomSplitter.addWidget(bottomLSplitter)
+        
+        bottomRSplitter = QWidget()
+        
         resultStackLayout = QStackedLayout()
         resultStackLayout.addWidget(mwInvResult)
         resultStackLayout.addWidget(mwInvResult3D)
-        resultLayout.addLayout(resultStackLayout, 90)
+        
+        bottomRSplitter.setLayout(resultStackLayout)
+        bottomSplitter.addWidget(bottomRSplitter)
+        
+        bottomSplitter.setSizes([0,1100])
+        resultLayout.addWidget(bottomSplitter)
+#        resultLayout.addLayout(resultStackLayout, 90)
 
         # in case of error, display R2.out
         r2outLayout = QVBoxLayout()
@@ -3893,11 +3912,23 @@ class App(QMainWindow):
         outStackLayout.addWidget(resultWidget)
         outStackLayout.addWidget(r2outWidget)
         outStackLayout.setCurrentIndex(0)
+        
+        topInvLayout = QWidget()
+        topInvLayout.setLayout(invLayout)
+        
+        topSplitter.addWidget(topInvLayout)
+        
+        bottomInvLayout = QWidget()
+        bottomInvLayout.setLayout(outStackLayout)
+        
+        topSplitter.addWidget(bottomInvLayout)
+        
+        topSplitter.setSizes([100,250])
+        splitterMainLayout.addWidget(topSplitter)
 
-        invLayout.addLayout(outStackLayout, 75)
+#        invLayout.addLayout(outStackLayout, 75)
 
-
-        tabInversion.setLayout(invLayout)
+        tabInversion.setLayout(splitterMainLayout)
 
 
         #%% tab 6 POSTPROCESSING
@@ -3972,6 +4003,7 @@ class App(QMainWindow):
            <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
            then nothing will be printed out until the inversion finished. When the inversion finished you will be able to see the inverted section, open it with Paraview (mainly for 3D)\
            and save the outputed .vtk file and graphs using the "Save Graphs" button.</li>
+           <ul><li>Plot aspect ratio can be changed by dragging  left handle to right or left and top handle (above plot options) up and down.</li></ul>
            <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
            </ul>
         ''')
