@@ -1779,7 +1779,7 @@ class App(QMainWindow):
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
         recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True)
+        recipErrorPLot = MatplotlibWidget(navi=True, aspect = 'auto')
         recipErrorPlotLayout.addWidget(recipErrorPLot)
 
         recipErrorBottomLayout = QVBoxLayout()
@@ -1874,7 +1874,7 @@ class App(QMainWindow):
         errorLayout.addWidget(errFitType)
         
         errorPlotLayout = QVBoxLayout()
-        mwFitError = MatplotlibWidget(navi=True)
+        mwFitError = MatplotlibWidget(navi=True, aspect = 'auto')
         errorPlotLayout.addWidget(mwFitError)
         errorLayout.addLayout(errorPlotLayout, 1)
 
@@ -1940,7 +1940,7 @@ class App(QMainWindow):
         ipLayout.addWidget(iperrFitType)
         
         ipErrPlotLayout = QVBoxLayout()
-        mwIPFiltering = MatplotlibWidget(navi=True)
+        mwIPFiltering = MatplotlibWidget(navi=True, aspect = 'auto')
         ipErrPlotLayout.addWidget(mwIPFiltering)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
