@@ -1146,16 +1146,16 @@ class Survey(object):
         
         if contour:
 #            from matplotlib.mlab import griddata
-            def grid(x, y, z, resX=100, resY=100):
-                "Convert 3 column data to matplotlib grid"
-                xi = np.linspace(min(x), max(x), resX)
-                yi = np.linspace(min(y), max(y), resY)
-                X, Y = np.meshgrid(xi, yi)
-#                Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
-                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
-#                favouring the home grown approach here becuase it doesnt throw warning
-                return X, Y, Z.reshape(X.shape)
-#            X, Y, Z = grid(xpos, ypos, resist)
+#            def grid(x, y, z, resX=100, resY=100):
+#                "Convert 3 column data to matplotlib grid"
+#                xi = np.linspace(min(x), max(x), resX)
+#                yi = np.linspace(min(y), max(y), resY)
+#                X, Y = np.meshgrid(xi, yi)
+##                Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
+#                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
+##                favouring the home grown approach here becuase it doesnt throw warning
+#                return X, Y, Z.reshape(X.shape)
+##            X, Y, Z = grid(xpos, ypos, resist)
 #            if ax is None:
 #                fig, ax = plt.subplots()
 #            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
