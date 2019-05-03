@@ -195,7 +195,7 @@ class MatplotlibWidget(QWidget):
         self.canvas.draw()
 
 
-    def plot(self, callback, threed=False):
+    def plot(self, callback, aspect = None, threed=False):
         ''' call a callback plot function and give it the ax to plot to
         '''
 #        print('plot is called')
@@ -209,7 +209,9 @@ class MatplotlibWidget(QWidget):
 #        if threed is False:
 #            ax.set_aspect('equal')
 #            ax.set_autoscale_on(False)
-        ax.set_aspect(self.aspect)
+        if aspect == None:
+            aspect = self.aspect
+        ax.set_aspect(aspect)
         if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -217,7 +219,7 @@ class MatplotlibWidget(QWidget):
     def setCallback(self, callback):
         self.callback = callback
 
-    def replot(self, threed=False, **kwargs):
+    def replot(self, threed=False, aspect = None, **kwargs):
         self.figure.clear()
         if threed is False:
             ax = self.figure.add_subplot(111)
@@ -225,7 +227,9 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
-        ax.set_aspect(self.aspect)
+        if aspect == None:
+            aspect = self.aspect
+        ax.set_aspect(aspect)
         if self.itight is True:
             self.figure.tight_layout()
         self.canvas.draw()
@@ -292,6 +296,7 @@ class App(QMainWindow):
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
         self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
+        self.plotAspect = 'equal'
 
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -356,6 +361,7 @@ class App(QMainWindow):
                 reg_mode.setCurrentIndex(0)
             # importing
             self.parser = None
+            self.plotAspect = 'equal'
             wdBtn.setText('Working directory:' + os.path.basename(self.r2.dirname))
             buttonf.setText('Import Data')
 #            timeLapseCheck.setChecked(False)
@@ -791,7 +797,15 @@ class App(QMainWindow):
                 restartFunc()
                 self.datadir = os.path.dirname(fname)
                 importFile(fname)
-
+                
+        def calcAspectRatio(): # for calculating aspect ratio of long surveys
+            self.r2.computeDOI()
+            surLength = np.abs(self.r2.param['xy_poly_table'][0,0] - self.r2.param['xy_poly_table'][1,0])
+            surDepth = np.abs(self.r2.param['xy_poly_table'][-1,1] - self.r2.param['xy_poly_table'][-2,1])
+            aspectRatio = surLength/surDepth
+            if not 0.2 < aspectRatio < 5: # make sure not to get narrow plots (max aspect ratio is 5 or 1/5)
+                self.plotAspect = 'auto'
+                
         def importFile(fname):
             if len(self.r2.surveys) > 0:
                 self.r2.surveys = []
@@ -807,6 +821,7 @@ class App(QMainWindow):
                 try:
                     self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                          parser=self.parser)
+                    calcAspectRatio()
                     if 'magErr' in self.r2.surveys[0].df.columns:
                         a_wgt.setText('0.0')
                         b_wgt.setText('0.0')
@@ -1046,18 +1061,18 @@ class App(QMainWindow):
 
         def plotPseudo():
             mwPseudo.setCallback(self.r2.pseudo)
-            mwPseudo.replot(**self.pParams)
+            mwPseudo.replot(aspect = self.plotAspect, **self.pParams)
 
         def plotPseudoIP():
             mwPseudoIP.setCallback(self.r2.pseudoIP)
-            mwPseudoIP.replot(**self.pParamsIP)
+            mwPseudoIP.replot(aspect = self.plotAspect, **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
 
-        mwPseudo = MatplotlibWidget(navi=True)
+        mwPseudo = MatplotlibWidget(navi=True, aspect='auto')
         pseudoLayout.addWidget(mwPseudo)
 
-        mwPseudoIP = MatplotlibWidget(navi=True)
+        mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
         mwPseudoIP.setVisible(False)
         pseudoLayout.addWidget(mwPseudoIP)
 
@@ -1626,7 +1641,7 @@ class App(QMainWindow):
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
         def plotManualFiltering():
-            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering, aspect = self.plotAspect)
 
         def errHist():
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
@@ -1779,7 +1794,7 @@ class App(QMainWindow):
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
         recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True, aspect = 'auto')
+        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto')
         recipErrorPlotLayout.addWidget(recipErrorPLot)
 
         recipErrorBottomLayout = QVBoxLayout()
@@ -1787,7 +1802,7 @@ class App(QMainWindow):
         recipErrorBottomTabs = QTabWidget()
 
         recipErrorPseudoPlotLayout = QVBoxLayout()
-        mwManualFiltering = MatplotlibWidget(navi=True)
+        mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto')
         recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
 #        manualPseudoPlotLayout.setLayout(manualBottomLayout)
         pseudoSectionPlotTab = QWidget()
@@ -1874,7 +1889,7 @@ class App(QMainWindow):
         errorLayout.addWidget(errFitType)
         
         errorPlotLayout = QVBoxLayout()
-        mwFitError = MatplotlibWidget(navi=True, aspect = 'auto')
+        mwFitError = MatplotlibWidget(navi=True, aspect='auto')
         errorPlotLayout.addWidget(mwFitError)
         errorLayout.addLayout(errorPlotLayout, 1)
 
@@ -1940,7 +1955,7 @@ class App(QMainWindow):
         ipLayout.addWidget(iperrFitType)
         
         ipErrPlotLayout = QVBoxLayout()
-        mwIPFiltering = MatplotlibWidget(navi=True, aspect = 'auto')
+        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto')
         ipErrPlotLayout.addWidget(mwIPFiltering)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
@@ -2082,8 +2097,8 @@ class App(QMainWindow):
 #            self.r2.surveys[0].cbar = True
             filt_hmp.plot(self.r2.heatmap)
 
-        raw_hmp = MatplotlibWidget(navi=True)
-        filt_hmp = MatplotlibWidget(navi=True)
+        raw_hmp = MatplotlibWidget(navi=True, aspect='auto')
+        filt_hmp = MatplotlibWidget(navi=True, aspect='auto')
         ipfiltlayout.addWidget(raw_hmp)
         ipfiltlayout.addWidget(filt_hmp)
 
@@ -2148,7 +2163,7 @@ class App(QMainWindow):
             regionTable.reset()
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=regionTable.addRow)
-            mwMesh.plot(func)
+            mwMesh.plot(func, aspect = self.plotAspect)
             mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             mwMesh.canvas.setFocus() # set focus on the canvas
 
@@ -2742,19 +2757,20 @@ class App(QMainWindow):
             noise = float(noiseEdit.text()) / 100 #percentage to proportion
             noiseIP = float(noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
-            forwardPseudo.plot(self.r2.surveys[0].pseudo)
+            calcAspectRatio()
+            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect = self.plotAspect)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
             tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
-                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP)
+                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect = self.plotAspect)
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
         forwardBtn.setStyleSheet('background-color: green')
 
-        forwardPseudo = MatplotlibWidget(navi=True)
-        forwardPseudoIP = MatplotlibWidget(navi=True)
+        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto')
+        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
         forwardPseudoIP.setVisible(False)
 
         forwardLogText = QTextEdit()
@@ -3392,7 +3408,7 @@ class App(QMainWindow):
                         if a[0] == 'End':
                             self.end = True
                         if a[0] == 'Iteration':
-                            mwInvResult.plot(self.r2.showIter)
+                            mwInvResult.plot(self.r2.showIter, aspect = self.plotAspect)
             return newFlag
 
         def plotRMS(ax):
@@ -3941,9 +3957,9 @@ class App(QMainWindow):
         invErrorLayout = QVBoxLayout()
 
         def plotInvError():
-            mwInvError.plot(self.r2.pseudoError)
+            mwInvError.plot(self.r2.pseudoError, aspect = self.plotAspect)
 
-        mwInvError = MatplotlibWidget(navi=True)
+        mwInvError = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
 
@@ -3954,7 +3970,7 @@ class App(QMainWindow):
 
         def plotInvError2():
             mwInvError2.plot(self.r2.showInversionErrors)
-        mwInvError2 = MatplotlibWidget(navi=True)
+        mwInvError2 = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
