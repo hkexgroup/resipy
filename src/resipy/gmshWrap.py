@@ -111,7 +111,7 @@ def tri_cent(p,q,r):
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 # 2D half space problem 
 def genGeoFile(electrodes, electrode_type = None, geom_input = None,
-               file_path='mesh.geo',doi=-1,cl=-1,cl_factor=2):
+               file_path='mesh.geo',doi=-1,dp_len=-1,cl=-1,cl_factor=2):
     """
     writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
@@ -138,10 +138,14 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         characteristic length (optional), essentially describes how big the nodes 
         assocaited elements will be. Usually no bigger than 5. 
     cl_factor: float, optional 
-        This allows for tuning of the incrimental size increase with depth in the 
-        mesh, usually set to 2 such that the elements at the DOI are twice as big as those
-        at the surface. The reasoning for this is becuase the sensitivity of ERT drops
-        off with depth. 
+        Characteristic length factor, this allows for tuning of the incrimental 
+        size increase with depth in the mesh, usually set to 2 such that the 
+        elements at the DOI are twice as big as those at the surface. The reasoning
+        for this is becuase the sensitivity of ERT drops off with depth. 
+    dp_len: float, optional 
+        Largest dipole length in the 2D array. Default is the largest electrode 
+        spacing. Controls the multipier applied to the edges of the coarse mesh region. 
+        
     
     Returns
     ----------
@@ -219,6 +223,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             geom_input['surface'] = [topo_x,topo_z]
             elec_x = np.array([])
             elec_z = np.array([])
+            if dp_len == -1 : dp_len = max(electrodes[0]) - min(electrodes[0])
+            if doi == -1: doi = min(electrodes[1]) - dp_len
         elif len(surface_idx)==0 and 'surface' in geom_input:
             elec_x = np.array([])
             elec_z = np.array([])
@@ -239,8 +245,12 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
   
     if doi == -1:#then set to a default 
         doi = np.max(elec_z) - (np.min(elec_z) - abs(np.max(elec_x) - np.min(elec_x))/2)
-                    
+                  
+    if dp_len == -1:#compute maximum dipole length
+        dp_len = abs(np.max(elec_x) - np.min(elec_x))
+        
     print("doi in gmshWrap.py: %f"%doi)
+    print("dp_len in gmshWrap.py: %f"%dp_len)
     
     if cl == -1:
         if bh_flag or bu_flag:
@@ -392,16 +402,13 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("Plane Surface(1) = {1};//Fine mesh region surface\n")
     
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
-    fh.write("\n//Add background region (Neumann boundary) points\n")
+    fh.write("\n//Background region (Neumann boundary) points\n")
     cl_factor2=50#characteristic length multipleier for Nuemon boundary 
     cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
-    #Background region propeties, follow rule of thumb that background should extend 100*electrode spacing
-    e_spacing=abs(np.mean(np.diff(np.unique(elec_x))))
-    if np.isnan(e_spacing):#catch error where e_spacing is nan if no surface electrodes 
-        e_spacing=abs(np.mean(np.diff(np.unique(electrodes[0]))))
-    flank=e_spacing*100
-    b_max_depth=-abs(doi)-flank#background max depth
+    #Background region propeties, follow rule of thumb that background should be 5*largest dipole 
+    flank=5*dp_len
+    b_max_depth=-abs(doi)-(3*dp_len)#background max depth
     #add nuemon boundaries on left hand side
     n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
     tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
@@ -1006,8 +1013,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 
 #%% 3D half space 
 
-def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
-           cl=-1, cl_factor=3, cln_factor=400, mesh_refinement=None):
+def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
+           cl=-1, cl_factor=3, cln_factor=100, dp_len=-1, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1070,18 +1077,36 @@ def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
     
-    dist = np.zeros((len(elec_x),len(elec_x)))    
-    if cl==-1:
+    def find_dist(elec_x,elec_y): # find maximum and minimum electrode spacings 
+        dist = np.zeros((len(elec_x),len(elec_x)))   
         x1 = np.array(elec_x)
         y1 = np.array(elec_y)
         for i in range(len(elec_x)):
             x2 = elec_x[i]
             y2 = elec_y[i]
             dist[:,i] = np.sqrt((x1-x2)**2+(y1-y2)**2)
-        dist_sort = np.unique(dist.flatten())
-        cl = dist_sort[0]/2 # characteristic length is 1/4 the minimum electrode distance
-        print('cl = %f'%cl)        
+        return dist.flatten() # array of all electrode distances 
+    
+    if cl==-1:
+        dist_sort = np.unique(find_dist(elec_x,elec_y))
+        cl = dist_sort[0]/2 # characteristic length is 1/2 the minimum electrode distance
+        #print('cl = %f'%cl)  
         
+    if dp_len == -1: # compute largest possible dipole length 
+        try:
+            dp_len = dist_sort[-1] # maximum possible dipole length
+        except NameError: # putting in try to avoid recalculating if done already 
+            dist_sort = np.unique(find_dist(elec_x,elec_y))
+            dp_len = dist_sort[-1]#biggest distance will be the last entry in array as it is sorted 
+    
+    if doi == -1: # compute depth of investigation
+        try:
+            doi = dist_sort[-1]/3 # maximum possible dipole length / 3
+        except NameError: # putting in try to avoid recalculating if done already 
+            dist_sort = np.unique(find_dist(elec_x,elec_y))
+            doi = dist_sort[-1]/3
+        
+    ### start to write to file ### 
     fh = open(file_path,'w') #file handle
     
     fh.write("//3D half space problem mesh for ResIPy - no topography\n")
@@ -1151,9 +1176,9 @@ def box_3d(electrodes, padding=20, doi=20, file_path='mesh3d.geo',
     fh.write("//End fine mesh region points\n" )
         
     #Nuemon boundary 
-    flank_x = 30 * (x_dist + y_dist)/2
-    flank_y = 30 * (x_dist + y_dist)/2
-    flank_z = 25*abs(doi)
+    flank_x = 5 * dp_len
+    flank_y = 5 * dp_len
+    flank_z = 3*abs(doi)
     fh.write("//Nuemonn boundary points\n")
     cln = cl*cln_factor # nuemom boundary characteristic length 
     fh.write("cln = %.2f;//characteristic length for background region\n"%cln)
