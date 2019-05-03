@@ -726,6 +726,12 @@ class R2(object): # R2 master class instanciated by the GUI
         kwargs: -
             Keyword arguments to be passed to mesh generation schemes 
         """
+        self.meshParams = {'typ':typ, 'buried':buried, 'surface':surface,
+                           'cl_factor':cl_factor, 'cl':cl, 'dump':dump,
+                           'res0': res0, 'show_output':show_output, 'doi':doi}
+        if kwargs is not None:
+            self.meshParams.update(kwargs)
+        
         if doi is None:# compute depth of investigation if it is not given
             self.computeDOI()
         else:
@@ -2574,6 +2580,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fparam['job_type'] = 0
         fparam['num_regions'] = 0
         fparam['res0File'] = 'resistivity.dat' # just starting resistivity
+        
         write2in(fparam, fwdDir, typ=self.typ)
         dump('done\n')
         
@@ -2643,14 +2650,112 @@ class R2(object): # R2 master class instanciated by the GUI
         self.pseudo()
         dump('Forward modelling done.')
 
+
+    def createModellingMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
+                   cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
+        """Create an homogeneous mesh to compute modelling error.
+        """
+        if typ == 'quad':
+            elec = self.elec.copy()
+            elec_x = self.elec[:,0]
+            elec_z = np.zeros(len(elec_x))# THIS IS KEY HERE we need a flat surface
+            #add buried electrodes? 
+            elec_type = np.repeat('electrode',len(elec_x))
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
+                elec_type[buried]='buried'
+                
+            elec_type = elec_type.tolist()
+            surface_x = surface[:,0] if surface is not None else None
+            surface_z = surface[:,1] if surface is not None else None
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,
+                                                         surface_x=surface_x, surface_z=surface_z,
+                                                         **kwargs)   #generate quad mesh   
+            
+            if 'regions' in self.param: # allow to create a new mesh then rerun inversion
+                del self.param['regions']
+            if 'num_regions' in self.param:
+                del self.param['num_regions']
+        elif typ == 'trian' or typ == 'tetra':
+            elec = self.elec.copy()
+            geom_input = {}
+            elec_x = self.elec[:,0]
+            elec_y = self.elec[:,1]
+            elec_z = np.zeros(len(elec_y)) # THIS IS KEY HERE we need a flat surface
+            elec_type = np.repeat('electrode',len(elec_x))
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
+                elec_type[buried]='buried'
+            
+            if surface is not None:
+                if surface.shape[1] == 2:
+                    geom_input['surface'] = [surface[:,0], surface[:,1]]
+                else:
+                    geom_input['surface'] = [surface[:,0], surface[:,2]]
+            
+            whole_space = False
+            if buried is not None:
+                if np.sum(buried) == len(buried) and surface is None:
+                    # all electrodes buried and no surface given
+                    whole_space = True
+
+            elec_type = elec_type.tolist()
+
+            #print('elec_type', elec_type)
+            ui_dir = os.getcwd()#current working directory (usually the one the ui is running in)
+            os.chdir(self.dirname)#change to working directory so that mesh files written in working directory 
+#            try:
+            if typ == 'trian':
+                mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             cl_factor=cl_factor,
+                             cl=cl, dump=dump, show_output=show_output,
+                             doi=self.doi-np.max(elec_z), whole_space=whole_space,
+                             **kwargs)
+            if typ == 'tetra': # TODO add buried
+                if cl == -1:
+                    dist = cdist(self.elec[:,:2])/2 # half the minimal electrode distance
+                    cl = np.min(dist[dist != 0])
+                elec_type = None # for now
+                mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             surface_refinement=surface,
+                             cl_factor=cl_factor,
+                             cl=cl, dump=dump, show_output=show_output,
+                             doi=self.doi-np.max(elec_z), whole_space=whole_space,
+                             **kwargs)
+            os.chdir(ui_dir)#change back to original directory            
+            e_nodes = mesh.e_nodes + 1 # +1 because of indexing staring at 0 in python
+            self.modErrMeshNE = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+            
+        self.modErrMesh = mesh
+        
+        self.param['num_regions'] = 0
+        
+        numel = self.mesh.num_elms
+        self.modErrMesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
+        self.modErrMesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
+        self.modErrMesh.add_attribute(np.ones(numel, dtype=int), 'zones')
+        self.modErrMesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
+        self.modErrMesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
+        
         
         
     def computeModelError(self):
         """ Compute modelling error due to the mesh.
+        We NEED to have a flat surface (no topography).
         """
-        if self.mesh is None:
-            raise ValueError('You fist need to generate a mesh to compute the modelling error.')
-            return
+        node_elec = None # we need this as the node_elec with topo and without might be different
+        if all(self.elec[:,1] == 0) is False: # so we have topography
+            print('A new mesh will be created as the surface is not flat.')
+            self.createModellingMesh(**self.meshParams)
+            node_elec = self.modErrMeshNE
+            mesh = self.modErrMesh
+        else:
+            mesh = self.mesh            
+            
         fwdDir = os.path.join(self.dirname, 'err')
         if os.path.exists(fwdDir):
             shutil.rmtree(fwdDir)
@@ -2659,7 +2764,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # write the resistivity.dat and fparam
         fparam = self.param.copy()
         fparam['job_type'] = 0
-        centroids = np.array(self.mesh.elm_centre).T
+        centroids = np.array(mesh.elm_centre).T
         if self.param['mesh_type'] == 4:
             fparam['num_regions'] = 1
             maxElem = centroids.shape[0]
@@ -2673,12 +2778,20 @@ class R2(object): # R2 master class instanciated by the GUI
             resFile[:,-1] = 100
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                        fmt='%.3f')
-            if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
-                shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
-                            os.path.join(fwdDir, 'mesh.dat'))
-            if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
-                shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
-                            os.path.join(fwdDir, 'mesh3d.dat'))
+            
+#            if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
+#                shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+#                            os.path.join(fwdDir, 'mesh.dat'))
+#            if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
+#                shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
+#                            os.path.join(fwdDir, 'mesh3d.dat'))
+            name = 'mesh.dat'
+            if self.typ == 'R3t' or self.typ == 'cR3t':
+                name = 'mesh3d.dat'
+            file_path = os.path.join(fwdDir, name)
+            mesh.write_dat(file_path)
+            if node_elec is not None: # then we need to overwrite it
+                fparam['node_elec'] = node_elec
             fparam['num_regions'] = 0
             fparam['res0File'] = 'resistivity.dat'
         write2in(fparam, fwdDir, typ=self.typ)
