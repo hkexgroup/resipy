@@ -2876,23 +2876,25 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if outputdir is None:
             outputdir = self.dirname
+        print(outputdir)
         if len(self.meshResults) == 0:
             self.getResults()
-        else:
-            for i in range(len(self.meshResults)):
-                kwargs2 = kwargs.copy()
-                fig, ax = plt.subplots()
-                if 'ylim' not in kwargs2:
-                    ylim = [self.doi, np.max(self.elec[:,2])]
-                    kwargs2 = dict(kwargs2, ylim=ylim)
-                if 'color_map' not in kwargs2:
-                    kwargs2 = dict(kwargs2, color_map='viridis')
-                if 'attr' in kwargs2:
-                    if kwargs2['attr'] not in list(self.meshResults[i].attr_cache.keys()):
-                        kwargs2['attr'] = 'Resistivity(log10)' 
-                self.meshResults[i].show(ax=ax, **kwargs2)
-                fname = self.surveys[i].name
-                fig.savefig(os.path.join(outputdir, fname + '.png'))
+        for i in range(len(self.meshResults)):
+#                kwargs2 = kwargs.copy()
+#                fig, ax = plt.subplots()
+#                if 'ylim' not in kwargs2:
+#                    ylim = [self.doi, np.max(self.elec[:,2])]
+#                    kwargs2 = dict(kwargs2, ylim=ylim)
+#                if 'color_map' not in kwargs2:
+#                    kwargs2 = dict(kwargs2, color_map='viridis')
+#                if 'attr' in kwargs2:
+#                    if kwargs2['attr'] not in list(self.meshResults[i].attr_cache.keys()):
+#                        kwargs2['attr'] = 'Resistivity(log10)' 
+#                self.meshResults[i].show(ax=ax, **kwargs2)
+            fig, ax = plt.subplots()
+            self.showResults(index=i, ax=ax, **kwargs)
+            fname = self.surveys[i].name
+            fig.savefig(os.path.join(outputdir, fname + '.png'))
     
     
     def getInvError(self):
@@ -3161,29 +3163,24 @@ class R2(object): # R2 master class instanciated by the GUI
             print('Had a problem computing differences for %i attributes'%problem)
                 
 
-    def saveVtks(self,dirname,prefix='ResIPyoutput'):
-        """Save vtk files of inversion results to a specified directory. Format
-        for file names will be 'prefix'xxx.vtk. A python script will also be saved
-        to the relevant directory 
+    def saveVtks(self, dirname=None):
+        """Save vtk files of inversion results to a specified directory. 
 
         Parameters
         ------------
         dirname: str
-            Direcotry in which results will be saved
-        prefix: str, optional
-            Characters appended to the front of each file name, ie by default
-            files will be named "ResIPyoutput"+"xxx.vtk", where x is the survey
-            number. For timelapse surveys "...001.vtk" will be the baseline 
-            survey.
-        """   
+            Directory in which results will be saved. Default is the working directory.
+        """  
+        if dirname is None:
+            dirname = self.dirname
         amtContent = startAnmt 
         if len(self.meshResults) == 0:
             self.getResults()
         count=0
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
-            file_path = os.path.join(dirname, prefix + '{:03d}.vtk'.format(count))
-            mesh.write_vtk(file_path,title=mesh.mesh_title)
+            file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
+            mesh.write_vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += endAnmt 
         fh = open(os.path.join(dirname,'amt_track.py'),'w')

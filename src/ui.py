@@ -384,7 +384,7 @@ class App(QMainWindow):
             else:
                 phiConvFactor.setText('1.2')
             if self.ftype == 'ProtocolIP':
-                phiConvFactor.setText('-')
+                phiConvFactor.setText('')
                 phiConvFactor.setEnabled(False)
                 phiConvFactorlabel.setEnabled(False)
 
@@ -1509,7 +1509,7 @@ class App(QMainWindow):
                 if vals[0] > 0:
                     colIndex.append(vals)
                     newHeaders.append(['ip'])
-                    phiConvFactor.setText('-')
+                    phiConvFactor.setText('')
                     phiConvFactor.setEnabled(False)
                     phiConvFactorlabel.setEnabled(False)
                     self.inputPhaseFlag = True
@@ -1745,7 +1745,7 @@ class App(QMainWindow):
         recipErrorInputLineLayout = QHBoxLayout()
         recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
 
-        recipErrorInputLine = QLineEdit('-')
+        recipErrorInputLine = QLineEdit('')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
         recipErrorInputLineLayout.addWidget(recipErrorInputLine)
@@ -3865,9 +3865,10 @@ class App(QMainWindow):
                     contour = self.displayParams['contour']
                     vmin = self.displayParams['vmin']
                     vmax = self.displayParams['vmax']
+                    cmap = self.displayParams['cmap']
                     self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
                                        contour=contour, sens=sens, attr=attr,
-                                       vmin=vmin, vmax=vmax)
+                                       vmin=vmin, vmax=vmax, color_map=cmap)
                 self.r2.saveVtks(fdir)
 
             infoDump('All graphs saved successfully in the working directory.')
