@@ -891,16 +891,16 @@ class Survey(object):
             with open(outputname, 'a') as f:
                 self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
                 
-        if (OS == 'Windows') and (rpath is None):
-            R_dir = input("Enter the directory where R.exe is installed: ")
-            os.system('R_PATH'+R_dir)
-
-        os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
-        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
-        df['resError'] = lmeError # fitted results, only with results
-        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
-        self.df['resError'] = lmeError # predicted results, entire survey
-
+        try:        
+            if (OS == 'Windows') and (rpath is None):
+                R_dir = input("Enter the directory where R.exe is installed: ")
+                os.system('R_PATH'+R_dir)
+    
+            os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
+            lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
+            df['resError'] = lmeError # fitted results, only with results
+            lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
+            self.df['resError'] = lmeError # predicted results, entire survey
 
 #        df['resError'] = lmeError 
         
@@ -925,21 +925,19 @@ class Survey(object):
 #        self.df['resError'] = self.errorModel(self.df)
  
         
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = ax.figure
-        ax.plot(df['obsErr'], df['resError'], 'o')
-        ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-        ax.grid()
-        ax.legend()
-        ax.set_title('Linear Mixed Effect Model Fit')
-        ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
-        
-        if ax is None:
-            return fig
-
+            if ax is None:
+                fig, ax = plt.subplots()
+            else:
+                fig = ax.figure
+            ax.plot(df['obsErr'], df['resError'], 'o')
+            ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+            ax.grid()
+            ax.legend()
+            ax.set_title('Linear Mixed Effect Model Fit')
+            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+        except Exception as e:
+            print('ERROR in Survey.lmefit(): Rscript command might not be available or the lme4 package is not installed.')
 
 
     def heatmap(self,ax=None):

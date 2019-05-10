@@ -1887,7 +1887,8 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
+        if platform.system() == 'Linux':
+            errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -3793,7 +3794,7 @@ class App(QMainWindow):
         displayOptions.addWidget(vMinMaxApply)
         
         cmapComboLabel = QLabel('Colormap')
-        cmaps = ['viridis','plasma','seismic', 'winter','autumn','jet']
+        cmaps = ['viridis','plasma','seismic', 'winter','autumn','rainbow']
         def cmapComboFunc(index):
             self.displayParams['cmap'] = cmaps[index]
             replotSection()

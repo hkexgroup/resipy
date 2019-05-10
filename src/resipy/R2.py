@@ -2844,25 +2844,26 @@ class R2(object): # R2 master class instanciated by the GUI
         for f in files:
             if (f[-8:] == '_res.dat') & ((len(f) == 16) or (len(f) == 12)):
                 fs.append(f)
+            
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
-            if self.param['mesh_type'] == 10:
-                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
-                # TODO change that to full meshTools
-                
-            else:
-                x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
-                if x.shape[0] > 0:
-                    triang = tri.Triangulation(x[:,0],x[:,1])
-                    cax = ax.tricontourf(triang, x[:,3], extend='both')
-                    # TODO might want to crop surface here as well
-                    fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
-                    ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
-                    ax.set_aspect('equal')
-                    ax.set_xlabel('Distance [m]')
-                    ax.set_ylabel('Elevation [m]')
-                    if iplot is True:
-                        fig.show()
+#            if self.param['mesh_type'] == 10:
+#                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
+#                # TODO change that to full meshTools
+#                
+#            else:
+            x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
+            if x.shape[0] > 0:
+                triang = tri.Triangulation(x[:,0],x[:,1])
+                cax = ax.tricontourf(triang, x[:,3], extend='both')
+                # TODO might want to crop surface here as well
+                fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
+                ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
+                ax.set_aspect('equal')
+                ax.set_xlabel('Distance [m]')
+                ax.set_ylabel('Elevation [m]')
+                if iplot is True:
+                    fig.show()
 
     
     def saveInvPlots(self, outputdir=None, **kwargs):
