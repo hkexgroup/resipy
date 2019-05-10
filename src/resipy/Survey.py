@@ -1159,12 +1159,11 @@ class Survey(object):
 #            if ax is None:
 #                fig, ax = plt.subplots()
 #            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
-            if vmin == None or vmax == None:
-                levels = None
-            elif vmax > vmin:
-                levels = np.linspace(vmin, vmax)
-            else:
-                levels = None
+            if vmin is None:
+                vmin = np.min(resist)
+            if vmax is None:
+                vmax = np.max(resist)
+            levels = np.linspace(vmin, vmax, 7)
             cax = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(cax, ax=ax, label=label)
             ax.set_title('Pseudo Section')
