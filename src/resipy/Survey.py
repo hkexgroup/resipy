@@ -1140,7 +1140,6 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('Pseudo Section')
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
         
@@ -1166,8 +1165,8 @@ class Survey(object):
             levels = np.linspace(vmin, vmax, 7)
             cax = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(cax, ax=ax, label=label)
-            ax.set_title('Pseudo Section')
             
+        ax.set_title('Apparent Resistivity Pseudo Section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
