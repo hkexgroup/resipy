@@ -1228,27 +1228,12 @@ class Survey(object):
             cbar.set_label(label)
             ax.set_title('Phase shift pseudo Section')
         
-        if contour:
-#            from matplotlib.mlab import griddata
-            def grid(x, y, z, resX=100, resY=100):
-                "Convert 3 column data to matplotlib grid"
-                xi = np.linspace(min(x), max(x), resX)
-                yi = np.linspace(min(y), max(y), resY)
-                X, Y = np.meshgrid(xi, yi)
-#                Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
-                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
-                #favouring the home grown approach here becuase it doesnt throw warning
-                return X, Y, Z.reshape(X.shape)
-#            X, Y, Z = grid(xpos, ypos, ip)
-#            if ax is None:
-#                fig, ax = plt.subplots()
-#            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
-            if vmin == None or vmax == None:
-                levels = None
-            elif vmax > vmin:
-                levels = np.linspace(vmin, vmax)
-            else:
-                levels = None
+        else:
+            if vmin is None:
+                vmin = np.min(ip)
+            if vmax is None:
+                vmax = np.max(ip)
+            levels = np.linspace(vmin, vmax, 7)
             cax = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
