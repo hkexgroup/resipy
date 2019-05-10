@@ -301,6 +301,10 @@ class App(QMainWindow):
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
+        
+        def clearError(arg):
+            infoDump('')
+        tabs.currentChanged.connect(clearError)
 
         # app icon
 #        self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
