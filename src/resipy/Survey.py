@@ -891,16 +891,16 @@ class Survey(object):
             with open(outputname, 'a') as f:
                 self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
                 
-        if (OS == 'Windows') and (rpath is None):
-            R_dir = input("Enter the directory where R.exe is installed: ")
-            os.system('R_PATH'+R_dir)
-
-        os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
-        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
-        df['resError'] = lmeError # fitted results, only with results
-        lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
-        self.df['resError'] = lmeError # predicted results, entire survey
-
+        try:        
+            if (OS == 'Windows') and (rpath is None):
+                R_dir = input("Enter the directory where R.exe is installed: ")
+                os.system('R_PATH'+R_dir)
+    
+            os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
+            lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
+            df['resError'] = lmeError # fitted results, only with results
+            lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
+            self.df['resError'] = lmeError # predicted results, entire survey
 
 #        df['resError'] = lmeError 
         
@@ -925,21 +925,19 @@ class Survey(object):
 #        self.df['resError'] = self.errorModel(self.df)
  
         
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            fig = ax.figure
-        ax.plot(df['obsErr'], df['resError'], 'o')
-        ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
-        ax.grid()
-        ax.legend()
-        ax.set_title('Linear Mixed Effect Model Fit')
-        ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-        ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
-        
-        if ax is None:
-            return fig
-
+            if ax is None:
+                fig, ax = plt.subplots()
+            else:
+                fig = ax.figure
+            ax.plot(df['obsErr'], df['resError'], 'o')
+            ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
+            ax.grid()
+            ax.legend()
+            ax.set_title('Linear Mixed Effect Model Fit')
+            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
+            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+        except Exception as e:
+            print('ERROR in Survey.lmefit(): Rscript command might not be available or the lme4 package is not installed.')
 
 
     def heatmap(self,ax=None):
@@ -1140,35 +1138,33 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('Pseudo Section')
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
         
         if contour:
 #            from matplotlib.mlab import griddata
-            def grid(x, y, z, resX=100, resY=100):
-                "Convert 3 column data to matplotlib grid"
-                xi = np.linspace(min(x), max(x), resX)
-                yi = np.linspace(min(y), max(y), resY)
-                X, Y = np.meshgrid(xi, yi)
-#                Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
-                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
-#                favouring the home grown approach here becuase it doesnt throw warning
-                return X, Y, Z.reshape(X.shape)
-#            X, Y, Z = grid(xpos, ypos, resist)
+#            def grid(x, y, z, resX=100, resY=100):
+#                "Convert 3 column data to matplotlib grid"
+#                xi = np.linspace(min(x), max(x), resX)
+#                yi = np.linspace(min(y), max(y), resY)
+#                X, Y = np.meshgrid(xi, yi)
+##                Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
+#                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
+##                favouring the home grown approach here becuase it doesnt throw warning
+#                return X, Y, Z.reshape(X.shape)
+##            X, Y, Z = grid(xpos, ypos, resist)
 #            if ax is None:
 #                fig, ax = plt.subplots()
 #            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
-            if vmin == None or vmax == None:
-                levels = None
-            elif vmax > vmin:
-                levels = np.linspace(vmin, vmax)
-            else:
-                levels = None
+            if vmin is None:
+                vmin = np.min(resist)
+            if vmax is None:
+                vmax = np.max(resist)
+            levels = np.linspace(vmin, vmax, 7)
             cax = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(cax, ax=ax, label=label)
-            ax.set_title('Pseudo Section')
             
+        ax.set_title('Apparent Resistivity Pseudo Section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
@@ -1232,27 +1228,12 @@ class Survey(object):
             cbar.set_label(label)
             ax.set_title('Phase shift pseudo Section')
         
-        if contour:
-#            from matplotlib.mlab import griddata
-            def grid(x, y, z, resX=100, resY=100):
-                "Convert 3 column data to matplotlib grid"
-                xi = np.linspace(min(x), max(x), resX)
-                yi = np.linspace(min(y), max(y), resY)
-                X, Y = np.meshgrid(xi, yi)
-#                Z = griddata(x, y, z, xi, yi, interp='linear') # matplotlib interpolation method
-                Z = bilinear(X.flatten(), Y.flatten(), x, y, z,extrapolate=False) # home grown approach from ResIPy module 
-                #favouring the home grown approach here becuase it doesnt throw warning
-                return X, Y, Z.reshape(X.shape)
-#            X, Y, Z = grid(xpos, ypos, ip)
-#            if ax is None:
-#                fig, ax = plt.subplots()
-#            cax = ax.contourf(X,Y,Z, vmin=vmin, vmax=vmax)
-            if vmin == None or vmax == None:
-                levels = None
-            elif vmax > vmin:
-                levels = np.linspace(vmin, vmax)
-            else:
-                levels = None
+        else:
+            if vmin is None:
+                vmin = np.min(ip)
+            if vmax is None:
+                vmax = np.max(ip)
+            levels = np.linspace(vmin, vmax, 7)
             cax = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)

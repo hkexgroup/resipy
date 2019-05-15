@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '1.1.5' # ResIPy version (semantic versionning in use) 
+ResIPy_version = '1.1.6' # ResIPy version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -726,6 +726,12 @@ class R2(object): # R2 master class instanciated by the GUI
         kwargs: -
             Keyword arguments to be passed to mesh generation schemes 
         """
+        self.meshParams = {'typ':typ, 'buried':buried, 'surface':surface,
+                           'cl_factor':cl_factor, 'cl':cl, 'dump':dump,
+                           'res0': res0, 'show_output':show_output, 'doi':doi}
+        if kwargs is not None:
+            self.meshParams.update(kwargs)
+        
         if doi is None:# compute depth of investigation if it is not given
             self.computeDOI()
         else:
@@ -2575,6 +2581,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fparam['job_type'] = 0
         fparam['num_regions'] = 0
         fparam['res0File'] = 'resistivity.dat' # just starting resistivity
+        
         write2in(fparam, fwdDir, typ=self.typ)
         dump('done\n')
         
@@ -2644,14 +2651,112 @@ class R2(object): # R2 master class instanciated by the GUI
         self.pseudo()
         dump('Forward modelling done.')
 
+
+    def createModellingMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
+                   cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
+        """Create an homogeneous mesh to compute modelling error.
+        """
+        if typ == 'quad':
+            elec = self.elec.copy()
+            elec_x = self.elec[:,0]
+            elec_z = np.zeros(len(elec_x))# THIS IS KEY HERE we need a flat surface
+            #add buried electrodes? 
+            elec_type = np.repeat('electrode',len(elec_x))
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
+                elec_type[buried]='buried'
+                
+            elec_type = elec_type.tolist()
+            surface_x = surface[:,0] if surface is not None else None
+            surface_z = surface[:,1] if surface is not None else None
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,
+                                                         surface_x=surface_x, surface_z=surface_z,
+                                                         **kwargs)   #generate quad mesh   
+            
+            if 'regions' in self.param: # allow to create a new mesh then rerun inversion
+                del self.param['regions']
+            if 'num_regions' in self.param:
+                del self.param['num_regions']
+        elif typ == 'trian' or typ == 'tetra':
+            elec = self.elec.copy()
+            geom_input = {}
+            elec_x = self.elec[:,0]
+            elec_y = self.elec[:,1]
+            elec_z = np.zeros(len(elec_y)) # THIS IS KEY HERE we need a flat surface
+            elec_type = np.repeat('electrode',len(elec_x))
+            if (buried is not None
+                    and elec.shape[0] == len(buried)
+                    and np.sum(buried) != 0):
+                elec_type[buried]='buried'
+            
+            if surface is not None:
+                if surface.shape[1] == 2:
+                    geom_input['surface'] = [surface[:,0], surface[:,1]]
+                else:
+                    geom_input['surface'] = [surface[:,0], surface[:,2]]
+            
+            whole_space = False
+            if buried is not None:
+                if np.sum(buried) == len(buried) and surface is None:
+                    # all electrodes buried and no surface given
+                    whole_space = True
+
+            elec_type = elec_type.tolist()
+
+            #print('elec_type', elec_type)
+            ui_dir = os.getcwd()#current working directory (usually the one the ui is running in)
+            os.chdir(self.dirname)#change to working directory so that mesh files written in working directory 
+#            try:
+            if typ == 'trian':
+                mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             cl_factor=cl_factor,
+                             cl=cl, dump=dump, show_output=show_output,
+                             doi=self.doi-np.max(elec_z), whole_space=whole_space,
+                             **kwargs)
+            if typ == 'tetra': # TODO add buried
+                if cl == -1:
+                    dist = cdist(self.elec[:,:2])/2 # half the minimal electrode distance
+                    cl = np.min(dist[dist != 0])
+                elec_type = None # for now
+                mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
+                             path=os.path.join(self.apiPath, 'exe'),
+                             surface_refinement=surface,
+                             cl_factor=cl_factor,
+                             cl=cl, dump=dump, show_output=show_output,
+                             doi=self.doi-np.max(elec_z), whole_space=whole_space,
+                             **kwargs)
+            os.chdir(ui_dir)#change back to original directory            
+            e_nodes = mesh.e_nodes + 1 # +1 because of indexing staring at 0 in python
+            self.modErrMeshNE = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+            
+        self.modErrMesh = mesh
+        
+        self.param['num_regions'] = 0
+        
+        numel = self.mesh.num_elms
+        self.modErrMesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
+        self.modErrMesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
+        self.modErrMesh.add_attribute(np.ones(numel, dtype=int), 'zones')
+        self.modErrMesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
+        self.modErrMesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
+        
         
         
     def computeModelError(self):
         """ Compute modelling error due to the mesh.
+        We NEED to have a flat surface (no topography).
         """
-        if self.mesh is None:
-            raise ValueError('You fist need to generate a mesh to compute the modelling error.')
-            return
+        node_elec = None # we need this as the node_elec with topo and without might be different
+        if all(self.elec[:,1] == 0) is False: # so we have topography
+            print('A new mesh will be created as the surface is not flat.')
+            self.createModellingMesh(**self.meshParams)
+            node_elec = self.modErrMeshNE
+            mesh = self.modErrMesh
+        else:
+            mesh = self.mesh            
+            
         fwdDir = os.path.join(self.dirname, 'err')
         if os.path.exists(fwdDir):
             shutil.rmtree(fwdDir)
@@ -2660,7 +2765,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # write the resistivity.dat and fparam
         fparam = self.param.copy()
         fparam['job_type'] = 0
-        centroids = np.array(self.mesh.elm_centre).T
+        centroids = np.array(mesh.elm_centre).T
         if self.param['mesh_type'] == 4:
             fparam['num_regions'] = 1
             maxElem = centroids.shape[0]
@@ -2674,12 +2779,20 @@ class R2(object): # R2 master class instanciated by the GUI
             resFile[:,-1] = 100
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                        fmt='%.3f')
-            if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
-                shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
-                            os.path.join(fwdDir, 'mesh.dat'))
-            if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
-                shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
-                            os.path.join(fwdDir, 'mesh3d.dat'))
+            
+#            if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
+#                shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
+#                            os.path.join(fwdDir, 'mesh.dat'))
+#            if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
+#                shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
+#                            os.path.join(fwdDir, 'mesh3d.dat'))
+            name = 'mesh.dat'
+            if self.typ == 'R3t' or self.typ == 'cR3t':
+                name = 'mesh3d.dat'
+            file_path = os.path.join(fwdDir, name)
+            mesh.write_dat(file_path)
+            if node_elec is not None: # then we need to overwrite it
+                fparam['node_elec'] = node_elec
             fparam['num_regions'] = 0
             fparam['res0File'] = 'resistivity.dat'
         write2in(fparam, fwdDir, typ=self.typ)
@@ -2732,25 +2845,26 @@ class R2(object): # R2 master class instanciated by the GUI
         for f in files:
             if (f[-8:] == '_res.dat') & ((len(f) == 16) or (len(f) == 12)):
                 fs.append(f)
+            
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
-            if self.param['mesh_type'] == 10:
-                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
-                # TODO change that to full meshTools
-                
-            else:
-                x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
-                if x.shape[0] > 0:
-                    triang = tri.Triangulation(x[:,0],x[:,1])
-                    cax = ax.tricontourf(triang, x[:,3], extend='both')
-                    # TODO might want to crop surface here as well
-                    fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
-                    ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
-                    ax.set_aspect('equal')
-                    ax.set_xlabel('Distance [m]')
-                    ax.set_ylabel('Elevation [m]')
-                    if iplot is True:
-                        fig.show()
+#            if self.param['mesh_type'] == 10:
+#                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
+#                # TODO change that to full meshTools
+#                
+#            else:
+            x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
+            if x.shape[0] > 0:
+                triang = tri.Triangulation(x[:,0],x[:,1])
+                cax = ax.tricontourf(triang, x[:,3], extend='both')
+                # TODO might want to crop surface here as well
+                fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
+                ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
+                ax.set_aspect('equal')
+                ax.set_xlabel('Distance [m]')
+                ax.set_ylabel('Elevation [m]')
+                if iplot is True:
+                    fig.show()
 
     
     def saveInvPlots(self, outputdir=None, **kwargs):
@@ -2764,23 +2878,25 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if outputdir is None:
             outputdir = self.dirname
+        print(outputdir)
         if len(self.meshResults) == 0:
             self.getResults()
-        else:
-            for i in range(len(self.meshResults)):
-                kwargs2 = kwargs.copy()
-                fig, ax = plt.subplots()
-                if 'ylim' not in kwargs2:
-                    ylim = [self.doi, np.max(self.elec[:,2])]
-                    kwargs2 = dict(kwargs2, ylim=ylim)
-                if 'color_map' not in kwargs2:
-                    kwargs2 = dict(kwargs2, color_map='viridis')
-                if 'attr' in kwargs2:
-                    if kwargs2['attr'] not in list(self.meshResults[i].attr_cache.keys()):
-                        kwargs2['attr'] = 'Resistivity(log10)' 
-                self.meshResults[i].show(ax=ax, **kwargs2)
-                fname = self.surveys[i].name
-                fig.savefig(os.path.join(outputdir, fname + '.png'))
+        for i in range(len(self.meshResults)):
+#                kwargs2 = kwargs.copy()
+#                fig, ax = plt.subplots()
+#                if 'ylim' not in kwargs2:
+#                    ylim = [self.doi, np.max(self.elec[:,2])]
+#                    kwargs2 = dict(kwargs2, ylim=ylim)
+#                if 'color_map' not in kwargs2:
+#                    kwargs2 = dict(kwargs2, color_map='viridis')
+#                if 'attr' in kwargs2:
+#                    if kwargs2['attr'] not in list(self.meshResults[i].attr_cache.keys()):
+#                        kwargs2['attr'] = 'Resistivity(log10)' 
+#                self.meshResults[i].show(ax=ax, **kwargs2)
+            fig, ax = plt.subplots()
+            self.showResults(index=i, ax=ax, **kwargs)
+            fname = self.surveys[i].name
+            fig.savefig(os.path.join(outputdir, fname + '.png'))
     
     
     def getInvError(self):
@@ -3049,29 +3165,24 @@ class R2(object): # R2 master class instanciated by the GUI
             print('Had a problem computing differences for %i attributes'%problem)
                 
 
-    def saveVtks(self,dirname,prefix='ResIPyoutput'):
-        """Save vtk files of inversion results to a specified directory. Format
-        for file names will be 'prefix'xxx.vtk. A python script will also be saved
-        to the relevant directory 
+    def saveVtks(self, dirname=None):
+        """Save vtk files of inversion results to a specified directory. 
 
         Parameters
         ------------
         dirname: str
-            Direcotry in which results will be saved
-        prefix: str, optional
-            Characters appended to the front of each file name, ie by default
-            files will be named "ResIPyoutput"+"xxx.vtk", where x is the survey
-            number. For timelapse surveys "...001.vtk" will be the baseline 
-            survey.
-        """   
+            Directory in which results will be saved. Default is the working directory.
+        """  
+        if dirname is None:
+            dirname = self.dirname
         amtContent = startAnmt 
         if len(self.meshResults) == 0:
             self.getResults()
         count=0
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
-            file_path = os.path.join(dirname, prefix + '{:03d}.vtk'.format(count))
-            mesh.write_vtk(file_path,title=mesh.mesh_title)
+            file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
+            mesh.write_vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += endAnmt 
         fh = open(os.path.join(dirname,'amt_track.py'),'w')

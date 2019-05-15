@@ -24,6 +24,7 @@ k = R2()
 k.createSurvey('resipy/test/syscalFile.csv')
 #k.createModel()
 #k.invert()
+#k.saveInvPlots()
 #k.pseudoError()
 
 #%% testing the R2 class

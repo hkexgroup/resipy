@@ -301,6 +301,10 @@ class App(QMainWindow):
         self.table_widget = QWidget()
         layout = QVBoxLayout()
         tabs = QTabWidget()
+        
+        def clearError(arg):
+            infoDump('')
+        tabs.currentChanged.connect(clearError)
 
         # app icon
 #        self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
@@ -384,7 +388,7 @@ class App(QMainWindow):
             else:
                 phiConvFactor.setText('1.2')
             if self.ftype == 'ProtocolIP':
-                phiConvFactor.setText('-')
+                phiConvFactor.setText('')
                 phiConvFactor.setEnabled(False)
                 phiConvFactorlabel.setEnabled(False)
 
@@ -1509,7 +1513,7 @@ class App(QMainWindow):
                 if vals[0] > 0:
                     colIndex.append(vals)
                     newHeaders.append(['ip'])
-                    phiConvFactor.setText('-')
+                    phiConvFactor.setText('')
                     phiConvFactor.setEnabled(False)
                     phiConvFactorlabel.setEnabled(False)
                     self.inputPhaseFlag = True
@@ -1745,7 +1749,7 @@ class App(QMainWindow):
         recipErrorInputLineLayout = QHBoxLayout()
         recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
 
-        recipErrorInputLine = QLineEdit('-')
+        recipErrorInputLine = QLineEdit('')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
         recipErrorInputLineLayout.addWidget(recipErrorInputLine)
@@ -1883,7 +1887,8 @@ class App(QMainWindow):
         errFitType.addItem('Observed Errors')
         errFitType.addItem('Linear')
         errFitType.addItem('Power-law')
-        errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
+        if platform.system() == 'Linux':
+            errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
         errorLayout.addWidget(errFitType)
@@ -3789,7 +3794,7 @@ class App(QMainWindow):
         displayOptions.addWidget(vMinMaxApply)
         
         cmapComboLabel = QLabel('Colormap')
-        cmaps = ['viridis','plasma','seismic', 'winter','autumn','jet']
+        cmaps = ['viridis','plasma','seismic', 'winter','autumn','rainbow']
         def cmapComboFunc(index):
             self.displayParams['cmap'] = cmaps[index]
             replotSection()
@@ -3865,9 +3870,10 @@ class App(QMainWindow):
                     contour = self.displayParams['contour']
                     vmin = self.displayParams['vmin']
                     vmax = self.displayParams['vmax']
+                    cmap = self.displayParams['cmap']
                     self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
                                        contour=contour, sens=sens, attr=attr,
-                                       vmin=vmin, vmax=vmax)
+                                       vmin=vmin, vmax=vmax, color_map=cmap)
                 self.r2.saveVtks(fdir)
 
             infoDump('All graphs saved successfully in the working directory.')
