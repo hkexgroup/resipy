@@ -2225,7 +2225,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 except Exception as e:
                     print('failed', e)
             else:
-                break
+                pass
+                #break
         
         # compute conductivity in mS/m
         for mesh in self.meshResults:
