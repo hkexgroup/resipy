@@ -852,3 +852,145 @@ def stingParser(fname):
 
 #fname = '070708L5_trial1.stg'
 #stingParser(fname)
+
+def ericParser(file_path):
+    """
+    Reads *.ohm ASCII-files with information related to the profile, comment,
+    first station coordinate, date and time, version of data collection program
+    used, electrode take-out spaing and the protocol files used.
+    """
+    
+    fh = open(file_path,'r')#open file handle for reading
+    dump = fh.readlines()#cache file contents into a list
+    fh.close()#close file handle, free up resources
+
+    #first find the general information
+    idx_oi = 0
+    line = dump[idx_oi]
+    sur_name = line.strip() #name of survey
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    x_location = float(vals[0])#First station coordinate
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
+    eric_version = str(vals[2]) + str(': ') + str(vals[3])
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    a_spac = float(vals[0]) #electrode spacing
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    no_protocols = int(vals[0])#no. of protocol used
+    idx_proto_file = 1
+    #declaration of variables
+    proto_file = []
+    proto_org = []
+    array_type = []
+    c1 = np.array(())
+    c2 = np.array(())
+    p1 = np.array(())
+    p2 = np.array(())
+    pt = np.array(())
+    pa = np.array(())
+    var_coef = np.array(())
+    n_cycles = np.array(())
+    n_tot_cycles = np.array(())
+    total_x = np.array(())
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+
+    
+    while idx_proto_file <= no_protocols:
+        idx_oi += 1
+        line = dump[idx_oi]
+        vals = line.strip().split()
+        proto_file.append(str(vals[0]))
+        array_type.append(int(vals[1]))
+        #max_I_level.append(float(vals[2]))
+        #min_I_level.append(float(vals[3]))
+        #idx_prot_file += 1
+        n_cable = vals[0]
+        num_cable = int(n_cable[-4])
+        elec_in_cable = int(n_cable[-2:])
+        idx_oi += 1
+        line = dump[idx_oi]
+        proto_org.append(str(line))
+        idx_oi += 1
+        line = dump[idx_oi]
+        vals = line.strip().split()
+        num_meas = int(vals[0])
+        idx_oi += 3
+        for k in range(num_meas):
+            line = dump[idx_oi + k]
+            vals = line.strip().split()
+            c1 = np.append(c1, float(vals[0]))
+            c2 = np.append(c2, float(vals[1]))
+            p1 = np.append(p1, float(vals[2]))
+            p2 = np.append(p2, float(vals[3]))
+            pt = np.append(pt, float(vals[4]))
+            var_coef = np.append(var_coef, float(vals[5]))
+            n_cycles = np.append(n_cycles, int(vals[6]))
+            n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
+            data_dict['ip'].append(0)
+            
+        idx_proto_file += 1
+    #Calculate electrode x locations
+    half_dist = float((a_spac * ((num_cable * elec_in_cable) - 1))/2)
+    half_dist = half_dist - x_location
+    largo = len(c1)
+    h_dist = np.array(())
+    for k in range(largo):
+        h_dist = np.append(h_dist, half_dist)
+    
+    c1 = np.add(c1, h_dist)
+    c2 = np.add(c2, h_dist)
+    p1 = np.add(p1, h_dist)
+    p2 = np.add(p2, h_dist)
+    
+    total_x = np.append(total_x, c1)
+    total_x = np.append(total_x, c2)
+    total_x = np.append(total_x, p1)
+    total_x = np.append(total_x, p2)
+    ex_pos = np.unique(total_x)
+    
+    num_elec = len(ex_pos)
+    e_idx_c1 = []
+    e_idx_c2 = []
+    e_idx_p1 = []
+    e_idx_p2 = []
+    e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
+    e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
+    e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
+    e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
+    
+    if x_location == 0:
+        e_idx_c1 = np.add(e_idx_c1, 1)
+        e_idx_c2 = np.add(e_idx_c2, 1)
+        e_idx_p1 = np.add(e_idx_p1, 1)
+        e_idx_p2 = np.add(e_idx_p2, 1)
+    
+    data_dict['a'] = np.copy(e_idx_c1)
+    data_dict['b'] = np.copy(e_idx_c2)
+    data_dict['m'] = np.copy(e_idx_p1)
+    data_dict['n'] = np.copy(e_idx_p2)
+    data_dict['resist'] = np.copy(pt)
+            
+    AM = np.abs(c1-p1)
+    BM = np.abs(c2-p1)
+    AN = np.abs(c1-p2)
+    BN = np.abs(c2-p2)
+    K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN))#geometric factor
+    data_dict['Rho'] = pt*K
+    data_dict['dev'] = (var_coef * n_tot_cycles * pt)/100
+    #we dont have any topography at x coordinates
+    ey_pos=[0]*num_elec
+    ez_pos=[0]*num_elec  
+    elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+       
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    
+    return elec,df

@@ -20,7 +20,7 @@ from scipy.stats.kde import gaussian_kde
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
-                     stingParser)
+                     stingParser, ericParser)
 from resipy.DCA import DCA
 from resipy.interpolation import bilinear
 
@@ -61,7 +61,7 @@ class Survey(object):
         self.kFactor = 1
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting']# add parser types here! 
+                        'Sting', 'ABEM-Lund']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -85,6 +85,8 @@ class Survey(object):
                 elec, data = forwardProtocolDC(fname)
             elif ftype == 'Sting':
                 elec, data = stingParser(fname)
+            elif ftype == 'ABEM-Lund':
+                elec, data = ericParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)
@@ -248,6 +250,10 @@ class Survey(object):
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
                 self.protocolIPFlag = True
+            elif ftype == 'Sting':
+                elec, data = stingParser(fname)
+            elif ftype == 'ABEM-Lund':
+                elec, data = ericParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
