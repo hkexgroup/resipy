@@ -896,6 +896,7 @@ class App(QMainWindow):
                         heatFilter()
                     errHist()
                 plotManualFiltering()
+                infoDump(fnameRecip + ' imported successfully')
 
         buttonfr = QPushButton('If you have a reciprocal dataset upload it here')
         buttonfr.setAutoDefault(True)
