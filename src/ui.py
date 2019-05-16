@@ -3875,10 +3875,11 @@ class App(QMainWindow):
                                        contour=contour, sens=sens, attr=attr,
                                        vmin=vmin, vmax=vmax, color_map=cmap)
                 self.r2.saveVtks(fdir)
-
+            self.r2.saveData(fdir)
             infoDump('All graphs saved successfully in the working directory.')
 
-        btnSave = QPushButton('Save graphs')
+
+        btnSave = QPushButton('Save Data')
         btnSave.clicked.connect(btnSaveGraphs)
         btnSave.setToolTip('Save current graph to the working directory.')
         displayOptions.addWidget(btnSave)

@@ -3188,6 +3188,24 @@ class R2(object): # R2 master class instanciated by the GUI
         fh.write(amtContent)
         fh.close()
         
+        
+    def saveData(self, outputdir):
+        '''Save all data (_res.dat, .vtk, ...) from the working directory 
+        generated during inversion to the designated directory.
+        
+        Parameters
+        ----------
+        outputdir : str
+            Path to the directory to save the files.
+        '''
+        wd = os.path.join(outputdir, 'wd')
+        if os.path.exists(wd):
+            shutil.rmtree(wd)
+        shutil.copytree(self.dirname, wd)
+        
+        
+        
+        
     def showParam(self):
         """ Print parameters in `R2.param` dictionary.
         """
