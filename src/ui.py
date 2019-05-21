@@ -2747,6 +2747,14 @@ class App(QMainWindow):
         noiseEditIP.hide()
         noiseEditIP.setValidator(QDoubleValidator())
 
+        # save sequence button
+        def saveSeqBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir)
+            if fname != '':
+                self.r2.saveSequence(fname)
+        saveSeqBtn = QPushButton('Save Sequence')
+        saveSeqBtn.clicked.connect(saveSeqBtnFunc)
+
         # add a forward button
         def forwardBtnFunc():
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
@@ -2817,6 +2825,7 @@ class App(QMainWindow):
         noiseLayout.addWidget(noiseLabelIP)
         noiseLayout.addWidget(noiseEditIP)
         noiseLayout.addWidget(seqOutputLabel)
+        noiseLayout.addWidget(saveSeqBtn)
 
         forwardLayout.addWidget(seqLabel, 5)
         forwardLayout.addLayout(seqLayout, 35)

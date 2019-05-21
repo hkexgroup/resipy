@@ -2502,6 +2502,20 @@ class R2(object): # R2 master class instanciated by the GUI
         self.sequence = np.vstack(qs)
     
     
+    def saveSequence(self, fname=''):
+        '''Save sequence as .csv file.
+        
+        Parameters
+        ----------
+        fname : str, optional
+            Path where to save the sequence.
+        '''
+        if self.sequence is not None:
+            df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
+            df.to_csv(fname)
+        
+        
+    
     def importElec(self, fname=''):
         """ Import electrodes positions.
         
