@@ -2746,10 +2746,10 @@ class R2(object): # R2 master class instanciated by the GUI
             self.modErrMeshNE = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
             
         self.modErrMesh = mesh
-        
+
         self.param['num_regions'] = 0
         
-        numel = self.mesh.num_elms
+        numel = self.modErrMesh.num_elms
         self.modErrMesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
         self.modErrMesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
         self.modErrMesh.add_attribute(np.ones(numel, dtype=int), 'zones')
@@ -2762,14 +2762,23 @@ class R2(object): # R2 master class instanciated by the GUI
         """ Compute modelling error due to the mesh.
         We NEED to have a flat surface (no topography).
         """
+        #bug fix for overwriting attr_cache in mesh object
+        try:
+            attr_cache = self.mesh.attr_cache.copy() 
+            #for some reason the mesh.attr_cache is dynamically linked to the modelling mesh, and i cant figure out why 
+        except AttributeError:
+            print("No mesh already in place")
+            
         node_elec = None # we need this as the node_elec with topo and without might be different
-        if all(self.elec[:,1] == 0) is False: # so we have topography
+        if all(self.elec[:,2] == 0) is False: # so we have topography
             print('A new mesh will be created as the surface is not flat.')
             self.createModellingMesh(**self.meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh
+            fix_me = True
         else:
             mesh = self.mesh            
+            fix_me = False  
             
         fwdDir = os.path.join(self.dirname, 'err')
         if os.path.exists(fwdDir):
@@ -2836,6 +2845,10 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # eventually delete the directory to spare space
         shutil.rmtree(fwdDir)
+        
+        #apply hot fix to sort attr_cache inside mesh object 
+        if fix_me:
+            self.mesh.attr_cache = attr_cache.copy()
         
     
     def showIter(self, index=-2, ax=None):
