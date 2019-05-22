@@ -396,7 +396,6 @@ def primeParserTab(fname, espacing = 1):
 #electrodes, data = primeParserTab("../Data/PRIME/3001_CAN_2017-11-16_005119.tab")
 
 #%% parse input for res2inv (.dat file) - Jimmy B.
-#jamyd91@bgs.ac.uk
 def res2invInputParser(file_path):
     """
     Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
@@ -576,13 +575,14 @@ def res2invInputParser(file_path):
         x_dump.append(p1)
         x_dump.append(p2)
         x_dump.append(c2)
-        total_x = np.append(total_x,x_dump)
-        total_x = np.around(total_x, decimals = 1)
-        #convert the x electrode coordinates into indexes?
-        ex_pos = np.unique(total_x)
-        ex_pos = np.around(ex_pos, decimals = 1)
+        total_x = np.append(total_x, x_dump)
+        #total_x = np.around(total_x, decimals = 1)
         x_dump.clear()
-    
+        
+    #convert the x electrode coordinates into indexes?
+    ex_pos = np.unique(total_x)#;print(ex_pos)
+        
+    # now go through and colocate electrode numbers with x coordinates 
     for k in range(num_meas):
         line = dump[idx_oi + k]
         vals = line.strip().split()            
@@ -678,20 +678,16 @@ def res2invInputParser(file_path):
             Pa.append(float(vals[9]))
         if any([c1 == 0,c2 == 0,p1 == 0,p2 == 0]):
             start_0_flag = True
-        c1 = round(c1, 0)
-        p1 = round(p1, 0)
-        p2 = round(p2, 0)
-        c2 = round(c2, 0)
+
         x_dump.append(c1)
         x_dump.append(p1)
         x_dump.append(p2)
         x_dump.append(c2)
-    
+        #print(x_dump)
+
+        e_idx = np.array([(ex_pos == x_dump[i]).tolist().index(True) for i in range(4)])
         if start_0_flag:
-            e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
-            e_idx= np.add(e_idx, [1, 1, 1, 1])
-        else:
-            e_idx = [np.where(ex_pos == x_dump[i])[0][0] for i in range(4)]
+            e_idx += 1
     
         data_dict['a'].append(e_idx[0])
         data_dict['b'].append(e_idx[3])
@@ -733,26 +729,28 @@ def res2invInputParser(file_path):
     fmt_flag = True
         
     topo_flag_idx = idx_oi + num_meas
+    if isinstance(dump[topo_flag_idx],str):#hot fix
+        topo_flag_idx+=1
     
     if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
         #print("topography flag activated")
         topo_flag = True
         num_elec_topo =  int(dump[topo_flag_idx+1])
         ex_pos_topo=[0]*num_elec_topo
-        ey_pos_topo=[0]*num_elec_topo
-        ez_pos_topo=[0]*num_elec_topo # actaully we can't have a z coordinate for 2d data so these will remain as zero
+        #ey_pos_topo=[0]*num_elec_topo # actaully we can't have a y coordinate for 2d data so these will remain as zero
+        ez_pos_topo=[0]*num_elec_topo 
         ey_pos=[0]*num_elec
         ez_pos=[0]*num_elec
         for i in range(num_elec_topo):
             ex_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[0])
-            ey_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[1])
+            ez_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[1])
             
         for i in range(num_elec):
             for j in range(num_elec_topo):
                 if ex_pos[i] == ex_pos_topo[j]:
-                    ey_pos[i] = ey_pos_topo[j]
-        #print(ex_pos,ey_pos)
-        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+                    ez_pos[i] = ez_pos_topo[j]
+        #print(ex_pos,ez_pos)
+        elec = np.column_stack((ex_pos,ez_pos,ey_pos))
               
        
     #add some protection against a dodgey file 
@@ -763,7 +761,7 @@ def res2invInputParser(file_path):
     if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
         ey_pos=[0]*num_elec
         ez_pos=[0]*num_elec  
-        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+        elec = np.column_stack((ex_pos,ez_pos,ey_pos))
        
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser

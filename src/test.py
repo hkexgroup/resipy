@@ -40,8 +40,8 @@ k.importElec('./resipy/test/elecTopo.csv')
 k.createMesh(typ='trian',cl=0.1, cl_factor=5)
 k.showMesh()
 #k.linfit()
-#k.pwlfit()
-
+k.pwlfit()
+k.err = True
 #k.lmefit(iplot=True)
 k.computeModelError()
 

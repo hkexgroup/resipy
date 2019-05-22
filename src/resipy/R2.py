@@ -392,7 +392,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.surveys) == 1:
             self.elec = self.surveys[0].elec
             
-            # attribute method of Survey object to R2
+            # attribute method of Survey object to R2file://
 #            self.pseudoIP = self.surveys[0].pseudoIP
 #            self.pseudo = self.surveys[0].pseudo
             self.plotError = self.surveys[0].plotError
