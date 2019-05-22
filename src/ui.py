@@ -2542,7 +2542,8 @@ class App(QMainWindow):
                           'Take into account the specifications of your instrument to'
                           ' obtain realistic simulation results. You can copy-paste '
                           'your custom sequence as well. '
-                          '<b>Mouse over the sequence title for more help.</b>')
+                          'Forward modeling output files (including R2_forward.dat) are saved in <i>fwd</i> folder in the <i>working directory</i>.'
+                          '<b>Click on the sequence title for more help.</b>')
         seqLabel.setWordWrap(True)
 
         class SequenceTable(QTableWidget):
@@ -2747,6 +2748,15 @@ class App(QMainWindow):
         noiseEditIP.hide()
         noiseEditIP.setValidator(QDoubleValidator())
 
+        # save sequence button
+        def saveSeqBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir, 'Comma Separated Values (*.csv)')
+            if fname != '':
+                self.r2.saveSequence(fname)
+        saveSeqBtn = QPushButton('Save Sequence')
+        saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
+        saveSeqBtn.clicked.connect(saveSeqBtnFunc)
+
         # add a forward button
         def forwardBtnFunc():
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
@@ -2817,6 +2827,7 @@ class App(QMainWindow):
         noiseLayout.addWidget(noiseLabelIP)
         noiseLayout.addWidget(noiseEditIP)
         noiseLayout.addWidget(seqOutputLabel)
+        noiseLayout.addWidget(saveSeqBtn)
 
         forwardLayout.addWidget(seqLabel, 5)
         forwardLayout.addLayout(seqLayout, 35)
