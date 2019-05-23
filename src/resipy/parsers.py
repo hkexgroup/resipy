@@ -729,7 +729,9 @@ def res2invInputParser(file_path):
     fmt_flag = True
         
     topo_flag_idx = idx_oi + num_meas
-    if isinstance(dump[topo_flag_idx],str):#hot fix
+    try:
+        int(dump[topo_flag_idx])#hot fix
+    except ValueError:
         topo_flag_idx+=1
     
     if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
