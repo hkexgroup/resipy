@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy.Survey import Survey
 from resipy.R2 import R2
-plt.ioff()  # NEEDED to run on gitlab runner
 
 tstart = time.time()
 
