@@ -1896,7 +1896,19 @@ class App(QMainWindow):
             errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
-        errorLayout.addWidget(errFitType)
+        
+        def saveErrBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir)
+            if fname != '':
+                self.r2.saveErrorData(fname)
+        saveErrBtn = QPushButton('Save Error Data')
+        saveErrBtn.clicked.connect(saveErrBtnFunc)
+        saveErrBtn.setToolTip('Save error data (DC and IP) as .csv')
+        
+        errFitLayout = QHBoxLayout()
+        errFitLayout.addWidget(errFitType, 70)
+        errFitLayout.addWidget(saveErrBtn, 30)
+        errorLayout.addLayout(errFitLayout)
         
         errorPlotLayout = QVBoxLayout()
         mwFitError = MatplotlibWidget(navi=True, aspect='auto')

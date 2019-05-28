@@ -2546,6 +2546,26 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
+    
+    def saveErrorData(self, fname):
+        '''Save quadruople, resistance, phase and their respective reciprocal
+        errors as .csv file.
+        
+        Parameters
+        ----------
+        fname : str
+            Path where to save the file.
+        '''
+        cols = np.array(['a','b','m','n','resist','resError','phase','phaseError'])
+        if self.iTimeLapse is True:
+            df = self.bigSurvey.df
+        else:
+            df = self.surveys[0].df
+        ie = [c in df.columns for c in cols]
+        df[cols[ie]].to_csv(fname, index=False)
+        
+        
+        
     def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
