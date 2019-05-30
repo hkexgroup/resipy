@@ -2638,7 +2638,7 @@ class R2(object): # R2 master class instanciated by the GUI
         seq = self.sequence
         
         # let's check if IP that we have a positive geometric factor
-        if self.typ[0] == 'c': # NOTE this does'nt work for borehole
+        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
             elecpos = self.elec[:,0].copy() # and works only for 2D
             array = seq.copy()
             apos = elecpos[array[:,0]-1]
@@ -2691,6 +2691,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise)
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
+        
+        # recompute doi
+        self.computeDOI()
+        self.zlim[0] = self.doi
         
         if iplot is True:
             self.pseudo()
