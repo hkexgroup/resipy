@@ -885,7 +885,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         self.regid = 1 # 1 is the background (no 0 region)
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
-        self.resist0 = np.ones(len(self.regions))*100
+        self.resist0 = np.ones(len(self.regions))*res0
         
         # define zlim
         if surface is not None:
@@ -2305,7 +2305,8 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.set_xlabel('Distance [m]')
 
     
-    def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False, ax=None):
+    def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False,
+                  ax=None, iplot=True):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -2326,12 +2327,15 @@ class R2(object): # R2 master class instanciated by the GUI
             region.
         ax : matplotlib.axes.Axes
             If not `None`, the region will be plotted against this axes.
+        iplot : bool, optional
+            If `True` (default), the updated mesh with the region will be plotted.
         """
         if ax is None:
             fig, ax = plt.subplots()
-        self.mesh.show(ax=ax)
+        if iplot is True:
+            self.mesh.show(ax=ax)
         selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
-                                typ='poly') # LIMITED FOR 2D case
+                                typ='poly', iplot=iplot) # LIMITED FOR 2D case
         selector.setVertices(xy)
         selector.getPointsInside()
         idx = selector.iselect
