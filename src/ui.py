@@ -3604,8 +3604,8 @@ class App(QMainWindow):
                     # this could failed if we invert homogeneous model -> vtk
                     #file size = 0 -> R2.getResults() -> vtk_import failed
                     plotSection()
-                    if self.iForward is True:
-                        sectionId.addItem('Initial Model')
+#                    if self.iForward is True:
+#                        sectionId.addItem('Initial Model')
                     for mesh in self.r2.meshResults:
                         sectionId.addItem(mesh.mesh_title)
                     outStackLayout.setCurrentIndex(0)

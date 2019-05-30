@@ -13,6 +13,7 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
+from matplotlib.path import Path
 from multiprocessing import Pool, Process, Queue
 from threading import Thread
 
@@ -2206,6 +2207,7 @@ class R2(object): # R2 master class instanciated by the GUI
             initMesh.elec_y = self.elec[:,1]
             initMesh.elec_z = self.elec[:,2]
             initMesh.surface = self.mesh.surface
+            initMesh.mesh_title = 'Initial Model'
             self.meshResults.append(initMesh)
             
         for i in range(len(self.surveys)):
@@ -2306,7 +2308,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False,
-                  ax=None, iplot=True):
+                  ax=None, iplot=False):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -2328,17 +2330,18 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib.axes.Axes
             If not `None`, the region will be plotted against this axes.
         iplot : bool, optional
-            If `True` (default), the updated mesh with the region will be plotted.
+            If `True` , the updated mesh with the region will be plotted.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-        if iplot is True:
-            self.mesh.show(ax=ax)
-        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
-                                typ='poly', iplot=iplot) # LIMITED FOR 2D case
-        selector.setVertices(xy)
-        selector.getPointsInside()
-        idx = selector.iselect
+#        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
+#                                typ='poly', iplot=iplot) # LIMITED FOR 2D case
+#        selector.setVertices(xy)
+#        selector.getPointsInside()
+#        idx = selector.iselect
+        
+        centroids = np.array(self.mesh.elm_centre).T[:,[0,2]]
+        path = Path(np.array(xy))
+        idx = path.contains_points(centroids)
+        
         self.regid = self.regid + 1
         self.regions[idx] = self.regid
         self.mesh.cell_attributes = list(self.regions) # overwriting regions
@@ -2361,6 +2364,9 @@ class R2(object): # R2 master class instanciated by the GUI
             paramFixed[idx] = True
             self.mesh.attr_cache['fixed'] = paramFixed
             print('sum = ', np.sum(paramFixed == True))
+
+        if iplot is True:
+            self.showMesh()
         
         
     def resetRegions(self):
@@ -2686,7 +2692,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
         
-        self.pseudo()
+        if iplot is True:
+            self.pseudo()
         dump('Forward modelling done.')
 
 
@@ -3138,8 +3145,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = self.surveys[i].elec.copy()
                 x = elec[:,0]
                 y = elec[:,1]
-                self.surveys[i].elec[:,0]=y
-                self.surveys[i].elec[:,1]=x
+                self.surveys[i].elec[:,0] = y
+                self.surveys[i].elec[:,1] = x
         
         for i in range(len(self.surveys)):
             self.surveys[i].elec2distance() # go through each survey and compute electrode
