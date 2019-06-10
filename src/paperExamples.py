@@ -213,3 +213,185 @@ fig.savefig(figdir + 'forwardDipDipInverted.png')
 fig.show()
 
 
+
+#%% general figure miniatures
+figsize=(3, 1.5)
+
+k = R2()
+k.createSurvey(k.dirname + '/../test/syscalFile.csv')
+array = k.surveys[0].df[['a','b','m','n']].values
+ie = (array <= 12).all(-1)
+#k.surveys[0].df = k.surveys[0].df[ie].reset_index(drop=True)
+#k.surveys[0].df.loc[[4], 'resist'] = 100
+
+k.removeUnpaired()
+
+
+fig, ax = plt.subplots(figsize=figsize)
+k.pseudo(ax=ax)#, vmin=45, vmax=60)
+ax.set_title('Field Data')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-pseudo.png')
+fig.show()
+
+fig, ax = plt.subplots(figsize=figsize)
+k.surveys[0].manualFiltering(ax=ax)
+ax.set_title('(a) Filtering')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.get_axes()[1].set_ylabel(r'$\rho_a$ [$\Omega$.m]')
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-manualFiltering.png')
+fig.show()
+
+
+fig, ax = plt.subplots(figsize=figsize)
+k.pwlfit(ax=ax)
+ax.set_title('(b) Error Modelling')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+#ax.set_xlabel('')
+#ax.set_ylabel('')
+ax.get_legend().remove()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-errorModelling.png')
+fig.show()
+
+k.filterElec([4])
+fig, ax = plt.subplots(figsize=figsize)
+k.pseudo(ax=ax)
+ax.set_title('(c) Field Data')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-pseudoFinal.png')
+fig.show()
+
+
+k.createMesh()
+
+fig, ax = plt.subplots(figsize=figsize)
+k.showMesh(ax=ax)
+ax.set_xlim([0, 2.5])
+ax.set_ylim([-1, 0])
+ax.set_title('(g) Quad Mesh')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-meshQuad.png')
+fig.show()
+
+k.createMesh('trian')
+
+
+fig, ax = plt.subplots(figsize=figsize)
+k.showMesh(ax=ax)
+ax.set_xlim([0, 2.5])
+ax.set_ylim([-1, 0])
+ax.set_title('(g) Tri Mesh')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-meshTrian.png')
+fig.show()
+
+k.invert()
+
+
+fig, ax = plt.subplots(figsize=figsize)
+k.showResults(ax=ax, sens=False, contour=True)
+#ax.set_xlim([0, 1])
+#ax.set_ylim([-0.7, 0])
+ax.set_title('(h) Inverted Section')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'minitature-invSection.png')
+fig.show()
+
+
+fig, ax = plt.subplots(figsize=figsize)
+k.pseudoError(ax=ax)
+ax.set_title('(i) Inversion Errors')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-pseudoError.png')
+fig.show()
+
+
+k.createMesh(typ='quad')
+target = np.array([[0,-0.2],[0,-0.4],[10,-0.4],[10,-0.2]])
+k.addRegion(target, 100, -3)
+target = np.array([[1,-0.3],[1,-0.7],[2,-0.7],[2,-0.3]])
+k.addRegion(target, 10, -3)
+
+fig, ax = plt.subplots(figsize=figsize)
+k.showMesh(ax=ax)
+ax.set_title('(d) Forward Model')
+ax.set_xlim([0, 2.5])
+ax.set_ylim([-1, 0])
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-forwardModel.png')
+fig.show()
+
+
+k.createSequence([('dpdp1', 1, 8)])
+
+
+fig, ax = plt.subplots(figsize=figsize)
+ax.table(cellText=k.sequence[:5,:].astype(str).tolist(),
+         colLabels=['A','B','M','N'],
+         loc=0.5)
+ax.set_title('(e) Sequence Design')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-forwardSequence.png')
+fig.show()
+
+
+k.forward(iplot=False, noise=0.05)
+
+fig, ax = plt.subplots(figsize=figsize)
+k.pseudo(ax=ax)
+ax.set_title('(f) Forward Pseudo')
+ax.set_xticks([],[])
+ax.set_yticks([],[])
+ax.set_xlabel('')
+ax.set_ylabel('')
+ax.set_axis_off()
+fig.tight_layout()
+fig.savefig(figdir + 'miniature-forwardPseudo.png')
+fig.show()
