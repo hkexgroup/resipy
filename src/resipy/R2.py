@@ -13,6 +13,7 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
+from matplotlib.path import Path
 from multiprocessing import Pool, Process, Queue
 from threading import Thread
 
@@ -885,7 +886,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         self.regid = 1 # 1 is the background (no 0 region)
         self.regions = np.ones(len(self.mesh.elm_centre[0]))
-        self.resist0 = np.ones(len(self.regions))*100
+        self.resist0 = np.ones(len(self.regions))*res0
         
         # define zlim
         if surface is not None:
@@ -2206,6 +2207,7 @@ class R2(object): # R2 master class instanciated by the GUI
             initMesh.elec_y = self.elec[:,1]
             initMesh.elec_z = self.elec[:,2]
             initMesh.surface = self.mesh.surface
+            initMesh.mesh_title = 'Initial Model'
             self.meshResults.append(initMesh)
             
         for i in range(len(self.surveys)):
@@ -2305,7 +2307,8 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.set_xlabel('Distance [m]')
 
     
-    def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False, ax=None):
+    def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False,
+                  ax=None, iplot=False):
         """ Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
@@ -2326,15 +2329,19 @@ class R2(object): # R2 master class instanciated by the GUI
             region.
         ax : matplotlib.axes.Axes
             If not `None`, the region will be plotted against this axes.
+        iplot : bool, optional
+            If `True` , the updated mesh with the region will be plotted.
         """
-        if ax is None:
-            fig, ax = plt.subplots()
-        self.mesh.show(ax=ax)
-        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
-                                typ='poly') # LIMITED FOR 2D case
-        selector.setVertices(xy)
-        selector.getPointsInside()
-        idx = selector.iselect
+#        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
+#                                typ='poly', iplot=iplot) # LIMITED FOR 2D case
+#        selector.setVertices(xy)
+#        selector.getPointsInside()
+#        idx = selector.iselect
+        
+        centroids = np.array(self.mesh.elm_centre).T[:,[0,2]]
+        path = Path(np.array(xy))
+        idx = path.contains_points(centroids)
+        
         self.regid = self.regid + 1
         self.regions[idx] = self.regid
         self.mesh.cell_attributes = list(self.regions) # overwriting regions
@@ -2357,6 +2364,9 @@ class R2(object): # R2 master class instanciated by the GUI
             paramFixed[idx] = True
             self.mesh.attr_cache['fixed'] = paramFixed
             print('sum = ', np.sum(paramFixed == True))
+
+        if iplot is True:
+            self.showMesh()
         
         
     def resetRegions(self):
@@ -2546,6 +2556,26 @@ class R2(object): # R2 master class instanciated by the GUI
             self.sequence = seq
     
     
+    
+    def saveErrorData(self, fname):
+        '''Save quadruople, resistance, phase and their respective reciprocal
+        errors as .csv file.
+        
+        Parameters
+        ----------
+        fname : str
+            Path where to save the file.
+        '''
+        cols = np.array(['a','b','m','n','resist','resError','phase','phaseError'])
+        if self.iTimeLapse is True:
+            df = self.bigSurvey.df
+        else:
+            df = self.surveys[0].df
+        ie = [c in df.columns for c in cols]
+        df[cols[ie]].to_csv(fname, index=False)
+        
+        
+        
     def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
@@ -2608,7 +2638,7 @@ class R2(object): # R2 master class instanciated by the GUI
         seq = self.sequence
         
         # let's check if IP that we have a positive geometric factor
-        if self.typ[0] == 'c': # NOTE this does'nt work for borehole
+        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
             elecpos = self.elec[:,0].copy() # and works only for 2D
             array = seq.copy()
             apos = elecpos[array[:,0]-1]
@@ -2662,7 +2692,12 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
         
-        self.pseudo()
+        # recompute doi
+        self.computeDOI()
+        self.zlim[0] = self.doi
+        
+        if iplot is True:
+            self.pseudo()
         dump('Forward modelling done.')
 
 
@@ -3107,8 +3142,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = self.surveys[i].elec.copy()
                 x = elec[:,0]
                 y = elec[:,1]
-                self.surveys[i].elec[:,0]=y
-                self.surveys[i].elec[:,1]=x
+                self.surveys[i].elec[:,0] = y
+                self.surveys[i].elec[:,1] = x
         
         for i in range(len(self.surveys)):
             self.surveys[i].elec2distance() # go through each survey and compute electrode

@@ -1896,7 +1896,19 @@ class App(QMainWindow):
             errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
         errFitType.currentIndexChanged.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
-        errorLayout.addWidget(errFitType)
+        
+        def saveErrBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir)
+            if fname != '':
+                self.r2.saveErrorData(fname)
+        saveErrBtn = QPushButton('Save Error Data')
+        saveErrBtn.clicked.connect(saveErrBtnFunc)
+        saveErrBtn.setToolTip('Save error data (DC and IP) as .csv')
+        
+        errFitLayout = QHBoxLayout()
+        errFitLayout.addWidget(errFitType, 70)
+        errFitLayout.addWidget(saveErrBtn, 30)
+        errorLayout.addLayout(errFitLayout)
         
         errorPlotLayout = QVBoxLayout()
         mwFitError = MatplotlibWidget(navi=True, aspect='auto')
@@ -3592,8 +3604,8 @@ class App(QMainWindow):
                     # this could failed if we invert homogeneous model -> vtk
                     #file size = 0 -> R2.getResults() -> vtk_import failed
                     plotSection()
-                    if self.iForward is True:
-                        sectionId.addItem('Initial Model')
+#                    if self.iForward is True:
+#                        sectionId.addItem('Initial Model')
                     for mesh in self.r2.meshResults:
                         sectionId.addItem(mesh.mesh_title)
                     outStackLayout.setCurrentIndex(0)
