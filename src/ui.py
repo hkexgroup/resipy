@@ -2359,6 +2359,12 @@ class App(QMainWindow):
         openMeshParaview.clicked.connect(openMeshParaviewFunc)
 
         def importCustomMeshFunc():
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
             fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
@@ -2369,6 +2375,28 @@ class App(QMainWindow):
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn = QPushButton('Import Custom Mesh')
         importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
+
+
+        importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
+        importCustomMeshLabel2.setWordWrap(True)
+        def importCustomMeshFunc2():
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
+            fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir)
+            if fname != '':
+                try:
+                    self.r2.importMesh(fname)
+                    mwMesh.plot(self.r2.showMesh, threed=False)
+                    meshOutputStack.setCurrentIndex(1)
+                except Exception as e:
+                    errorDump('Error importing mesh' + str(e))
+        importCustomMeshBtn2 = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn2.clicked.connect(importCustomMeshFunc2)
+        importCustomMeshBtn2.setToolTip('Import .msh or .vtk file. The electrodes will be snapped to the closest node.')
 
         # layout
         meshOptionQuadLayout = QHBoxLayout()
@@ -2384,6 +2412,10 @@ class App(QMainWindow):
         meshOptionTrianLayout.addWidget(clFactorLabel)
 #        meshOptionTrianLayout.addWidget(clFactorEdit)
         meshOptionTrianLayout.addWidget(clFactorSld)
+        
+        importCustomLayout = QVBoxLayout()
+        importCustomLayout.addWidget(importCustomMeshLabel2)
+        importCustomLayout.addWidget(importCustomMeshBtn2)
 
         meshOptionTetraLayout = QHBoxLayout()
         meshOptionTetraLayout.addWidget(cl3Label)
@@ -2392,6 +2424,7 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
         meshOptionTetraLayout.addWidget(openMeshParaview)
         meshOptionTetraLayout.addWidget(importCustomMeshBtn)
+        
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
         meshTrianLayout = QVBoxLayout()
@@ -2413,6 +2446,11 @@ class App(QMainWindow):
         meshTrianGroup.setLayout(meshTrianLayout)
         meshChoiceLayout.addWidget(meshTrianGroup)
 
+        meshCustomGroup = QGroupBox()
+        meshCustomGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        meshCustomGroup.setLayout(importCustomLayout)
+        meshChoiceLayout.addWidget(meshCustomGroup, 10)
+        
         meshTetraLayout.addLayout(meshOptionTetraLayout)
         meshTetraLayout.addWidget(meshTetra)
         meshTetraGroup.setLayout(meshTetraLayout)
