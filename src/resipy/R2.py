@@ -2837,13 +2837,6 @@ class R2(object): # R2 master class instanciated by the GUI
             resFile[:,-1] = 100
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                        fmt='%.3f')
-            
-#            if os.path.exists(os.path.join(self.dirname, 'mesh.dat')) is True:
-#                shutil.copy(os.path.join(self.dirname, 'mesh.dat'),
-#                            os.path.join(fwdDir, 'mesh.dat'))
-#            if os.path.exists(os.path.join(self.dirname, 'mesh3d.dat')) is True:
-#                shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
-#                            os.path.join(fwdDir, 'mesh3d.dat'))
             name = 'mesh.dat'
             if self.typ == 'R3t' or self.typ == 'cR3t':
                 name = 'mesh3d.dat'
