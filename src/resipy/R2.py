@@ -338,6 +338,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.elec = initElec
                 for i in range(num_surveys):
                     self.surveys[i].elec = elecList[i] # set survey electrodes to each electrode coordinate
+        if len(self.surveys) > 0:
+            self.computeDOI()
     
         
     def setBorehole(self, val=False):

@@ -2389,7 +2389,7 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
-                    self.r2.importMesh(fname)
+                    self.r2.importMesh(fname, mesh_type='trian')
                     mwMesh.plot(self.r2.showMesh, threed=False)
                     meshOutputStack.setCurrentIndex(1)
                 except Exception as e:
