@@ -2390,7 +2390,7 @@ class App(QMainWindow):
             if fname != '':
                 try:
                     self.r2.importMesh(fname, mesh_type='trian')
-                    mwMesh.plot(self.r2.showMesh, threed=False)
+                    replotMesh()
                     meshOutputStack.setCurrentIndex(1)
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
