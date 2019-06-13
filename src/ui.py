@@ -2449,7 +2449,7 @@ class App(QMainWindow):
         meshCustomGroup = QGroupBox()
         meshCustomGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         meshCustomGroup.setLayout(importCustomLayout)
-        meshChoiceLayout.addWidget(meshCustomGroup, 10)
+        meshChoiceLayout.addWidget(meshCustomGroup)
         
         meshTetraLayout.addLayout(meshOptionTetraLayout)
         meshTetraLayout.addWidget(meshTetra)
