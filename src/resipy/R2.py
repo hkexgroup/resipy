@@ -957,6 +957,9 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['mesh_type'] = 3
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
         
+        # checking
+        if len(np.unique(e_nodes)) < len(e_nodes):
+            raise ValueError('Some electrodes are positionned on the same nodes !')
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
