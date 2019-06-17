@@ -2871,7 +2871,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
         
         # get error model
-        x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)
+        if self.typ[-2] == '3':
+            x = np.genfromtxt(os.path.join(fwdDir, self.typ + '.fwd'), skip_header=0)
+        else:
+            x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)
         modErr = np.abs(100-x[:,-1])/100
         for s in self.surveys:
             s.df['modErr'] = modErr

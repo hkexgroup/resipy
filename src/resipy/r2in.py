@@ -280,10 +280,9 @@ def write3Din(param, dirname, typ='R3t'):
             content = content + param['res0File'] + '\n\n'
         else:
             content = content + '{:f}\n\n'.format(param['resis']) # replace by default rho
-
-        content = content + '{}\t << data_type\n'.format(param['data_type'])
     
         if param['job_type'] == 1:
+            content = content + '{}\t << data_type\n'.format(param['data_type'])
             content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
         
             # type of inversion

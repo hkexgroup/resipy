@@ -304,6 +304,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
 #%% 3D testing importing a mesh
+from resipy.R2 import R2
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
 t0 = time.time()
@@ -312,6 +313,7 @@ k.createSurvey('resipy/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('resipy/test/electrodes3D.csv',delimiter=',')
 k.setElec(elec)
 k.importMesh('resipy/test/mesh3D.vtk')
+k.computeModelError()
 #k.write2in()
 #k.param = param
 k.invert()
