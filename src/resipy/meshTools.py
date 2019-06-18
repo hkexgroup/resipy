@@ -2504,9 +2504,9 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         raise NameError("'%s' is an unrecognised interpretation method"%interp_method)
             
     if surface_refinement is not None:
-        surf_x = surface_refinement[0,:]
-        surf_y = surface_refinement[1,:]
-        surf_z = surface_refinement[2,:]
+        surf_x = surface_refinement[:,0]
+        surf_y = surface_refinement[:,1]
+        surf_z = surface_refinement[:,2]
     else:
         surf_x = []
         surf_y = []
