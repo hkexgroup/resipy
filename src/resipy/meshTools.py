@@ -455,7 +455,7 @@ class Mesh:
             if vmax is None:
                 vmax = np.nanmax(zc)
             if vmax > vmin:
-                levels = np.linspace(vmin, vmax, 14) # to have 2 contours between two cbar values!
+                levels = np.linspace(vmin, vmax, 13) # to have 2 contours between two cbar values!
             else:
                 levels = None
             
@@ -490,7 +490,7 @@ class Mesh:
                 z = interp.nearest(x, y, xc, yc, zc)
                 triang = tri.Triangulation(x, y, connection)
                 
-                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both')
+                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
             
             else: # fallback mode with tricontourf and cropSurface() (topo based on centroids) 
                 triang = tri.Triangulation(xc, yc) # build grid based on centroids
@@ -521,7 +521,7 @@ class Mesh:
                 except Exception as e:
                     print('Error in Mesh.show for contouring: ', e)
                 
-                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=cm)
+                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
             
             
         ax.autoscale()
