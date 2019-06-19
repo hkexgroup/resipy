@@ -2433,8 +2433,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                surface_refinement = None, mesh_refinement = None,show_output=True, 
                path='exe', dump=print,whole_space=False, padding=20, search_radius = 10,
                **kwargs):
-    """ 
-    Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
+    """ Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
     in the working directory. This function expects the current working directory 
     has path: exe/gmsh.exe.
     
@@ -2456,14 +2455,14 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     interp_method: string, default ='bilinear' optional
         Interpolation method to translate mesh nodes in the z direction. In other words the method in which topography 
         is appended to the mesh. Here the topography is added to the mesh in post processing. 
-        The options are inverse wieghting distance, bilinear interpolation or nearest neighbour. 
+        The options documented in the notes. 
         if == 'idw': then provide search_radius.  
     surface_refinement : np.array, optional 
         Numpy array of shape (3,n), should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
         Allows for extra refinement for the top surface of the mesh. The points are not added to the mesh, but 
         considered in post processing in order to super impose topography on the mesh. 
     mesh_refinement : np.array, optional
-        Coming soon ... 
+        Coming soon ... Not yet implimented.
     show_ouput : boolean, optional
         `True` if gmsh output is to be printed to console. 
     path : string, optional
@@ -2483,9 +2482,30 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         Key word arguments to be passed to box_3d. 
             
     Returns
-    -------
+    ---------- 
     mesh3d: class
  
+    Notes 
+    ---------- 
+    Possible arguments for interp_method: 
+        'bilinear' : 4 known points are used to compute the equation of a plane 
+                    in which the interpolated point lies. This method is reccomended 
+                    if elevation data is organised in a regular grid. 
+        'idw' : Inverse distance weighting, interpolated points are assigned a 
+                    a z value which is a weighted average of all points in the 
+                    search raduis. This method works best for gentle topography. 
+        'nearest' : Nearest neighbour interpolation. Z value at the interpolated 
+                    point takes on the same Z value as the closest known point. 
+                    This method can work well for dense elevation data, say in 
+                    the case using a point cloud from a digital elevation model. 
+                    This method is the most computationally cheap to run. 
+        'spline' : Like bilinear interpolation, a function is fitted to a 
+                    quadlerateral of known points encompassing the interpolated
+                    Z value. The computed function is a higher order than linear 
+                    interpolation though. Works best for irregular spaced 
+                    elevation data. 
+        None : No interpolation method is used to interpolated topography on to 
+                    mesh, hence a flat mesh is returned. 
     """
     #formalities 
     if len(elec_x) != len(elec_y):
@@ -2499,7 +2519,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         if len(elec_type)==check:
             print("all electrodes are surface electrodes, ignoring the electrode type")
             elec_type = None
-    avail_methods = ['bilinear','idw','nearest']
+    avail_methods = ['bilinear','idw','nearest','spline',None]
     if interp_method not in avail_methods:
         raise NameError("'%s' is an unrecognised interpretation method"%interp_method)
             
@@ -2538,12 +2558,14 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         y_interp = np.append(surf_elec_y,surf_y)
         z_interp = np.append(surf_elec_z,surf_z)
         
-        if interp_method is 'idw': 
+        if interp_method == 'idw': 
             bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
-        elif interp_method is 'bilinear':
+        elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
             bur_elec_z = np.array(bur_elec_z) - interp.bilinear(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
-        elif interp_method is 'nearest':
+        elif interp_method == 'nearest':
             bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+        elif interp_method == 'spline':
+            bur_elec_z = np.array(bur_elec_z) - interp.spline(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
@@ -2614,12 +2636,16 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)
     #using home grown functions to interpolate / extrapolate topography on mesh
-    if interp_method is 'idw': 
+    if interp_method == 'idw': 
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
-    elif interp_method is 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
+    elif interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
         nodez = interp.bilinear(node_x, node_y, x_interp, y_interp, z_interp)
-    elif interp_method is 'nearest':
+    elif interp_method == 'nearest':
         nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp)
+    elif interp_method == 'spline':
+        nodez = interp.spline(node_x, node_y, x_interp, y_interp, z_interp)
+    elif interp_method == None:
+        nodez = np.zeros_like(node_x,dtype=float)
     print('done')
     
     mesh.node_z = np.array(mesh.node_z) + nodez

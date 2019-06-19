@@ -2777,6 +2777,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
                              path=os.path.join(self.apiPath, 'exe'),
                              surface_refinement=surface,
+                             interp_method = None, # this aviods doing a lengthy interpolation 
                              cl_factor=cl_factor,
                              cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
