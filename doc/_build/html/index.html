@@ -64,7 +64,7 @@ Automatically infered when creating the survey.</p>
 </table>
 <dl class="method">
 <dt id="resipy.R2.R2.addRegion">
-<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=1</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
+<code class="descname">addRegion</code><span class="sig-paren">(</span><em>xy</em>, <em>res0=100</em>, <em>phase0=1</em>, <em>blocky=False</em>, <em>fixed=False</em>, <em>ax=None</em>, <em>iplot=False</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.addRegion" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add region according to a polyline defined by <cite>xy</cite> and assign it
 the starting resistivity <cite>res0</cite>.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -95,8 +95,12 @@ is block inversion.</p>
 region.</p>
 </div></blockquote>
 <p><strong>ax</strong> : matplotlib.axes.Axes</p>
-<blockquote class="last">
+<blockquote>
 <div><p>If not <cite>None</cite>, the region will be plotted against this axes.</p>
+</div></blockquote>
+<p><strong>iplot</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>If <cite>True</cite> , the updated mesh with the region will be plotted.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -161,7 +165,8 @@ the phase [mrad].</p>
 <dl class="method">
 <dt id="resipy.R2.R2.computeModelError">
 <code class="descname">computeModelError</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.computeModelError" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute modelling error due to the mesh.</p>
+<dd><p>Compute modelling error due to the mesh.
+We NEED to have a flat surface (no topography).</p>
 </dd></dl>
 
 <dl class="method">
@@ -209,7 +214,7 @@ reciprocal measurements. By default all surveys are used.</p>
 
 <dl class="method">
 <dt id="resipy.R2.R2.createMesh">
-<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>res0=100</em>, <em>show_output=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
+<code class="descname">createMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>res0=100</em>, <em>show_output=True</em>, <em>doi=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.createMesh" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a mesh.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -302,6 +307,12 @@ GUI purpose).</p>
 </tr>
 </tbody>
 </table>
+</dd></dl>
+
+<dl class="method">
+<dt id="resipy.R2.R2.createModellingMesh">
+<code class="descname">createModellingMesh</code><span class="sig-paren">(</span><em>typ='default'</em>, <em>buried=None</em>, <em>surface=None</em>, <em>cl_factor=2</em>, <em>cl=-1</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>res0=100</em>, <em>show_output=True</em>, <em>doi=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.createModellingMesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an homogeneous mesh to compute modelling error.</p>
 </dd></dl>
 
 <dl class="method">
@@ -630,7 +641,7 @@ will be computed by finding the nearest nodes to the relevant coordinates.</p>
 
 <dl class="method">
 <dt id="resipy.R2.R2.invert">
-<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em>, <em>iMoveElec=False</em>, <em>ncores=None</em>, <em>forceParallel=False</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
+<code class="descname">invert</code><span class="sig-paren">(</span><em>param={}</em>, <em>iplot=False</em>, <em>dump=&lt;built-in function print&gt;</em>, <em>modErr=False</em>, <em>parallel=False</em>, <em>iMoveElec=False</em>, <em>ncores=None</em>, <em>forceParallel=False</em>, <em>rmDirTree=True</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.invert" title="Permalink to this definition">¶</a></dt>
 <dd><p>Invert the data, first generate R2.in file, then run
 inversion using appropriate wrapper, then return results.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -669,9 +680,13 @@ the different surveys. Electrodes location are specified in the
 <cite>Survey</cite> object. Only for parallel inversion for now.</p>
 </div></blockquote>
 <p><strong>ncores</strong> : int, optional</p>
-<blockquote class="last">
+<blockquote>
 <div><p>If <cite>parallel==True</cite> then ncores is the number of cores to use (by
-default all the cores available are used).)</p>
+default all the cores available are used).</p>
+</div></blockquote>
+<p><strong>rmDirTree: bool, optional</strong></p>
+<blockquote class="last">
+<div><p>Remove excess directories and files created during parallel inversion</p>
 </div></blockquote>
 </td>
 </tr>
@@ -972,6 +987,44 @@ available will be used.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="resipy.R2.R2.saveData">
+<code class="descname">saveData</code><span class="sig-paren">(</span><em>outputdir</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.saveData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save all data (_res.dat, .vtk, …) from the working directory 
+generated during inversion to the designated directory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>outputdir</strong> : str</p>
+<blockquote class="last">
+<div><p>Path to the directory to save the files.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="resipy.R2.R2.saveErrorData">
+<code class="descname">saveErrorData</code><span class="sig-paren">(</span><em>fname</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.saveErrorData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save quadruople, resistance, phase and their respective reciprocal
+errors as .csv file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str</p>
+<blockquote class="last">
+<div><p>Path where to save the file.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="resipy.R2.R2.saveInvPlots">
 <code class="descname">saveInvPlots</code><span class="sig-paren">(</span><em>outputdir=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.saveInvPlots" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save all plots to output (or working directory). Parameters
@@ -991,25 +1044,34 @@ are passed to the <cite>showResults()</cite> method.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="resipy.R2.R2.saveSequence">
+<code class="descname">saveSequence</code><span class="sig-paren">(</span><em>fname=''</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.saveSequence" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save sequence as .csv file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fname</strong> : str, optional</p>
+<blockquote class="last">
+<div><p>Path where to save the sequence.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="resipy.R2.R2.saveVtks">
-<code class="descname">saveVtks</code><span class="sig-paren">(</span><em>dirname</em>, <em>prefix='ResIPyoutput'</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.saveVtks" title="Permalink to this definition">¶</a></dt>
-<dd><p>Save vtk files of inversion results to a specified directory. Format
-for file names will be ‘prefix’xxx.vtk. A python script will also be saved
-to the relevant directory</p>
+<code class="descname">saveVtks</code><span class="sig-paren">(</span><em>dirname=None</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.R2.R2.saveVtks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save vtk files of inversion results to a specified directory.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>dirname: str</strong></p>
-<blockquote>
-<div><p>Direcotry in which results will be saved</p>
-</div></blockquote>
-<p><strong>prefix: str, optional</strong></p>
 <blockquote class="last">
-<div><p>Characters appended to the front of each file name, ie by default
-files will be named “ResIPyoutput”+”xxx.vtk”, where x is the survey
-number. For timelapse surveys “…001.vtk” will be the baseline 
-survey.</p>
+<div><p>Directory in which results will be saved. Default is the working directory.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -1396,6 +1458,13 @@ are not in the same file).</p>
 <dt id="resipy.Survey.Survey.checkTxSign">
 <code class="descname">checkTxSign</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#resipy.Survey.Survey.checkTxSign" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checking the sign of the transfer resistance.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="resipy.Survey.Survey.computeK">
+<code class="descname">computeK</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#resipy.Survey.Survey.computeK" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute geomatrix factor (assuming flat 2D surface) and store it
+in self.df[‘K’].</p>
 </dd></dl>
 
 <dl class="method">
@@ -2486,7 +2555,7 @@ coordinates.</p>
 
 <dl class="method">
 <dt id="resipy.meshTools.Mesh.paraview">
-<code class="descname">paraview</code><span class="sig-paren">(</span><em>fname='TRIP4Dmesh.vtk'</em>, <em>loc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.meshTools.Mesh.paraview" title="Permalink to this definition">¶</a></dt>
+<code class="descname">paraview</code><span class="sig-paren">(</span><em>fname='ResIPy_mesh.vtk'</em>, <em>loc=None</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.meshTools.Mesh.paraview" title="Permalink to this definition">¶</a></dt>
 <dd><p>Show mesh in paraview</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2552,7 +2621,7 @@ Example is Resistivity to conductivty conversion.</p>
 
 <dl class="method">
 <dt id="resipy.meshTools.Mesh.show">
-<code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>zlim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em>, <em>clabel=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.meshTools.Mesh.show" title="Permalink to this definition">¶</a></dt>
+<code class="descname">show</code><span class="sig-paren">(</span><em>color_map='Spectral'</em>, <em>color_bar=True</em>, <em>xlim='default'</em>, <em>zlim='default'</em>, <em>ax=None</em>, <em>electrodes=True</em>, <em>sens=False</em>, <em>edge_color='k'</em>, <em>contour=False</em>, <em>vmin=None</em>, <em>vmax=None</em>, <em>attr=None</em>, <em>clabel=None</em>, <em>hor_cbar=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#resipy.meshTools.Mesh.show" title="Permalink to this definition">¶</a></dt>
 <dd><p>Displays a 2d mesh and attribute.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -2610,6 +2679,11 @@ as the key for this dictionary.</p>
 <p><strong>clabel: string, optional</strong></p>
 <blockquote>
 <div><p>Label of the colorbar. Default is the value of <cite>attr</cite> argument.</p>
+</div></blockquote>
+<p><strong>hor_cbar: boolean, optional</strong></p>
+<blockquote>
+<div><p>‘True’ to make a horizontal color bar at the bottom of the plot, default
+is vertical color bar to the right of the plot.</p>
 </div></blockquote>
 </td>
 </tr>

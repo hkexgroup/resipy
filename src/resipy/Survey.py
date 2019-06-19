@@ -1087,7 +1087,27 @@ class Survey(object):
             ax.plot(self.df['ip'].values, '.')
             ax.set_xlabel('Measurements')
             ax.set_ylabel('Chargeability [mV/V]')
-            
+    
+    def computeK(self):
+        '''Compute geomatrix factor (assuming flat 2D surface) and store it
+        in self.df['K'].
+        '''
+        array = self.df[['a','b','m','n']].values.astype(int)
+        elecpos = self.elec[:,0]
+
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        
+        self.df['K'] = K
+        
+        
 
     def pseudoSection(self, ax=None, contour=False, log=False, geom=True,
                       vmin=None, vmax=None):

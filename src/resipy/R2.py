@@ -2710,6 +2710,12 @@ class R2(object): # R2 master class instanciated by the GUI
                    cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
         """Create an homogeneous mesh to compute modelling error.
         """
+        fix_me = False
+        try: 
+            old_attr_cache = self.mesh.attr_cache.copy()
+            fix_me = True
+        except AttributeError:
+            pass
         if typ == 'quad':
             elec = self.elec.copy()
             elec_x = self.elec[:,0]
@@ -2796,8 +2802,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.modErrMesh.add_attribute(np.ones(numel, dtype=int), 'zones')
         self.modErrMesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         self.modErrMesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
-        
-        
+        if fix_me:
+            self.mesh.attr_cache = old_attr_cache              
         
     def computeModelError(self):
         """ Compute modelling error due to the mesh.
