@@ -294,7 +294,7 @@ k.setElec(elec)
 k.createMesh(cl=-1,interp_method=None)#, cl_factor=20, cln_factor=500)
 #k.mesh.write_vtk('resipy/test/mesh3D.vtk',title='3D mesh with flat surface')
 #k.computeModelError()
-k.err = True
+#k.err = True
 k.invert()
 k.showResults() 
 k.showSlice(axis='z')
