@@ -315,7 +315,7 @@ k.createSurvey('resipy/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('resipy/test/electrodes3D.csv',delimiter=',')
 k.setElec(elec)
 k.importMesh('resipy/test/mesh3D.vtk')
-k.computeModelError()
+#k.computeModelError()
 #k.write2in()
 #k.param = param
 k.invert()
