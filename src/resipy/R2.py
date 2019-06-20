@@ -2662,9 +2662,9 @@ class R2(object): # R2 master class instanciated by the GUI
             
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])            
         outputname = os.path.join(fwdDir, 'protocol.dat')
-        with open(outputname, 'w') as f:
+        with open(outputname, 'wb') as f:
             f.write(str(len(protocol)) + '\n')
-        with open(outputname, 'a') as f:
+        with open(outputname, 'ab') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
         dump('done\n')
         
