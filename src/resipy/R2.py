@@ -2839,6 +2839,12 @@ class R2(object): # R2 master class instanciated by the GUI
         node_elec = None # we need this as the node_elec with topo and without might be different
         if all(self.elec[:,2] == 0) is False: # so we have topography
             print('A new mesh will be created as the surface is not flat.')
+            try:
+                _ = self.meshParams
+            except AttributeError:
+                self.meshParams = {}
+            if 'interp_method' in self.meshParams:
+                del self.meshParams['interp_method']
             self.createModellingMesh(**self.meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh
