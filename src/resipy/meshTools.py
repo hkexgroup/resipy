@@ -193,7 +193,7 @@ class Mesh:
     def file_path(self):#returns the file path from where the mesh was imported
         return(format(self.original_file_path))
        
-    def Type2VertsNo(self):#converts vtk cell types into number of vertices each element has 
+    def type2VertsNo(self):#converts vtk cell types into number of vertices each element has 
         if int(self.cell_type[0])==5:#then elements are triangles
             return 3
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
@@ -217,7 +217,7 @@ class Mesh:
         out = "\n_______mesh summary_______\n"
         out += "Number of elements: %i\n"%int(self.num_elms)
         out += "Number of nodes: %i\n"%int(self.num_nodes)
-        out += "Number of cell vertices: %i\n"%self.Type2VertsNo()
+        out += "Number of cell vertices: %i\n"%self.type2VertsNo()
         out += "Number of cell attributes: %i\n"%int(self.no_attributes)
         out += "Dimensions: %i\n"%int(self.ndims)
         out += "original file path: %s\n"%self.file_path()
@@ -1251,7 +1251,7 @@ class Mesh:
                 raise IndexError("the number of parameters does not match the number of elements")
         
         #write out elements         
-        no_verts = self.Type2VertsNo()
+        no_verts = self.type2VertsNo()
         for i in range(self.num_elms):
             elm_no=i+1
             fid.write("%i "%elm_no)
@@ -1314,7 +1314,7 @@ class Mesh:
             elif self.ndims == 3:
                 fh.write("%8.6f\t%8.6f\t%8.6f\n"%(self.node_x[i],self.node_y[i],self.node_z[i]))
         #define the connection matrix    
-        no_verts = self.Type2VertsNo()
+        no_verts = self.type2VertsNo()
         no_readable = self.num_elms*(1+no_verts)
         fh.write("CELLS %i %i\n"%(self.num_elms,no_readable))
         for i in range(self.num_elms):
@@ -1499,11 +1499,171 @@ class Mesh:
             colz[i] = int(np.argwhere(z==uniz) + 1)
             
         return colx#,colz # return columns to go in parameters 
+    
+    def exportTetgenMesh(self,prefix='mesh',neigh=False):
+        """Export a mesh like the tetgen format for input into E4D. 
+        This format is composed of several files. 
         
+        Parameters
+        ----------  
+        prefix: string
+            Prefix assigned to exported files.
+        neigh: bool
+            If True export .neigh file. This describes cell neighbours, but it's 
+            not required for E4D inversion (I think) and is computationally
+            intense to compute. Defaut is False. 
+        """
+        #output .node file
+        fh = open(prefix+'.node','w')
+        #header line : 
+        #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
+        fh.write('{:d}\t{:d}\t{:d}\t{:d}\n'.format(self.num_nodes,self.ndims,1,1))
+        #all other lines: 
+        #<point #> <x> <y> <z> [attributes] [boundary marker]
+        for i in range(self.num_nodes):
+            line = '{:d}\t{:f}\t{:f}\t{:f}\t{:d}\t{:d}\n'.format((i+1),
+                                                        self.node_x[i],
+                                                        self.node_y[i],
+                                                        self.node_z[i],
+                                                        1,1)
+            fh.write(line)
+        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
+        fh.close()    
+            
+        #output .ele file 
+        fh = open(prefix+'.ele','w')
+        #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
+        fh.write('{:d}\t{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo(),1))
+        #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
+        for i in range(self.num_elms):
+            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
+                                                         self.con_matrix[0][i]+1,#need to add one becuase of fortran indexing 
+                                                         self.con_matrix[1][i]+1,
+                                                         self.con_matrix[2][i]+1,
+                                                         self.con_matrix[3][i]+1,
+                                                         1)
+            fh.write(line)
+        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
+        fh.close()
+        
+        #output .trn file 
+        fh = open(prefix+'.trn','w')
+        fh.write('0\t0\t0')
+        fh.close()
+        
+        #out .neigh file
+        if neigh: 
+            #firstly need to find neighbouring cells
+            print('Calculating neighbouring cells, this can take some time...', end='')
+            def pdist3d(x,y,z,x_all,y_all,z_all):
+                dx=x-x_all
+                dy=y-y_all
+                dz=z-z_all
+                dist = np.sqrt(dx**2 + dy**2 + dz**2)
+                return dist
+            
+            fh = open(prefix+'.neigh','w')
+            fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line 
+            x_all = np.array(self.elm_centre[0])
+            y_all = np.array(self.elm_centre[1])
+            z_all = np.array(self.elm_centre[2])
+            elm_id = np.arange(1,self.num_elms+1,1)
+            for i in range(self.num_elms):
+                x = x_all[i]
+                y = y_all[i]
+                z = z_all[i]
+                dist = pdist3d(x,y,z,x_all,y_all,z_all)
+                sorted_idx = np.argsort(dist)
+                idx = sorted_idx[1:5]
+                line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
+                                                                elm_id[idx[0]],
+                                                                elm_id[idx[1]],
+                                                                elm_id[idx[2]],
+                                                                elm_id[idx[3]])
+                fh.write(line)
+            fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
+            print('Done.')
+            fh.close()
+        
+        #write .face file - which describes elements on the outer edges of the mesh
+        #todo this we need to find the elements on the outside of the mesh, hence 
+        #this involves borrowing code from show3D. 
+        print('Computing which elements lie on the edge of the mesh...',end='')
+        tri_combo = np.zeros((self.num_elms,4),dtype='float64')
+        con_mat=self.con_matrix
+        inside_numel = len(con_mat[0])#number of inside elements 
+        
+        for i in range(inside_numel):
+            idx1 = con_mat[0][i]#extract indexes 
+            idx2 = con_mat[1][i]
+            idx3 = con_mat[2][i]
+            idx4 = con_mat[3][i]
+            
+            face1 = idx1*idx2*idx3 # hopefully each of these make a unique value 
+            face2 = idx1*idx2*idx4
+            face3 = idx2*idx3*idx4
+            face4 = idx1*idx4*idx3
+            
+#            face1 = (idx1,idx2,idx3) # hopefully each of these make a unique value 
+#            face2 = (idx1,idx2,idx4)
+#            face3 = (idx2,idx3,idx4)
+#            face4 = (idx1,idx4,idx3)
+
+            tri_combo[i,0] = face1#face 1 
+            tri_combo[i,1] = face2#face 2 
+            tri_combo[i,2] = face3#face 3 
+            tri_combo[i,3] = face4#face 4 
+            
+        #shape = tri_combo.shape
+        tri_combo = tri_combo.flatten()
+        temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
+        single_vals_idx = counts==1
+        edge_element_idx = index[single_vals_idx]/4
+        face_element_idx = np.floor(edge_element_idx)
+        face_probe = edge_element_idx - np.floor(edge_element_idx)
+        
+        truncated_numel = len(face_element_idx)
+        face_list = [0] * truncated_numel
+        for i in range(truncated_numel):
+            ref = int(face_element_idx[i])
+            idx1 = con_mat[0][ref]
+            idx2 = con_mat[1][ref]
+            idx3 = con_mat[2][ref]
+            idx4 = con_mat[3][ref]
+                       
+            face1 = (idx1,idx2,idx3)
+            face2 = (idx1,idx2,idx4)
+            face3 = (idx2,idx3,idx4)
+            face4 = (idx1,idx4,idx3)
+            
+            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
+                face_list[i] = face1#face 1 
+            elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
+                face_list[i] = face2#face 2
+            elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
+                face_list[i] = face3#face 3 
+            elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
+                face_list[i] = face4#face 4  
+        print('Done.')    
+        
+        fh = open(prefix+'.face','w')
+        #First line: <# of faces> <boundary marker (0 or 1)>
+        fh.write('{:d}\t{:d}\n'.format(truncated_numel,1))#header line 
+        for i in range(truncated_numel):
+            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
+                                                        face_list[i][0]+1,
+                                                        face_list[i][1]+1,
+                                                        face_list[i][2]+1,
+                                                        1)
+            fh.write(line)
+            
+        
+        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
+        fh.close()
+                                 
 #%% triangle centriod 
 def tri_cent(p,q,r):
-    """
-    Compute the centre coordinates for a 2d triangle given the x,y coordinates 
+    """Compute the centre coordinates for a 2d triangle given the x,y coordinates 
     of the vertices.
             
     Parameters
