@@ -411,6 +411,25 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removerecip = self.surveys[0].removerecip
             self.removenested = self.surveys[0].removenested
             self.addFilteredIP = self.surveys[0].addFilteredIP
+    
+    
+#    def lmefit(self, each=False, ax=None):
+#        '''Fit a LME model model.
+#        
+#        Parameters
+#        ----------
+#        each : bool, optional
+#            If `True`, then the error model will be applied for each survey.
+#        ax : Matplotlib.Axes, optional
+#            If specified, the plot will be plotted against this axis.
+#        '''
+#        if len(surveys) > 1 and each is True:
+#            for s in self.surveys:
+#                s.lmefit()
+#        else:
+#            self.bigSurvey.lmefit()
+            
+        
         
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
@@ -2805,6 +2824,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if fix_me:
             self.mesh.attr_cache = old_attr_cache              
         
+        
     def computeModelError(self):
         """ Compute modelling error due to the mesh.
         We NEED to have a flat surface (no topography).
@@ -2819,6 +2839,12 @@ class R2(object): # R2 master class instanciated by the GUI
         node_elec = None # we need this as the node_elec with topo and without might be different
         if all(self.elec[:,2] == 0) is False: # so we have topography
             print('A new mesh will be created as the surface is not flat.')
+            try:
+                _ = self.meshParams
+            except AttributeError:
+                self.meshParams = {}
+            if 'interp_method' in self.meshParams:
+                del self.meshParams['interp_method']
             self.createModellingMesh(**self.meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh
@@ -2862,6 +2888,12 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # write the protocol.dat based on measured sequence
         seq = self.surveys[0].df[['a','b','m','n']].values
+        if len(self.surveys) > 0: # multiple survey here
+            seq = []
+            for s in self.surveys:
+                seq.append(s.df[['a','b','m','n']].values)
+            seq = np.vstack(seq)
+            seq = np.unique(seq, axis=0)
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
         if all(self.elec[:,1] == 0) is False: # it's a 3D survey
             protocol.insert(1, 'sa', 1)
@@ -2883,9 +2915,11 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)
         modErr = np.abs(100-x[:,-1])/100
+        dferr = pd.DataFrame(np.c_[seq, modErr], columns=['a','b','m','n','modErr'])
         for s in self.surveys:
-            s.df['modErr'] = modErr
-        
+            if 'modErr' in s.df:
+                s.df.drop('modErr', axis=1)
+            s.df = pd.merge(s.df, dferr, on=['a','b','m','n'], how='inner')
         # eventually delete the directory to spare space
         shutil.rmtree(fwdDir)
         
