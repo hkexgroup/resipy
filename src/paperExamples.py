@@ -48,20 +48,18 @@ k.invert() # run the inversion (and write cR2.in and protocol.dat automatically)
 k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity section
 k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 
-# graph section
-fig, ax = plt.subplots(figsize=(6, 2))
+#%% graph section
+fig, axs = plt.subplots(2, 1, figsize=(4, 3), sharex=True)
+ax = axs[0]
 ax.set_title('(a)')
 k.showResults(attr='Sigma_real(log10)', zlim=[-8, 0], ax=ax, sens=False)
-fig.tight_layout()
-fig.savefig(figdir + 'micp-sigma.eps')
-fig.savefig(figdir + 'micp-sigma.png')
-fig.show()
-fig, ax = plt.subplots(figsize=(6, 2))
+ax.set_xlabel(None)
+ax = axs[1]
 ax.set_title('(b)')
 k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
 fig.tight_layout()
-fig.savefig(figdir + 'micp-phase.eps')
-fig.savefig(figdir + 'micp-phase.png')
+fig.savefig(figdir + 'micp.eps')
+fig.savefig(figdir + 'micp.png')
 fig.show()
 
 
@@ -77,29 +75,22 @@ k.showResults(index=1) # show the second inverted section
 k.showResults(index=1, attr='difference(percent)') # show the differences between the first and second survey
 
 
-# graph
-fig, ax = plt.subplots(figsize=(5, 2))
+#%% graph
+fig, axs = plt.subplots(3, 1, figsize=(4, 5), sharex=True)
+ax = axs[0]
 ax.set_title('(a) 15th March 2017')
 k.showResults(ax=ax, index=1, attr='difference(percent)', vmin=0, vmax=50, sens=False)
-fig.tight_layout()
-fig.savefig(figdir + 'woburnMarch.eps')
-fig.savefig(figdir + 'woburnMarch.png')
-fig.show()
-
-fig, ax = plt.subplots(figsize=(5, 2))
+ax.set_xlabel(None)
+ax = axs[1]
 ax.set_title('(b) 27th April 2017')
 k.showResults(ax=ax, index=2, attr='difference(percent)', vmin=0, vmax=50, sens=False)
-fig.tight_layout()
-fig.savefig(figdir + 'woburnApril.eps')
-fig.savefig(figdir + 'woburnApril.png')
-fig.show()
-
-fig, ax = plt.subplots(figsize=(5, 2))
+ax.set_xlabel(None)
+ax = axs[2]
 ax.set_title('(c) 16th Mai 2017')
 k.showResults(ax=ax, index=3, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
-fig.savefig(figdir + 'woburnMai.eps')
-fig.savefig(figdir + 'woburnMai.png')
+fig.savefig(figdir + 'woburn.eps')
+fig.savefig(figdir + 'woburn.png')
 fig.show()
 
 
@@ -135,14 +126,14 @@ fig.show()
 
 
 #%% Forward modelling for dipole-dipole array
-k = R2(typ='R2')
-k.setElec(np.c_[np.linspace(0,24, 24), np.zeros((24, 2))])
-k.createMesh(typ='quad')
+k1 = R2(typ='R2')
+k1.setElec(np.c_[np.linspace(0,24, 24), np.zeros((24, 2))])
+k1.createMesh(typ='quad')
 target = np.array([[7,-1],[10,-1],[10,-2],[7,-2]])
-k.addRegion(target, 10, -3)
-k.showMesh()
+k1.addRegion(target, 10, -3)
+k1.showMesh()
 
-k.createSequence(params=[('wenner_alpha',1),
+k1.createSequence(params=[('wenner_alpha',1),
                          ('wenner_alpha',2),
                          ('wenner_alpha',3),
                          ('wenner_alpha',4),
@@ -153,65 +144,86 @@ k.createSequence(params=[('wenner_alpha',1),
                          ('wenner_alpha',9),
                          ('wenner_alpha',10)])
 
-k.forward(iplot=True, noise=0.05)
-k.invert(iplot=True)
-k.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
-k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
-
-# graph
-fig, ax = plt.subplots(figsize=(7, 2))
-ax.set_title('(a)')
-k.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
-fig.tight_layout()
-fig.savefig(figdir + 'forwardInitialModel.eps')
-fig.savefig(figdir + 'forwardInitialModel.png')
-fig.show()
-
-fig, ax = plt.subplots(figsize=(7, 2))
-k.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
-ax.set_title('(b)')
-fig.tight_layout()
-fig.savefig(figdir + 'forwardWennerPseudo.eps')
-fig.savefig(figdir + 'forwardWennerPseudo.png')
-fig.show()
-
-fig, ax = plt.subplots(figsize=(7, 2))
-ax.set_title('(c)')
-k.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
-target2 = np.vstack([target, target[0,:]])
-ax.plot(target2[:,0], target2[:,1], 'r--')
-fig.tight_layout()
-fig.savefig(figdir + 'forwardWennerInverted.eps')
-fig.savefig(figdir + 'forwardWennerInverted.png')
-fig.show()
-
-
+k1.forward(iplot=True, noise=0.05)
+k1.invert(iplot=True)
+k1.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k1.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
 # now for the dipole dipole
-k.createSequence([('dpdp1', 1, 8)])
+k2 = R2(typ='R2')
+k2.setElec(np.c_[np.linspace(0,24, 24), np.zeros((24, 2))])
+k2.createMesh(typ='quad')
+target = np.array([[7,-1],[10,-1],[10,-2],[7,-2]])
+k2.addRegion(target, 10, -3)
+k2.showMesh()
 
-k.forward(iplot=True, noise=0.05)
-k.invert(iplot=True)
-k.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k2.createSequence([('dpdp1', 1, 8)])
+k2.forward(iplot=True, noise=0.05)
+k2.invert(iplot=True)
+k2.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
 
-# graph
-fig, ax = plt.subplots(figsize=(7, 2))
-k.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
+#%% graph
+fig = plt.figure(figsize=(8, 4))
+ax = plt.subplot2grid((3,3), (0,0), colspan=2)
+ax.set_title('(a)')
+k1.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
+
+ax = plt.subplot2grid((3,3), (1,0))
+k1.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
+ax.set_title('(b)')
+
+ax = plt.subplot2grid((3,3), (1,1))
+ax.set_title('(c)')
+k1.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
+target2 = np.vstack([target, target[0,:]])
+ax.plot(target2[:,0], target2[:,1], 'r--')
+
+ax = plt.subplot2grid((3,3), (2,0))
+k2.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
 ax.set_title('(d)')
-fig.tight_layout()
-fig.savefig(figdir + 'forwardDipDipPseudo.eps')
-fig.savefig(figdir + 'forwardDipDipPseudo.png')
-fig.show()
 
-fig, ax = plt.subplots(figsize=(7, 2))
+ax = plt.subplot2grid((3,3), (2,1))
 ax.set_title('(e)')
-k.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
+k2.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 ax.plot(target2[:,0], target2[:,1], 'r--')
 fig.tight_layout()
-fig.savefig(figdir + 'forwardDipDipInverted.eps')
-fig.savefig(figdir + 'forwardDipDipInverted.png')
+#fig.savefig(figdir + 'forward.eps')
+#fig.savefig(figdir + 'forward.png')
 fig.show()
 
+#%%
+
+fig, axs = plt.subplots(5, 1, figsize=(4, 8), sharex=True)
+ax = axs[0]
+ax.set_title('(a) True')
+k1.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
+ax.set_xlabel(None)
+
+ax = axs[1]
+k1.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
+ax.set_title('(b) Wenner')
+ax.set_xlabel(None)
+
+ax = axs[3]
+ax.set_title('(c) Wenner')
+k1.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
+target2 = np.vstack([target, target[0,:]])
+ax.plot(target2[:,0], target2[:,1], 'r--')
+ax.set_xlabel(None)
+
+ax = axs[2]
+k2.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
+ax.set_title('(d) Dipole-Dipole')
+ax.set_xlabel(None)
+
+ax = axs[4]
+ax.set_title('(e) Dipole-Dipole')
+k2.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
+ax.plot(target2[:,0], target2[:,1], 'r--')
+fig.tight_layout()
+fig.savefig(figdir + 'forward.eps')
+fig.savefig(figdir + 'forward.png')
+fig.show()
 
 
 #%% general figure miniatures

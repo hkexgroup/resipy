@@ -2094,7 +2094,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ncores : int, optional
             If `parallel==True` then ncores is the number of cores to use (by
             default all the cores available are used).
-        rmDirTree: bool, optional
+        rmDirTree : bool, optional
             Remove excess directories and files created during parallel inversion
         """
         # clean meshResults list
