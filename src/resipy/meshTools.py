@@ -793,7 +793,11 @@ class Mesh:
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-            face1 = idx1*idx2*idx3 # hopefully each of these make a unique value 
+#            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code (inefficent way but technically accurate)
+#            face2 = int(str(idx1)+str(idx2)+str(idx4))
+#            face3 = int(str(idx2)+str(idx3)+str(idx4))
+#            face4 = int(str(idx1)+str(idx4)+str(idx3))
+            face1 = idx1*idx2*idx3 # assign each face a code
             face2 = idx1*idx2*idx4
             face3 = idx2*idx3*idx4
             face4 = idx1*idx4*idx3
@@ -806,7 +810,7 @@ class Mesh:
         #shape = tri_combo.shape
         tri_combo = tri_combo.flatten()
         temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
-        single_vals_idx = counts==1
+        single_vals_idx = counts==1 # faces on edge of volume only appear once
         edge_element_idx = index[single_vals_idx]/4
         face_element_idx = np.floor(edge_element_idx)
         face_probe = edge_element_idx - np.floor(edge_element_idx)
@@ -1126,13 +1130,15 @@ class Mesh:
             elm_z = np.array(self.elm_centre[2])  
             #use interpolation to work out depth to datum 
             if method == 'bilinear':
-                Z = interp.bilinear(elm_x, elm_y, datum_x, datum_y, datum_z)
+                Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z)
+            if method == 'spline':
+                Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z,method='spline')
             elif method == 'idw':
                 Z = interp.idw(elm_x, elm_y, datum_x, datum_y, datum_z)
             elif method == 'nearest':
                 Z = interp.nearest(elm_x, elm_y, datum_x, datum_y, datum_z)
             else:
-                avail_methods = ['bilinear','idw','nearest']
+                avail_methods = ['bilinear','spline','idw','nearest']
                 raise NameError("Unknown interpolation method, available methods are %s"%str(avail_methods))
             depth = Z - elm_z
             self.attr_cache['depths'] = depth # add cell depths to attribute cache
@@ -1599,15 +1605,10 @@ class Mesh:
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-            face1 = idx1*idx2*idx3 # hopefully each of these make a unique value 
-            face2 = idx1*idx2*idx4
-            face3 = idx2*idx3*idx4
-            face4 = idx1*idx4*idx3
-            
-#            face1 = (idx1,idx2,idx3) # hopefully each of these make a unique value 
-#            face2 = (idx1,idx2,idx4)
-#            face3 = (idx2,idx3,idx4)
-#            face4 = (idx1,idx4,idx3)
+            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code
+            face2 = int(str(idx1)+str(idx2)+str(idx4))
+            face3 = int(str(idx2)+str(idx3)+str(idx4))
+            face4 = int(str(idx1)+str(idx4)+str(idx3))
 
             tri_combo[i,0] = face1#face 1 
             tri_combo[i,1] = face2#face 2 
@@ -2721,11 +2722,11 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         if interp_method == 'idw': 
             bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
         elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
-            bur_elec_z = np.array(bur_elec_z) - interp.bilinear(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+            bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
         elif interp_method == 'nearest':
             bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
         elif interp_method == 'spline':
-            bur_elec_z = np.array(bur_elec_z) - interp.spline(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+            bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
@@ -2771,7 +2772,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
-        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
         
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
@@ -2799,11 +2800,11 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if interp_method == 'idw': 
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
     elif interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
-        nodez = interp.bilinear(node_x, node_y, x_interp, y_interp, z_interp)
+        nodez = interp.interp2d(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method == 'nearest':
         nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method == 'spline':
-        nodez = interp.spline(node_x, node_y, x_interp, y_interp, z_interp)
+        nodez = interp.interp2d(node_x, node_y, x_interp, y_interp, z_interp,method='spline')
     elif interp_method == None:
         nodez = np.zeros_like(node_x,dtype=float)
     print('done')

@@ -291,7 +291,7 @@ k = R2(typ='R3t')
 k.createSurvey('resipy/test/protocol3D.dat', ftype='Protocol')
 elec = np.genfromtxt('resipy/test/electrodes3D.csv',delimiter=',')
 k.setElec(elec)
-k.createMesh(cl=-1,interp_method=None)#, cl_factor=20, cln_factor=500)
+k.createMesh(cl=-1,interp_method='bilinear')#, cl_factor=20, cln_factor=500)
 #k.mesh.write_vtk('resipy/test/mesh3D.vtk',title='3D mesh with flat surface')
 #k.computeModelError()
 #k.err = True
