@@ -634,7 +634,7 @@ class Survey(object):
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
         ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power Law Fit")
         ax.set_ylabel(r's($\phi$) [mRad]')
-        ax.set_xlabel(r'R [$\Omega$]')      
+        ax.set_xlabel(r'$R_{avg}$ [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
         a1 = np.exp(coefs_ip[0])
