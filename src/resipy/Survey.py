@@ -1634,4 +1634,61 @@ class Survey(object):
             new_elec[put_back,2] =  z_sorted[i]
     
         self.elec = new_elec
+        
+    def estError(self,a_wgt=0.01,b_wgt=0.02):
+        """Estimate reciprocal error data for data with no recipricols, following
+        the same routine present in R2. This allows for the additional inclusion
+        of modelling errors. 
+        
+        Parameters
+        ------------
+        a_wgt: float, optional
+            a_wgt documented in the R2 documentation 
+        b_wgt: float, optional 
+            b_wgt documented in the R2 documentation  
+        """
+        res = np.array(self.df['resist'])
+        var_res = (a_wgt*a_wgt)+(b_wgt*b_wgt) * (res*res)
+        std_res = np.sqrt(var_res)
+        self.df['resError'] = std_res
+        
 
+    def exportSrv(self,fname=None):
+        """Export .srv format for which is compatible with E4D. The e4d survey
+        file includes the electrode locations, in addition to the scheduling 
+        matrix. 
+        
+        Paramters
+        ------------
+        fname: string, optional
+            Where the output file will be written to. By default the file will 
+            take on the name of the survey and is written to the current working 
+            directory. 
+        """
+        if fname is None: # rename output file name to that of the survey name
+            fname = self.name + '.srv'
+        fh = open(fname,'w')
+        numelec = self.elec.shape[0] # number of electrodes 
+        fh.write('%i number of electrodes\n'%numelec)
+        for i in range(numelec):
+            line = '{:d} {:f} {:f} {:f} {:d}\n'.format(i+1,
+                    self.elec[i,0],#x coordinate
+                    self.elec[i,1],#y coordinate
+                    self.elec[i,2],#z coordinate
+                    1)#buried flag 
+            fh.write(line)
+        #now write the scheduling matrix to file 
+        nomeas = len(self.df) # number of measurements 
+        fh.write('\n%i number of measurements \n'%nomeas)
+        if not 'resError' in self.df.columns: # the columns exists
+            self.estError()
+        # format >>> m_indx a b m n V/I stdev_V/I
+        for i in range(nomeas): 
+            line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
+                    self.df['a'][i],
+                    self.df['b'][i],
+                    self.df['m'][i],
+                    self.df['n'][i],
+                    self.df['resist'][i],
+                    self.df['resError'][i])
+            fh.write(line)
