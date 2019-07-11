@@ -233,6 +233,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.doi = None # depth of investigation below the surface [in survey units]
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
+        self.referenceMdl = False
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -2128,7 +2129,7 @@ class R2(object): # R2 master class instanciated by the GUI
         dump('done\n')
         
         # runs inversion
-        if self.iTimeLapse == True:
+        if self.iTimeLapse == True and self.referenceMdl==False:
             dump('------------ INVERTING REFERENCE SURVEY ---------------\n')
             refdir = os.path.join(self.dirname, 'ref')
             shutil.move(os.path.join(self.dirname,'res0.dat'),
@@ -2141,6 +2142,8 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                             os.path.join(self.dirname, 'Start_res.dat'))
+        elif self.iTimeLapse == True and self.referenceMdl==True:
+            print('Note: Skipping reference inversion, as reference model has already been assigned')
   
         dump('--------------------- MAIN INVERSION ------------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
@@ -2499,7 +2502,28 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.attr_cache['phase0'] = phase0
         
         print('assignRes0-------------', np.sum(fixed), np.sum(phase0))
+    
+    def assignRefModel(self,res0):
+        """Set the reference model according to a previous inversion, avoids 
+        the need to invert reference model again for timelapse workflows. 
         
+        Parameters
+        -------------
+        res0: array like
+            Array of resistivity values, ideally from a previous inversion. The
+            length of this array should be the same as the number of elements. 
+        """
+        try:
+            self.mesh.add_attribute(res0,'res0')
+        except AttributeError:
+            print('Cant set reference model without first assigning/creating a mesh')
+            return
+        self.param['reg_mode'] = 1 # ensure inversion is background regularised 
+        self.param['res0File'] = 'Start_res.dat'
+        self.param['num_regions'] = 0
+        self.mesh.write_attr('res0',file_name='Start_res.dat',file_path=self.dirname)
+        self.referenceMdl = True
+        print('Reference model successfully assigned')
 
     def createSequence(self, params=[('dpdp1', 1, 8)]):
         """ Create a dipole-dipole sequence.
@@ -2906,7 +2930,7 @@ class R2(object): # R2 master class instanciated by the GUI
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
     
-        # fun the inversion
+        # run the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
         
         # get error model
@@ -3139,8 +3163,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     ## Sorting electrode numbers ## 
     def shuntIndexes(self):
-        """
-        Shunt electrode indexes to start at 1. 
+        """Shunt electrode indexes to start at 1. 
         """
         debug=True
         if len(self.surveys)>1:
@@ -3149,8 +3172,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.surveys[i].shuntIndexes(debug=debug)
         
     def normElecIdx(self):
-        """
-        Normalise electrode indexes to start at 1 in consective and ascending order. 
+        """Normalise electrode indexes to start at 1 in consective and ascending order. 
         """
         debug = True
         if len(self.surveys)>1:

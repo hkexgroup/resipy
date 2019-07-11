@@ -953,7 +953,7 @@ class Mesh:
         return material_no
     
     def assign_zone_3D(self,volume_data):
-        """Assign material/region assocations with certain elements in the mesh 
+        """ Assign material/region assocations with certain elements in the mesh 
         say if you have an area you'd like to forward model. 
         ***3D ONLY***
         
@@ -991,8 +991,7 @@ class Mesh:
         return material_no        
         
     def assign_zone_attribute(self,material_no,attr_list,new_key):
-        """
-        Asssigns values to the mesh which depend on region / material only. E.G 
+        """ Asssigns values to the mesh which depend on region / material only. E.G 
         a single resistivity value.
             
         Parameters
@@ -1033,8 +1032,7 @@ class Mesh:
             
 
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
-        """
-        Applies a function to a mesh by zone number and mesh parameter.
+        """ Applies a function to a mesh by zone number and mesh parameter.
         
         Parameters
         ----------
@@ -1074,8 +1072,7 @@ class Mesh:
         #return new_para
         
     def reciprocal(self,attr="Resistivity",new_key="Conductivity"):
-        """
-        Compute reciprocal for a given attribute (ie 1 over that number)
+        """ Compute reciprocal for a given attribute (ie 1 over that number)
         Example is Resistivity to conductivty conversion. 
         
         Parameters
@@ -1146,26 +1143,25 @@ class Mesh:
             return depth
             
     def move_elec_nodes(self, new_x, new_y, new_z, debug=True):
-        """
-        Move the electrodes to different nodes which are close to the given coordinates. 
+        """ Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
         ideally this is implimented on a mesh which is refined near the surface. If 
         no nodes are assigned to mesh, a mesh.e_nodes variable is created.  
         
         Parameters
         ------------
-        new_x : array like
+        new_x: array like
             new electrode x coordinates 
-        new_y : array like
+        new_y: array like
             new electrode y coordinates, if 2D mesh let new_y=None and the array will automatically be
             assigned an array of zeros. 
-        new_z : array-like
+        new_z: array-like
             new electrode z coordinates 
-        debug : bool, optional
+        debug: bool, optional
             Controls if any changes to electrode nodes will be output to console. 
         Returns
         ------------
-        node_in_mesh : np array
+        node_in_mesh: np array
             Array of mesh node numbers corresponding to the electrode postions/
             coordinates.
             
@@ -1204,21 +1200,20 @@ class Mesh:
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
-        """
-        Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
+        """ Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
         input file for triangle meshes, so this function is only relevant for
         triangle meshes.
         
         Parameters
         ------------
-        file_path : string, optional
+        file_path: string, optional
             Path to the file. By default 'mesh.dat' is saved in the working directory. 
-        zone : array like, optional
+        zone: array like, optional
             An array of integers which are assocaited with regions/materials in the mesh. 
             Useful in the case of an inversion which has a boundary constraint. 
             You can use assign_zone to give a zone/material number to the mesh, and pass that 
             as the zone argument. 
-        param : array-like, optional
+        param: array-like, optional
             Array of parameter number. Set a parameter number to zero fixed its
             conductivity to the starting conductivity.
         
@@ -1289,17 +1284,16 @@ class Mesh:
         print('written mesh.dat file to \n%s'%file_path)
 
     def write_vtk(self,file_path="mesh.vtk", title=None):
-        """
-        Writes a vtk file for the mesh object, everything in the attr_cache
+        """ Writes a vtk file for the mesh object, everything in the attr_cache
         will be written to file as attributes. We suggest using Paraview 
-        to display the mesh outside of pyR2. It's fast and open source :). 
+        to display the mesh outside of ResIPy. It's fast and open source :). 
         
         Parameters
         ------------
-        file_path : string, optional
+        file_path: string, optional
             Maps where python will write the file, if left as `default` then mesh.vtk
             will be written the current working directory. 
-        title : string, optional
+        title: string, optional
             Header string written at the top of the vtk file .
         """
         #open file and write header information    
@@ -1345,19 +1339,18 @@ class Mesh:
     
 
     def write_attr(self,attr_key,file_name='_res.dat',file_path='default'):
-        """ 
-        Writes a attribute to a _res.dat type file. file_name entered
+        """ Writes a attribute to a _res.dat type file. file_name entered
         seperately because it will be needed for the R2 config file.
         The reason for this function is so you can write a forward model 
         parameter input file. 
         
         Parameters
         ----------
-        attr_key : string
+        attr_key: string
             Key identifying the attr to be written in the mesh object attr_cache.
-        file_name : string, optional
+        file_name: string, optional
             Name of the _res.dat type file.
-        file_path : string, optional
+        file_path: string, optional
             Directory to which the file will be saved in, if left as none then the
             file will be written in the current working directory.
         """
@@ -1436,8 +1429,7 @@ class Mesh:
         #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
         
     def paraview(self,fname='ResIPy_mesh.vtk',loc=None):
-        """
-        Show mesh in paraview 
+        """ Show mesh in paraview 
         
         Parameters
         -----------
@@ -1477,7 +1469,7 @@ class Mesh:
             Popen(['paraview', fname])
             
     def quadMeshNp(self, topo=None):
-        """Convert mesh nodes into x column indexes in the case of quad meshes. 
+        """ Convert mesh nodes into x column indexes in the case of quad meshes. 
         Does not currently support changes in electrode elevation! 
         
         Returns
@@ -1506,7 +1498,7 @@ class Mesh:
             
         return colx#,colz # return columns to go in parameters 
     
-    def exportTetgenMesh(self,prefix='mesh',neigh=False):
+    def exportTetgenMesh(self,prefix='mesh',neigh=True):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. 
         
@@ -1516,8 +1508,9 @@ class Mesh:
             Prefix assigned to exported files.
         neigh: bool
             If True export .neigh file. This describes cell neighbours, but it's 
-            not required for E4D inversion (I think) and is computationally
-            intense to compute. Defaut is False. 
+            not required for E4D forward mode and is computationally
+            intense to compute. Defualt is True as its necassary for inversion 
+            with E4D. 
         """
         #output .node file
         fh = open(prefix+'.node','w')
@@ -2082,8 +2075,8 @@ def dat_import(file_path='mesh.dat'):
            
 #%% Read in E4D / tetgen mesh
 def tetgen_import(file_path):
-    """Import Tetgen mesh into <pyR2>. This isa little different from other 
-    imports as the mesh is described by several files. From pyR2's perspective
+    """Import Tetgen mesh into ResIPy. This isa little different from other 
+    imports as the mesh is described by several files. From meshTools' perspective
     What is needed is the node(.node) file and element (.ele) files, which 
     describe the coordinates of mesh nodes and the connection matrix. 
     
@@ -2749,6 +2742,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
         raise Exception("No gmsh.exe exists in the exe directory!")
+    elif not os.path.isfile(os.path.join(ewd,'gmsh')):
+        raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file
     file_name="mesh3d"
@@ -2775,7 +2770,10 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
         
     if show_output: 
-        p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        try:
+            p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        except PermissionError: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
             dump(line.decode('utf-8'))
