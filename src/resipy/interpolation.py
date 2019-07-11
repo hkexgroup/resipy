@@ -3,6 +3,7 @@
 
 import numpy as np
 import resipy.isinpolygon as iip
+import warnings 
 #from tqdm import tqdm # progess bar package - disabled 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
@@ -104,6 +105,7 @@ def bilinear(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
         z coordinates at xnew and ynew.
         
     """
+    warnings.warn('Depreciation warning: Bilinear interpolation function will be removed in future versions of ResIPy in favour of resipy.interpolation.interp2d method')
     #preallocate array for new z coordinates / interpolated values  
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)
@@ -207,6 +209,7 @@ def spline(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
         z coordinates at xnew and ynew.
         
     """
+    warnings.warn('Depreciation warning: Spline interpolation function will be removed in future versions of ResIPy in favour of resipy.interpolation.interp2d method')
     #preallocate array for new z coordinates / interpolated values  
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)
