@@ -206,7 +206,11 @@ class R2(object): # R2 master class instanciated by the GUI
         Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t`.
         Automatically infered when creating the survey.
     """ 
-    def __init__(self, dirname='', typ='R2'):
+    #insert starting variables here: 
+    referenceMdl = False # is there a starting reference model already? 
+    fwdErrMdl = False # is there is a forward modelling error already (due to the mesh)? 
+    errTyp = 'global'# type of error model to be used in batch and timelapse surveys
+    def __init__(self, dirname='', typ='R2'): # initiate R2 class
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
             dirname = os.path.join(self.apiPath, 'invdir')
@@ -234,7 +238,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.doi = None # depth of investigation below the surface [in survey units]
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
-        self.referenceMdl = False
+        
         
     def setwd(self, dirname):
         """ Set the working directory.
@@ -1176,7 +1180,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 np.savetxt(f, x2)
                 
 
-    def write2protocol(self, err=None, errTot=False, **kwargs):
+    def write2protocol(self, err=None, errTyp = None, errTot=False, **kwargs):
         """ Write a protocol.dat file for the inversion code.
         
         Parameters
@@ -1197,6 +1201,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         if err is None:
             err = self.err
+        if errTyp is None:
+            errTyp = self.errTyp
         
         # important changing sign of resistivity and quadrupoles so to work
         # with complex resistivity
@@ -1231,10 +1237,10 @@ class R2(object): # R2 master class instanciated by the GUI
                 if 'recipMean0' in s.df.columns:
                     s.df = s.df.drop('recipMean0', axis=1)
                 s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
-                if err is True:
+                if err is True and errTyp == 'global':
                     s.df['resError'] = self.bigSurvey.errorModel(s.df)
                 res0Bool = False if self.param['reg_mode'] == 1 else True
-                protocol = s.write2protocol('', err=err, res0=res0Bool,
+                protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             isubset=indexes[i+1])
                 content = content + str(protocol.shape[0]) + '\n'
                 content = content + protocol.to_csv(sep='\t', header=False, index=False)
@@ -2109,10 +2115,13 @@ class R2(object): # R2 master class instanciated by the GUI
             dump('done\n')
             
         # compute modelling error if selected
-        if modErr is True:
+        if modErr is True and self.fwdErrMdl is False: #check no error model exists
             dump('Computing error model ...')
             self.computeModelError()
             dump('done\n')
+            errTot = True
+        elif modErr is True and self.fwdErrMdl: 
+            # aviod computing error model again if it has already been run. 
             errTot = True
         else:
             errTot = False
@@ -2871,15 +2880,34 @@ class R2(object): # R2 master class instanciated by the GUI
         self.modErrMesh.add_attribute(np.zeros(numel, dtype=bool), 'fixed')
         self.modErrMesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
         if fix_me:
-            self.mesh.attr_cache = old_attr_cache              
+            self.mesh.attr_cache = old_attr_cache 
+
+    def estError(self,a_wgt=0.01,b_wgt=0.02):
+        """Estimate reciprocal error data for data with no recipricols for each 
+        survey, using the same routine present in R2. This allows for the additional inclusion
+        of modelling errors. 
         
+        Parameters
+        ------------
+        a_wgt: float, optional
+            a_wgt documented in the R2 documentation 
+        b_wgt: float, optional 
+            b_wgt documented in the R2 documentation  
+        """            
+        for s in self.surveys:
+            s.estError(a_wgt=a_wgt,b_wgt=b_wgt)
         
-    def computeModelError(self):
-        """ Compute modelling error due to the mesh.
-        We NEED to have a flat surface (no topography).
+    def computeModelError(self,rm_tree=True):
+        """ Compute modelling error assocaited with the mesh.
+        This is computed on a flat tetrahedral mesh.
+        
+        Parameters
+        ------------
+        rm_tree: bool
+            Remove the working directory used for the error modelling. Default
+            is True. 
         """
-        #bug fix for overwriting attr_cache in mesh object
-        try:
+        try:#bug fix for overwriting attr_cache in mesh object
             attr_cache = self.mesh.attr_cache.copy() 
             #for some reason the mesh.attr_cache is dynamically linked to the modelling mesh, and i cant figure out why 
         except AttributeError:
@@ -2969,14 +2997,15 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'modErr' in s.df:
                 s.df.drop('modErr', axis=1)
             s.df = pd.merge(s.df, dferr, on=['a','b','m','n'], how='inner')
-        # eventually delete the directory to spare space
-        shutil.rmtree(fwdDir)
         
-        #apply hot fix to sort attr_cache inside mesh object 
-        if fix_me:
+        if rm_tree:# eventually delete the directory to spare space
+            shutil.rmtree(fwdDir)
+        
+        if fix_me: #apply fix to sort attr_cache inside mesh object 
             self.mesh.attr_cache = attr_cache.copy()
         
-    
+        self.fwdErrMdl = True # class now has a forward error model.        
+        
     def showIter(self, index=-2, ax=None):
         """ Dispay temporary inverted section after each iteration.
         
