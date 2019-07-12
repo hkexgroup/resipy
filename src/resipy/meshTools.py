@@ -2774,6 +2774,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         except PermissionError: # hotfix to deal with failing commits on gitlab's server. 
             cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+            p = Popen(cmd_line, stdout=PIPE, shell=False)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
             dump(line.decode('utf-8'))
