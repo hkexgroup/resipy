@@ -22,7 +22,6 @@ from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  res
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
                      stingParser, ericParser)
 from resipy.DCA import DCA
-from resipy.interpolation import bilinear
 
 class Survey(object):
     """ Class that handles geophysical data and some basic functions. One 
@@ -1635,6 +1634,18 @@ class Survey(object):
     
         self.elec = new_elec
         
+    def addPerError(self,pnct=2.5):
+        """Add a flat percentage error to resistivity data.
+        
+        Parameters
+        --------------
+        pnct: float
+            Error in percent
+        """
+        res = np.array(self.df['resist'])
+        error = (pnct/100)*res
+        self.df['resError'] = error + np.array(self.df['resError'])
+        
     def estError(self,a_wgt=0.01,b_wgt=0.02):
         """Estimate reciprocal error data for data with no recipricols, following
         the same routine present in R2. This allows for the additional inclusion
@@ -1651,7 +1662,6 @@ class Survey(object):
         var_res = (a_wgt*a_wgt)+(b_wgt*b_wgt) * (res*res)
         std_res = np.sqrt(var_res)
         self.df['resError'] = std_res
-        
 
     def exportSrv(self,fname=None):
         """Export .srv format for which is compatible with E4D. The e4d survey

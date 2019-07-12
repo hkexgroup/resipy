@@ -358,6 +358,10 @@ elecList = [np.genfromtxt('resipy/test/3d/elec/' + f, delimiter=',') for f in os
 k.setElec(elec=None, elecList=elecList)
 k.createMesh(cl=2)
 k.param['reg_mode'] = 1 # background regularization
+k.err = True # test using estimated error model 
+k.errTyp = 'survey'
+k.estError()
+k.computeModelError()
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
 #print('elapsed: {:.4}s'.format(time.time() - t0))
