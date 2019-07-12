@@ -7,11 +7,27 @@ Created on Thu Jul 11 11:12:08 2019
 
 import numpy as np
 import pandas as pd
-import os
 
-def write2Res2DInv(param, dirname, df, elec, typ  = 'R2'):
-    '''Writes a Res2DInv format file'''
+def write2Res2DInv(param, fname, df, elec, typ='R2'):
+    ''' Writes a Res2DInv format file.
     
+   Parameters
+    ----------
+    param : dict
+        Dictionnary of parameters to be used.
+    fname : str
+        Path of the file to be saved.
+    df : DataFrame
+        DataFrame containing measurements
+    elec : Array
+        Array containing topography information
+    typ : str
+        Type of file either `R2`, `cR2`, `R3t`, `cR3t`.
+    
+    Returns
+    -------
+    String to be writting in the ".dat".
+    '''
     dparam = {
             'lineTitle':'My beautiful survey',
             'spacing':1.0,
@@ -94,9 +110,50 @@ def write2Res2DInv(param, dirname, df, elec, typ  = 'R2'):
         
     content = content + '{}'.format(param['end_zeros'])
     
-    fname = param['lineTitle']+'.dat'
-    with open(os.path.join(dirname,fname),'w') as f:
+#    fname = param['lineTitle']+'.dat'
+    with open(fname,'w') as f:
         f.write(content)
     
-    return content
+    return content # if needed!
+
+
+def write2csv(fname, dfi, elec, typ='R2'):
+    ''' Writes a clean csv format file.
+    
+    Parameters
+    ----------
+    fname : str
+        Path of the file to be saved.
+    dfi : DataFrame
+        DataFrame containing measurements
+    elec : Array
+        Array containing topography information
+    typ : str
+        Type of file either `R2`, `cR2`, `R3t`, `cR3t`.
+    '''
+    df = dfi[['a','b','m','n','i','vp','resist','ip']]
+    df = df.rename(columns = {'i':'Input_Current',
+                              'resist':'Resistance',
+                              'ip':'Chargeability'})
+    if 'recipMean' in dfi.columns:
+        df['Mean_R_Error'] = dfi['recipMean']
+        df['Relative_R_Error'] = dfi['reciprocalErrRel']
+    if 'reci_IP_err' in dfi.columns:
+        df['Recipraocal_IP_Error'] = dfi['reci_IP_err']
+    
+    if typ  == 'R2':
+        df = df.drop(['Chargeability'], axis=1)
+        if 'Recipraocal_IP_Error' in df.columns:
+            df = df.drop(['Recipraocal_IP_Error'], axis=1)
+            
+    df.to_csv(fname, index=False)
+    if np.sum(elec[:,2]) != 0: # if we have topography
+        topodf = pd.DataFrame(elec[:,[0,2]]).rename(columns = {0:'X [m]',1:'Z [m]'})
+        topofname = fname[:-4]+'_topography'+fname[-4:]
+        topodf.to_csv(topofname, index=False)
+        
+    
+    
+    
+
     

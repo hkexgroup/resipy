@@ -29,6 +29,7 @@ from resipy.template import parallelScript, startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
+from resipy.saveData import (write2Res2DInv, write2csv)
 
 apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
@@ -2623,7 +2624,31 @@ class R2(object): # R2 master class instanciated by the GUI
         df[cols[ie]].to_csv(fname, index=False)
         
         
+    def saveFilteredData(self, fname, elec, savetyp='Res2DInv (*.dat)'):
+        '''Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
         
+        Parameters
+        ----------
+        fname : str
+            Path where to save the file.
+        elec : Array
+            Array containing topohraphy information.
+        savetyp : str
+            Saving format. To be determined in GUI.
+            Default: Res2DInv (*.dat)
+        '''
+        for s, i in zip(self.surveys, range(len(self.surveys))):
+            df = s.df.query('irecip >=0') # not saving reciprocal data
+            if savetyp == 'Res2DInv (*.dat)':
+                param = {'num_meas':len(df),
+                         'lineTitle':self.param['lineTitle']}
+                write2Res2DInv(param, fname, df, elec, self.typ)
+            elif savetyp == 'Comma Separated Values (*.csv)':
+                write2csv(fname, df, elec, self.typ)
+                
+            fname = fname[:-4]+str(i)+fname[-4:] # to iterate file numbers in case of timelapse survey
+
+    
     def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=print):
         """ Operates forward modelling.
         
