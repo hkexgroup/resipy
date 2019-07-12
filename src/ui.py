@@ -1788,14 +1788,28 @@ class App(QMainWindow):
         recipErrorPltbtn.clicked.connect(recipFilter)
         recipErrorPltbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorPltbtn)
-
+        
         recipErrorResetbtn = QPushButton('Reset')
         recipErrorResetbtn.setStyleSheet("color: red")
         recipErrorResetbtn.setToolTip('This will restore all deleted measurements at this stage')
         recipErrorResetbtn.clicked.connect(resetRecipFilter)
         recipErrorResetbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorResetbtn)
-
+        
+        def saveFilteredData():
+            fname, savetyp = QFileDialog.getSaveFileName(tabImportingData,'Save Filtered Data', 
+                                                         self.datadir, 'Res2DInv (*.dat);;Comma Separated Values (*.csv)') # can add Protocol (*.dat) and so on
+            if fname != '':
+                elec = elecTable.getTable() # getting the topography info
+                self.r2.param['lineTitle'] = titleEdit.text()
+                self.r2.saveFilteredData(fname, elec, savetyp)
+                
+        recipErrorSavebtn = QPushButton('Save data')
+        recipErrorSavebtn.setStyleSheet("color: green")
+        recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        recipErrorSavebtn.clicked.connect(saveFilteredData)
+        recipErrorSavebtn.setFixedWidth(150)
+        recipErrorBtnLayout.addWidget(recipErrorSavebtn)
 
         recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
         recipErrorTopLayout.addLayout(recipErrorInputlayout)
@@ -1901,6 +1915,7 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir)
             if fname != '':
                 self.r2.saveErrorData(fname)
+                
         saveErrBtn = QPushButton('Save Error Data')
         saveErrBtn.clicked.connect(saveErrBtnFunc)
         saveErrBtn.setToolTip('Save error data (DC and IP) as .csv')
@@ -2072,11 +2087,18 @@ class App(QMainWindow):
             heatRaw()
 
         resetlayout = QHBoxLayout()
+        phaseSavebtn = QPushButton('Save data')
+        phaseSavebtn.setStyleSheet("color: green")
+        phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        phaseSavebtn.clicked.connect(saveFilteredData)
+        phaseSavebtn.setFixedWidth(150)
+        
         filtreset = QPushButton('Reset all "phase" filters')
         filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
+        filtreset.setFixedWidth(150)
         phiCbarminlabel = QLabel('Colorbar min: ')
         phiCbarminEdit = QLineEdit()
 #        phiCbarminEdit.setFixedWidth(80)
@@ -2095,6 +2117,7 @@ class App(QMainWindow):
         phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
         phiCbarDatarangebutton.setAutoDefault(True)
         phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
+        phiCbarDatarangebutton.setFixedWidth(150)
         resetlayout.addWidget(phiCbarminlabel)
         resetlayout.addWidget(phiCbarminEdit)
         resetlayout.addWidget(phiCbarMaxlabel)
@@ -2102,6 +2125,7 @@ class App(QMainWindow):
         resetlayout.addWidget(phiCbarrangebutton)
         resetlayout.addWidget(phiCbarDatarangebutton)
         resetlayout.addWidget(filtreset)
+        resetlayout.addWidget(phaseSavebtn)
 #        recipfilt.clicked.connect("add function")
 
 
