@@ -2624,13 +2624,18 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path where to save the file.
         '''
-        cols = np.array(['a','b','m','n','resist','resError','phase','phaseError'])
+        cols = np.array(['a','b','m','n','resist','recipMean','recipError','resError',
+                         'phase','reci_IP_err','phaseError'])
         if self.iTimeLapse is True:
             df = self.bigSurvey.df
         else:
             df = self.surveys[0].df
         ie = [c in df.columns for c in cols]
-        df[cols[ie]].to_csv(fname, index=False)
+        dff = df[cols[ie]]
+        dff = dff.rename(columns = {'resist':'Resistance [ohm]', 'recipError':'Resistance_err [ohm]', 
+                                    'resError':'Fit Resistance_err [ohm]','phase':'Phase [mRad]', 
+                                    'reci_IP_err':'Phase_err [mRad]','phaseError':'Fit Phase_err [mRad]'})
+        dff.to_csv(fname, index=False)
         
         
     def saveFilteredData(self, fname, elec, savetyp='Res2DInv (*.dat)'):
