@@ -9,9 +9,9 @@ import numpy as np
 import pandas as pd
 
 def write2Res2DInv(param, fname, df, elec, typ='R2'):
-    ''' Writes a Res2DInv format file.
+    """Writes a Res2DInv format file.
     
-   Parameters
+    Parameters
     ----------
     param : dict
         Dictionnary of parameters to be used.
@@ -27,7 +27,7 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
     Returns
     -------
     String to be writting in the ".dat".
-    '''
+    """
     dparam = {
             'lineTitle':'My beautiful survey',
             'spacing':1.0,
@@ -118,7 +118,7 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
 
 
 def write2csv(fname, dfi, elec, typ='R2'):
-    ''' Writes a clean csv format file.
+    """Writes a clean csv format file.
     
     Parameters
     ----------
@@ -130,7 +130,7 @@ def write2csv(fname, dfi, elec, typ='R2'):
         Array containing topography information
     typ : str
         Type of file either `R2`, `cR2`, `R3t`, `cR3t`.
-    '''
+    """
     df = dfi[['a','b','m','n','i','vp','resist','ip']]
     df = df.rename(columns = {'i':'Input_Current',
                               'resist':'Resistance',
