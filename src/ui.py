@@ -1912,13 +1912,15 @@ class App(QMainWindow):
         errFitType.setToolTip('Select an error model to use.')
         
         def saveErrBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir)
+            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save error data file', self.datadir, 'Comma Separated Values (*.csv)')
             if fname != '':
                 self.r2.saveErrorData(fname)
                 
         saveErrBtn = QPushButton('Save Error Data')
+        saveErrBtn.setStyleSheet("color: green")
+        saveErrBtn.setFixedWidth(150)
         saveErrBtn.clicked.connect(saveErrBtnFunc)
-        saveErrBtn.setToolTip('Save error data (DC and IP) as .csv')
+        saveErrBtn.setToolTip('Save error data for DC and IP (if available) as .csv')
         
         errFitLayout = QHBoxLayout()
         errFitLayout.addWidget(errFitType, 70)
@@ -1989,7 +1991,18 @@ class App(QMainWindow):
         iperrFitType.addItem('Parabola')
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
         iperrFitType.setToolTip('Select an error model for IP.')
-        ipLayout.addWidget(iperrFitType)
+        
+        saveIPErrBtn = QPushButton('Save Error Data')
+        saveIPErrBtn.setStyleSheet("color: green")
+        saveIPErrBtn.setFixedWidth(150)
+        saveIPErrBtn.clicked.connect(saveErrBtnFunc)
+        saveIPErrBtn.setToolTip('Save error data (DC and IP) as .csv')
+        
+        errIPFitLayout = QHBoxLayout()
+        errIPFitLayout.addWidget(iperrFitType, 70)
+        errIPFitLayout.addWidget(saveIPErrBtn, 30)        
+        
+        ipLayout.addLayout(errIPFitLayout)
         
         ipErrPlotLayout = QVBoxLayout()
         mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto')
