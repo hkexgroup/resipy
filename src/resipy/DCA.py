@@ -10,7 +10,7 @@ import pandas as pd
 
 #%%
 def positive_test (Dcurve,DecayTime): 
-    """ Calculating TDIP chargeability decay curve trend: 
+    """Calculating TDIP chargeability decay curve trend: 
         positive (increasing over time) trends are bad data
     """
     DC_slope = np.zeros(np.shape(Dcurve)[0])
@@ -30,12 +30,14 @@ def linear_coefs (x,y): #linear fit parameteres for decay curve
         return
 
 def DCA(data_in, dump=print): 
-    """ Decay Curve Analysis (Only for Syscal files):
+    """Decay Curve Analysis (Only for Syscal files):
         calculating master decay curve based on individual decay curves, 
         then compares individual decay curves with a master decay curve (avg(all good curves)) 
         and remove data with STD > 2 * STD(dataset).
-    -----------
-    (Reference: Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
+        
+    Reference:
+    ----------
+    Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
     Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
     Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
     """

@@ -22,10 +22,9 @@ from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  res
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
                      stingParser, ericParser)
 from resipy.DCA import DCA
-from resipy.interpolation import bilinear
 
 class Survey(object):
-    """ Class that handles geophysical data and some basic functions. One 
+    """Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
     
     Parameters
@@ -147,7 +146,7 @@ class Survey(object):
         return out
  
     def checkTxSign(self):
-        """ Checking the sign of the transfer resistance.
+        """Checking the sign of the transfer resistance.
         """
         elecpos = self.elec[:,0]
         array = self.df[['a','b','m','n']].values.copy().astype(int)
@@ -169,7 +168,7 @@ class Survey(object):
         
         
     def basicFilter(self):
-        """ Remove NaN, Inf and duplicates values in the data frame.
+        """Remove NaN, Inf and duplicates values in the data frame.
         """
         # remove Inf and NaN
         resist = self.df['resist'].values
@@ -228,7 +227,7 @@ class Survey(object):
           
         
     def addData(self, fname, ftype='Syscal', spacing=None, parser=None):
-        """ Add data to the actual survey (for instance the reciprocal if they
+        """Add data to the actual survey (for instance the reciprocal if they
         are not in the same file).
         """
          
@@ -267,7 +266,7 @@ class Survey(object):
 
     
     def filterData(self, i2keep):
-        """ Filter out the data not retained in `i2keep`.
+        """Filter out the data not retained in `i2keep`.
         
         Parameters
         ----------
@@ -293,7 +292,7 @@ class Survey(object):
     
     
     def removeUnpaired(self):
-        """ Remove quadrupoles that don't have a reciprocals. This might
+        """Remove quadrupoles that don't have a reciprocals. This might
         remove dummy measurements added for sequence optimization.
         """
         i2keep = self.df['irecip'] != 0
@@ -303,7 +302,7 @@ class Survey(object):
         
         
     def inferType(self):
-        """ define the type of the survey
+        """define the type of the survey
         """
         if self.elec[:,2].sum() == 0:
             stype = '2d'
@@ -316,7 +315,7 @@ class Survey(object):
     
     
     def setType(self, stype=None):
-        """ Set the type of the survey.
+        """Set the type of the survey.
         
         Parameters
         ----------
@@ -418,7 +417,7 @@ class Survey(object):
     
     
     def errorDist(self, ax=None):
-        """ Calculate and plots reciprocal error probablity histogram.
+        """Calculate and plots reciprocal error probablity histogram.
         Good data will have a bell shape (normal) distribution where most datapoints have near
         zero reciprocal error.
         """
@@ -448,7 +447,7 @@ class Survey(object):
     
     
     def removeDummy(self):
-        """ Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
+        """Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
         measurements added for speed).
         """
         i2keep = np.abs(self.df['a'] - self.df['b']) == np.abs(self.df['m'] - self.df['n'])
@@ -481,14 +480,14 @@ class Survey(object):
             return numRemoved
         
     def addFilteredIP(self):
-        """ Add filtered IP data after IP filtering and pre-processing.
+        """Add filtered IP data after IP filtering and pre-processing.
         """
         self.df = pd.merge(self.df, self.filterDataIP[['a','b','m','n']].copy(), how='inner', on=['a','b','m','n'])
 
     
     @staticmethod
     def logClasses3(datax, datay, func, class1=None):
-        """ Perform a log class of datay based on datay and applied function
+        """Perform a log class of datay based on datay and applied function
         func to each bin.
         
         Parameters
@@ -536,7 +535,7 @@ class Survey(object):
         return mbins, vbins, nbins
     
     def plotError(self, ax=None):
-        """ Plot the reciprocal errors.
+        """Plot the reciprocal errors.
         
         Parameters
         ----------
@@ -560,7 +559,7 @@ class Survey(object):
             return fig
 
     def phaseplotError(self, ax=None): #plotting phase discrepancies over R
-        """ Plot the reciprocal phase discrepancies.
+        """Plot the reciprocal phase discrepancies.
         
         Parameters
         ----------
@@ -602,7 +601,7 @@ class Survey(object):
         return t    
         
     def plotIPFit(self, ax=None):
-        """ Plot the reciprocal phase errors with a power-law fit.
+        """Plot the reciprocal phase errors with a power-law fit.
         
         Parameters
         ----------
@@ -650,7 +649,7 @@ class Survey(object):
             return fig   
 
     def plotIPFitParabola(self, ax=None):
-        """ Plot the reciprocal phase errors with a parabola fit.
+        """Plot the reciprocal phase errors with a parabola fit.
         
         Parameters
         ----------
@@ -699,7 +698,7 @@ class Survey(object):
 
 
     def pwlfit(self, ax=None):
-        """ Fit an power law to the resistivity data.
+        """Fit an power law to the resistivity data.
         
         Parameters
         ----------
@@ -760,7 +759,7 @@ class Survey(object):
 
 
     def linfit(self, ax=None):
-        """ Fit a linear relationship to the resistivity data.
+        """Fit a linear relationship to the resistivity data.
         
         Parameters
         ----------
@@ -959,7 +958,7 @@ class Survey(object):
 
 
     def heatmap(self,ax=None):
-        """ Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
+        """Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
             Orozco, A. F., K. H. Williams, and A. Kemna (2013), 
             Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, 
             Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
@@ -1010,7 +1009,7 @@ class Survey(object):
             return fig
     
     def iprangefilt(self, phimin, phimax):
-        """ Filter IP data according to a specified range.
+        """Filter IP data according to a specified range.
         
         Parameters
         ----------
@@ -1032,7 +1031,7 @@ class Survey(object):
         self.addFilteredIP()
         
     def removerecip(self):
-        """ Removing reciprocal measurements from dataset - only for visualization purposes on heatmap()
+        """Removing reciprocal measurements from dataset - only for visualization purposes on heatmap()
         """
         
         if self.filterDataIP.empty:
@@ -1042,7 +1041,7 @@ class Survey(object):
         self.addFilteredIP()
 
     def removenested(self):
-        """ Removes nested measurements:
+        """Removes nested measurements:
             Where M or N are in between A and B
         """
         if self.filterDataIP.empty:
@@ -1059,7 +1058,7 @@ class Survey(object):
 
 
     def pseudo(self, ax=None, bx=None, **kwargs):
-        """ Plot pseudo section if 2D survey or just quadrupoles transfer
+        """Plot pseudo section if 2D survey or just quadrupoles transfer
         resistance otherwise.
         """
         if bx is None:
@@ -1075,7 +1074,7 @@ class Survey(object):
 
 
     def pseudoIP(self, ax=None, bx=None, **kwargs):
-        """ Plot pseudo section if 2D survey or just quadrupoles phase otherwise.
+        """Plot pseudo section if 2D survey or just quadrupoles phase otherwise.
         """
         if bx is None:
             bx = self.iBorehole
@@ -1210,7 +1209,7 @@ class Survey(object):
 
     
     def pseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
-        """ Create pseudo section of IP data with points (default)
+        """Create pseudo section of IP data with points (default)
         
         Parameters
         ----------
@@ -1285,7 +1284,7 @@ class Survey(object):
     
     def write2protocol(self, outputname='', err=False, errTot=False,
                        ip=False, res0=False, isubset=None):
-        """ Write a protocol.dat file for R2 or cR2.
+        """Write a protocol.dat file for R2 or cR2.
         
         Parameters
         ----------
@@ -1399,7 +1398,7 @@ class Survey(object):
         
     def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
                         log=False, geom=False, label='', vmin=None, vmax=None):
-        """ Manually filters the data visually.
+        """Manually filters the data visually.
         
         Parameters
         ----------
@@ -1515,7 +1514,7 @@ class Survey(object):
     
     
     def shuntIndexes(self, debug=True): 
-        """ Normalise the indexes the sequence matrix to start at 1.
+        """Normalise the indexes the sequence matrix to start at 1.
         
         Parameters
         ----------
@@ -1549,7 +1548,7 @@ class Survey(object):
 
 
     def swapIndexes(self, old_indx, new_indx):
-        """ Replace the electrode number in a sequence matrix with another.
+        """Replace the electrode number in a sequence matrix with another.
         Survey dataframe is updated after running. 
         
         Parameters
@@ -1573,7 +1572,7 @@ class Survey(object):
         
     
     def normElecIdx(self, debug=True):
-        """ Normalise the electrode indexing sequencing to start at 1 and ascend
+        """Normalise the electrode indexing sequencing to start at 1 and ascend
         consectively (ie 1 , 2 , 3 , 4 ... )
         
         Function firstly normalises all indexes so that the lowest electrode 
@@ -1605,7 +1604,7 @@ class Survey(object):
     
     
     def elec2distance(self):
-        """ Convert 3d xy data in pure x lateral distance.
+        """Convert 3d xy data in pure x lateral distance.
         Use for 2D data only!
         """
         elec = self.elec.copy()
@@ -1634,4 +1633,72 @@ class Survey(object):
             new_elec[put_back,2] =  z_sorted[i]
     
         self.elec = new_elec
+        
+    def addPerError(self,pnct=2.5):
+        """Add a flat percentage error to resistivity data.
+        
+        Parameters
+        --------------
+        pnct: float
+            Error in percent
+        """
+        res = np.array(self.df['resist'])
+        error = (pnct/100)*res
+        self.df['resError'] = error + np.array(self.df['resError'])
+        
+    def estError(self,a_wgt=0.01,b_wgt=0.02):
+        """Estimate reciprocal error data for data with no recipricols, following
+        the same routine present in R2. This allows for the additional inclusion
+        of modelling errors. 
+        
+        Parameters
+        ------------
+        a_wgt: float, optional
+            a_wgt documented in the R2 documentation 
+        b_wgt: float, optional 
+            b_wgt documented in the R2 documentation  
+        """
+        res = np.array(self.df['resist'])
+        var_res = (a_wgt*a_wgt)+(b_wgt*b_wgt) * (res*res)
+        std_res = np.sqrt(var_res)
+        self.df['resError'] = std_res
 
+    def exportSrv(self,fname=None):
+        """Export .srv format for which is compatible with E4D. The e4d survey
+        file includes the electrode locations, in addition to the scheduling 
+        matrix. 
+        
+        Paramters
+        ------------
+        fname: string, optional
+            Where the output file will be written to. By default the file will 
+            take on the name of the survey and is written to the current working 
+            directory. 
+        """
+        if fname is None: # rename output file name to that of the survey name
+            fname = self.name + '.srv'
+        fh = open(fname,'w')
+        numelec = self.elec.shape[0] # number of electrodes 
+        fh.write('%i number of electrodes\n'%numelec)
+        for i in range(numelec):
+            line = '{:d} {:f} {:f} {:f} {:d}\n'.format(i+1,
+                    self.elec[i,0],#x coordinate
+                    self.elec[i,1],#y coordinate
+                    self.elec[i,2],#z coordinate
+                    1)#buried flag 
+            fh.write(line)
+        #now write the scheduling matrix to file 
+        nomeas = len(self.df) # number of measurements 
+        fh.write('\n%i number of measurements \n'%nomeas)
+        if not 'resError' in self.df.columns: # the columns exists
+            self.estError()
+        # format >>> m_indx a b m n V/I stdev_V/I
+        for i in range(nomeas): 
+            line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
+                    self.df['a'][i],
+                    self.df['b'][i],
+                    self.df['m'][i],
+                    self.df['n'][i],
+                    self.df['resist'][i],
+                    self.df['resError'][i])
+            fh.write(line)

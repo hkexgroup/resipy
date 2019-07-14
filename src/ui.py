@@ -11,8 +11,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
     QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal#, QProcess, QSize
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer#, QProcess, QSize
 from PyQt5.QtCore import Qt
+from functools import partial
 
 
 #%% General crash ERROR
@@ -302,13 +303,18 @@ class App(QMainWindow):
         layout = QVBoxLayout()
         tabs = QTabWidget()
         
-        def clearError(arg):
-            infoDump('')
-        tabs.currentChanged.connect(clearError)
+#        def clearError(arg):
+#            infoDump('')
+#        tabs.currentChanged.connect(clearError)
 
         # app icon
 #        self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
-
+        
+        def timeOut(timeStamp):
+            errorLabel.setText('<i style="color:black">['+timeStamp+']: </i>')
+            
+        timer = QTimer() # a better method to get rid of expired messages in status bar
+        
         def errorDump(text, flag=1):
             text = str(text)
             timeStamp = time.strftime('%H:%M:%S')
@@ -317,6 +323,9 @@ class App(QMainWindow):
             else:
                 col = 'black'
             errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
+            timer.timeout.connect(partial(timeOut, timeStamp))
+            timer.start(10000) # 10 secs - making sure the error/message doen't stick forever!
+            
         errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
         QApplication.processEvents()
 
@@ -1788,14 +1797,28 @@ class App(QMainWindow):
         recipErrorPltbtn.clicked.connect(recipFilter)
         recipErrorPltbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorPltbtn)
-
+        
         recipErrorResetbtn = QPushButton('Reset')
         recipErrorResetbtn.setStyleSheet("color: red")
         recipErrorResetbtn.setToolTip('This will restore all deleted measurements at this stage')
         recipErrorResetbtn.clicked.connect(resetRecipFilter)
         recipErrorResetbtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorResetbtn)
-
+        
+        def saveFilteredData():
+            fname, savetyp = QFileDialog.getSaveFileName(tabImportingData,'Save Filtered Data', 
+                                                         self.datadir, 'Res2DInv (*.dat);;Comma Separated Values (*.csv)') # can add Protocol (*.dat) and so on
+            if fname != '':
+                elec = elecTable.getTable() # getting the topography info
+                self.r2.param['lineTitle'] = titleEdit.text()
+                self.r2.saveFilteredData(fname, elec, savetyp)
+                
+        recipErrorSavebtn = QPushButton('Save data')
+        recipErrorSavebtn.setStyleSheet("color: green")
+        recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        recipErrorSavebtn.clicked.connect(saveFilteredData)
+        recipErrorSavebtn.setFixedWidth(150)
+        recipErrorBtnLayout.addWidget(recipErrorSavebtn)
 
         recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
         recipErrorTopLayout.addLayout(recipErrorInputlayout)
@@ -1898,12 +1921,15 @@ class App(QMainWindow):
         errFitType.setToolTip('Select an error model to use.')
         
         def saveErrBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir)
+            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save error data file', self.datadir, 'Comma Separated Values (*.csv)')
             if fname != '':
                 self.r2.saveErrorData(fname)
+                
         saveErrBtn = QPushButton('Save Error Data')
+        saveErrBtn.setStyleSheet("color: green")
+        saveErrBtn.setFixedWidth(150)
         saveErrBtn.clicked.connect(saveErrBtnFunc)
-        saveErrBtn.setToolTip('Save error data (DC and IP) as .csv')
+        saveErrBtn.setToolTip('Save error data for DC and IP (if available) as .csv')
         
         errFitLayout = QHBoxLayout()
         errFitLayout.addWidget(errFitType, 70)
@@ -1974,7 +2000,18 @@ class App(QMainWindow):
         iperrFitType.addItem('Parabola')
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
         iperrFitType.setToolTip('Select an error model for IP.')
-        ipLayout.addWidget(iperrFitType)
+        
+        saveIPErrBtn = QPushButton('Save Error Data')
+        saveIPErrBtn.setStyleSheet("color: green")
+        saveIPErrBtn.setFixedWidth(150)
+        saveIPErrBtn.clicked.connect(saveErrBtnFunc)
+        saveIPErrBtn.setToolTip('Save error data (DC and IP) as .csv')
+        
+        errIPFitLayout = QHBoxLayout()
+        errIPFitLayout.addWidget(iperrFitType, 70)
+        errIPFitLayout.addWidget(saveIPErrBtn, 30)        
+        
+        ipLayout.addLayout(errIPFitLayout)
         
         ipErrPlotLayout = QVBoxLayout()
         mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto')
@@ -2072,11 +2109,18 @@ class App(QMainWindow):
             heatRaw()
 
         resetlayout = QHBoxLayout()
+        phaseSavebtn = QPushButton('Save data')
+        phaseSavebtn.setStyleSheet("color: green")
+        phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        phaseSavebtn.clicked.connect(saveFilteredData)
+        phaseSavebtn.setFixedWidth(150)
+        
         filtreset = QPushButton('Reset all "phase" filters')
         filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
+        filtreset.setFixedWidth(150)
         phiCbarminlabel = QLabel('Colorbar min: ')
         phiCbarminEdit = QLineEdit()
 #        phiCbarminEdit.setFixedWidth(80)
@@ -2095,6 +2139,7 @@ class App(QMainWindow):
         phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
         phiCbarDatarangebutton.setAutoDefault(True)
         phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
+        phiCbarDatarangebutton.setFixedWidth(150)
         resetlayout.addWidget(phiCbarminlabel)
         resetlayout.addWidget(phiCbarminEdit)
         resetlayout.addWidget(phiCbarMaxlabel)
@@ -2102,6 +2147,7 @@ class App(QMainWindow):
         resetlayout.addWidget(phiCbarrangebutton)
         resetlayout.addWidget(phiCbarDatarangebutton)
         resetlayout.addWidget(filtreset)
+        resetlayout.addWidget(phaseSavebtn)
 #        recipfilt.clicked.connect("add function")
 
 
