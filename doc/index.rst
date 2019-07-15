@@ -22,6 +22,9 @@ To start the GUI from source, navigate through the `src` directory and run `ui.p
 From the same `src` directory you can import the module from source using python. Another solution is to install the module from pypi using pip::
 
     pip install resipy
+    
+.. note::
+    Mac and Linux user will need `wine` to run the inversions.
 
 
 .. toctree::
