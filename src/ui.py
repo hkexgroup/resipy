@@ -11,8 +11,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
     QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal#, QProcess, QSize
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer#, QProcess, QSize
 from PyQt5.QtCore import Qt
+from functools import partial
 
 
 #%% General crash ERROR
@@ -302,13 +303,18 @@ class App(QMainWindow):
         layout = QVBoxLayout()
         tabs = QTabWidget()
         
-        def clearError(arg):
-            infoDump('')
-        tabs.currentChanged.connect(clearError)
+#        def clearError(arg):
+#            infoDump('')
+#        tabs.currentChanged.connect(clearError)
 
         # app icon
 #        self.setWindowIcon(QIcon(os.path.join(bundle_dir + 'logo.png')))
-
+        
+        def timeOut(timeStamp):
+            errorLabel.setText('<i style="color:black">['+timeStamp+']: </i>')
+            
+        timer = QTimer() # a better method to get rid of expired messages in status bar
+        
         def errorDump(text, flag=1):
             text = str(text)
             timeStamp = time.strftime('%H:%M:%S')
@@ -317,6 +323,9 @@ class App(QMainWindow):
             else:
                 col = 'black'
             errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
+            timer.timeout.connect(partial(timeOut, timeStamp))
+            timer.start(10000) # 10 secs - making sure the error/message doen't stick forever!
+            
         errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
         QApplication.processEvents()
 
