@@ -67,7 +67,7 @@ wineCheck()
 #%%
         
 def workerInversion(path, dump, exePath, qin, iMoveElec=False):
-    ''' Take protocol.dat from the queue (`qin`) and run inversion in its own
+    """Take protocol.dat from the queue (`qin`) and run inversion in its own
     working directory and then put the inverted files back to their origin.
     This function is called by `R2.runParallel()` and shouldn't be used on its
     own.
@@ -87,7 +87,7 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
     iMoveElec : boolean, optional
         If `True`, each protocol.dat file will have it's own .in file that
         can provide different electrode positions.
-    '''
+    """
     os.chdir(path)
     typ = os.path.basename(exePath).replace('.exe','')
     
@@ -154,7 +154,7 @@ def workerInversion(path, dump, exePath, qin, iMoveElec=False):
 
 # small useful function for reading and writing mesh.dat
 def readMeshDat(fname):
-    """ Read mesh.dat or mesh3d.dat and returns elements and nodes.
+    """Read mesh.dat or mesh3d.dat and returns elements and nodes.
     """
     with open(fname, 'r') as f:
         x = f.readline().split()
@@ -169,7 +169,7 @@ def readMeshDat(fname):
 
 
 def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
-    """ Write mesh.dat/mesh3d.dat provided elements and nodes at least.
+    """Write mesh.dat/mesh3d.dat provided elements and nodes at least.
     """
     numel = len(elems)
     nnodes = len(nodes)
@@ -196,7 +196,7 @@ def cdist(a):
             
             
 class R2(object): # R2 master class instanciated by the GUI
-    """ Master class to handle all processing around the inversion codes.
+    """Master class to handle all processing around the inversion codes.
     
     Parameters
     ----------
@@ -241,7 +241,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def setwd(self, dirname):
-        """ Set the working directory.
+        """Set the working directory.
         
         Parameters
         ----------
@@ -292,7 +292,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def setElec(self, elec, elecList=None):
-        """ Set electrodes.
+        """Set electrodes.
         
         Parameters
         ----------
@@ -349,7 +349,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
         
     def setBorehole(self, val=False):
-        """ Set all surveys in borehole type if `True` is passed.
+        """Set all surveys in borehole type if `True` is passed.
         """
         self.iBorehole = val
         for s in self.surveys:
@@ -367,7 +367,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None,
                      parser=None):
-        """ Read electrodes and quadrupoles data and return 
+        """Read electrodes and quadrupoles data and return 
         a survey object.
         
         Parameters
@@ -420,7 +420,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
 #    def lmefit(self, each=False, ax=None):
-#        '''Fit a LME model model.
+#        """Fit a LME model model.
 #        
 #        Parameters
 #        ----------
@@ -428,7 +428,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #            If `True`, then the error model will be applied for each survey.
 #        ax : Matplotlib.Axes, optional
 #            If specified, the plot will be plotted against this axis.
-#        '''
+#        """
 #        if len(surveys) > 1 and each is True:
 #            for s in self.surveys:
 #                s.lmefit()
@@ -440,7 +440,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
                           parser=None, isurveys=[], dump=print):
-        """ Read multiples files from a folders (sorted by alphabetical order).
+        """Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
         ----------
@@ -471,7 +471,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
                               spacing=None, parser=None, isurveys=[],
                               dump=print):
-        """ Read electrodes and quadrupoles data and return 
+        """Read electrodes and quadrupoles data and return 
         a survey object.
         
         Parameters
@@ -544,7 +544,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def pseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
-        """ Plot pseudo-section with dots.
+        """Plot pseudo-section with dots.
         
         Parameters
         ----------
@@ -564,7 +564,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
-        """ Plot pseudo-section with dots for IP data.
+        """Plot pseudo-section with dots for IP data.
         
         Parameters
         ----------
@@ -584,7 +584,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def matchSurveys(self):
-        """ Will trim all surveys to get them ready for difference inversion
+        """Will trim all surveys to get them ready for difference inversion
         where all datasets must have the same number of quadrupoles.
         """
         print('Matching quadrupoles between surveys for difference inversion ...', end='')
@@ -627,7 +627,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     
     
     def filterElec(self, elec=[]):
-        """ Filter out specific electrodes given in all surveys.
+        """Filter out specific electrodes given in all surveys.
         
         Parameters
         ----------
@@ -643,7 +643,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def filterRecip(self, percent=20):
-        """ Filter on reciprocal errors.
+        """Filter on reciprocal errors.
         
         Parameters
         ----------
@@ -658,7 +658,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def removeUnpaired(self):
-        """ Remove quadrupoles that don't have reciprocals. This might
+        """Remove quadrupoles that don't have reciprocals. This might
         remove dummy measurements added for sequence optimization.
         """
         numRemoved = 0
@@ -668,7 +668,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         
     def computeDOI(self):
-        """ Compute the Depth Of Investigation (DOI).
+        """Compute the Depth Of Investigation (DOI).
         """
         elec = self.elec.copy()
         if all(self.elec[:,1] == 0): # 2D survey:
@@ -725,7 +725,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
                    cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
-        """ Create a mesh.
+        """Create a mesh.
         
         Parameters
         ----------
@@ -1014,7 +1014,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def showMesh(self, ax=None):
-        """ Display the mesh.
+        """Display the mesh.
         """
         if self.mesh is None:
             raise Exception('Mesh undefined')
@@ -1027,7 +1027,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def write2in(self, param={}):
-        """ Create configuration file for inversion.
+        """Create configuration file for inversion.
         
         Parameters
         ----------
@@ -1181,7 +1181,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 
 
     def write2protocol(self, err=None, errTyp = None, errTot=False, **kwargs):
-        """ Write a protocol.dat file for the inversion code.
+        """Write a protocol.dat file for the inversion code.
         
         Parameters
         ----------
@@ -1278,7 +1278,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def runR2(self, dirname='', dump=print):
-        """ Run the executable in charge of the inversion.
+        """Run the executable in charge of the inversion.
         
         Parameters
         ----------
@@ -1331,7 +1331,7 @@ class R2(object): # R2 master class instanciated by the GUI
         os.chdir(cwd)
     
     def runDistributed(self, dirname=None, dump=print, iMoveElec=False, ncores=None):
-        """ run R2 in // according to the number of cores available but in a 
+        """run R2 in // according to the number of cores available but in a 
         non-concurrent way (!= runParallel) -> this works on Windows
         
         Parameters
@@ -1516,7 +1516,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def runParallel(self, dirname=None, dump=print, iMoveElec=False, 
                     ncores=None, rmDirTree=True):
-        """ Run R2 in // according to the number of cores available.
+        """Run R2 in // according to the number of cores available.
         
         Parameters
         ----------
@@ -1664,7 +1664,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def runParallel2(self, dirname=None, dump=print, iMoveElec=False, 
                     ncores=None, rmDirTree=True):
-        """ Run R2 in // according to the number of cores available.
+        """Run R2 in // according to the number of cores available.
         
         Parameters
         ----------
@@ -1922,7 +1922,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def runParallelWindows(self, dirname=None, dump=print, iMoveElec=False, 
                     ncores=None, rmDirTree=False):
-        """ Run R2 in // according to the number of cores available.
+        """Run R2 in // according to the number of cores available.
         
         Parameters
         ----------
@@ -2075,7 +2075,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
                parallel=False, iMoveElec=False, ncores=None, forceParallel=False,
                rmDirTree=True):
-        """ Invert the data, first generate R2.in file, then run
+        """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
         
         Parameters
@@ -2174,7 +2174,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
                     **kwargs):
-        """ Show the inverteds section.
+        """Show the inverteds section.
         
         Parameters
         ----------
@@ -2221,7 +2221,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def getResults(self):
-        """ Collect inverted results after running the inversion and adding
+        """Collect inverted results after running the inversion and adding
         them to `R2.meshResults` list.
         """
         self.meshResults = [] # make sure we empty the list first
@@ -2292,7 +2292,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
             
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
-        """ Show inverted section based on the `_res.dat``file instead of the
+        """Show inverted section based on the `_res.dat``file instead of the
         `.vtk`.
         
         Parameters
@@ -2346,7 +2346,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def addRegion(self, xy, res0=100, phase0=1, blocky=False, fixed=False,
                   ax=None, iplot=False):
-        """ Add region according to a polyline defined by `xy` and assign it
+        """Add region according to a polyline defined by `xy` and assign it
         the starting resistivity `res0`.
         
         Parameters
@@ -2407,7 +2407,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def resetRegions(self):
-        """ Just reset all regions already draw. Shouldn't be needed as 
+        """Just reset all regions already draw. Shouldn't be needed as 
         the `self.runR2()` automatically use a homogenous model as starting
         for inversion. The only purpose of this is to use an inhomogeous
         starting model to invert data from forward modelling.
@@ -2418,7 +2418,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def createModel(self, ax=None, dump=print, typ='poly', addAction=None):
-        """ Interactive model creation for forward modelling.
+        """Interactive model creation for forward modelling.
         
         Parameters
         ----------
@@ -2464,7 +2464,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
     
     def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
-        """ Assign starting resitivity values.
+        """Assign starting resitivity values.
         
         Parameters
         ----------
@@ -2536,7 +2536,7 @@ class R2(object): # R2 master class instanciated by the GUI
         print('Reference model successfully assigned')
 
     def createSequence(self, params=[('dpdp1', 1, 8)]):
-        """ Create a dipole-dipole sequence.
+        """Create a dipole-dipole sequence.
         
         Parameters
         ----------
@@ -2571,13 +2571,13 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def saveSequence(self, fname=''):
-        '''Save sequence as .csv file.
+        """Save sequence as .csv file.
         
         Parameters
         ----------
         fname : str, optional
             Path where to save the sequence.
-        '''
+        """
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
             df.to_csv(fname)
@@ -2585,7 +2585,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def importElec(self, fname=''):
-        """ Import electrodes positions.
+        """Import electrodes positions.
         
         Parameters
         ----------
@@ -2600,7 +2600,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def importSequence(self, fname=''):
-        """ Import sequence for forward modelling.
+        """Import sequence for forward modelling.
         
         Parameters
         ----------
@@ -2616,14 +2616,14 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def saveErrorData(self, fname):
-        '''Save quadruople, resistance, phase and their respective reciprocal
+        """Save quadruople, resistance, phase and their respective reciprocal
         errors as .csv file.
         
         Parameters
         ----------
         fname : str
             Path where to save the file.
-        '''
+        """
         cols = np.array(['a','b','m','n','resist','recipMean','recipError','resError',
                          'phase','reci_IP_err','phaseError'])
         if self.iTimeLapse is True:
@@ -2639,18 +2639,18 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def saveFilteredData(self, fname, elec, savetyp='Res2DInv (*.dat)'):
-        '''Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
+        """Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
         
         Parameters
         ----------
         fname : str
             Path where to save the file.
         elec : Array
-            Array containing topohraphy information.
-        savetyp : str
+            Array containing topography information.
+        savetyp : str, optional
             Saving format. To be determined in GUI.
             Default: Res2DInv (*.dat)
-        '''
+        """
         for s, i in zip(self.surveys, range(len(self.surveys))):
             df = s.df.query('irecip >=0') # not saving reciprocal data
             if savetyp == 'Res2DInv (*.dat)':
@@ -2664,7 +2664,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def forward(self, noise=0.0, noiseIP=0.0, iplot=False, dump=print):
-        """ Operates forward modelling.
+        """Operates forward modelling.
         
         Parameters
         ----------
@@ -2903,7 +2903,7 @@ class R2(object): # R2 master class instanciated by the GUI
             s.estError(a_wgt=a_wgt,b_wgt=b_wgt)
         
     def computeModelError(self,rm_tree=True):
-        """ Compute modelling error assocaited with the mesh.
+        """Compute modelling error assocaited with the mesh.
         This is computed on a flat tetrahedral mesh.
         
         Parameters
@@ -3012,7 +3012,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.fwdErrMdl = True # class now has a forward error model.        
         
     def showIter(self, index=-2, ax=None):
-        """ Dispay temporary inverted section after each iteration.
+        """Dispay temporary inverted section after each iteration.
         
         Parameters
         ----------
@@ -3055,7 +3055,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     
     def saveInvPlots(self, outputdir=None, **kwargs):
-        """ Save all plots to output (or working directory). Parameters
+        """Save all plots to output (or working directory). Parameters
         are passed to the `showResults()` method.
         
         Parameters
@@ -3087,7 +3087,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def getInvError(self):
-        """ Collect inversion error from _err.dat or .err file after inversion.
+        """Collect inversion error from _err.dat or .err file after inversion.
         
         Returns
         -------
@@ -3113,7 +3113,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
             
     def pseudoError(self, ax=None):
-        """ Plot pseudo section of errors from file `f001_err.dat`.
+        """Plot pseudo section of errors from file `f001_err.dat`.
         
         Parameters
         ----------
@@ -3127,7 +3127,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     
     def pseudoErrorIP(self, ax=None):
-        """ Display normalized phase error.
+        """Display normalized phase error.
         """
         if self.typ == 'cR2':
             df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)   
@@ -3138,7 +3138,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
         
     def showInversionErrors(self, ax=None):
-        """ Display inversion error by measurment numbers.
+        """Display inversion error by measurment numbers.
         """
 #        if self.typ == 'R2':
 #            file_path = os.path.join(self.dirname, 'f001_err.dat')
@@ -3174,7 +3174,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def showInParaview(self, index=0, paraview_loc=None):
-        """ Open paraview to display the .vtk file.
+        """Open paraview to display the .vtk file.
         
         Parameters
         ----------
@@ -3213,7 +3213,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def showSlice(self, index=0, ax=None, attr=None, axis='z'): 
-        """ Show slice of 3D mesh interactively.
+        """Show slice of 3D mesh interactively.
         """
         if attr is None:
             attr = list(self.meshResults[index].attr_cache.keys())[0]
@@ -3376,14 +3376,14 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def saveData(self, outputdir):
-        '''Save all data (_res.dat, .vtk, ...) from the working directory 
+        """Save all data (_res.dat, .vtk, ...) from the working directory 
         generated during inversion to the designated directory.
         
         Parameters
         ----------
         outputdir : str
             Path to the directory to save the files.
-        '''
+        """
         wd = os.path.join(outputdir, 'wd')
         if os.path.exists(wd):
             shutil.rmtree(wd)
@@ -3393,13 +3393,13 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def showParam(self):
-        """ Print parameters in `R2.param` dictionary.
+        """Print parameters in `R2.param` dictionary.
         """
         [print(key) for i,key in enumerate(self.param)]
     
     
     def filterZeroMeasSurveys(self):
-        """ Filter out badly behaved surveys, where after all other QC no measurements 
+        """Filter out badly behaved surveys, where after all other QC no measurements 
         are actually left."""
         count=0
         survey_len = [len(self.surveys[i].df) for i in range(len(self.surveys))]

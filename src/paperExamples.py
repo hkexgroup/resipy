@@ -13,6 +13,62 @@ plt.ioff() # this disable interactive plotting
 
 figdir = './image/paper/'
 
+#%% error plots
+#k = R2()
+#k.createSurvey('./resipy/test/syscalFile.csv')
+#k.removeUnpaired()
+
+#fig = plt.figure(figsize=(8,5))
+#k.filterElec([3])
+#ax = plt.subplot2grid((2,2), (0,1))
+#k.surveys[0].manualFiltering(ax=ax)
+#ax.set_title('(b) Filtered data')
+#ax = plt.subplot2grid((2,2), (0,0))
+##k = R2()
+#k.createSurvey('./resipy/test/syscalFile.csv')
+#k.removeUnpaired()
+#k.surveys[0].manualFiltering(ax=ax) # need to click manually and same
+#ax.set_title('(a) Manual filtering')
+#ax = plt.subplot2grid((2,2), (1,0), colspan=2)
+#k.errorDist(ax=ax)
+#ax.set_title('(c) Error probability distribution')
+#fig.show()
+
+
+#%%
+k = R2()
+k.createSurvey('./resipy/test/syscalFile.csv')
+k.removeUnpaired()
+figsize=(4,2)
+
+fig, ax = plt.subplots(figsize=figsize)
+k.surveys[0].manualFiltering(ax=ax) # manually selection points
+ax.set_title('(a) Select points/electrodes')
+ax.set_ylabel('Pseudo-depth [m]')
+ax.set_xlabel('Distance [m]')
+fig.savefig(figdir + 'fig4-manualFiltering.png') # to be saved after selecting points
+fig.show()
+
+k.surveys[0].filterData(~k.surveys[0].iselect)
+
+fig, ax = plt.subplots(figsize=figsize)
+k.surveys[0].manualFiltering(ax=ax) # manually selection points
+ax.set_title('(b) Filtered data')
+ax.set_ylabel('Pseudo-depth [m]')
+ax.set_xlabel('Distance [m]')
+fig.savefig(figdir + 'fig4-filtered.png')
+fig.show()
+
+fig, ax = plt.subplots(figsize=figsize)
+k.errorDist(ax=ax)
+ax.set_title('(c) Probability error distribution')
+fig.savefig(figdir + 'fig4-errorDist.png')
+fig.show()
+
+
+
+
+
 #%% 2D topo at Lancaster Castle Hill (Lancaster UK)
 k = R2() # initiate an R2 instance
 k.createSurvey('./resipy/test/syscalFileTopo.csv', ftype='Syscal') # import data
