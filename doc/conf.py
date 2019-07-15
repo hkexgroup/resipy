@@ -43,6 +43,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
     'numpydoc',
+    'nbsphinx',
 ]
 
 numpydoc_show_class_members = False

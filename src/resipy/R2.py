@@ -2646,8 +2646,8 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path where to save the file.
         elec : Array
-            Array containing topohraphy information.
-        savetyp : str
+            Array containing topography information.
+        savetyp : str, optional
             Saving format. To be determined in GUI.
             Default: Res2DInv (*.dat)
         """

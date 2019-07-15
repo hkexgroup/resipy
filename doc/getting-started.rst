@@ -1,7 +1,7 @@
 Getting Started
 ===============
 
-EMagPy aims to process frequency domain electromagnetic measurements (FDEM) taken with electromagnetic induction (EMI) device. EMagPy has a python application programming interface (API) to use in Jupyter-notebook (see section Examples) and a standalone graphical user interface (GUI).
+ResIPy aims to process geoeletrical data (DC and IP). It provides a python application programming interface (API) and a standalone graphical user interface (GUI). Resipy provides high-level filtering, error modelling, inversion/forward modelling and post-processing tools.
 
 .. _guiGif:
 .. figure:: ../src/image/teaser.gif
