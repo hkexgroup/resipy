@@ -27,7 +27,7 @@ author = 'G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
 # The short X.Y version
 version = resipy.ResIPy_version
 # The full version, including alpha/beta/rc tags
-release = 'v0.1'
+release = resipy.ResIPy_version
 
 
 # -- General configuration ---------------------------------------------------

@@ -1,14 +1,19 @@
 image: python:3.7-stretch
 
-pages:
+test:
   script:
   - apt-get update
   - apt-get install --assume-yes wine
   - pip install -r requirements.txt
-  - pip install sphinx numpydoc sphinx_rtd_theme sphinx_nbexamples pandoc
   - cd src
   - python test.py
-  - cd ..
+  
+pages:
+  script:
+  - apt-get update
+  - apt-get install --assume-yes pandoc
+  - pip install -r requirements.txt
+  - pip install sphinx numpydoc sphinx_rtd_theme sphinx_nbexamples pandoc
   - ls
   - cd doc
   - make html
