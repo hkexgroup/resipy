@@ -16,18 +16,18 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('..'))
 sys.path.append(os.path.relpath('../src'))
-
+import resipy
 
 # -- Project information -----------------------------------------------------
 
 project = 'ResIPy'
-copyright = '2018, G. Blanchy, S. Saneiyan, J. Boyd'
-author = 'G. Blanchy, S. Saneiyan, J. Boyd'
+copyright = '2019, G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
+author = 'G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
 
 # The short X.Y version
-version = ''
+version = resipy.ResIPy_version
 # The full version, including alpha/beta/rc tags
-release = 'v0.1'
+release = resipy.ResIPy_version
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,11 +42,24 @@ release = 'v0.1'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
     'numpydoc',
-    'nbsphinx',
+#    'nbsphinx',
+    'sphinx_nbexamples',
 ]
 
 numpydoc_show_class_members = False
+
+
+example_gallery_config = {
+    'examples_dirs': '../jupyter-notebook',
+    'gallery_dirs': 'auto_examples',
+#    'dont_preprocess': '../examples/foliumTest.ipynb',
+    'pattern': '.+.ipynb',
+    'urls': 'https://gitlab.com/hkex/pyr2/blob/master/jupyter-notebook',
+    'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fmaster/master?filepath=jupyter-notebook',
+}
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -158,8 +171,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'ResIPy', 'ResIPy Documentation',
-     author, 'ResIPy', 'One line description of project.',
-     'Miscellaneous'),
+     author, 'ResIPy', 'Processing and inversion of DC/IP resistivity data',
+     'Python API and GUI around the inversion codes R2/cR2/R3t/cR3t.'),
 ]
 
 
