@@ -1,6 +1,6 @@
-#Topography interpolation schemes for pyr2, python 3. Dated 2019. 
+#Topography interpolation schemes for ResIPy, python 3. Dated 2019. 
 #author: jimmy boyd 
-
+import sys
 import numpy as np
 import resipy.isinpolygon as iip
 #import warnings 
@@ -46,29 +46,25 @@ def bilinear_mod(x,y,z):
     return mod.A
 
 def compute(mod,xnew,ynew):
-    """
-    Compute the znew at xnew and ynew given a model  
+    """ Compute the znew at xnew and ynew given a model from either 
     """
     shp = xnew.copy().shape
     if len(mod)==4:
         znew = mod[0]*xnew*ynew + mod[1]*xnew + mod[2]*ynew + mod[3]
     elif len(mod)==6:
         znew = mod[0]*xnew**2 + mod[1]*xnew*ynew + mod[2]*ynew**2 + mod[3]*xnew + mod[4]*ynew + mod[5]
-    elif len(mod)==16:
+    elif len(mod)==16: # then its a cubic model , not currently in use
         xnew.shape=(len(xnew),1)
         ynew.shape=(len(ynew),1)
-        G = np.matrix(np.ones((len(xnew),16)))
+        G = np.matrix(np.ones((len(xnew),16)))#construct operator 
         itr = 0
         for i in range(4):
             for j in range(4):
                 G[:,itr] = xnew**i * ynew**j
                 itr+=1
-#        print(G)
-#        print(mod)
         znew = G*np.matrix(mod)
         znew = znew.A
         znew.shape = shp
-#        print(znew)
     else:
         raise ValueError("length of model vector is unrecognised")
     return znew
@@ -276,8 +272,7 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
 
 #%% pure nearest neighbour interpolation
 def nearest(xnew, ynew, xknown, yknown, zknown, maxDist=None): 
-    """
-    Compute z values for unstructured data using nearest neighbour extrapolation.
+    """Nearest neighbour look up for 2D unstructured data.
     Suitable where dense known coordinates occur.ie. in the case of a DEM.  
     
     Parameters
@@ -320,4 +315,67 @@ def nearest(xnew, ynew, xknown, yknown, zknown, maxDist=None):
                 znew[i] = float('NaN')
             
     return znew
+
+#%% nearest neighbour interpolation in 3D 
+def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
+    """Nearest neighbour look up for 3D unstructured data.
+    
+    Parameters
+    ------------
+    xnew: array like
+        x coordinates for the interpolated values
+    ynew: array like 
+        y coordinates for the interpolated values
+    znew: array like 
+        z coordinates for the interpolated values
+    xknown: array like
+        x coordinates for the known values 
+    yknown: array like
+        y coordinates for the known values 
+    zknown: array like
+        z coordinates for the known values 
+    iknown: array like
+        known values in 3D space. 
+    return_idx: bool 
+        Also return the look indexes of the iknown array. 
+
+    Returns
+    ------------
+    inew: numpy array
+        extrapolated values at (xnew ynew znew) coordinates 
+        
+    """
+    #error checking 
+    if len(xnew) != len(ynew) or len(xnew) != len(znew):
+        raise ValueError('Mismatch in interpolated coordinate array lengths')
+    if len(xknown) != len(yknown) or len(xknown) != len(zknown) or len(xknown) != len(iknown):
+        raise ValueError('Mismatch in known coordinate array lengths')
+    #as this process can take some time to compute progress is output to the screen
+    sys.stdout.write('Running 3D nearest neighbour interpolation job...\n')
+
+    sys.stdout.write('Computing delta x matrix ... ')
+    a,b = np.meshgrid(xknown,xnew)
+    dX = (a - b)**2
+    sys.stdout.flush()
+    sys.stdout.write('\rComputing delta y matrix ... ')
+    a,b = np.meshgrid(yknown,ynew)
+    dY = (a - b)**2
+    sys.stdout.flush()
+    sys.stdout.write('\rComputing delta z matrix ... ')
+    a,b = np.meshgrid(zknown,znew)
+    dZ = (a - b)**2
+    #use meshgrid function to make a euclidian matrix 
+    
+    sys.stdout.flush()
+    sys.stdout.write('\rComputing distance matrix .. ')
+    dist = np.sqrt(dX+dY+dZ)#compute distance matrix 
+    
+    idx = np.argmin(dist,axis=1)
+    sys.stdout.flush()
+    sys.stdout.write('\rDone ...                     \n')   
+    
+    if return_idx:
+        return iknown[idx], idx
+    else: 
+        return iknown[idx]
     
