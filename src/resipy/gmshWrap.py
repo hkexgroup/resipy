@@ -762,7 +762,7 @@ def msh_parse(file_path):
             'node_y':z_coord,#y coordinates of nodes - nb swapped around as meshTools sees z as elevation
             'node_z':y_coord,#z coordinates of nodes 
             'node_id':node_num,#node id number 
-            'elm_id':np.arange(1,real_no_elements,1),#element id number 
+            'elm_id':np.arange(1,real_no_elements+1,1),#element id number 
             'num_elm_nodes':3,#number of points which make an element
             'node_data':node_dump,#nodes of element vertices
             'elm_centre':(centriod_x,[0]*len(centriod_x),centriod_y),#centre of elements (x,y)
@@ -1399,7 +1399,7 @@ def msh_parse_3d(file_path):
             'node_y':y_coord,#y coordinates of nodes
             'node_z':z_coord,#z coordinates of nodes 
             'node_id':node_num,#node id number 
-            'elm_id':np.arange(1,real_no_elements,1),#element id number 
+            'elm_id':np.arange(1,real_no_elements+1,1),#element id number 
             'num_elm_nodes':3,#number of points which make an element
             'node_data':node_dump,#nodes of element vertices
             'elm_centre':[centriod_x,centriod_y,centriod_z],#centre of elements (x,y,z)
