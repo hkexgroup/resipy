@@ -1,14 +1,19 @@
 image: python:3.7-stretch
 
-pages:
+test:
   script:
   - apt-get update
   - apt-get install --assume-yes wine
-  - pip install sphinx==1.6.7 numpydoc numpy matplotlib==3.0.3 PyQt5 pandas scipy statsmodels
-  - pip install sphinx_rtd_theme nbsphinx
+  - pip install -r requirements.txt
   - cd src
   - python test.py
-  - cd ..
+  
+pages:
+  script:
+  - apt-get update
+  - apt-get install --assume-yes pandoc
+  - pip install -r requirements.txt
+  - pip install sphinx==1.8.4 numpydoc==0.7.0 sphinx_rtd_theme sphinx_nbexamples pandoc
   - ls
   - cd doc
   - make html

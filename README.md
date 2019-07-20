@@ -6,7 +6,7 @@ GUI for R2 family code
 
 This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
 provides a standalone graphical user interface (GUI) along with a python API (Application Programming Interface)
-for use in jupyter notebook.
+for use in jupyter notebook. Documentation can be viewed at https://hkex.gitlab.io/pyr2.
 
 
 ResIPy aims to be 
