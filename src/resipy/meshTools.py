@@ -12,7 +12,7 @@ Dependencies:
     python3 standard libaries
 """
 #import standard python packages
-import os, platform, warnings, multiprocessing, re, pathlib
+import os, platform, warnings, multiprocessing, re, sys
 from subprocess import PIPE, Popen, call
 import time
 #import matplotlib and numpy packages 
@@ -1100,8 +1100,9 @@ class Mesh:
             Method of interpolation used to compute cell depths for a 3D mesh.
             Ignored for 2D meshes. 
             - 'bilinear' - (default) binlinear interpolation
+            - 'spline' - uses a series of thin plate splines, good for unstructured data
             - 'idw' - inverse distance wieghting
-            - 'nearest' - nearest neighbour interpolation
+            - 'nearest' - nearest neighbour look up
         """
         #formalities and error checking
         if datum_y is None: # set up y column if not in use
@@ -1111,7 +1112,7 @@ class Mesh:
         datum_x = np.array(datum_x)
         datum_y = np.array(datum_y)
         datum_z = np.array(datum_z)
-        if self.ndims == 2: # use 2D interpolation
+        if self.ndims == 2: # use 1D interpolation
             elm_x = np.array(self.elm_centre[0])
             elm_z = np.array(self.elm_centre[2])
             min_idx = np.argmin(datum_x)
@@ -1121,14 +1122,14 @@ class Mesh:
             self.attr_cache['depths'] = depth
             self.no_attributes += 1
             return depth
-        if self.ndims == 3: # use 3D interpolation
+        if self.ndims == 3: # use 2D interpolation
             elm_x = np.array(self.elm_centre[0])
             elm_y = np.array(self.elm_centre[1])
             elm_z = np.array(self.elm_centre[2])  
             #use interpolation to work out depth to datum 
             if method == 'bilinear':
                 Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z)
-            if method == 'spline':
+            elif method == 'spline':
                 Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z,method='spline')
             elif method == 'idw':
                 Z = interp.idw(elm_x, elm_y, datum_x, datum_y, datum_z)
@@ -1498,19 +1499,14 @@ class Mesh:
             
         return colx#,colz # return columns to go in parameters 
     
-    def exportTetgenMesh(self,prefix='mesh',neigh=True):
+    def exportTetgenMesh(self,prefix='mesh'):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. 
         
         Parameters
         ----------  
         prefix: string
-            Prefix assigned to exported files.
-        neigh: bool
-            If True export .neigh file. This describes cell neighbours, but it's 
-            not required for E4D forward mode and is computationally
-            intense to compute. Defualt is True as its necassary for inversion 
-            with E4D. 
+            Prefix assigned to exported files. Can include path to file. 
         """
         #output .node file
         fh = open(prefix+'.node','w')
@@ -1549,40 +1545,47 @@ class Mesh:
         fh = open(prefix+'.trn','w')
         fh.write('0\t0\t0')
         fh.close()
-        
+         
         #out .neigh file
-        if neigh: 
-            #firstly need to find neighbouring cells
-            print('Calculating neighbouring cells, this can take some time...', end='')
-            def pdist3d(x,y,z,x_all,y_all,z_all):
-                dx=x-x_all
-                dy=y-y_all
-                dz=z-z_all
-                dist = np.sqrt(dx**2 + dy**2 + dz**2)
-                return dist
+        print('Calculating neighbouring cells, this can take some time!..', end='\n')            
+        elm_id = self.elm_id
+        
+        sys.stdout.write('Computing delta x matrix ... ')
+        a,b = np.meshgrid(self.elm_centre[0],self.elm_centre[0])
+        dX = (a - b)**2
+        sys.stdout.flush()
+        sys.stdout.write('\rComputing delta y matrix ... ')
+        a,b = np.meshgrid(self.elm_centre[1],self.elm_centre[1])
+        dY = (a - b)**2
+        sys.stdout.flush()
+        sys.stdout.write('\rComputing delta z matrix ... ')
+        a,b = np.meshgrid(self.elm_centre[2],self.elm_centre[2])
+        dZ = (a - b)**2
+        
+        sys.stdout.flush()
+        sys.stdout.write('\rComputing distance matrix ... ')
+        dist = np.sqrt(dX+dY+dZ)
+        #dist = dX+dY+dZ
+        
+        sys.stdout.flush()
+        sys.stdout.write('\rFinding minimum distances ... ')
+        sorted_idx = np.argsort(dist,axis=1)
+        sys.stdout.write('Done.\n')
+        
+        fh = open(prefix+'.neigh','w')#write to file 
+        fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
+        for i in range(self.num_elms):
+            idx = sorted_idx[i,1:5]
+            loc_ids = elm_id[idx]
+            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
+                                                            loc_ids[0],
+                                                            loc_ids[1],
+                                                            loc_ids[2],
+                                                            loc_ids[3])
+            fh.write(line)
             
-            fh = open(prefix+'.neigh','w')
-            fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line 
-            x_all = np.array(self.elm_centre[0])
-            y_all = np.array(self.elm_centre[1])
-            z_all = np.array(self.elm_centre[2])
-            elm_id = np.arange(1,self.num_elms+1,1)
-            for i in range(self.num_elms):
-                x = x_all[i]
-                y = y_all[i]
-                z = z_all[i]
-                dist = pdist3d(x,y,z,x_all,y_all,z_all)
-                sorted_idx = np.argsort(dist)
-                idx = sorted_idx[1:5]
-                line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
-                                                                elm_id[idx[0]],
-                                                                elm_id[idx[1]],
-                                                                elm_id[idx[2]],
-                                                                elm_id[idx[3]])
-                fh.write(line)
-            fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
-            print('Done.')
-            fh.close()
+        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
+        fh.close()
         
         #write .face file - which describes elements on the outer edges of the mesh
         #todo this we need to find the elements on the outside of the mesh, hence 
@@ -1654,6 +1657,41 @@ class Mesh:
         
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
+        
+    def meshLookUp(self,look_up_mesh):#,dev_mode=False):
+        """Look up values from another mesh using nearest neighbour look up, 
+        assign attributes to the current mesh class.  
+        
+        Parameters
+        -------------
+        look_up_mesh: class
+            Another mesh class. 
+        dev_mode: bool optional (not in use currently)
+            Use parallelised method (currently unstable), requires the installation
+            of joblib and tqdm. Cannot be used on windows.
+        """
+        #assign coordinate arrays 
+        x_old = look_up_mesh.elm_centre[0]
+        x_new = self.elm_centre[0]
+        y_old = look_up_mesh.elm_centre[1]
+        y_new = self.elm_centre[1]
+        z_old = look_up_mesh.elm_centre[2]
+        z_new = self.elm_centre[2]
+        i_old = np.array(look_up_mesh.cell_attributes)
+        #do look up 
+#        if dev_mode:
+#            i_new, idxes = interp.nearest3d_dev(x_new,y_new,z_new,
+#                                            x_old,y_old,z_old,i_old,
+#                                            return_idx=True)
+#        else:
+        i_new, idxes = interp.nearest3d(x_new,y_new,z_new,
+                                        x_old,y_old,z_old,i_old,
+                                        return_idx=True)
+        look_up_cache = look_up_mesh.attr_cache
+        look_up_keys = look_up_cache.keys()
+        for k in look_up_keys:
+            look_up_array = np.array(look_up_cache[k])
+            self.attr_cache[k] = look_up_array[idxes]
                                  
 #%% triangle centriod 
 def tri_cent(p,q,r):
@@ -2160,6 +2198,7 @@ def tetgen_import(file_path):
     mesh.add_attribute(zone,'zone')
     
     return mesh
+        
         
 #%% build a quad mesh        
 def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
@@ -2772,8 +2811,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if show_output: 
         try:
             p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        except PermissionError: # hotfix to deal with failing commits on gitlab's server. 
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        except: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3'] # use .exe through wine instead
             p = Popen(cmd_line, stdout=PIPE, shell=False)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()

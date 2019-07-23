@@ -1517,7 +1517,7 @@ class Survey(object):
         """Normalise the indexes the sequence matrix to start at 1.
         
         Parameters
-        ----------
+        -------------
         debug : bool, optional
             Set to True to print output.
         """
@@ -1534,7 +1534,7 @@ class Survey(object):
                 imin_pos = np.min(np.abs(sch_mat))
                 if imin_pos == 1:
                     if debug:
-                        print("Positive electrode indexes firstly now start at %i"%(abs(imin)+1))
+                        print("Any positive electrode indexes now start at %i"%(abs(imin)+1))
                     crr_idx = np.argwhere(sch_mat>0)
                     sch_mat[crr_idx] -= 1
                     
