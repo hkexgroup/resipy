@@ -2638,7 +2638,7 @@ class R2(object): # R2 master class instanciated by the GUI
         dff.to_csv(fname, index=False)
         
         
-    def saveFilteredData(self, fname, elec, savetyp='Res2DInv (*.dat)'):
+    def saveFilteredData(self, fname, elec, savetyp='Res2DInv (*.dat)', spacing=None):
         """Save filtered data in formats to be used outside ResIPy (e.g. Res2DInv).
         
         Parameters
@@ -2653,9 +2653,15 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         for s, i in zip(self.surveys, range(len(self.surveys))):
             df = s.df.query('irecip >=0') # not saving reciprocal data
+            if spacing == None:
+                spacing = elec[1,0]-elec[0,0] # for batch surveys the spacing can differ and not follow user input
+            else:
+                spacing = spacing
+            df[['a','b','m','n']] *= spacing
             if savetyp == 'Res2DInv (*.dat)':
                 param = {'num_meas':len(df),
-                         'lineTitle':self.param['lineTitle']}
+                         'lineTitle':self.param['lineTitle'],
+                         'spacing':spacing}
                 write2Res2DInv(param, fname, df, elec, self.typ)
             elif savetyp == 'Comma Separated Values (*.csv)':
                 write2csv(fname, df, elec, self.typ)
