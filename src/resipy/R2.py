@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '1.1.6' # ResIPy version (semantic versionning in use) 
+ResIPy_version = '1.1.7' # ResIPy version (semantic versionning in use) 
 
 #import relevant modules 
 import os, sys, shutil, platform, warnings, time # python standard libs
