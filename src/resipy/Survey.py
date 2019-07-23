@@ -73,10 +73,10 @@ class Survey(object):
             elif ftype == 'Res2Dinv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
-                try:
-                    elec, data = primeParser(fname)
-                except:
-                    elec, data = primeParserTab(fname)
+#                try:
+#                    elec, data = primeParser(fname)
+#                except:
+                elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
                 self.protocolIPFlag = True
