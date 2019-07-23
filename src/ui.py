@@ -1811,7 +1811,11 @@ class App(QMainWindow):
             if fname != '':
                 elec = elecTable.getTable() # getting the topography info
                 self.r2.param['lineTitle'] = titleEdit.text()
-                self.r2.saveFilteredData(fname, elec, savetyp)
+                if not self.r2.iTimeLapse or self.r2.iBatch:
+                    spacing = float(elecDx.text())
+                else:
+                    spacing = None
+                self.r2.saveFilteredData(fname, elec, savetyp, spacing=spacing)
                 
         recipErrorSavebtn = QPushButton('Save data')
         recipErrorSavebtn.setStyleSheet("color: green")
