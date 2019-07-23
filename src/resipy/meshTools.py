@@ -1100,8 +1100,9 @@ class Mesh:
             Method of interpolation used to compute cell depths for a 3D mesh.
             Ignored for 2D meshes. 
             - 'bilinear' - (default) binlinear interpolation
+            - 'spline' - uses a series of thin plate splines, good for unstructured data
             - 'idw' - inverse distance wieghting
-            - 'nearest' - nearest neighbour interpolation
+            - 'nearest' - nearest neighbour look up
         """
         #formalities and error checking
         if datum_y is None: # set up y column if not in use
@@ -1111,7 +1112,7 @@ class Mesh:
         datum_x = np.array(datum_x)
         datum_y = np.array(datum_y)
         datum_z = np.array(datum_z)
-        if self.ndims == 2: # use 2D interpolation
+        if self.ndims == 2: # use 1D interpolation
             elm_x = np.array(self.elm_centre[0])
             elm_z = np.array(self.elm_centre[2])
             min_idx = np.argmin(datum_x)
@@ -1121,14 +1122,14 @@ class Mesh:
             self.attr_cache['depths'] = depth
             self.no_attributes += 1
             return depth
-        if self.ndims == 3: # use 3D interpolation
+        if self.ndims == 3: # use 2D interpolation
             elm_x = np.array(self.elm_centre[0])
             elm_y = np.array(self.elm_centre[1])
             elm_z = np.array(self.elm_centre[2])  
             #use interpolation to work out depth to datum 
             if method == 'bilinear':
                 Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z)
-            if method == 'spline':
+            elif method == 'spline':
                 Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z,method='spline')
             elif method == 'idw':
                 Z = interp.idw(elm_x, elm_y, datum_x, datum_y, datum_z)
@@ -1657,7 +1658,7 @@ class Mesh:
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
         
-    def meshLookUp(self,look_up_mesh,attr=None):
+    def meshLookUp(self,look_up_mesh):#,dev_mode=False):
         """Look up values from another mesh using nearest neighbour look up, 
         assign attributes to the current mesh class.  
         
@@ -1665,8 +1666,9 @@ class Mesh:
         -------------
         look_up_mesh: class
             Another mesh class. 
-        attr: string, optional
-            Attribute key to look up. 
+        dev_mode: bool optional (not in use currently)
+            Use parallelised method (currently unstable), requires the installation
+            of joblib and tqdm. Cannot be used on windows.
         """
         #assign coordinate arrays 
         x_old = look_up_mesh.elm_centre[0]
@@ -1677,6 +1679,11 @@ class Mesh:
         z_new = self.elm_centre[2]
         i_old = np.array(look_up_mesh.cell_attributes)
         #do look up 
+#        if dev_mode:
+#            i_new, idxes = interp.nearest3d_dev(x_new,y_new,z_new,
+#                                            x_old,y_old,z_old,i_old,
+#                                            return_idx=True)
+#        else:
         i_new, idxes = interp.nearest3d(x_new,y_new,z_new,
                                         x_old,y_old,z_old,i_old,
                                         return_idx=True)
@@ -2804,8 +2811,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     if show_output: 
         try:
             p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        except PermissionError: # hotfix to deal with failing commits on gitlab's server. 
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        except: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3'] # use .exe through wine instead
             p = Popen(cmd_line, stdout=PIPE, shell=False)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()

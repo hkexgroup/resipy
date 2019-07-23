@@ -2529,6 +2529,8 @@ class R2(object): # R2 master class instanciated by the GUI
             print('Cant set reference model without first assigning/creating a mesh')
             return
         self.param['reg_mode'] = 1 # ensure inversion is background regularised 
+        if self.typ[-1] =='t':
+            self.param['inverse_type']=1
         self.param['res0File'] = 'Start_res.dat'
         self.param['num_regions'] = 0
         self.mesh.write_attr('res0',file_name='Start_res.dat',file_path=self.dirname)
