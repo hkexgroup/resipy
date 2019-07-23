@@ -76,13 +76,13 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
                             param['ip_spec'])
         
     # formattin measurement points and adding topography info
-    a = df.a-1 # -1 for positional issues! first position should be at "0"
+    a = df.a-df.a[0] # -1 for positional issues! first position should be at "0"
     az = 0*a.rename('az')
-    b = df.b-1
+    b = df.b-df.a[0]
     bz = 0*b.rename('bz')
-    m = df.m-1
+    m = df.m-df.a[0]
     mz = 0*m.rename('mz')
-    n = df.n-1
+    n = df.n-df.a[0]
     nz = 0*n.rename('nz')
     resist = df.resist
     ip = df.ip
