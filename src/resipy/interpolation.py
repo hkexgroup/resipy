@@ -318,7 +318,8 @@ def nearest(xnew, ynew, xknown, yknown, zknown, maxDist=None):
 
 #%% nearest neighbour interpolation in 3D 
 def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
-    """Nearest neighbour look up for 3D unstructured data.
+    """Nearest neighbour look up for 3D unstructured data. This process can be 
+    RAM and CPU demanding. 
     
     Parameters
     ------------
@@ -345,7 +346,6 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
         extrapolated values at (xnew ynew znew) coordinates 
         
     """
-    #from scipy.spatial.distance import cdist 
     #error checking 
     if len(xnew) != len(ynew) or len(xnew) != len(znew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
@@ -370,7 +370,6 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
     sys.stdout.flush()
     sys.stdout.write('\rComputing distance matrix .. ')
     dist = np.sqrt(dX+dY+dZ)#compute distance matrix 
-#    dist = cdist(nknown,nnew)#compute distance matrix 
     
     idx = np.argmin(dist,axis=1)
     sys.stdout.flush()
@@ -380,63 +379,4 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
         return iknown[idx], idx
     else: 
         return iknown[idx]
-    
-#def nearest3d_dev(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
-#    """Nearest neighbour look up for 3D unstructured data.
-#    
-#    Parameters
-#    ------------
-#    xnew: array like
-#        x coordinates for the interpolated values
-#    ynew: array like 
-#        y coordinates for the interpolated values
-#    znew: array like 
-#        z coordinates for the interpolated values
-#    xknown: array like
-#        x coordinates for the known values 
-#    yknown: array like
-#        y coordinates for the known values 
-#    zknown: array like
-#        z coordinates for the known values 
-#    iknown: array like
-#        known values in 3D space. 
-#    return_idx: bool 
-#        Also return the look indexes of the iknown array. 
-#
-#    Returns
-#    ------------
-#    inew: numpy array
-#        extrapolated values at (xnew ynew znew) coordinates 
-#        
-#    """
-#    warnings.warn('this version of nearest neighbour search requires joblib and tqdm')
-#    from joblib import Parallel, delayed 
-#    from tqdm import tqdm
-#    #error checking 
-#    if len(xnew) != len(ynew) or len(xnew) != len(znew):
-#        raise ValueError('Mismatch in interpolated coordinate array lengths')
-#    if len(xknown) != len(yknown) or len(xknown) != len(zknown) or len(xknown) != len(iknown):
-#        raise ValueError('Mismatch in known coordinate array lengths')
-#    #as this process can take some time to compute progress is output to the screen
-#    sys.stdout.write('Running 3D nearest neighbour interpolation job...\n')    
-#    def comp(nknown,nnew):
-#        proxy_dist = np.abs(nknown - nnew)
-#        idx = np.argmin(np.sum(proxy_dist,axis=1))
-#        return idx
-#        
-#    nknown = np.zeros((len(xknown),3))
-#    nknown[:,0] = xknown
-#    nknown[:,1] = yknown
-#    nknown[:,2] = zknown
-#    nnew = np.zeros((len(xnew),3))
-#    nnew[:,0] = xnew
-#    nnew[:,1] = ynew
-#    nnew[:,2] = znew
-#    
-#    idx = Parallel(n_jobs=4)(delayed(comp)(nknown,nnew[i,:]) for i in tqdm(range(len(xnew))))
-#    
-#    if return_idx:
-#        return iknown[idx], idx
-#    else: 
-#        return iknown[idx]
     

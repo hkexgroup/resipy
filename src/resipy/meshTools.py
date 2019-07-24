@@ -1658,17 +1658,18 @@ class Mesh:
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
         
-    def meshLookUp(self,look_up_mesh):#,dev_mode=False):
+    def meshLookUp(self,look_up_mesh):
         """Look up values from another mesh using nearest neighbour look up, 
-        assign attributes to the current mesh class.  
+        assign attributes to the current mesh class. 
         
         Parameters
         -------------
         look_up_mesh: class
             Another mesh class. 
-        dev_mode: bool optional (not in use currently)
-            Use parallelised method (currently unstable), requires the installation
-            of joblib and tqdm. Cannot be used on windows.
+        
+        Notes
+        -------------
+        This can fail for  large meshes due to the size of matrices involved. 
         """
         #assign coordinate arrays 
         x_old = look_up_mesh.elm_centre[0]
@@ -1679,11 +1680,6 @@ class Mesh:
         z_new = self.elm_centre[2]
         i_old = np.array(look_up_mesh.cell_attributes)
         #do look up 
-#        if dev_mode:
-#            i_new, idxes = interp.nearest3d_dev(x_new,y_new,z_new,
-#                                            x_old,y_old,z_old,i_old,
-#                                            return_idx=True)
-#        else:
         i_new, idxes = interp.nearest3d(x_new,y_new,z_new,
                                         x_old,y_old,z_old,i_old,
                                         return_idx=True)
