@@ -2775,9 +2775,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         ewd = path # points to the location of the .exe 
         # else its assumed a custom directory has been given to the gmsh.exe 
     
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-        raise Exception("No gmsh.exe exists in the exe directory!")
-    elif not os.path.isfile(os.path.join(ewd,'gmsh')):
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh')):
         raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file

@@ -161,10 +161,10 @@ fig.show()
 
 #%% ERT in River at Boxford (UK) with fixed region
 k = R2()
-k.createSurvey('./resipy/test/primeFile.dat', ftype='BGS Prime')
+k.createSurvey('./resipy/test/river-protocol.dat', ftype='Protocol')
 # following lines will add electrode position, surface points and specify if electrodes are buried or not. Similar steps are done in the GUI in (a), (b), (c)
-x = np.genfromtxt('./resipy/test/primePosBuried.csv', delimiter=',')
-k.elec[:,[0,2]] = x[:,:2] # electrode positions
+x = np.genfromtxt('./resipy/test/river-elec.csv', delimiter=',')
+k.setElec(x[:,:2]) # electrode positions
 surface = np.array([[0.7, 92.30],[10.3, 92.30]]) # additional surface point for the river level
 buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river here)
 k.filterElec([21, 2]) # filter out problematic electrodes 21 and 2
