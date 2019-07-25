@@ -57,7 +57,7 @@ example_gallery_config = {
 #    'dont_preprocess': '../examples/foliumTest.ipynb',
     'pattern': '.+.ipynb',
     'urls': 'https://gitlab.com/hkex/pyr2/blob/master/jupyter-notebook',
-    'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fmaster/master?filepath=jupyter-notebook',
+    'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fpyr2/stable?filepath=jupyter-notebook',
 }
 
 
