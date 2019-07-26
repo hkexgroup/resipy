@@ -2578,8 +2578,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2']
     else:
-        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
-#        cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
+#        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
+        cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
         
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console

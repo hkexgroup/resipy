@@ -496,6 +496,7 @@ class App(QMainWindow):
                 meshQuadGroup.setVisible(True)
                 meshTrianGroup.setVisible(True)
                 meshTetraGroup.setVisible(False)
+                meshCustomGroup.setVisible(True)
                 instructionLabel.setVisible(True)
 
                 # inversion settings
@@ -531,6 +532,7 @@ class App(QMainWindow):
                 meshQuadGroup.setVisible(False)
                 meshTrianGroup.setVisible(False)
                 meshTetraGroup.setVisible(True)
+                meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
 
                 # inversion settings
@@ -2443,8 +2445,12 @@ class App(QMainWindow):
             if fname != '':
                 try:
                     self.r2.importMesh(fname, mesh_type='trian')
-                    replotMesh()
-                    meshOutputStack.setCurrentIndex(1)
+                    if (self.r2.typ == 'R3t') or (self.r2.typ == 'cR3t'):
+                        mwMesh3D.plot(self.r2.showMesh, threed=True)
+                        meshOutputStack.setCurrentIndex(2)
+                    else:
+                        replotMesh()
+                        meshOutputStack.setCurrentIndex(1)
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn2 = QPushButton('Import Custom Mesh')
