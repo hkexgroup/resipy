@@ -543,7 +543,7 @@ class App(QMainWindow):
                 edgeCheck.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
-#                sliceAxis.setVisible(True)
+                sliceAxis.setVisible(True)
 
         dimRadio2D = QRadioButton('2D')
         dimRadio2D.setChecked(True)
@@ -1079,18 +1079,21 @@ class App(QMainWindow):
 
         def plotPseudo():
             mwPseudo.setCallback(self.r2.pseudo)
-            mwPseudo.replot(aspect = self.plotAspect, **self.pParams)
+            if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
+                mwPseudo.replot(aspect='auto', **self.pParams)
+            else:
+                mwPseudo.replot(aspect=self.plotAspect, **self.pParams)
 
         def plotPseudoIP():
             mwPseudoIP.setCallback(self.r2.pseudoIP)
-            mwPseudoIP.replot(aspect = self.plotAspect, **self.pParamsIP)
+            mwPseudoIP.replot(aspect=self.plotAspect, **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
 
-        mwPseudo = MatplotlibWidget(navi=True, aspect='auto')
+        mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         pseudoLayout.addWidget(mwPseudo)
 
-        mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
+        mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         mwPseudoIP.setVisible(False)
         pseudoLayout.addWidget(mwPseudoIP)
 
@@ -3719,9 +3722,9 @@ class App(QMainWindow):
                 mwInvResult.setCallback(self.r2.showResults)
                 resultStackLayout.setCurrentIndex(0)
             else:
-                mwInvResult3D.setCallback(self.r2.showResults)
+#                mwInvResult3D.setCallback(self.r2.showResults)
                 resultStackLayout.setCurrentIndex(1)
-#                mwInvResult.setCallback(self.r2.showSlice)
+                mwInvResult.setCallback(self.r2.showSlice)
             if self.r2.iBorehole is False:
                 try:
                     plotInvError()

@@ -2552,8 +2552,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         ewd = path
         # else its assumed a custom directory has been given to the gmsh.exe
     
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-        raise Exception("No gmsh.exe exists in the exe directory!")
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh')):
+        raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file
     file_name="mesh"
@@ -2579,6 +2579,7 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2']
     else:
         cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
+#        cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
         
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
