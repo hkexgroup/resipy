@@ -1505,7 +1505,22 @@ class Survey(object):
 
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
+    
+    def filterElec(self, elec=[]):
+        """Filter out specific electrodes given.
         
+        Parameters
+        ----------
+        elec : list
+            List of electrode number to be removed.
+        
+        """
+        for e in elec:
+            i2keep = (self.df[['a','b','m','n']].values != e).all(1)
+            self.filterData(i2keep)
+            print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
+   
+    
     def filterdip(self, elec): # deleted specific elec data
         index = (self.array == elec[0]).any(-1)
         for i in range(1,len(elec)):

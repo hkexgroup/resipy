@@ -545,7 +545,7 @@ class App(QMainWindow):
                 edgeCheck.setVisible(False)
                 sensCheck.setVisible(False)
                 paraviewBtn.setVisible(True)
-                sliceAxis.setVisible(True)
+#                sliceAxis.setVisible(True)
 
         dimRadio2D = QRadioButton('2D')
         dimRadio2D.setChecked(True)
