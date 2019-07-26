@@ -3618,6 +3618,13 @@ class App(QMainWindow):
             self.end = False
             outStackLayout.setCurrentIndex(0)
             mwInvResult.clear()
+            mwRMS.clear()
+            logText.setText('')
+            self.pindex = 0
+            self.rms = []
+            self.rmsIndex = []
+            self.rmsIP = []
+            self.rmsIndexIP = []
             self.r2.param['lineTitle'] = titleEdit.text()
             if self.r2.mesh is None:
                 meshQuadFunc() # generate default mesh
@@ -3686,14 +3693,18 @@ class App(QMainWindow):
             def printR2out():
                 print('--------INVERSION FAILED--------')
                 outStackLayout.setCurrentIndex(1)
-                with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
-                    text = f.read()
-                r2outEdit.setText(text)
+                frozeUI(False)
                 btnInvert.setText('Invert')
                 btnInvert.setStyleSheet("background-color: green")
                 btnInvert.clicked.disconnect()
                 btnInvert.clicked.connect(btnInvertFunc)
-                frozeUI(False)
+                outfile = os.path.join(self.r2.dirname, self.r2.typ + '.out')
+                if os.path.exists(outfile):
+                    with open(outfile,'r') as f:
+                        text = f.read()
+                    r2outEdit.setText(text)
+                else:
+                    r2outEdit.setText('No .out were generated.')
 
 
             if self.end is True:
@@ -3716,7 +3727,6 @@ class App(QMainWindow):
                         sectionId.setCurrentIndex(1)
                 except Exception as e:
                     print('Error when plotting:', e)
-                    pass
                     printR2out()
 
             else:
@@ -3728,9 +3738,10 @@ class App(QMainWindow):
                 mwInvResult.setCallback(self.r2.showResults)
                 resultStackLayout.setCurrentIndex(0)
             else:
-#                mwInvResult3D.setCallback(self.r2.showResults)
+                mwInvResult3D.setCallback(self.r2.showResults)
                 resultStackLayout.setCurrentIndex(1)
-                mwInvResult.setCallback(self.r2.showSlice)
+#                resultStackLayout.setCurrentIndex(0)
+#                mwInvResult.setCallback(self.r2.showSlice)
             if self.r2.iBorehole is False:
                 try:
                     plotInvError()
