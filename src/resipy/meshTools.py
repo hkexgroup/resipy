@@ -2578,9 +2578,11 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2']
     else:
-#        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
-        cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
-        
+        if os.path.isfile(os.path.join(ewd,'gmsh')):
+            cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
+        else: # fall back to wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
+
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
@@ -2801,7 +2803,10 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
-        cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+        if os.path.isfile(os.path.join(ewd,'gmsh')): # if linux gmsh is present
+            cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+        else: # fallback on wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         
     if show_output: 
         try:
