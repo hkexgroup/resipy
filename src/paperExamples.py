@@ -39,13 +39,14 @@ figdir = './image/paper/'
 k = R2()
 k.createSurvey('./resipy/test/syscalFile.csv')
 k.removeUnpaired()
-figsize=(4,2)
+figsize=(5,2.5)
 
 fig, ax = plt.subplots(figsize=figsize)
 k.surveys[0].manualFiltering(ax=ax) # manually selection points
 ax.set_title('(a) Select points/electrodes')
 ax.set_ylabel('Pseudo-depth [m]')
 ax.set_xlabel('Distance [m]')
+fig.tight_layout()
 fig.savefig(figdir + 'fig4-manualFiltering.png') # to be saved after selecting points
 fig.show()
 
@@ -56,10 +57,11 @@ k.surveys[0].manualFiltering(ax=ax) # manually selection points
 ax.set_title('(b) Filtered data')
 ax.set_ylabel('Pseudo-depth [m]')
 ax.set_xlabel('Distance [m]')
+fig.tight_layout()
 fig.savefig(figdir + 'fig4-filtered.png')
 fig.show()
 
-fig, ax = plt.subplots(figsize=figsize)
+fig, ax = plt.subplots(figsize=(8,2.5))
 k.errorDist(ax=ax)
 ax.set_title('(c) Probability error distribution')
 fig.savefig(figdir + 'fig4-errorDist.png')
@@ -108,8 +110,10 @@ k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 fig, axs = plt.subplots(1, 2, figsize=(8,3))
 ax = axs[0]
 k.pwlfit(ax=ax)
+ax.set_title('(a) ' + ax.get_title())
 ax = axs[1]
 k.plotIPFit(ax=ax)
+ax.set_title('(b) ' + ax.get_title())
 fig.tight_layout()
 fig.savefig(figdir + 'ip-error-models.png')
 fig.show()
