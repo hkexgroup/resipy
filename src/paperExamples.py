@@ -74,7 +74,7 @@ fig.show()
 #%% 2D topo at Lancaster Castle Hill (Lancaster UK)
 k = R2() # initiate an R2 instance
 k.createSurvey('./resipy/test/syscalFileTopo.csv', ftype='Syscal') # import data
-k.setElec(np.genfromtxt('./resipy/test/elecTopo.csv', delimiter=','))
+k.importElec('./resipy/test/elecTopo.csv')
 k.pwlfit() # fit a power law
 k.createMesh(typ='trian') # create quadrilateral mesh
 k.invert() # run the inversion
@@ -214,9 +214,10 @@ k1.createSequence(params=[('wenner_alpha',1),
                          ('wenner_alpha',10)])
 
 k1.forward(iplot=True, noise=0.05)
+k1.param['num_xy_poly'] = 0
 k1.invert(iplot=True)
-k1.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
-k1.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k1.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False)
+k1.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False)
 
 # now for the dipole dipole
 k2 = R2(typ='R2')
@@ -228,12 +229,13 @@ k2.showMesh()
 
 k2.createSequence([('dpdp1', 1, 8)])
 k2.forward(iplot=True, noise=0.05)
-k2.invert(iplot=True)
-k2.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k2.param['num_xy_poly'] = 0
+k2.invert()
+k2.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False)
 
 #%% graph
-fig = plt.figure(figsize=(8, 4))
-ax = plt.subplot2grid((3,3), (0,0), colspan=2)
+fig = plt.figure(figsize=(6, 8))
+ax = plt.subplot2grid((3,3), (0,1), colspan=1)
 ax.set_title('(a)')
 k1.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
 
@@ -273,16 +275,16 @@ k1.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
 ax.set_title('(b) Wenner')
 ax.set_xlabel(None)
 
+ax = axs[2]
+k2.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
+ax.set_title('(c) Dipole-Dipole')
+ax.set_xlabel(None)
+
 ax = axs[3]
-ax.set_title('(c) Wenner')
+ax.set_title('(d) Wenner')
 k1.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 target2 = np.vstack([target, target[0,:]])
 ax.plot(target2[:,0], target2[:,1], 'r--')
-ax.set_xlabel(None)
-
-ax = axs[2]
-k2.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
-ax.set_title('(d) Dipole-Dipole')
 ax.set_xlabel(None)
 
 ax = axs[4]
