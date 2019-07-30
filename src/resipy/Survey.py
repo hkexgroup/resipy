@@ -73,10 +73,10 @@ class Survey(object):
             elif ftype == 'Res2Dinv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
-                try:
-                    elec, data = primeParser(fname)
-                except:
-                    elec, data = primeParserTab(fname)
+#                try:
+#                    elec, data = primeParser(fname)
+#                except:
+                elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
                 elec, data = protocolParserIP(fname)
                 self.protocolIPFlag = True
@@ -1505,7 +1505,22 @@ class Survey(object):
 
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
+    
+    def filterElec(self, elec=[]):
+        """Filter out specific electrodes given.
         
+        Parameters
+        ----------
+        elec : list
+            List of electrode number to be removed.
+        
+        """
+        for e in elec:
+            i2keep = (self.df[['a','b','m','n']].values != e).all(1)
+            self.filterData(i2keep)
+            print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
+   
+    
     def filterdip(self, elec): # deleted specific elec data
         index = (self.array == elec[0]).any(-1)
         for i in range(1,len(elec)):
@@ -1517,7 +1532,7 @@ class Survey(object):
         """Normalise the indexes the sequence matrix to start at 1.
         
         Parameters
-        ----------
+        -------------
         debug : bool, optional
             Set to True to print output.
         """
@@ -1534,7 +1549,7 @@ class Survey(object):
                 imin_pos = np.min(np.abs(sch_mat))
                 if imin_pos == 1:
                     if debug:
-                        print("Positive electrode indexes firstly now start at %i"%(abs(imin)+1))
+                        print("Any positive electrode indexes now start at %i"%(abs(imin)+1))
                     crr_idx = np.argwhere(sch_mat>0)
                     sch_mat[crr_idx] -= 1
                     

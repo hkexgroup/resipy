@@ -1100,8 +1100,9 @@ class Mesh:
             Method of interpolation used to compute cell depths for a 3D mesh.
             Ignored for 2D meshes. 
             - 'bilinear' - (default) binlinear interpolation
+            - 'spline' - uses a series of thin plate splines, good for unstructured data
             - 'idw' - inverse distance wieghting
-            - 'nearest' - nearest neighbour interpolation
+            - 'nearest' - nearest neighbour look up
         """
         #formalities and error checking
         if datum_y is None: # set up y column if not in use
@@ -1111,7 +1112,7 @@ class Mesh:
         datum_x = np.array(datum_x)
         datum_y = np.array(datum_y)
         datum_z = np.array(datum_z)
-        if self.ndims == 2: # use 2D interpolation
+        if self.ndims == 2: # use 1D interpolation
             elm_x = np.array(self.elm_centre[0])
             elm_z = np.array(self.elm_centre[2])
             min_idx = np.argmin(datum_x)
@@ -1121,14 +1122,14 @@ class Mesh:
             self.attr_cache['depths'] = depth
             self.no_attributes += 1
             return depth
-        if self.ndims == 3: # use 3D interpolation
+        if self.ndims == 3: # use 2D interpolation
             elm_x = np.array(self.elm_centre[0])
             elm_y = np.array(self.elm_centre[1])
             elm_z = np.array(self.elm_centre[2])  
             #use interpolation to work out depth to datum 
             if method == 'bilinear':
                 Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z)
-            if method == 'spline':
+            elif method == 'spline':
                 Z = interp.interp2d(elm_x, elm_y, datum_x, datum_y, datum_z,method='spline')
             elif method == 'idw':
                 Z = interp.idw(elm_x, elm_y, datum_x, datum_y, datum_z)
@@ -1657,16 +1658,18 @@ class Mesh:
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
         
-    def meshLookUp(self,look_up_mesh,attr=None):
+    def meshLookUp(self,look_up_mesh):
         """Look up values from another mesh using nearest neighbour look up, 
-        assign attributes to the current mesh class.  
+        assign attributes to the current mesh class. 
         
         Parameters
         -------------
         look_up_mesh: class
             Another mesh class. 
-        attr: string, optional
-            Attribute key to look up. 
+        
+        Notes
+        -------------
+        This can fail for  large meshes due to the size of matrices involved. 
         """
         #assign coordinate arrays 
         x_old = look_up_mesh.elm_centre[0]
@@ -2572,8 +2575,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         ewd = path
         # else its assumed a custom directory has been given to the gmsh.exe
     
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-        raise Exception("No gmsh.exe exists in the exe directory!")
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh')):
+        raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file
     file_name="mesh"
@@ -2598,8 +2601,11 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2']
     else:
-        cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
-        
+        if os.path.isfile(os.path.join(ewd,'gmsh')):
+            cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
+        else: # fall back to wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
+
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
         while p.poll() is None:
@@ -2795,9 +2801,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         ewd = path # points to the location of the .exe 
         # else its assumed a custom directory has been given to the gmsh.exe 
     
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')):
-        raise Exception("No gmsh.exe exists in the exe directory!")
-    elif not os.path.isfile(os.path.join(ewd,'gmsh')):
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh')):
         raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file
@@ -2822,13 +2826,16 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
-        cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+        if os.path.isfile(os.path.join(ewd,'gmsh')): # if linux gmsh is present
+            cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+        else: # fallback on wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         
     if show_output: 
         try:
             p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        except PermissionError: # hotfix to deal with failing commits on gitlab's server. 
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        except: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3'] # use .exe through wine instead
             p = Popen(cmd_line, stdout=PIPE, shell=False)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()

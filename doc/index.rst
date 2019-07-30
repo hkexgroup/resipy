@@ -33,6 +33,7 @@ From the same `src` directory you can import the module from source using python
    
    getting-started
    gui
+   gui-in-action
    api
    auto_examples/index
    
