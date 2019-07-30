@@ -2921,7 +2921,7 @@ class R2(object): # R2 master class instanciated by the GUI
         pnct: float
             Error in percent
         """
-        for s in range(self.surveys):
+        for s in self.surveys:
             s.addPerError(pnct)
         
     def computeModelError(self,rm_tree=True):
