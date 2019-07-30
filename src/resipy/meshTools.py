@@ -2575,7 +2575,7 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         ewd = path
         # else its assumed a custom directory has been given to the gmsh.exe
     
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh')):
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh_linux')):
         raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file
@@ -2601,8 +2601,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2']
     else:
-        if os.path.isfile(os.path.join(ewd,'gmsh')):
-            cmd_line = [ewd + '/gmsh', file_name + '.geo', '-2'] # using linux version
+        if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
+            cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', '-2'] # using linux version if avialable (can be more performant)
         else: # fall back to wine
             cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2']
 
@@ -2801,7 +2801,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         ewd = path # points to the location of the .exe 
         # else its assumed a custom directory has been given to the gmsh.exe 
     
-    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh')):
+    if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh_linux')):
         raise Exception("No gmsh executable exists in the exe directory!")
     
     #make .geo file
@@ -2826,7 +2826,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             else:
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
-        if os.path.isfile(os.path.join(ewd,'gmsh')): # if linux gmsh is present
+        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
         else: # fallback on wine
             cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
