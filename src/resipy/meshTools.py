@@ -2136,6 +2136,28 @@ def tetgen_import(file_path):
         node_z[i] = float(line[3])
     fh.close() #close file 
     
+    #try and find the .trn file? - this is an output from E4D which describes 
+    # a mesh translation applied to improve computational accuracy 
+    file_path_trn =[file_path.replace('.node','.trn'),
+                    file_path.replace('.1.node','.trn')]# 2 likely options for the way the file is named 
+    for i in range(2):
+        if os.path.exists(file_path_trn[i]):
+            fh = open(file_path_trn[i],'r')
+            line = fh.readline().split()
+            fh.close()
+            delta_x = float(line[0])
+            delta_y = float(line[1])
+            delta_z = float(line[2])
+            break # break loop if found the file 
+        else:
+            delta_x = 0
+            delta_y = 0
+            delta_z = 0
+    
+    node_x = np.array(node_x) + delta_x
+    node_y = np.array(node_y) + delta_y
+    node_z = np.array(node_z) + delta_z
+    
     #next we need the connection matrix to describe each of the tetrahedral e
     #elements
     file_path2 = file_path.replace('.node','.ele')
@@ -2186,6 +2208,7 @@ def tetgen_import(file_path):
              elm_area = areas,#area of each element
              cell_type = [10],#according to vtk format
              cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
+             original_file_path = file_path,
              atribute_title='zone')#what is the attribute? 
     
     mesh.add_attribute(zone,'zone')
