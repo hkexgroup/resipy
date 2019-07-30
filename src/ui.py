@@ -496,6 +496,7 @@ class App(QMainWindow):
                 meshQuadGroup.setVisible(True)
                 meshTrianGroup.setVisible(True)
                 meshTetraGroup.setVisible(False)
+                meshCustomGroup.setVisible(True)
                 instructionLabel.setVisible(True)
 
                 # inversion settings
@@ -531,6 +532,7 @@ class App(QMainWindow):
                 meshQuadGroup.setVisible(False)
                 meshTrianGroup.setVisible(False)
                 meshTetraGroup.setVisible(True)
+                meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
 
                 # inversion settings
@@ -1079,18 +1081,21 @@ class App(QMainWindow):
 
         def plotPseudo():
             mwPseudo.setCallback(self.r2.pseudo)
-            mwPseudo.replot(aspect = self.plotAspect, **self.pParams)
+            if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
+                mwPseudo.replot(aspect='auto', **self.pParams)
+            else:
+                mwPseudo.replot(aspect=self.plotAspect, **self.pParams)
 
         def plotPseudoIP():
             mwPseudoIP.setCallback(self.r2.pseudoIP)
-            mwPseudoIP.replot(aspect = self.plotAspect, **self.pParamsIP)
+            mwPseudoIP.replot(aspect=self.plotAspect, **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
 
-        mwPseudo = MatplotlibWidget(navi=True, aspect='auto')
+        mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         pseudoLayout.addWidget(mwPseudo)
 
-        mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
+        mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         mwPseudoIP.setVisible(False)
         pseudoLayout.addWidget(mwPseudoIP)
 
@@ -1811,7 +1816,11 @@ class App(QMainWindow):
             if fname != '':
                 elec = elecTable.getTable() # getting the topography info
                 self.r2.param['lineTitle'] = titleEdit.text()
-                self.r2.saveFilteredData(fname, elec, savetyp)
+                if not self.r2.iTimeLapse or self.r2.iBatch:
+                    spacing = float(elecDx.text())
+                else:
+                    spacing = None
+                self.r2.saveFilteredData(fname, elec, savetyp, spacing=spacing)
                 
         recipErrorSavebtn = QPushButton('Save data')
         recipErrorSavebtn.setStyleSheet("color: green")
@@ -2436,8 +2445,12 @@ class App(QMainWindow):
             if fname != '':
                 try:
                     self.r2.importMesh(fname, mesh_type='trian')
-                    replotMesh()
-                    meshOutputStack.setCurrentIndex(1)
+                    if (self.r2.typ == 'R3t') or (self.r2.typ == 'cR3t'):
+                        mwMesh3D.plot(self.r2.showMesh, threed=True)
+                        meshOutputStack.setCurrentIndex(2)
+                    else:
+                        replotMesh()
+                        meshOutputStack.setCurrentIndex(1)
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn2 = QPushButton('Import Custom Mesh')
@@ -3605,6 +3618,13 @@ class App(QMainWindow):
             self.end = False
             outStackLayout.setCurrentIndex(0)
             mwInvResult.clear()
+            mwRMS.clear()
+            logText.setText('')
+            self.pindex = 0
+            self.rms = []
+            self.rmsIndex = []
+            self.rmsIP = []
+            self.rmsIndexIP = []
             self.r2.param['lineTitle'] = titleEdit.text()
             if self.r2.mesh is None:
                 meshQuadFunc() # generate default mesh
@@ -3673,14 +3693,18 @@ class App(QMainWindow):
             def printR2out():
                 print('--------INVERSION FAILED--------')
                 outStackLayout.setCurrentIndex(1)
-                with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
-                    text = f.read()
-                r2outEdit.setText(text)
+                frozeUI(False)
                 btnInvert.setText('Invert')
                 btnInvert.setStyleSheet("background-color: green")
                 btnInvert.clicked.disconnect()
                 btnInvert.clicked.connect(btnInvertFunc)
-                frozeUI(False)
+                outfile = os.path.join(self.r2.dirname, self.r2.typ + '.out')
+                if os.path.exists(outfile):
+                    with open(outfile,'r') as f:
+                        text = f.read()
+                    r2outEdit.setText(text)
+                else:
+                    r2outEdit.setText('No .out were generated.')
 
 
             if self.end is True:
@@ -3703,7 +3727,6 @@ class App(QMainWindow):
                         sectionId.setCurrentIndex(1)
                 except Exception as e:
                     print('Error when plotting:', e)
-                    pass
                     printR2out()
 
             else:
@@ -3717,6 +3740,7 @@ class App(QMainWindow):
             else:
                 mwInvResult3D.setCallback(self.r2.showResults)
                 resultStackLayout.setCurrentIndex(1)
+#                resultStackLayout.setCurrentIndex(0)
 #                mwInvResult.setCallback(self.r2.showSlice)
             if self.r2.iBorehole is False:
                 try:

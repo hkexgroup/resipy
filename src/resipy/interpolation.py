@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 import resipy.isinpolygon as iip
-#import warnings 
+import warnings 
 #from tqdm import tqdm # progess bar package - disabled 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
@@ -318,7 +318,8 @@ def nearest(xnew, ynew, xknown, yknown, zknown, maxDist=None):
 
 #%% nearest neighbour interpolation in 3D 
 def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
-    """Nearest neighbour look up for 3D unstructured data.
+    """Nearest neighbour look up for 3D unstructured data. This process can be 
+    RAM and CPU demanding. 
     
     Parameters
     ------------
@@ -378,4 +379,4 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
         return iknown[idx], idx
     else: 
         return iknown[idx]
-    
+
