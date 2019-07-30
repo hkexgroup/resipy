@@ -2890,7 +2890,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def estError(self,a_wgt=0.01,b_wgt=0.02):
         """Estimate reciprocal error data for data with no recipricols for each 
         survey, using the same routine present in R2. This allows for the additional inclusion
-        of modelling errors. 
+        of modelling errors. This action is irreversable. 
         
         Parameters
         ------------
@@ -2901,6 +2901,20 @@ class R2(object): # R2 master class instanciated by the GUI
         """            
         for s in self.surveys:
             s.estError(a_wgt=a_wgt,b_wgt=b_wgt)
+    
+    def addFlatError(self,pnct=2.5):
+        """Add a flat percentage error to resistivity data (for each survey in 
+        the class). This action is irreversable. 
+        
+        resError = res*(pnct/100) + resError
+        
+        Parameters
+        --------------
+        pnct: float
+            Error in percent
+        """
+        for s in range(self.surveys):
+            s.addPerError(pnct)
         
     def computeModelError(self,rm_tree=True):
         """Compute modelling error assocaited with the mesh.
