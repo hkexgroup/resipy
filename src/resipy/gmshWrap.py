@@ -187,9 +187,11 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #formalities and error checks
     if geom_input is not None: 
         if not isinstance(geom_input,dict):
-            raise TypeError ("'geom_input' is not a dictionary type object. Dict type is expected for the first argument of genGeoFile_adv")
+            raise TypeError ("'geom_input' is not a dictionary type object. Dict type is expected for the first argument of genGeoFile")
     else:
         geom_input = {}
+    if len(electrodes[0])!=len(electrodes[1]):
+        raise ValueError('The length of the electrode x and z arrays does not match')
         
     bh_flag = False
     bu_flag = False
@@ -219,12 +221,14 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             min_idx = np.argmin(electrodes[0])
             topo_x = [electrodes[0][min_idx],electrodes[0][max_idx]]
             y_idx = np.argmax(electrodes[1])
-            topo_z = [electrodes[1][y_idx]+1,electrodes[1][y_idx]+1] # add one so we cut into the buried in electrodes with the mesh
+            topo_z = [electrodes[1][y_idx]+1,electrodes[1][y_idx]+1] # add one so we don't cut into the buried in electrodes with the mesh
             geom_input['surface'] = [topo_x,topo_z]
             elec_x = np.array([])
             elec_z = np.array([])
-            if dp_len == -1 : dp_len = max(electrodes[0]) - min(electrodes[0])
-            if doi == -1: doi = min(electrodes[1]) - dp_len
+            if dp_len == -1 : 
+                dp_len = max(electrodes[0]) - min(electrodes[0])
+            if doi == -1: 
+                doi = min(electrodes[1]) - dp_len
         elif len(surface_idx)==0 and 'surface' in geom_input:
             elec_x = np.array([])
             elec_z = np.array([])
@@ -233,7 +237,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         elec_x = np.array(electrodes[0])
         elec_z = np.array(electrodes[1])
 
-    if 'surface' not in geom_input:
+    if 'surface' not in geom_input: # make extra topography points if there are none 
         min_idx = np.argmin(elec_x)
         max_idx = np.argmax(elec_x)   
         topo_x = [elec_x[min_idx] - 5*np.mean(np.diff(np.unique(elec_x))),
@@ -242,13 +246,24 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     else:
         topo_x = geom_input['surface'][0]
         topo_z = geom_input['surface'][1] 
-  
+        
+    #catch where x coordinates dont change
+    if max(topo_x)-min(topo_x) < 0.2: # they have the same x coordinate 
+        topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
+                  
+    if dp_len == -1 and len(elec_x)>0:#compute maximum dipole length
+        dp_len = abs(np.max(elec_x) - np.min(elec_x))
+    elif dp_len == 0 or dp_len==-1:#there is no change dipole length, maybe due to 1 x coordinate 
+        dp_len = abs(np.max(electrodes[1]) - np.min(electrodes[1])) # use z coordinates, 
+    if dp_len == 0: #if its still 0 
+        dp_len = 5 # insert obligitory value here
+                
     if doi == -1:#then set to a default 
         doi = np.max(elec_z) - (np.min(elec_z) - abs(np.max(elec_x) - np.min(elec_x))/2)
-                  
-    if dp_len == -1:#compute maximum dipole length
-        dp_len = abs(np.max(elec_x) - np.min(elec_x))
-        
+    if abs(doi) <= abs(np.min(electrodes[1])):
+        warnings.warn('DOI is shallower than minimum z coordinate, therefore lowering the DOI by 5 units')
+        doi-=5
+    
     print("doi in gmshWrap.py: %f"%doi)
     print("dp_len in gmshWrap.py: %f"%dp_len)
     
@@ -780,7 +795,7 @@ def msh_parse(file_path):
 #%% 2D whole space 
 
 def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_input = None,
-                       file_path='mesh.geo',cl=1):
+                       file_path='mesh.geo',cl=-1):
     """
     writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
     
@@ -853,6 +868,22 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
         
+    def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
+        dist = np.zeros((len(elec_x),len(elec_x)))   
+        x1 = np.array(elec_x)
+        y1 = np.array(elec_y)
+        z1 = np.array(elec_z)
+        for i in range(len(elec_x)):
+            x2 = elec_x[i]
+            y2 = elec_y[i]
+            z2 = elec_z[i]
+            dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+        return dist.flatten() # array of all electrode distances 
+    
+    if cl==-1:
+        dist_sort = np.unique(find_dist(elec_x,[0]*len(elec_x),elec_z))
+        cl = dist_sort[0]/2 # characteristic length is 1/2 the minimum electrode distance
+        
     fh = open(file_path,'w') #file handle
     
     fh.write("//Gmsh wrapper code version 1.0 (run the following in gmsh to generate a triangular mesh for 2D whole space)\n")
@@ -862,6 +893,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     #create square around all of the electrodes
     x_dist = abs(np.max(elec_x) - np.min(elec_x))
     z_dist = abs(np.max(elec_z) - np.min(elec_z))
+    if x_dist<0.2:x_dist=5 # protection against small (or zero) padding 
+    if z_dist<0.2:z_dist=5
     max_x = np.max(elec_x) + (padding/100)*x_dist
     min_x = np.min(elec_x) - (padding/100)*x_dist
     max_z = np.max(elec_z) + (padding/100)*z_dist
@@ -1077,35 +1110,41 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
     
-    def find_dist(elec_x,elec_y): # find maximum and minimum electrode spacings 
+    def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
         dist = np.zeros((len(elec_x),len(elec_x)))   
         x1 = np.array(elec_x)
         y1 = np.array(elec_y)
+        z1 = np.array(elec_z)
         for i in range(len(elec_x)):
             x2 = elec_x[i]
             y2 = elec_y[i]
-            dist[:,i] = np.sqrt((x1-x2)**2+(y1-y2)**2)
+            z2 = elec_z[i]
+            dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
         return dist.flatten() # array of all electrode distances 
     
+    triggered=False
     if cl==-1:
-        dist_sort = np.unique(find_dist(elec_x,elec_y))
+        dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         cl = dist_sort[0]/2 # characteristic length is 1/2 the minimum electrode distance
+        triggered = True
         #print('cl = %f'%cl)  
         
     if dp_len == -1: # compute largest possible dipole length 
-        try:
-            dp_len = dist_sort[-1] # maximum possible dipole length
-        except NameError: # putting in try to avoid recalculating if done already 
-            dist_sort = np.unique(find_dist(elec_x,elec_y))
-            dp_len = dist_sort[-1]#biggest distance will be the last entry in array as it is sorted 
+        if not triggered:# Avoid recalculating if done already 
+            dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
+        dp_len = dist_sort[-1] # maximum possible dipole length
     
     if doi == -1: # compute depth of investigation
         try:
             doi = dist_sort[-1]/3 # maximum possible dipole length / 3
         except NameError: # putting in try to avoid recalculating if done already 
-            dist_sort = np.unique(find_dist(elec_x,elec_y))
+            dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
             doi = dist_sort[-1]/3
+    if doi >= np.min(elec_z):
+        warnings.warn('depth of investigation is shaller than lowest electrode, adding 5 units to doi')
+        doi = np.min(elec_z) - 5 
         
+    print('doi in gmshWrap.py: %f'%doi)
     ### start to write to file ### 
     fh = open(file_path,'w') #file handle
     
@@ -1115,6 +1154,9 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
     #create square around all of the electrodes
     x_dist = abs(np.max(elec_x) - np.min(elec_x))
     y_dist = abs(np.max(elec_y) - np.min(elec_y))
+    if x_dist<0.2:x_dist=5 # protection against small (or zero) padding 
+    if y_dist<0.2:y_dist=5
+        
     max_x = np.max(elec_x) + (padding/100)*x_dist
     min_x = np.min(elec_x) - (padding/100)*x_dist
     max_y = np.max(elec_y) + (padding/100)*y_dist

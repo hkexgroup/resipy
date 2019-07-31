@@ -1055,7 +1055,13 @@ class Survey(object):
             temp_data.loc[mask, 'ip'] = np.nan
             self.filterDataIP = temp_data.dropna(subset = ['ip'])
         self.addFilteredIP()
-
+        
+    def removeneg(self):
+        """Remove negative apparent resistivty values
+        """
+        df = self.df.copy()
+        keep_idx = df['resist']>0 # apparant resistivity values must be bigger than zero
+        self.filterData(keep_idx)
 
     def pseudo(self, ax=None, bx=None, **kwargs):
         """Plot pseudo section if 2D survey or just quadrupoles transfer
