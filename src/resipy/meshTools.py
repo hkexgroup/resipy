@@ -408,9 +408,9 @@ class Mesh:
             if zlim=="default":
                 zlim=[min(self.node_z),max(self.node_z)]
                 
-        if abs(xlim[0] - xlim[1]) < 4:# protection against thin axis margins 
+        if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
-        if abs(zlim[0] - zlim[1]) < 4:
+        if abs(zlim[0] - zlim[1]) < 0.001:
             zlim=[zlim[0]-2,zlim[1]+2]
                 
         ##plot mesh! ##
@@ -766,11 +766,11 @@ class Mesh:
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
             
-        if abs(xlim[0] - xlim[1]) < 4:# protection against thin axis margins 
+        if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
-        if abs(zlim[0] - zlim[1]) < 4:
+        if abs(zlim[0] - zlim[1]) < 0.001:
             zlim=[zlim[0]-2,zlim[1]+2]
-        if abs(ylim[0] - ylim[1]) < 4:
+        if abs(ylim[0] - ylim[1]) < 0.001:
             ylim=[ylim[0]-2,ylim[1]+2]
         #set axis limits     
         ax.set_xlim(xlim)
