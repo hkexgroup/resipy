@@ -408,9 +408,9 @@ class Mesh:
             if zlim=="default":
                 zlim=[min(self.node_z),max(self.node_z)]
                 
-        if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
+        if np.diff(xlim) == 0: # protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
-        if abs(zlim[0] - zlim[1]) < 0.001:
+        if np.diff(zlim) == 0:
             zlim=[zlim[0]-2,zlim[1]+2]
                 
         ##plot mesh! ##
