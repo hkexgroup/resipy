@@ -665,8 +665,13 @@ class R2(object): # R2 master class instanciated by the GUI
         for s in self.surveys:
             numRemoved += s.removeUnpaired()
         return numRemoved
+
+    def removeneg(self):
+        """Remove negative apparent resistivty values
+        """
+        for s in self.surveys:
+            s.removeneg()
             
-        
     def computeDOI(self):
         """Compute the Depth Of Investigation (DOI).
         """

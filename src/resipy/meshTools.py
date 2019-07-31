@@ -408,6 +408,11 @@ class Mesh:
             if zlim=="default":
                 zlim=[min(self.node_z),max(self.node_z)]
                 
+        if abs(xlim[0] - xlim[1]) < 4:# protection against thin axis margins 
+            xlim=[xlim[0]-2,xlim[1]+2]
+        if abs(zlim[0] - zlim[1]) < 4:
+            zlim=[zlim[0]-2,zlim[1]+2]
+                
         ##plot mesh! ##
         a = time.time() #start timer on how long it takes to plot the mesh
         #compile mesh coordinates into polygon coordinates  
@@ -760,6 +765,13 @@ class Mesh:
             ylim=[min(self.elec_y), max(self.elec_y)]
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
+            
+        if abs(xlim[0] - xlim[1]) < 4:# protection against thin axis margins 
+            xlim=[xlim[0]-2,xlim[1]+2]
+        if abs(zlim[0] - zlim[1]) < 4:
+            zlim=[zlim[0]-2,zlim[1]+2]
+        if abs(ylim[0] - ylim[1]) < 4:
+            ylim=[ylim[0]-2,ylim[1]+2]
         #set axis limits     
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
