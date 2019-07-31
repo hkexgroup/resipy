@@ -795,7 +795,7 @@ def msh_parse(file_path):
 #%% 2D whole space 
 
 def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_input = None,
-                       file_path='mesh.geo',cl=-1):
+                       file_path='mesh.geo',cl=-1,cl_factor=50,doi=None,dp_len=None):
     """
     writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
     
@@ -814,7 +814,15 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
         name of the generated gmsh file (can include file path also) (optional)
     cl: float, optional
         characteristic length (optional), essentially describes how big the nodes 
-        assocaited elements will be. Usually no bigger than 5. 
+        assocaited elements will be. Usually no bigger than 5.
+    cl_factor: float, optional
+        Describes the growth factor applied to the outer fine mesh region.  
+    doi: N/A
+        Parameter is not used. Needed for keyword argument compatiblity with 
+        genGeoFile.
+    dp_len: N/A
+        Parameter is not used. Needed for keyword argument compatiblity with 
+        genGeoFile.            
     
     Returns
     ----------
@@ -901,19 +909,20 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     min_z = np.min(elec_z) - (padding/100)*z_dist
     
     fh.write("//Fine mesh region.\n")
+    fh.write("cl_pad=%f;//padding characteristic length\n"%(cl*cl_factor))#padding applied to fine mesh outer nodes
     #add points to file 
     no_pts = 1
     loop_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, max_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, max_x, max_z, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, min_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, max_x, min_z, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, min_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, min_x, min_z, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, max_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, min_x, max_z, 0))
     
     #add line loop
     no_lns = 0 
