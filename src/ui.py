@@ -1009,7 +1009,8 @@ class App(QMainWindow):
                 self.pParams['contour'] = False
                 self.pParamsIP['contour'] = False
             plotPseudo()
-            plotPseudoIP()
+            if self.r2.typ[0] == 'c':
+                plotPseudoIP()
         
         # display options for pseudo-sections
         psContourCheck = QCheckBox('Contour')
