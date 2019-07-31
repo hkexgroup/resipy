@@ -2598,7 +2598,7 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     elif whole_space:
         print("Whole space problem")
         node_pos = gw.gen_2d_whole_space([elec_x,elec_z], geom_input = geom_input, 
-                                         file_path=file_name)    
+                                         file_path=file_name,**kwargs)    
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
