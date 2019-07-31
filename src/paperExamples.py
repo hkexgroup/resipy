@@ -39,13 +39,14 @@ figdir = './image/paper/'
 k = R2()
 k.createSurvey('./resipy/test/syscalFile.csv')
 k.removeUnpaired()
-figsize=(4,2)
+figsize=(5,2.5)
 
 fig, ax = plt.subplots(figsize=figsize)
 k.surveys[0].manualFiltering(ax=ax) # manually selection points
 ax.set_title('(a) Select points/electrodes')
 ax.set_ylabel('Pseudo-depth [m]')
 ax.set_xlabel('Distance [m]')
+fig.tight_layout()
 fig.savefig(figdir + 'fig4-manualFiltering.png') # to be saved after selecting points
 fig.show()
 
@@ -56,10 +57,11 @@ k.surveys[0].manualFiltering(ax=ax) # manually selection points
 ax.set_title('(b) Filtered data')
 ax.set_ylabel('Pseudo-depth [m]')
 ax.set_xlabel('Distance [m]')
+fig.tight_layout()
 fig.savefig(figdir + 'fig4-filtered.png')
 fig.show()
 
-fig, ax = plt.subplots(figsize=figsize)
+fig, ax = plt.subplots(figsize=(8,2.5))
 k.errorDist(ax=ax)
 ax.set_title('(c) Probability error distribution')
 fig.savefig(figdir + 'fig4-errorDist.png')
@@ -72,7 +74,7 @@ fig.show()
 #%% 2D topo at Lancaster Castle Hill (Lancaster UK)
 k = R2() # initiate an R2 instance
 k.createSurvey('./resipy/test/syscalFileTopo.csv', ftype='Syscal') # import data
-k.setElec(np.genfromtxt('./resipy/test/elecTopo.csv', delimiter=','))
+k.importElec('./resipy/test/elecTopo.csv')
 k.pwlfit() # fit a power law
 k.createMesh(typ='trian') # create quadrilateral mesh
 k.invert() # run the inversion
@@ -108,8 +110,10 @@ k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 fig, axs = plt.subplots(1, 2, figsize=(8,3))
 ax = axs[0]
 k.pwlfit(ax=ax)
+ax.set_title('(a) ' + ax.get_title())
 ax = axs[1]
 k.plotIPFit(ax=ax)
+ax.set_title('(b) ' + ax.get_title())
 fig.tight_layout()
 fig.savefig(figdir + 'ip-error-models.png')
 fig.show()
@@ -210,9 +214,10 @@ k1.createSequence(params=[('wenner_alpha',1),
                          ('wenner_alpha',10)])
 
 k1.forward(iplot=True, noise=0.05)
+k1.param['num_xy_poly'] = 0
 k1.invert(iplot=True)
-k1.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
-k1.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k1.showResults(index=0, attr='Resistivity(Ohm-m)', sens=False)
+k1.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False)
 
 # now for the dipole dipole
 k2 = R2(typ='R2')
@@ -224,12 +229,13 @@ k2.showMesh()
 
 k2.createSequence([('dpdp1', 1, 8)])
 k2.forward(iplot=True, noise=0.05)
-k2.invert(iplot=True)
-k2.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False) # not for cR2
+k2.param['num_xy_poly'] = 0
+k2.invert()
+k2.showResults(index=1, attr='Resistivity(Ohm-m)', sens=False)
 
 #%% graph
-fig = plt.figure(figsize=(8, 4))
-ax = plt.subplot2grid((3,3), (0,0), colspan=2)
+fig = plt.figure(figsize=(6, 8))
+ax = plt.subplot2grid((3,3), (0,1), colspan=1)
 ax.set_title('(a)')
 k1.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
 
@@ -269,16 +275,16 @@ k1.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
 ax.set_title('(b) Wenner')
 ax.set_xlabel(None)
 
+ax = axs[2]
+k2.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
+ax.set_title('(c) Dipole-Dipole')
+ax.set_xlabel(None)
+
 ax = axs[3]
-ax.set_title('(c) Wenner')
+ax.set_title('(d) Wenner')
 k1.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 target2 = np.vstack([target, target[0,:]])
 ax.plot(target2[:,0], target2[:,1], 'r--')
-ax.set_xlabel(None)
-
-ax = axs[2]
-k2.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
-ax.set_title('(d) Dipole-Dipole')
 ax.set_xlabel(None)
 
 ax = axs[4]
