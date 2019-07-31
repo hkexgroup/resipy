@@ -260,9 +260,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 
     if doi == -1:#then set to a default 
         doi = np.max(elec_z) - (np.min(elec_z) - abs(np.max(elec_x) - np.min(elec_x))/2)
-    if abs(doi) <= abs(np.min(electrodes[1])):
-        warnings.warn('DOI is shallower than minimum z coordinate, therefore lowering the DOI by 5 units')
-        doi-=5
+    if doi >= np.min(electrodes[1]):
+        warnings.warn('DOI is shallower than minimum z coordinate, therefore lowering the DOI by 5 units below lowest electrode')
+        doi= np.min(electrodes[1]) - 5 
     
     print("doi in gmshWrap.py: %f"%doi)
     print("dp_len in gmshWrap.py: %f"%dp_len)
@@ -1141,7 +1141,7 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
             dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
             doi = dist_sort[-1]/3
     if doi >= np.min(elec_z):
-        warnings.warn('depth of investigation is shaller than lowest electrode, adding 5 units to doi')
+        warnings.warn('depth of investigation is shaller than lowest electrode, adding 5 units below lowest electrode')
         doi = np.min(elec_z) - 5 
         
     print('doi in gmshWrap.py: %f'%doi)
