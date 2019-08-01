@@ -31,7 +31,7 @@ Notes that Mac and Linux:
 
 What it can do
 --------------
-<img src='src/image/teaser.gif' width="400">
+<img src='src/image/teaser.gif' width="600">
 
 More examples can be found in [examples](./examples/)
 
