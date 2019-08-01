@@ -31,24 +31,7 @@ Notes that Mac and Linux:
 
 What it can do
 --------------
-<img src='src/image/workflow.png' width="400">
-<figcaption>General workflow available</figcaption>
-
-<img src="src/image/importData.png"  width="700">
-<figcaption>Importing data and plotting pseudo-section. Note that there are option for borehole survey, time-lapse, batch and IP data.</figcaption>
-
-<img src="src/image/fitErrorModel.png"  width="700">
-<figcaption>Fitting a power-law error model for DC resistivity.</figcaption>
-
-<img src="src/image/meshTrian.png"  width="700">
-<figcaption>Creating a triangular mesh.</figcaption>
-
-<img src="src/image/inversionSettings.png"  width="700">
-<figcaption>Tweaking fine inversion settings.</figcaption>
-
-<img src="src/image/invert.png"  width="700">
-<figcaption>Inverting and plotting inverted section with different attributes.</figcaption>
-
+<img src='src/image/teaser.gif' width="400">
 
 More examples can be found in [examples](./examples/)
 
