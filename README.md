@@ -20,9 +20,9 @@ ResIPy is an open-source project, everyone is welcome to contribute.
 
 You can download the latest versions using the links below:
 
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.6-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.6-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.6-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm "Tested on Debian10 and Ubuntu18.04.2")
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.9-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm "Tested on Debian10 and Ubuntu18.04.2")
 
 Notes that Mac and Linux:
 - you will need to have *wine* installed as the executable beneath are compiled for Windows
@@ -31,24 +31,7 @@ Notes that Mac and Linux:
 
 What it can do
 --------------
-<img src='src/image/workflow.png' width="400">
-<figcaption>General workflow available</figcaption>
-
-<img src="src/image/importData.png"  width="700">
-<figcaption>Importing data and plotting pseudo-section. Note that there are option for borehole survey, time-lapse, batch and IP data.</figcaption>
-
-<img src="src/image/fitErrorModel.png"  width="700">
-<figcaption>Fitting a power-law error model for DC resistivity.</figcaption>
-
-<img src="src/image/meshTrian.png"  width="700">
-<figcaption>Creating a triangular mesh.</figcaption>
-
-<img src="src/image/inversionSettings.png"  width="700">
-<figcaption>Tweaking fine inversion settings.</figcaption>
-
-<img src="src/image/invert.png"  width="700">
-<figcaption>Inverting and plotting inverted section with different attributes.</figcaption>
-
+<img src='src/image/teaser.gif' width="600">
 
 More examples can be found in [examples](./examples/)
 
@@ -206,6 +189,19 @@ Finally the typical workflow is as following:
 9. request from the branch you have just push to. You can also go to Repository > 
 10. Branches and create a merge request from the `<name_of_branch>` branch.
 
+
+Previous releases
+-----------------
+Below are the link to previous releases of ResIPy/pyR2. Note that those release can contains bugs and it is recommended to always use
+the latest release available.
+- v1.1.6
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.6-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/ehjsvimef3hgw88trb36s9huq4vclnr0)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.6-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/bdtpn23crfxwdblq85ukjn2dj8a3spn0)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.6-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/3guw8q4pn94jb7qasrrej4p6df7ooi77)
+- v1.1.5
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.5-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/pc3fd9w3bxgyjnx5darga8g57tp92047)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/odbaxm7dj2d645r9mbgogxkcq78jitov)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.5-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/b2tea7fmwyr4uja0pn25lprunnp4ndlv)
 
 
 
