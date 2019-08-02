@@ -3894,9 +3894,13 @@ class App(QMainWindow):
             self.displayParams['vmin'] = None
             self.displayParams['vmax'] = None
             if self.displayParams['attr'] == 'Sigma_imag(log10)':
-                if any(val == 0 for val in self.r2.meshResults[self.displayParams['index']].attr_cache['Sigma_imag(log10)']):
-                    contourCheck.setChecked(True)
-                    infoDump('Contouring data by default!')
+                sigma_imag_vals = self.r2.meshResults[self.displayParams['index']].attr_cache['Sigma_imag(log10)']
+                if any(val == 0 for val in sigma_imag_vals):
+                    if all(val == 0 for val in sigma_imag_vals):
+                        pass
+                    else:
+                        contourCheck.setChecked(True)
+                        infoDump('Contouring data by default!')
             replotSection()
 
 
