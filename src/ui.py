@@ -800,7 +800,7 @@ class App(QMainWindow):
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         pass # no reciprocals found
                     else:
-#                        tabPreProcessing.setTabEnabled(1, True)
+    #                        tabPreProcessing.setTabEnabled(1, True)
                         tabPreProcessing.setTabEnabled(2, True)
                         plotError()
                         errHist()
@@ -3896,6 +3896,14 @@ class App(QMainWindow):
             vmaxEdit.setText('')
             self.displayParams['vmin'] = None
             self.displayParams['vmax'] = None
+            if self.displayParams['attr'] == 'Sigma_imag(log10)':
+                sigma_imag_vals = self.r2.meshResults[self.displayParams['index']].attr_cache['Sigma_imag(log10)']
+                if any(val == 0 for val in sigma_imag_vals):
+                    if all(val == 0 for val in sigma_imag_vals):
+                        pass
+                    else:
+                        contourCheck.setChecked(True)
+                        infoDump('Contouring data by default!')
             replotSection()
 
 
