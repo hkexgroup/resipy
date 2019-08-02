@@ -58,6 +58,7 @@ class Survey(object):
         self.iBorehole = False # True is it's a borehole
         self.protocolIPFlag = False
         self.kFactor = 1
+        self.errorModel = None # function instanticated after fitting an error model with reciprocal errors
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
                         'Sting', 'ABEM-Lund']# add parser types here! 

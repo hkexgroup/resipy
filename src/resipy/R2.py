@@ -206,10 +206,6 @@ class R2(object): # R2 master class instanciated by the GUI
         Either `R2` or `R3t` for 3D. Complex equivalents are `cR2` and `cR3t`.
         Automatically infered when creating the survey.
     """ 
-    #insert starting variables here: 
-    referenceMdl = False # is there a starting reference model already? 
-    fwdErrMdl = False # is there is a forward modelling error already (due to the mesh)? 
-    errTyp = 'global'# type of error model to be used in batch and timelapse surveys
     def __init__(self, dirname='', typ='R2'): # initiate R2 class
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
@@ -239,6 +235,11 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         
+        # attributes needed for independant error model for timelapse/batch inversion
+        self.referenceMdl = False # is there a starting reference model already? 
+        self.fwdErrMdl = False # is there is a forward modelling error already (due to the mesh)? 
+        self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
+
         
     def setwd(self, dirname):
         """Set the working directory.
@@ -1185,14 +1186,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 np.savetxt(f, x2)
                 
 
-    def write2protocol(self, err=None, errTyp = None, errTot=False, **kwargs):
+    def write2protocol(self, err=None, errTot=False, **kwargs):
         """Write a protocol.dat file for the inversion code.
         
         Parameters
         ----------
         err : bool, optional
             If `True` error columns will be written in protocol.dat provided
-            an error model has been fitted or error have been imported.
+            an error model has been fitted or errors have been imported.
         errTot : bool, optional
             If `True`, it will compute the modelling error due to the mesh and
             add it to the error from an error model.
@@ -1206,8 +1207,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         if err is None:
             err = self.err
-        if errTyp is None:
-            errTyp = self.errTyp
+        errTyp = self.errTyp # either 'global' (default) or 'survey' 
         
         # important changing sign of resistivity and quadrupoles so to work
         # with complex resistivity
@@ -1243,9 +1243,14 @@ class R2(object): # R2 master class instanciated by the GUI
                     s.df = s.df.drop('recipMean0', axis=1)
                 s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
                 if err is True and errTyp == 'global':
-                    s.df['resError'] = self.bigSurvey.errorModel(s.df)
+                    if self.bigSurvey.errorModel is not None:
+                        s.df['resError'] = self.bigSurvey.errorModel(s.df)
+                    # if not it means that the 'resError' columns has already
+                    # been populated when the files has been imported
+                    
                 res0Bool = False if self.param['reg_mode'] == 1 else True
-                protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
+                protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool, 
+                                            ip=False, # no IP timelapse possible for now
                                             isubset=indexes[i+1])
                 content = content + str(protocol.shape[0]) + '\n'
                 content = content + protocol.to_csv(sep='\t', header=False, index=False)
@@ -1268,8 +1273,12 @@ class R2(object): # R2 master class instanciated by the GUI
         elif self.iBatch is True:
             content = ''
             for i, s in enumerate(self.surveys):
-                if err is True:
-                    s.df['resError'] = self.bigSurvey.errorModel(s.df)
+                if err is True and errTyp == 'global':
+                     if self.bigSurvey.errorModel is not None:
+                        s.df['resError'] = self.bigSurvey.errorModel(s.df)
+                    # if not it means that the 'resError' columns has already
+                    # been populated when the files has been imported
+                print('++++++', ipBool, s.df.head())
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
                 content = content + str(len(df)) + '\n'
                 content = content + df.to_csv(sep='\t', header=False, index=False)
@@ -2078,7 +2087,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
-               parallel=False, iMoveElec=False, ncores=None, forceParallel=False,
+               parallel=False, iMoveElec=False, ncores=None,
                rmDirTree=True):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
