@@ -784,7 +784,7 @@ class App(QMainWindow):
                         self.r2.createTimeLapseSurvey(fdir, ftype=self.ftype, dump=infoDump)
                         infoDump('Time-lapse survey created.')
                     else:
-                        self.r2.createBatchSurvey(fdir, dump=infoDump)
+                        self.r2.createBatchSurvey(fdir, ftype=self.ftype, dump=infoDump)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
                     for s in self.r2.surveys:
