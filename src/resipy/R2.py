@@ -1278,7 +1278,6 @@ class R2(object): # R2 master class instanciated by the GUI
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
                     # if not it means that the 'resError' columns has already
                     # been populated when the files has been imported
-                print('++++++', ipBool, s.df.head())
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
                 content = content + str(len(df)) + '\n'
                 content = content + df.to_csv(sep='\t', header=False, index=False)
@@ -3076,10 +3075,15 @@ class R2(object): # R2 master class instanciated by the GUI
 #                # TODO change that to full meshTools
 #                
 #            else:
-            x = np.genfromtxt(os.path.join(self.dirname, fs[index]))
+#            x = np.genfromtxt(os.path.join(self.dirname, fs[index])) # too sensitive to empty columns of cR2 output
+            x = pd.read_csv(os.path.join(self.dirname, fs[index]), delim_whitespace=True).values
             if x.shape[0] > 0:
                 triang = tri.Triangulation(x[:,0],x[:,1])
-                cax = ax.tricontourf(triang, x[:,3], extend='both')
+                if self.typ[0] == 'c':
+                    z = x[:,4]
+                else:
+                    z = x[:,3]
+                cax = ax.tricontourf(triang, z, extend='both')
                 # TODO might want to crop surface here as well
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
