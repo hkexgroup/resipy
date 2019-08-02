@@ -643,17 +643,16 @@ class Mesh:
         if color_map != None :
             if attr is None:
                 cm = plt.get_cmap(color_map, len(np.unique(X)))
-                vmin = vmin + 0.5
-                vmax = vmax - 0.5
             else:
                 cm = color_map
             self.cax.set_cmap(cm) # change the color map if the user wants to 
         else:
             if attr is None:
                 cm = plt.get_cmap('Spectral', len(np.unique(X)))
-                vmin = vmin + 0.5
-                vmax = vmax - 0.5
+#                vmin = vmin + 0.5
+#                vmax = vmax - 0.5
                 self.cax.set_cmap(cm)
+                self.cbar.set_ticks(np.arange(len(np.unique(X))+1))
         
         
         #following block of code redraws figure 

@@ -2452,8 +2452,8 @@ class R2(object): # R2 master class instanciated by the GUI
             fig = ax.figure
 
         def callback(idx):
-            print('nb elements selected:', np.sum(idx))
             self.regid = self.regid + 1
+            print('nb elements selected:', np.sum(idx), 'in region', self.regid)
             self.regions[idx] = self.regid            
             self.mesh.cell_attributes = list(self.regions) # overwritin regions            
             self.mesh.draw()
