@@ -63,7 +63,8 @@ fig.show()
 
 fig, ax = plt.subplots(figsize=(8,2.5))
 k.errorDist(ax=ax)
-ax.set_title('(c) Probability error distribution')
+ax.set_title('(c) Probability distribution of reciprocal errors')
+fig.tight_layout()
 fig.savefig(figdir + 'fig4-errorDist.png')
 fig.show()
 
@@ -104,7 +105,7 @@ k.param['b_wgt'] = 0 # "b_wgt" = 0 when there is individual phase error
 k.param['tolerance'] = 1.2 # based on data, field site and experience
 k.invert() # run the inversion (and write cR2.in and protocol.dat automatically)
 k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity section
-k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
+k.showResults(attr='Sigma_imag(log10)') # show the inverted phase shift section
 
 #%% graph section
 fig, axs = plt.subplots(1, 2, figsize=(8,3))
@@ -125,7 +126,8 @@ k.showResults(attr='Sigma_real(log10)', zlim=[-8, 0], ax=ax, sens=False)
 ax.set_xlabel(None)
 ax = axs[1]
 ax.set_title('(b)')
-k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
+#k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
+k.showResults(attr='Sigma_imag(log10)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'micp.eps')
 fig.savefig(figdir + 'micp.png')
@@ -145,17 +147,17 @@ k.showResults(index=1, attr='difference(percent)') # show the differences betwee
 
 
 #%% graph
-fig, axs = plt.subplots(3, 1, figsize=(4, 5), sharex=True)
+fig, axs = plt.subplots(3, 1, figsize=(5, 6), sharex=True)
 ax = axs[0]
-ax.set_title('(a) 15th March 2017')
+ax.set_title('(a) 15th March to 3rd April')
 k.showResults(ax=ax, index=1, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 ax.set_xlabel(None)
 ax = axs[1]
-ax.set_title('(b) 27th April 2017')
+ax.set_title('(b) 15th March to 27th April')
 k.showResults(ax=ax, index=2, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 ax.set_xlabel(None)
 ax = axs[2]
-ax.set_title('(c) 16th Mai 2017')
+ax.set_title('(c) 15th March to 16th May')
 k.showResults(ax=ax, index=3, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'woburn.eps')
@@ -179,15 +181,20 @@ k.param['b_wgt'] = 0.05 # setting up higher noise level
 k.invert()
 k.showResults(sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
 
-# graph
+#%% graph
 fig, ax = plt.subplots(figsize=(7, 2))
-k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
+k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[89, 93])
 ax.plot([10.5, 11.88, 12.85, 16.5],[91.9, 91.42, 91.83, 91.79],'k--')
 #ax.plot([0, 10.4, 12.5, 16.5],[90.7, 90.7, 89.6, 89.6],'k--')
 ax.text(6.87, 92.2, '1', color='red', fontsize=14)
-ax.text(8.5, 90, '3', color='red', fontsize=14)
+ax.text(8.5, 90.5, '3', color='red', fontsize=14)
 ax.text(14, 92.1, '2', color='red', fontsize=14)
 #ax.text(6, 89.2, '4', color='red', fontsize=14)
+xyb = np.r_[xy, xy[[0],:]]
+xyb[0,1] = 92.36
+xyb[-2,1] = 92.36
+xyb[-1,1] = 92.36
+ax.plot(xyb[:,0], xyb[:,1], 'r--')
 fig.tight_layout()
 fig.savefig(figdir + 'fixedRiver.eps')
 fig.savefig(figdir + 'fixedRiver.png')
@@ -264,11 +271,12 @@ fig.show()
 
 #%%
 
-fig, axs = plt.subplots(5, 1, figsize=(4, 8), sharex=True)
+fig, axs = plt.subplots(5, 1, figsize=(5, 9), sharex=True)
 ax = axs[0]
 ax.set_title('(a) True')
 k1.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
 ax.set_xlabel(None)
+fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 
 ax = axs[1]
 k1.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
@@ -285,12 +293,14 @@ ax.set_title('(d) Wenner')
 k1.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 target2 = np.vstack([target, target[0,:]])
 ax.plot(target2[:,0], target2[:,1], 'r--')
+fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 ax.set_xlabel(None)
 
 ax = axs[4]
 ax.set_title('(e) Dipole-Dipole')
 k2.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 ax.plot(target2[:,0], target2[:,1], 'r--')
+fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 fig.tight_layout()
 fig.savefig(figdir + 'forward.eps')
 fig.savefig(figdir + 'forward.png')

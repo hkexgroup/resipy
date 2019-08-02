@@ -451,6 +451,13 @@ class Mesh:
             xc = np.array(self.elm_centre[0])
             yc = np.array(self.elm_centre[2])
             zc = np.array(X)
+            
+            # check for 0 in sigma log
+            if attr == 'Sigma_imag(log10)':
+                ie = zc != 0
+                zc = zc[ie]
+                xc = xc[ie]
+                yc = yc[ie]
             x = np.array(self.node_x)
             y = np.array(self.node_z)
             
@@ -649,8 +656,6 @@ class Mesh:
         else:
             if attr is None:
                 cm = plt.get_cmap('Spectral', len(np.unique(X)))
-#                vmin = vmin + 0.5
-#                vmax = vmax - 0.5
                 self.cax.set_cmap(cm)
                 self.cbar.set_ticks(np.arange(len(np.unique(X))+1))
         
