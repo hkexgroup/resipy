@@ -105,7 +105,7 @@ k.param['b_wgt'] = 0 # "b_wgt" = 0 when there is individual phase error
 k.param['tolerance'] = 1.2 # based on data, field site and experience
 k.invert() # run the inversion (and write cR2.in and protocol.dat automatically)
 k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity section
-k.showResults(attr='Sigma_imag(log10)') # show the inverted phase shift section
+k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 
 #%% graph section
 fig, axs = plt.subplots(1, 2, figsize=(8,3))
