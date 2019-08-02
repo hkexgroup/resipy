@@ -101,7 +101,7 @@ k.createTimeLapseSurvey('resipy/test/testTimelapse')
 k.linfit()
 k.pwlfit()
 k.err = True
-k.invert(iplot=False, parallel=True, ncores=2, forceParallel=True)
+k.invert(iplot=False, parallel=True, ncores=2)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
