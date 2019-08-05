@@ -64,6 +64,7 @@ Specific packages and versions can be installed through pip as follows:
 
 
 # 3. Building (3 ways)
+First change the console directory the src directory of ResIPy: `cd <path_to_resipy>/pyr2/src'
 There are 3 ways of building pyR2:
 - single zip file
     1. `pyinstaller ui-dir.spec`
