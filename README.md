@@ -94,7 +94,8 @@ ResIPy contains executables that are built only for windows. To run them you wil
 ### On Linux
 
 ```
-sudo apt-get install wine
+sudo apt-get install wine # if using debian/ubuntu based distribution
+sudo pacman -S install wine-stable # if using arch based distribution
 ```
 
 ### On Mac
