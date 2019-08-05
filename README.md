@@ -12,8 +12,8 @@ for use in jupyter notebook.
 
 
 ResIPy aims to be 
-- (1) **simple and intuitive** to use (you can invert your data in one-click with all default settings)
-- (2) but still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
+- (1) **Simple and intuitive** to use (you can invert your data in one-click with all default settings)
+- (2) But still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
 
 
 ResIPy is an open-source project, everyone is welcome to contribute.
@@ -21,12 +21,12 @@ ResIPy is an open-source project, everyone is welcome to contribute.
 You can download the latest versions using the links below:
 
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.9-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm "Tested on Debian10 and Ubuntu18.04.2")
 
-Notes that Mac and Linux:
-- you will need to have *wine* installed as the executable beneath are compiled for Windows
-- if you get a 'command not found' error, you might need to allow executable permission to the binary using `sudo chmod 775 ResIPy`
+Note for Mac and Linux users:
+- You will need to have *wine* installed as the executables beneath are compiled for Windows
+- If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 
 What it can do
@@ -134,10 +134,10 @@ wine /your example.exe file directory/example.exe
 Features implementations/ bug report
 ----
 If there is a feature you would like to see in the API or the GUI or if there is a bug you want to report,
- please raise an issue on Gitlab describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide
- examples files and log related to your issue.
+ please raise an [issue on Gitlab](https://gitlab.com/hkex/pyr2/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide
+ example files and error log, related to your issue.
 The issue will then be assigned to someone to be addressed. This will allow to spread the workload and avoid
-two people doing the same work in parallel.
+multiple people doing the same work in parallel.
 
 
 Best practices for developers
@@ -186,13 +186,13 @@ Finally the typical workflow is as following:
 6. Use `git commit -a` to add a commit messages to the changes you are about to push.
 7. Use `git push origin <name_of_branch>` to push your changes to the repository.
 8. Go on gitlab and on the project page you will see an invitation to create a merge
-9. request from the branch you have just push to. You can also go to Repository > 
+9. request from the branch you have just pushed to. You can also go to Repository > 
 10. Branches and create a merge request from the `<name_of_branch>` branch.
 
 
 Previous releases
 -----------------
-Below are the link to previous releases of ResIPy/pyR2. Note that those release can contains bugs and it is recommended to always use
+Below are the links to previous releases of ResIPy/pyR2. Note that these releases may contain bugs/issues and it is recommended to always use
 the latest release available.
 - v1.1.6
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.6-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/ehjsvimef3hgw88trb36s9huq4vclnr0)
