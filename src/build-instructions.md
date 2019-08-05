@@ -28,7 +28,7 @@ Using python > 3.6.X. This method can be advantageous as it is results in overal
 smaller compiled executables for windows. 
 
 ``` shell
-python -m venv <my_virtual_env> -p python3 # this creates the virtual environment folder in the working directory. 
+python -m venv <my_virtual_env> # this creates the virtual environment folder in the working directory. 
 <my_virtual_env>\Scripts\activate.bat #windows version
 source <my_virtual_env>\bin\activate #linux version
 ```
