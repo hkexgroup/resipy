@@ -48,6 +48,7 @@ Activate your virtual environment (as above). Inside this environnement install 
 
 Packages needed:
 - numpy
+- scipy
 - matplotlib
 - pandas
 - pyinstaller
