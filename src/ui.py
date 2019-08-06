@@ -1839,7 +1839,7 @@ class App(QMainWindow):
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
         recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto')
+        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         recipErrorPlotLayout.addWidget(recipErrorPLot)
 
         recipErrorBottomLayout = QVBoxLayout()
@@ -1847,7 +1847,7 @@ class App(QMainWindow):
         recipErrorBottomTabs = QTabWidget()
 
         recipErrorPseudoPlotLayout = QVBoxLayout()
-        mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto')
+        mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
 #        manualPseudoPlotLayout.setLayout(manualBottomLayout)
         pseudoSectionPlotTab = QWidget()
@@ -1950,7 +1950,7 @@ class App(QMainWindow):
         errorLayout.addLayout(errFitLayout)
         
         errorPlotLayout = QVBoxLayout()
-        mwFitError = MatplotlibWidget(navi=True, aspect='auto')
+        mwFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         errorPlotLayout.addWidget(mwFitError)
         errorLayout.addLayout(errorPlotLayout, 1)
 
@@ -2027,7 +2027,7 @@ class App(QMainWindow):
         ipLayout.addLayout(errIPFitLayout)
         
         ipErrPlotLayout = QVBoxLayout()
-        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto')
+        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         ipErrPlotLayout.addWidget(mwIPFiltering)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
@@ -2178,8 +2178,8 @@ class App(QMainWindow):
 #            self.r2.surveys[0].cbar = True
             filt_hmp.plot(self.r2.heatmap)
 
-        raw_hmp = MatplotlibWidget(navi=True, aspect='auto')
-        filt_hmp = MatplotlibWidget(navi=True, aspect='auto')
+        raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         ipfiltlayout.addWidget(raw_hmp)
         ipfiltlayout.addWidget(filt_hmp)
 
