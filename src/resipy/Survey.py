@@ -1204,7 +1204,7 @@ class Survey(object):
                 vmin = np.min(resist)
             if vmax is None:
                 vmax = np.max(resist)
-            levels = np.linspace(vmin, vmax, 7)
+            levels = np.linspace(vmin, vmax, 13)
             cax = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(cax, ax=ax, label=label)
             
@@ -1270,19 +1270,19 @@ class Survey(object):
             cax = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
             cbar = fig.colorbar(cax, ax=ax)
             cbar.set_label(label)
-            ax.set_title('Phase Shift\npseudo section')
+#            ax.set_title('Phase Shift\npseudo section')
         
         else:
             if vmin is None:
                 vmin = np.min(ip)
             if vmax is None:
                 vmax = np.max(ip)
-            levels = np.linspace(vmin, vmax, 7)
+            levels = np.linspace(vmin, vmax, 13)
             cax = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
-            cbar = fig.colorbar(cax, ax=ax)
-            cbar.set_label(label)
-            ax.set_title('IP pseudo Section')
-            
+            fig.colorbar(cax, ax=ax, label=label)
+#            cbar.set_label(label)
+#            ax.set_title('Phase Shift\npseudo section')
+        ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
