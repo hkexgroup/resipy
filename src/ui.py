@@ -158,7 +158,9 @@ class MatplotlibWidget(QWidget):
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
         self.itight = itight
+        clearIt = False
         if figure is None:
+            clearIt = True
             figure = Figure()
             self.canvas = FigureCanvasQTAgg(figure)
             if threed is True:
@@ -172,6 +174,8 @@ class MatplotlibWidget(QWidget):
         self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)
+        if clearIt is True:
+            self.clear()
 
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
@@ -220,7 +224,7 @@ class MatplotlibWidget(QWidget):
     def setCallback(self, callback):
         self.callback = callback
 
-    def replot(self, threed=False, aspect = None, **kwargs):
+    def replot(self, threed=False, aspect=None, **kwargs):
         self.figure.clear()
         if threed is False:
             ax = self.figure.add_subplot(111)
