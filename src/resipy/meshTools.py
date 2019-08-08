@@ -561,7 +561,7 @@ class Mesh:
             cbar_horizontal = 'vertical'
             if hor_cbar: # change orientation if true 
                 cbar_horizontal = 'horizontal'
-            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f',orientation=cbar_horizontal)
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f',orientation=cbar_horizontal, fraction=0.046, pad=0.04)
             self.cbar.set_label(color_bar_title) #set colorbar title
 
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)

@@ -173,7 +173,7 @@ class MatplotlibWidget(QWidget):
         self.axis = axes
         self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
-        self.layoutVertical.addWidget(self.canvas)
+        self.layoutVertical.addWidget(self.canvas)#, stretch = 1, alignment=Qt.AlignCenter)
         if clearIt is True:
             self.clear()
 
@@ -181,7 +181,6 @@ class MatplotlibWidget(QWidget):
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
             self.layoutVertical.addWidget(self.navi_toolbar)        
-    
 
     def setMinMax(self, vmin=None, vmax=None):
         coll = self.axis.collections[0]
@@ -1054,13 +1053,14 @@ class App(QMainWindow):
             if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
                 mwPseudo.replot(aspect='auto', **self.pParams)
             else:
-                mwPseudo.replot(aspect=self.plotAspect, **self.pParams)
+                mwPseudo.replot(aspect='auto', **self.pParams)
 
         def plotPseudoIP():
             mwPseudoIP.setCallback(self.r2.pseudoIP)
-            mwPseudoIP.replot(aspect=self.plotAspect, **self.pParamsIP)
+            mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
+        pseudoLayout.setAlignment(Qt.AlignHCenter | Qt.AlignCenter)
 
         mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         pseudoLayout.addWidget(mwPseudo)
@@ -1634,7 +1634,7 @@ class App(QMainWindow):
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
         def plotManualFiltering():
-            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering, aspect = self.plotAspect)
+            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
 
         def errHist():
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
@@ -2868,8 +2868,8 @@ class App(QMainWindow):
         forwardBtn.clicked.connect(forwardBtnFunc)
         forwardBtn.setStyleSheet('background-color: green')
 
-        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto')
-        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
+        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         forwardPseudoIP.setVisible(False)
 
         forwardLogText = QTextEdit()
@@ -4024,7 +4024,7 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
 
-        mwInvResult = MatplotlibWidget(navi=True, itight=False)
+        mwInvResult = MatplotlibWidget(navi=True, itight=False, aspect=self.plotAspect)
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
                 
         bottomSplitter = QSplitter(Qt.Horizontal)
