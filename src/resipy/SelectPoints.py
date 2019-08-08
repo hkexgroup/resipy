@@ -56,9 +56,12 @@ class SelectPoints(object):
 
         
     def addButtons(self):
-        self.polyAxes = self.ax.figure.add_axes([0.6, 0.9, 0.1, 0.08])
-        self.rectAxes = self.ax.figure.add_axes([0.7, 0.9, 0.1, 0.08])
-        self.lineAxes = self.ax.figure.add_axes([0.8, 0.9, 0.1, 0.08])
+#        self.polyAxes = self.ax.figure.add_axes([0.6, 0.9, 0.1, 0.08])
+#        self.rectAxes = self.ax.figure.add_axes([0.7, 0.9, 0.1, 0.08])
+#        self.lineAxes = self.ax.figure.add_axes([0.8, 0.9, 0.1, 0.08])
+        self.polyAxes = self.ax.figure.add_axes([0.35, 0.91, 0.1, 0.08]) # just to put the buttons out of legend's way
+        self.rectAxes = self.ax.figure.add_axes([0.45, 0.91, 0.1, 0.08])
+        self.lineAxes = self.ax.figure.add_axes([0.55, 0.91, 0.1, 0.08])
         self.polyButton = Button(self.polyAxes, 'Poly')
         self.rectButton = Button(self.rectAxes, 'Rect')
         self.lineButton = Button(self.lineAxes, 'Line')
