@@ -300,6 +300,7 @@ class Mesh:
              attr=None,
              clabel=None,
              hor_cbar=False,
+             sensPrc=None,
              **kwargs):
         """ Displays a 2d mesh and attribute.
         
@@ -330,11 +331,15 @@ class Mesh:
         attr : string, optional
             Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
             as the key for this dictionary.
-        clabel: string, optional
+        clabel : string, optional
             Label of the colorbar. Default is the value of `attr` argument.
-        hor_cbar: boolean, optional
+        hor_cbar : boolean, optional
             'True' to make a horizontal color bar at the bottom of the plot, default
             is vertical color bar to the right of the plot. 
+        sensPrc : float, optional
+            Normalised (between 0 and 1) sensitivity value threshold. Default
+            is None meaning the sensitivity is just overlay. Need `sens=True` 
+            to be used.
         
         Returns
         ----------
@@ -471,42 +476,50 @@ class Mesh:
             else:
                 levels = None
             
-            if self.cell_type[0] == 9: # quadrilateral mesh (exact topo)   
-                # interpolate the cell-centered value to the node to be able
-                # to use the triangular mesh already in the grid
-                z = interp.nearest(x, y, xc, yc, zc)
-                
-                def rebuildRegularGrid(x2, y2, z2):
-                    x2unique = np.unique(x2)
-                    xs = []
-                    for xuni in x2unique: # for loop otherwise dataframe groupby
-                        xs.append(np.where(x2 == xuni)[0])
-                    minLength = np.min([len(a) for a in xs])
-                    xs2 = []
-                    for a in xs:
-                        isort = np.argsort(y2[a])
-                        xs2.append(a[isort][-minLength:])
-                    xs2 = np.vstack(xs2)
-                    X = x2[xs2]
-                    Y = y2[xs2]
-                    Z = z2[xs2]
-                    return X, Y, Z
+            if self.cell_type[0] == -1:
+                print('really ?!')
+                pass
+#            if self.cell_type[0] == 9: # quadrilateral mesh (exact topo)   
+#                # interpolate the cell-centered value to the node to be able
+#                # to use the quadrilateral mesh already in the grid
+#                z = interp.linear(x, y, xc, yc, zc)
+#                
+#                def rebuildRegularGrid(x2, y2, z2):
+#                    x2unique = np.unique(x2)
+#                    xs = []
+#                    for xuni in x2unique: # for loop otherwise dataframe groupby
+#                        xs.append(np.where(x2 == xuni)[0])
+#                    minLength = np.min([len(a) for a in xs])
+#                    xs2 = []
+#                    for a in xs:
+#                        isort = np.argsort(y2[a])
+#                        xs2.append(a[isort][-minLength:])
+#                    xs2 = np.vstack(xs2)
+#                    X = x2[xs2]
+#                    Y = y2[xs2]
+#                    Z = z2[xs2]
+#                    return X, Y, Z
+#            
+#                Xi, Yi, Zi = rebuildRegularGrid(x, y, z)
+#                self.cax = ax.contourf(Xi, Yi, Zi, levels=levels, cmap=color_map, extend = 'both')
+#            
             
-                Xi, Yi, Zi = rebuildRegularGrid(x, y, z)
-                self.cax = ax.contourf(Xi, Yi, Zi, levels=levels, cmap=color_map, extend = 'both')
-            
-            
-            elif self.cell_type[0] == 5: # triangular mesh (exact topo)
-                # interpolate the cell-centered value to the node to be able
-                # to use the triangular mesh already in the grid
-                z = interp.nearest(x, y, xc, yc, zc)
-                triang = tri.Triangulation(x, y, connection)
-                
-                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
+#            elif self.cell_type[0] == 5: # triangular mesh (exact topo)
+#                # interpolate the cell-centered value to the node to be able
+#                # to use the triangular mesh already in the grid
+#                z = interp.nearest(x, y, xc, yc, zc)
+#                triang = tri.Triangulation(x, y, connection)
+#                
+#                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
             
             else: # fallback mode with tricontourf and cropSurface() (topo based on centroids) 
+                if self.surface is not None:
+                    xf, yf = self.surface[:,0], self.surface[:,1]
+                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+                    xc = np.r_[xc, xf]
+                    yc = np.r_[yc, yf]
+                    zc = np.r_[zc, zf]
                 triang = tri.Triangulation(xc, yc) # build grid based on centroids
-                z = zc
 
                 # make sure none of the triangle centroids are above the
                 # line of electrodes
@@ -528,12 +541,13 @@ class Mesh:
                             i2keep[np.where(ie)[0][ie2]] = True
                     return i2keep
                 
-                try:
-                    triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-                except Exception as e:
-                    print('Error in Mesh.show for contouring: ', e)
+                if self.surface is not None:
+                    try:
+                        triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+                    except Exception as e:
+                        print('Error in Mesh.show for contouring: ', e)
                 
-                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
+                self.cax = ax.tricontourf(triang, zc, levels=levels, extend='both', cmap=color_map)
             
             
         ax.autoscale()
@@ -555,19 +569,68 @@ class Mesh:
         #biuld alpha channel if we have sensitivities 
         if sens:
             try:
-                weights = np.array(self.sensitivities) #values assigned to alpha channels 
-                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
-                raw_alpha[..., -1] = alphas
-                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
-                #make alpha collection
-                alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
-                #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
-                #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
-                ax.add_collection(alpha_coll)
-                
-            except AttributeError:
-                print("no sensitivities in mesh object to plot")
+                if sensPrc is None:
+                    weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
+                    alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
+                    raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                    raw_alpha[:, -1] = alphas
+                    alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                    #make alpha collection
+                    alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+                    #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
+                    #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
+                    ax.add_collection(alpha_coll)
+                else:
+                    x = np.array(self.attr_cache['Sensitivity(log10)'])
+                    alphas = np.zeros(len(x))
+                    xmin, xmax = np.nanmin(x), np.nanmax(x)
+                    xnorm = (x-xmin)/(xmax-xmin) # should all be between 0 and 1
+                    i2mask = xnorm < sensPrc
+                    xnorm[i2mask] = 0
+                    xnorm[~i2mask] = 1
+                    raw_alpha = np.ones((2, 4), dtype=float)
+                    raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
+                    alpha_map = ListedColormap(raw_alpha)
+                    if contour is False:
+                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
+                        ax.add_collection(alpha_coll)
+                    else: # if contour is True, cropSurface() should have been defined
+                        xc = np.array(self.elm_centre[0])
+                        yc = np.array(self.elm_centre[2])
+                        x = np.array(self.node_x)
+                        y = np.array(self.node_z)
+                        zc = xnorm # normalized sensitivity here
+                        
+                        # doesn't work as the QHull alright discard the elements forming the topo :/
+    #                    from scipy.interpolate import LinearNDInterpolator
+    #                    lin = LinearNDInterpolator(np.c_[xc, yc], zc)
+    #                    z = lin(np.c_[x, y])
+    #                    print(np.sum(np.isnan(z)))
+    #                    inan = ~np.isnan(z)
+    #                    x, y, z = x[inan], y[inan], z[inan]
+    #                    triang = tri.Triangulation(x, y)
+                        
+                        # adding surface points to form surface triangles
+                        if self.surface is not None:
+                            xf, yf = self.surface[:,0], self.surface[:,1]
+                            zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+                            xc = np.r_[xc, xf]
+                            yc = np.r_[yc, yf]
+                            zc = np.r_[zc, zf]
+                        triang = tri.Triangulation(xc, yc) # build grid based on centroids and surface points
+                        z = zc
+                    
+                        # discarding triangles out of surface
+                        if self.surface is not None:        
+                            try:
+                                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+                            except Exception as e:
+                                print('Error in Mesh.show for contouring: ', e)
+                        
+                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
+                                                    
+            except Exception as e:
+                print('Error in the sensitivity overlay:', e)
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
@@ -580,6 +643,7 @@ class Mesh:
         def format_coord(x, y):
             dist = np.sqrt(np.sum((centroids - np.array([x, y]))**2, axis=1))
             imin = np.argmin(dist)
+            # TODO if imin is out of surface, then don't show value
             return ('x={:.2f} m, elevation={:.2f} m, value={:.3f}'.format(x,y,X[imin]))
         ax.format_coord = format_coord
 
