@@ -3730,7 +3730,7 @@ class App(QMainWindow):
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis'}
+                                  'cmap':'viridis', 'sensPrc':0.1}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
@@ -3752,10 +3752,11 @@ class App(QMainWindow):
             vmin = self.displayParams['vmin']
             vmax = self.displayParams['vmax']
             cmap = self.displayParams['cmap']
+            sensPrc = self.displayParams['sensPrc']
             if self.r2.typ[-1] == '2':
                 mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
-                                   vmin=vmin, vmax=vmax, color_map=cmap)
+                                   vmin=vmin, vmax=vmax, color_map=cmap, sensPrc=sensPrc)
             else:
                 mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                      vmin=vmin, vmax=vmax, color_map=cmap)
@@ -3953,10 +3954,24 @@ class App(QMainWindow):
             replotSection()
         sensCheck = QCheckBox('Sensitivity')
         sensCheck.setChecked(True)
+        sensCheck.setVisible(False)
         sensCheck.stateChanged.connect(showSens)
         sensCheck.setToolTip('Overlay a semi-transparent white sensivity layer.')
         displayOptions.addWidget(sensCheck)
-
+        
+        def sensSliderFunc(val):
+            val = val/10.0
+            print('value changed', val)
+            self.displayParams['sensPrc'] = val
+            replotSection()
+        sensSlider = QSlider(Qt.Horizontal)
+        sensSlider.setMinimum(0)
+        sensSlider.setMaximum(10)
+        sensSlider.setValue(1)
+        sensSlider.setToolTip('Normalized sensivity threshold')
+        sensSlider.valueChanged.connect(sensSliderFunc)
+        displayOptions.addWidget(sensSlider)
+        
         def sliceAxisFunc(index):
             self.displayParams['axis'] = index
         sliceAxis = QComboBox()
@@ -4001,7 +4016,7 @@ class App(QMainWindow):
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis,
-                    paraviewBtn, btnSave]
+                    paraviewBtn, btnSave, sensSlider]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
