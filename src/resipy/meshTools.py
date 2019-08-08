@@ -331,11 +331,15 @@ class Mesh:
         attr : string, optional
             Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
             as the key for this dictionary.
-        clabel: string, optional
+        clabel : string, optional
             Label of the colorbar. Default is the value of `attr` argument.
-        hor_cbar: boolean, optional
+        hor_cbar : boolean, optional
             'True' to make a horizontal color bar at the bottom of the plot, default
             is vertical color bar to the right of the plot. 
+        sensPrc : float, optional
+            Normalised (between 0 and 1) sensitivity value threshold. Default
+            is None meaning the sensitivity is just overlay. Need `sens=True` 
+            to be used.
         
         Returns
         ----------
@@ -588,7 +592,7 @@ class Mesh:
                     raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
                     alpha_map = ListedColormap(raw_alpha)
                     if contour is False:
-                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='black', linewidths=1)
+                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
                         ax.add_collection(alpha_coll)
                     else: # if contour is True, cropSurface() should have been defined
                         xc = np.array(self.elm_centre[0])
