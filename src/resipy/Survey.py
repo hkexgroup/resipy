@@ -1179,8 +1179,8 @@ class Survey(object):
 #                fig, ax = plt.subplots()
 #            else:
 #                fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
-            cbar = fig.colorbar(cax, ax=ax)
+            plotPsRes = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
+            cbar = fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             cbar.set_label(label)
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
@@ -1205,8 +1205,8 @@ class Survey(object):
             if vmax is None:
                 vmax = np.max(resist)
             levels = np.linspace(vmin, vmax, 13)
-            cax = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
-            fig.colorbar(cax, ax=ax, label=label)
+            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
+            fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             
         ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
@@ -1267,8 +1267,10 @@ class Survey(object):
 #                fig, ax = plt.subplots()
 #            else:
 #                fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
-            cbar = fig.colorbar(cax, ax=ax)
+            plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
+#            divider = make_axes_locatable(ax)
+#            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label(label)
 #            ax.set_title('Phase Shift\npseudo section')
         
@@ -1278,8 +1280,8 @@ class Survey(object):
             if vmax is None:
                 vmax = np.max(ip)
             levels = np.linspace(vmin, vmax, 13)
-            cax = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
-            fig.colorbar(cax, ax=ax, label=label)
+            plotPsIP = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
+            fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
 #            cbar.set_label(label)
 #            ax.set_title('Phase Shift\npseudo section')
         ax.set_title('Phase Shift\npseudo section')  
