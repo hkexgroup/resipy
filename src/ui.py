@@ -150,18 +150,18 @@ print( 'sys.argv[0] is', sys.argv[0] )
 print( 'sys.executable is', sys.executable )
 print( 'os.getcwd is', os.getcwd() )
 
-
+#%% MatplotlibWidget class
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None, figure=None, navi=False, itight=False,
-                 threed=False, aspect='equal'):
+                 threed=False, aspect='auto'):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
-        self.itight = itight
+        self.callback = None
         clearIt = False
         if figure is None:
             clearIt = True
-            figure = Figure()
+            figure = Figure(tight_layout=itight) # tight_layout will be called internally for each draw
             self.canvas = FigureCanvasQTAgg(figure)
             if threed is True:
                 axes = figure.add_subplot(111, projection='3d')
@@ -180,13 +180,11 @@ class MatplotlibWidget(QWidget):
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
-            self.layoutVertical.addWidget(self.navi_toolbar)
-
+            self.layoutVertical.addWidget(self.navi_toolbar)        
+    
 
     def setMinMax(self, vmin=None, vmax=None):
         coll = self.axis.collections[0]
-#        print('->', vmin, vmax)
-#        print('array ', coll.get_array())
         if vmin is None:
             vmin = np.nanmin(coll.get_array())
         else:
@@ -195,7 +193,6 @@ class MatplotlibWidget(QWidget):
             vmax = np.nanmax(coll.get_array())
         else:
             vmax = float(vmax)
-#        print(vmin, vmax)
         coll.set_clim(vmin, vmax)
         self.canvas.draw()
 
@@ -203,23 +200,18 @@ class MatplotlibWidget(QWidget):
     def plot(self, callback, aspect = None, threed=False):
         ''' call a callback plot function and give it the ax to plot to
         '''
-#        print('plot is called')
         self.figure.clear() # need to clear the figure with the colorbar as well
         if threed is False:
             ax = self.figure.add_subplot(111)
         else:
-            ax = self.figure.add_subplot(111, projection='3d')
+            ax = self.figure.add_subplot(111, projection='3d')            
         self.callback = callback
         callback(ax=ax)
-#        if threed is False:
-#            ax.set_aspect('equal')
-#            ax.set_autoscale_on(False)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
-        if self.itight is True:
-            self.figure.tight_layout()
         self.canvas.draw()
+
 
     def setCallback(self, callback):
         self.callback = callback
@@ -235,43 +227,16 @@ class MatplotlibWidget(QWidget):
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
-        if self.itight is True:
-            self.figure.tight_layout()
         self.canvas.draw()
+
 
     def clear(self):
         self.axis.clear()
         self.figure.clear()
         self.canvas.draw()
 
-#
-#    def draw(self, fig):
-#        print('creating new figure')
-#        self.figure = fig
-#        self.figure.suptitle('hello')
-#        self.canvas = FigureCanvasQTAgg(self.figure)
-#        self.canvas.draw()
-#        self.figure.canvas.draw()
-#
-#    def drawAxes(self, ax):
-#        print('draw Awes')
-#        self.figure.clf()
-#        self.figure.axes.append(ax)
-##        self.canvas = FigureCanvasQTAgg(self.figure)
-#        self.figure.canvas.draw()
-#        self.canvas.draw()
 
-#class ThreadSample(QThread):
-#    newSample = pyqtSignal(list)
-#
-#    def __init__(self, parent=None):
-#        super(ThreadSample, self).__init__(parent)
-#
-#    def run(self):
-#        randomSample = random.sample(range(0, 10), 10)
-#
-#        self.newSample.emit(randomSample)
-
+#%% Main class
 class App(QMainWindow):
 
     def __init__(self, parent=None):
@@ -856,7 +821,6 @@ class App(QMainWindow):
                     pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
-        #                    hbox4.addWidget(buttonfr)
                     buttonfr.show()
                     recipOrNoRecipShow(recipPresence = False)
                 else:
@@ -865,18 +829,17 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
                     errHist()
-        #                generateMesh()
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
                     self.r2.setBorehole(False)
-                plotPseudo()
                 plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                plotPseudo()
 
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
@@ -958,8 +921,8 @@ class App(QMainWindow):
                     noiseLabelIP.show()
                     noiseEditIP.show()
                 else:
-                    plotPseudoIP()
                     mwPseudoIP.setVisible(True)
+                    plotPseudoIP()
                     tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                         phaseplotError()
@@ -1085,7 +1048,6 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
-
 
         def plotPseudo():
             mwPseudo.setCallback(self.r2.pseudo)
@@ -4412,6 +4374,9 @@ if __name__ == '__main__':
     app.processEvents()
 
     print('importing matplotlib')
+    import matplotlib
+    matplotlib.use('Qt5Agg')
+
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
@@ -4453,6 +4418,7 @@ if __name__ == '__main__':
     app.processEvents()
 
     ex = App()
+    ex.show()
     splash.hide() # hiding the splash screen when finished
     
     sys.exit(app.exec_())
