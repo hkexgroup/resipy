@@ -2615,6 +2615,9 @@ class App(QMainWindow):
         tabForward = QWidget()
         tabs.addTab(tabForward, 'Forward model')
         tabs.setTabEnabled(3, False)
+        
+        fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
+        fwdSplitter = QSplitter(Qt.Vertical)
 
         # add table for sequence generation
         seqLabel = QLabel('Define the number of skip and levels in the table.'
@@ -2857,12 +2860,12 @@ class App(QMainWindow):
             noiseIP = float(noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             calcAspectRatio()
-            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect = self.plotAspect)
+            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect='auto')
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
             tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
-                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect = self.plotAspect)
+                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect='auto')
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
@@ -2933,9 +2936,21 @@ class App(QMainWindow):
         forwardOutputStack.addWidget(forwardHelp)
         forwardOutputStack.setCurrentIndex(0)
 
-        forwardLayout.addLayout(forwardOutputStack, 55)
-
-        tabForward.setLayout(forwardLayout)
+#        forwardLayout.addLayout(forwardOutputStack, 55)
+        
+        fwdTopWidget = QWidget()
+        fwdTopWidget.setLayout(forwardLayout)
+        
+        fwdBottomWidget = QWidget()
+        fwdBottomWidget.setLayout(forwardOutputStack)
+        
+        fwdSplitter.addWidget(fwdTopWidget)
+        fwdSplitter.addWidget(fwdBottomWidget)
+        fwdSplitter.setSizes([100,200])
+        
+        fwdSlpitterLayout.addWidget(fwdSplitter)
+        
+        tabForward.setLayout(fwdSlpitterLayout)
 
         #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()
@@ -4023,7 +4038,7 @@ class App(QMainWindow):
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis,
-                    paraviewBtn, btnSave, sensSlider]
+                    paraviewBtn, btnSave, sensWidget]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
