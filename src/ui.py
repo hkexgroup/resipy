@@ -3964,13 +3964,20 @@ class App(QMainWindow):
             print('value changed', val)
             self.displayParams['sensPrc'] = val
             replotSection()
+        sensWidget = QWidget()
+        sensLayout = QVBoxLayout()
+        sensLabel = QLabel('Sensitivity')
+        sensLabel.setAlignment(Qt.AlignCenter )
+        sensLayout.addWidget(sensLabel)
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setMinimum(0)
         sensSlider.setMaximum(10)
         sensSlider.setValue(1)
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
-        displayOptions.addWidget(sensSlider)
+        sensLayout.addWidget(sensSlider)
+        sensWidget.setLayout(sensLayout)
+        displayOptions.addWidget(sensWidget)
         
         def sliceAxisFunc(index):
             self.displayParams['axis'] = index
