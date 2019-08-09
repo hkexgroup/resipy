@@ -1060,7 +1060,7 @@ class App(QMainWindow):
             mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
-        pseudoLayout.setAlignment(Qt.AlignHCenter | Qt.AlignCenter)
+#        pseudoLayout.setAlignment(Qt.AlignHCenter | Qt.AlignCenter)
 
         mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         pseudoLayout.addWidget(mwPseudo)
