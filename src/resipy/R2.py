@@ -1559,6 +1559,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if done(p):
                     self.procs.remove(p)
                     c = c+1
+                    # TODO get RMS and iteration number here ?
                     dump('{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
     
             if not self.procs and not wds:

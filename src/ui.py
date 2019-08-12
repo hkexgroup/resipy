@@ -4417,7 +4417,7 @@ if __name__ == '__main__':
     progressBar.setValue(8)
     app.processEvents()
     from matplotlib import rcParams
-    rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+    rcParams.update({'font.size': 11}) # CHANGE HERE for graph font size
 
     # library needed for update checker + wine checker
     import platform
