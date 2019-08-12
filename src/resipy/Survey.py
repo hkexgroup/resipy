@@ -642,9 +642,9 @@ class Survey(object):
         a2 = coefs_ip[1]
         print ('Error model is: Sp(m) = {:.2f}*R^{:.2f} (R^2 = {:.2f})'.format(a1,a2,R2_ip))
         if a1 > 0.001:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
+            ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
         else:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2e}$R^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
+            ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {:.2e}$R^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
         self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -690,9 +690,9 @@ class Survey(object):
         b3 = coefs_ip[1]
         c3 = coefs_ip[2]
         if a3 > 0.001:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.3f}$R^2${:+.3f}$R${:+.3f} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.3f}$R^2${:+.3f}$R${:+.3f} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
         else:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2e}$R^2${:+.2e}$R${:+.2e} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.2e}$R^2${:+.2e}$R${:+.2e} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
         self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -748,9 +748,9 @@ class Survey(object):
 #        a4 = coefs[1]
         print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
         if a1 > 0.001:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
         else:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):
             x = df['recipMean'].values
@@ -805,9 +805,9 @@ class Survey(object):
         a2 = coefs[1]
         print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
         if a1 > 0.001:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:+.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:+.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
         else:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:+.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:+.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         def errorModel(df):
             x = df['recipMean'].values
