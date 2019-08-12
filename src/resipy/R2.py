@@ -1690,7 +1690,7 @@ class R2(object): # R2 master class instanciated by the GUI
   
         dump('--------------------- MAIN INVERSION ------------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
-            self.runParallel2(dump=dump, iMoveElec=iMoveElec, ncores=ncores)
+            self.runParallel2(dump=dump, iMoveElec=iMoveElec, ncores=ncores, rmDirTree=rmDirTree)
         else:
             self.runR2(dump=dump)
         

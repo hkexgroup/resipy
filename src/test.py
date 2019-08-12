@@ -21,7 +21,7 @@ tstart = time.time()
 
 #%% very simple example
 k = R2()
-k.createSurvey('resipy/test/syscalFile.csv')
+k.createSurvey('resipy/test/IP/syscalFileIP.csv')
 #k.createModel()
 #k.invert()
 #k.saveInvPlots()
