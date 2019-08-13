@@ -112,14 +112,13 @@ k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity se
 k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 
 #%% graph section
-matplotlib.rcParams.update({'font.size': 12})
-fig, axs = plt.subplots(1, 2, figsize=(8,3))
+fig, axs = plt.subplots(1, 2, figsize=(10,4))
 ax = axs[0]
 k.pwlfit(ax=ax)
-ax.set_title('(a) ' + ax.get_title(), fontsize=12)
+ax.set_title('(a) ' + ax.get_title())
 ax = axs[1]
 k.plotIPFit(ax=ax)
-ax.set_title('(b) ' + ax.get_title(), fontsize=12)
+ax.set_title('(b) ' + ax.get_title())
 fig.tight_layout()
 fig.savefig(figdir + 'ip-error-models.jpg', dpi=1000)
 fig.savefig(figdir + 'ip-error-models.eps')
@@ -182,7 +181,7 @@ k.setElec(x[:,:2]) # electrode positions
 surface = np.array([[0.7, 92.30],[10.3, 92.30]]) # additional surface point for the river level
 buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river here)
 k.filterElec([21, 2]) # filter out problematic electrodes 21 and 2
-k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.1, cl_factor=10)
+k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
 xy = k.elec[1:21,[0,2]] # adding river water level using 2 topo points
 k.addRegion(xy, res0=32, blocky=True, fixed=False) # fixed river resistivity to 32 Ohm.m
 k.param['b_wgt'] = 0.05 # setting up higher noise level
@@ -192,7 +191,7 @@ k.showResults(sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
 
 #%% graph
 fig, ax = plt.subplots(figsize=(7, 2))
-k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[89, 93])
+k.showResults(ax=ax, sens=True, vmin=1.2, vmax=2.2, zlim=[89, 93])
 ax.plot([10.5, 11.88, 12.85, 16.5],[91.9, 91.42, 91.83, 91.79],'k--')
 #ax.plot([0, 10.4, 12.5, 16.5],[90.7, 90.7, 89.6, 89.6],'k--')
 ax.text(6.87, 92.2, '1', color='red', fontsize=14)
@@ -206,7 +205,7 @@ xyb[-1,1] = 92.36
 ax.plot(xyb[:,0], xyb[:,1], 'r--')
 fig.tight_layout()
 fig.savefig(figdir + 'fixedRiver.eps')
-fig.savefig(figdir + 'fixedRiver.png')
+fig.savefig(figdir + 'fixedRiver.jpg', dpi=1000)
 fig.show()
 
 
@@ -312,12 +311,11 @@ ax.plot(target2[:,0], target2[:,1], 'r--')
 fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 fig.tight_layout()
 fig.savefig(figdir + 'forward.eps')
-fig.savefig(figdir + 'forward.png')
+fig.savefig(figdir + 'forward.jpg', dpi=1000)
 fig.show()
 
 
 #%% general figure miniatures
-import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
 figsize=(3, 1.5)
 
