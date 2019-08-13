@@ -5,6 +5,7 @@ test:
   - apt-get update
   - apt-get install --assume-yes wine
   - pip install -r requirements.txt
+  - pip install SALib
   - cd src
   - python test.py
   
