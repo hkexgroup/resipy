@@ -4223,7 +4223,7 @@ USA: Trelgol Publishing, (2006).
 </ul>
 </p>
 <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-<p>Contributor(s): Pedro Concha</p>
+<p>Contributor(s): Pedro Concha, Michael Tso</p>
 <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
 '''%ResIPy_version)
 #        aboutText.setText('''<h1>About ResIPy</h1> \
