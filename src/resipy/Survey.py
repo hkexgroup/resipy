@@ -579,7 +579,7 @@ class Survey(object):
         phase = np.abs(temp_df_range_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
-        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_title('Observed Discrepancies\n')
         if ax is None:
             return fig
@@ -634,7 +634,7 @@ class Survey(object):
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
         ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power Law Fit")
-        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_xlabel(r'$R_{avg}$ [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
@@ -682,7 +682,7 @@ class Survey(object):
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
         ax.semilogx(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Parabola Fit")
-        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
@@ -1007,7 +1007,7 @@ class Survey(object):
         ax.grid(False)
         if self.cbar==True:
             cbhnf = fig.colorbar(m, ax=ax)
-            cbhnf.set_label(r'-$\phi$ [mRad]', fontsize=20)
+            cbhnf.set_label(r'-$\phi$ [mrad]', fontsize=20)
             cbhnf.ax.tick_params(labelsize=18)
         if ax is None:
             return fig
@@ -1248,7 +1248,7 @@ class Survey(object):
         else:
             ip = -self.kFactor*self.df['ip'].values
 
-        label = r'$\phi$ [mRad]'
+        label = r'$\phi$ [mrad]'
         
 
         # sorting the array in case of Wenner measurements (just for plotting)
