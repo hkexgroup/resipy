@@ -2780,7 +2780,15 @@ class App(QMainWindow):
                 [seqMultiLabel, seqMulti],
                 [seqCustomLabel, seqCustom]]
 
-
+        # alternative design
+#        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
+#                   ('wenner', 'Wenner', ['a','n']),
+#                   ('schlum1', 'Schlumberger', ['a','m']),
+#                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
+#                   ('custSeq', 'Custom Sequence')]
+#        combo
+        
+        
         def seqCreateFunc():
             if self.r2.elec is None:
                 errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
