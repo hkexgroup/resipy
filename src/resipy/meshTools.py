@@ -2920,7 +2920,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
         else: # fallback on wine
             cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         
