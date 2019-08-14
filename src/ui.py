@@ -150,16 +150,18 @@ print( 'sys.argv[0] is', sys.argv[0] )
 print( 'sys.executable is', sys.executable )
 print( 'os.getcwd is', os.getcwd() )
 
-
+#%% MatplotlibWidget class
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None, figure=None, navi=False, itight=False,
-                 threed=False, aspect='equal'):
+                 threed=False, aspect='auto'):
         super(MatplotlibWidget, self).__init__(parent) # we can pass a figure but we can replot on it when
         # pushing on a button (I didn't find a way to do it) while with the axes, you can still clear it and
         # plot again on them
-        self.itight = itight
+        self.callback = None
+        clearIt = False
         if figure is None:
-            figure = Figure()
+            clearIt = True
+            figure = Figure(tight_layout=itight) # tight_layout will be called internally for each draw
             self.canvas = FigureCanvasQTAgg(figure)
             if threed is True:
                 axes = figure.add_subplot(111, projection='3d')
@@ -171,18 +173,17 @@ class MatplotlibWidget(QWidget):
         self.axis = axes
         self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
-        self.layoutVertical.addWidget(self.canvas)
+        self.layoutVertical.addWidget(self.canvas)#, stretch = 1, alignment=Qt.AlignCenter)
+        if clearIt is True:
+            self.clear()
 
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
-            self.layoutVertical.addWidget(self.navi_toolbar)
-
+            self.layoutVertical.addWidget(self.navi_toolbar)        
 
     def setMinMax(self, vmin=None, vmax=None):
         coll = self.axis.collections[0]
-#        print('->', vmin, vmax)
-#        print('array ', coll.get_array())
         if vmin is None:
             vmin = np.nanmin(coll.get_array())
         else:
@@ -191,7 +192,6 @@ class MatplotlibWidget(QWidget):
             vmax = np.nanmax(coll.get_array())
         else:
             vmax = float(vmax)
-#        print(vmin, vmax)
         coll.set_clim(vmin, vmax)
         self.canvas.draw()
 
@@ -199,28 +199,23 @@ class MatplotlibWidget(QWidget):
     def plot(self, callback, aspect = None, threed=False):
         ''' call a callback plot function and give it the ax to plot to
         '''
-#        print('plot is called')
         self.figure.clear() # need to clear the figure with the colorbar as well
         if threed is False:
             ax = self.figure.add_subplot(111)
         else:
-            ax = self.figure.add_subplot(111, projection='3d')
+            ax = self.figure.add_subplot(111, projection='3d')            
         self.callback = callback
         callback(ax=ax)
-#        if threed is False:
-#            ax.set_aspect('equal')
-#            ax.set_autoscale_on(False)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
-        if self.itight is True:
-            self.figure.tight_layout()
         self.canvas.draw()
+
 
     def setCallback(self, callback):
         self.callback = callback
 
-    def replot(self, threed=False, aspect = None, **kwargs):
+    def replot(self, threed=False, aspect=None, **kwargs):
         self.figure.clear()
         if threed is False:
             ax = self.figure.add_subplot(111)
@@ -231,43 +226,16 @@ class MatplotlibWidget(QWidget):
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
-        if self.itight is True:
-            self.figure.tight_layout()
         self.canvas.draw()
+
 
     def clear(self):
         self.axis.clear()
         self.figure.clear()
         self.canvas.draw()
 
-#
-#    def draw(self, fig):
-#        print('creating new figure')
-#        self.figure = fig
-#        self.figure.suptitle('hello')
-#        self.canvas = FigureCanvasQTAgg(self.figure)
-#        self.canvas.draw()
-#        self.figure.canvas.draw()
-#
-#    def drawAxes(self, ax):
-#        print('draw Awes')
-#        self.figure.clf()
-#        self.figure.axes.append(ax)
-##        self.canvas = FigureCanvasQTAgg(self.figure)
-#        self.figure.canvas.draw()
-#        self.canvas.draw()
 
-#class ThreadSample(QThread):
-#    newSample = pyqtSignal(list)
-#
-#    def __init__(self, parent=None):
-#        super(ThreadSample, self).__init__(parent)
-#
-#    def run(self):
-#        randomSample = random.sample(range(0, 10), 10)
-#
-#        self.newSample.emit(randomSample)
-
+#%% Main class
 class App(QMainWindow):
 
     def __init__(self, parent=None):
@@ -784,7 +752,7 @@ class App(QMainWindow):
                         self.r2.createTimeLapseSurvey(fdir, ftype=self.ftype, dump=infoDump)
                         infoDump('Time-lapse survey created.')
                     else:
-                        self.r2.createBatchSurvey(fdir, dump=infoDump)
+                        self.r2.createBatchSurvey(fdir, ftype=self.ftype, dump=infoDump)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
                     for s in self.r2.surveys:
@@ -800,12 +768,15 @@ class App(QMainWindow):
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         pass # no reciprocals found
                     else:
-#                        tabPreProcessing.setTabEnabled(1, True)
+    #                        tabPreProcessing.setTabEnabled(1, True)
                         tabPreProcessing.setTabEnabled(2, True)
                         plotError()
                         errHist()
                     plotManualFiltering()
                     activateTabs(True)
+                    if 'ip' in self.r2.surveys[0].df.columns:
+                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            ipCheck.setChecked(True)
                 except:
                     errorDump('File format is not recognized (or directory contains invalid input files)')
 
@@ -849,7 +820,6 @@ class App(QMainWindow):
                     pass
                 print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
-        #                    hbox4.addWidget(buttonfr)
                     buttonfr.show()
                     recipOrNoRecipShow(recipPresence = False)
                 else:
@@ -858,18 +828,17 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
                     errHist()
-        #                generateMesh()
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
                     self.r2.setBorehole(False)
-                plotPseudo()
                 plotManualFiltering()
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                plotPseudo()
 
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
@@ -951,8 +920,8 @@ class App(QMainWindow):
                     noiseLabelIP.show()
                     noiseEditIP.show()
                 else:
-                    plotPseudoIP()
                     mwPseudoIP.setVisible(True)
+                    plotPseudoIP()
                     tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                         phaseplotError()
@@ -1079,19 +1048,19 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
 
-
         def plotPseudo():
             mwPseudo.setCallback(self.r2.pseudo)
             if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
                 mwPseudo.replot(aspect='auto', **self.pParams)
             else:
-                mwPseudo.replot(aspect=self.plotAspect, **self.pParams)
+                mwPseudo.replot(aspect='auto', **self.pParams)
 
         def plotPseudoIP():
             mwPseudoIP.setCallback(self.r2.pseudoIP)
-            mwPseudoIP.replot(aspect=self.plotAspect, **self.pParamsIP)
+            mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
+#        pseudoLayout.setAlignment(Qt.AlignHCenter | Qt.AlignCenter)
 
         mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         pseudoLayout.addWidget(mwPseudo)
@@ -1665,7 +1634,7 @@ class App(QMainWindow):
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
         def plotManualFiltering():
-            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering, aspect = self.plotAspect)
+            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
 
         def errHist():
             if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
@@ -1836,7 +1805,7 @@ class App(QMainWindow):
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
         recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto')
+        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         recipErrorPlotLayout.addWidget(recipErrorPLot)
 
         recipErrorBottomLayout = QVBoxLayout()
@@ -1844,7 +1813,7 @@ class App(QMainWindow):
         recipErrorBottomTabs = QTabWidget()
 
         recipErrorPseudoPlotLayout = QVBoxLayout()
-        mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto')
+        mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
 #        manualPseudoPlotLayout.setLayout(manualBottomLayout)
         pseudoSectionPlotTab = QWidget()
@@ -1947,7 +1916,7 @@ class App(QMainWindow):
         errorLayout.addLayout(errFitLayout)
         
         errorPlotLayout = QVBoxLayout()
-        mwFitError = MatplotlibWidget(navi=True, aspect='auto')
+        mwFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         errorPlotLayout.addWidget(mwFitError)
         errorLayout.addLayout(errorPlotLayout, 1)
 
@@ -2024,7 +1993,7 @@ class App(QMainWindow):
         ipLayout.addLayout(errIPFitLayout)
         
         ipErrPlotLayout = QVBoxLayout()
-        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto')
+        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         ipErrPlotLayout.addWidget(mwIPFiltering)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
@@ -2175,8 +2144,8 @@ class App(QMainWindow):
 #            self.r2.surveys[0].cbar = True
             filt_hmp.plot(self.r2.heatmap)
 
-        raw_hmp = MatplotlibWidget(navi=True, aspect='auto')
-        filt_hmp = MatplotlibWidget(navi=True, aspect='auto')
+        raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         ipfiltlayout.addWidget(raw_hmp)
         ipfiltlayout.addWidget(filt_hmp)
 
@@ -2646,6 +2615,9 @@ class App(QMainWindow):
         tabForward = QWidget()
         tabs.addTab(tabForward, 'Forward model')
         tabs.setTabEnabled(3, False)
+        
+        fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
+        fwdSplitter = QSplitter(Qt.Vertical)
 
         # add table for sequence generation
         seqLabel = QLabel('Define the number of skip and levels in the table.'
@@ -2808,7 +2780,15 @@ class App(QMainWindow):
                 [seqMultiLabel, seqMulti],
                 [seqCustomLabel, seqCustom]]
 
-
+        # alternative design
+#        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
+#                   ('wenner', 'Wenner', ['a','n']),
+#                   ('schlum1', 'Schlumberger', ['a','m']),
+#                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
+#                   ('custSeq', 'Custom Sequence')]
+#        combo
+        
+        
         def seqCreateFunc():
             if self.r2.elec is None:
                 errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
@@ -2888,19 +2868,19 @@ class App(QMainWindow):
             noiseIP = float(noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             calcAspectRatio()
-            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect = self.plotAspect)
+            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect='auto')
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
             tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
-                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect = self.plotAspect)
+                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect='auto')
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
         forwardBtn.setStyleSheet('background-color: green')
 
-        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto')
-        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto')
+        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         forwardPseudoIP.setVisible(False)
 
         forwardLogText = QTextEdit()
@@ -2964,9 +2944,21 @@ class App(QMainWindow):
         forwardOutputStack.addWidget(forwardHelp)
         forwardOutputStack.setCurrentIndex(0)
 
-        forwardLayout.addLayout(forwardOutputStack, 55)
-
-        tabForward.setLayout(forwardLayout)
+#        forwardLayout.addLayout(forwardOutputStack, 55)
+        
+        fwdTopWidget = QWidget()
+        fwdTopWidget.setLayout(forwardLayout)
+        
+        fwdBottomWidget = QWidget()
+        fwdBottomWidget.setLayout(forwardOutputStack)
+        
+        fwdSplitter.addWidget(fwdTopWidget)
+        fwdSplitter.addWidget(fwdBottomWidget)
+        fwdSplitter.setSizes([100,200])
+        
+        fwdSlpitterLayout.addWidget(fwdSplitter)
+        
+        tabForward.setLayout(fwdSlpitterLayout)
 
         #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()
@@ -3761,7 +3753,7 @@ class App(QMainWindow):
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis'}
+                                  'cmap':'viridis', 'sensPrc':0.1}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
@@ -3783,10 +3775,11 @@ class App(QMainWindow):
             vmin = self.displayParams['vmin']
             vmax = self.displayParams['vmax']
             cmap = self.displayParams['cmap']
+            sensPrc = self.displayParams['sensPrc']
             if self.r2.typ[-1] == '2':
                 mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
-                                   vmin=vmin, vmax=vmax, color_map=cmap)
+                                   vmin=vmin, vmax=vmax, color_map=cmap, sensPrc=sensPrc)
             else:
                 mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                      vmin=vmin, vmax=vmax, color_map=cmap)
@@ -3893,6 +3886,14 @@ class App(QMainWindow):
             vmaxEdit.setText('')
             self.displayParams['vmin'] = None
             self.displayParams['vmax'] = None
+            if self.displayParams['attr'] == 'Sigma_imag(log10)':
+                sigma_imag_vals = self.r2.meshResults[self.displayParams['index']].attr_cache['Sigma_imag(log10)']
+                if any(val == 0 for val in sigma_imag_vals):
+                    if all(val == 0 for val in sigma_imag_vals):
+                        pass
+                    else:
+                        contourCheck.setChecked(True)
+                        infoDump('Contouring data by default!')
             replotSection()
 
 
@@ -3976,10 +3977,31 @@ class App(QMainWindow):
             replotSection()
         sensCheck = QCheckBox('Sensitivity')
         sensCheck.setChecked(True)
+        sensCheck.setVisible(False)
         sensCheck.stateChanged.connect(showSens)
         sensCheck.setToolTip('Overlay a semi-transparent white sensivity layer.')
         displayOptions.addWidget(sensCheck)
-
+        
+        def sensSliderFunc(val):
+            val = val/10.0
+            print('value changed', val)
+            self.displayParams['sensPrc'] = val
+            replotSection()
+        sensWidget = QWidget()
+        sensLayout = QVBoxLayout()
+        sensLabel = QLabel('Sensitivity')
+        sensLabel.setAlignment(Qt.AlignCenter )
+        sensLayout.addWidget(sensLabel)
+        sensSlider = QSlider(Qt.Horizontal)
+        sensSlider.setMinimum(0)
+        sensSlider.setMaximum(10)
+        sensSlider.setValue(1)
+        sensSlider.setToolTip('Normalized sensivity threshold')
+        sensSlider.valueChanged.connect(sensSliderFunc)
+        sensLayout.addWidget(sensSlider)
+        sensWidget.setLayout(sensLayout)
+        displayOptions.addWidget(sensWidget)
+        
         def sliceAxisFunc(index):
             self.displayParams['axis'] = index
         sliceAxis = QComboBox()
@@ -4024,7 +4046,7 @@ class App(QMainWindow):
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis,
-                    paraviewBtn, btnSave]
+                    paraviewBtn, btnSave, sensWidget]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
@@ -4032,7 +4054,7 @@ class App(QMainWindow):
         resultLayout = QVBoxLayout()
         resultLayout.addLayout(displayOptions, 20)
 
-        mwInvResult = MatplotlibWidget(navi=True, itight=False)
+        mwInvResult = MatplotlibWidget(navi=True, itight=False, aspect=self.plotAspect)
         mwInvResult3D = MatplotlibWidget(navi=True, threed=True)
                 
         bottomSplitter = QSplitter(Qt.Horizontal)
@@ -4201,7 +4223,7 @@ USA: Trelgol Publishing, (2006).
 </ul>
 </p>
 <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-<p>Contributor(s): Pedro Concha</p>
+<p>Contributor(s): Pedro Concha, Michael Tso</p>
 <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
 '''%ResIPy_version)
 #        aboutText.setText('''<h1>About ResIPy</h1> \
@@ -4397,6 +4419,9 @@ if __name__ == '__main__':
     app.processEvents()
 
     print('importing matplotlib')
+    import matplotlib
+    matplotlib.use('Qt5Agg')
+
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
@@ -4422,7 +4447,7 @@ if __name__ == '__main__':
     progressBar.setValue(8)
     app.processEvents()
     from matplotlib import rcParams
-    rcParams.update({'font.size': 13}) # CHANGE HERE for graph font size
+    rcParams.update({'font.size': 11}) # CHANGE HERE for graph font size
 
     # library needed for update checker + wine checker
     import platform
@@ -4438,6 +4463,7 @@ if __name__ == '__main__':
     app.processEvents()
 
     ex = App()
+    ex.show()
     splash.hide() # hiding the splash screen when finished
     
     sys.exit(app.exec_())

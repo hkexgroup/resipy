@@ -12,6 +12,7 @@ import numpy as np
 from matplotlib.path import Path
 from matplotlib.patches import Rectangle
 from matplotlib.widgets import Button
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class SelectPoints(object):
     """Select indices from a matplotlib collection using `PolygonSelector`.
@@ -56,9 +57,16 @@ class SelectPoints(object):
 
         
     def addButtons(self):
-        self.polyAxes = self.ax.figure.add_axes([0.6, 0.9, 0.1, 0.08])
-        self.rectAxes = self.ax.figure.add_axes([0.7, 0.9, 0.1, 0.08])
-        self.lineAxes = self.ax.figure.add_axes([0.8, 0.9, 0.1, 0.08])
+#        self.polyAxes = self.ax.figure.add_axes([0.6, 0.9, 0.1, 0.08])
+#        self.rectAxes = self.ax.figure.add_axes([0.7, 0.9, 0.1, 0.08])
+#        self.lineAxes = self.ax.figure.add_axes([0.8, 0.9, 0.1, 0.08])
+        divider = make_axes_locatable(self.ax)
+        buttons = divider.new_vertical(size='5%') # 5% cushion between buttons and plot below it
+        axbutton = self.ax.figure.add_axes(buttons)
+        axbutton.axis('off')
+        self.polyAxes = axbutton.figure.add_axes([0.35, 0.91, 0.1, 0.08]) # just to put the buttons out of legend's way
+        self.rectAxes = axbutton.figure.add_axes([0.45, 0.91, 0.1, 0.08])
+        self.lineAxes = axbutton.figure.add_axes([0.55, 0.91, 0.1, 0.08])
         self.polyButton = Button(self.polyAxes, 'Poly')
         self.rectButton = Button(self.rectAxes, 'Rect')
         self.lineButton = Button(self.lineAxes, 'Line')

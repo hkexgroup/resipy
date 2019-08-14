@@ -58,6 +58,7 @@ class Survey(object):
         self.iBorehole = False # True is it's a borehole
         self.protocolIPFlag = False
         self.kFactor = 1
+        self.errorModel = None # function instanticated after fitting an error model with reciprocal errors
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
                         'Sting', 'ABEM-Lund']# add parser types here! 
@@ -578,7 +579,7 @@ class Survey(object):
         phase = np.abs(temp_df_range_filter['reci_IP_err'].values)
         ax.semilogx(reciprocalMean, phase, 'o')
         ax.set_xlabel(r'LogR [$\Omega$]')
-        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_title('Observed Discrepancies\n')
         if ax is None:
             return fig
@@ -627,12 +628,13 @@ class Survey(object):
             bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
             bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
         bins_ip = bins_ip.dropna()
-        coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)
+#        coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)
+        coefs_ip = np.polyfit(np.log(bins_ip.iloc[:,0]), np.log(bins_ip.iloc[:,1]), 1)[::-1]
         R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
         ax.plot(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Power Law Fit")
-        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_xlabel(r'$R_{avg}$ [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
@@ -640,9 +642,9 @@ class Survey(object):
         a2 = coefs_ip[1]
         print ('Error model is: Sp(m) = {:.2f}*R^{:.2f} (R^2 = {:.2f})'.format(a1,a2,R2_ip))
         if a1 > 0.001:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
+            ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
         else:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2e}$R^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
+            ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {:.2e}$R^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
         self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -680,7 +682,7 @@ class Survey(object):
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
         ax.semilogx(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Parabola Fit")
-        ax.set_ylabel(r's($\phi$) [mRad]')
+        ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_xlabel(r'R [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
@@ -688,9 +690,9 @@ class Survey(object):
         b3 = coefs_ip[1]
         c3 = coefs_ip[2]
         if a3 > 0.001:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.3f}$R^2${:+.3f}$R${:+.3f} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.3f}$R^2${:+.3f}$R${:+.3f} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
         else:
-            ax.set_title('Multi bin phase error plot\n' + r's($\phi$) = {:.2e}$R^2${:+.2e}$R${:+.2e} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.2e}$R^2${:+.2e}$R${:+.2e} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
         self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
@@ -727,7 +729,8 @@ class Survey(object):
 #        print(bins)
 #        print(np.sum(np.isnan(bins)))
 #        print(np.sum(np.isinf(bins)))
-        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
+#        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
+        coefs = np.polyfit(np.log(bins[:,0]), np.log(bins[:,1]), 1)[::-1] #order is of coefs is opposite to lstqd       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
@@ -745,9 +748,9 @@ class Survey(object):
 #        a4 = coefs[1]
         print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
         if a1 > 0.001:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
         else:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):
             x = df['recipMean'].values
@@ -785,7 +788,8 @@ class Survey(object):
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
-        coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1], rcond=None)[0] # calculating fitting coefficients (a,m) 
+#        coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1], rcond=None)[0] # calculating fitting coefficients (a,m) 
+        coefs = np.polyfit(bins[:,0], bins[:,1], 1)
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
@@ -801,9 +805,9 @@ class Survey(object):
         a2 = coefs[1]
         print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
         if a1 > 0.001:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:+.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:+.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
         else:
-            ax.set_title('Multi bin power-law plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:+.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:+.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         def errorModel(df):
             x = df['recipMean'].values
@@ -1003,7 +1007,7 @@ class Survey(object):
         ax.grid(False)
         if self.cbar==True:
             cbhnf = fig.colorbar(m, ax=ax)
-            cbhnf.set_label(r'-$\phi$ [mRad]', fontsize=20)
+            cbhnf.set_label(r'-$\phi$ [mrad]', fontsize=20)
             cbhnf.ax.tick_params(labelsize=18)
         if ax is None:
             return fig
@@ -1178,8 +1182,8 @@ class Survey(object):
 #                fig, ax = plt.subplots()
 #            else:
 #                fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
-            cbar = fig.colorbar(cax, ax=ax)
+            plotPsRes = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
+            cbar = fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             cbar.set_label(label)
     #        fig.suptitle(self.name, x= 0.2)
 #            fig.tight_layout()
@@ -1203,11 +1207,11 @@ class Survey(object):
                 vmin = np.min(resist)
             if vmax is None:
                 vmax = np.max(resist)
-            levels = np.linspace(vmin, vmax, 7)
-            cax = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
-            fig.colorbar(cax, ax=ax, label=label)
+            levels = np.linspace(vmin, vmax, 13)
+            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
+            fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             
-        ax.set_title('Apparent Resistivity Pseudo Section')
+        ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
@@ -1244,7 +1248,7 @@ class Survey(object):
         else:
             ip = -self.kFactor*self.df['ip'].values
 
-        label = r'$\phi$ [mRad]'
+        label = r'$\phi$ [mrad]'
         
 
         # sorting the array in case of Wenner measurements (just for plotting)
@@ -1266,22 +1270,24 @@ class Survey(object):
 #                fig, ax = plt.subplots()
 #            else:
 #                fig = ax.get_figure()
-            cax = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
-            cbar = fig.colorbar(cax, ax=ax)
+            plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
+#            divider = make_axes_locatable(ax)
+#            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label(label)
-            ax.set_title('Phase shift pseudo Section')
+#            ax.set_title('Phase Shift\npseudo section')
         
         else:
             if vmin is None:
                 vmin = np.min(ip)
             if vmax is None:
                 vmax = np.max(ip)
-            levels = np.linspace(vmin, vmax, 7)
-            cax = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
-            cbar = fig.colorbar(cax, ax=ax)
-            cbar.set_label(label)
-            ax.set_title('IP pseudo Section')
-            
+            levels = np.linspace(vmin, vmax, 13)
+            plotPsIP = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
+            fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
+#            cbar.set_label(label)
+#            ax.set_title('Phase Shift\npseudo section')
+        ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
