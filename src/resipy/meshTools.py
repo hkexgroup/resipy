@@ -23,7 +23,7 @@ from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-#import R2gui API packages - remove the "api." in below code if running the script and using the test blocks at the bottom 
+#import R2gui API packages 
 import resipy.gmshWrap as gw
 from resipy.isinpolygon import isinpolygon, isinvolume, in_box
 import resipy.interpolation as interp
@@ -1511,7 +1511,7 @@ class Mesh:
             
         return colx#,colz # return columns to go in parameters 
     
-    def exportTetgenMesh(self,prefix='mesh'):
+    def exportTetgenMesh(self,prefix='mesh',zone=None):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. 
         
@@ -1519,7 +1519,20 @@ class Mesh:
         ----------  
         prefix: string
             Prefix assigned to exported files. Can include path to file. 
+        zone: array like, optional
+            If using zones in the mesh, this attribute should include the zone
+            attribute which is an array of integers identifying the zone 
+            associated with each element. By default each element is assigned to 
+            zone 1. 
         """
+        #error checking / formalities 
+        if not isinstance(prefix,str):
+            raise NameError('prefix argument is not a string.')
+        if zone is not None:
+            if len(zone) != self.num_elms:
+                raise ValueError('Number of zone array elements given to exportTetgenMesh does not match the number of elements in the mesh.')
+        else:
+            zone = [1]*self.num_elms # all elements are inside zone 1 
         #output .node file
         fh = open(prefix+'.node','w')
         #header line : 
@@ -1548,7 +1561,7 @@ class Mesh:
                                                          self.con_matrix[1][i]+1,
                                                          self.con_matrix[2][i]+1,
                                                          self.con_matrix[3][i]+1,
-                                                         1)
+                                                         zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
         fh.close()
@@ -1613,7 +1626,7 @@ class Mesh:
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code
+            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code (more accurate than multiplying together)
             face2 = int(str(idx1)+str(idx2)+str(idx4))
             face3 = int(str(idx2)+str(idx3)+str(idx4))
             face4 = int(str(idx1)+str(idx4)+str(idx3))
