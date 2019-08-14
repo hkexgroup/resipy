@@ -34,22 +34,26 @@ class SelectPoints(object):
         Arrays of size Nx2 for N points.
     """
 
-    def __init__(self, ax, pts, typ='poly', callback=None):
+    def __init__(self, ax, pts=None, typ='poly', callback=None):
         self.ax = ax
         self.canvas = ax.figure.canvas
         self.pts = pts
         self.vertices = []
         self.path = Path
         self.currentIndex = 1
-        self.iselect = np.zeros(len(pts), dtype=bool)
+        if self.pts is not None:
+            self.iselect = np.zeros(len(self.pts), dtype=bool)
         self.typ = typ
         self.callback = callback
         self.canvas.mpl_connect('key_press_event', self.keyPress)
         self.cax = self.ax.plot([],[], 'r.-')
         self.caxSelected = self.ax.plot([],[], 'k+')
         self.rect = None
-        self.xmin = np.nanmin(pts[:,0]) - 10 # padding to get extreme points in the zone
-        self.xmax = np.nanmax(pts[:,0]) + 10
+        self.xmin = None
+        self.xmax = None
+        if self.pts is not None:
+            self.xmin = np.nanmin(pts[:,0]) - 10 # padding to get extreme points in the zone
+            self.xmax = np.nanmax(pts[:,0]) + 10
         self.drawable = True # can draw on canvas
         
         self.addButtons()
@@ -209,15 +213,18 @@ class SelectPoints(object):
         
         
     def getPointsInside(self):
-        path = Path(self.vertices)
-        self.iselect = path.contains_points(self.pts)
-        self.caxSelected[0].set_xdata(self.pts[self.iselect, 0])
-        self.caxSelected[0].set_ydata(self.pts[self.iselect, 1])
+        if self.pts is not None:
+            path = Path(self.vertices)
+            self.iselect = path.contains_points(self.pts)
+            self.caxSelected[0].set_xdata(self.pts[self.iselect, 0])
+            self.caxSelected[0].set_ydata(self.pts[self.iselect, 1])
+            if self.callback is not None:
+                self.callback(self.iselect)
+            else:
+                print(np.sum(self.iselect), 'elements selected')
+            self.canvas.draw_idle()
         if self.callback is not None:
-            self.callback(self.iselect)
-        else:
-            print(np.sum(self.iselect), 'elements selected')
-        self.canvas.draw_idle()
+            self.callback()
     
     
     def keyPress(self, event):
@@ -251,7 +258,8 @@ class SelectPoints(object):
             self.rect.set_ydata([])
             self.rect = None
         self.vertices = []
-        self.iselect = np.zeros(len(self.pts), dtype=bool)
+        if self.pts is not None:
+            self.iselect = np.zeros(len(self.pts), dtype=bool)
         self.cax[0].set_xdata([])
         self.cax[0].set_ydata([])
         self.caxSelected[0].set_xdata([])

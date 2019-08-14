@@ -2780,14 +2780,6 @@ class App(QMainWindow):
                 [seqMultiLabel, seqMulti],
                 [seqCustomLabel, seqCustom]]
 
-        # alternative design
-#        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
-#                   ('wenner', 'Wenner', ['a','n']),
-#                   ('schlum1', 'Schlumberger', ['a','m']),
-#                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
-#                   ('custSeq', 'Custom Sequence')]
-#        combo
-        
         
         def seqCreateFunc():
             if self.r2.elec is None:
@@ -4265,6 +4257,158 @@ USA: Trelgol Publishing, (2006).
 
         tabAbout.setLayout(infoLayout)
 
+        #%% test tab
+        tabTest = QTabWidget()
+        tabs.addTab(tabTest, 'TEST')
+        tabTestLayout = QVBoxLayout()
+        tabTest.setLayout(tabTestLayout)
+        
+        # alternative design
+        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
+                   ('wenner', 'Wenner', ['a','n']),
+                   ('schlum1', 'Schlumberger', ['a','m']),
+                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
+                   ('custSeq', 'Custom Sequence', [])]
+        
+        class RowOpt(QHBoxLayout):
+            def __init__(self):
+                super(QHBoxLayout, self).__init__()
+                self.combo = None
+                self.rmBtn = None
+                self.labels = []
+                self.fields = []
+                self.seq = seq
+                self.iseq = 0
+                self.createRow()
+                self.showArg()
+                
+            def createRow(self):
+                self.combo = QComboBox()
+                for row in seqData:
+                    self.combo.addItem(row[1])
+                self.combo.currentIndexChanged.connect(self.comboFunc)
+                self.addWidget(self.combo)
+                for a in ['a','n','m']:
+                    lab = QLabel(a + '=')
+                    field = QLineEdit()
+                    field.setValidator(QIntValidator())
+                    self.labels.append(lab)
+                    self.fields.append(field)
+                    self.addWidget(lab)
+                    self.addWidget(field)
+                self.importBtn = QPushButton('Import Custom Sequence')
+                self.importBtn.clicked.connect(self.importFile)
+                self.importBtn.setVisible(False)
+                self.addWidget(self.importBtn)
+                self.rmBtn = QPushButton('-')
+                self.rmBtn.clicked.connect(self.remove)
+                self.addWidget(self.rmBtn)
+            
+            def importFile(self):
+                print('hey')
+                
+            def comboFunc(self, i):
+                self.seq = seqData[i][0]
+                self.iseq = i
+                self.showArg()
+                
+            def showArg(self):
+                n = len(seqData[self.iseq][2])
+                if self.iseq == 4: # custom sequence
+                    self.importBtn.setVisible(True)
+                else:
+                    self.importBtn.setVisible(False)
+                for i in range(3):
+                    val = False
+                    if i < n:
+                        val = True
+                    self.labels[i].setVisible(val)
+                    self.fields[i].setVisible(val)
+                    
+            def remove(self):
+                self.combo.deleteLater()
+                for w in self.fields:
+                    w.deleteLater()
+                for w in self.labels:
+                    w.deleteLater()
+                self.rmBtn.deleteLater()
+                self.deleteLater()
+            
+            def getData(self):
+                n = len(seqData[self.iseq][2])
+                vals = []
+                for i, field in enumerate(self.fields):
+                    if i < n:
+                        val = int(field.text()) if field.text() != '' else np.nan
+                        vals.append(val)
+                return (self.seq, *vals)
+        """add side pannel with help displayed
+        finish import custom sequence
+        """
+        seqRowLayout = QVBoxLayout()
+        seqRows = []
+        seqRow = RowOpt()
+        seqRowLayout.addLayout(seqRow)
+        seqRows.append(seqRow)
+        tabTestLayout.addLayout(seqRowLayout)
+        
+        def addRowBtnFunc():
+            print('called')
+            a = RowOpt()
+            seqRows.append(a)
+            seqRowLayout.addLayout(a)
+        addRowBtn = QPushButton('+')
+        addRowBtn.clicked.connect(addRowBtnFunc)
+        tabTestLayout.addWidget(addRowBtn)
+        
+        def getDataBtnFunc():
+            vals = []
+            for seqRow in seqRows:
+                val = seqRow.getData()
+                vals.append(val)
+            print(vals)
+        getDataBtn = QPushButton('Get Data')
+        getDataBtn.clicked.connect(getDataBtnFunc)
+        tabTestLayout.addWidget(getDataBtn)
+            
+        def bbf():
+#            tabTestLayout.removeLayout(row1)
+            print(row1.getData())
+        bb = QPushButton('Push')
+        bb.clicked.connect(bbf)
+        tabTestLayout.addWidget(bb)
+#            
+#        class SeqOpt(QWidget):
+#            def __init__(self):
+#                self.layouts = []
+#                self.nrow = 1
+#                self.layout = QHBoxLayout()
+#                
+#            def createRow(self):
+#                def comboFunc(i):
+#                    print('kk', i)
+#                    
+#                combo = QComboBox()
+#                for row in seqData:
+#                    combo.addItem(row[1])
+#                combo.setCurrentIndex(0)
+#                combo.currentIndexChanged.connect(comboFunc)
+#                
+#            
+#            def comboFunc(i):
+#                print('current index changed to', i, seqData[i][1])
+#                
+#            def removeRow(self):
+#                pass
+#            
+#            def addRow(self):
+#                pass
+#            
+#            def getData(self):
+#                pass
+            
+        
+        
         #%% general Ctrl+Q shortcut + general tab layout
 
         layout.addWidget(tabs)
