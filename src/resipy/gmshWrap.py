@@ -257,13 +257,11 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         dp_len = abs(np.max(electrodes[1]) - np.min(electrodes[1])) # use z coordinates, 
     if dp_len == 0: #if its still 0 
         dp_len = 5 # insert obligitory value here
-                
     if doi == -1:#then set to a default 
         doi = np.max(elec_z) - (np.min(elec_z) - abs(np.max(elec_x) - np.min(elec_x))/2)
     if doi >= np.min(electrodes[1]):
         warnings.warn('DOI is shallower than minimum z coordinate, therefore lowering the DOI by 5 units below lowest electrode')
         doi= np.min(electrodes[1]) - 5 
-    
     print("doi in gmshWrap.py: %f"%doi)
     print("dp_len in gmshWrap.py: %f"%dp_len)
     

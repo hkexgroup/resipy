@@ -9,6 +9,7 @@ Created on Fri Mar  1 15:08:19 2019
 import numpy as np
 import matplotlib.pyplot as plt
 from resipy.R2 import R2
+import matplotlib
 plt.ioff() # this disable interactive plotting
 
 figdir = './image/paper/'
@@ -47,7 +48,8 @@ ax.set_title('(a) Select points/electrodes')
 ax.set_ylabel('Pseudo-depth [m]')
 ax.set_xlabel('Distance [m]')
 fig.tight_layout()
-fig.savefig(figdir + 'fig4-manualFiltering.png') # to be saved after selecting points
+#fig.savefig(figdir + 'fig4-manualFiltering.jpg', dpi=500) # to be saved after selecting points
+#fig.savefig(figdir + 'fig4-manualFiltering.eps')
 fig.show()
 
 k.surveys[0].filterData(~k.surveys[0].iselect)
@@ -58,13 +60,16 @@ ax.set_title('(b) Filtered data')
 ax.set_ylabel('Pseudo-depth [m]')
 ax.set_xlabel('Distance [m]')
 fig.tight_layout()
-fig.savefig(figdir + 'fig4-filtered.png')
+fig.savefig(figdir + 'fig4-filtered.jpg', dpi=500)
+fig.savefig(figdir + 'fig4-filtered.eps')
 fig.show()
 
 fig, ax = plt.subplots(figsize=(8,2.5))
 k.errorDist(ax=ax)
-ax.set_title('(c) Probability error distribution')
-fig.savefig(figdir + 'fig4-errorDist.png')
+ax.set_title('(c) Probability distribution of reciprocal errors')
+fig.tight_layout()
+fig.savefig(figdir + 'fig4-errorDist.jpg', dpi=500)
+fig.savefig(figdir + 'fig4-errorDist.eps')
 fig.show()
 
 
@@ -85,7 +90,7 @@ fig, ax = plt.subplots(figsize=(7, 2))
 k.showResults(ax=ax, zlim=[28, 29.6], sens=False) # show the inverted section
 fig.tight_layout()
 fig.savefig(figdir + 'castle.eps')
-fig.savefig(figdir + 'castle.png')
+fig.savefig(figdir + 'castle.jpg', dpi=1000)
 fig.show()
 
 
@@ -107,7 +112,7 @@ k.showResults(attr='Sigma_real(log10)') # show the inverted real conductivity se
 k.showResults(attr='Phase(mrad)') # show the inverted phase shift section
 
 #%% graph section
-fig, axs = plt.subplots(1, 2, figsize=(8,3))
+fig, axs = plt.subplots(1, 2, figsize=(10,4))
 ax = axs[0]
 k.pwlfit(ax=ax)
 ax.set_title('(a) ' + ax.get_title())
@@ -115,10 +120,13 @@ ax = axs[1]
 k.plotIPFit(ax=ax)
 ax.set_title('(b) ' + ax.get_title())
 fig.tight_layout()
-fig.savefig(figdir + 'ip-error-models.png')
+fig.savefig(figdir + 'ip-error-models.jpg', dpi=1000)
+fig.savefig(figdir + 'ip-error-models.eps')
 fig.show()
 
-fig, axs = plt.subplots(2, 1, figsize=(4, 3), sharex=True)
+
+#%%
+fig, axs = plt.subplots(2, 1, figsize=(5, 4), sharex=True)
 ax = axs[0]
 ax.set_title('(a)')
 k.showResults(attr='Sigma_real(log10)', zlim=[-8, 0], ax=ax, sens=False)
@@ -126,9 +134,10 @@ ax.set_xlabel(None)
 ax = axs[1]
 ax.set_title('(b)')
 k.showResults(attr='Phase(mrad)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
+#k.showResults(attr='Sigma_imag(log10)', zlim=[-8, 0], vmax=0, ax=ax, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'micp.eps')
-fig.savefig(figdir + 'micp.png')
+fig.savefig(figdir + 'micp.jpg', dpi=1000)
 fig.show()
 
 
@@ -145,21 +154,21 @@ k.showResults(index=1, attr='difference(percent)') # show the differences betwee
 
 
 #%% graph
-fig, axs = plt.subplots(3, 1, figsize=(4, 5), sharex=True)
+fig, axs = plt.subplots(3, 1, figsize=(5, 6), sharex=True)
 ax = axs[0]
-ax.set_title('(a) 15th March 2017')
+ax.set_title('(a) 15th March to 3rd April')
 k.showResults(ax=ax, index=1, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 ax.set_xlabel(None)
 ax = axs[1]
-ax.set_title('(b) 27th April 2017')
+ax.set_title('(b) 15th March to 27th April')
 k.showResults(ax=ax, index=2, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 ax.set_xlabel(None)
 ax = axs[2]
-ax.set_title('(c) 16th Mai 2017')
+ax.set_title('(c) 15th March to 16th May')
 k.showResults(ax=ax, index=3, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'woburn.eps')
-fig.savefig(figdir + 'woburn.png')
+fig.savefig(figdir + 'woburn.jpg', dpi=1000)
 fig.show()
 
 
@@ -172,25 +181,31 @@ k.setElec(x[:,:2]) # electrode positions
 surface = np.array([[0.7, 92.30],[10.3, 92.30]]) # additional surface point for the river level
 buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river here)
 k.filterElec([21, 2]) # filter out problematic electrodes 21 and 2
-k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.1, cl_factor=10)
+k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
 xy = k.elec[1:21,[0,2]] # adding river water level using 2 topo points
 k.addRegion(xy, res0=32, blocky=True, fixed=False) # fixed river resistivity to 32 Ohm.m
 k.param['b_wgt'] = 0.05 # setting up higher noise level
 k.invert()
 k.showResults(sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
 
-# graph
+
+#%% graph
 fig, ax = plt.subplots(figsize=(7, 2))
-k.showResults(ax=ax, sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
+k.showResults(ax=ax, sens=True, vmin=1.2, vmax=2.2, zlim=[89, 93])
 ax.plot([10.5, 11.88, 12.85, 16.5],[91.9, 91.42, 91.83, 91.79],'k--')
 #ax.plot([0, 10.4, 12.5, 16.5],[90.7, 90.7, 89.6, 89.6],'k--')
 ax.text(6.87, 92.2, '1', color='red', fontsize=14)
-ax.text(8.5, 90, '3', color='red', fontsize=14)
+ax.text(8.5, 90.5, '3', color='red', fontsize=14)
 ax.text(14, 92.1, '2', color='red', fontsize=14)
 #ax.text(6, 89.2, '4', color='red', fontsize=14)
+xyb = np.r_[xy, xy[[0],:]]
+xyb[0,1] = 92.36
+xyb[-2,1] = 92.36
+xyb[-1,1] = 92.36
+ax.plot(xyb[:,0], xyb[:,1], 'r--')
 fig.tight_layout()
 fig.savefig(figdir + 'fixedRiver.eps')
-fig.savefig(figdir + 'fixedRiver.png')
+fig.savefig(figdir + 'fixedRiver.jpg', dpi=1000)
 fig.show()
 
 
@@ -264,11 +279,12 @@ fig.show()
 
 #%%
 
-fig, axs = plt.subplots(5, 1, figsize=(4, 8), sharex=True)
+fig, axs = plt.subplots(5, 1, figsize=(5, 9), sharex=True)
 ax = axs[0]
 ax.set_title('(a) True')
 k1.showResults(index=0, ax=ax, sens=False, zlim=[-7,0])
 ax.set_xlabel(None)
+fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 
 ax = axs[1]
 k1.surveys[0].pseudo(ax=ax, vmin=50, vmax=120)
@@ -285,20 +301,21 @@ ax.set_title('(d) Wenner')
 k1.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 target2 = np.vstack([target, target[0,:]])
 ax.plot(target2[:,0], target2[:,1], 'r--')
+fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 ax.set_xlabel(None)
 
 ax = axs[4]
 ax.set_title('(e) Dipole-Dipole')
 k2.showResults(index=1, ax=ax, sens=False, zlim=[-7,0], vmin=1, vmax=2)
 ax.plot(target2[:,0], target2[:,1], 'r--')
+fig.axes[-1].set_ylabel(r'$\log_{10}(\rho)$ [$\Omega$.m]')
 fig.tight_layout()
 fig.savefig(figdir + 'forward.eps')
-fig.savefig(figdir + 'forward.png')
+fig.savefig(figdir + 'forward.jpg', dpi=1000)
 fig.show()
 
 
 #%% general figure miniatures
-import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
 figsize=(3, 1.5)
 
@@ -321,7 +338,7 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-pseudo.png')
+fig.savefig(figdir + 'miniature-pseudo.jpg', dpi=500)
 fig.show()
 
 fig, ax = plt.subplots(figsize=figsize)
@@ -334,7 +351,7 @@ ax.set_ylabel('')
 ax.set_axis_off()
 fig.get_axes()[1].set_ylabel(r'$\rho_a$ [$\Omega$.m]')
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-manualFiltering.png')
+fig.savefig(figdir + 'miniature-manualFiltering.jpg', dpi=500)
 fig.show()
 
 
@@ -347,7 +364,7 @@ ax.set_yticks([],[])
 #ax.set_ylabel('')
 ax.get_legend().remove()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-errorModelling.png')
+fig.savefig(figdir + 'miniature-errorModelling.jpg', dpi=500)
 fig.show()
 
 fig, ax = plt.subplots(figsize=figsize)
@@ -359,10 +376,10 @@ ax.set_yticks([],[])
 #ax.set_ylabel('')
 ax.get_legend().remove()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-errorModellingIP.png')
+fig.savefig(figdir + 'miniature-errorModellingIP.jpg', dpi=500)
 fig.show()
 
-k.filterElec([4])
+k.surveys[0].filterData(~k.surveys[0].iselect)
 fig, ax = plt.subplots(figsize=figsize)
 k.pseudo(ax=ax)
 ax.set_title('(d) Filtered Data')
@@ -372,7 +389,7 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-pseudoFinal.png')
+fig.savefig(figdir + 'miniature-pseudoFinal.jpg', dpi=500)
 fig.show()
 
 
@@ -389,7 +406,7 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-meshQuad.png')
+fig.savefig(figdir + 'miniature-meshQuad.jpg', dpi=500)
 fig.show()
 
 k.createMesh('trian')
@@ -406,14 +423,14 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-meshTrian.png')
+fig.savefig(figdir + 'miniature-meshTrian.jpg', dpi=500)
 fig.show()
 
 k.invert()
 
 
 fig, ax = plt.subplots(figsize=figsize)
-k.showResults(ax=ax, sens=False, contour=True)
+k.showResults(ax=ax, sens=True, sensPrc=0.15, contour=True)
 #ax.set_xlim([0, 1])
 #ax.set_ylim([-0.7, 0])
 ax.set_title('(j) Inverted Section')
@@ -422,8 +439,13 @@ ax.set_yticks([],[])
 ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
+cb = k.meshResults[0].cbar
+from matplotlib import ticker
+tick_locator = ticker.MaxNLocator(nbins=5)
+cb.locator = tick_locator
+cb.update_ticks()
 fig.tight_layout()
-fig.savefig(figdir + 'minitature-invSection.png')
+fig.savefig(figdir + 'minitature-invSection.jpg', dpi=500)
 fig.show()
 
 
@@ -436,7 +458,7 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-pseudoError.png')
+fig.savefig(figdir + 'miniature-pseudoError.jpg', dpi=500)
 fig.show()
 
 
@@ -457,7 +479,7 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-forwardModel.png')
+fig.savefig(figdir + 'miniature-forwardModel.jpg', dpi=500)
 fig.show()
 
 
@@ -475,7 +497,7 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-forwardSequence.png')
+fig.savefig(figdir + 'miniature-forwardSequence.jpg', dpi=500)
 fig.show()
 
 
@@ -490,5 +512,5 @@ ax.set_xlabel('')
 ax.set_ylabel('')
 ax.set_axis_off()
 fig.tight_layout()
-fig.savefig(figdir + 'miniature-forwardPseudo.png')
+fig.savefig(figdir + 'miniature-forwardPseudo.jpg', dpi=500)
 fig.show()
