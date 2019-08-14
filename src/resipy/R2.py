@@ -828,6 +828,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 else:
                     geom_input['surface'] = [surface[:,0], surface[:,2]]
             
+            if 'geom_input' in kwargs:
+                geom_input.update(kwargs['geom_input'])
+                kwargs.pop('geom_input')
+                print('-----', geom_input)
+            
             whole_space = False
             if buried is not None:
                 if np.sum(buried) == len(buried) and surface is None:
@@ -1967,28 +1972,44 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if self.mesh is None:
             print('will create a mesh before')
-            self.createMesh()
+#            self.createMesh()
+        self.computeDOI()
+        
         if ax is None:
             fig, ax = plt.subplots()
         else:
             fig = ax.figure
-
-        def callback(idx):
-            self.regid = self.regid + 1
-            print('nb elements selected:', np.sum(idx), 'in region', self.regid)
-            self.regions[idx] = self.regid            
-            self.mesh.cell_attributes = list(self.regions) # overwritin regions            
-            self.mesh.draw()
+        
+        self.geom_input = {}
+        ax.plot(self.elec[:,0], self.elec[:,2], 'ko', label='electrode')
+        ax.set_ylim([self.doi, np.max(self.elec[:,1])])
+        ax.set_xlim(np.min(self.elec[:,0]), np.max(self.elec[:,0]))
+        def callback():
+            vert = np.array(self.selector.vertices)
+            self.geom_input['polygon' + str(len(self.geom_input)+1)] = [vert[:,0].tolist(), vert[:,1].tolist()]
+            ax.plot(vert[:,0], vert[:,1], '.-')
             if addAction is not None:
                 addAction()
-        self.mesh.atribute_title = 'Material'
-        self.mesh.show(ax=ax, zlim=self.zlim)
+#        self.mesh.atribute_title = 'Material'
+#        self.mesh.show(ax=ax, zlim=self.zlim)
         # we need to assign a selector to self otherwise it's not used
-        self.selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
-                                     typ=typ, callback=callback)
+        self.selector = SelectPoints(ax, typ=typ, callback=callback)
+        surveyLength = np.max(self.elec[:,0]) - np.min(self.elec[:,0])
+        self.selector.xmin = np.min(self.elec[:,0]) - 10 * surveyLength
+        self.selector.xmax = np.max(self.elec[:,1]) + 10 * surveyLength
         if ax is None:
             return fig
-            
+    
+    def createModelMesh(self, **kwargs):
+        """Create a triangular mesh given the designed geometry.
+        
+        Parameters
+        ----------
+        All parameters to be passed are similar to `R2.createMesh()`.
+        """
+        geom_input = self.geom_input
+        self.createMesh(typ='trian', geom_input=geom_input, **kwargs)
+        
     
     def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
         """Assign starting resitivity values.
@@ -3011,4 +3032,10 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     ax.set_title('Pseudo Section')
     ax.set_xlabel('Distance [m]')
     ax.set_ylabel('Pseudo depth [m]')
+
+#%%
+k = R2()
+elec = np.c_[np.arange(24), np.zeros((24, 2))]
+k.setElec(elec)
+k.createModel()
 
