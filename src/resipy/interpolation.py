@@ -4,7 +4,6 @@ import sys
 import numpy as np
 import resipy.isinpolygon as iip
 import warnings 
-#from tqdm import tqdm # progess bar package - disabled 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
 # see solution @ https://math.stackexchange.com/questions/828392/spatial-interpolation-for-irregular-grid
