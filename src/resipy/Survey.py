@@ -1611,18 +1611,39 @@ class Survey(object):
             Output will be printed to console if `True`. 
         """
         df = self.df.copy()
-        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).flatten()
-        uni_idx = np.unique(sch_mat) # returns sorted and unique array of electrode indexes
+
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        uni_idx = np.unique(sch_mat.flatten()) # returns sorted and unique array of electrode indexes
         comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
-        num_elec = len(uni_idx)        
+        num_elec = len(uni_idx)  
+        min_idx = np.min(uni_idx)
+        surrogate = sch_mat.copy()
+        
+        if min_idx<1:
+            print('Zero or Negative electrode indexes detected!')
+        
         count = 0 # rolling total for number of indexes which had to be 'corrected' 
         for i in range(num_elec):
-            #print(uni_idx[i],comp_idx[i])
-            if uni_idx[i] != comp_idx[i]: # if there is a mis match, put the electrodes in the right order
-                self.swapIndexes(uni_idx[i],comp_idx[i])
-                count += 1 
-                if debug:
-                    print("electrode number %i changed to %i"%(uni_idx[i],comp_idx[i]))
+            if uni_idx[i] != comp_idx[i]:
+                #we need to put the electrode order in sequence 
+                off = comp_idx[i] - uni_idx[i]
+                if off<0:
+                    off+=1 # need to add one to aviod 0 indexed electrodes 
+                idx_array = np.argwhere(sch_mat == uni_idx[i])
+                new_id = uni_idx[i]+off
+                for j in range(len(idx_array)):
+                    idx = (idx_array[j][0],idx_array[j][1])
+                    surrogate[idx] = new_id
+                print('Electrode number %i changed to %i'%(uni_idx[i],new_id))
+                count+=1
+                
+        if count>0: 
+            df['a'] = surrogate[:,0]
+            df['b'] = surrogate[:,1]
+            df['m'] = surrogate[:,2]
+            df['n'] = surrogate[:,3]
+            
+            self.df = df 
         if debug:
             if count > 0:
                 print("%i electrode indexes corrected to be in consective and ascending order"%count)
