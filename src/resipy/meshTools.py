@@ -1384,7 +1384,10 @@ class Mesh:
             try:
                 title = self.mesh_title
             except AttributeError:
-                title = "output from R2 gui meshTools module"
+                title = "output from resipy meshTools module"
+        if not file_path.endswith('.vtk'):
+            file_path +='.vtk'#append .vtk extension to end of file path if not there
+            
         fh.write(title+"\n")
         fh.write("ASCII\nDATASET UNSTRUCTURED_GRID\n")
         #define node coordinates
@@ -1602,7 +1605,7 @@ class Mesh:
         else:
             zone = [1]*self.num_elms # all elements are inside zone 1 
         #output .node file
-        fh = open(prefix+'.node','w')
+        fh = open(prefix+'.1.node','w')
         #header line : 
         #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\t{:d}\n'.format(self.num_nodes,self.ndims,1,1))
@@ -1619,7 +1622,7 @@ class Mesh:
         fh.close()    
             
         #output .ele file 
-        fh = open(prefix+'.ele','w')
+        fh = open(prefix+'.1.ele','w')
         #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo(),1))
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
@@ -1665,7 +1668,7 @@ class Mesh:
         sorted_idx = np.argsort(dist,axis=1)
         sys.stdout.write('Done.\n')
         
-        fh = open(prefix+'.neigh','w')#write to file 
+        fh = open(prefix+'.1.neigh','w')#write to file 
         fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
         for i in range(self.num_elms):
             idx = sorted_idx[i,1:5]
@@ -1736,7 +1739,7 @@ class Mesh:
                 face_list[i] = face4#face 4  
         print('Done.')    
         
-        fh = open(prefix+'.face','w')
+        fh = open(prefix+'.1.face','w')
         #First line: <# of faces> <boundary marker (0 or 1)>
         fh.write('{:d}\t{:d}\n'.format(truncated_numel,1))#header line 
         for i in range(truncated_numel):

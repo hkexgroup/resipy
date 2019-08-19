@@ -1716,16 +1716,17 @@ class Survey(object):
             fh.write(line)
         #now write the scheduling matrix to file 
         nomeas = len(self.df) # number of measurements 
+        df = self.df.reset_index().copy()
         fh.write('\n%i number of measurements \n'%nomeas)
         if not 'resError' in self.df.columns: # the columns exists
             self.estError()
         # format >>> m_indx a b m n V/I stdev_V/I
         for i in range(nomeas): 
             line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
-                    self.df['a'][i],
-                    self.df['b'][i],
-                    self.df['m'][i],
-                    self.df['n'][i],
-                    self.df['resist'][i],
-                    self.df['resError'][i])
+                    df['a'][i],
+                    df['b'][i],
+                    df['m'][i],
+                    df['n'][i],
+                    df['resist'][i],
+                    df['resError'][i])
             fh.write(line)
