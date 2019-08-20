@@ -1637,7 +1637,7 @@ class Survey(object):
                 print('Electrode number %i changed to %i'%(uni_idx[i],new_id))
                 count+=1
                 
-        if count>0: 
+        if count>0: #only correct if chabges detected 
             df['a'] = surrogate[:,0]
             df['b'] = surrogate[:,1]
             df['m'] = surrogate[:,2]
@@ -1649,7 +1649,74 @@ class Survey(object):
                 print("%i electrode indexes corrected to be in consective and ascending order"%count)
             else:
                 print("Electrode indexing appears to be okay")
-    
+                
+    def normElecIdxwSeq(self,istart=None,iend=None):
+        """Normalise the electrode indexing sequencing to start at 1 and ascend
+        consectively (ie 1 , 2 , 3 , 4 ... ). Also checks for any electrodes 
+        which are missing out of sequence. 
+        
+        Function firstly normalises all indexes so that the lowest electrode 
+        number is 1. Then removes jumps in the electrode indexing.
+        
+        Parameters
+        -----------
+        istart : int, optional
+            Expected start for the electrode sequence.
+        iend : int,optional
+            Expected end index for the electrode sequence. 
+        """
+        df = self.df.copy()
+
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        uni_idx = np.unique(sch_mat.flatten()) # returns sorted and unique array of electrode indexes
+        if istart==None:
+            istart = np.min(uni_idx)
+        if iend==None:
+            iend = np.max(uni_idx)
+
+        comp_idx = np.arange(istart,iend+1,1) # comparison array 
+        exp_num_elec = len(comp_idx)#expected number of electrodes 
+        min_idx = np.min(uni_idx)
+        surrogate = sch_mat.copy()
+        
+        if min_idx<1:
+            print('Zero or Negative electrode indexes detected!')
+        
+        count = 0 # rolling total for number of indexes which had to be 'corrected' 
+        missing = []
+        for i in range(exp_num_elec):
+            check = uni_idx == comp_idx[i]
+            if all(check)==False:# then the index is missing 
+                print('electrode %i is missing from sequence'%comp_idx[i])
+                missing.append(comp_idx)
+        
+        missing = np.array(missing)        
+        crr_uni_idx = np.sort(np.append(uni_idx,missing))# corrected unique indexes     
+        for i in range(exp_num_elec):
+            if crr_uni_idx[i] != comp_idx[i]:
+                #we need to put the electrode order in sequence 
+                off = comp_idx[i] - crr_uni_idx[i]
+                if off<0:
+                    off+=1 # need to add one to aviod 0 indexed electrodes 
+                idx_array = np.argwhere(sch_mat == crr_uni_idx[i])
+                new_id = uni_idx[i]+off
+                for j in range(len(idx_array)):
+                    idx = (idx_array[j][0],idx_array[j][1])
+                    surrogate[idx] = new_id
+                print('Electrode number %i changed to %i'%(uni_idx[i],new_id))
+                count+=1
+                
+        if count>0: #only correct if chabges detected 
+            df['a'] = surrogate[:,0]
+            df['b'] = surrogate[:,1]
+            df['m'] = surrogate[:,2]
+            df['n'] = surrogate[:,3]
+            self.df = df 
+        
+        if count > 0:
+            print("%i electrode indexes corrected to be in consective and ascending order"%count)
+        else:
+            print("Electrode indexing appears to be okay")    
     
     def elec2distance(self):
         """Convert 3d xy data in pure x lateral distance.
