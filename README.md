@@ -24,6 +24,9 @@ You can download the latest versions using the links below:
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.9-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm "Tested on Debian10 and Ubuntu18.04.2")
 
+Note for Windows users:
+- If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
+
 Note for Mac and Linux users:
 - You will need to have *wine* installed as the executables beneath are compiled for Windows
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
