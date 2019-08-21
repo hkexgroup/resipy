@@ -2157,6 +2157,12 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         qs = []
         nelec = len(self.elec)
+        def addCustSeq(fname):
+            seq = pd.read_csv(fname, header=1)
+            if seq.shape[1] != 4:
+                raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
+            else:
+                return seq.values
         fdico = {'dpdp1': dpdp1,
               'dpdp2': dpdp2,
               'wenner': wenner,
@@ -2165,11 +2171,18 @@ class R2(object): # R2 master class instanciated by the GUI
               'wenner_gamma': wenner_gamma,
               'schlum1': schlum1,
               'schlum2': schlum2,
-              'multigrad': multigrad}
+              'multigrad': multigrad,
+              'custSeq': addCustSeq}
         
         for p in params:
-            pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
-            qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
+            if p[0] is 'custSeq':
+                try:
+                    qs.append(addCustSeq(p[1]))
+                except Exception as e:
+                    print('error when importing custom sequence:', e)
+            else:
+                pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
         self.sequence = np.vstack(qs)
     
     
@@ -2183,7 +2196,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname)
+            df.to_csv(fname, index=False)
         
         
     
