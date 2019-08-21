@@ -2043,7 +2043,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 addAction()
         # we need to assign a selector to self otherwise it's not used
         self.selector = SelectPoints(ax, typ=typ, callback=callback)
-        surveyLength = np.max(self.elec[:,0]) - np.min(self.elec[:,0])
+#        surveyLength = np.max(self.elec[:,0]) - np.min(self.elec[:,0])
         self.selector.xmin = np.min(self.elec[:,0])# - 10 * surveyLength
         self.selector.xmax = np.max(self.elec[:,0])# + 10 * surveyLength
         if ax is None:

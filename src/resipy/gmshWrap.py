@@ -192,7 +192,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         geom_input = {}
     if len(electrodes[0])!=len(electrodes[1]):
         raise ValueError('The length of the electrode x and z arrays does not match')
-        
     bh_flag = False
     bu_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -503,25 +502,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
     
-    #add buried electrodes?         
-    if bu_flag:
-        print('buried electrodes added to input file')
-        fh.write("\n//Buried electrodes \n")  
-        buried_x = np.array(electrodes[0])[bur_idx]#get buried electrode coordinate information
-        buried_z = np.array(electrodes[1])[bur_idx]
-        buried_y = [0]*len(buried_x)
-        e_pt_idx = [0]*len(buried_x)
-        for k in range(len(buried_x)):
-            no_pts += 1 
-            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_z[k],buried_y[k],k+1))
-            e_pt_idx[k] = no_pts
-        
-        node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
-        fh.write("Point{%s} In Surface{1};\n"%str(e_pt_idx).strip('[').strip(']'))
-        fh.write("//end of buried electrodes.\n")
-        elec_x_cache = np.append(elec_x_cache,buried_x)
-        elec_z_cache = np.append(elec_z_cache,buried_z)
-        
     no_plane = 1 # number of plane surfaces so far (actually two)
     fh.write("\n//Adding polygons?\n")
     line_loops = []
@@ -576,6 +556,27 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         fh.write("Plane Surface(%i) = {1};//Fine mesh region surface\n"%(no_plane))
     fh.write("\n//Make a physical surface\n")
     fh.write("Physical Surface(1) = {%i, 1};\n"%no_plane)
+    
+    
+    #add buried electrodes? (added after as we need Surface 1 to be defined)       
+    if bu_flag:
+        print('buried electrodes added to input file')
+        fh.write("\n//Buried electrodes \n")  
+        buried_x = np.array(electrodes[0])[bur_idx]#get buried electrode coordinate information
+        buried_z = np.array(electrodes[1])[bur_idx]
+        buried_y = [0]*len(buried_x)
+        e_pt_idx = [0]*len(buried_x)
+        for k in range(len(buried_x)):
+            no_pts += 1 
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_z[k],buried_y[k],k+1))
+            e_pt_idx[k] = no_pts
+        
+        node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
+        fh.write("Point{%s} In Surface{%i};\n"%(str(e_pt_idx).strip('[').strip(']'), no_plane))
+        fh.write("//end of buried electrodes.\n")
+        elec_x_cache = np.append(elec_x_cache,buried_x)
+        elec_z_cache = np.append(elec_z_cache,buried_z)
+        
     
     fh.write("\n//Adding boundaries?\n")
     count = 0   
