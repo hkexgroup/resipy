@@ -23,7 +23,7 @@ from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-#import R2gui API packages - remove the "api." in below code if running the script and using the test blocks at the bottom 
+#import R2gui API packages 
 import resipy.gmshWrap as gw
 from resipy.isinpolygon import isinpolygon, isinvolume, in_box
 import resipy.interpolation as interp
@@ -1398,7 +1398,10 @@ class Mesh:
             try:
                 title = self.mesh_title
             except AttributeError:
-                title = "output from R2 gui meshTools module"
+                title = "output from resipy meshTools module"
+        if not file_path.endswith('.vtk'):
+            file_path +='.vtk'#append .vtk extension to end of file path if not there
+            
         fh.write(title+"\n")
         fh.write("ASCII\nDATASET UNSTRUCTURED_GRID\n")
         #define node coordinates
@@ -1593,7 +1596,7 @@ class Mesh:
             
         return colx#,colz # return columns to go in parameters 
     
-    def exportTetgenMesh(self,prefix='mesh'):
+    def exportTetgenMesh(self,prefix='mesh',zone=None):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. 
         
@@ -1601,9 +1604,22 @@ class Mesh:
         ----------  
         prefix: string
             Prefix assigned to exported files. Can include path to file. 
+        zone: array like, optional
+            If using zones in the mesh, this attribute should include the zone
+            attribute which is an array of integers identifying the zone 
+            associated with each element. By default each element is assigned to 
+            zone 1. 
         """
+        #error checking / formalities 
+        if not isinstance(prefix,str):
+            raise NameError('prefix argument is not a string.')
+        if zone is not None:
+            if len(zone) != self.num_elms:
+                raise ValueError('Number of zone array elements given to exportTetgenMesh does not match the number of elements in the mesh.')
+        else:
+            zone = [1]*self.num_elms # all elements are inside zone 1 
         #output .node file
-        fh = open(prefix+'.node','w')
+        fh = open(prefix+'.1.node','w')
         #header line : 
         #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\t{:d}\n'.format(self.num_nodes,self.ndims,1,1))
@@ -1620,7 +1636,7 @@ class Mesh:
         fh.close()    
             
         #output .ele file 
-        fh = open(prefix+'.ele','w')
+        fh = open(prefix+'.1.ele','w')
         #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo(),1))
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
@@ -1630,7 +1646,7 @@ class Mesh:
                                                          self.con_matrix[1][i]+1,
                                                          self.con_matrix[2][i]+1,
                                                          self.con_matrix[3][i]+1,
-                                                         1)
+                                                         zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
         fh.close()
@@ -1666,7 +1682,7 @@ class Mesh:
         sorted_idx = np.argsort(dist,axis=1)
         sys.stdout.write('Done.\n')
         
-        fh = open(prefix+'.neigh','w')#write to file 
+        fh = open(prefix+'.1.neigh','w')#write to file 
         fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
         for i in range(self.num_elms):
             idx = sorted_idx[i,1:5]
@@ -1695,7 +1711,7 @@ class Mesh:
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code
+            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code (more accurate than multiplying together)
             face2 = int(str(idx1)+str(idx2)+str(idx4))
             face3 = int(str(idx2)+str(idx3)+str(idx4))
             face4 = int(str(idx1)+str(idx4)+str(idx3))
@@ -1737,7 +1753,7 @@ class Mesh:
                 face_list[i] = face4#face 4  
         print('Done.')    
         
-        fh = open(prefix+'.face','w')
+        fh = open(prefix+'.1.face','w')
         #First line: <# of faces> <boundary marker (0 or 1)>
         fh.write('{:d}\t{:d}\n'.format(truncated_numel,1))#header line 
         for i in range(truncated_numel):
@@ -2921,7 +2937,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
         else: # fallback on wine
             cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         

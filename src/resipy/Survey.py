@@ -1611,24 +1611,119 @@ class Survey(object):
             Output will be printed to console if `True`. 
         """
         df = self.df.copy()
-        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).flatten()
-        uni_idx = np.unique(sch_mat) # returns sorted and unique array of electrode indexes
+
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        uni_idx = np.unique(sch_mat.flatten()) # returns sorted and unique array of electrode indexes
         comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
-        num_elec = len(uni_idx)        
+        num_elec = len(uni_idx)  
+        min_idx = np.min(uni_idx)
+        surrogate = sch_mat.copy()
+        
+        if min_idx<1:
+            print('Zero or Negative electrode indexes detected!')
+        
         count = 0 # rolling total for number of indexes which had to be 'corrected' 
         for i in range(num_elec):
-            #print(uni_idx[i],comp_idx[i])
-            if uni_idx[i] != comp_idx[i]: # if there is a mis match, put the electrodes in the right order
-                self.swapIndexes(uni_idx[i],comp_idx[i])
-                count += 1 
-                if debug:
-                    print("electrode number %i changed to %i"%(uni_idx[i],comp_idx[i]))
+            if uni_idx[i] != comp_idx[i]:
+                #we need to put the electrode order in sequence 
+                off = comp_idx[i] - uni_idx[i]
+                if off<0:
+                    off+=1 # need to add one to aviod 0 indexed electrodes 
+                idx_array = np.argwhere(sch_mat == uni_idx[i])
+                new_id = uni_idx[i]+off
+                for j in range(len(idx_array)):
+                    idx = (idx_array[j][0],idx_array[j][1])
+                    surrogate[idx] = new_id
+                print('Electrode number %i changed to %i'%(uni_idx[i],new_id))
+                count+=1
+                
+        if count>0: #only correct if chabges detected 
+            df['a'] = surrogate[:,0]
+            df['b'] = surrogate[:,1]
+            df['m'] = surrogate[:,2]
+            df['n'] = surrogate[:,3]
+            
+            self.df = df 
         if debug:
             if count > 0:
                 print("%i electrode indexes corrected to be in consective and ascending order"%count)
             else:
                 print("Electrode indexing appears to be okay")
-    
+                
+    def normElecIdxwSeq(self,expected=None):
+        """Normalise the electrode indexing sequencing to start at 1 and ascend
+        consectively (ie 1 , 2 , 3 , 4 ... ). Also checks for any electrodes 
+        which are missing out of sequence if an expected sequence is given. 
+        
+        Function firstly normalises all indexes so that the lowest electrode 
+        number is 1. Then removes jumps in the electrode indexing.
+        
+        Parameters
+        -----------
+        expected : array like
+            Expected sequence. 
+        """
+        df = self.df.copy()
+
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        uni_idx = np.unique(sch_mat.flatten()) # returns sorted and unique array of electrode indexes
+        
+        if expected == None: 
+            comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
+        else:
+            comp_idx = np.array(expected) # comparison array 
+        exp_num_elec = len(comp_idx)#expected number of electrodes 
+        min_idx = np.min(uni_idx)
+        surrogate = sch_mat.copy()
+        
+        if min_idx<1:
+            print('Zero or Negative electrode indexes detected!')
+        
+        count = 0 # rolling total for number of indexes which had to be 'corrected' 
+        missing = []
+        for i in range(exp_num_elec):
+            check = uni_idx == comp_idx[i]
+            if all(check==False)==True:# then the index is missing 
+                print('electrode %i is missing from expected sequence'%comp_idx[i])
+                missing.append(comp_idx[i])
+        
+        missing = np.array(missing)        
+        crr_uni_idx = np.sort(np.append(uni_idx,missing))# corrected unique indexes     
+        comp_idx = np.arange(1,len(crr_uni_idx)+1,1) # an array of values order consectively 
+
+        for i in range(exp_num_elec):
+            if crr_uni_idx[i] != comp_idx[i]:
+                #we need to put the electrode order in sequence 
+                off = comp_idx[i] - crr_uni_idx[i]
+                if off<0:
+                    off+=1 # need to add one to aviod 0 indexed electrodes 
+                idx_array = np.argwhere(sch_mat == crr_uni_idx[i])
+                new_id = crr_uni_idx[i]+off
+                ignore=False
+                if not len(idx_array)==0:
+                    for j in range(len(idx_array)):
+                        idx = (idx_array[j][0],idx_array[j][1])
+                        surrogate[idx] = new_id
+                else:
+                    ignore=True
+                print('Electrode number %i changed to %i'%(crr_uni_idx[i],new_id),end='')
+                if ignore:
+                    print(' (but will be ignored during inversion)')
+                else:
+                    print('')
+                count+=1
+                
+        if count>0: #only correct if chabges detected 
+            df['a'] = surrogate[:,0]
+            df['b'] = surrogate[:,1]
+            df['m'] = surrogate[:,2]
+            df['n'] = surrogate[:,3]
+            self.df = df 
+        
+        if count > 0:
+            print("%i electrode indexes corrected to be in consective and ascending order"%count)
+        else:
+            print("Electrode indexing appears to be okay")    
     
     def elec2distance(self):
         """Convert 3d xy data in pure x lateral distance.
@@ -1716,16 +1811,17 @@ class Survey(object):
             fh.write(line)
         #now write the scheduling matrix to file 
         nomeas = len(self.df) # number of measurements 
+        df = self.df.reset_index().copy()
         fh.write('\n%i number of measurements \n'%nomeas)
         if not 'resError' in self.df.columns: # the columns exists
             self.estError()
         # format >>> m_indx a b m n V/I stdev_V/I
         for i in range(nomeas): 
             line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
-                    self.df['a'][i],
-                    self.df['b'][i],
-                    self.df['m'][i],
-                    self.df['n'][i],
-                    self.df['resist'][i],
-                    self.df['resError'][i])
+                    df['a'][i],
+                    df['b'][i],
+                    df['m'][i],
+                    df['n'][i],
+                    df['resist'][i],
+                    df['resError'][i])
             fh.write(line)
