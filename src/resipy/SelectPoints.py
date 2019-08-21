@@ -177,6 +177,7 @@ class SelectPoints(object):
         else:
             self.vertices.append((self.xmax, event.ydata))
             self.vertices.append((self.xmin, event.ydata))
+            self.vertices.append((self.vertices[0][0], self.vertices[0][1]))
             self.drawPath()
             self.getPointsInside()
             self.disconnect()
