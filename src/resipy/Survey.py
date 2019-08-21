@@ -1650,31 +1650,28 @@ class Survey(object):
             else:
                 print("Electrode indexing appears to be okay")
                 
-    def normElecIdxwSeq(self,istart=None,iend=None):
+    def normElecIdxwSeq(self,expected=None):
         """Normalise the electrode indexing sequencing to start at 1 and ascend
         consectively (ie 1 , 2 , 3 , 4 ... ). Also checks for any electrodes 
-        which are missing out of an expected sequence. 
+        which are missing out of sequence if an expected sequence is given. 
         
         Function firstly normalises all indexes so that the lowest electrode 
         number is 1. Then removes jumps in the electrode indexing.
         
         Parameters
         -----------
-        istart : int, optional
-            Expected start for the electrode sequence.
-        iend : int,optional
-            Expected end index for the electrode sequence. 
+        expected : array like
+            Expected sequence. 
         """
         df = self.df.copy()
 
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         uni_idx = np.unique(sch_mat.flatten()) # returns sorted and unique array of electrode indexes
-        if istart==None:
-            istart = np.min(uni_idx)
-        if iend==None:
-            iend = np.max(uni_idx)
-
-        comp_idx = np.arange(istart,iend+1,1) # comparison array 
+        
+        if expected == None: 
+            comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
+        else:
+            comp_idx = np.array(expected) # comparison array 
         exp_num_elec = len(comp_idx)#expected number of electrodes 
         min_idx = np.min(uni_idx)
         surrogate = sch_mat.copy()
@@ -1686,12 +1683,14 @@ class Survey(object):
         missing = []
         for i in range(exp_num_elec):
             check = uni_idx == comp_idx[i]
-            if all(check)==False:# then the index is missing 
-                print('electrode %i is missing from sequence'%comp_idx[i])
-                missing.append(comp_idx)
+            if all(check==False)==True:# then the index is missing 
+                print('electrode %i is missing from expected sequence'%comp_idx[i])
+                missing.append(comp_idx[i])
         
         missing = np.array(missing)        
         crr_uni_idx = np.sort(np.append(uni_idx,missing))# corrected unique indexes     
+        comp_idx = np.arange(1,len(crr_uni_idx)+1,1) # an array of values order consectively 
+
         for i in range(exp_num_elec):
             if crr_uni_idx[i] != comp_idx[i]:
                 #we need to put the electrode order in sequence 
@@ -1700,10 +1699,18 @@ class Survey(object):
                     off+=1 # need to add one to aviod 0 indexed electrodes 
                 idx_array = np.argwhere(sch_mat == crr_uni_idx[i])
                 new_id = crr_uni_idx[i]+off
-                for j in range(len(idx_array)):
-                    idx = (idx_array[j][0],idx_array[j][1])
-                    surrogate[idx] = new_id
-                print('Electrode number %i changed to %i'%(uni_idx[i],new_id))
+                ignore=False
+                if not len(idx_array)==0:
+                    for j in range(len(idx_array)):
+                        idx = (idx_array[j][0],idx_array[j][1])
+                        surrogate[idx] = new_id
+                else:
+                    ignore=True
+                print('Electrode number %i changed to %i'%(crr_uni_idx[i],new_id),end='')
+                if ignore:
+                    print(' (but will be ignored during inversion)')
+                else:
+                    print('')
                 count+=1
                 
         if count>0: #only correct if chabges detected 
