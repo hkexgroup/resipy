@@ -223,7 +223,7 @@ class SelectPoints(object):
             else:
                 print(np.sum(self.iselect), 'elements selected')
             self.canvas.draw_idle()
-        if self.callback is not None:
+        if self.pts is None and self.callback is not None:
             self.callback()
     
     

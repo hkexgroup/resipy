@@ -234,6 +234,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.doi = None # depth of investigation below the surface [in survey units]
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
+        self.geom_input = {} # dictionnary used to create the mesh
         
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already? 
@@ -780,7 +781,6 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 typ = 'tetra'
                 print('Using a tetrahedral mesh.')
-        print(typ)
         
         if typ == 'quad':
             elec = self.elec.copy()
@@ -831,7 +831,6 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'geom_input' in kwargs:
                 geom_input.update(kwargs['geom_input'])
                 kwargs.pop('geom_input')
-                print('-----', geom_input)
             
             whole_space = False
             if buried is not None:
@@ -922,8 +921,12 @@ class R2(object): # R2 master class instanciated by the GUI
         file_path = os.path.join(self.dirname, name)
         self.mesh.write_dat(file_path)
         
-        self.regid = 1 # 1 is the background (no 0 region)
-        self.regions = np.ones(len(self.mesh.elm_centre[0]))
+        try:
+            self.regions = np.array(self.mesh.cell_attributes)
+        except Exception as e:
+            print('Error in self.regions=', e)
+            self.regions = np.ones(len(self.mesh.elm_centre[0]))  
+        self.regid = len(np.unique(self.regions)) # no region 0
         self.resist0 = np.ones(len(self.regions))*res0
         
         # define zlim
@@ -1034,7 +1037,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                self.mesh.show(ax=ax, color_bar=False) # show the whole 3D mesh
                 # not just the ROI -> maybe we just want to show ROI actually ... TODO
 #            else:
-            self.mesh.show(ax=ax, color_bar=False, zlim=self.zlim)
+            self.mesh.show(ax=ax, color_bar=True, zlim=self.zlim)
     
     
     def write2in(self, param={}):
@@ -1972,8 +1975,56 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if self.mesh is None:
             print('will create a mesh before')
-#            self.createMesh()
-        self.computeDOI()
+            self.createMesh()
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            fig = ax.figure
+
+        def callback(idx):
+            self.regid = self.regid + 1
+            print('nb elements selected:', np.sum(idx), 'in region', self.regid)
+            self.regions[idx] = self.regid            
+            self.mesh.cell_attributes = list(self.regions) # overwritin regions            
+            self.mesh.draw()
+            if addAction is not None:
+                addAction()
+        self.mesh.atribute_title = 'Material'
+        self.mesh.show(ax=ax, zlim=self.zlim)
+        # we need to assign a selector to self otherwise it's not used
+        self.selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
+                                     typ=typ, callback=callback)
+        if ax is None:
+            return fig
+
+
+
+    def designModel(self, ax=None, dump=print, typ='poly', addAction=None):
+        """Interactive model design for forward modelling (triangular only).
+        As opposite to R2.createModel(). R2.designModel() allows to draw mesh
+        region **before** meshing. This allows to have straight boundaries for
+        triangular mesh.
+        
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Axes to which the graph will be plotted.
+        dump : function, optional
+            Function that outputs messages from the interactive model creation.
+        typ : str
+            Type of selection either `poly` for polyline or `rect` for
+            rectangle.
+        addAction : function
+            Function to be called once the selection is finished (design for
+            GUI purpose).
+        
+        Returns
+        -------
+        fig : matplotlib.figure
+            If `ax` is `None`, will return a figure.
+        """
+        if self.doi is None:
+            self.computeDOI()
         
         if ax is None:
             fig, ax = plt.subplots()
@@ -1986,12 +2037,10 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.set_xlim(np.min(self.elec[:,0]), np.max(self.elec[:,0]))
         def callback():
             vert = np.array(self.selector.vertices)
-            self.geom_input['polygon' + str(len(self.geom_input)+1)] = [vert[:,0].tolist(), vert[:,1].tolist()]
+            self.geom_input['polygon' + str(len(self.geom_input)+1)] = [vert[:-1,0].tolist(), vert[:-1,1].tolist()]
             ax.plot(vert[:,0], vert[:,1], '.-')
             if addAction is not None:
                 addAction()
-#        self.mesh.atribute_title = 'Material'
-#        self.mesh.show(ax=ax, zlim=self.zlim)
         # we need to assign a selector to self otherwise it's not used
         self.selector = SelectPoints(ax, typ=typ, callback=callback)
         surveyLength = np.max(self.elec[:,0]) - np.min(self.elec[:,0])
@@ -2000,8 +2049,10 @@ class R2(object): # R2 master class instanciated by the GUI
         if ax is None:
             return fig
     
+    
     def createModelMesh(self, **kwargs):
-        """Create a triangular mesh given the designed geometry.
+        """Create a triangular mesh given the designed geometry by 
+        R2.designModel().
         
         Parameters
         ----------
@@ -2061,6 +2112,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         print('assignRes0-------------', np.sum(fixed), np.sum(phase0))
     
+    
     def assignRefModel(self,res0):
         """Set the reference model according to a previous inversion, avoids 
         the need to invert reference model again for timelapse workflows. 
@@ -2084,6 +2136,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.write_attr('res0',file_name='Start_res.dat',file_path=self.dirname)
         self.referenceMdl = True
         print('Reference model successfully assigned')
+
 
     def createSequence(self, params=[('dpdp1', 1, 8)]):
         """Create a dipole-dipole sequence.
@@ -3033,9 +3086,5 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
     ax.set_xlabel('Distance [m]')
     ax.set_ylabel('Pseudo depth [m]')
 
-#%%
-k = R2()
-elec = np.c_[np.arange(24), np.zeros((24, 2))]
-k.setElec(elec)
-k.createModel()
+
 

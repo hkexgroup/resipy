@@ -266,6 +266,7 @@ class App(QMainWindow):
         self.num_xy_poly = None # to store the values
         self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
         self.plotAspect = 'equal'
+        self.iDesign = False # boolean to know if the mesh has been designed before meshing
 
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -2205,37 +2206,53 @@ class App(QMainWindow):
         tabs.setTabEnabled(2, False)
 
         meshLayout = QVBoxLayout()
-
+        
         def replotMesh():
-            regionTable.reset()
+            if self.iDesign is False:
+                regionTable.reset()
+                self.iDesign is False
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=regionTable.addRow)
             mwMesh.plot(func, aspect = self.plotAspect)
             mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             mwMesh.canvas.setFocus() # set focus on the canvas
 
+        
+        def designModel():
+            self.iDesign = True
+            # read electrodes locations
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
+            
+            # plot the interactive model
+            regionTable.reset() # TODO if designSurvey the table won't be empty
+            def func(ax):
+                self.r2.designModel(ax=ax, addAction=regionTable.addRow)
+            mwMesh.plot(func, aspect = self.plotAspect)
+            mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
+            mwMesh.canvas.setFocus() # set focus on the canvas
+            meshOutputStack.setCurrentIndex(1)
+
+        designModelBtn = QPushButton('Design Model before meshing')
+        designModelBtn.clicked.connect(designModel)
+
         def meshQuadFunc():
             elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
             if not np.isnan(surface[0,0]):
                 surface_flag = True
             else:
                 surface_flag = False
-            if np.sum(~np.isnan(elec[:,0])) == 0:
-                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
-                return
-            else:
-                self.r2.setElec(elec)
-#            nnodes = int(nnodesEdit.text())
-#            if nnodes < 4:
-#                nnodesEdit.setText('4')
-#                nnodes = 4
-#                errorDump('There need to be at least 4 elements between two electrodes.')
-#            if nnodes > 10:
-#                nnodesEdit.setText('10')
-#                nnodes = 10
-#                errorDump('Sorry no more than 10 elements between electrodes.')
             nnodes = nnodesSld.value()
             try:
                 if surface_flag:
@@ -2281,13 +2298,12 @@ class App(QMainWindow):
                 surface = None
             else:
                 surface = surface[inan,:]
-            self.r2.createMesh(typ='trian', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+            self.r2.createModelMesh(buried=buried, surface=surface,
+                                    cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
             scale.setVisible(True)
             scaleLabel.setVisible(True)
-            replotMesh()
             meshOutputStack.setCurrentIndex(1)
-
+            replotMesh()
         meshTrian = QPushButton('Triangular Mesh')
         meshTrian.setAutoDefault(True)
         meshTrian.clicked.connect(meshTrianFunc)
@@ -2442,6 +2458,10 @@ class App(QMainWindow):
 #        meshOptionTrianLayout.addWidget(clFactorEdit)
         meshOptionTrianLayout.addWidget(clFactorSld)
         
+        meshButtonTrianLayout = QHBoxLayout()
+        meshButtonTrianLayout.addWidget(designModelBtn)
+        meshButtonTrianLayout.addWidget(meshTrian)
+        
         importCustomLayout = QVBoxLayout()
         importCustomLayout.addWidget(importCustomMeshLabel2)
         importCustomLayout.addWidget(importCustomMeshBtn2)
@@ -2464,14 +2484,14 @@ class App(QMainWindow):
         meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         meshTetraGroup = QGroupBox()
         meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
-
+        
         meshQuadLayout.addLayout(meshOptionQuadLayout)
         meshQuadLayout.addWidget(meshQuad)
         meshQuadGroup.setLayout(meshQuadLayout)
         meshChoiceLayout.addWidget(meshQuadGroup)
 
         meshTrianLayout.addLayout(meshOptionTrianLayout)
-        meshTrianLayout.addWidget(meshTrian)
+        meshTrianLayout.addLayout(meshButtonTrianLayout)
         meshTrianGroup.setLayout(meshTrianLayout)
         meshChoiceLayout.addWidget(meshTrianGroup)
 
