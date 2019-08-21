@@ -3027,7 +3027,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.importBtn.clicked.connect(self.importFile)
                 self.importBtn.setVisible(False)
                 self.addWidget(self.importBtn)
-                self.rmBtn = QPushButton('-')
+                self.rmBtn = QPushButton('Remove')
                 self.rmBtn.clicked.connect(self.remove)
                 self.addWidget(self.rmBtn)
             
@@ -3080,6 +3080,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
 
         seqRowLayout = QVBoxLayout()
+        seqRowLayout.setAlignment(Qt.AlignTop)
         seqRows = []
         seqRow = RowOpt()
         seqRowLayout.addLayout(seqRow)
@@ -3096,10 +3097,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum1': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
-           'custSeq': 'Use the button to import a custom CSV file with just C+, b: C-, m: P+, n: P-'
+           'custSeq': 'Use the button to import a custom CSV file (no header) with just column1: C+, column2: C-, column3: P+, column4: P-'
             }
         
         arrayLabel = QLabel('Sequence help will be display here.')
+        arrayLabel.setAlignment(Qt.AlignCenter)
         def showArray(arg):
             if arg not in seqHelp.keys():
                 arrayLabel.setText('Sequence help not found.')
@@ -3111,7 +3113,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             a = RowOpt()
             seqRows.append(a)
             seqRowLayout.addLayout(a)
-        addRowBtn = QPushButton('+')
+        addRowBtn = QPushButton('Add sequence')
+        addRowBtn.adjustSize()
         addRowBtn.clicked.connect(addRowBtnFunc)
         
         def getDataBtnFunc():
@@ -3234,13 +3237,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardLayout = QVBoxLayout()
         forwardLayout.setAlignment(Qt.AlignTop)
         seqLayout = QHBoxLayout()
-        seqLayout.setAlignment(Qt.AlignTop)
         noiseLayout = QHBoxLayout()
 
         # top part
 #        seqLayout = QHBoxLayout()
         seqOptionLayout = QVBoxLayout()
-        seqRowLayout.setAlignment(Qt.AlignTop)
+        seqOptionLayout.setAlignment(Qt.AlignTop)
+#        seqRowLayout.setAlignment(Qt.AlignTop)
         seqOptionLayout.addLayout(seqRowLayout)
         seqOptionLayout.addWidget(addRowBtn)
         seqLayout.addLayout(seqOptionLayout, 50)
@@ -3279,9 +3282,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardOutputStack.setCurrentIndex(0)
                 
         # general forward layout
-        forwardLayout.addWidget(seqLabel, 5)
-        forwardLayout.addLayout(seqLayout, 25)
-        forwardLayout.addLayout(noiseLayout, 2)
+        forwardLayout.addWidget(seqLabel)
+        forwardLayout.addLayout(seqLayout)
+        forwardLayout.addLayout(noiseLayout)
 #        forwardLayout.addWidget(forwardBtn, 3)
 #        forwardLayout.addLayout(forwardOutputStack, 60)
 
@@ -3293,10 +3296,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         fwdSplitter.addWidget(fwdTopWidget)
         fwdSplitter.addWidget(fwdBottomWidget)
-#        fwdSplitter.setSizes([75,25])
+        fwdSplitter.setCollapsible(1, False)
         
         fwdSlpitterLayout.addWidget(fwdSplitter)
-        
         
         tabForward.setLayout(fwdSlpitterLayout)
 
