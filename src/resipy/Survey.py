@@ -1653,7 +1653,7 @@ class Survey(object):
     def normElecIdxwSeq(self,istart=None,iend=None):
         """Normalise the electrode indexing sequencing to start at 1 and ascend
         consectively (ie 1 , 2 , 3 , 4 ... ). Also checks for any electrodes 
-        which are missing out of sequence. 
+        which are missing out of an expected sequence. 
         
         Function firstly normalises all indexes so that the lowest electrode 
         number is 1. Then removes jumps in the electrode indexing.
@@ -1699,7 +1699,7 @@ class Survey(object):
                 if off<0:
                     off+=1 # need to add one to aviod 0 indexed electrodes 
                 idx_array = np.argwhere(sch_mat == crr_uni_idx[i])
-                new_id = uni_idx[i]+off
+                new_id = crr_uni_idx[i]+off
                 for j in range(len(idx_array)):
                     idx = (idx_array[j][0],idx_array[j][1])
                     surrogate[idx] = new_id
