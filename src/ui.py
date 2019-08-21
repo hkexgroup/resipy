@@ -2977,10 +2977,14 @@ class App(QMainWindow):
         tabForward = QWidget()
         tabs.addTab(tabForward, 'Forward model')
         tabs.setTabEnabled(3, False)
+        
+        fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
+        fwdSplitter = QSplitter(Qt.Vertical)
 
         seqLabel = QLabel('Design a sequence for the forward modelling. A \
 combination of multiple sequence is accepted as well as importing a custom sequence')
         seqLabel.setWordWrap(True)
+        seqLabel.setAlignment(Qt.AlignTop)
         
         # alternative design
         seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
@@ -3212,14 +3216,29 @@ combination of multiple sequence is accepted as well as importing a custom seque
             QApplication.processEvents()
             if text == 'Forward modelling done.':
                 forwardOutputStack.setCurrentIndex(1) # switch to graph
+                
+        def fwdContourFunc(state):
+            if state == Qt.Checked:
+                contour = True
+            else:
+                contour = False
+                
+            forwardPseudo.setCallback(self.r2.surveys[0].pseudo)
+            forwardPseudo.replot(aspect='auto', contour=contour)
+            if self.r2.typ[0] == 'c':
+                forwardPseudoIP.setCallback(self.r2.surveys[0].pseudoIP)
+                forwardPseudoIP.replot(aspect='auto', contour=contour)
+            
 
         # layout
         forwardLayout = QVBoxLayout()
+        forwardLayout.setAlignment(Qt.AlignTop)
         seqLayout = QHBoxLayout()
+        seqLayout.setAlignment(Qt.AlignTop)
         noiseLayout = QHBoxLayout()
 
         # top part
-        seqLayout = QHBoxLayout()
+#        seqLayout = QHBoxLayout()
         seqOptionLayout = QVBoxLayout()
         seqRowLayout.setAlignment(Qt.AlignTop)
         seqOptionLayout.addLayout(seqRowLayout)
@@ -3237,10 +3256,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
         noiseLayout.addWidget(saveSeqBtn)
 
         # pseudo dynamic layout
-        forwardPseudoLayout = QHBoxLayout()
-        forwardPseudoLayout.addWidget(forwardPseudo)
-        forwardPseudoLayout.addWidget(forwardPseudoIP)
+        forwardPseudoLayout = QVBoxLayout()
+        
+        fwdContour = QCheckBox('Contour')
+        fwdContour.stateChanged.connect(fwdContourFunc)
+        
+        forwardPseudoLayout.addWidget(fwdContour)
+        
+        forwardPseudoLayoutBottom = QHBoxLayout()
+        forwardPseudoLayoutBottom.addWidget(forwardPseudo)
+        forwardPseudoLayoutBottom.addWidget(forwardPseudoIP)
         forwardPseudoIP.hide()
+        
+        forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
 
         forwardPseudos = QWidget()
         forwardPseudos.setLayout(forwardPseudoLayout)
@@ -3255,9 +3283,22 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardLayout.addLayout(seqLayout, 25)
         forwardLayout.addLayout(noiseLayout, 2)
 #        forwardLayout.addWidget(forwardBtn, 3)
-        forwardLayout.addLayout(forwardOutputStack, 60)
+#        forwardLayout.addLayout(forwardOutputStack, 60)
+
+        fwdTopWidget = QWidget()
+        fwdTopWidget.setLayout(forwardLayout)
         
-        tabForward.setLayout(forwardLayout)
+        fwdBottomWidget = QWidget()
+        fwdBottomWidget.setLayout(forwardOutputStack)
+        
+        fwdSplitter.addWidget(fwdTopWidget)
+        fwdSplitter.addWidget(fwdBottomWidget)
+#        fwdSplitter.setSizes([75,25])
+        
+        fwdSlpitterLayout.addWidget(fwdSplitter)
+        
+        
+        tabForward.setLayout(fwdSlpitterLayout)
 
 
         #%% tab INVERSION SETTINGS
