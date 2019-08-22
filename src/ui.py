@@ -3195,6 +3195,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             calcAspectRatio()
             forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect='auto')
+            fwdContour.setVisible(True)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
             tabs.setTabEnabled(6, True)
@@ -3231,7 +3232,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.r2.typ[0] == 'c':
                 forwardPseudoIP.setCallback(self.r2.surveys[0].pseudoIP)
                 forwardPseudoIP.replot(aspect='auto', contour=contour)
-            
+        
+        fwdContour = QCheckBox('Contour')
+        fwdContour.stateChanged.connect(fwdContourFunc)
+        fwdContour.setVisible(False)
 
         # layout
         forwardLayout = QVBoxLayout()
@@ -3257,14 +3261,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         noiseLayout.addWidget(forwardBtn)
         noiseLayout.addWidget(seqOutputLabel)
         noiseLayout.addWidget(saveSeqBtn)
+        noiseLayout.addWidget(fwdContour)
 
         # pseudo dynamic layout
         forwardPseudoLayout = QVBoxLayout()
-        
-        fwdContour = QCheckBox('Contour')
-        fwdContour.stateChanged.connect(fwdContourFunc)
-        
-        forwardPseudoLayout.addWidget(fwdContour)
         
         forwardPseudoLayoutBottom = QHBoxLayout()
         forwardPseudoLayoutBottom.addWidget(forwardPseudo)
