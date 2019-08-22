@@ -2330,7 +2330,7 @@ def tetgen_import(file_path):
         
         
 #%% build a quad mesh        
-def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
+def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, doi=-1, pad=2, 
               surface_x=None,surface_z=None):
     """Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
@@ -2345,19 +2345,19 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         strings, where 'electrode' is a surface electrode; 'buried' is a buried electrode
     elemy : int, optional
         Number of elements in the fine y region
-    yf : float, optional
-         Y factor multiplier in the fine zone.
-    ygf : float, optional
-         Y factor multiplier in the coarse zone.
+    zf : float, optional
+         Z factor multiplier in the fine zone.
+    zgf : float, optional
+         Z factor multiplier in the coarse zone.
     doi : float (m), optional 
          Depth of investigation (if left as -1 = half survey width).
     pad : int, optional
          X padding outside the fine area (tipicaly twice the number of elements between electrodes).
     surface_x: array like, optional
         Default is None. x coordinates of extra surface topography points for the generation of topography in the quad mesh
-    surface_y: array like, optional
-        Default is None. y coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
-        an error will be returned if len(surface_x) != len(surface_y)
+    surface_z: array like, optional
+        Default is None. z coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
+        an error will be returned if len(surface_x) != len(surface_z)
         
             
     Returns
@@ -2366,8 +2366,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         Mesh object 
     meshx : numpy.array
         Mesh x locations for R2in file.
-    meshy : numpy.array
-        Mesh y locations for R2in file (ie node depths).
+    meshz : numpy.array
+        Mesh  locations for R2in file (ie node depths).
     topo : numpy.array
         Topography for R2in file.
     elec_node : numpy.array
@@ -2453,7 +2453,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
             
-    # create meshy
+    # create meshz
     if doi == -1:
         if bh_flag:
             doi = abs(min(elec_z))
@@ -2461,20 +2461,20 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             doi = np.abs(elec[0,0]-elec[-1,0])/2
         
 #    dyy = espacing/(elemx*4)
-    meshy = [0]
+    meshz = [0]
     dyy = 0.05
     for i in range(100):
-        meshy.append(meshy[-1]+dyy*yf)
-        dyy = dyy*yf
-        if meshy[-1] > doi:
+        meshz.append(meshz[-1]+dyy*zf)
+        dyy = dyy*zf
+        if meshz[-1] > doi:
             break
-    elemy = len(meshy)
+    elemy = len(meshz)
     elemy2 = int(elemy/2)
-    yy = np.ones(elemy2)*meshy[-1]
+    yy = np.ones(elemy2)*meshz[-1]
     for i in range(1, elemy2):
-        yy[i] = yy[i-1]+dyy*ygf
-        dyy = dyy*ygf
-    meshy = np.r_[meshy, yy[1:]]
+        yy[i] = yy[i-1]+dyy*zgf
+        dyy = dyy*zgf
+    meshz = np.r_[meshz, yy[1:]]
     
     #insert borehole electrodes? if we have boreholes / buried electrodes 
     if bh_flag:
@@ -2495,12 +2495,12 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     if bh_flag:
         #insert y values of boreholes, normalised to topography
         norm_bhy = np.interp(bh[:,0], elec[:,0], elec[:,1]) - bh[:,1]
-        meshy = np.unique(np.append(meshy,norm_bhy))
+        meshz = np.unique(np.append(meshz,norm_bhy))
     
     ###
     #find the columns relating to the electrode nodes? 
     temp_x = meshx.tolist()
-    temp_y = meshy.tolist()
+    temp_y = meshz.tolist()
     elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 because of indexing in R2. 
     
     elec_node_y = np.ones((len(elec_z),1),dtype=int)#by default electrodes are at the surface
@@ -2514,7 +2514,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                     #print(elec_node_y[i])
                     count += 1
         except ValueError:
-            raise Exception("There was a problem indexing the meshy values for electrode number %i"%i)
+            raise Exception("There was a problem indexing the meshz values for electrode number %i"%i)
                 
     elec_node = [elec_node_x,elec_node_y.T.tolist()[0]]
     
@@ -2525,11 +2525,11 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         warnings.warn("Electrode node vector and number of electrodes mismatch! ")
      
     # what is the number of regions? (elements)
-    no_elms=(len(meshx)-1)*(len(meshy)-1)
-    no_nodes=len(meshx)*len(meshy)
+    no_elms=(len(meshx)-1)*(len(meshz)-1)
+    no_nodes=len(meshx)*len(meshz)
     
     # compute node mappins (connection matrix)
-    y_dim=len(meshy)
+    y_dim=len(meshz)
     fnl_node=no_nodes-1
     
     node_mappins=(np.arange(0,fnl_node-y_dim),
@@ -2541,7 +2541,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     
     node_mappins = [list(np.delete(node_mappins[i],del_idx)) for i in range(4)]#delete excess node placements
     #compute node x and y  (and z)
-    node_x,node_z=np.meshgrid(meshx,meshy)
+    node_x,node_z=np.meshgrid(meshx,meshz)
     #account for topography in the y direction 
     node_z = [topo-node_z[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
     node_z=np.array(node_z).flatten(order='F')
@@ -2603,7 +2603,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     isort = np.argsort(xsurf)
     mesh.surface = surfacePoints[isort, :]
 
-    return mesh,meshx,meshy,topo,elec_node
+    return mesh,meshx,meshz,topo,elec_node
 
 
 #%% build a triangle mesh - using the gmsh wrapper
