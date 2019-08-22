@@ -101,7 +101,7 @@ k.filterRecip(percent=20) # remove\ing datapoints with > 20% reciprocal error
 k.removenested() # removing nested measurements
 k.iprangefilt(0,25) # setting phase shift range to 0 < -ϕ < 25
 k.pwlfit() # adding resistance power-law error model to data
-k.plotIPFit() # adding phase power-law error model to data
+k.plotIPFitParabola() # adding phase power-law error model to data
 k.err = True # using error models (DC and IP) - automatically done in the GUI when fitting the error model
 k.createMesh(typ='trian') # create triangular mesh
 k.param['a_wgt'] = 0 # "a_wgt" = 0 when there is individual resistance error
@@ -117,7 +117,7 @@ ax = axs[0]
 k.pwlfit(ax=ax)
 ax.set_title('(a) ' + ax.get_title())
 ax = axs[1]
-k.plotIPFit(ax=ax)
+k.plotIPFitParabola(ax=ax)
 ax.set_title('(b) ' + ax.get_title())
 fig.tight_layout()
 fig.savefig(figdir + 'ip-error-models.jpg', dpi=1000)

@@ -683,16 +683,16 @@ class Survey(object):
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
         ax.semilogx(bins_ip.iloc[:,0],R_error_predict_ip,'r', label="Parabola Fit")
         ax.set_ylabel(r's($\phi$) [mrad]')
-        ax.set_xlabel(r'R [$\Omega$]')      
+        ax.set_xlabel(r'$R_{avg}$ [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
         R2_ip= self.R_sqr(bins_ip.iloc[:,1],R_error_predict_ip)
         a3 = coefs_ip[0]
         b3 = coefs_ip[1]
         c3 = coefs_ip[2]
         if a3 > 0.001:
-            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.3f}$R^2${:+.3f}$R${:+.3f} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.3f}$R_{{avg}}^2${:+.3f}$R_{{avg}}${:+.3f} ($R_{{avg}}^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
         else:
-            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.2e}$R^2${:+.2e}$R${:+.2e} (R$^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.2e}$R_{{avg}}^2${:+.2e}$R_{{avg}}${:+.2e} ($R_{{avg}^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
         self.df['phaseError'] = (coefs_ip[0]*np.log10(np.abs(self.df['recipMean']))**2) + (coefs_ip[1]*np.log10(np.abs(self.df['recipMean'])) + coefs_ip[2])
         self.df['phase'] = -self.kFactor*self.df['ip']
         if ax is None:
