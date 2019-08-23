@@ -873,10 +873,6 @@ class Mesh:
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-#            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code (inefficent way but technically accurate)
-#            face2 = int(str(idx1)+str(idx2)+str(idx4))
-#            face3 = int(str(idx2)+str(idx3)+str(idx4))
-#            face4 = int(str(idx1)+str(idx4)+str(idx3))
             face1 = idx1*idx2*idx3 # assign each face a code
             face2 = idx1*idx2*idx4
             face3 = idx2*idx3*idx4
@@ -1604,7 +1600,9 @@ class Mesh:
                 raise ValueError('Number of zone array elements given to exportTetgenMesh does not match the number of elements in the mesh.')
         else:
             zone = [1]*self.num_elms # all elements are inside zone 1 
+            
         #output .node file
+        print('writing .node file... ',end='')
         fh = open(prefix+'.1.node','w')
         #header line : 
         #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
@@ -1619,9 +1617,11 @@ class Mesh:
                                                         1,1)
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
-        fh.close()    
+        fh.close()   
+        print('done.')
             
         #output .ele file 
+        print('writing .ele file... ',end='')
         fh = open(prefix+'.1.ele','w')
         #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo(),1))
@@ -1636,71 +1636,44 @@ class Mesh:
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
         fh.close()
+        print('done.')
         
         #output .trn file 
+        print('writing .trn file... ',end='')
         fh = open(prefix+'.trn','w')
         fh.write('0\t0\t0')
         fh.close()
-         
-        #out .neigh file
-        print('Calculating neighbouring cells, this can take some time!..', end='\n')            
-        elm_id = self.elm_id
-        
-        sys.stdout.write('Computing delta x matrix ... ')
-        a,b = np.meshgrid(self.elm_centre[0],self.elm_centre[0])
-        dX = (a - b)**2
-        sys.stdout.flush()
-        sys.stdout.write('\rComputing delta y matrix ... ')
-        a,b = np.meshgrid(self.elm_centre[1],self.elm_centre[1])
-        dY = (a - b)**2
-        sys.stdout.flush()
-        sys.stdout.write('\rComputing delta z matrix ... ')
-        a,b = np.meshgrid(self.elm_centre[2],self.elm_centre[2])
-        dZ = (a - b)**2
-        
-        sys.stdout.flush()
-        sys.stdout.write('\rComputing distance matrix ... ')
-        dist = np.sqrt(dX+dY+dZ)
-        #dist = dX+dY+dZ
-        
-        sys.stdout.flush()
-        sys.stdout.write('\rFinding minimum distances ... ')
-        sorted_idx = np.argsort(dist,axis=1)
-        sys.stdout.write('Done.\n')
-        
-        fh = open(prefix+'.1.neigh','w')#write to file 
-        fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
-        for i in range(self.num_elms):
-            idx = sorted_idx[i,1:5]
-            loc_ids = elm_id[idx]
-            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
-                                                            loc_ids[0],
-                                                            loc_ids[1],
-                                                            loc_ids[2],
-                                                            loc_ids[3])
-            fh.write(line)
-            
-        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
-        fh.close()
+        print('done.')
         
         #write .face file - which describes elements on the outer edges of the mesh
-        #todo this we need to find the elements on the outside of the mesh, hence 
-        #this involves borrowing code from show3D. 
-        print('Computing which elements lie on the edge of the mesh...',end='')
-        tri_combo = np.zeros((self.num_elms,4),dtype='float64')
-        con_mat=self.con_matrix
-        inside_numel = len(con_mat[0])#number of inside elements 
         
-        for i in range(inside_numel):
+        #todo this we need to find the elements on the outside of the mesh, idea
+        #is to find the elements with faces which are used only once. 
+        print('Computing which elements lie on the edge of the mesh... ',end='')
+        tri_combo = np.zeros((self.num_elms,4),dtype='int64')
+        con_mat=self.con_matrix
+       
+        #first construct unique identifiers for each face in the mesh 
+        for i in range(self.num_elms):
             idx1 = con_mat[0][i]#extract indexes 
             idx2 = con_mat[1][i]
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code (more accurate than multiplying together)
-            face2 = int(str(idx1)+str(idx2)+str(idx4))
-            face3 = int(str(idx2)+str(idx3)+str(idx4))
-            face4 = int(str(idx1)+str(idx4)+str(idx3))
+            # assign each face an organised and unique code
+            #sort face indexes 
+            face1s = sorted((idx2,idx3,idx4))
+            face2s = sorted((idx1,idx4,idx3))
+            face3s = sorted((idx1,idx2,idx4))
+            face4s = sorted((idx1,idx2,idx3))
+            face1t = [str(face1s[i]) for i in range(3)]
+            face2t = [str(face2s[i]) for i in range(3)]
+            face3t = [str(face3s[i]) for i in range(3)]
+            face4t = [str(face4s[i]) for i in range(3)]
+            face1 = int(''.join(face1t))
+            face2 = int(''.join(face2t))
+            face3 = int(''.join(face3t))
+            face4 = int(''.join(face4t))
 
             tri_combo[i,0] = face1#face 1 
             tri_combo[i,1] = face2#face 2 
@@ -1708,8 +1681,10 @@ class Mesh:
             tri_combo[i,3] = face4#face 4 
             
         #shape = tri_combo.shape
-        tri_combo = tri_combo.flatten()
-        temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
+        tri_combof = tri_combo.flatten()#flattening the array means every 4th entry is in the 1st column of the original tri_combo
+        #find the unique values 
+        temp,index,counts = np.unique(tri_combof,return_index=True,return_counts=True)
+        #find faces which only appear once 
         single_vals_idx = counts==1
         edge_element_idx = index[single_vals_idx]/4
         face_element_idx = np.floor(edge_element_idx)
@@ -1717,28 +1692,31 @@ class Mesh:
         
         truncated_numel = len(face_element_idx)
         face_list = [0] * truncated_numel
+        
+        #construct 2d triangles (with nodes) from faces 
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
             idx1 = con_mat[0][ref]
             idx2 = con_mat[1][ref]
             idx3 = con_mat[2][ref]
             idx4 = con_mat[3][ref]
-                       
-            face1 = (idx1,idx2,idx3)
-            face2 = (idx1,idx2,idx4)
-            face3 = (idx2,idx3,idx4)
-            face4 = (idx1,idx4,idx3)
             
-            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
+            face1 = (idx2,idx3,idx4)
+            face2 = (idx1,idx4,idx3)
+            face3 = (idx1,idx2,idx4)
+            face4 = (idx1,idx2,idx3)                     
+            
+            if face_probe[i] == 0: #if single_val_idx. == 0 >>> face1
                 face_list[i] = face1#face 1 
-            elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
+            elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 >>> face2
                 face_list[i] = face2#face 2
-            elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
+            elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 >>> face3
                 face_list[i] = face3#face 3 
-            elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
+            elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 >>> face4
                 face_list[i] = face4#face 4  
-        print('Done.')    
+        print('done.')    
         
+        print('writing .face file... ',end='')
         fh = open(prefix+'.1.face','w')
         #First line: <# of faces> <boundary marker (0 or 1)>
         fh.write('{:d}\t{:d}\n'.format(truncated_numel,1))#header line 
@@ -1753,7 +1731,52 @@ class Mesh:
         
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
+        print('done.')
         
+        #out .neigh file
+        #Here we want look for faces which share with another element. 
+        print('Calculating neighbouring cells...', end='\n')            
+        #using variables from .face creation
+        double_vals_idx = counts==2
+        tri_comboft = temp[double_vals_idx]#flattened and truncated 
+        indext = index[double_vals_idx] # truncated indexes
+        neigh_array = np.ones((len(tri_combof),1),dtype='int64')*-1
+        
+        #apply correction for moving columns around
+        flatten_idx = np.zeros_like(tri_combo)
+        for i in range(self.num_elms):
+            flatten_idx[i,:] = i
+        
+        correction = flatten_idx.flatten()
+        
+        for i in range(len(tri_comboft)):
+            idx = np.argwhere(tri_combof == tri_comboft[i])
+            #idx should always return 2 values, we want the one which isn't the current index
+            curr_idx = indext[i]
+            neigh_idx = idx[idx!=curr_idx]
+        
+            neigh_array[curr_idx] = correction[neigh_idx]+1#look up neighbour index
+            
+        neigh_matrix = neigh_array.reshape((self.num_elms,4))
+            
+        print('done.')
+        
+        print('writing .neigh file... ',end='')
+        fh = open(prefix+'.1.neigh','w') # write to file 
+        fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
+        elm_id = self.elm_id
+        for i in range(self.num_elms):
+            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
+                                                            neigh_matrix[i,0],
+                                                            neigh_matrix[i,1],
+                                                            neigh_matrix[i,2],
+                                                            neigh_matrix[i,3])
+            fh.write(line)
+            
+        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
+        fh.close()
+        print('done.')
+                
     def meshLookUp(self,look_up_mesh):
         """Look up values from another mesh using nearest neighbour look up, 
         assign attributes to the current mesh class. 
