@@ -357,10 +357,8 @@ k.createSurvey('./resipy/test/IP/IP_MICP_all.csv', ftype='Syscal') # import data
 k.filterRecip(percent=5) # remove\ing datapoints with > 20% reciprocal error
 k.removenested() # removing nested measurements
 k.iprangefilt(0,20) # setting phase shift range to 0 < -ϕ < 25
-k.linfit()
-k.plotIPFit()
-#k.pwlfit() # adding resistance power-law error model to data
-#k.plotIPFitParabola() # adding phase power-law error model to data
+k.linfit() # adding resistance power-law error model to data
+k.plotIPFit() # adding phase power-law error model to data
 k.err = True # using error models (DC and IP) - automatically done in the GUI when fitting the error model
 k.createMesh(typ='trian') # create triangular mesh
 k.param['a_wgt'] = 0 # "a_wgt" = 0 when there is individual resistance error
