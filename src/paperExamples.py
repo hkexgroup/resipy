@@ -413,18 +413,14 @@ k.showResults(index=1, attr='difference(percent)') # show the differences betwee
 
 
 #%% graph
-fig, axs = plt.subplots(3, 1, figsize=(5, 6), sharex=True)
+fig, axs = plt.subplots(2, 1, figsize=(5, 4), sharex=True)
 ax = axs[0]
 ax.set_title('(a) 15th March to 3rd April')
 k.showResults(ax=ax, index=1, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 ax.set_xlabel(None)
 ax = axs[1]
-ax.set_title('(b) 15th March to 27th April')
+ax.set_title('(b) 15th March to 16th May')
 k.showResults(ax=ax, index=2, attr='difference(percent)', vmin=0, vmax=50, sens=False)
-ax.set_xlabel(None)
-ax = axs[2]
-ax.set_title('(c) 15th March to 16th May')
-k.showResults(ax=ax, index=3, attr='difference(percent)', vmin=0, vmax=50, sens=False)
 fig.tight_layout()
 fig.savefig(figdir + 'woburn.eps')
 fig.savefig(figdir + 'woburn.jpg', dpi=1000)
