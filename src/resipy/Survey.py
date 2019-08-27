@@ -1668,7 +1668,7 @@ class Survey(object):
         sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
         uni_idx = np.unique(sch_mat.flatten()) # returns sorted and unique array of electrode indexes
         
-        if expected == None: 
+        if expected is None: 
             comp_idx = np.arange(1,len(uni_idx)+1,1) # an array of values order consectively 
         else:
             comp_idx = np.array(expected) # comparison array 
