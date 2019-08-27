@@ -365,7 +365,7 @@ k.err = True # using error models (DC and IP) - automatically done in the GUI wh
 k.createMesh(typ='trian') # create triangular mesh
 k.param['a_wgt'] = 0 # "a_wgt" = 0 when there is individual resistance error
 k.param['b_wgt'] = 0 # "b_wgt" = 0 when there is individual phase error
-k.param['tolerance'] = 1.15 # based on data, field site and experience
+k.param['tolerance'] = 1.14 # based on data, field site and experience
 k.param['min_error'] = 0.001
 k.invert() # run the inversion (and write cR2.in and protocol.dat automatically)
 k.showResults(attr='Magnitude(Ohm.m)') # show the inverted real conductivity section
