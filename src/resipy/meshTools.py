@@ -1289,6 +1289,57 @@ class Mesh:
         if len(np.unique(node_in_mesh)) != len(new_x):
             warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
+    
+    def truncateMesh(self,xlim=None,ylim=None,zlim=None):
+        """Truncate the mesh to certian dimensions. Similar to how R3t behaves 
+        when outputting inverted results. 
+        
+        Parameters
+        ------------
+        xlim : tuple, optional
+            Axis x limits as `(xmin, xmax)`.
+        ylim : tuple, optional
+            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(ymin, ymax)`. 
+        """
+        if xlim is None:
+            xlim=[min(self.elec_x), max(self.elec_x)]
+        if ylim is None:
+            ylim=[min(self.elec_y), max(self.elec_y)]
+        if zlim is None:
+            zlim=[min(self.elec_z), max(self.elec_z)]
+            
+        elm_x = np.array(self.elm_centre[0])
+        elm_y = np.array(self.elm_centre[1])
+        elm_z = np.array(self.elm_centre[2])
+        in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find inside of limits 
+        temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
+        con_mat=list(temp_con_mat[:,in_elem]) # truncate connection matrix
+        
+        new_attr_cache = self.attr_cache.copy()
+        new_attr = np.array(self.cell_attributes)
+        
+        elm_id = np.array(self.elm_id)
+        elm_area = np.array(self.elm_area)
+
+        #truncate the attribute table down to the inside elements 
+        for key in self.attr_cache.keys():
+            X = np.array(self.attr_cache[key])
+            new_attr_cache[key] = X[in_elem]
+        
+        self.con_matrix = con_mat
+        self.attr_cache = new_attr_cache
+        self.num_elms = len(con_mat[0])
+        self.cell_attributes = new_attr[in_elem]
+        self.elm_id = elm_id[in_elem]
+        self.elm_area = elm_area[in_elem]
+        new_elm_centre = [[],[],[]]
+        new_elm_centre[0] = elm_x[in_elem]
+        new_elm_centre[1] = elm_y[in_elem]
+        new_elm_centre[2] = elm_z[in_elem]
+        self.elm_centre = new_elm_centre
+        
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """ Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
@@ -1387,9 +1438,7 @@ class Mesh:
         title: string, optional
             Header string written at the top of the vtk file .
         """
-        #open file and write header information    
-        fh = open(file_path,'w')
-        fh.write("# vtk DataFile Version 3.0\n")
+        #formalities 
         if title == None:
             try:
                 title = self.mesh_title
@@ -1397,7 +1446,9 @@ class Mesh:
                 title = "output from resipy meshTools module"
         if not file_path.endswith('.vtk'):
             file_path +='.vtk'#append .vtk extension to end of file path if not there
-            
+        #open file and write header information  
+        fh = open(file_path,'w')
+        fh.write("# vtk DataFile Version 3.0\n")
         fh.write(title+"\n")
         fh.write("ASCII\nDATASET UNSTRUCTURED_GRID\n")
         #define node coordinates
