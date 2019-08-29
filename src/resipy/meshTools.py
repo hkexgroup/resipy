@@ -582,6 +582,7 @@ class Mesh:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
                     alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
+#                    alphas = np.logspace(0, -1, self.num_elms)#array of alpha values 
                     raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                     raw_alpha[:, -1] = alphas
                     alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
