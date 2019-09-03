@@ -127,6 +127,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             'buried' = buried electrode, placed the mesh surface
             'borehole#' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
                         borehole numbering starts at 1 and ascends numerically by 1. 
+            'remote' = remote electrode, this will not be actaully meshed, as often remote electrode coordinates
+                        are given arbitary values like -999. Instead every remote electrode found will be 
+                        randomly added as a node in the background region towards the lower left hand corner of 
+                        of the mesh. 
     geom_input: dict, optional
         Allows for further customisation of the 2D mesh, its a
         dictionary contianing surface topography, polygons and boundaries 
@@ -194,6 +198,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         raise ValueError('The length of the electrode x and z arrays does not match')
     bh_flag = False
     bu_flag = False
+
     #determine the relevant node ordering for the surface electrodes? 
     if electrode_type is not None:
         if not isinstance(electrode_type,list):
@@ -204,10 +209,12 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         surface_idx=[]#surface electrode index
         bh_idx=[]#borehole index
         bur_idx=[]#buried electrode index 
+        rem_idx=[]#remote electrode index
         for i,key in enumerate(electrode_type):
             if key == 'electrode': surface_idx.append(i)
             if key == 'buried': bur_idx.append(i); bu_flag = True
             if key == 'borehole1': bh_flag = True
+            if key == 'remote':rem_idx.append(i)
         
         if len(surface_idx)>0:# then surface electrodes are present
             elec_x=np.array(electrodes[0])[surface_idx]
@@ -318,9 +325,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             flag.append('topography point')
             
     #catch an error where the fine mesh region will truncate where the electrodes are        
-    if min(electrodes[0]) < min(x_pts):
-        raise ValueError("the minimum X coordinate value for the surface of the mesh must be smaller than the minimum electrode X coordinate")
-    if max(electrodes[0]) > max(x_pts):
+    if min(elec_x) < min(x_pts):
+        raise ValueError("The minimum X coordinate value for the surface of the mesh must be smaller than the minimum electrode X coordinate")
+    if max(elec_x) > max(x_pts):
         raise ValueError("The maximum X coordinate value for the surface of the mesh must be greater than the maximum electrode X coordinate") 
     
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
@@ -464,10 +471,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     no_lin=tot_lins#+1
     no_pts=tot_pnts#+1
     #add borehole electrode strings
-    print('probing for boundaries and other additions to the mesh')
+    #print('probing for boundaries and other additions to the mesh')
     count = 0
     if bh_flag:
-        fh.write("\n//Boreholes? \n")
+        fh.write("\n//Boreholes \n")
         while True:
             count += 1
             key = 'borehole'+str(count)#count through the borehole keys
@@ -503,7 +510,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
     
     no_plane = 1 # number of plane surfaces so far (actually two)
-    fh.write("\n//Adding polygons?\n")
+    fh.write("\n//Adding polygons\n")
     line_loops = []
     count = 0    
     while True:  
@@ -534,7 +541,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                     fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
                 line_idx.append(no_lin)
             #make line loop out of polygon
-            fh.write("//make lines forming polygon into a line loop? - current inactive due to unexpected behaviour in gmsh\n")
+            fh.write("//make lines forming polygons from line loops\n")
             no_lin += 1
 #            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
             fh.write("Line Loop(%i) = {%s};\n"%(no_lin,str(line_idx).strip('[').strip(']')))
@@ -560,7 +567,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     
     #add buried electrodes? (added after as we need Surface 1 to be defined)       
     if bu_flag:
-        print('buried electrodes added to input file')
         fh.write("\n//Buried electrodes \n")  
         buried_x = np.array(electrodes[0])[bur_idx]#get buried electrode coordinate information
         buried_z = np.array(electrodes[1])[bur_idx]
@@ -577,8 +583,27 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         elec_x_cache = np.append(elec_x_cache,buried_x)
         elec_z_cache = np.append(elec_z_cache,buried_z)
         
+    if len(rem_idx)>0: #then we need to add remote electrodes to the mesh
+        fh.write("\n//Remote electrodes \n")
+        e_pt_idx = [0]*len(rem_idx)
+        #put points in lower left hand corner of the outer region
+        #if an electrode does have the remote flag, then chances are it has 
+        #a bogus coordinate associated with it (ie. -99999)
+        for k in range(len(rem_idx)):
+            no_pts += 1
+            remote_x = x_pts[0]-flank + 10*np.random.rand()
+            remote_z = b_max_depth  + 10*np.random.rand()
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//remote electrode\n"%(no_pts,remote_x,remote_z,z_pts[0]))
+            e_pt_idx[k] = no_pts
+            elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
+            elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])
+            
+        node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
+        fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
+        fh.write('//End of remote electrodes.\n')
+        
     
-    fh.write("\n//Adding boundaries?\n")
+    fh.write("\n//Adding boundaries\n")
     count = 0   
     while True:
         count += 1        

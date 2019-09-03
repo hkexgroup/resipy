@@ -2849,7 +2849,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     elec_z: array like 
         electrode z coordinates 
     elec_type: list of strings, optional
-        type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list   
+        Defines if electrodes are buried or not.   
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the working directory.
     interp_method: string, default ='bilinear' optional
@@ -2932,6 +2932,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         surf_y = []
         surf_z = []
     
+    rem_elec_idx = []
     if elec_type is not None:
         warnings.warn("Borehole electrode meshes still in development!")
         if not isinstance(elec_type,list):
@@ -2944,28 +2945,34 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         bur_elec_x = []
         bur_elec_y = []
         bur_elec_z = []
+        
+        if elec_z is None:
+            elec_z = np.zeros_like(elec_x)
         for i, key in enumerate(elec_type):
             if key == 'buried':
                 bur_elec_x.append(elec_x[i])
                 bur_elec_y.append(elec_y[i])
                 bur_elec_z.append(elec_z[i])
-            if key == 'surface':
+            if key == 'surface' or key=='electrode':
                 surf_elec_x.append(elec_x[i])
                 surf_elec_y.append(elec_y[i])
                 surf_elec_z.append(elec_z[i])
+            if key == 'remote':
+                rem_elec_idx.append(i)
         #interpolate in order to normalise buried electrode elevations to 0
         x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
         y_interp = np.append(surf_elec_y,surf_y)
         z_interp = np.append(surf_elec_z,surf_z)
         
-        if interp_method == 'idw': 
-            bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
-        elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
-            bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
-        elif interp_method == 'nearest':
-            bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
-        elif interp_method == 'spline':
-            bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
+        if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
+            if interp_method == 'idw': 
+                bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
+            elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
+                bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+            elif interp_method == 'nearest':
+                bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+            elif interp_method == 'spline':
+                bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
@@ -2973,15 +2980,20 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             surf_elec_z = np.zeros_like(elec_x)
             elec_z = np.zeros_like(elec_x)
         else:
-            surf_elec_z = elec_z 
+            surf_elec_z = elec_z.copy()
             elec_z = np.array(elec_z) - np.array(elec_z)#normalise elec_z
+            
+    #check if remeote electrodes present, and remove them 
+    if len(rem_elec_idx)>0:
+        elec_x = np.delete(elec_x,rem_elec_idx)
+        elec_y = np.delete(elec_y,rem_elec_idx)
+        elec_z = np.delete(elec_z,rem_elec_idx)
          
     #check directories 
     if path == "exe":
         ewd = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 path)
-        #print(ewd) #ewd - exe working directory 
     else:
         ewd = path # points to the location of the .exe 
         # else its assumed a custom directory has been given to the gmsh.exe 
@@ -2997,7 +3009,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         
     else:
         node_pos = gw.box_3d([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
-        
+            
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
@@ -3039,9 +3051,11 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
     print('interpolating topography onto mesh using %s interpolation...'%interp_method, end='')
+    
     x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)
+
     #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method == 'idw': 
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
@@ -3077,6 +3091,14 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         elm_z[i] = sum((n1[2],n2[2],n3[2],n4[2]))/npere
     
     mesh.elm_centre = (elm_x, elm_y, elm_z)
+
+    #check if remeote electrodes present, and insert them into the node position array
+    if len(rem_elec_idx)>0: 
+        rem_node_bool = min(node_x) == node_x #& (min(node_y) == node_y) & (min(node_z) == node_z)
+        rem_node = np.argwhere(rem_node_bool == True)
+        print(rem_elec_idx)
+        node_pos = np.insert(node_pos,np.array(rem_elec_idx)-1,[rem_node[0][0]]*len(rem_elec_idx),axis=0)
+        
     #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
