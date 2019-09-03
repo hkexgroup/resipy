@@ -678,6 +678,15 @@ class R2(object): # R2 master class instanciated by the GUI
         """Compute the Depth Of Investigation (DOI).
         """
         elec = self.elec.copy()
+        
+        #check if remote electrodes present? 
+        remote_flags = [-999999,-99999,-9999,-999] # values asssociated with remote electrodes 
+        for r in remote_flags:
+            check = elec == r
+            hits = np.argwhere(check==True)
+            if len(hits)>0:#if hits have been made delete the coordinates so they dont interefere with the doi calculation
+                elec = np.delete(elec,hits[:,0],axis=0)
+                
         if all(self.elec[:,1] == 0): # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
@@ -731,7 +740,8 @@ class R2(object): # R2 master class instanciated by the GUI
         
     
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
+                   cl=-1, dump=print, res0=100, show_output=True, doi=None, 
+                   remote = None, **kwargs):
         """Create a mesh.
         
         Parameters
@@ -758,6 +768,9 @@ class R2(object): # R2 master class instanciated by the GUI
             Starting resistivity for mesh elements. 
         show_output : bool, optional
             If `True`, the output of gmsh will be shown on screen.
+        remote : bool, optional
+            Boolean array of electrodes that are remote (ie not real). Should be the same
+            length as `R2.elec`
         kwargs: -
             Keyword arguments to be passed to mesh generation schemes 
         """
@@ -821,6 +834,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     and elec.shape[0] == len(buried)
                     and np.sum(buried) != 0):
                 elec_type[buried]='buried'
+            if remote is not None:
+                elec_type[remote]='remote'
             
             if surface is not None:
                 if surface.shape[1] == 2:
@@ -855,7 +870,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if cl == -1:
                     dist = cdist(self.elec[:,:2])/2 # half the minimal electrode distance
                     cl = np.min(dist[dist != 0])
-                elec_type = None # for now
+                #elec_type = None # for now
                 mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
                              path=os.path.join(self.apiPath, 'exe'),
                              surface_refinement=surface,
