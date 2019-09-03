@@ -16,18 +16,18 @@ import os
 import sys
 #sys.path.insert(0, os.path.abspath('..'))
 sys.path.append(os.path.relpath('../src'))
-
+import resipy
 
 # -- Project information -----------------------------------------------------
 
-project = 'pyR2'
-copyright = '2018, G. Blanchy, S. Saneiyan, J. Boyd'
-author = 'G. Blanchy, S. Saneiyan, J. Boyd'
+project = 'ResIPy'
+copyright = '2019, G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
+author = 'G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
 
 # The short X.Y version
-version = ''
+version = resipy.ResIPy_version
 # The full version, including alpha/beta/rc tags
-release = 'v0.1'
+release = resipy.ResIPy_version
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,10 +42,24 @@ release = 'v0.1'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
+    'sphinx.ext.mathjax',
     'numpydoc',
+#    'nbsphinx',
+    'sphinx_nbexamples',
 ]
 
 numpydoc_show_class_members = False
+
+
+example_gallery_config = {
+    'examples_dirs': '../jupyter-notebook',
+    'gallery_dirs': 'auto_examples',
+    'dont_preprocess': '../jupyter-notebook/Morris.ipynb',
+    'pattern': '.+.ipynb',
+    'urls': 'https://gitlab.com/hkex/pyr2/blob/master/jupyter-notebook',
+    'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fpyr2/stable?filepath=jupyter-notebook',
+}
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -80,7 +94,8 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'nature'
+html_logo = '../src/logo.png'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -107,8 +122,8 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyR2doc'
-
+htmlhelp_basename = 'resipydoc'
+numfig = True
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -134,7 +149,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'pyR2.tex', 'pyR2 Documentation',
+    (master_doc, 'resipy.tex', 'ResIPy Documentation',
      'G. Blanchy, S. Saneiyan, J. Boyd', 'manual'),
 ]
 
@@ -144,7 +159,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'pyr2', 'pyR2 Documentation',
+    (master_doc, 'resipy', 'ResIPy Documentation',
      [author], 1)
 ]
 
@@ -155,9 +170,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'pyR2', 'pyR2 Documentation',
-     author, 'pyR2', 'One line description of project.',
-     'Miscellaneous'),
+    (master_doc, 'ResIPy', 'ResIPy Documentation',
+     author, 'ResIPy', 'Processing and inversion of DC/IP resistivity data',
+     'Python API and GUI around the inversion codes R2/cR2/R3t/cR3t.'),
 ]
 
 
