@@ -2945,6 +2945,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         bur_elec_x = []
         bur_elec_y = []
         bur_elec_z = []
+        surf_elec_idx = []
+        bur_elec_idx = []
         
         if elec_z is None:
             elec_z = np.zeros_like(elec_x)
@@ -2953,10 +2955,12 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 bur_elec_x.append(elec_x[i])
                 bur_elec_y.append(elec_y[i])
                 bur_elec_z.append(elec_z[i])
+                bur_elec_idx.append(i)
             if key == 'surface' or key=='electrode':
                 surf_elec_x.append(elec_x[i])
                 surf_elec_y.append(elec_y[i])
                 surf_elec_z.append(elec_z[i])
+                surf_elec_idx.append(i)
             if key == 'remote':
                 rem_elec_idx.append(i)
         #interpolate in order to normalise buried electrode elevations to 0
@@ -2973,6 +2977,11 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
             elif interp_method == 'spline':
                 bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
+                
+        elec_z = np.array(elec_z) 
+        elec_z[surf_elec_idx] = 0
+        elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z # normalise to zero surface 
+        
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
