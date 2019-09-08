@@ -682,12 +682,9 @@ class R2(object): # R2 master class instanciated by the GUI
         #check if remote electrodes present? 
         remote_flags = [-9999999, -999999, -99999,-9999,-999,
                         9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes 
-        for r in remote_flags:
-            check = elec == r
-            hits = np.argwhere(check==True)
-            if len(hits)>0:#if hits have been made delete the coordinates so they dont interefere with the doi calculation
-                elec = np.delete(elec,hits[:,0],axis=0)
-                
+        iremote = np.in1d(self.elec[:,0], remote_flags)
+        elec = elec[~iremote,:]        
+        
         if all(self.elec[:,1] == 0): # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
@@ -698,9 +695,9 @@ class R2(object): # R2 master class instanciated by the GUI
 
             # set num_xy_poly
             self.param['num_xy_poly'] = 5
-            ymax = np.max(self.elec[:,2])
+            ymax = np.max(elec[:,2])
             ymin = self.doi
-            xmin, xmax = np.min(self.elec[:,0]), np.max(self.elec[:,0])
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
             xy_poly_table = np.array([
             [xmin, ymax],
             [xmax, ymax],
@@ -717,9 +714,9 @@ class R2(object): # R2 master class instanciated by the GUI
             
             # set num_xy_poly
             self.param['num_xy_poly'] = 5
-            xmin, xmax = np.min(self.elec[:,0]), np.max(self.elec[:,0])
-            ymin, ymax = np.min(self.elec[:,1]), np.max(self.elec[:,1])
-            zmin, zmax = self.doi, np.max(self.elec[:,2])
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            ymin, ymax = np.min(elec[:,1]), np.max(elec[:,1])
+            zmin, zmax = self.doi, np.max(elec[:,2])
             if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D
                 xy_poly_table = np.array([
                 [xmin, zmax],
@@ -1794,9 +1791,13 @@ class R2(object): # R2 master class instanciated by the GUI
             print('reading ref', fresults)
             mesh = mt.vtk_import(fresults)
             mesh.mesh_title = self.surveys[0].name
-            mesh.elec_x = self.elec[:,0]
-            mesh.elec_y = self.elec[:,1]
-            mesh.elec_z = self.elec[:,2]
+            elec = self.elec.copy()
+            remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes 
+            iremote = np.in1d(elec[:,0], remote_flags)
+            mesh.elec_x = elec[~iremote,0]
+            mesh.elec_y = elec[~iremote,1]
+            mesh.elec_z = elec[~iremote,2]
             mesh.surface = self.mesh.surface
             self.meshResults.append(mesh)
         if self.iForward is True:
@@ -1822,9 +1823,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 try:
                     mesh = mt.vtk_import(fresults)
                     mesh.mesh_title = self.surveys[j].name
-                    mesh.elec_x = self.surveys[j].elec[:,0]
-                    mesh.elec_y = self.surveys[j].elec[:,1]
-                    mesh.elec_z = self.surveys[j].elec[:,2]
+                    elec = self.surveys[j].elec.copy()
+                    elec = self.elec.copy()
+                    remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                                9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes 
+                    iremote = np.in1d(elec[:,0], remote_flags)
+                    mesh.elec_x = elec[~iremote,0]
+                    mesh.elec_y = elec[~iremote,1]
+                    mesh.elec_z = elec[~iremote,2]
                     mesh.surface = self.mesh.surface
                     self.meshResults.append(mesh)
                     print('done')
