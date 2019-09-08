@@ -112,6 +112,7 @@ class Mesh:
         self.regions = regions
         self.surface = None # surface points for cropping the mesh when contouring
         #decide if mesh is 3D or not 
+        self.iremote = None # specify which electrode is remote
         if max(node_y) - min(node_y) == 0: # mesh is probably 2D 
             self.ndims=2
         else:
@@ -404,12 +405,19 @@ class Mesh:
             self.fig = ax.figure
             self.ax = ax
         #if no dimensions are given then set the plot limits to edge of mesh
+        
+        if self.iremote is None:
+            iremote = np.zeros(len(self.elec_x), dtype=bool)
+        else:
+            iremote = self.iremote
+        elec_x = self.elec_x[~iremote]
         try: 
             if xlim=="default":
-                xlim=[min(self.elec_x),max(self.elec_x)]
+                xlim=[min(elec_x),max(elec_x)]
+                print('xlim=', xlim)
             if zlim=="default":
-                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
-                #print(doiEstimate)
+                doiEstimate = 2/3*np.abs(elec_x[0]-elec_x[-1])
+                # longest dipole calculation available in R2 class
                 zlim=[min(self.elec_z)-doiEstimate,max(self.elec_z)]
         except AttributeError:
             if xlim=="default":
@@ -645,7 +653,7 @@ class Mesh:
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(self.elec_x,self.elec_z,'ko')
+                ax.plot(elec_x, self.elec_z[~iremote],'ko')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
@@ -2809,6 +2817,10 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         os.remove(file_name+".geo");os.remove(file_name+".msh")
 
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+    
+    # add remote if any
+    iremote = np.array([a == 'remote' for a in elec_type])
+    mesh.iremote = iremote
     
     # point at the surface
     xsurf = []
