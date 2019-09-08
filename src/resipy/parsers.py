@@ -95,28 +95,37 @@ def syscalParser(fname, spacing=None):
                                     'M19 (mV/V)':'M19',
                                     'M20 (mV/V)':'M20',
                                     'TM1 (ms)':'TM1'})
-        
-        array = df[['a','b','m','n']].values
-        arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        if arrayMin != 0:
-            array -= arrayMin
-        espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-        if spacing is None:
-            spacing = espacing
-        array = np.round(array/spacing+1).astype(int)
-        df[['a','b','m','n']] = array
+    
         df['resist'] = df['vp']/df['i']
-        imax = int(np.max(array))
-        elec = np.zeros((imax,3))
-        elec[:,0] = np.arange(0,imax)*spacing
+
+        if spacing is None:    
+            # for unregularly spaced array
+            array = df[['a','b','m','n']].values
+            val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+            elecLabel = 1 + np.arange(len(val))
+            newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+            df.loc[:,['a','b','m','n']] = newval
+            elec = np.c_[val, np.zeros((len(val),2))]
+        else:        
+            # for regularly spaced array (NOTE deprecated ?)
+            array = df[['a','b','m','n']].values
+            arrayMin = np.min(np.unique(np.sort(array.flatten())))
+            if arrayMin != 0:
+                array -= arrayMin
+            espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
+            if spacing is None:
+                spacing = espacing
+            array = np.round(array/spacing+1).astype(int)
+            df[['a','b','m','n']] = array
+            imax = int(np.max(array))
+            elec = np.zeros((imax,3))
+            elec[:,0] = np.arange(0,imax)*spacing
                 
         return elec, df
     
 #test code
 #elec, df = syscalParser('test/syscalFile.csv')
-#elec, df = syscalParser('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', 0.5)
-#print(df[['a','b','m','n']])
-#print(elec)
+#elec, df = syscalParser('test/pole-dipole-survey/Long_south_PDF_63_10_1_filt_5.csv')
 
 #%% protocol.dat forward modelling parser
 
