@@ -414,7 +414,6 @@ class Mesh:
         try: 
             if xlim=="default":
                 xlim=[min(elec_x),max(elec_x)]
-                print('xlim=', xlim)
             if zlim=="default":
                 doiEstimate = 2/3*np.abs(elec_x[0]-elec_x[-1])
                 # longest dipole calculation available in R2 class
