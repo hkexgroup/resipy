@@ -4,7 +4,6 @@ import sys
 import numpy as np
 import resipy.isinpolygon as iip
 import warnings 
-#from tqdm import tqdm # progess bar package - disabled 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
 # see solution @ https://math.stackexchange.com/questions/828392/spatial-interpolation-for-irregular-grid
@@ -118,7 +117,9 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
         z coordinates at xnew and ynew.
         
     """
-    #check if inputs are arrays 
+    #check if inputs are arrays
+    if len(xknown)==0 or len(xnew)==0:
+        raise ValueError('Empty array passed to interp2d!')
     return_list = False 
     if type(xnew) != 'numpy.ndarray':
         xnew = np.array(xnew)
@@ -134,7 +135,7 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
     znew.fill(np.nan)
     #outside = np.logical_not(inside)
     num_pts = len(xnew)
-    fudgex=0.05#add a bit of padding to prevent artefacts?
+    fudgex=0.05#add a bit of padding to prevent artefacts
     fudgey=0.05
     #compute new values inside survey
     for i in range(num_pts):
@@ -151,7 +152,7 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
             dist4 = pdist(xnew[i], ynew[i], xknown[quad4], yknown[quad4])
             
             if len(dist1)!=0 and len(dist2)!=0 and len(dist3)!=0 and len(dist4)!=0:
-                #then the conditions need to interpolate in a quad are met
+                #then the conditions needed to interpolate in a quad are met
                 idx1 = np.argmin(dist1)#find closest index for each quad 
                 idx2 = np.argmin(dist2)
                 idx3 = np.argmin(dist3)
@@ -169,6 +170,7 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
                               zknown[quad2][idx2],
                               zknown[quad3][idx3],
                               zknown[quad4][idx4]))
+                
                 if len(x.shape)==1:#bug fix to deal with numpy being finicky, arrays need 2 dimensions 
                     x.shape += (1,)
                     z.shape += (1,)#append 1 dimension to the numpy array shape (otherwise np.concentrate wont work)
