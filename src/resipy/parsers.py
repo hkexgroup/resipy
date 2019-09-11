@@ -157,7 +157,8 @@ def protocolParser(fname):
     else: 
         df = pd.DataFrame(protocol).drop(['magErr'], axis = 1)
     df['ip'] = np.nan
-    xElec = np.arange(np.max(df[['a','b','m','n']].values))
+    num_elec = len(np.array((df['a'],df['b'],df['m'],df['n'])).flatten())
+    xElec = np.arange(num_elec)
     elec = np.zeros((len(xElec),3))
     elec[:,0] = xElec
     return elec, df

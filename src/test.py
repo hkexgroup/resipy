@@ -105,7 +105,7 @@ k.invert(iplot=False, parallel=True, ncores=2)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
-k.showResults(index=3)
+#k.showResults(index=3) # file 17051601.csv is removed from testTimelapse folder
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -122,7 +122,7 @@ k.param['reg_mode'] = 1
 k.invert(iplot=False, parallel=True)
 k.showResults(index=1)
 k.showResults(index=2)
-k.showResults(index=3)
+#k.showResults(index=3) # file 17051601.csv is removed from testTimelapse folder
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -144,7 +144,7 @@ k.invert(parallel=True, iMoveElec=True)
 k.showResults(index=0)
 k.showResults(index=1)
 k.showResults(index=2)
-k.showResults(index=3)
+#k.showResults(index=3) # file 17051601.csv is removed from testTimelapse folder
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 

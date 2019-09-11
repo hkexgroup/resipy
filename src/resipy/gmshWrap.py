@@ -127,6 +127,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             'buried' = buried electrode, placed the mesh surface
             'borehole#' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
                         borehole numbering starts at 1 and ascends numerically by 1. 
+            'remote' = remote electrode, this will not be actaully meshed, as often remote electrode coordinates
+                        are given arbitary values like -999. Instead every remote electrode found will be 
+                        randomly added as a node in the background region towards the lower left hand corner of 
+                        of the mesh. 
     geom_input: dict, optional
         Allows for further customisation of the 2D mesh, its a
         dictionary contianing surface topography, polygons and boundaries 
@@ -141,7 +145,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         Characteristic length factor, this allows for tuning of the incrimental 
         size increase with depth in the mesh, usually set to 2 such that the 
         elements at the DOI are twice as big as those at the surface. The reasoning
-        for this is becuase the sensitivity of ERT drops off with depth. 
+        for this is because the sensitivity of ERT drops off with depth. 
     dp_len: float, optional 
         Largest dipole length in the 2D array. Default is the largest electrode 
         spacing. Controls the multipier applied to the edges of the coarse mesh region. 
@@ -192,9 +196,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         geom_input = {}
     if len(electrodes[0])!=len(electrodes[1]):
         raise ValueError('The length of the electrode x and z arrays does not match')
-        
     bh_flag = False
     bu_flag = False
+
     #determine the relevant node ordering for the surface electrodes? 
     if electrode_type is not None:
         if not isinstance(electrode_type,list):
@@ -205,10 +209,12 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         surface_idx=[]#surface electrode index
         bh_idx=[]#borehole index
         bur_idx=[]#buried electrode index 
+        rem_idx=[]#remote electrode index
         for i,key in enumerate(electrode_type):
             if key == 'electrode': surface_idx.append(i)
             if key == 'buried': bur_idx.append(i); bu_flag = True
             if key == 'borehole1': bh_flag = True
+            if key == 'remote':rem_idx.append(i)
         
         if len(surface_idx)>0:# then surface electrodes are present
             elec_x=np.array(electrodes[0])[surface_idx]
@@ -319,9 +325,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             flag.append('topography point')
             
     #catch an error where the fine mesh region will truncate where the electrodes are        
-    if min(electrodes[0]) < min(x_pts):
-        raise ValueError("the minimum X coordinate value for the surface of the mesh must be smaller than the minimum electrode X coordinate")
-    if max(electrodes[0]) > max(x_pts):
+    if min(elec_x) < min(x_pts):
+        raise ValueError("The minimum X coordinate value for the surface of the mesh must be smaller than the minimum electrode X coordinate")
+    if max(elec_x) > max(x_pts):
         raise ValueError("The maximum X coordinate value for the surface of the mesh must be greater than the maximum electrode X coordinate") 
     
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
@@ -412,23 +418,23 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     sur_ln_cache_flipped = list(np.flipud(np.array(sur_ln_cache))*-1)
     fine_msh_loop = [end_ln_cache[0]] + basal_ln_cache + [-1*end_ln_cache[1]] + sur_ln_cache_flipped
     fh.write("Line Loop(1) = {%s};\n"%str(fine_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
-    fh.write("Plane Surface(1) = {1};//Fine mesh region surface\n")
+#    fh.write("Plane Surface(1) = {1};//Fine mesh region surface\n")
     
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
     fh.write("\n//Background region (Neumann boundary) points\n")
-    cl_factor2=50#characteristic length multipleier for Nuemon boundary 
+    cl_factor2=50#characteristic length multipleier for Neumann boundary 
     cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
     fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
     #Background region propeties, follow rule of thumb that background should be 5*largest dipole 
     flank=5*dp_len
     b_max_depth=-abs(doi)-(3*dp_len)#background max depth
-    #add nuemon boundaries on left hand side
+    #add Neumann boundaries on left hand side
     n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
     tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
     fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
     tot_pnts=tot_pnts+1;n_pnt_cache[1]=tot_pnts
     fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
-    #add nuemon boundary points on right hand side
+    #add Neumann boundary points on right hand side
     tot_pnts=tot_pnts+1;n_pnt_cache[2]=tot_pnts
     fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
     tot_pnts=tot_pnts+1;n_pnt_cache[3]=tot_pnts
@@ -448,15 +454,12 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     tot_lins=tot_lins+1;n_ln_cache[4]=tot_lins
     fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,n_pnt_cache[2],sur_pnt_cache[-1]))
     
-    fh.write("//Add line loops and plane surfaces to for nuemon region\n")
+    fh.write("//Add line loops and plane surfaces for the Neumann region\n")
     #now add background region line loop (cos this be made more efficent?)
     basal_ln_cache_flipped = list(np.flipud(np.array(basal_ln_cache))*-1)
     coarse_msh_loop = n_ln_cache + [end_ln_cache[1]] + basal_ln_cache_flipped + [-1*end_ln_cache[0]]
     fh.write("Line Loop(2) = {%s};\n"%str(coarse_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
-    fh.write("Plane Surface(2) = {2};//Fine mesh region surface\n")
-    
-    fh.write("\n//Make a physical surface\n")
-    fh.write("Physical Surface(1) = {1, 2};\n")
+    fh.write("Plane Surface(1) = {1, 2};//Coarse mesh region surface\n")
     
     #now we want to return the point values of the electrodes, as gmsh will assign node numbers to points
     #already specified in the .geo file. This will needed for specifying electrode locations in R2.in   
@@ -468,10 +471,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     no_lin=tot_lins#+1
     no_pts=tot_pnts#+1
     #add borehole electrode strings
-    print('probing for boundaries and other additions to the mesh')
+    #print('probing for boundaries and other additions to the mesh')
     count = 0
     if bh_flag:
-        fh.write("\n//Boreholes? \n")
+        fh.write("\n//Boreholes \n")
         while True:
             count += 1
             key = 'borehole'+str(count)#count through the borehole keys
@@ -506,27 +509,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
     
-    #add buried electrodes?         
-    if bu_flag:
-        print('buried electrodes added to input file')
-        fh.write("\n//Buried electrodes \n")  
-        buried_x = np.array(electrodes[0])[bur_idx]#get buried electrode coordinate information
-        buried_z = np.array(electrodes[1])[bur_idx]
-        buried_y = [0]*len(buried_x)
-        e_pt_idx = [0]*len(buried_x)
-        for k in range(len(buried_x)):
-            no_pts += 1 
-            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_z[k],buried_y[k],k+1))
-            e_pt_idx[k] = no_pts
-        
-        node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
-        fh.write("Point{%s} In Surface{1};\n"%str(e_pt_idx).strip('[').strip(']'))
-        fh.write("//end of buried electrodes.\n")
-        elec_x_cache = np.append(elec_x_cache,buried_x)
-        elec_z_cache = np.append(elec_z_cache,buried_z)
-        
-    no_plane = 2 # number of plane surfaces so far
-    fh.write("\n//Adding polygons?\n")
+    no_plane = 1 # number of plane surfaces so far (actually two)
+    fh.write("\n//Adding polygons\n")
+    line_loops = []
     count = 0    
     while True:  
         count += 1
@@ -556,19 +541,69 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                     fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
                 line_idx.append(no_lin)
             #make line loop out of polygon
-            fh.write("//make lines forming polygon into a line loop? - current inactive due to unexpected behaviour in gmsh\n")
+            fh.write("//make lines forming polygons from line loops\n")
             no_lin += 1
-            fh.write("//Line Loop(%i) = {%s};\n"%(no_lin,str(line_idx).strip('[').strip(']')))
+#            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+            fh.write("Line Loop(%i) = {%s};\n"%(no_lin,str(line_idx).strip('[').strip(']')))
+            line_loops.append(no_lin)
             no_plane +=1
-            fh.write("//Plane Surface(%i) = {%i};\n"%(no_plane,no_lin))
-            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+            fh.write("Plane Surface(%i) = {%i};\n"%(no_plane,no_lin))
+            fh.write("Physical Surface (%i) = {%i};\n"%(no_plane,no_plane))
             
         except KeyError:
             fh.write("//end of polygons.\n")
             print('%i polygons added to input file'%(count-1))
             break  
-
-    fh.write("\n//Adding boundaries?\n")
+        
+    line_loops = np.array(line_loops)
+    no_plane += 1
+    if len(line_loops) > 0:
+        fh.write("Plane Surface(%i) = {%s, 1};//Fine mesh region surface\n"%(no_plane, ', '.join(line_loops.astype(str))))
+    else:
+        fh.write("Plane Surface(%i) = {1};//Fine mesh region surface\n"%(no_plane))
+    fh.write("\n//Make a physical surface\n")
+    fh.write("Physical Surface(1) = {%i, 1};\n"%no_plane)
+    
+    
+    #add buried electrodes? (added after as we need Surface 1 to be defined)       
+    if bu_flag:
+        fh.write("\n//Buried electrodes \n")  
+        buried_x = np.array(electrodes[0])[bur_idx]#get buried electrode coordinate information
+        buried_z = np.array(electrodes[1])[bur_idx]
+        buried_y = [0]*len(buried_x)
+        e_pt_idx = [0]*len(buried_x)
+        for k in range(len(buried_x)):
+            no_pts += 1 
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_z[k],buried_y[k],k+1))
+            e_pt_idx[k] = no_pts
+        
+        node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
+        fh.write("Point{%s} In Surface{%i};\n"%(str(e_pt_idx).strip('[').strip(']'), no_plane))
+        fh.write("//end of buried electrodes.\n")
+        elec_x_cache = np.append(elec_x_cache,buried_x)
+        elec_z_cache = np.append(elec_z_cache,buried_z)
+        
+    if len(rem_idx)>0: #then we need to add remote electrodes to the mesh
+        fh.write("\n//Remote electrodes \n")
+        e_pt_idx = [0]*len(rem_idx)
+        #put points in lower left hand corner of the outer region
+        #if an electrode does have the remote flag, then chances are it has 
+        #a bogus coordinate associated with it (ie. -99999)
+        for k in range(len(rem_idx)):
+            no_pts += 1
+            remote_x = x_pts[0]-flank + 10*np.random.rand()
+            remote_z = b_max_depth  + 10*np.random.rand()
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//remote electrode\n"%(no_pts,remote_x,remote_z,z_pts[0]))
+            e_pt_idx[k] = no_pts
+            elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
+            elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])
+            
+        node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
+        fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
+        fh.write('//End of remote electrodes.\n')
+        
+    
+    fh.write("\n//Adding boundaries\n")
     count = 0   
     while True:
         count += 1        
@@ -740,7 +775,7 @@ def msh_parse(file_path):
     except ValueError:#if mesh hasnt been read in this is where the error occurs 
         raise Exception("It looks like no elements have read into pyR2, its likley gmsh has failed to produced a stable mesh. Consider checking the mesh input (.geo) file.")
             
-    print("%i element node orderings had to be corrected becuase they were found to be orientated clockwise\n"%num_corrected)
+    print("%i element node orderings had to be corrected because they were found to be orientated clockwise\n"%num_corrected)
     fid.close()
     
     ### return dictionary which can be converted to mesh class ### 
@@ -931,10 +966,10 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
         else:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
          
-    #Nuemon boundary 
+    #Nueman boundary 
     flank_x = 80*x_dist
     flank_z = 50*z_dist 
-    fh.write("//Nuemonn boundary \n")
+    fh.write("//Nueman boundary \n")
     cl2 = cl*150
     fh.write("cl2 = %.2f;\n"%cl2)
     no_pts += 1
@@ -1224,11 +1259,11 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
         
     fh.write("//End fine mesh region points\n" )
         
-    #Nuemon boundary 
+    #Neumann boundary 
     flank_x = 5 * dp_len
     flank_y = 5 * dp_len
     flank_z = 3*abs(doi)
-    fh.write("//Nuemonn boundary points\n")
+    fh.write("//Neumannn boundary points\n")
     cln = cl*cln_factor # nuemom boundary characteristic length 
     fh.write("cln = %.2f;//characteristic length for background region\n"%cln)
     no_pts += 1

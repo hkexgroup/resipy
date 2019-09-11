@@ -23,7 +23,7 @@ from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-#import R2gui API packages - remove the "api." in below code if running the script and using the test blocks at the bottom 
+#import R2gui API packages 
 import resipy.gmshWrap as gw
 from resipy.isinpolygon import isinpolygon, isinvolume, in_box
 import resipy.interpolation as interp
@@ -152,7 +152,7 @@ class Mesh:
                      mesh_info['elm_centre'],
                      mesh_info['elm_area'],
                      mesh_info['cell_type'],
-                     mesh_info['parameters'],
+                     mesh_info['parameters'], # this is not copy to the Mesh object (guillaume)
                      mesh_info['parameter_title'],
                      mesh_info['original_file_path'])
         try:
@@ -160,6 +160,10 @@ class Mesh:
         except KeyError as e:
             #print('error in add_attr_dict', e)
             pass
+        try: # add the physical flag from the msh parsing as cell_attribute
+            obj.attr_cache['cell_attributes'] = mesh_info['parameters']
+        except Exception as e:
+            print('Failed to add cell_attributes:', e)
         try:
             obj.regions = mesh_info['element_ranges']
         except KeyError:
@@ -562,6 +566,12 @@ class Mesh:
             if hor_cbar: # change orientation if true 
                 cbar_horizontal = 'horizontal'
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f',orientation=cbar_horizontal, fraction=0.046, pad=0.04)
+            if attr is None: # default to material
+                val = np.sort(np.unique(X))
+                if len(val) > 1:
+                    interval = (val[-1]-val[0])/len(val)
+                    self.cbar.set_ticks(np.arange(val[0]+interval/2, val[-1], interval))
+                    self.cbar.set_ticklabels(val)
             self.cbar.set_label(color_bar_title) #set colorbar title
 
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
@@ -572,13 +582,14 @@ class Mesh:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
                     alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
+#                    alphas = np.logspace(0, -1, self.num_elms)#array of alpha values 
                     raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                     raw_alpha[:, -1] = alphas
                     alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
                     #make alpha collection
                     alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
                     #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
-                    #*** i still cant figure out why this is becuase its the same code used to plot the resistivities 
+                    #*** i still cant figure out why this is because its the same code used to plot the resistivities 
                     ax.add_collection(alpha_coll)
                 else:
                     x = np.array(self.attr_cache['Sensitivity(log10)'])
@@ -717,12 +728,16 @@ class Mesh:
             else:
                 cm = color_map
             self.cax.set_cmap(cm) # change the color map if the user wants to 
+            
         else:
             if attr is None:
                 cm = plt.get_cmap('Spectral', len(np.unique(X)))
                 self.cax.set_cmap(cm)
-                self.cbar.set_ticks(np.arange(len(np.unique(X))+1))
-        
+                val = np.sort(np.unique(X))
+                if len(val) > 1:
+                    interval = (val[-1]-val[0])/len(val)
+                    self.cbar.set_ticks(np.arange(val[0]+interval/2, val[-1], interval))
+                    self.cbar.set_ticklabels(val)        
         
         #following block of code redraws figure 
         self.cax.set_array(X) # set the array of the polygon collection to the new attribute 
@@ -873,10 +888,6 @@ class Mesh:
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-#            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code (inefficent way but technically accurate)
-#            face2 = int(str(idx1)+str(idx2)+str(idx4))
-#            face3 = int(str(idx2)+str(idx3)+str(idx4))
-#            face4 = int(str(idx1)+str(idx4)+str(idx3))
             face1 = idx1*idx2*idx3 # assign each face a code
             face2 = idx1*idx2*idx4
             face3 = idx2*idx3*idx4
@@ -1279,6 +1290,57 @@ class Mesh:
         if len(np.unique(node_in_mesh)) != len(new_x):
             warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
+    
+    def truncateMesh(self,xlim=None,ylim=None,zlim=None):
+        """Truncate the mesh to certian dimensions. Similar to how R3t behaves 
+        when outputting inverted results. 
+        
+        Parameters
+        ------------
+        xlim : tuple, optional
+            Axis x limits as `(xmin, xmax)`.
+        ylim : tuple, optional
+            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(ymin, ymax)`. 
+        """
+        if xlim is None:
+            xlim=[min(self.elec_x), max(self.elec_x)]
+        if ylim is None:
+            ylim=[min(self.elec_y), max(self.elec_y)]
+        if zlim is None:
+            zlim=[min(self.elec_z), max(self.elec_z)]
+            
+        elm_x = np.array(self.elm_centre[0])
+        elm_y = np.array(self.elm_centre[1])
+        elm_z = np.array(self.elm_centre[2])
+        in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find inside of limits 
+        temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
+        con_mat=list(temp_con_mat[:,in_elem]) # truncate connection matrix
+        
+        new_attr_cache = self.attr_cache.copy()
+        new_attr = np.array(self.cell_attributes)
+        
+        elm_id = np.array(self.elm_id)
+        elm_area = np.array(self.elm_area)
+
+        #truncate the attribute table down to the inside elements 
+        for key in self.attr_cache.keys():
+            X = np.array(self.attr_cache[key])
+            new_attr_cache[key] = X[in_elem]
+        
+        self.con_matrix = con_mat
+        self.attr_cache = new_attr_cache
+        self.num_elms = len(con_mat[0])
+        self.cell_attributes = new_attr[in_elem]
+        self.elm_id = elm_id[in_elem]
+        self.elm_area = elm_area[in_elem]
+        new_elm_centre = [[],[],[]]
+        new_elm_centre[0] = elm_x[in_elem]
+        new_elm_centre[1] = elm_y[in_elem]
+        new_elm_centre[2] = elm_z[in_elem]
+        self.elm_centre = new_elm_centre
+        
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """ Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
@@ -1377,14 +1439,17 @@ class Mesh:
         title: string, optional
             Header string written at the top of the vtk file .
         """
-        #open file and write header information    
-        fh = open(file_path,'w')
-        fh.write("# vtk DataFile Version 3.0\n")
+        #formalities 
         if title == None:
             try:
                 title = self.mesh_title
             except AttributeError:
-                title = "output from R2 gui meshTools module"
+                title = "output from resipy meshTools module"
+        if not file_path.endswith('.vtk'):
+            file_path +='.vtk'#append .vtk extension to end of file path if not there
+        #open file and write header information  
+        fh = open(file_path,'w')
+        fh.write("# vtk DataFile Version 3.0\n")
         fh.write(title+"\n")
         fh.write("ASCII\nDATASET UNSTRUCTURED_GRID\n")
         #define node coordinates
@@ -1579,7 +1644,7 @@ class Mesh:
             
         return colx#,colz # return columns to go in parameters 
     
-    def exportTetgenMesh(self,prefix='mesh'):
+    def exportTetgenMesh(self,prefix='mesh',zone=None):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. 
         
@@ -1587,9 +1652,24 @@ class Mesh:
         ----------  
         prefix: string
             Prefix assigned to exported files. Can include path to file. 
+        zone: array like, optional
+            If using zones in the mesh, this attribute should include the zone
+            attribute which is an array of integers identifying the zone 
+            associated with each element. By default each element is assigned to 
+            zone 1. 
         """
+        #error checking / formalities 
+        if not isinstance(prefix,str):
+            raise NameError('prefix argument is not a string.')
+        if zone is not None:
+            if len(zone) != self.num_elms:
+                raise ValueError('Number of zone array elements given to exportTetgenMesh does not match the number of elements in the mesh.')
+        else:
+            zone = [1]*self.num_elms # all elements are inside zone 1 
+            
         #output .node file
-        fh = open(prefix+'.node','w')
+        print('writing .node file... ',end='')
+        fh = open(prefix+'.1.node','w')
         #header line : 
         #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\t{:d}\n'.format(self.num_nodes,self.ndims,1,1))
@@ -1603,88 +1683,63 @@ class Mesh:
                                                         1,1)
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
-        fh.close()    
+        fh.close()   
+        print('done.')
             
         #output .ele file 
-        fh = open(prefix+'.ele','w')
+        print('writing .ele file... ',end='')
+        fh = open(prefix+'.1.ele','w')
         #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo(),1))
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
         for i in range(self.num_elms):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
-                                                         self.con_matrix[0][i]+1,#need to add one becuase of fortran indexing 
+                                                         self.con_matrix[0][i]+1,#need to add one because of fortran indexing 
                                                          self.con_matrix[1][i]+1,
                                                          self.con_matrix[2][i]+1,
                                                          self.con_matrix[3][i]+1,
-                                                         1)
+                                                         zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
         fh.close()
+        print('done.')
         
         #output .trn file 
+        print('writing .trn file... ',end='')
         fh = open(prefix+'.trn','w')
         fh.write('0\t0\t0')
         fh.close()
-         
-        #out .neigh file
-        print('Calculating neighbouring cells, this can take some time!..', end='\n')            
-        elm_id = self.elm_id
-        
-        sys.stdout.write('Computing delta x matrix ... ')
-        a,b = np.meshgrid(self.elm_centre[0],self.elm_centre[0])
-        dX = (a - b)**2
-        sys.stdout.flush()
-        sys.stdout.write('\rComputing delta y matrix ... ')
-        a,b = np.meshgrid(self.elm_centre[1],self.elm_centre[1])
-        dY = (a - b)**2
-        sys.stdout.flush()
-        sys.stdout.write('\rComputing delta z matrix ... ')
-        a,b = np.meshgrid(self.elm_centre[2],self.elm_centre[2])
-        dZ = (a - b)**2
-        
-        sys.stdout.flush()
-        sys.stdout.write('\rComputing distance matrix ... ')
-        dist = np.sqrt(dX+dY+dZ)
-        #dist = dX+dY+dZ
-        
-        sys.stdout.flush()
-        sys.stdout.write('\rFinding minimum distances ... ')
-        sorted_idx = np.argsort(dist,axis=1)
-        sys.stdout.write('Done.\n')
-        
-        fh = open(prefix+'.neigh','w')#write to file 
-        fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
-        for i in range(self.num_elms):
-            idx = sorted_idx[i,1:5]
-            loc_ids = elm_id[idx]
-            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
-                                                            loc_ids[0],
-                                                            loc_ids[1],
-                                                            loc_ids[2],
-                                                            loc_ids[3])
-            fh.write(line)
-            
-        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
-        fh.close()
+        print('done.')
         
         #write .face file - which describes elements on the outer edges of the mesh
-        #todo this we need to find the elements on the outside of the mesh, hence 
-        #this involves borrowing code from show3D. 
-        print('Computing which elements lie on the edge of the mesh...',end='')
-        tri_combo = np.zeros((self.num_elms,4),dtype='float64')
-        con_mat=self.con_matrix
-        inside_numel = len(con_mat[0])#number of inside elements 
         
-        for i in range(inside_numel):
+        #todo this we need to find the elements on the outside of the mesh, idea
+        #is to find the elements with faces which are used only once. 
+        print('Computing which elements lie on the edge of the mesh... ',end='')
+        tri_combo = np.zeros((self.num_elms,4),dtype='int64')
+        con_mat=self.con_matrix
+       
+        #first construct unique identifiers for each face in the mesh 
+        for i in range(self.num_elms):
             idx1 = con_mat[0][i]#extract indexes 
             idx2 = con_mat[1][i]
             idx3 = con_mat[2][i]
             idx4 = con_mat[3][i]
             
-            face1 = int(str(idx1)+str(idx2)+str(idx3)) # assign each face a code
-            face2 = int(str(idx1)+str(idx2)+str(idx4))
-            face3 = int(str(idx2)+str(idx3)+str(idx4))
-            face4 = int(str(idx1)+str(idx4)+str(idx3))
+            # assign each face an organised and unique code
+            #sort face indexes 
+            face1s = sorted((idx2,idx3,idx4))
+            face2s = sorted((idx1,idx4,idx3))
+            face3s = sorted((idx1,idx2,idx4))
+            face4s = sorted((idx1,idx2,idx3))
+            face1t = [str(face1s[i]) for i in range(3)]
+            face2t = [str(face2s[i]) for i in range(3)]
+            face3t = [str(face3s[i]) for i in range(3)]
+            face4t = [str(face4s[i]) for i in range(3)]
+            face1 = int(''.join(face1t))
+            face2 = int(''.join(face2t))
+            face3 = int(''.join(face3t))
+            face4 = int(''.join(face4t))
 
             tri_combo[i,0] = face1#face 1 
             tri_combo[i,1] = face2#face 2 
@@ -1692,8 +1747,10 @@ class Mesh:
             tri_combo[i,3] = face4#face 4 
             
         #shape = tri_combo.shape
-        tri_combo = tri_combo.flatten()
-        temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
+        tri_combof = tri_combo.flatten()#flattening the array means every 4th entry is in the 1st column of the original tri_combo
+        #find the unique values 
+        temp,index,counts = np.unique(tri_combof,return_index=True,return_counts=True)
+        #find faces which only appear once 
         single_vals_idx = counts==1
         edge_element_idx = index[single_vals_idx]/4
         face_element_idx = np.floor(edge_element_idx)
@@ -1701,29 +1758,32 @@ class Mesh:
         
         truncated_numel = len(face_element_idx)
         face_list = [0] * truncated_numel
+        
+        #construct 2d triangles (with nodes) from faces 
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
             idx1 = con_mat[0][ref]
             idx2 = con_mat[1][ref]
             idx3 = con_mat[2][ref]
             idx4 = con_mat[3][ref]
-                       
-            face1 = (idx1,idx2,idx3)
-            face2 = (idx1,idx2,idx4)
-            face3 = (idx2,idx3,idx4)
-            face4 = (idx1,idx4,idx3)
             
-            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
+            face1 = (idx2,idx3,idx4)
+            face2 = (idx1,idx4,idx3)
+            face3 = (idx1,idx2,idx4)
+            face4 = (idx1,idx2,idx3)                     
+            
+            if face_probe[i] == 0: #if single_val_idx. == 0 >>> face1
                 face_list[i] = face1#face 1 
-            elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
+            elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 >>> face2
                 face_list[i] = face2#face 2
-            elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
+            elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 >>> face3
                 face_list[i] = face3#face 3 
-            elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
+            elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 >>> face4
                 face_list[i] = face4#face 4  
-        print('Done.')    
+        print('done.')    
         
-        fh = open(prefix+'.face','w')
+        print('writing .face file... ',end='')
+        fh = open(prefix+'.1.face','w')
         #First line: <# of faces> <boundary marker (0 or 1)>
         fh.write('{:d}\t{:d}\n'.format(truncated_numel,1))#header line 
         for i in range(truncated_numel):
@@ -1737,7 +1797,52 @@ class Mesh:
         
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
+        print('done.')
         
+        #out .neigh file
+        #Here we want look for faces which share with another element. 
+        print('Calculating neighbouring cells...', end='\n')            
+        #using variables from .face creation
+        double_vals_idx = counts==2
+        tri_comboft = temp[double_vals_idx]#flattened and truncated 
+        indext = index[double_vals_idx] # truncated indexes
+        neigh_array = np.ones((len(tri_combof),1),dtype='int64')*-1
+        
+        #apply correction for moving columns around
+        flatten_idx = np.zeros_like(tri_combo)
+        for i in range(self.num_elms):
+            flatten_idx[i,:] = i
+        
+        correction = flatten_idx.flatten()
+        
+        for i in range(len(tri_comboft)):
+            idx = np.argwhere(tri_combof == tri_comboft[i])
+            #idx should always return 2 values, we want the one which isn't the current index
+            curr_idx = indext[i]
+            neigh_idx = idx[idx!=curr_idx]
+        
+            neigh_array[curr_idx] = correction[neigh_idx]+1#look up neighbour index
+            
+        neigh_matrix = neigh_array.reshape((self.num_elms,4))
+            
+        print('done.')
+        
+        print('writing .neigh file... ',end='')
+        fh = open(prefix+'.1.neigh','w') # write to file 
+        fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
+        elm_id = self.elm_id
+        for i in range(self.num_elms):
+            line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
+                                                            neigh_matrix[i,0],
+                                                            neigh_matrix[i,1],
+                                                            neigh_matrix[i,2],
+                                                            neigh_matrix[i,3])
+            fh.write(line)
+            
+        fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
+        fh.close()
+        print('done.')
+                
     def meshLookUp(self,look_up_mesh):
         """Look up values from another mesh using nearest neighbour look up, 
         assign attributes to the current mesh class. 
@@ -2300,7 +2405,7 @@ def tetgen_import(file_path):
         
         
 #%% build a quad mesh        
-def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.25, doi=-1, pad=2, 
+def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, doi=-1, pad=2, 
               surface_x=None,surface_z=None):
     """Creates a quaderlateral mesh given the electrode x and y positions. Function
     relies heavily on the numpy package.
@@ -2315,19 +2420,19 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         strings, where 'electrode' is a surface electrode; 'buried' is a buried electrode
     elemy : int, optional
         Number of elements in the fine y region
-    yf : float, optional
-         Y factor multiplier in the fine zone.
-    ygf : float, optional
-         Y factor multiplier in the coarse zone.
+    zf : float, optional
+         Z factor multiplier in the fine zone.
+    zgf : float, optional
+         Z factor multiplier in the coarse zone.
     doi : float (m), optional 
          Depth of investigation (if left as -1 = half survey width).
     pad : int, optional
          X padding outside the fine area (tipicaly twice the number of elements between electrodes).
     surface_x: array like, optional
         Default is None. x coordinates of extra surface topography points for the generation of topography in the quad mesh
-    surface_y: array like, optional
-        Default is None. y coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
-        an error will be returned if len(surface_x) != len(surface_y)
+    surface_z: array like, optional
+        Default is None. z coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
+        an error will be returned if len(surface_x) != len(surface_z)
         
             
     Returns
@@ -2336,8 +2441,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         Mesh object 
     meshx : numpy.array
         Mesh x locations for R2in file.
-    meshy : numpy.array
-        Mesh y locations for R2in file (ie node depths).
+    meshz : numpy.array
+        Mesh  locations for R2in file (ie node depths).
     topo : numpy.array
         Topography for R2in file.
     elec_node : numpy.array
@@ -2423,7 +2528,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                 dxx = dxx*xgf
             meshx = np.r_[meshx, xx2, xx3]
             
-    # create meshy
+    # create meshz
     if doi == -1:
         if bh_flag:
             doi = abs(min(elec_z))
@@ -2431,20 +2536,20 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
             doi = np.abs(elec[0,0]-elec[-1,0])/2
         
 #    dyy = espacing/(elemx*4)
-    meshy = [0]
+    meshz = [0]
     dyy = 0.05
     for i in range(100):
-        meshy.append(meshy[-1]+dyy*yf)
-        dyy = dyy*yf
-        if meshy[-1] > doi:
+        meshz.append(meshz[-1]+dyy*zf)
+        dyy = dyy*zf
+        if meshz[-1] > doi:
             break
-    elemy = len(meshy)
+    elemy = len(meshz)
     elemy2 = int(elemy/2)
-    yy = np.ones(elemy2)*meshy[-1]
+    yy = np.ones(elemy2)*meshz[-1]
     for i in range(1, elemy2):
-        yy[i] = yy[i-1]+dyy*ygf
-        dyy = dyy*ygf
-    meshy = np.r_[meshy, yy[1:]]
+        yy[i] = yy[i-1]+dyy*zgf
+        dyy = dyy*zgf
+    meshz = np.r_[meshz, yy[1:]]
     
     #insert borehole electrodes? if we have boreholes / buried electrodes 
     if bh_flag:
@@ -2465,13 +2570,13 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     if bh_flag:
         #insert y values of boreholes, normalised to topography
         norm_bhy = np.interp(bh[:,0], elec[:,0], elec[:,1]) - bh[:,1]
-        meshy = np.unique(np.append(meshy,norm_bhy))
+        meshz = np.unique(np.append(meshz,norm_bhy))
     
     ###
     #find the columns relating to the electrode nodes? 
     temp_x = meshx.tolist()
-    temp_y = meshy.tolist()
-    elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 becuase of indexing in R2. 
+    temp_y = meshz.tolist()
+    elec_node_x=[temp_x.index(elec_x[i])+1 for i in range(len(elec_x))]#add 1 because of indexing in R2. 
     
     elec_node_y = np.ones((len(elec_z),1),dtype=int)#by default electrodes are at the surface
     #this ugly looking if - for loop thing finds the y values for borehole meshes. 
@@ -2484,7 +2589,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
                     #print(elec_node_y[i])
                     count += 1
         except ValueError:
-            raise Exception("There was a problem indexing the meshy values for electrode number %i"%i)
+            raise Exception("There was a problem indexing the meshz values for electrode number %i"%i)
                 
     elec_node = [elec_node_x,elec_node_y.T.tolist()[0]]
     
@@ -2495,11 +2600,11 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
         warnings.warn("Electrode node vector and number of electrodes mismatch! ")
      
     # what is the number of regions? (elements)
-    no_elms=(len(meshx)-1)*(len(meshy)-1)
-    no_nodes=len(meshx)*len(meshy)
+    no_elms=(len(meshx)-1)*(len(meshz)-1)
+    no_nodes=len(meshx)*len(meshz)
     
     # compute node mappins (connection matrix)
-    y_dim=len(meshy)
+    y_dim=len(meshz)
     fnl_node=no_nodes-1
     
     node_mappins=(np.arange(0,fnl_node-y_dim),
@@ -2511,7 +2616,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     
     node_mappins = [list(np.delete(node_mappins[i],del_idx)) for i in range(4)]#delete excess node placements
     #compute node x and y  (and z)
-    node_x,node_z=np.meshgrid(meshx,meshy)
+    node_x,node_z=np.meshgrid(meshx,meshz)
     #account for topography in the y direction 
     node_z = [topo-node_z[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
     node_z=np.array(node_z).flatten(order='F')
@@ -2573,7 +2678,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, yf=1.1, ygf=1.
     isort = np.argsort(xsurf)
     mesh.surface = surfacePoints[isort, :]
 
-    return mesh,meshx,meshy,topo,elec_node
+    return mesh,meshx,meshz,topo,elec_node
 
 
 #%% build a triangle mesh - using the gmsh wrapper
@@ -2744,7 +2849,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     elec_z: array like 
         electrode z coordinates 
     elec_type: list of strings, optional
-        type of electrode see Notes in genGeoFile in gmshWrap.py for the format of this list   
+        Defines if electrodes are buried or not.   
     keep_files : boolean, optional
         `True` if the gmsh input and output file is to be stored in the working directory.
     interp_method: string, default ='bilinear' optional
@@ -2827,6 +2932,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         surf_y = []
         surf_z = []
     
+    rem_elec_idx = []
     if elec_type is not None:
         warnings.warn("Borehole electrode meshes still in development!")
         if not isinstance(elec_type,list):
@@ -2839,28 +2945,43 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         bur_elec_x = []
         bur_elec_y = []
         bur_elec_z = []
+        surf_elec_idx = []
+        bur_elec_idx = []
+        
+        if elec_z is None:
+            elec_z = np.zeros_like(elec_x)
         for i, key in enumerate(elec_type):
             if key == 'buried':
                 bur_elec_x.append(elec_x[i])
                 bur_elec_y.append(elec_y[i])
                 bur_elec_z.append(elec_z[i])
-            if key == 'surface':
+                bur_elec_idx.append(i)
+            if key == 'surface' or key=='electrode':
                 surf_elec_x.append(elec_x[i])
                 surf_elec_y.append(elec_y[i])
                 surf_elec_z.append(elec_z[i])
+                surf_elec_idx.append(i)
+            if key == 'remote':
+                rem_elec_idx.append(i)
         #interpolate in order to normalise buried electrode elevations to 0
         x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
         y_interp = np.append(surf_elec_y,surf_y)
         z_interp = np.append(surf_elec_z,surf_z)
         
-        if interp_method == 'idw': 
-            bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
-        elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
-            bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
-        elif interp_method == 'nearest':
-            bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
-        elif interp_method == 'spline':
-            bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
+        if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
+            if interp_method == 'idw': 
+                bur_elec_z = np.array(bur_elec_z) - interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
+            elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
+                bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+            elif interp_method == 'nearest':
+                bur_elec_z = np.array(bur_elec_z) - interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+            elif interp_method == 'spline':
+                bur_elec_z = np.array(bur_elec_z) - interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
+                
+        elec_z = np.array(elec_z) 
+        elec_z[surf_elec_idx] = 0
+        elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z # normalise to zero surface 
+        
     else:
         surf_elec_x = elec_x 
         surf_elec_y = elec_y 
@@ -2868,15 +2989,20 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             surf_elec_z = np.zeros_like(elec_x)
             elec_z = np.zeros_like(elec_x)
         else:
-            surf_elec_z = elec_z 
+            surf_elec_z = elec_z.copy()
             elec_z = np.array(elec_z) - np.array(elec_z)#normalise elec_z
+            
+    #check if remeote electrodes present, and remove them 
+    if len(rem_elec_idx)>0:
+        elec_x = np.delete(elec_x,rem_elec_idx)
+        elec_y = np.delete(elec_y,rem_elec_idx)
+        elec_z = np.delete(elec_z,rem_elec_idx)
          
     #check directories 
     if path == "exe":
         ewd = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
                 path)
-        #print(ewd) #ewd - exe working directory 
     else:
         ewd = path # points to the location of the .exe 
         # else its assumed a custom directory has been given to the gmsh.exe 
@@ -2892,7 +3018,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         
     else:
         node_pos = gw.box_3d([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
-        
+            
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
@@ -2907,7 +3033,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
                 cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh', file_name+'.geo', '-3']
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
         else: # fallback on wine
             cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
         
@@ -2934,9 +3060,11 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
     print('interpolating topography onto mesh using %s interpolation...'%interp_method, end='')
+    
     x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
     y_interp = np.append(surf_elec_y,surf_y)
     z_interp = np.append(surf_elec_z,surf_z)
+
     #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method == 'idw': 
         nodez = interp.idw(node_x, node_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
@@ -2972,6 +3100,14 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         elm_z[i] = sum((n1[2],n2[2],n3[2],n4[2]))/npere
     
     mesh.elm_centre = (elm_x, elm_y, elm_z)
+
+    #check if remeote electrodes present, and insert them into the node position array
+    if len(rem_elec_idx)>0: 
+        rem_node_bool = min(node_x) == node_x #& (min(node_y) == node_y) & (min(node_z) == node_z)
+        rem_node = np.argwhere(rem_node_bool == True)
+        print(rem_elec_idx)
+        node_pos = np.insert(node_pos,np.array(rem_elec_idx)-1,[rem_node[0][0]]*len(rem_elec_idx),axis=0)
+        
     #add nodes to mesh
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     

@@ -266,6 +266,7 @@ class App(QMainWindow):
         self.num_xy_poly = None # to store the values
         self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
         self.plotAspect = 'equal'
+        self.iDesign = False # boolean to know if the mesh has been designed before meshing
 
         self.table_widget = QWidget()
         layout = QVBoxLayout()
@@ -2205,37 +2206,53 @@ class App(QMainWindow):
         tabs.setTabEnabled(2, False)
 
         meshLayout = QVBoxLayout()
-
+        
         def replotMesh():
-            regionTable.reset()
+            if self.iDesign is False:
+                regionTable.reset()
+                self.iDesign is False
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=regionTable.addRow)
             mwMesh.plot(func, aspect = self.plotAspect)
             mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             mwMesh.canvas.setFocus() # set focus on the canvas
 
+        
+        def designModel():
+            self.iDesign = True
+            # read electrodes locations
+            elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
+            
+            # plot the interactive model
+            regionTable.reset() # TODO if designSurvey the table won't be empty
+            def func(ax):
+                self.r2.designModel(ax=ax, addAction=regionTable.addRow)
+            mwMesh.plot(func, aspect = self.plotAspect)
+            mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
+            mwMesh.canvas.setFocus() # set focus on the canvas
+            meshOutputStack.setCurrentIndex(1)
+
+        designModelBtn = QPushButton('Design Model before meshing')
+        designModelBtn.clicked.connect(designModel)
+
         def meshQuadFunc():
             elec = elecTable.getTable()
+            if np.sum(~np.isnan(elec[:,0])) == 0:
+                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            else:
+                self.r2.setElec(elec)
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
             if not np.isnan(surface[0,0]):
                 surface_flag = True
             else:
                 surface_flag = False
-            if np.sum(~np.isnan(elec[:,0])) == 0:
-                errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
-                return
-            else:
-                self.r2.setElec(elec)
-#            nnodes = int(nnodesEdit.text())
-#            if nnodes < 4:
-#                nnodesEdit.setText('4')
-#                nnodes = 4
-#                errorDump('There need to be at least 4 elements between two electrodes.')
-#            if nnodes > 10:
-#                nnodesEdit.setText('10')
-#                nnodes = 10
-#                errorDump('Sorry no more than 10 elements between electrodes.')
             nnodes = nnodesSld.value()
             try:
                 if surface_flag:
@@ -2281,13 +2298,12 @@ class App(QMainWindow):
                 surface = None
             else:
                 surface = surface[inan,:]
-            self.r2.createMesh(typ='trian', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+            self.r2.createModelMesh(buried=buried, surface=surface,
+                                    cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
             scale.setVisible(True)
             scaleLabel.setVisible(True)
-            replotMesh()
             meshOutputStack.setCurrentIndex(1)
-
+            replotMesh()
         meshTrian = QPushButton('Triangular Mesh')
         meshTrian.setAutoDefault(True)
         meshTrian.clicked.connect(meshTrianFunc)
@@ -2442,6 +2458,10 @@ class App(QMainWindow):
 #        meshOptionTrianLayout.addWidget(clFactorEdit)
         meshOptionTrianLayout.addWidget(clFactorSld)
         
+        meshButtonTrianLayout = QHBoxLayout()
+        meshButtonTrianLayout.addWidget(designModelBtn)
+        meshButtonTrianLayout.addWidget(meshTrian)
+        
         importCustomLayout = QVBoxLayout()
         importCustomLayout.addWidget(importCustomMeshLabel2)
         importCustomLayout.addWidget(importCustomMeshBtn2)
@@ -2464,14 +2484,14 @@ class App(QMainWindow):
         meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         meshTetraGroup = QGroupBox()
         meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
-
+        
         meshQuadLayout.addLayout(meshOptionQuadLayout)
         meshQuadLayout.addWidget(meshQuad)
         meshQuadGroup.setLayout(meshQuadLayout)
         meshChoiceLayout.addWidget(meshQuadGroup)
 
         meshTrianLayout.addLayout(meshOptionTrianLayout)
-        meshTrianLayout.addWidget(meshTrian)
+        meshTrianLayout.addLayout(meshButtonTrianLayout)
         meshTrianGroup.setLayout(meshTrianLayout)
         meshChoiceLayout.addWidget(meshTrianGroup)
 
@@ -2612,6 +2632,348 @@ class App(QMainWindow):
         tabMesh.setLayout(meshLayout)
 
         #%% tab Forward model
+#        tabForward = QWidget()
+#        tabs.addTab(tabForward, 'Forward model')
+#        tabs.setTabEnabled(3, False)
+#        
+#        fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
+#        fwdSplitter = QSplitter(Qt.Vertical)
+#
+#        # add table for sequence generation
+#        seqLabel = QLabel('Define the number of skip and levels in the table.'
+#                          'Take into account the specifications of your instrument to'
+#                          ' obtain realistic simulation results. You can copy-paste '
+#                          'your custom sequence as well. '
+#                          'Forward modeling output files (including R2_forward.dat) are saved in <i>fwd</i> folder in the <i>working directory</i>.'
+#                          '<b>Click on the sequence title for more help.</b>')
+#        seqLabel.setWordWrap(True)
+#
+#        class SequenceTable(QTableWidget):
+#            def __init__(self, headers, selfInit=False):
+#                nrow, ncol = 10, len(headers)
+#                super(SequenceTable, self).__init__(nrow, ncol)
+#                self.nrow = nrow
+#                self.ncol = ncol
+#                self.selfInit = selfInit
+#                self.setColumnCount(self.ncol)
+#                self.setRowCount(self.nrow)
+#                self.headers = headers
+#                self.setHorizontalHeaderLabels(self.headers)
+#                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+##                self.setItem(0,0,QTableWidgetItem(''))
+##                self.setItem(0,1,QTableWidgetItem(''))
+#
+#            def addRow(self):
+#                self.nrow = self.nrow + 1
+#                self.setRowCount(self.nrow)
+#
+#            def keyPressEvent(self, e):
+#                if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
+#                    cell = self.selectedIndexes()[0]
+#                    c0, r0 = cell.column(), cell.row()
+#                    self.paste(c0, r0)
+#                elif e.modifiers() != Qt.ControlModifier: # start editing
+##                    print('start editing...')
+#                    cell = self.selectedIndexes()[0]
+#                    c0, r0 = cell.column(), cell.row()
+#                    self.editItem(self.item(r0,c0))
+#
+#            def paste(self, c0=0, r0=0):
+#                # get clipboard
+#                text = QApplication.clipboard().text()
+#                # parse clipboard
+#                tt = []
+#                for row in text.split('\n'):
+#                    trow = row.split()
+#                    if len(trow) > 0:
+#                        tt.append(trow)
+#                tt = np.array(tt)
+#
+#                if np.sum(tt.shape) > 0:
+#                    # get max row/columns
+#                    if self.selfInit is True:
+#                        self.initTable(tt)
+#                    else:
+#                        self.setTable(tt, c0, r0)
+#
+#            def initTable(self, tt=None, headers=None):
+#                self.clear()
+#                if headers is not None:
+#                    self.headers = np.array(headers)
+#                self.ncol = len(self.headers)
+#                self.setColumnCount(len(self.headers))
+#                self.setHorizontalHeaderLabels(self.headers)
+#                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+#                if tt is None:
+#                    tt = np.zeros((10,len(self.headers)-1))
+#                self.setRowCount(tt.shape[0])
+#                self.nrow = tt.shape[0]
+#                self.setTable(tt)
+#
+#            def setTable(self, tt, c0=0, r0=0):
+#                # paste clipboard to qtableView
+#                for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
+#                    for j in range(r0, min([self.nrow, r0+tt.shape[0]])):
+#                        self.setItem(j,i,QTableWidgetItem(str(tt[j-r0, i-c0])))
+#
+#            def getTable(self):
+#                table = -np.ones((self.nrow, self.ncol), dtype=int)
+#                for i in range(self.ncol):
+#                    for j in range(self.nrow):
+#                        if self.item(j,i) is not None:
+#                            try:
+#                                table[j,i] = int(self.item(j,i).text())
+#                            except:
+#                                pass
+#                return table
+#
+#            def reset(self):
+#                self.nrow = 1
+#                self.setRowCount(1)
+#                
+#        DpDp = resource_path('image/dipdip.png')
+#        Wenner = resource_path('image/wenner.png')
+#        Schlum = resource_path('image/schlum.png')
+#        Gradient = resource_path('image/gradient.png')
+#        
+#        seqHelp = {'dipdip' : '<img height=200 src="%s">' % DpDp,
+#           'wenner': '<img height=200 src="%s">' % Wenner,
+#           'schlum': '<img height=200 src="%s">' % Schlum,
+#           'gradient': '<img height=200 src="%s">' % Gradient,
+#           'custom': 'Paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-'
+#            }
+#
+#        def showSeqHelp(arg):
+#            if arg in seqHelp.keys():
+#                forwardHelpText.setText(seqHelp[arg])
+##                if arg is not 'custome':
+##                    forwardHelpText.setPixmap(QPixmap('image/' + arg + '.png'))
+##                else:
+##                    forwardHelpText.setText(seqHelp[arg])
+#                forwardOutputStack.setCurrentIndex(2)
+#                QApplication.processEvents()
+#
+#        seqDipDipLabel = QLabel('<a href="dipdip">Dipole-Dipole</a>')
+#        seqDipDipLabel.linkActivated.connect(showSeqHelp)
+##        seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
+#        seqDipDip = SequenceTable(['a','n'])
+#        seqDipDip.setItem(0,0,QTableWidgetItem('1')) #confuses user. user should define the sequence.
+#        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
+#
+#        seqWennerLabel = QLabel('<a href="wenner">Wenner</a>')
+#        seqWennerLabel.linkActivated.connect(showSeqHelp)
+##        seqWennerLabel.setToolTip('<img src="image/wenner.png">')
+##        pixmap = QPixmap('image/wenner.png').scaledToWidth(250)
+##        seqWennerLabel.setPixmap(pixmap)
+#
+##        from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+##        seqWennerMap = QSvgWidget('image/proto.svg')
+##        renderer = QSvgRenderer('image/proto.svg')
+##        seqWennerLabel.resize(renderer.defaultSize())
+#
+#        seqWenner = SequenceTable(['a'])
+#
+#        seqSchlumLabel = QLabel('<a href="schlum">Schlumberger</a>')
+#        seqSchlumLabel.linkActivated.connect(showSeqHelp)
+##        seqSchlumLabel.setToolTip('<img src="image/schlum.png">')
+#        seqSchlum = SequenceTable(['a','n'])
+#
+#        seqMultiLabel = QLabel('<a href="gradient">Multigradient</a>')
+#        seqMultiLabel.linkActivated.connect(showSeqHelp)
+##        seqMultiLabel.setToolTip('<img src="image/gradient.png">')
+#        seqMulti = SequenceTable(['a','n','s'])
+#
+#        seqCustomLabel = QLabel('<a href="custom">Custom Sequence</a>')
+#        seqCustomLabel.linkActivated.connect(showSeqHelp)
+##        seqCustomLabel.setToolTip('paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
+#        seqCustom = SequenceTable(['a','b','m','n'], selfInit=True)
+#
+#        seqTables = {'dpdp1' : seqDipDip,
+#                     'wenner' : seqWenner,
+#                     'schlum1' : seqSchlum,
+#                     'multigrad' : seqMulti,
+#                     'custSeq' : seqCustom}
+#
+#        seqs = [[seqDipDipLabel, seqDipDip],
+#                [seqWennerLabel, seqWenner],
+#                [seqSchlumLabel, seqSchlum],
+#                [seqMultiLabel, seqMulti],
+#                [seqCustomLabel, seqCustom]]
+#
+#        
+#        def seqCreateFunc():
+#            if self.r2.elec is None:
+#                errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
+#                return
+#            else:
+#                self.r2.elec = elecTable.getTable()
+#            params = []
+#            counter = 0 #temp loop counter
+#            for key in seqTables:
+#                p = seqTables[key].getTable()
+#                ie = (p != -1).all(1)
+#                p = p[ie,:]
+#                if len(p) > 0:
+#                    if key == 'custSeq':
+#                        self.r2.sequence = seqCustom.getTable()
+#                        seq_typ = ' imported'
+#                    else:
+#                        for i in range(p.shape[0]):
+#                            params.append((key, *p[i,:]))
+#                else:
+#                    counter += 1
+#            if params:
+#                self.r2.createSequence(params=params)
+#                seq_typ = ' generated'
+#
+#            text_default = ''
+#            array_typ = ''
+#            if counter == 5: # creats a default DpDp1 if user doesn't specify the sequence
+#                self.r2.createSequence()
+#                text_default = 'Default '
+#                array_typ = ' Dipole - Dipole'
+#                seq_typ = ' generated'
+#
+#            seqOutputLabel.setText(text_default + str(len(self.r2.sequence)) + array_typ + ' quadrupoles' + seq_typ)
+#
+#        seqOutputLabel = QLabel('')
+#
+#        # add noise possibility
+#        noiseLabel = QLabel('Resistivity noise [%]:')
+#        noiseEdit = QLineEdit('2')
+#        noiseEdit.setValidator(QDoubleValidator())
+#
+#        # add IP noise
+#        noiseLabelIP = QLabel('Phase noise [mrad]:')
+#        noiseEditIP = QLineEdit('2')
+#        noiseLabelIP.hide()
+#        noiseEditIP.hide()
+#        noiseEditIP.setValidator(QDoubleValidator())
+#
+#        # save sequence button
+#        def saveSeqBtnFunc():
+#            fname, _ = QFileDialog.getSaveFileName(tabImportingData,'Save File', self.datadir, 'Comma Separated Values (*.csv)')
+#            if fname != '':
+#                self.r2.saveSequence(fname)
+#        saveSeqBtn = QPushButton('Save Sequence')
+#        saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
+#        saveSeqBtn.clicked.connect(saveSeqBtnFunc)
+#
+#        # add a forward button
+#        def forwardBtnFunc():
+#            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
+#                errorDump('Please specify a mesh and an initial model first.')
+#                return
+#            seqCreateFunc()
+#            forwardOutputStack.setCurrentIndex(0)
+#            forwardLogText.clear()
+#            QApplication.processEvents()
+#            # apply region for initial model
+#
+#            x, phase0, zones, fixed = regionTable.getTable()
+#            regid = np.arange(len(x)) + 1 # region 0 doesn't exist
+#            self.r2.assignRes0(dict(zip(regid, x)),
+#                               dict(zip(regid, zones)),
+#                               dict(zip(regid, fixed)),
+#                               dict(zip(regid, phase0)))
+#            noise = float(noiseEdit.text()) / 100 #percentage to proportion
+#            noiseIP = float(noiseEditIP.text())
+#            self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
+#            calcAspectRatio()
+#            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect='auto')
+#            tabs.setTabEnabled(4, True)
+#            tabs.setTabEnabled(5, True)
+#            tabs.setTabEnabled(6, True)
+#            if self.r2.typ[0] == 'c':
+#                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect='auto')
+#        forwardBtn = QPushButton('Forward Modelling')
+#        forwardBtn.setAutoDefault(True)
+#        forwardBtn.clicked.connect(forwardBtnFunc)
+#        forwardBtn.setStyleSheet('background-color: green')
+#
+#        forwardPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+#        forwardPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+#        forwardPseudoIP.setVisible(False)
+#
+#        forwardLogText = QTextEdit()
+#        forwardLogText.setReadOnly(True)
+#        def forwardLogTextFunc(text):
+#            cursor = forwardLogText.textCursor()
+#            cursor.movePosition(cursor.End)
+#            cursor.insertText(text + '\n')
+#            forwardLogText.ensureCursorVisible()
+#            QApplication.processEvents()
+#            if text == 'Forward modelling done.':
+#                forwardOutputStack.setCurrentIndex(1) # switch to graph
+#
+#        forwardHelpText = QLabel()
+##        forwardHelpText = QTextEdit()
+##        forwardHelpText.setReadOnly(True)
+#
+#        # layout
+#        forwardLayout = QVBoxLayout()
+#        seqLayout = QHBoxLayout()
+#        noiseLayout = QHBoxLayout()
+#
+#        for seq in seqs:
+#            qgroup = QGroupBox()
+#            qgroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+#            qlayout = QVBoxLayout()
+#            for a in seq:
+#                qlayout.addWidget(a)
+#            qgroup.setLayout(qlayout)
+#            seqLayout.addWidget(qgroup)
+#
+#        noiseLayout.addWidget(noiseLabel)
+#        noiseLayout.addWidget(noiseEdit)
+#        noiseLayout.addWidget(noiseLabelIP)
+#        noiseLayout.addWidget(noiseEditIP)
+#        noiseLayout.addWidget(seqOutputLabel)
+#        noiseLayout.addWidget(saveSeqBtn)
+#
+#        forwardLayout.addWidget(seqLabel, 5)
+#        forwardLayout.addLayout(seqLayout, 35)
+#        forwardLayout.addLayout(noiseLayout, 2)
+#        forwardLayout.addWidget(forwardBtn, 3)
+#
+#        forwardPseudoLayout = QHBoxLayout()
+#        forwardPseudoLayout.addWidget(forwardPseudo)
+#        forwardPseudoLayout.addWidget(forwardPseudoIP)
+#        forwardPseudoIP.hide()
+#
+#        forwardHelpLayout = QVBoxLayout()
+#        forwardHelpLayout.addWidget(forwardHelpText)
+#
+#        forwardPseudos = QWidget()
+#        forwardPseudos.setLayout(forwardPseudoLayout)
+#
+#        forwardHelp = QWidget()
+#        forwardHelp.setLayout(forwardHelpLayout)
+#
+#        forwardOutputStack = QStackedLayout()
+#        forwardOutputStack.addWidget(forwardLogText)
+#        forwardOutputStack.addWidget(forwardPseudos)
+#        forwardOutputStack.addWidget(forwardHelp)
+#        forwardOutputStack.setCurrentIndex(0)
+#
+##        forwardLayout.addLayout(forwardOutputStack, 55)
+#        
+#        fwdTopWidget = QWidget()
+#        fwdTopWidget.setLayout(forwardLayout)
+#        
+#        fwdBottomWidget = QWidget()
+#        fwdBottomWidget.setLayout(forwardOutputStack)
+#        
+#        fwdSplitter.addWidget(fwdTopWidget)
+#        fwdSplitter.addWidget(fwdBottomWidget)
+#        fwdSplitter.setSizes([100,200])
+#        
+#        fwdSlpitterLayout.addWidget(fwdSplitter)
+#        
+#        tabForward.setLayout(fwdSlpitterLayout)
+
+
+        #%% Tab for forward model (new layout)
         tabForward = QWidget()
         tabs.addTab(tabForward, 'Forward model')
         tabs.setTabEnabled(3, False)
@@ -2619,175 +2981,161 @@ class App(QMainWindow):
         fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
         fwdSplitter = QSplitter(Qt.Vertical)
 
-        # add table for sequence generation
-        seqLabel = QLabel('Define the number of skip and levels in the table.'
-                          'Take into account the specifications of your instrument to'
-                          ' obtain realistic simulation results. You can copy-paste '
-                          'your custom sequence as well. '
-                          'Forward modeling output files (including R2_forward.dat) are saved in <i>fwd</i> folder in the <i>working directory</i>.'
-                          '<b>Click on the sequence title for more help.</b>')
+        seqLabel = QLabel('Design a sequence for the forward modelling. A \
+combination of multiple sequence is accepted as well as importing a custom sequence')
         seqLabel.setWordWrap(True)
-
-        class SequenceTable(QTableWidget):
-            def __init__(self, headers, selfInit=False):
-                nrow, ncol = 10, len(headers)
-                super(SequenceTable, self).__init__(nrow, ncol)
-                self.nrow = nrow
-                self.ncol = ncol
-                self.selfInit = selfInit
-                self.setColumnCount(self.ncol)
-                self.setRowCount(self.nrow)
-                self.headers = headers
-                self.setHorizontalHeaderLabels(self.headers)
-                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-#                self.setItem(0,0,QTableWidgetItem(''))
-#                self.setItem(0,1,QTableWidgetItem(''))
-
-            def addRow(self):
-                self.nrow = self.nrow + 1
-                self.setRowCount(self.nrow)
-
-            def keyPressEvent(self, e):
-                if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
-                    cell = self.selectedIndexes()[0]
-                    c0, r0 = cell.column(), cell.row()
-                    self.paste(c0, r0)
-                elif e.modifiers() != Qt.ControlModifier: # start editing
-#                    print('start editing...')
-                    cell = self.selectedIndexes()[0]
-                    c0, r0 = cell.column(), cell.row()
-                    self.editItem(self.item(r0,c0))
-
-            def paste(self, c0=0, r0=0):
-                # get clipboard
-                text = QApplication.clipboard().text()
-                # parse clipboard
-                tt = []
-                for row in text.split('\n'):
-                    trow = row.split()
-                    if len(trow) > 0:
-                        tt.append(trow)
-                tt = np.array(tt)
-
-                if np.sum(tt.shape) > 0:
-                    # get max row/columns
-                    if self.selfInit is True:
-                        self.initTable(tt)
-                    else:
-                        self.setTable(tt, c0, r0)
-
-            def initTable(self, tt=None, headers=None):
-                self.clear()
-                if headers is not None:
-                    self.headers = np.array(headers)
-                self.ncol = len(self.headers)
-                self.setColumnCount(len(self.headers))
-                self.setHorizontalHeaderLabels(self.headers)
-                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                if tt is None:
-                    tt = np.zeros((10,len(self.headers)-1))
-                self.setRowCount(tt.shape[0])
-                self.nrow = tt.shape[0]
-                self.setTable(tt)
-
-            def setTable(self, tt, c0=0, r0=0):
-                # paste clipboard to qtableView
-                for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
-                    for j in range(r0, min([self.nrow, r0+tt.shape[0]])):
-                        self.setItem(j,i,QTableWidgetItem(str(tt[j-r0, i-c0])))
-
-            def getTable(self):
-                table = -np.ones((self.nrow, self.ncol), dtype=int)
-                for i in range(self.ncol):
-                    for j in range(self.nrow):
-                        if self.item(j,i) is not None:
-                            try:
-                                table[j,i] = int(self.item(j,i).text())
-                            except:
-                                pass
-                return table
-
-            def reset(self):
-                self.nrow = 1
-                self.setRowCount(1)
+        seqLabel.setAlignment(Qt.AlignTop)
+        
+        # alternative design
+        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
+                   ('wenner', 'Wenner', ['a']),
+                   ('schlum1', 'Schlumberger', ['a','m']),
+                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
+                   ('custSeq', 'Custom Sequence', [])]
+        
+        wd = self.datadir
+        
+        class RowOpt(QHBoxLayout):
+            def __init__(self):
+                super(QHBoxLayout, self).__init__()
+                self.combo = None
+                self.rmBtn = None
+                self.labels = []
+                self.fields = []
+                self.seq = 'dpdp1'
+                self.iseq = 0
+                self.importBtn = None
+                self.fname = ''
+                self.createRow()
+                self.showArg()
                 
+            def createRow(self):
+                self.combo = QComboBox()
+                for row in seqData:
+                    self.combo.addItem(row[1])
+                self.combo.currentIndexChanged.connect(self.comboFunc)
+                self.addWidget(self.combo)
+                for a in ['a','n','m']:
+                    lab = QLabel(a + '=')
+                    field = QLineEdit()
+                    field.setValidator(QIntValidator())
+                    self.labels.append(lab)
+                    self.fields.append(field)
+                    self.addWidget(lab)
+                    self.addWidget(field)
+                self.importBtn = QPushButton('Import Custom Sequence')
+                self.importBtn.clicked.connect(self.importFile)
+                self.importBtn.setVisible(False)
+                self.addWidget(self.importBtn)
+                self.rmBtn = QPushButton('Remove')
+                self.rmBtn.clicked.connect(self.remove)
+                self.addWidget(self.rmBtn)
+            
+            def importFile(self):
+                fname, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', wd)
+                if fname != '':
+                    self.fname = fname
+                    self.importBtn.setText(os.path.basename(fname))
+                
+            def comboFunc(self, i):
+                self.seq = seqData[i][0]
+                showArray(self.seq) # display help aside
+                self.iseq = i
+                self.showArg()
+                
+            def showArg(self):
+                n = len(seqData[self.iseq][2])
+                if self.iseq == 4: # custom sequence
+                    self.importBtn.setVisible(True)
+                else:
+                    self.importBtn.setVisible(False)
+                for i in range(3):
+                    val = False
+                    if i < n:
+                        val = True
+                    self.labels[i].setVisible(val)
+                    self.fields[i].setVisible(val)
+                    
+            def remove(self):
+                self.combo.deleteLater()
+                for w in self.fields:
+                    w.deleteLater()
+                for w in self.labels:
+                    w.deleteLater()
+                self.rmBtn.deleteLater()
+                self.importBtn.deleteLater()
+                self.deleteLater()
+            
+            def getData(self):
+                if self.seq == 'custSeq':
+                    return (self.seq, self.fname)
+                else:
+                    n = len(seqData[self.iseq][2])
+                    vals = []
+                    for i, field in enumerate(self.fields):
+                        if i < n:
+                            val = int(field.text()) if field.text() != '' else -9999
+                            vals.append(val)
+                    return (self.seq, *vals)
+
+
+        seqRowLayout = QVBoxLayout()
+        seqRowLayout.setAlignment(Qt.AlignTop)
+        seqRows = []
+        seqRow = RowOpt()
+        seqRowLayout.addLayout(seqRow)
+        seqRow.fields[0].setText('1') # default dipole-dipole sequence
+        seqRow.fields[1].setText('8')
+        seqRows.append(seqRow)
+        
         DpDp = resource_path('image/dipdip.png')
         Wenner = resource_path('image/wenner.png')
         Schlum = resource_path('image/schlum.png')
         Gradient = resource_path('image/gradient.png')
         
-        seqHelp = {'dipdip' : '<img height=200 src="%s">' % DpDp,
-           'wenner': '<img height=200 src="%s">' % Wenner,
-           'schlum': '<img height=200 src="%s">' % Schlum,
-           'gradient': '<img height=200 src="%s">' % Gradient,
-           'custom': 'Paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-'
+        seqHelp = {'dpdp1' : '<img height=140 src="%s">' % DpDp,
+           'wenner': '<img height=140 src="%s">' % Wenner,
+           'schlum1': '<img height=140 src="%s">' % Schlum,
+           'multigrad': '<img height=140 src="%s">' % Gradient,
+           'custSeq': 'Use the button to import a custom CSV file (no header) with just column1: C+, column2: C-, column3: P+, column4: P-'
             }
-
-        def showSeqHelp(arg):
-            if arg in seqHelp.keys():
-                forwardHelpText.setText(seqHelp[arg])
-#                if arg is not 'custome':
-#                    forwardHelpText.setPixmap(QPixmap('image/' + arg + '.png'))
-#                else:
-#                    forwardHelpText.setText(seqHelp[arg])
-                forwardOutputStack.setCurrentIndex(2)
-                QApplication.processEvents()
-
-        seqDipDipLabel = QLabel('<a href="dipdip">Dipole-Dipole</a>')
-        seqDipDipLabel.linkActivated.connect(showSeqHelp)
-#        seqDipDipLabel.setToolTip('<img src="image/dipdip.png">')
-        seqDipDip = SequenceTable(['a','n'])
-        seqDipDip.setItem(0,0,QTableWidgetItem('1')) #confuses user. user should define the sequence.
-        seqDipDip.setItem(0,1,QTableWidgetItem('8'))
-
-        seqWennerLabel = QLabel('<a href="wenner">Wenner</a>')
-        seqWennerLabel.linkActivated.connect(showSeqHelp)
-#        seqWennerLabel.setToolTip('<img src="image/wenner.png">')
-#        pixmap = QPixmap('image/wenner.png').scaledToWidth(250)
-#        seqWennerLabel.setPixmap(pixmap)
-
-#        from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
-#        seqWennerMap = QSvgWidget('image/proto.svg')
-#        renderer = QSvgRenderer('image/proto.svg')
-#        seqWennerLabel.resize(renderer.defaultSize())
-
-        seqWenner = SequenceTable(['a'])
-
-        seqSchlumLabel = QLabel('<a href="schlum">Schlumberger</a>')
-        seqSchlumLabel.linkActivated.connect(showSeqHelp)
-#        seqSchlumLabel.setToolTip('<img src="image/schlum.png">')
-        seqSchlum = SequenceTable(['a','n'])
-
-        seqMultiLabel = QLabel('<a href="gradient">Multigradient</a>')
-        seqMultiLabel.linkActivated.connect(showSeqHelp)
-#        seqMultiLabel.setToolTip('<img src="image/gradient.png">')
-        seqMulti = SequenceTable(['a','n','s'])
-
-        seqCustomLabel = QLabel('<a href="custom">Custom Sequence</a>')
-        seqCustomLabel.linkActivated.connect(showSeqHelp)
-#        seqCustomLabel.setToolTip('paste your custom sequence using ctrl+v in here\na: C+, b: C-, m: P+, n: P-')
-        seqCustom = SequenceTable(['a','b','m','n'], selfInit=True)
-
-        seqTables = {'dpdp1' : seqDipDip,
-                     'wenner' : seqWenner,
-                     'schlum1' : seqSchlum,
-                     'multigrad' : seqMulti,
-                     'custSeq' : seqCustom}
-
-        seqs = [[seqDipDipLabel, seqDipDip],
-                [seqWennerLabel, seqWenner],
-                [seqSchlumLabel, seqSchlum],
-                [seqMultiLabel, seqMulti],
-                [seqCustomLabel, seqCustom]]
-
-        # alternative design
-#        seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
-#                   ('wenner', 'Wenner', ['a','n']),
-#                   ('schlum1', 'Schlumberger', ['a','m']),
-#                   ('multigrad', 'Multi-Gradient', ['a','m','n']),
-#                   ('custSeq', 'Custom Sequence')]
-#        combo
         
+        arrayLabel = QLabel('Sequence help will be display here.')
+        arrayLabel.setAlignment(Qt.AlignCenter)
+        def showArray(arg):
+            if arg not in seqHelp.keys():
+                arrayLabel.setText('Sequence help not found.')
+            else:
+                arrayLabel.setText(seqHelp[arg])
+        showArray('dpdp1') # default
+        
+        def addRowBtnFunc():
+            a = RowOpt()
+            seqRows.append(a)
+            seqRowLayout.addLayout(a)
+        addRowBtn = QPushButton('Add sequence')
+        addRowBtn.adjustSize()
+        addRowBtn.clicked.connect(addRowBtnFunc)
+        
+        def getDataBtnFunc():
+            vals = []
+            for seqRow in seqRows:
+                try: # because we 'deleteLater() the object it causes error
+                    # would be better to check if the object exists
+                    val = seqRow.getData()
+                    ok = True
+                    for j, a in enumerate(val):
+                        if (j != 0) & (a == -9999):
+                            ok = False
+                    if ok is True:
+                        vals.append(val)
+                except:# Exception as e:
+                    pass
+#                    print('object does not exist', e)
+            print('sequences = ', vals)
+            return vals
+#        getDataBtn = QPushButton('Get Data')
+#        getDataBtn.clicked.connect(getDataBtnFunc)
         
         def seqCreateFunc():
             if self.r2.elec is None:
@@ -2795,37 +3143,15 @@ class App(QMainWindow):
                 return
             else:
                 self.r2.elec = elecTable.getTable()
-            params = []
-            counter = 0 #temp loop counter
-            for key in seqTables:
-                p = seqTables[key].getTable()
-                ie = (p != -1).all(1)
-                p = p[ie,:]
-                if len(p) > 0:
-                    if key == 'custSeq':
-                        self.r2.sequence = seqCustom.getTable()
-                        seq_typ = ' imported'
-                    else:
-                        for i in range(p.shape[0]):
-                            params.append((key, *p[i,:]))
-                else:
-                    counter += 1
-            if params:
-                self.r2.createSequence(params=params)
-                seq_typ = ' generated'
-
-            text_default = ''
-            array_typ = ''
-            if counter == 5: # creats a default DpDp1 if user doesn't specify the sequence
-                self.r2.createSequence()
-                text_default = 'Default '
-                array_typ = ' Dipole - Dipole'
-                seq_typ = ' generated'
-
-            seqOutputLabel.setText(text_default + str(len(self.r2.sequence)) + array_typ + ' quadrupoles' + seq_typ)
+            params = getDataBtnFunc()
+            if len(params) == 0:
+                raise ValueError('You must specify at least one sequence.')
+                return
+            self.r2.createSequence(params=params)
+            seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.r2.sequence)))
 
         seqOutputLabel = QLabel('')
-
+        
         # add noise possibility
         noiseLabel = QLabel('Resistivity noise [%]:')
         noiseEdit = QLineEdit('2')
@@ -2869,6 +3195,7 @@ class App(QMainWindow):
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             calcAspectRatio()
             forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect='auto')
+            fwdContour.setVisible(True)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
             tabs.setTabEnabled(6, True)
@@ -2893,59 +3220,74 @@ class App(QMainWindow):
             QApplication.processEvents()
             if text == 'Forward modelling done.':
                 forwardOutputStack.setCurrentIndex(1) # switch to graph
-
-        forwardHelpText = QLabel()
-#        forwardHelpText = QTextEdit()
-#        forwardHelpText.setReadOnly(True)
+                
+        def fwdContourFunc(state):
+            if state == Qt.Checked:
+                contour = True
+            else:
+                contour = False
+                
+            forwardPseudo.setCallback(self.r2.surveys[0].pseudo)
+            forwardPseudo.replot(aspect='auto', contour=contour)
+            if self.r2.typ[0] == 'c':
+                forwardPseudoIP.setCallback(self.r2.surveys[0].pseudoIP)
+                forwardPseudoIP.replot(aspect='auto', contour=contour)
+        
+        fwdContour = QCheckBox('Contour')
+        fwdContour.stateChanged.connect(fwdContourFunc)
+        fwdContour.setVisible(False)
 
         # layout
         forwardLayout = QVBoxLayout()
+        forwardLayout.setAlignment(Qt.AlignTop)
         seqLayout = QHBoxLayout()
         noiseLayout = QHBoxLayout()
 
-        for seq in seqs:
-            qgroup = QGroupBox()
-            qgroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
-            qlayout = QVBoxLayout()
-            for a in seq:
-                qlayout.addWidget(a)
-            qgroup.setLayout(qlayout)
-            seqLayout.addWidget(qgroup)
-
+        # top part
+#        seqLayout = QHBoxLayout()
+        seqOptionLayout = QVBoxLayout()
+        seqOptionLayout.setAlignment(Qt.AlignTop)
+#        seqRowLayout.setAlignment(Qt.AlignTop)
+        seqOptionLayout.addLayout(seqRowLayout)
+        seqOptionLayout.addWidget(addRowBtn)
+        seqLayout.addLayout(seqOptionLayout, 50)
+        seqLayout.addWidget(arrayLabel, 50)
+        
+        # noise Layout
         noiseLayout.addWidget(noiseLabel)
         noiseLayout.addWidget(noiseEdit)
         noiseLayout.addWidget(noiseLabelIP)
         noiseLayout.addWidget(noiseEditIP)
+        noiseLayout.addWidget(forwardBtn)
         noiseLayout.addWidget(seqOutputLabel)
         noiseLayout.addWidget(saveSeqBtn)
+        noiseLayout.addWidget(fwdContour)
 
-        forwardLayout.addWidget(seqLabel, 5)
-        forwardLayout.addLayout(seqLayout, 35)
-        forwardLayout.addLayout(noiseLayout, 2)
-        forwardLayout.addWidget(forwardBtn, 3)
-
-        forwardPseudoLayout = QHBoxLayout()
-        forwardPseudoLayout.addWidget(forwardPseudo)
-        forwardPseudoLayout.addWidget(forwardPseudoIP)
+        # pseudo dynamic layout
+        forwardPseudoLayout = QVBoxLayout()
+        
+        forwardPseudoLayoutBottom = QHBoxLayout()
+        forwardPseudoLayoutBottom.addWidget(forwardPseudo)
+        forwardPseudoLayoutBottom.addWidget(forwardPseudoIP)
         forwardPseudoIP.hide()
-
-        forwardHelpLayout = QVBoxLayout()
-        forwardHelpLayout.addWidget(forwardHelpText)
+        
+        forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
 
         forwardPseudos = QWidget()
         forwardPseudos.setLayout(forwardPseudoLayout)
 
-        forwardHelp = QWidget()
-        forwardHelp.setLayout(forwardHelpLayout)
-
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(forwardLogText)
         forwardOutputStack.addWidget(forwardPseudos)
-        forwardOutputStack.addWidget(forwardHelp)
         forwardOutputStack.setCurrentIndex(0)
+                
+        # general forward layout
+        forwardLayout.addWidget(seqLabel)
+        forwardLayout.addLayout(seqLayout)
+        forwardLayout.addLayout(noiseLayout)
+#        forwardLayout.addWidget(forwardBtn, 3)
+#        forwardLayout.addLayout(forwardOutputStack, 60)
 
-#        forwardLayout.addLayout(forwardOutputStack, 55)
-        
         fwdTopWidget = QWidget()
         fwdTopWidget.setLayout(forwardLayout)
         
@@ -2954,11 +3296,12 @@ class App(QMainWindow):
         
         fwdSplitter.addWidget(fwdTopWidget)
         fwdSplitter.addWidget(fwdBottomWidget)
-        fwdSplitter.setSizes([100,200])
+        fwdSplitter.setCollapsible(1, False)
         
         fwdSlpitterLayout.addWidget(fwdSplitter)
         
         tabForward.setLayout(fwdSlpitterLayout)
+
 
         #%% tab INVERSION SETTINGS
         tabInversionSettings = QTabWidget()
@@ -4265,6 +4608,13 @@ USA: Trelgol Publishing, (2006).
 
         tabAbout.setLayout(infoLayout)
 
+        #%% test tab
+#        tabTest = QTabWidget()
+#        tabs.addTab(tabTest, 'TEST')
+#        tabTestLayout = QVBoxLayout()
+#        tabTest.setLayout(tabTestLayout)
+#        
+        
         #%% general Ctrl+Q shortcut + general tab layout
 
         layout.addWidget(tabs)
