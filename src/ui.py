@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame,
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar,
-    QStackedLayout, QRadioButton, QGroupBox)#, QAction, QButtonGroup, QListWidget, QShortcut)
+    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer#, QProcess, QSize
 from PyQt5.QtCore import Qt
@@ -4495,8 +4495,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         helpLayout = QVBoxLayout()
         helpLayout.setAlignment(Qt.AlignTop)
-        helpText = QTextEdit()
+        helpText = QTextBrowser()
         helpText.setReadOnly(True)
+        helpText.setOpenExternalLinks(True)
         helpText.setText('''
            <h1>General help</h1>\
            <p>Below are simple instructions to guide you to through the software.</p>
@@ -4531,6 +4532,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <ul><li>Plot aspect ratio can be changed by dragging  left handle to right or left and top handle (above plot options) up and down.</li></ul>
            <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
            </ul>
+           <p>More help at: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
         ''')
         helpLayout.addWidget(helpText)
         tabHelp.setLayout(helpLayout)
