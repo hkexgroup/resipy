@@ -2660,7 +2660,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
                     (centriod_x,centriod_y,centriod_z),
                     areas,
                     [9],
-                    [0]*no_elms,
+                    [1]*no_elms,
                     'no attribute')
     
     #find the node which the electrodes are actually on in terms of the mesh. 

@@ -467,6 +467,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(False)
                 meshCustomGroup.setVisible(True)
                 instructionLabel.setVisible(True)
+                resetMeshBtn.setVisible(True)
 
                 # inversion settings
                 show3DOptions(False)
@@ -503,6 +504,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(True)
                 meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
+                resetMeshBtn.setVisible(True)
 
                 # inversion settings
                 show3DOptions(True)
@@ -1510,8 +1512,10 @@ class App(QMainWindow):
                     self.inputPhaseFlag = True
                 else:
                     ipCheck.setChecked(False)
+            
+            # currently not importing each IP columns (M1 -> M..) so no
+            # decay curve analysis can be performed
 
-            # TODO need to import the IP coluns as well
 
             colIndex = np.hstack(colIndex)
             newHeaders = np.hstack(newHeaders)
@@ -2230,7 +2234,7 @@ class App(QMainWindow):
                 self.r2.setElec(elec)
             
             # plot the interactive model
-            regionTable.reset() # TODO if designSurvey the table won't be empty
+            regionTable.reset()
             def func(ax):
                 self.r2.designModel(ax=ax, addAction=regionTable.addRow)
             mwMesh.plot(func, aspect = self.plotAspect)
@@ -2371,7 +2375,7 @@ class App(QMainWindow):
         clCoarseLabel = QLabel('Coarse')
         clCoarseLabel.setStyleSheet('font:12px;')
         clSld = QSlider(Qt.Horizontal)
-        clSld.setMinimum(1) # TODO this will depend of electrode spacing
+        clSld.setMinimum(1) # this depends on electrode spacing
         clSld.setMaximum(10)
         clSld.setValue(5)
         clGrid.addWidget(clSld, 0, 0, 1, 2)
