@@ -3097,7 +3097,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum1': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
-           'custSeq': 'Use the button to import a custom CSV file (no header) with just column1: C+, column2: C-, column3: P+, column4: P-'
+           'custSeq': 'Use the button to import a custom CSV file (no header)\ncolumn1: C+, column2: C-, column3: P+, column4: P-'
             }
         
         arrayLabel = QLabel('Sequence help will be display here.')
