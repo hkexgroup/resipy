@@ -644,6 +644,8 @@ class App(QMainWindow):
             ipCheck.setEnabled(False)
             tabImporting.setTabEnabled(2,True)
             batchCheck.setEnabled(True)
+            timeLapseCheck.setChecked(False) # not checked by default
+            batchCheck.setChecked(False) # not checked by default
 #            boreholeCheck.setEnabled(True)
             activateTabs(False)
         dimForward = QRadioButton('Forward')
