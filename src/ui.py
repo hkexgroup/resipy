@@ -1102,6 +1102,10 @@ class App(QMainWindow):
 #                    self.setBuried()
 #                    self.ncol = ncol-1
 
+            def addRow(self):
+                self.nrow += 1
+                self.setRowCount(self.nrow)
+    
             def setBuried(self, vals=None):
                 if vals is None:
                     vals = np.zeros(self.nrow, dtype=bool)
@@ -1299,8 +1303,16 @@ class App(QMainWindow):
         topoButton = QPushButton('Import from CSV files (no headers)')
         topoButton.setAutoDefault(True)
         topoButton.clicked.connect(topoButtonFunc)
+        def topoAddRowBtnFunc():
+            topoTable.addRow()
+        topoAddRowBtn = QPushButton('Add Row')
+        topoAddRowBtn.clicked.connect(topoAddRowBtnFunc)
+        
         topoLayout.addWidget(topoLabel)
-        topoLayout.addWidget(topoButton)
+        topoBtnLayout = QHBoxLayout()
+        topoBtnLayout.addWidget(topoButton, 90)
+        topoBtnLayout.addWidget(topoAddRowBtn, 10)
+        topoLayout.addLayout(topoBtnLayout)
         topoLayout.addWidget(topoTable)
 
         tabImportingTopo.setLayout(topoLayout)
