@@ -4397,6 +4397,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if self.r2.typ[-1] == '2':
                     edge_color = self.displayParams['edge_color']
                     sens = self.displayParams['sens']
+                    sensPrc = self.displayParams['sensPrc']
                     attr = self.displayParams['attr']
                     contour = self.displayParams['contour']
                     vmin = self.displayParams['vmin']
@@ -4404,7 +4405,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     cmap = self.displayParams['cmap']
                     self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
                                        contour=contour, sens=sens, attr=attr,
-                                       vmin=vmin, vmax=vmax, color_map=cmap)
+                                       vmin=vmin, vmax=vmax, color_map=cmap,
+                                       sensPrc=sensPrc)
                 self.r2.saveVtks(fdir)
             self.r2.saveData(fdir)
             infoDump('All graphs saved successfully in the working directory.')

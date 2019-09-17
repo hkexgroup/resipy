@@ -2738,7 +2738,6 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if outputdir is None:
             outputdir = self.dirname
-        print(outputdir)
         if len(self.meshResults) == 0:
             self.getResults()
         for i in range(len(self.meshResults)):
@@ -2755,7 +2754,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                self.meshResults[i].show(ax=ax, **kwargs2)
             fig, ax = plt.subplots()
             self.showResults(index=i, ax=ax, **kwargs)
-            fname = self.surveys[i].name
+            fname = self.meshResults[i].mesh_title
             fig.savefig(os.path.join(outputdir, fname + '.png'))
     
     
@@ -3125,8 +3124,6 @@ class R2(object): # R2 master class instanciated by the GUI
         if os.path.exists(wd):
             shutil.rmtree(wd)
         shutil.copytree(self.dirname, wd)
-        
-        
         
         
     def showParam(self):
