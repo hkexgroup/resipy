@@ -34,7 +34,7 @@ r2help = {
 'modErr' : "<p>Compute modelling error due to the mesh by doing a forward modelling with a homogeneous resistivity of 100 Ohm.m. This error will be geometrically added to the reciprocal error if the latest is available.</p>",
 'parallel' : "<p>Run inversions in parallel according to the number of cores "
               "of your computer. Note that you won't be able to see the "
-              "progress of the inversiong. Don't "
+              "progress of the inversion. Don't "
               "do this for 3D surveys as the required memory might be huge.</p>",
 'no_improve' : "<p> <code>no_improve</code> is termination criteria such that"
                 " if during two iterations the misfit doesn\'t change by "

@@ -101,6 +101,9 @@ def syscalParser(fname, spacing=None):
         if spacing is None:    
             # for unregularly spaced array
             array = df[['a','b','m','n']].values
+            arrayMin = np.min(np.unique(np.sort(array.flatten())))
+            if arrayMin != 0: # all surveys must start from x = 0
+                array -= arrayMin
             val = np.sort(np.unique(array.flatten())) # unique electrodes positions
             elecLabel = 1 + np.arange(len(val))
             newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
