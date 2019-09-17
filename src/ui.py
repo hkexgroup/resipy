@@ -3795,7 +3795,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def rho_minFunc():
             self.r2.param['rho_min'] = float(rho_min.text())
-        rho_minLabel = QLabel('<a href="errorParam">Minimum apparent resistivity</a>:')
+        rho_minLabel = QLabel('<a href="rho_max">Minimum apparent resistivity</a>:')
         rho_minLabel.linkActivated.connect(showHelp)
         rho_min = QLineEdit()
         rho_min.setValidator(QDoubleValidator())
@@ -3805,7 +3805,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def rho_maxFunc():
             self.r2.param['rho_max'] = float(rho_max.text())
-        rho_maxLabel = QLabel('<a href="errorParam">Maximum apparent resistivity</a>:')
+        rho_maxLabel = QLabel('<a href="rho_max">Maximum apparent resistivity</a>:')
         rho_maxLabel.linkActivated.connect(showHelp)
         rho_max = QLineEdit()
         rho_max.setValidator(QDoubleValidator())
