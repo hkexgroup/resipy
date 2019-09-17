@@ -756,6 +756,7 @@ class App(QMainWindow):
                         self.r2.createBatchSurvey(fdir, ftype=self.ftype, dump=infoDump)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
+                    psContourCheck.setEnabled(True)
                     for s in self.r2.surveys:
                         fnamesCombo.addItem(s.name)
                     fnamesCombo.show()
