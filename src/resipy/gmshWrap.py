@@ -381,16 +381,14 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     if bh_flag: #not allowing mesh refinement for boreholes currently
         cl_factor = 1   
     
-    #reflect surface topography at base of fine mesh area. 
-    x_base = x_pts[::2]
-    z_base = moving_average(y_pts[::2] - abs(doi),N=5) # compute the depth to the points at the base of the survey, + downsample
-    if len(x_pts)%2 == 0:#bug fix
-        z_base = np.append(z_base,y_pts[-1]- abs(doi))#puts in extra point at base underneath last x and y point
-        x_base = np.append(x_base,x_pts[-1])
-    # a smoothed version of the topography ... 
+    #reflect surface topography at base of fine mesh area, should be a smoothed version of the topography
+    x_base = x_pts
+    z_base = moving_average(y_pts- abs(doi),N=5) # compute the depth to the points at the base of the survey
+    
+    # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
     if np.max(z_base) > np.min(electrodes[1]):
-        #warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
-        raise Exception("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!")
+        warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
+        #raise Exception("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!")
     
     basal_pnt_cache = []
     for i in range(len(x_base)):
