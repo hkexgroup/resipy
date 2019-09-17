@@ -34,21 +34,19 @@ r2help = {
 'modErr' : "<p>Compute modelling error due to the mesh by doing a forward modelling with a homogeneous resistivity of 100 Ohm.m. This error will be geometrically added to the reciprocal error if the latest is available.</p>",
 'parallel' : "<p>Run inversions in parallel according to the number of cores "
               "of your computer. Note that you won't be able to see the "
-              "progress of the inversion or kill it while it's running. Don't "
+              "progress of the inversiong. Don't "
               "do this for 3D surveys as the required memory might be huge.</p>",
 'no_improve' : "<p> <code>no_improve</code> is termination criteria such that"
                 " if during two iterations the misfit doesn\'t change by "
-                "<code>no_improve</code> (%) then the inverse solution is stopped</p>",
-'inv_type3D' : "<p> 0 for normal regularisation; 1 for background regularisation (see"
-                "equation (13)); 2 for difference regularisation (see equation (7)). Note that option 2 is not"
-                "a difference inversion (as per LaBrecque and Yang, 2001) but can be used for this purpose"
-                "with a modification to the data in protocol.dat as shown in equation (11)</p>",
+                "<code>no_improve</code> (%) then the inverse solution is stopped.</p>",
+'inv_type3D' : "<p>0 for normal regularisation; 1 for background regularisation; 2 for difference regularisation. Note that option 2 is not a difference inversion (as per LaBrecque and Yang, 2001) but can be used for this purpose"
+                "with a modification to the data in <code>protocol.dat</code>.</p>",
 'alpha_s' : "<p><code>alpha_s</code> is an additional penalty factor applied to the starting resistivity"
             "model. If <code>alpha_s</code> is 1.0 then the regularisation applies the same"
             "weight to smoothing the model as to constraining to the background model. A smaller"
             "(no zero) value of <code>alpha_s</code> will retain some constraint to the background model.</p>",
 'cginv_tolerance' : "<p><code>cginv_tolerance</code> is the tolerance (typically 0.0001) for the conjugate gradient "
-                    "solution of the inverse equations</p>",
+                    "solution of the inverse equations.</p>",
 'cginv_maxits' : "<p><code>cginv_maxits</code> is the maximum number of iterations for"
                 "the conjugate gradient solution of the inverse problem (this could be set to a high value < "
                 "number of parameters or could be set low, say 50, to gain an approximate solution). A "
