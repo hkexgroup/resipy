@@ -161,10 +161,10 @@ class Mesh:
         except KeyError as e:
             #print('error in add_attr_dict', e)
             pass
-        try: # add the physical flag from the msh parsing as cell_attribute
-            obj.attr_cache['cell_attributes'] = mesh_info['parameters']
-        except Exception as e:
-            print('Failed to add cell_attributes:', e)
+#        try: # add the physical flag from the msh parsing as cell_attribute
+#            obj.attr_cache['cell_attributes'] = mesh_info['parameters']
+#        except Exception as e:
+#            print('Failed to add cell_attributes:', e)
         try:
             obj.regions = mesh_info['element_ranges']
         except KeyError:
