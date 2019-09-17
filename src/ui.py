@@ -2236,12 +2236,16 @@ class App(QMainWindow):
             mwMesh.plot(func, aspect = self.plotAspect)
             mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             mwMesh.canvas.setFocus() # set focus on the canvas
+            if self.iForward is False:
+                regionTable.setColumnHidden(2, False) # show zone column
+                regionTable.setColumnHidden(3, False) # show fixed column
             meshOutputStack.setCurrentIndex(1)
 
         designModelBtn = QPushButton('Design Model before meshing')
         designModelBtn.clicked.connect(designModel)
 
         def meshQuadFunc():
+            regionTable.reset()
             elec = elecTable.getTable()
             if np.sum(~np.isnan(elec[:,0])) == 0:
                 errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
@@ -2266,6 +2270,9 @@ class App(QMainWindow):
                 scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
                 replotMesh()
+                if self.iForward is False:
+                    regionTable.setColumnHidden(2, True) # hide zone column
+                    regionTable.setColumnHidden(3, True) # hide fixed column
             except Exception as e:
                 errorDump('Error creating the mesh: ' + str(e))
         meshQuad = QPushButton('Quadrilateral Mesh')
@@ -2301,6 +2308,9 @@ class App(QMainWindow):
                 surface = surface[inan,:]
             self.r2.createModelMesh(buried=buried, surface=surface,
                                     cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+            if self.iForward is False:
+                regionTable.setColumnHidden(2, False) # show zone column
+                regionTable.setColumnHidden(3, False) # show fixed column
             scale.setVisible(True)
             scaleLabel.setVisible(True)
             meshOutputStack.setCurrentIndex(1)
@@ -2444,6 +2454,14 @@ class App(QMainWindow):
         importCustomMeshBtn2.clicked.connect(importCustomMeshFunc2)
         importCustomMeshBtn2.setToolTip('Import .msh or .vtk file. The electrodes will be snapped to the closest node.')
 
+        def resetMeshBtnFunc():
+            regionTable.reset()
+            mwMesh.clear()
+            self.r2.mesh = None
+        resetMeshBtn = QPushButton('Reset Mesh')
+        resetMeshBtn.clicked.connect(resetMeshBtnFunc)
+        
+        
         # layout
         meshOptionQuadLayout = QHBoxLayout()
         meshOptionQuadLayout.addWidget(nnodesLabel)
@@ -2550,12 +2568,16 @@ class App(QMainWindow):
                 self.setRowCount(1)
 
 
-        instructionLabel = QLabel('To define a region, just click on the mesh'
-           ' to draw a polygon. Close the polygon using a right click. Once done'
-           ', you can define the region resistivity in the table. To define a'
-           ' new region, just press \'e\'')
+        instructionLabel = QLabel('Click on the buttons below to define a region.'
+            ' If polyline is selected, you can close the region by using the right'
+            ' click of the mouse. Note that it is possible to define a zone (so'
+            ' no smoothing at the boundaries) and fix the region value for '
+            'triangular mesh only.')
         instructionLabel.setWordWrap(True)
-        meshLayout.addWidget(instructionLabel)
+        instructionLayout = QHBoxLayout()
+        instructionLayout.addWidget(instructionLabel, 92)
+        instructionLayout.addWidget(resetMeshBtn, 8)
+        meshLayout.addLayout(instructionLayout)
 
         mwMesh = MatplotlibWidget(navi=True, itight=False)
         mwMesh3D = MatplotlibWidget(threed=True, navi=True)
