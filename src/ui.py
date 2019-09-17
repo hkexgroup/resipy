@@ -2272,6 +2272,11 @@ class App(QMainWindow):
                 self.r2.setElec(elec)
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
+            if np.sum(~inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
             if not np.isnan(surface[0,0]):
                 surface_flag = True
             else:
@@ -2280,10 +2285,10 @@ class App(QMainWindow):
             try:
                 if surface_flag:
                     print("quad mesh + topo")
-                    self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes, surface_x=surface[:,0], surface_y=surface[:,2])
+                    self.r2.createMesh(typ='quad', buried=buried, elemx=nnodes, surface=surface)
                 else:
                     print("quad mesh no topo")
-                    self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes)
+                    self.r2.createMesh(typ='quad', buried=buried, elemx=nnodes)
                 scale.setVisible(False)
                 scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)

@@ -251,11 +251,13 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         topo_z = [elec_z[min_idx],elec_z[max_idx]]
     else:
         topo_x = geom_input['surface'][0]
-        topo_z = geom_input['surface'][1] 
-        
+        topo_z = geom_input['surface'][1]
+
     #catch where x coordinates dont change
-    if max(topo_x)-min(topo_x) < 0.2: # they have the same x coordinate 
-        topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
+    if bh_flag:
+        elecspacing = (min(electrodes[0]) - max(electrodes[0]))/len(electrodes)
+        if max(topo_x)-min(topo_x) < 0.2*elecspacing and len(topo_x) != 1: # they have the same x coordinate 
+            topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
                   
     if dp_len == -1 and len(elec_x)>0:#compute maximum dipole length
         dp_len = abs(np.max(elec_x) - np.min(elec_x))
