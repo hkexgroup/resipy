@@ -1603,7 +1603,7 @@ class Mesh:
                 raise NameError("Excepted string type argument for 'loc'")
                 
         self.write_vtk(fname)#write vtk to working directory with all associated attributes
-        op_sys = platform.system()#find kernal type
+        op_sys = platform.system()#find kernel type
         if op_sys == "Windows":
             if look4: # find where paraview is installed 
                 found, cmd_line = self.findParaview()
@@ -2464,10 +2464,10 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         surface_x = np.array([])
         surface_z = np.array([])
     else: #if surface_x != None and surface_y != None:
-            if len(surface_x) != len(surface_z):
-                raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
-            surface_x = np.array(surface_x)
-            surface_z = np.array(surface_z)
+        if len(surface_x) != len(surface_z):
+            raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
+        surface_x = np.array(surface_x)
+        surface_z = np.array(surface_z)
     
     bh_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -2486,17 +2486,17 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
                 bh_flag = True
         
         if len(surface_idx)>0:# then surface electrodes are present
-            Ex=np.array(elec_x)[surface_idx]
-            Ey=np.array(elec_z)[surface_idx]
-        elif len(surface_idx)== 0 and len(surface_x)>0:
+            Ex = np.array(elec_x)[surface_idx]
+            Ey = np.array(elec_z)[surface_idx]
+        elif len(surface_idx) == 0 and len(surface_x) > 0:
             #case where you have surface topography but no surface electrodes 
-            Ex=np.array(surface_x)
-            Ey=np.array(surface_z)
-            elec=np.c_[Ex,Ey]
+            Ex = np.array(surface_x)
+            Ey = np.array(surface_z)
+            elec = np.c_[Ex, Ey]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
-            Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
-            Ey=np.array([elec_z[np.argmax(elec_z)],elec_z[np.argmax(elec_z)]])
+            Ex = np.array([elec_x[np.argmin(elec_x)], elec_x[np.argmax(elec_x)]])
+            Ey = np.array([elec_z[np.argmax(elec_z)], elec_z[np.argmax(elec_z)]])
     else:
         pass
         #elec = np.c_[elec_x,elec_y]
@@ -2564,15 +2564,16 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         
     # create topo
     if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
-        X = np.append(Ex,surface_x) 
-        Y = np.append(Ey,surface_z)
+        X = np.append(Ex, surface_x) 
+        Y = np.append(Ey, surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
     else: # all electrodes are assumed to be on the surface 
-        X = np.append(elec[:,0],surface_x)
-        Y = np.append(elec[:,1],surface_z)
+        X = np.append(elec[:,0], surface_x)
+        Y = np.append(elec[:,1], surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
+        print('----------', topo)
     
     if bh_flag:
         #insert y values of boreholes, normalised to topography
@@ -2619,16 +2620,16 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
                   np.arange(y_dim+1,fnl_node+1),
                   np.arange(1,fnl_node-y_dim+1))
     
-    del_idx=np.arange(y_dim-1,len(node_mappins[0]),y_dim)#the above has too many indexes at the changeover of columns so some need deleting
+    del_idx = np.arange(y_dim-1,len(node_mappins[0]),y_dim)#the above has too many indexes at the changeover of columns so some need deleting
     
     node_mappins = [list(np.delete(node_mappins[i],del_idx)) for i in range(4)]#delete excess node placements
     #compute node x and y  (and z)
-    node_x,node_z=np.meshgrid(meshx,meshz)
+    node_x,node_z = np.meshgrid(meshx,meshz)
     #account for topography in the y direction 
     node_z = [topo-node_z[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
-    node_z=np.array(node_z).flatten(order='F')
-    node_x=node_x.flatten(order='F')
-    node_y=np.array([0]*len(node_x))
+    node_z = np.array(node_z).flatten(order='F')
+    node_x = node_x.flatten(order='F')
+    node_y = np.array([0]*len(node_x))
     
     #compute element centres and areas
     centriod_x=[]
@@ -2685,7 +2686,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
     isort = np.argsort(xsurf)
     mesh.surface = surfacePoints[isort, :]
 
-    return mesh,meshx,meshz,topo,elec_node
+    return mesh, meshx, meshz, topo, elec_node
+
 
 
 #%% build a triangle mesh - using the gmsh wrapper
@@ -3304,9 +3306,9 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     #check operating system 
     OpSys=platform.system()    
     if OpSys=='Darwin':
-        print("Kernal type: macOS")
+        print("Kernel type: macOS")
     else:
-        print("Kernal type: %s"%OpSys)
+        print("Kernel type: %s"%OpSys)
     #check the amount of ram 
     if OpSys=="Linux":
         p = Popen('free -m', stdout=PIPE, shell=True)
