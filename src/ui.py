@@ -1102,6 +1102,10 @@ class App(QMainWindow):
 #                    self.setBuried()
 #                    self.ncol = ncol-1
 
+            def addRow(self):
+                self.nrow += 1
+                self.setRowCount(self.nrow)
+    
             def setBuried(self, vals=None):
                 if vals is None:
                     vals = np.zeros(self.nrow, dtype=bool)
@@ -1299,8 +1303,16 @@ class App(QMainWindow):
         topoButton = QPushButton('Import from CSV files (no headers)')
         topoButton.setAutoDefault(True)
         topoButton.clicked.connect(topoButtonFunc)
+        def topoAddRowBtnFunc():
+            topoTable.addRow()
+        topoAddRowBtn = QPushButton('Add Row')
+        topoAddRowBtn.clicked.connect(topoAddRowBtnFunc)
+        
         topoLayout.addWidget(topoLabel)
-        topoLayout.addWidget(topoButton)
+        topoBtnLayout = QHBoxLayout()
+        topoBtnLayout.addWidget(topoButton, 90)
+        topoBtnLayout.addWidget(topoAddRowBtn, 10)
+        topoLayout.addLayout(topoBtnLayout)
         topoLayout.addWidget(topoTable)
 
         tabImportingTopo.setLayout(topoLayout)
@@ -2260,18 +2272,27 @@ class App(QMainWindow):
                 self.r2.setElec(elec)
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
+            inan = ~np.isnan(surface[:,0])
             if not np.isnan(surface[0,0]):
                 surface_flag = True
             else:
                 surface_flag = False
+            if np.sum(~inan) == surface.shape[0]:
+                surface = None
+            else:
+                surface = surface[inan,:]
+#            if not np.isnan(surface[0,0]):
+#                surface_flag = True
+#            else:
+#                surface_flag = False
             nnodes = nnodesSld.value()
             try:
                 if surface_flag:
                     print("quad mesh + topo")
-                    self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes, surface_x=surface[:,0], surface_y=surface[:,2])
+                    self.r2.createMesh(typ='quad', buried=buried, elemx=nnodes, surface=surface)
                 else:
                     print("quad mesh no topo")
-                    self.r2.createMesh(typ='quad', buried = buried, elemx=nnodes)
+                    self.r2.createMesh(typ='quad', buried=buried, elemx=nnodes)
                 scale.setVisible(False)
                 scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
