@@ -254,7 +254,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         topo_z = geom_input['surface'][1]
 
     #catch where x coordinates dont change
-    if bh_flag:
+    if bh_flag or bu_flag:
         elecspacing = (min(electrodes[0]) - max(electrodes[0]))/len(electrodes)
         if max(topo_x)-min(topo_x) < 0.2*elecspacing and len(topo_x) != 1: # they have the same x coordinate 
             topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
