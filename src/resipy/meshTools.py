@@ -2573,7 +2573,6 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         Y = np.append(elec[:,1], surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
-        print('----------', topo)
     
     if bh_flag:
         #insert y values of boreholes, normalised to topography
