@@ -2946,7 +2946,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     
     rem_elec_idx = []
     if elec_type is not None:
-        warnings.warn("Borehole electrode meshes still in development!")
+#        warnings.warn("Borehole electrode meshes still in development!")
         if not isinstance(elec_type,list):
             raise TypeError("'elec_type' argument should be of type 'list', got type %s"%str(type(elec_type)))
         elif len(elec_type) != len(elec_x):

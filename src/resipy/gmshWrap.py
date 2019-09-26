@@ -254,7 +254,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         topo_z = geom_input['surface'][1]
 
     #catch where x coordinates dont change
-    if bh_flag:
+    if bh_flag or bu_flag:
         elecspacing = (min(electrodes[0]) - max(electrodes[0]))/len(electrodes)
         if max(topo_x)-min(topo_x) < 0.2*elecspacing and len(topo_x) != 1: # they have the same x coordinate 
             topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
@@ -390,7 +390,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
     if np.max(z_base) > np.min(electrodes[1]):
         warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
-        #raise Exception("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!")
     
     basal_pnt_cache = []
     for i in range(len(x_base)):
@@ -422,23 +421,23 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
     fh.write("\n//Background region (Neumann boundary) points\n")
-    cl_factor2=50#characteristic length multipleier for Neumann boundary 
-    cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
-    fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
+    cl_factor2=25*cl_factor#characteristic length multipleier for Neumann boundary 
+    cln=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
+    fh.write("cln=%.2f;//characteristic length for background region\n" %cln)
     #Background region propeties, follow rule of thumb that background should be 5*largest dipole 
     flank=5*dp_len
     b_max_depth=-abs(doi)-(3*dp_len)#background max depth
     #add Neumann boundaries on left hand side
     n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
     tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
     tot_pnts=tot_pnts+1;n_pnt_cache[1]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
     #add Neumann boundary points on right hand side
     tot_pnts=tot_pnts+1;n_pnt_cache[2]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
     tot_pnts=tot_pnts+1;n_pnt_cache[3]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
     #make lines encompassing all the points - counter clock wise fashion
     fh.write("//make lines encompassing all the background points - counter clock wise fashion\n")
     
