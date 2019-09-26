@@ -287,7 +287,14 @@ class Survey(object):
             return
         else:
             self.ndata = len(i2keep)
+            if 'irecip' in self.df.columns:
+                # get a list of measurement that would be affected by the removal
+                recip2reset = self.df[~i2keep]['irecip'].values*-1
             self.df = self.df[i2keep]
+            if 'irecip' in self.df.columns:
+                ie = np.in1d(self.df['irecip'].values, recip2reset)
+                self.df.loc[ie, 'irecip'] = 0 # as their reciprocal is deleted, we set it to 0
+                self.df.loc[ie, 'recipErr'] = np.nan # they don't contribute to the error model anymore
             print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
             return np.sum(~i2keep)
     
