@@ -299,33 +299,37 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode']*len(elec_x))   
     
-#    #deal with end case electrodes, check max topo points are outside survey bounds 
-#    try:
-#        min_idx = np.argmin(elec_x)
-#        max_idx = np.argmax(elec_z)
-#        if min(elec_x) == min(x_pts):
-#            x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.diff(elec_x))) # in this case extend the survey bounds beyond the first electrode 
-#            y_pts = np.append(y_pts,elec_z[min_idx])
-#            flag.append('topography point')#add a flag
-#            
-#        if max(elec_x) == max(x_pts):
-#            print('--')
-#            x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.diff(elec_x)))
-#            y_pts = np.append(y_pts,elec_z[max_idx])
-#            flag.append('topography point')
-#    
-#    except ValueError: # then there are no surface electrodes, in which case
-#        min_idx = np.argmin(electrodes[0])
-#        max_idx = np.argmax(electrodes[0])
-#        if min(electrodes[0]) == min(x_pts):
-#            x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*np.mean(np.diff(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
-#            y_pts = np.append(y_pts,max(electrodes[1])+1)
-#            flag.append('topography point')#add a flag
-#            
-#        if max(electrodes[0]) == max(x_pts):
-#            x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*np.mean(np.diff(electrodes[0])))
-#            y_pts = np.append(y_pts,max(electrodes[1])+1)
-#            flag.append('topography point')
+    # increase the size of the fine mesh region on both side of the survey
+#    e_left = np.min(elec_x) - 4*np.median(np.abs(np.diff(elec_x)))
+#    e_right = np.max(elec_x) + 4
+    
+    #deal with end case electrodes, check max topo points are outside survey bounds 
+    try:
+        min_idx = np.argmin(elec_x)
+        max_idx = np.argmax(elec_x)
+        if min(elec_x) == min(x_pts):
+            x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.abs(np.diff(elec_x)))) # in this case extend the survey bounds beyond the first electrode 
+            y_pts = np.append(y_pts,elec_z[min_idx])
+            flag.append('topography point')#add a flag
+            
+        if max(elec_x) == max(x_pts):
+            x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.abs(np.diff(elec_x))))
+            y_pts = np.append(y_pts,elec_z[max_idx])
+            flag.append('topography point')
+    
+    except Exception as e: # then there are no surface electrodes, in which case
+        print('Error in assigning additional points on each side of transect: ', e)
+        min_idx = np.argmin(electrodes[0])
+        max_idx = np.argmax(electrodes[0])
+        if min(electrodes[0]) == min(x_pts):
+            x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*np.mean(np.diff(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
+            y_pts = np.append(y_pts,max(electrodes[1])+1)
+            flag.append('topography point')#add a flag
+            
+        if max(electrodes[0]) == max(x_pts):
+            x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*np.mean(np.diff(electrodes[0])))
+            y_pts = np.append(y_pts,max(electrodes[1])+1)
+            flag.append('topography point')
             
     #catch an error where the fine mesh region will truncate where the electrodes are        
     if min(elec_x) < min(x_pts):
@@ -334,8 +338,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         raise ValueError("The maximum X coordinate value for the surface of the mesh must be greater than the maximum electrode X coordinate") 
     
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
-    print('++--', y_pts)
-    print('x_pts=', x_pts)
     x_pts=x_pts[idx] # compute sorted arrays
     y_pts=y_pts[idx]
     z_pts=np.zeros((len(x_pts),1))#for now let z = 0
@@ -389,10 +391,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #reflect surface topography at base of fine mesh area, should be a smoothed version of the topography
     x_base = x_pts
 #    z_base = moving_average(y_pts - abs(doi),N=5) # compute the depth to the points at the base of the survey
-    print('======', x_base)
     z_base = y_pts - abs(doi)
-    print('++++', z_base)
-    print('-----', y_pts)
     
     # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
     if np.max(z_base) > np.min(electrodes[1]):
