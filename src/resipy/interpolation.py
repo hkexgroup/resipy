@@ -135,8 +135,12 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
     znew.fill(np.nan)
     #outside = np.logical_not(inside)
     num_pts = len(xnew)
-    fudgex=0.05#add a bit of padding to prevent artefacts
-    fudgey=0.05
+    
+    #add a bit of padding to prevent artefacts
+    x_diff = np.min(np.diff(np.sort(xknown)))
+    y_diff = np.min(np.diff(np.sort(yknown)))
+    fudgex=0.001*x_diff
+    fudgey=0.001*y_diff
     #compute new values inside survey
     for i in range(num_pts):
         if np.isnan(znew[i]): # point is not already known, else there is no need to interpolate

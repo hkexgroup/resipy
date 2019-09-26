@@ -275,7 +275,7 @@ buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river
 k.filterElec([21, 2]) # filter out problematic electrodes 21 and 2
 k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
 xy = k.elec[1:21,[0,2]] # adding river water level using 2 topo points
-k.addRegion(xy, res0=32, blocky=True, fixed=False) # fixed river resistivity to 32 Ohm.m
+k.addRegion(xy, res0=32, blocky=False, fixed=False) # fixed river resistivity to 32 Ohm.m
 k.param['b_wgt'] = 0.05 # setting up higher noise level
 k.invert()
 k.showResults(sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
