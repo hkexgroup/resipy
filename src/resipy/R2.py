@@ -781,8 +781,6 @@ class R2(object): # R2 master class instanciated by the GUI
         if doi is None:# compute depth of investigation if it is not given
             self.computeDOI()
         else:
-            if not isinstance(doi,float) or not isinstance(doi,int):
-                raise ValueError("Depth of investigation (doi) value is needs to be float or int type")
             self.doi = doi
         
         if typ == 'default':
@@ -1276,6 +1274,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 if err is True and errTyp == 'global':
                     if self.bigSurvey.errorModel is not None:
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
+                        if self.typ[0] == 'c':
+                            s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
                     # if not it means that the 'resError' columns has already
                     # been populated when the files has been imported
                     
@@ -1307,6 +1307,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 if err is True and errTyp == 'global':
                      if self.bigSurvey.errorModel is not None:
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
+                        if self.typ[0] == 'c':
+                            s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
                     # if not it means that the 'resError' columns has already
                     # been populated when the files has been imported
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
