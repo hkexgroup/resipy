@@ -724,6 +724,9 @@ class App(QMainWindow):
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
             elif index == 7:
+                self.ftype = 'Lippmann'
+                self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt)'
+            elif index == 8:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -736,6 +739,7 @@ class App(QMainWindow):
         fileType.addItem('BGS Prime')
         fileType.addItem('Sting')
         fileType.addItem('ABEM-Lund')
+        fileType.addItem('Lippmann')
         fileType.addItem('Custom')
         fileType.currentIndexChanged.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
@@ -1589,7 +1593,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            fileType.setCurrentIndex(7)
+            fileType.setCurrentIndex(8)
             tabImporting.setCurrentIndex(0)
 
 

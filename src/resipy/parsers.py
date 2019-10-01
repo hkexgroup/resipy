@@ -865,7 +865,7 @@ def stingParser(fname):
 
 #fname = '070708L5_trial1.stg'
 #stingParser(fname)
-
+#%%
 def ericParser(file_path):
     """
     Reads *.ohm ASCII-files with information related to the profile, comment,
@@ -1007,3 +1007,36 @@ def ericParser(file_path):
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     return elec,df
+#%% 
+def lippmannParser(fname):
+    with open(fname, 'r') as fh:
+        dump = fh.readlines()
+
+    #getting electrode locations
+    elec_lineNum_s = [i for i in range(len(dump)) if '* Electrode positions *' in dump[i]]
+    elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Remote electrode positions *' in dump[i]]
+    elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
+    elec_raw = pd.read_csv(fname, sep='\s+', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
+    elec = np.array(elec_raw.iloc[:,-3:])
+
+    #getting data
+    data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
+    data_headers = dump[data_linNum_s[0]+1].split()[1:]
+    df = pd.read_csv(fname, sep='\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+    df = df.rename(columns={'A':'a',
+                            'B':'b',
+                            'M':'m',
+                            'N':'n',
+                            'I':'i',
+                            'U':'vp',})
+    if 'phi' in df.columns:
+        df = df.rename(columns={'phi':'ip'})
+        df = df[['a','b','m','n','i','vp','ip']]
+    else:
+        df = df[['a','b','m','n','i','vp']]
+        df['ip'] = 0
+    
+    #calculations
+    df['resist'] = df['vp']/df['i']
+
+    return elec, df
