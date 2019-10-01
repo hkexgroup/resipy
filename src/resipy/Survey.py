@@ -294,7 +294,8 @@ class Survey(object):
             if 'irecip' in self.df.columns:
                 ie = np.in1d(self.df['irecip'].values, recip2reset)
                 self.df.loc[ie, 'irecip'] = 0 # as their reciprocal is deleted, we set it to 0
-                self.df.loc[ie, 'recipErr'] = np.nan # they don't contribute to the error model anymore
+                self.df.loc[ie, 'recipError'] = np.nan # they don't contribute to the error model anymore
+                self.df.loc[ie, 'recipMean'] = self.df.loc[ie, 'resist'].values
             print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
             return np.sum(~i2keep)
     
