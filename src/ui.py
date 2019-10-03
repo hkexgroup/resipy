@@ -1684,9 +1684,11 @@ class App(QMainWindow):
                         s.dfPhaseReset = s.df
                         s.filterDataIP = s.df
                     heatFilter()
+                    iperrFitType.setCurrentIndex(0)
                     phaseplotError()
                 errHist()
                 plotManualFiltering()
+                errFitType.setCurrentIndex(0)
                 plotError()
             except ValueError as e:
                 if ipCheck.checkState() != Qt.Checked:
@@ -1707,9 +1709,11 @@ class App(QMainWindow):
                     s.dfPhaseReset = s.dfReset.copy()
                     s.filterDataIP = s.dfReset.copy()
                 heatFilter()
+                iperrFitType.setCurrentIndex(0)
                 phaseplotError()
             errHist()
             plotManualFiltering()
+            errFitType.setCurrentIndex(0)
             plotError()
             infoDump('%i measurements restored!' % numRestored)
 
@@ -1779,9 +1783,11 @@ class App(QMainWindow):
                     s.dfPhaseReset = s.df
                     s.filterDataIP = s.df
                 heatFilter()
+                iperrFitType.setCurrentIndex(0)
                 phaseplotError()
             errHist()
             plotManualFiltering()
+            errFitType.setCurrentIndex(0)
             plotError()
             infoDump('%i unpaired quadrupoles removed!' % numRemoved)
 
@@ -4007,6 +4013,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def logInversion():
             self.end = False
             outStackLayout.setCurrentIndex(0)
+            cmapCombo.setCurrentIndex(0)
+            sensSlider.setValue(1)
             mwInvResult.clear()
             mwRMS.clear()
             logText.setText('')
