@@ -1035,6 +1035,8 @@ def lippmannParser(fname):
     else:
         df = df[['a','b','m','n','i','vp']]
         df['ip'] = 0
+        
+    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
     
     #calculations
     df['resist'] = df['vp']/df['i']
