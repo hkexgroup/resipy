@@ -31,10 +31,10 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           name='ResIPy',
-          debug=False,
+          debug=True,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False,
+          console=True,
 		  icon='logo.ico')
 
