@@ -458,7 +458,10 @@ class App(QMainWindow):
                 dimForward.setChecked(False)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
-
+                
+                recipErrorBottomTabs.setTabEnabled(0, True)
+                recipErrorBottomTabs.setCurrentIndex(0)
+                recipErrorSavebtn.setEnabled(True)
                 tabPreProcessing.setTabEnabled(0, True)
 
                 # mesh tab
@@ -495,8 +498,9 @@ class App(QMainWindow):
                 dimInverse.setChecked(True)
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
-
-                tabPreProcessing.setTabEnabled(0, False)
+                
+                recipErrorBottomTabs.setTabEnabled(0, False)
+                recipErrorSavebtn.setEnabled(False)
 
                 # mesh tab
                 meshQuadGroup.setVisible(False)
@@ -1824,7 +1828,7 @@ class App(QMainWindow):
                 
         recipErrorSavebtn = QPushButton('Save data')
         recipErrorSavebtn.setStyleSheet("color: green")
-        recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g., Res2DInv.dat)')
         recipErrorSavebtn.clicked.connect(saveFilteredData)
         recipErrorSavebtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorSavebtn)
