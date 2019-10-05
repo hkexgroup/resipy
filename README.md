@@ -103,6 +103,8 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
+ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).
+
 You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X:
 
 Open "terminal" and install ```homebrew``` with:
