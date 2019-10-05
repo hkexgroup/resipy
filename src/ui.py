@@ -446,6 +446,7 @@ class App(QMainWindow):
 #        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
 
         def dimSurvey():
+                    
             if dimRadio2D.isChecked():
                 self.typ = self.typ.replace('3t','2')
                 if self.r2 is not None:
@@ -459,9 +460,10 @@ class App(QMainWindow):
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
                 
+                #Pre-processing tab
                 recipErrorBottomTabs.setTabEnabled(0, True)
                 recipErrorBottomTabs.setCurrentIndex(0)
-                recipErrorSavebtn.setEnabled(True)
+                recipErrorSavebtn.setVisible(True)
                 tabPreProcessing.setTabEnabled(0, True)
 
                 # mesh tab
@@ -499,8 +501,17 @@ class App(QMainWindow):
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
                 
+                #Pre-processing tab
                 recipErrorBottomTabs.setTabEnabled(0, False)
-                recipErrorSavebtn.setEnabled(False)
+                recipErrorSavebtn.setVisible(False)
+                
+                try:
+                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                        recipErrorWidget.setEnabled(False)
+                    else:
+                        recipErrorWidget.setEnabled(True)
+                except:
+                    pass
 
                 # mesh tab
                 meshQuadGroup.setVisible(False)
@@ -852,6 +863,12 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                if dimRadio3D.isChecked:
+                    recipErrorBottomTabs.setTabEnabled(0, False)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                        recipErrorWidget.setEnabled(False)
+                    else:
+                        recipErrorWidget.setEnabled(True)   
                 plotPseudo()
 
                 infoDump(fname + ' imported successfully')
