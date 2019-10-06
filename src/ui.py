@@ -797,11 +797,11 @@ class App(QMainWindow):
         spacingEdit.setToolTip('Electrode spacing.')
 
         def getdir():
-            fnames, _ = QFileDialog.getOpenFileNames(tabImportingData, 'Select file(s)', directory=self.datadir)
+            fnames, _ = QFileDialog.getOpenFileNames(tabImportingData, 'Select file(s)', self.datadir, self.fformat)
 #            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
-            fdir = os.path.dirname(fnames[0])
             
-            if fdir != '':
+            if fnames != []:
+                fdir = os.path.dirname(fnames[0])
                 restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 try:
