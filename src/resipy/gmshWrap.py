@@ -1094,7 +1094,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
-           cl=-1, cl_factor=3, cln_factor=100, dp_len=-1, mesh_refinement=None):
+           cl=-1, cl_factor=8, cln_factor=100, dp_len=-1, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1499,36 +1499,3 @@ def msh_parse_3d(file_path):
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     return mesh_dict 
-    
-#%% test block 
-#import parsers as prs     
-#import survey 
-#elec, df = prs.res2invInputParser(os.path.join(pyR2_location,r'api/test/res2d_forward_error.dat'))
-##elec, df = prs.syscalParser(r'C:\Users\jamyd91\Documents\2PhD_projects\R2gui\Data\example_feild_data.txt')
-##slope geometry 
-#width=170;#width of slope:
-#top=100;#top of slope: 100m above datum
-#bottom=50;#base of slope 50m ODM;
-#ends_addon=40;# how much to add to the width of the slope
-#bottom_addon=10;#how much to add to the bottom of the model 
-#X=np.array([-ends_addon,0,width,width+ends_addon]);#compile geometry into arrays
-#Y=np.array([bottom,bottom,top,top])
-#
-##%triangular mesh - create geometry and run gmsh wrapper
-#electrodes = [elec.T[0],elec.T[1]]
-#geom_input = {'surface':[X,Y]}
-##
-#genGeoFile(electrodes, None,geom_input)
-##%%
-#poly2x=np.array([-40,200,200,-40])
-#poly2y=np.array([70,70,100,100])
-#poly_data = {'region1':[poly2x,poly2y]}
-#mesh_dict = gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=True,poly_data=poly_data)
-
-#%% bore hole test 
-#geom_input={'surface':[[-2,10],[0,0]]}
-#electrodes=[[0,0,2,2,6,6,8,8],[0,2,0,2,0,2,0,2]]
-#typ = ['electrode','buried']*4
-#node,old_nodes = genGeoFile(electrodes, typ,geom_input)   
-
-

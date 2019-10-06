@@ -2431,7 +2431,7 @@ class App(QMainWindow):
         cl3FactorLabel = QLabel('Growth factor:')
         cl3FactorEdit = QLineEdit()
         cl3FactorEdit.setValidator(QDoubleValidator())
-        cl3FactorEdit.setText('2')
+        cl3FactorEdit.setText('8')
         def openMeshParaviewFunc():
             meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
             try:
