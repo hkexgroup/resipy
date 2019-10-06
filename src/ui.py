@@ -319,6 +319,17 @@ class App(QMainWindow):
                 tabs.setTabEnabled(4,val)
                 tabs.setTabEnabled(5,val)
                 tabs.setTabEnabled(6,val)
+                try:
+                    if dimRadio3D.isChecked():
+                        if all(self.r2.surveys[0].df['irecip'].values == 0):
+                            tabs.setTabEnabled(1, False)
+                            tabPreProcessing.setTabEnabled(0, False)
+                        else:
+                            tabs.setTabEnabled(1, True)
+                        if ipCheck.checkState() == Qt.Checked:
+                            tabs.setTabEnabled(1, True)
+                except:
+                    pass
             else:
                 tabs.setTabEnabled(2,val)
 #                tabs.setTabEnabled(4,val)
@@ -351,6 +362,9 @@ class App(QMainWindow):
 #            batchCheck.setChecked(False)
             ipCheck.setChecked(False)
             ipCheck.setEnabled(False)
+            buttonfr.hide()
+            fnamesCombo.hide()
+            fnamesComboLabel.hide()
             psContourCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
@@ -450,6 +464,7 @@ class App(QMainWindow):
                 self.typ = self.typ.replace('3t','2')
                 if self.r2 is not None:
                     self.r2.typ = self.r2.typ.replace('3t','2')
+                    
                 # importing tab
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
@@ -458,9 +473,19 @@ class App(QMainWindow):
                 dimForward.setChecked(False)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
-
+                
+                #Pre-processing tab
+                recipErrorBottomTabs.setTabEnabled(0, True)
+                recipErrorBottomTabs.setCurrentIndex(0)
+                recipErrorSavebtn.setVisible(True)
+                tabPreProcessing.setCurrentIndex(0)
                 tabPreProcessing.setTabEnabled(0, True)
-
+                try:
+                    if not self.r2.surveys[0].df.empty:
+                        tabs.setTabEnabled(1, True)
+                except:
+                    pass
+                
                 # mesh tab
                 meshQuadGroup.setVisible(True)
                 meshTrianGroup.setVisible(True)
@@ -495,8 +520,21 @@ class App(QMainWindow):
                 dimInverse.setChecked(True)
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
-
-                tabPreProcessing.setTabEnabled(0, False)
+                
+                #Pre-processing tab
+                recipErrorBottomTabs.setTabEnabled(0, False)
+                recipErrorSavebtn.setVisible(False)
+                
+                try:
+                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                        tabs.setTabEnabled(1, False)
+                        tabPreProcessing.setTabEnabled(0, False)
+                    else:
+                        tabs.setTabEnabled(1, True)
+                    if ipCheck.checkState() == Qt.Checked:
+                        tabs.setTabEnabled(1, True)
+                except:
+                    pass
 
                 # mesh tab
                 meshQuadGroup.setVisible(False)
@@ -582,9 +620,12 @@ class App(QMainWindow):
                 self.iBorehole = False
                 if self.r2 is not None:
                     self.r2.setBorehole(False)
-            if self.fname is not None:
-                    plotPseudo()
-                    plotPseudoIP()
+            try:
+                if self.fname is not None:
+                        plotPseudo()
+                        plotPseudoIP()
+            except:
+                pass
         boreholeCheck = QCheckBox('Unconventional Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
         boreholeCheck.setToolTip('Check if you have an unconventional survey (e.g. boreholes).\nThis will just change the pseudo-section.')
@@ -592,12 +633,16 @@ class App(QMainWindow):
         def batchCheckFunc(state):
             if state == Qt.Checked:
                 self.iBatch = True
+                if self.r2 is not None:
+                    restartFunc()
                 buttonf.setText('Import Data Directory')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
                 timeLapseCheck.setEnabled(False)
             else:
                 self.iBatch = False
+                if self.r2 is not None:
+                    restartFunc()
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
@@ -848,6 +893,7 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                   
                 plotPseudo()
 
                 infoDump(fname + ' imported successfully')
@@ -1824,7 +1870,7 @@ class App(QMainWindow):
                 
         recipErrorSavebtn = QPushButton('Save data')
         recipErrorSavebtn.setStyleSheet("color: green")
-        recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g., Res2DInv.dat)')
         recipErrorSavebtn.clicked.connect(saveFilteredData)
         recipErrorSavebtn.setFixedWidth(150)
         recipErrorBtnLayout.addWidget(recipErrorSavebtn)
@@ -2370,6 +2416,7 @@ class App(QMainWindow):
             meshLogText.clear()
             cl = float(cl3Edit.text())
             cl_factor = float(cl3FactorEdit.text())
+            cln_factor = float(clnFactorEdit.text()) if clnFactorEdit.text() != '' else 100
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
             inan = ~np.isnan(surface[:,0])
@@ -2378,7 +2425,8 @@ class App(QMainWindow):
             else:
                 surface = surface[inan,:]
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
+                               cln_factor=cln_factor)
             mwMesh3D.plot(self.r2.showMesh, threed=True)
             meshOutputStack.setCurrentIndex(2)
 
@@ -2428,24 +2476,32 @@ class App(QMainWindow):
         cl3Edit = QLineEdit()
         cl3Edit.setValidator(QDoubleValidator())
         cl3Edit.setText('-1')
-        cl3FactorLabel = QLabel('Growth factor:')
+        cl3FactorLabel = QLabel('Growth factor Top:')
         cl3FactorEdit = QLineEdit()
         cl3FactorEdit.setValidator(QDoubleValidator())
-        cl3FactorEdit.setText('8')
+        cl3FactorEdit.setText('8')       
+        clnFactorLabel = QLabel('Growth factor Bottom:')
+        clnFactorEdit = QLineEdit()
+        clnFactorEdit.setValidator(QDoubleValidator())
+        clnFactorEdit.setText('100')
+        
         def openMeshParaviewFunc():
-            meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
             try:
-                if platform.system()=="Windows":
-                    self.r2.mesh.paraview(meshVTK)
-                else:
-                    print('Writing mesh to .vtk first...', end='')
-                    self.r2.mesh.write_vtk(meshVTK)
-                    print('done')
-                    Popen(['paraview', meshVTK])
+                self.r2.saveMeshVtk()
+                self.r2.showMeshInParaview()
             except Exception as e:
                 errorDump('Error opening Paraview:' + str(e))
         openMeshParaview = QPushButton('Open in Paraview')
         openMeshParaview.clicked.connect(openMeshParaviewFunc)
+        
+        def saveMeshVtkBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(tabMesh, 'Open File', self.datadir)
+            if fname is not '':
+                self.r2.saveMeshVtk(fname)
+                infoDump('Mesh saved to {:s}'.format(fname))
+        saveMeshVtkBtn = QPushButton('Save Mesh as .vtk')
+        saveMeshVtkBtn.clicked.connect(saveMeshVtkBtnFunc)
+
 
         def importCustomMeshFunc():
             elec = elecTable.getTable()
@@ -2527,6 +2583,9 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3Edit)
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
+        meshOptionTetraLayout.addWidget(clnFactorLabel)
+        meshOptionTetraLayout.addWidget(clnFactorEdit)
+        meshOptionTetraLayout.addWidget(saveMeshVtkBtn)
         meshOptionTetraLayout.addWidget(openMeshParaview)
         meshOptionTetraLayout.addWidget(importCustomMeshBtn)
         

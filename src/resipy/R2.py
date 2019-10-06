@@ -2860,6 +2860,72 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.plot((1,measurement_no[-1]),baseline,'k--')
 
 
+    def saveMeshVtk(self, outputname=None):
+        """Save mesh as .vtk to be viewed in paraview.
+        
+        Parameters
+        ----------
+        outputname : str, optional
+            Output path of the .vtk produced. By default the mesh is saved in 
+            the working directory `self.dirname` as `mesh.vtk`.
+        """
+        if outputname is None:
+            outputname = os.path.join(self.dirname, 'mesh.vtk')
+        self.mesh.write_vtk(outputname)
+
+
+    def _toParaview(self, fname,  paraview_loc=None):
+        """Open file in paraview.
+        
+        Parameters
+        ----------
+        fname : str
+            Path of the .vtk file to be opened.
+        paraview_loc: str, optional
+            **Windows ONLY** maps to the excuatable paraview.exe. The program 
+            will attempt to find the location of the paraview install if not given. 
+        """
+                
+        if OS == "Windows":
+            if paraview_loc is None:
+                found,cmd_line = self.mesh.findParaview()
+                if not found:
+                    print("Cannot find paraview location")
+                    return
+                cmd_line = '"' + cmd_line + '" ' + fname
+            elif isinstance(paraview_loc,str):
+                cmd_line = '"' + paraview_loc + '" ' + fname
+            else:
+                print("Cannot find where paraview is installed")
+                return
+        else:
+            cmd_line = 'paraview ' + fname
+            
+        try:#try and launch paraview
+            #Popen([cmd_line, os.path.join(self.dirname, fname)])
+            os.popen(cmd_line)
+        except PermissionError:
+            print("Your operating system has blocked launching Paraview")
+            #windows doesnt like calling paraview from python for some reason
+            #will need to look into this further. 
+            
+
+    def showMeshInParaview(self, paraview_loc=None):
+        """Show the mesh in paraview (mostly useful for 3D surveys.
+        
+        Parameters
+        ----------
+        paraview_loc: str, optional
+            **Windows ONLY** maps to the excuatable paraview.exe. The program 
+            will attempt to find the location of the paraview install if not given. 
+        """
+        print('Saving mesh as vtk ...', end='')
+        self.saveMeshVtk() # save in default dirname
+        print('done.\n Launching paraview.')
+        self._toParaview(os.path.join(self.dirname, 'mesh.vtk'), 
+                         paraview_loc=paraview_loc)
+
+
     def showInParaview(self, index=0, paraview_loc=None):
         """Open paraview to display the .vtk file.
         
@@ -2875,28 +2941,7 @@ class R2(object): # R2 master class instanciated by the GUI
             fname = 'f{:03d}_res.vtk'.format(index+1)
         else:
             fname = 'f{:03d}.vtk'.format(index+1)  
-        if OS == "Windows":
-            if paraview_loc is None:
-                found,cmd_line = self.mesh.findParaview()
-                if not found:
-                    print("Cannot find paraview location")
-                    return
-                cmd_line = '"' + cmd_line + '" ' + os.path.join(self.dirname, fname)
-            elif isinstance(paraview_loc,str):
-                cmd_line = '"' + paraview_loc + '" ' + os.path.join(self.dirname, fname)
-            else:
-                print("Cannot find where paraview is installed")
-                return
-        else:
-            cmd_line = 'paraview ' + os.path.join(self.dirname, fname)
-            
-        try:#try and launch paraview
-            #Popen([cmd_line, os.path.join(self.dirname, fname)])
-            os.popen(cmd_line)
-        except PermissionError:
-            print("Your operating system has blocked launching Paraview")
-            #windows doesnt like calling paraview from python for some reason
-            #will need to look into this further. 
+        self._toParaview(os.path.join(self.dirname, fname), paraview_loc=paraview_loc)
 
 
     def showSlice(self, index=0, ax=None, attr=None, axis='z'): 
