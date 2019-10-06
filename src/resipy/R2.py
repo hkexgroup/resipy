@@ -2663,7 +2663,20 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # get error model
         if self.typ[-2] == '3':
-            x = np.genfromtxt(os.path.join(fwdDir, self.typ + '.fwd'), skip_header=0)
+            try:
+                x = np.genfromtxt(os.path.join(fwdDir, self.typ + '.fwd'), skip_header=0)
+            except:#try just reading in the last 2 columns instead
+                fh = open(os.path.join(fwdDir, self.typ + '.fwd'))
+                no_meas = len(protocol)
+                trans_res = [0]*no_meas 
+                app_res = [0]*no_meas
+                for i in range(no_meas):
+                    line = fh.readline().split()
+                    trans_res[i] = float(line[-2])
+                    app_res[i] = float(line[-1])
+                x = np.array((trans_res,app_res)).T
+                fh.close()
+                
         else:
             x = np.genfromtxt(os.path.join(fwdDir, self.typ + '_forward.dat'), skip_header=1)
         modErr = np.abs(100-x[:,-1])/100
