@@ -2416,6 +2416,7 @@ class App(QMainWindow):
             meshLogText.clear()
             cl = float(cl3Edit.text())
             cl_factor = float(cl3FactorEdit.text())
+            cln_factor = float(clnFactorEdit.text()) if clnFactorEdit.text() != '' else 100
             buried = elecTable.getBuried()
             surface = topoTable.getTable()
             inan = ~np.isnan(surface[:,0])
@@ -2424,7 +2425,8 @@ class App(QMainWindow):
             else:
                 surface = surface[inan,:]
             self.r2.createMesh(typ='tetra', buried=buried, surface=surface,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc)
+                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
+                               cln_factor=cln_factor)
             mwMesh3D.plot(self.r2.showMesh, threed=True)
             meshOutputStack.setCurrentIndex(2)
 
@@ -2474,24 +2476,33 @@ class App(QMainWindow):
         cl3Edit = QLineEdit()
         cl3Edit.setValidator(QDoubleValidator())
         cl3Edit.setText('-1')
-        cl3FactorLabel = QLabel('Growth factor:')
+        cl3FactorLabel = QLabel('Growth factor Top:')
         cl3FactorEdit = QLineEdit()
         cl3FactorEdit.setValidator(QDoubleValidator())
         cl3FactorEdit.setText('2')
+        
+        clnFactorLabel = QLabel('Growth factor Bottom:')
+        clnFactorEdit = QLineEdit()
+        clnFactorEdit.setValidator(QDoubleValidator())
+        clnFactorEdit.setText('100')
+        
         def openMeshParaviewFunc():
-            meshVTK = os.path.join(self.r2.dirname, 'mesh.vtk')
             try:
-                if platform.system()=="Windows":
-                    self.r2.mesh.paraview(meshVTK)
-                else:
-                    print('Writing mesh to .vtk first...', end='')
-                    self.r2.mesh.write_vtk(meshVTK)
-                    print('done')
-                    Popen(['paraview', meshVTK])
+                self.r2.saveMeshVtk()
+                self.r2.showMeshInParaview()
             except Exception as e:
                 errorDump('Error opening Paraview:' + str(e))
         openMeshParaview = QPushButton('Open in Paraview')
         openMeshParaview.clicked.connect(openMeshParaviewFunc)
+        
+        def saveMeshVtkBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(tabMesh, 'Open File', self.datadir)
+            if fname is not '':
+                self.r2.saveMeshVtk(fname)
+                infoDump('Mesh saved to {:s}'.format(fname))
+        saveMeshVtkBtn = QPushButton('Save Mesh as .vtk')
+        saveMeshVtkBtn.clicked.connect(saveMeshVtkBtnFunc)
+
 
         def importCustomMeshFunc():
             elec = elecTable.getTable()
@@ -2573,6 +2584,9 @@ class App(QMainWindow):
         meshOptionTetraLayout.addWidget(cl3Edit)
         meshOptionTetraLayout.addWidget(cl3FactorLabel)
         meshOptionTetraLayout.addWidget(cl3FactorEdit)
+        meshOptionTetraLayout.addWidget(clnFactorLabel)
+        meshOptionTetraLayout.addWidget(clnFactorEdit)
+        meshOptionTetraLayout.addWidget(saveMeshVtkBtn)
         meshOptionTetraLayout.addWidget(openMeshParaview)
         meshOptionTetraLayout.addWidget(importCustomMeshBtn)
         
