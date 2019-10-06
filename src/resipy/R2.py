@@ -498,7 +498,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         if isinstance(dirname, list): # it's a list of filename
-            files = sorted(dirname)
+            files = dirname
         else: # it's a directory and we import all the files inside
             if os.path.isdir(dirname):
                 files = [os.path.join(dirname, f) for f in np.sort(os.listdir(dirname)) if f[0] != '.']
