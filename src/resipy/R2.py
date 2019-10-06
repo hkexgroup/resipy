@@ -501,7 +501,8 @@ class R2(object): # R2 master class instanciated by the GUI
             files = sorted(dirname)
         else: # it's a directory and we import all the files inside
             if os.path.isdir(dirname):
-                files = [os.path.join(dirname, f) for f in np.sort(os.listdir(dirname))]
+                files = [os.path.join(dirname, f) for f in np.sort(os.listdir(dirname)) if f[0] != '.']
+                # this filter out hidden file as well
             else:
                 raise ValueError('dirname should be a directory path or a list of filenames')
                 
