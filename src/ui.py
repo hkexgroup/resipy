@@ -319,6 +319,17 @@ class App(QMainWindow):
                 tabs.setTabEnabled(4,val)
                 tabs.setTabEnabled(5,val)
                 tabs.setTabEnabled(6,val)
+                try:
+                    if dimRadio3D.isChecked():
+                        if all(self.r2.surveys[0].df['irecip'].values == 0):
+                            tabs.setTabEnabled(1, False)
+                            tabPreProcessing.setTabEnabled(0, False)
+                        else:
+                            tabs.setTabEnabled(1, True)
+                        if ipCheck.checkState() == Qt.Checked:
+                            tabs.setTabEnabled(1, True)
+                except:
+                    pass
             else:
                 tabs.setTabEnabled(2,val)
 #                tabs.setTabEnabled(4,val)
@@ -351,6 +362,9 @@ class App(QMainWindow):
 #            batchCheck.setChecked(False)
             ipCheck.setChecked(False)
             ipCheck.setEnabled(False)
+            buttonfr.hide()
+            fnamesCombo.hide()
+            fnamesComboLabel.hide()
             psContourCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
@@ -446,11 +460,11 @@ class App(QMainWindow):
 #        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
 
         def dimSurvey():
-                    
             if dimRadio2D.isChecked():
                 self.typ = self.typ.replace('3t','2')
                 if self.r2 is not None:
                     self.r2.typ = self.r2.typ.replace('3t','2')
+                    
                 # importing tab
                 elecTable.initTable(headers=['x','z','Buried'])
                 topoTable.initTable(headers=['x','z'])
@@ -464,8 +478,14 @@ class App(QMainWindow):
                 recipErrorBottomTabs.setTabEnabled(0, True)
                 recipErrorBottomTabs.setCurrentIndex(0)
                 recipErrorSavebtn.setVisible(True)
+                tabPreProcessing.setCurrentIndex(0)
                 tabPreProcessing.setTabEnabled(0, True)
-
+                try:
+                    if not self.r2.surveys[0].df.empty:
+                        tabs.setTabEnabled(1, True)
+                except:
+                    pass
+                
                 # mesh tab
                 meshQuadGroup.setVisible(True)
                 meshTrianGroup.setVisible(True)
@@ -507,9 +527,12 @@ class App(QMainWindow):
                 
                 try:
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        recipErrorWidget.setEnabled(False)
+                        tabs.setTabEnabled(1, False)
+                        tabPreProcessing.setTabEnabled(0, False)
                     else:
-                        recipErrorWidget.setEnabled(True)
+                        tabs.setTabEnabled(1, True)
+                    if ipCheck.checkState() == Qt.Checked:
+                        tabs.setTabEnabled(1, True)
                 except:
                     pass
 
@@ -597,9 +620,12 @@ class App(QMainWindow):
                 self.iBorehole = False
                 if self.r2 is not None:
                     self.r2.setBorehole(False)
-            if self.fname is not None:
-                    plotPseudo()
-                    plotPseudoIP()
+            try:
+                if self.fname is not None:
+                        plotPseudo()
+                        plotPseudoIP()
+            except:
+                pass
         boreholeCheck = QCheckBox('Unconventional Survey')
         boreholeCheck.stateChanged.connect(boreholeCheckFunc)
         boreholeCheck.setToolTip('Check if you have an unconventional survey (e.g. boreholes).\nThis will just change the pseudo-section.')
@@ -607,12 +633,16 @@ class App(QMainWindow):
         def batchCheckFunc(state):
             if state == Qt.Checked:
                 self.iBatch = True
+                if self.r2 is not None:
+                    restartFunc()
                 buttonf.setText('Import Data Directory')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
                 timeLapseCheck.setEnabled(False)
             else:
                 self.iBatch = False
+                if self.r2 is not None:
+                    restartFunc()
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
@@ -863,12 +893,7 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
-                if dimRadio3D.isChecked:
-                    recipErrorBottomTabs.setTabEnabled(0, False)
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        recipErrorWidget.setEnabled(False)
-                    else:
-                        recipErrorWidget.setEnabled(True)   
+                   
                 plotPseudo()
 
                 infoDump(fname + ' imported successfully')
