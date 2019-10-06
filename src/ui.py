@@ -916,7 +916,7 @@ class App(QMainWindow):
         buttonf = QPushButton('Import Data')
         buttonf.setAutoDefault(True)
         buttonf.clicked.connect(getfile)
-        buttonf.setToolTip('Select input file (time-lapse: select the directory that contains the data).')
+        buttonf.setToolTip('Select input files (time-lapse: select all the datasets, sorted based on your criteria in the system (e.g., Date modified, Name)).')
 
         def getfileR(): # import reciprocal file
             fnameRecip, _ = QFileDialog.getOpenFileName(tabImportingData,'Open File', self.datadir, self.fformat)
