@@ -100,7 +100,7 @@ k = R2()
 k.createTimeLapseSurvey(['resipy/test/testTimelapse/17031501.csv',
                          'resipy/test/testTimelapse/17051601.csv',
                          'resipy/test/testTimelapse/17040301.csv'])
-k.createTimeLapseSurvey('resipy/test/testTimelapse')
+#k.createTimeLapseSurvey('resipy/test/testTimelapse')
 k.linfit()
 k.pwlfit()
 k.err = True
