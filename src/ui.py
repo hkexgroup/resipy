@@ -591,7 +591,7 @@ class App(QMainWindow):
                 if self.r2 is not None: # if there is already an R2 object
                     restartFunc()
                     reg_mode.setCurrentIndex(2)
-                buttonf.setText('Import Data Directory')
+                buttonf.setText('Import multiple datasets')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
                 ipCheck.setEnabled(False)
@@ -635,7 +635,7 @@ class App(QMainWindow):
                 self.iBatch = True
                 if self.r2 is not None:
                     restartFunc()
-                buttonf.setText('Import Data Directory')
+                buttonf.setText('Import multiple datasets')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
                 timeLapseCheck.setEnabled(False)
@@ -797,16 +797,19 @@ class App(QMainWindow):
         spacingEdit.setToolTip('Electrode spacing.')
 
         def getdir():
-            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
+            fnames, _ = QFileDialog.getOpenFileNames(tabImportingData, 'Select file(s)', directory=self.datadir)
+#            fdir = QFileDialog.getExistingDirectory(tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
+            fdir = os.path.dirname(fnames[0])
+            
             if fdir != '':
                 restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
-                        self.r2.createTimeLapseSurvey(fdir, ftype=self.ftype, dump=infoDump)
+                        self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
                         infoDump('Time-lapse survey created.')
                     else:
-                        self.r2.createBatchSurvey(fdir, ftype=self.ftype, dump=infoDump)
+                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
                     psContourCheck.setEnabled(True)
