@@ -354,6 +354,8 @@ class App(QMainWindow):
                 reg_mode.setCurrentIndex(2)
             else:
                 reg_mode.setCurrentIndex(0)
+            activateTabs(False)
+            
             # importing
             self.parser = None
             self.plotAspect = 'equal'
@@ -656,6 +658,7 @@ class App(QMainWindow):
         batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings.')
         
         def bachPrepFunc(state):
+            try:
                 if state == Qt.Checked:
                     self.iBatchPrep = True
                     if self.r2 is not None:
@@ -669,6 +672,8 @@ class App(QMainWindow):
                         self.r2.iBatchPrep = False
                         self.r2.indiPrep()
                         indiPlots(self.dataIndex)
+            except:
+                pass
         batchPrep = QCheckBox('Batch Pre-processing')
         batchPrep.stateChanged.connect(bachPrepFunc)
         batchPrep.setToolTip('Check for applying uniform data preprocessing on surveys.\n Uncheck for individual preprocessing')
