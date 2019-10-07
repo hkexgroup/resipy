@@ -2657,7 +2657,7 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
-    
+            
         # run the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
         
