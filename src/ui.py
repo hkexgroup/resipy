@@ -352,6 +352,8 @@ class App(QMainWindow):
                 reg_mode.setCurrentIndex(2)
             else:
                 reg_mode.setCurrentIndex(0)
+            activateTabs(False)
+            
             # importing
             self.parser = None
             self.plotAspect = 'equal'
