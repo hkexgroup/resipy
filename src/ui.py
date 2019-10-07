@@ -594,7 +594,7 @@ class App(QMainWindow):
                 buttonf.setText('Import multiple datasets')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getdir)
-                ipCheck.setEnabled(False)
+#                ipCheck.setEnabled(False)
                 batchCheck.setEnabled(False)
             else:
                 self.iTimeLapse = False
@@ -604,7 +604,7 @@ class App(QMainWindow):
                 buttonf.setText('Import Data')
                 buttonf.clicked.disconnect()
                 buttonf.clicked.connect(getfile)
-                ipCheck.setEnabled(True)
+#                ipCheck.setEnabled(True)
                 batchCheck.setEnabled(True)
 
         timeLapseCheck = QCheckBox('Time-lapse Survey')
@@ -807,9 +807,11 @@ class App(QMainWindow):
                 try:
                     if self.r2.iBatch is False:
                         self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                        ipCheck.setEnabled(False)
                         infoDump('Time-lapse survey created.')
                     else:
                         self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                        ipCheck.setEnabled(True)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
                     psContourCheck.setEnabled(True)
@@ -832,8 +834,10 @@ class App(QMainWindow):
                         errHist()
                     plotManualFiltering()
                     activateTabs(True)
-                    if 'ip' in self.r2.surveys[0].df.columns:
+                    if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
+                        print('hmmm')
                         if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            print('not good!!')
                             ipCheck.setChecked(True)
                 except:
                     errorDump('File format is not recognized (or directory contains invalid input files)')
@@ -1019,9 +1023,9 @@ class App(QMainWindow):
             self.pParams['index'] = index
             self.pParamsIP['index'] = index
             plotPseudo()
-#            mwPseudo.plot(self.r2.surveys[index].pseudo)
-#            if self.r2.typ[0] == 'c':
-#                mwPseudoIP.plot(self.r2.surveys[index].pseudoIP)
+            if self.r2.typ[0] == 'c':
+                plotPseudoIP()
+
         fnamesCombo = QComboBox()
         fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         fnamesCombo.setMinimumWidth(150)
