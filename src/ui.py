@@ -835,9 +835,7 @@ class App(QMainWindow):
                     plotManualFiltering()
                     activateTabs(True)
                     if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
-                        print('hmmm')
                         if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                            print('not good!!')
                             ipCheck.setChecked(True)
                 except:
                     errorDump('File format is not recognized (or directory contains invalid input files)')
