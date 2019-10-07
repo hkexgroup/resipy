@@ -660,10 +660,14 @@ class App(QMainWindow):
                     self.iBatchPrep = True
                     if self.r2 is not None:
                         self.r2.iBatchPrep = True
+                        self.dataIndex = 0
+                        self.r2.indiPrep()
+                        indiPlots(self.dataIndex)
                 else:
                     self.iBatchPrep = False
                     if self.r2 is not None:
                         self.r2.iBatchPrep = False
+                        self.r2.indiPrep()
                         indiPlots(self.dataIndex)
         batchPrep = QCheckBox('Batch Pre-processing')
         batchPrep.stateChanged.connect(bachPrepFunc)
@@ -833,8 +837,7 @@ class App(QMainWindow):
                         ipCheck.setEnabled(False)
                         infoDump('Time-lapse survey created.')
                     else:
-                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
-                        self.r2.iBatchPrep = self.iBatchPrep
+                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=self.iBatchPrep)
                         ipCheck.setEnabled(True)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
@@ -1044,6 +1047,12 @@ class App(QMainWindow):
         
         def indiPlots(index):
             plotManualFiltering(index)
+            plotError()
+            errHist()
+            if self.r2.typ[0] == 'c':
+                phaseplotError()
+                heatRaw()
+                heatFilter()
         
         def fnamesComboFunc(index):
             self.pParams['index'] = index
@@ -1054,6 +1063,8 @@ class App(QMainWindow):
                 plotPseudoIP()
             if self.r2.iBatchPrep is False:
                 indiPlots(index)
+                errFitType.setCurrentIndex(0)
+                iperrFitType.setCurrentIndex(0)
 
         fnamesCombo = QComboBox()
         fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
@@ -1744,7 +1755,10 @@ class App(QMainWindow):
 
         def errHist(index=0):
             if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
-                recipErrorPLot.plot(self.r2.errorDist)
+                if self.r2.iBatchPrep is True:
+                    recipErrorPLot.plot(self.r2.errorDist)
+                else:
+                    recipErrorPLot.plot(self.r2.errorDist[self.dataIndex])
             else:
                 pass
 
@@ -1953,7 +1967,10 @@ class App(QMainWindow):
             b_wgtFunc()
 
         def plotError():
-            mwFitError.plot(self.r2.plotError)
+            if self.r2.iBatchPrep is True:
+                mwFitError.plot(self.r2.plotError)
+            else:
+                mwFitError.plot(self.r2.plotError[self.dataIndex])
             self.r2.err = False
 
 #        def fitLinError():
@@ -1970,20 +1987,34 @@ class App(QMainWindow):
 #            self.r2.errTyp = 'pwl'
 
         def errFitTypeFunc(index):
-#            print(index)
-            if index == 0:
-                plotError()
-            elif index == 1:
-                mwFitError.plot(self.r2.linfit)
-                self.r2.err = True
-            elif index == 2:
-                mwFitError.plot(self.r2.pwlfit)
-                self.r2.err = True
-            elif index == 3:
-                mwFitError.plot(self.r2.lmefit)
-                self.r2.err = True
+            if self.r2.iBatchPrep is True:
+                if index == 0:
+                    plotError()
+                elif index == 1:
+                    mwFitError.plot(self.r2.linfit)
+                    self.r2.err = True
+                elif index == 2:
+                    mwFitError.plot(self.r2.pwlfit)
+                    self.r2.err = True
+                elif index == 3:
+                    mwFitError.plot(self.r2.lmefit)
+                    self.r2.err = True
+                else:
+                    print('NOT IMPLEMENTED YET')
             else:
-                print('NOT IMPLEMENTED YET')
+                if index == 0:
+                    plotError()
+                elif index == 1:
+                    mwFitError.plot(self.r2.linfit[self.dataIndex])
+                    self.r2.err = True
+                elif index == 2:
+                    mwFitError.plot(self.r2.pwlfit[self.dataIndex])
+                    self.r2.err = True
+                elif index == 3:
+                    mwFitError.plot(self.r2.lmefit[self.dataIndex])
+                    self.r2.err = True
+                else:
+                    print('NOT IMPLEMENTED YET')
             if index == 0:
                 a_wgt.setText('0.01')
                 a_wgtFunc()
@@ -2039,24 +2070,39 @@ class App(QMainWindow):
         ipLayout.setAlignment(Qt.AlignTop)
 
         def phaseplotError():
-            mwIPFiltering.plot(self.r2.phaseplotError)
+            if self.r2.iBatchPrep is True:
+                mwIPFiltering.plot(self.r2.phaseplotError)
+            else:
+                mwIPFiltering.plot(self.r2.phaseplotError[self.dataIndex])
 
 #        def phasePLerr():
 #            mwIPFiltering.plot(self.r2.plotIPFit)
 #            self.r2.errTypIP = 'pwlip'
 
         def iperrFitTypeFunc(index):
-#            print(index)
-            if index == 0:
-                phaseplotError()
-            elif index == 1:
-                mwIPFiltering.plot(self.r2.plotIPFit)
-                self.r2.err = True
-            elif index == 2:
-                mwIPFiltering.plot(self.r2.plotIPFitParabola)
-                self.r2.err = True
+            if self.r2.iBatchPrep is True:
+                if index == 0:
+                    phaseplotError()
+                elif index == 1:
+                    mwIPFiltering.plot(self.r2.plotIPFit)
+                    self.r2.err = True
+                elif index == 2:
+                    mwIPFiltering.plot(self.r2.plotIPFitParabola)
+                    self.r2.err = True
+                else:
+                    print('NOT IMPLEMENTED YET')
             else:
-                print('NOT IMPLEMENTED YET')
+                if index == 0:
+                    phaseplotError()
+                elif index == 1:
+                    mwIPFiltering.plot(self.r2.plotIPFit[self.dataIndex])
+                    self.r2.err = True
+                elif index == 2:
+                    mwIPFiltering.plot(self.r2.plotIPFitParabola[self.dataIndex])
+                    self.r2.err = True
+                else:
+                    print('NOT IMPLEMENTED YET')
+                
             if index == 0:
                 a_wgt.setText('0.02')
                 a_wgtFunc()
@@ -2114,20 +2160,33 @@ class App(QMainWindow):
         phasefiltlayout = QVBoxLayout()
 
         def phirange():
-            self.r2.iprangefilt(float(phivminEdit.text()),
-                                float(phivmaxEdit.text()))
+            if self.r2.iBatchPrep is True:
+                self.r2.iprangefilt(float(phivminEdit.text()),
+                                    float(phivmaxEdit.text()))
+            else:
+                self.r2.iprangefilt[self.dataIndex](float(phivminEdit.text()),
+                                    float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
-            self.r2.removerecip()
+            if self.r2.iBatchPrep is True:
+                self.r2.removerecip()
+            else:
+                self.r2.removerecip[self.dataIndex]()
             heatFilter()
 
         def removenested():
-            self.r2.removenested()
+            if self.r2.iBatchPrep is True:
+                self.r2.removenested()
+            else:
+                self.r2.removenested[self.dataIndex]()
             heatFilter()
 
         def convFactK():
-            self.r2.surveys[0].kFactor = float(phiConvFactor.text())
+            if self.r2.iBatchPrep is True:
+                self.r2.surveys[0].kFactor = float(phiConvFactor.text())
+            else:
+                self.r2.surveys[self.dataIndex].kFactor = float(phiConvFactor.text())
             heatFilter()
 
         phitoplayout = QHBoxLayout()
@@ -2247,16 +2306,20 @@ class App(QMainWindow):
         ipfiltlayout = QHBoxLayout()
 
         def heatRaw():
-#            self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
-#            self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
-            self.r2.surveys[0].filt_typ = 'Raw'
-#            self.r2.surveys[0].cbar = False
-            raw_hmp.plot(self.r2.heatmap)
+            if self.r2.iBatchPrep is True:
+                self.r2.surveys[0].filt_typ = 'Raw'
+                raw_hmp.plot(self.r2.heatmap)
+            else:
+                self.r2.surveys[self.dataIndex].filt_typ = 'Raw'
+                raw_hmp.plot(self.r2.heatmap[self.dataIndex])
 
         def heatFilter():
-            self.r2.surveys[0].filt_typ = 'Filtered'
-#            self.r2.surveys[0].cbar = True
-            filt_hmp.plot(self.r2.heatmap)
+            if self.r2.iBatchPrep is True:
+                self.r2.surveys[0].filt_typ = 'Filtered'
+                filt_hmp.plot(self.r2.heatmap)
+            else:
+                self.r2.surveys[self.dataIndex].filt_typ = 'Filtered'
+                filt_hmp.plot(self.r2.heatmap[self.dataIndex])
 
         raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -2270,7 +2333,10 @@ class App(QMainWindow):
 
         def dcaFiltering():
             try:
-                self.r2.surveys[0].dca(dump=dcaDump)
+                if self.r2.iBatchPrep is True:
+                    self.r2.surveys[0].dca(dump=dcaDump)
+                else:
+                    self.r2.surveys[self.dataIndex].dca(dump=dcaDump)
                 heatFilter()
             except:
                 errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')

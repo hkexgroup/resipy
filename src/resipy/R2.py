@@ -439,10 +439,57 @@ class R2(object): # R2 master class instanciated by the GUI
 #            self.bigSurvey.lmefit()
             
         
+    def indiPrep(self):
+        """Clears up the pre-processing global functions and fills them with per survey functions"""
         
+        if self.iBatchPrep is True:
+            self.elec = self.surveys[0].elec
+            self.plotError = self.surveys[0].plotError
+            self.errorDist = self.surveys[0].errorDist
+            self.linfit = self.surveys[0].linfit
+            self.lmefit = self.surveys[0].lmefit
+            self.pwlfit = self.surveys[0].pwlfit
+            self.phaseplotError = self.surveys[0].phaseplotError
+            self.plotIPFit = self.surveys[0].plotIPFit
+            self.plotIPFitParabola = self.surveys[0].plotIPFitParabola
+            self.heatmap = self.surveys[0].heatmap
+            self.iprangefilt = self.surveys[0].iprangefilt
+            self.removerecip = self.surveys[0].removerecip
+            self.removenested = self.surveys[0].removenested
+            self.addFilteredIP = self.surveys[0].addFilteredIP
+        else:
+#            self.elec = [] # for now it's excluded to be read from survey[0], later must be per survey
+            self.plotError = []
+            self.errorDist = []
+            self.linfit = []
+            self.lmefit = []
+            self.pwlfit = []
+            self.phaseplotError = []
+            self.plotIPFit = []
+            self.plotIPFitParabola = []
+            self.heatmap = []
+            self.iprangefilt = []
+            self.removerecip = []
+            self.removenested = []
+            self.addFilteredIP = []
+            for s in self.surveys:
+#                self.elec.append(s.elec)
+                self.plotError.append(s.plotError)
+                self.errorDist.append(s.errorDist)
+                self.linfit.append(s.linfit)
+                self.lmefit.append(s.lmefit)
+                self.pwlfit.append(s.pwlfit)
+                self.phaseplotError.append(s.phaseplotError)
+                self.plotIPFit.append(s.plotIPFit)
+                self.plotIPFitParabola.append(s.plotIPFitParabola)
+                self.heatmap.append(s.heatmap)
+                self.iprangefilt.append(s.iprangefilt)
+                self.removerecip.append(s.removerecip)
+                self.removenested.append(s.removenested)
+                self.addFilteredIP.append(s.addFilteredIP)
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print):
+                          parser=None, isurveys=[], dump=print, iBatchPrep=True):
         """Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -469,6 +516,10 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
+        
+        self.iBatchPrep = iBatchPrep
+        if iBatchPrep is False:
+            self.indiPrep()
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
