@@ -226,6 +226,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iBorehole = False # to tell the software to not plot pseudoSection
         self.iTimeLapse = False # to enable timelapse inversion
         self.iBatch = False # to enable batch inversion
+        self.iBatchPrep = True
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
@@ -636,7 +637,7 @@ class R2(object): # R2 master class instanciated by the GUI
         return indexes               
                     
     
-    def filterElec(self, elec=[]):
+    def filterElec(self, index=0, elec=[]):
         """Filter out specific electrodes given in all surveys.
         
         Parameters
@@ -645,14 +646,20 @@ class R2(object): # R2 master class instanciated by the GUI
             List of electrode number to be removed.
         
         """
-        for e in elec:
-            for i, s in enumerate(self.surveys):
-                i2keep = (s.df[['a','b','m','n']].values != e).all(1)
-                s.filterData(i2keep)
-                print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
+        if self.iBatchPrep:
+            for e in elec:
+                for i, s in enumerate(self.surveys):
+                    i2keep = (s.df[['a','b','m','n']].values != e).all(1)
+                    s.filterData(i2keep)
+                    print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
+        else:
+            for e in elec:
+                i2keep = (self.surveys[index].df[['a','b','m','n']].values != e).all(1)
+                self.surveys[index].filterData(i2keep)
+                print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', index)
     
     
-    def filterRecip(self, percent=20):
+    def filterRecip(self, index=0, percent=20):
         """Filter on reciprocal errors.
         
         Parameters
@@ -662,18 +669,24 @@ class R2(object): # R2 master class instanciated by the GUI
             discarded. 20% by default.
         """
         numRemoved = 0
-        for s in self.surveys:
-            numRemoved += s.filterRecip(percent)
+        if self.iBatchPrep:
+            for s in self.surveys:
+                numRemoved += s.filterRecip(percent)
+        else:
+            numRemoved = self.surveys[index].filterRecip(percent)
         return numRemoved
     
     
-    def removeUnpaired(self):
+    def removeUnpaired(self, index=0):
         """Remove quadrupoles that don't have reciprocals. This might
         remove dummy measurements added for sequence optimization.
         """
         numRemoved = 0
-        for s in self.surveys:
-            numRemoved += s.removeUnpaired()
+        if self.iBatchPrep:
+            for s in self.surveys:
+                numRemoved += s.removeUnpaired()
+        else:
+            numRemoved = self.surveys[index].removeUnpaired()
         return numRemoved
 
     def removeneg(self):

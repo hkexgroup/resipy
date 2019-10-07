@@ -258,6 +258,8 @@ class App(QMainWindow):
         self.parser = None
         self.fname = None
         self.iBatch = False
+        self.iBatchPrep = True
+        self.dataIndex = 0
         self.iTimeLapse = False
         self.iBorehole = False
         self.iForward = False
@@ -633,6 +635,7 @@ class App(QMainWindow):
         def batchCheckFunc(state):
             if state == Qt.Checked:
                 self.iBatch = True
+                batchPrep.show()
                 if self.r2 is not None:
                     restartFunc()
                 buttonf.setText('Import multiple datasets')
@@ -641,6 +644,7 @@ class App(QMainWindow):
                 timeLapseCheck.setEnabled(False)
             else:
                 self.iBatch = False
+                batchPrep.hide()
                 if self.r2 is not None:
                     restartFunc()
                 buttonf.setText('Import Data')
@@ -650,7 +654,24 @@ class App(QMainWindow):
         batchCheck = QCheckBox('Batch Inversion')
         batchCheck.stateChanged.connect(batchCheckFunc)
         batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings.')
-
+        
+        def bachPrepFunc(state):
+                if state == Qt.Checked:
+                    self.iBatchPrep = True
+                    if self.r2 is not None:
+                        self.r2.iBatchPrep = True
+                else:
+                    self.iBatchPrep = False
+                    if self.r2 is not None:
+                        self.r2.iBatchPrep = False
+                        indiPlots(self.dataIndex)
+        batchPrep = QCheckBox('Batch Pre-processing')
+        batchPrep.stateChanged.connect(bachPrepFunc)
+        batchPrep.setToolTip('Check for applying uniform data preprocessing on surveys.\n Uncheck for individual preprocessing')
+        batchPrep.setChecked(True)
+        batchPrep.hide()
+        
+        
         # select inverse or forward model
         def dimForwardFunc():
             self.iForward = True
@@ -725,6 +746,7 @@ class App(QMainWindow):
         hbox2.addWidget(dimInvGroup)
         hbox2.addWidget(timeLapseCheck)
         hbox2.addWidget(batchCheck)
+        hbox2.addWidget(batchPrep)
         hbox2.addWidget(boreholeCheck)
 
 
@@ -807,10 +829,12 @@ class App(QMainWindow):
                 try:
                     if self.r2.iBatch is False:
                         self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                        self.r2.iBatchPrep = True
                         ipCheck.setEnabled(False)
                         infoDump('Time-lapse survey created.')
                     else:
                         self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                        self.r2.iBatchPrep = self.iBatchPrep
                         ipCheck.setEnabled(True)
                         infoDump('Batch survey created.')
                     fnamesCombo.clear()
@@ -1017,12 +1041,19 @@ class App(QMainWindow):
 
         fnamesComboLabel = QLabel('Choose a dataset to plot:')
         fnamesComboLabel.hide()
+        
+        def indiPlots(index):
+            plotManualFiltering(index)
+        
         def fnamesComboFunc(index):
             self.pParams['index'] = index
             self.pParamsIP['index'] = index
+            self.dataIndex = index
             plotPseudo()
             if self.r2.typ[0] == 'c':
                 plotPseudoIP()
+            if self.r2.iBatchPrep is False:
+                indiPlots(index)
 
         fnamesCombo = QComboBox()
         fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
@@ -1708,11 +1739,11 @@ class App(QMainWindow):
                 recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
-        def plotManualFiltering():
-            mwManualFiltering.plot(self.r2.surveys[0].manualFiltering)
+        def plotManualFiltering(index=0):
+            mwManualFiltering.plot(self.r2.surveys[index].manualFiltering)
 
-        def errHist():
-            if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+        def errHist(index=0):
+            if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
                 recipErrorPLot.plot(self.r2.errorDist)
             else:
                 pass
@@ -1720,7 +1751,9 @@ class App(QMainWindow):
         def recipFilter():
             try:
                 numSelectRemoved = 0
-                if self.r2.iTimeLapse or self.r2.iBatch: # only remove electrode not single measurements
+                if self.r2.iBatch: # only remove electrode not single measurements
+                    self.r2.filterElec(elec=np.where(self.r2.surveys[self.dataIndex].eselect)[0]+1, index=self.dataIndex)
+                elif self.r2.iTimeLapse: # only remove electrode not single measurements
                     self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
                 else:
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
@@ -1738,7 +1771,7 @@ class App(QMainWindow):
                     iperrFitType.setCurrentIndex(0)
                     phaseplotError()
                 errHist()
-                plotManualFiltering()
+                plotManualFiltering(self.dataIndex)
                 errFitType.setCurrentIndex(0)
                 plotError()
             except ValueError as e:
