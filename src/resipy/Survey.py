@@ -417,7 +417,7 @@ class Survey(object):
         
         self.df['irecip'] = irecip
         self.df['reciprocalErrRel'] = reciprocalErrRel
-        self.df['recipError'] = reciprocalErr/sqrt(2) # it's actually an SD estimate !
+        self.df['recipError'] = reciprocalErr/np.sqrt(2) # it's actually an SD estimate !
         self.df['recipMean'] = reciprocalMean
         self.df['reci_IP_err'] = reci_IP_err
         # in order to compute error model based on a few reciprocal measurements
