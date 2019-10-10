@@ -902,13 +902,12 @@ class Survey(object):
             if (OS == 'Windows') and (rpath is None):
                 R_dir = input("Enter the directory where R.exe is installed: ")
                 os.system('R_PATH'+R_dir)
-    
             os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
             lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
             df['resError'] = lmeError # fitted results, only with results
             lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
             self.df['resError'] = lmeError # predicted results, entire survey
-
+            
 #        df['resError'] = lmeError 
         
 #        if 'recipMean' not in self.df.columns:
