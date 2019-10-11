@@ -131,8 +131,19 @@ class Survey(object):
             
     @classmethod
     def fromDataframe(cls, df, elec):
-        """
-        Create a survey class from pandas dataframe.
+        """Create a survey class from pandas dataframe.
+        
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Pandas dataframe.
+        elec : numpy.ndarray
+            A nx3 numpy array witht the XYZ electrodes positions.
+            
+        Returns
+        -------
+        s_svy : Survey
+            An instance of the Survey class.
         """
         surrogate_file = 'test/protocol.dat'
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)),surrogate_file) # map to the protocol test file
@@ -140,7 +151,7 @@ class Survey(object):
         s_svy.df = df
         s_svy.elec = elec
         s_svy.ndata = 1#len(data)
-        irecip = s_svy.reciprocal()
+        s_svy.reciprocal()
         s_svy.basicFilter()
         return s_svy
     
@@ -149,7 +160,7 @@ class Survey(object):
         return out
  
     def checkTxSign(self):
-        """Checking the sign of the transfer resistance.
+        """Checking the sign of the transfer resistances (2D survey only !).
         """
         elecpos = self.elec[:,0]
         array = self.df[['a','b','m','n']].values.copy().astype(int)
@@ -445,8 +456,6 @@ class Survey(object):
             errPercent = 100
         parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
         KDEfit = gaussian_kde(errMax)
-        # TODO the mlab.normpdf is deprecated and will be removed !
-        # change to scipy.stats.norm() instead -> need to add scipy dependency
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
         ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'k',label="KDE fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
@@ -631,7 +640,7 @@ class Survey(object):
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['recipMean'])
-        phasedisc = self.df['reci_IP_err']
+        phasedisc = self.df['reci_IP_err']/np.sqrt(2) # to convert to SD estimate
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on input  phase range
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
@@ -685,7 +694,7 @@ class Survey(object):
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['recipMean'])
-        phasedisc = self.df['reci_IP_err']
+        phasedisc = self.df['reci_IP_err']/np.sqrt(2) # factor to convert to SD estimate
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
@@ -741,6 +750,7 @@ class Survey(object):
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
+        error_input['recipError'] = error_input['recipError']/np.sqrt(2) # factor to convert to SD estimate
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -803,6 +813,7 @@ class Survey(object):
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
+        error_input['recipError'] = error_input['recipError']/np.sqrt(2) # factor to convert to SD estimate
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -838,52 +849,6 @@ class Survey(object):
         if ax is None:
             return fig                  
         
-        
-    def linfitStd(self, iplot=False):
-        # linear fit with std
-        ie = self.irecip > 0
-        recipMean = np.abs(self.reciprocalMean[ie])
-        recipError = np.abs(self.reciprocalErr[ie])
-        
-        # logspace classes, fit, R^2
-        xm,ystdErr,nbs=self.logClasses(recipMean,recipError,np.std)
-        inan = ~np.isnan(ystdErr)
-        slope,offset = np.polyfit(np.log10(xm[inan]),np.log10(ystdErr[inan]),1)
-        predy=10**(offset+slope*np.log10(xm[inan]))
-        # R2 makes sense in linear fitting space only and only for the classes
-        r2=1-np.sum((np.log10(predy)-np.log10(ystdErr[inan]))**2)/np.sum((np.log10(predy)-np.mean(np.log10(ystdErr[inan])))**2)
-        print('Simple linear log fit (with std) : \n\t offset = {0:0.3f}\n\t slope = {1:.3f}\nR^2 = {2:.4f}'.format(offset, slope, r2))        
-        
-        predictRecipError = 10**offset*recipMean**slope
-        self.linstdError = predictRecipError
-        
-        
-        if iplot:
-            figs = []
-            fig,ax=plt.subplots()
-#            ax.loglog(recipMean, recipError, '+o') # doesn't make sense because
-            # we are plotting the STD of the errors and not the absolute errors
-            ax.loglog(xm[inan],ystdErr[inan],'o')
-            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-            ax.set_ylabel('Standard deviation $\sigma$ [$\Omega$]')
-            ax.loglog(xm[inan],predy,'r-',label='linear regression')
-            ax.set_title('loglog graph (R$^2$ = {0:.3f})'.format(r2))
-            fig.show()
-            figs.append(fig)
-            
-            fig,ax=plt.subplots()
-            isort = np.argsort(recipMean)
-            ax.plot(recipMean,recipError,'o', label='raw errors')
-            ax.plot(recipMean,predictRecipError,'o', label='predicted')
-            ax.plot(recipMean[isort],2*predictRecipError[isort],'-', label='2*prediction')
-            ax.legend()
-            ax.set_title('Raw class with stdErr (not in log scale)')
-            ax.set_xlabel('Mean of transfer resistance [$\Omega$]')
-            ax.set_ylabel('Standard deviation $\sigma$ [$\Omega$]')
-            fig.show()
-            figs.append(fig)
-            
-            return figs
     
         
     def lmefit(self, iplot=True, ax=None, rpath=None):
@@ -911,7 +876,7 @@ class Survey(object):
         dfg = self.df[self.df['irecip'] > 0]
         
         recipMean = np.abs(dfg['recipMean'].values)
-        recipError = np.abs(dfg['recipError'].values)
+        recipError = np.abs(dfg['recipError'].values)/np.sqrt(2) # to convert to SD estimate
         array = dfg[['a','b','m','n']].values.astype(int)        
         data = np.vstack([recipMean, recipError]).T
         data = np.hstack((array,data))
@@ -937,13 +902,12 @@ class Survey(object):
             if (OS == 'Windows') and (rpath is None):
                 R_dir = input("Enter the directory where R.exe is installed: ")
                 os.system('R_PATH'+R_dir)
-    
             os.system('Rscript ' + os.path.join(os.path.dirname(os.path.realpath(__file__)),'lmefit.R'))  # Run R
             lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOutRecip.dat'))
             df['resError'] = lmeError # fitted results, only with results
             lmeError = protocolParserLME(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeOut.dat'))
             self.df['resError'] = lmeError # predicted results, entire survey
-
+            
 #        df['resError'] = lmeError 
         
 #        if 'recipMean' not in self.df.columns:
@@ -969,8 +933,6 @@ class Survey(object):
         
             if ax is None:
                 fig, ax = plt.subplots()
-            else:
-                fig = ax.figure
             ax.plot(df['obsErr'], df['resError'], 'o')
             ax.plot([np.min(df['obsErr']),np.max(df['obsErr'])], [np.min(df['obsErr']), np.max(df['obsErr'])], 'r-', label='1:1')
             ax.grid()
@@ -979,7 +941,7 @@ class Survey(object):
             ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
             ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
         except Exception as e:
-            print('ERROR in Survey.lmefit(): Rscript command might not be available or the lme4 package is not installed.')
+            print('ERROR in Survey.lmefit(): Rscript command might not be available or the lme4 package is not installed.', e)
 
 
     def heatmap(self,ax=None):

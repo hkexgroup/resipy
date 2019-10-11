@@ -14,8 +14,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from matplotlib.path import Path
-from multiprocessing import Pool, Process, Queue
-from threading import Thread
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -2807,29 +2805,44 @@ class R2(object): # R2 master class instanciated by the GUI
         return array, errors
     
             
-    def pseudoError(self, ax=None):
+    def pseudoError(self, ax=None, vmin=None, vmax=None):
         """Plot pseudo section of errors from file `f001_err.dat`.
         
         Parameters
         ----------
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
+        vmin : float, optional
+            Min value.
+        vmax : float, optional
+            Max value.
         """
         array, errors = self.getInvError()
             
         spacing = np.diff(self.elec[[0,1],0])
-        pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
+        pseudo(array, errors, spacing, ax=ax, label='Normalized Errors', 
+               log=False, geom=False, contour=False, vmin=vmin, vmax=vmax)
     
     
-    def pseudoErrorIP(self, ax=None):
+    def pseudoErrorIP(self, ax=None, vmin=None, vmax=None):
         """Display normalized phase error.
+        
+        Parameters
+        ----------
+        ax : matplotlib axis
+            If specified, the graph will be plotted against `ax`.
+        vmin : float, optional
+            Min value.
+        vmax : float, optional
+            Max value.
         """
         if self.typ == 'cR2':
             df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)   
             array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int)
             errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
         spacing = np.diff(self.elec[[0,1],0])
-        pseudo(array.T, errors, spacing, ax=ax, label='Normalized Errors', log=False, geom=False, contour=False)
+        pseudo(array.T, errors, spacing, ax=ax, label='Normalized Errors', 
+               log=False, geom=False, contour=False, vmin=None, vmax=None)
     
         
     def showInversionErrors(self, ax=None):
@@ -3214,7 +3227,8 @@ class R2(object): # R2 master class instanciated by the GUI
         print("%i surveys removed as they had no measurements!"%count)
 
 
-def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, geom=True):
+def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True,
+           geom=True, vmin=None, vmax=None):
     array = np.sort(array, axis=1) # for better presentation, especially Wenner arrays
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
@@ -3253,7 +3267,7 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True, g
         fig, ax = plt.subplots()
     else:
         fig = ax.figure
-    cax = ax.scatter(xpos, ypos, c=resist, s=70)#, norm=mpl.colors.LogNorm())
+    cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
     cbar = fig.colorbar(cax, ax=ax)
     cbar.set_label(label)
     ax.set_title('Pseudo Section')
