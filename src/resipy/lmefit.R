@@ -14,7 +14,7 @@ library(lme4) # install in terminal: e.g. conda install r-lme4
 
 #script.dir <- dirname(sys.frame(0)$ofile)
 #setwd(script.dir)
-setwd("api")
+setwd("resipy")
 print(getwd())
 
 

@@ -7,7 +7,7 @@ sys.path.append('..')
 from resipy.Survey import Survey
 
 #setup environmental variables 
-data_dir = r'C:\Users\jamyd91\Documents\2PhD_projects\Extra\Willington\Data\STG' # Directory where the survey files are stored 
+data_dir = r'C:\Users\Jimmy\Desktop\3D_demo\Willington\justYdata' # Directory where the survey files are stored 
 ext = '.stg' # file extension associated with the files 
 ftype = 'Sting' # file format of the survey files 
 #%% filter out relevant files 
