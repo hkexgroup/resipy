@@ -28,7 +28,7 @@ Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
 
 Note for Mac and Linux users:
-- You will need to have *wine* installed as the executables beneath are compiled for Windows
+- You will need to have *wine* installed as the executables beneath are compiled for Windows. *wine* is still not supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 
@@ -102,6 +102,8 @@ sudo pacman -S install wine # if using arch based distribution
 ```
 
 ### On Mac
+
+IMPORTANT NOTE: *wine* is still not supported on macOS Catalina!
 
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).
 
