@@ -672,6 +672,7 @@ class App(QMainWindow):
                          be written in the <code>protocol.dat</code> file \
                          and used in the inversion if both <code>a_wgt</code> and\
                          <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).'
+                    fnamesComboLabel.setText('Choose a dataset to plot:')
                 else:
                     self.iBatchPrep = False
                     if self.r2 is not None:
@@ -687,6 +688,7 @@ class App(QMainWindow):
                          In case of batch inversion but not batch analysis, <i>all</i> datesets must either have an error model \
                          or not have any error models (i.e., select an error model for all individual datasets). \
                          ResIPy can handle batch data with mixture of different error models.'
+                    fnamesComboLabel.setText('Choose a dataset to analyze:')
                 errFitLabel.setText(errorModelTabText)
                 iperrFitLabel.setText(errorModelTabText)
             except:
