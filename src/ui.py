@@ -666,12 +666,29 @@ class App(QMainWindow):
                         self.dataIndex = 0
                         self.r2.indiPrep()
                         indiPlots(self.dataIndex)
+                    errorModelTabText = 'Select an error model from the drop-down menu. Once\
+                         fitted, the model will generate an error for each quadrupoles\
+                         (even the ones with no reciprocals). This error will\
+                         be written in the <code>protocol.dat</code> file \
+                         and used in the inversion if both <code>a_wgt</code> and\
+                         <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).'
                 else:
                     self.iBatchPrep = False
                     if self.r2 is not None:
                         self.r2.iBatchPrep = False
                         self.r2.indiPrep()
                         indiPlots(self.dataIndex)
+                    errorModelTabText = 'Select an error model from the drop-down menu. Once\
+                         fitted, the model will generate an error for each quadrupoles\
+                         (even the ones with no reciprocals). This error will\
+                         be written in the <code>protocol.dat</code> file \
+                         and used in the inversion if both <code>a_wgt</code> and\
+                         <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab). \
+                         In case of batch inversion but not batch analysis, <i>all</i> datesets must either have an error model \
+                         or not have any error models (i.e., select an error model for all individual datasets). \
+                         ResIPy can handle batch data with mixture of different error models.'
+                errFitLabel.setText(errorModelTabText)
+                iperrFitLabel.setText(errorModelTabText)
             except:
                 pass
         batchPrep = QCheckBox('Batch Pre-processing')
@@ -1066,6 +1083,7 @@ class App(QMainWindow):
             plotPseudo()
             if self.r2.typ[0] == 'c':
                 plotPseudoIP()
+                dcaProgress.setValue(0)
             if self.r2.iBatchPrep is False:
                 indiPlots(index)
                 errFitType.setCurrentIndex(0)
@@ -1751,7 +1769,7 @@ class App(QMainWindow):
                 recipErrorInputLine.setText('')
                 recipErrorInputLine.hide()
                 recipErrorUnpairedBtn.hide()
-                recipErrorPltbtn.setText('Remove selected points')
+                recipErrorPltbtn.setText('Remove selected')
                 recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
@@ -1770,18 +1788,35 @@ class App(QMainWindow):
         def recipFilter():
             try:
                 numSelectRemoved = 0
-                if self.r2.iBatch: # only remove electrode not single measurements
-                    self.r2.filterElec(elec=np.where(self.r2.surveys[self.dataIndex].eselect)[0]+1, index=self.dataIndex)
+                if self.r2.iBatch: 
+                    if self.r2.iBatchPrep is True: # only remove electrode not single measurements
+                        self.r2.filterElec(elec=np.where(self.r2.surveys[0].eselect)[0]+1)
+                        numElecRemoved = np.sum(self.r2.surveys[0].eselect)
+                    else:
+                        numSelectRemoved += self.r2.surveys[self.dataIndex].filterData(~self.r2.surveys[self.dataIndex].iselect)
                 elif self.r2.iTimeLapse: # only remove electrode not single measurements
                     self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
+                    numElecRemoved = np.sum(self.r2.surveys[0].eselect)
                 else:
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
                 if recipErrorInputLine.text() != '':
                     percent = float(recipErrorInputLine.text())
-                    numRecipRemoved = self.r2.filterRecip(percent=percent)
-                    infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
+                    numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.dataIndex)
+                    if self.r2.iBatch or self.r2.iTimeLapse:
+                        if self.r2.iBatchPrep:
+                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected electrodes removed!" % (numRecipRemoved,percent,numElecRemoved))
+                        else:
+                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
+                    else:
+                        infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
                 else:
-                    infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                    if self.r2.iBatch or self.r2.iTimeLapse:
+                        if self.r2.iBatchPrep:
+                            infoDump("%i selected electrodes removed!" % (numElecRemoved))
+                        else:
+                            infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                    else:
+                        infoDump("%i selected measurements removed!" % (numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
                     for s in self.r2.surveys:
                         s.dfPhaseReset = s.df
@@ -1801,16 +1836,23 @@ class App(QMainWindow):
                               'Reset the filters and redo the filterings, first reciprocity then phase.')
 
         def resetRecipFilter():
-            numRestored = len(self.r2.surveys[0].dfReset) - len(self.r2.surveys[0].df)
-            for s in self.r2.surveys:
-                s.df = s.dfReset.copy()
+            numRestored = len(self.r2.surveys[self.dataIndex].dfReset) - len(self.r2.surveys[self.dataIndex].df)
+            if self.r2.iBatchPrep:
+                for s in self.r2.surveys:
+                    s.df = s.dfReset.copy()
+            else:
+                self.r2.surveys[self.dataIndex].df = self.r2.surveys[self.dataIndex].dfReset.copy()
             if recipErrorInputLine.text() != '':
                 errHist()
                 recipErrorInputLine.setText('')
             if ipCheck.checkState() == Qt.Checked:
-                for s in self.r2.surveys:
-                    s.dfPhaseReset = s.dfReset.copy()
-                    s.filterDataIP = s.dfReset.copy()
+                if self.r2.iBatchPrep:
+                    for s in self.r2.surveys:
+                        s.dfPhaseReset = s.dfReset.copy()
+                        s.filterDataIP = s.dfReset.copy()
+                else:
+                    self.r2.surveys[self.dataIndex].dfPhaseReset = self.r2.surveys[self.dataIndex].dfReset.copy()
+                    self.r2.surveys[self.dataIndex].filterDataIP = self.r2.surveys[self.dataIndex].dfReset.copy()
                 heatFilter()
                 iperrFitType.setCurrentIndex(0)
                 phaseplotError()
@@ -1880,11 +1922,15 @@ class App(QMainWindow):
         recipErrorBtnLayout.setAlignment(Qt.AlignRight)
 
         def recipErrorUnpairedFunc():
-            numRemoved = self.r2.removeUnpaired()
+            numRemoved = self.r2.removeUnpaired(index=self.dataIndex)
             if ipCheck.checkState() == Qt.Checked:
-                for s in self.r2.surveys:
-                    s.dfPhaseReset = s.df
-                    s.filterDataIP = s.df
+                if self.r2.iBatchPrep:
+                    for s in self.r2.surveys:
+                        s.dfPhaseReset = s.dfReset.copy()
+                        s.filterDataIP = s.dfReset.copy()
+                else:
+                    self.r2.surveys[self.dataIndex].dfPhaseReset = self.r2.surveys[self.dataIndex].dfReset.copy()
+                    self.r2.surveys[self.dataIndex].filterDataIP = self.r2.surveys[self.dataIndex].dfReset.copy()
                 heatFilter()
                 iperrFitType.setCurrentIndex(0)
                 phaseplotError()
@@ -2036,7 +2082,10 @@ class App(QMainWindow):
                              (even the ones with no reciprocals). This error will\
                              be written in the <code>protocol.dat</code> file \
                              and used in the inversion if both <code>a_wgt</code> and\
-                             <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
+                             <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab). \
+                             In case of batch inversion but not batch analysis, <i>all</i> datesets must either have an error model \
+                             or not have any error models (i.e., select an error model for all individual datasets). \
+                             ResIPy can handle batch data with mixture of different error models.')
         errFitLabel.setWordWrap(True)
         errorLayout.addWidget(errFitLabel)
 
@@ -2134,7 +2183,10 @@ class App(QMainWindow):
                      (even the ones with no reciprocals). This error will\
                      be written in the <code>protocol.dat</code> file \
                      and used in the inversion if both <code>a_wgt</code> and\
-                     <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
+                     <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab). \
+                     In case of batch inversion but not batch analysis, <i>all</i> datesets must either have an error model \
+                     or not have any error models (i.e., select an error model for all individual datasets). \
+                     ResIPy can handle batch data with mixture of different error models.')
         iperrFitLabel.setWordWrap(True)
         ipLayout.addWidget(iperrFitLabel)
 
@@ -2241,27 +2293,27 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
 
         def filt_reset():
-            self.r2.surveys[0].filterDataIP = self.r2.surveys[0].dfPhaseReset.copy()
-            self.r2.surveys[0].df = self.r2.surveys[0].dfPhaseReset.copy()
+            self.r2.surveys[self.dataIndex].filterDataIP = self.r2.surveys[self.dataIndex].dfPhaseReset.copy()
+            self.r2.surveys[self.dataIndex].df = self.r2.surveys[self.dataIndex].dfPhaseReset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             infoDump('All phase filteres are now reset!')
 
         def phiCbarRange():
-            self.r2.surveys[0].phiCbarmin = float(phiCbarminEdit.text())
-            self.r2.surveys[0].phiCbarMax = float(phiCbarMaxEdit.text())
+            self.r2.surveys[self.dataIndex].phiCbarmin = float(phiCbarminEdit.text())
+            self.r2.surveys[self.dataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
             heatFilter()
             heatRaw()
 
         def phiCbarDataRange():
-            minDataIP = np.min(self.r2.surveys[0].dfOrigin['ip'])
-            maxDataIP = np.max(self.r2.surveys[0].dfOrigin['ip'])
+            minDataIP = np.min(self.r2.surveys[self.dataIndex].dfOrigin['ip'])
+            maxDataIP = np.max(self.r2.surveys[self.dataIndex].dfOrigin['ip'])
             if self.ftype == 'ProtocolIP':
-                self.r2.surveys[0].phiCbarmin = -maxDataIP
-                self.r2.surveys[0].phiCbarMax = -minDataIP
+                self.r2.surveys[self.dataIndex].phiCbarmin = -maxDataIP
+                self.r2.surveys[self.dataIndex].phiCbarMax = -minDataIP
             else:
-                self.r2.surveys[0].phiCbarmin = minDataIP
-                self.r2.surveys[0].phiCbarMax = maxDataIP
+                self.r2.surveys[self.dataIndex].phiCbarmin = minDataIP
+                self.r2.surveys[self.dataIndex].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
 

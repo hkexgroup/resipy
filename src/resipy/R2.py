@@ -686,7 +686,7 @@ class R2(object): # R2 master class instanciated by the GUI
         return indexes               
                     
     
-    def filterElec(self, index=0, elec=[]):
+    def filterElec(self, elec=[]):
         """Filter out specific electrodes given in all surveys.
         
         Parameters
@@ -695,17 +695,11 @@ class R2(object): # R2 master class instanciated by the GUI
             List of electrode number to be removed.
         
         """
-        if self.iBatchPrep:
-            for e in elec:
-                for i, s in enumerate(self.surveys):
-                    i2keep = (s.df[['a','b','m','n']].values != e).all(1)
-                    s.filterData(i2keep)
-                    print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
-        else:
-            for e in elec:
-                i2keep = (self.surveys[index].df[['a','b','m','n']].values != e).all(1)
-                self.surveys[index].filterData(i2keep)
-                print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', index)
+        for e in elec:
+            for i, s in enumerate(self.surveys):
+                i2keep = (s.df[['a','b','m','n']].values != e).all(1)
+                s.filterData(i2keep)
+                print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
     
     
     def filterRecip(self, index=0, percent=20):
