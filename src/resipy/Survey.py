@@ -1477,8 +1477,7 @@ class Survey(object):
                 elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
-            killed.figure.canvas.draw()
-                
+            killed.figure.canvas.draw()                
                 
         if ax is None:
             fig, ax = plt.subplots()
