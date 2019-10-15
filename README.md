@@ -34,6 +34,10 @@ Note for Mac and Linux users:
 Note to Chinese users:
 - If the download URL failed because `lancaster.box.com` is blocked, try replacing it by either `lancaster.app.boxenterprise.net` or `lancaster.app.boxcn.net`.
 
+中国用户注意事项:
+- 如果由于 `lancaster.box.com` 被阻止而导致下载 URL 失败，请尝试使用 `lancaster.app.boxenterprise.net` 或 `lancaster.app.boxcn.net` 替换它。
+
+
 What it can do
 --------------
 <img src='src/image/teaser.gif' width="600">
