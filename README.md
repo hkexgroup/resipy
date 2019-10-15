@@ -31,6 +31,8 @@ Note for Mac and Linux users:
 - You will need to have *wine* installed as the executables beneath are compiled for Windows. *wine* is still not supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
+Note to Chinese users:
+- If the download URL failed because `lancaster.box.com` is blocked, try replacing it by either `lancaster.app.boxenterprise.net` or `lancaster.app.boxcn.net`.
 
 What it can do
 --------------
