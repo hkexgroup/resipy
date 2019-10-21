@@ -640,7 +640,7 @@ class Survey(object):
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['recipMean'])
-        phasedisc = self.df['reci_IP_err']/np.sqrt(2) # to convert to SD estimate
+        phasedisc = self.df['reci_IP_err']
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on input  phase range
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
@@ -694,7 +694,7 @@ class Survey(object):
         numbins_ip = 16
         binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
         Rn = np.abs(self.df['recipMean'])
-        phasedisc = self.df['reci_IP_err']/np.sqrt(2) # factor to convert to SD estimate
+        phasedisc = self.df['reci_IP_err']
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
         bins_ip = pd.DataFrame(np.zeros((numbins_ip,2))).rename(columns = {0:'R_mean',1:'Phi_dis_STD'})
         for i in range(numbins_ip): # bining 
@@ -750,7 +750,7 @@ class Survey(object):
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
-        error_input['recipError'] = error_input['recipError']/np.sqrt(2) # factor to convert to SD estimate
+        error_input['recipError'] = error_input['recipError']
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -813,7 +813,7 @@ class Survey(object):
         dfg = self.df[self.df['irecip'] > 0]
         binsize = int(len(dfg['recipMean'])/numbins) 
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
-        error_input['recipError'] = error_input['recipError']/np.sqrt(2) # factor to convert to SD estimate
+        error_input['recipError'] = error_input['recipError']
         bins = np.zeros((numbins,2))
         for i in range(numbins): # bining 
             ns=i*binsize
@@ -876,7 +876,7 @@ class Survey(object):
         dfg = self.df[self.df['irecip'] > 0]
         
         recipMean = np.abs(dfg['recipMean'].values)
-        recipError = np.abs(dfg['recipError'].values)/np.sqrt(2) # to convert to SD estimate
+        recipError = np.abs(dfg['recipError'].values)
         array = dfg[['a','b','m','n']].values.astype(int)        
         data = np.vstack([recipMean, recipError]).T
         data = np.hstack((array,data))
