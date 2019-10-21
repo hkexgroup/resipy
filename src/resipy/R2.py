@@ -440,7 +440,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def indiPrep(self):
         """Clears up the pre-processing global functions and fills them with per survey functions"""
         
-        if self.iBatchPrep is True:
+        if not self.iBatch or self.iTimeLapse:
             self.elec = self.surveys[0].elec
             self.plotError = self.surveys[0].plotError
             self.errorDist = self.surveys[0].errorDist
@@ -515,9 +515,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iBatch = True
         self.setBorehole(self.iBorehole)
         
-        self.iBatchPrep = iBatchPrep
-        if iBatchPrep is False:
-            self.indiPrep()
+#        self.iBatchPrep = iBatchPrep
+#        if iBatchPrep is False:
+        self.indiPrep()
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
@@ -702,7 +702,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
     
     
-    def filterRecip(self, index=0, percent=20):
+    def filterRecip(self, index=0, percent=20, batchPrep=True):
         """Filter on reciprocal errors.
         
         Parameters
@@ -712,7 +712,7 @@ class R2(object): # R2 master class instanciated by the GUI
             discarded. 20% by default.
         """
         numRemoved = 0
-        if self.iBatchPrep:
+        if batchPrep:
             for s in self.surveys:
                 numRemoved += s.filterRecip(percent)
         else:
@@ -720,12 +720,12 @@ class R2(object): # R2 master class instanciated by the GUI
         return numRemoved
     
     
-    def removeUnpaired(self, index=0):
+    def removeUnpaired(self, index=0, batchPrep=True):
         """Remove quadrupoles that don't have reciprocals. This might
         remove dummy measurements added for sequence optimization.
         """
         numRemoved = 0
-        if self.iBatchPrep:
+        if batchPrep:
             for s in self.surveys:
                 numRemoved += s.removeUnpaired()
         else:
