@@ -20,9 +20,9 @@ ResIPy is an open-source project, everyone is welcome to contribute.
 
 You can download the latest versions using the links below:
 
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.box.com/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.box.com/s/gafj2hqq3l94boff7hburb2mizb5v32e "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.9-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.box.com/s/vmezt50g0it4ml6x1iyy98sk06757ktm "Tested on Debian10 and Ubuntu18.04.2")
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://lancaster.boxcn.net/s/3uvyrwxaurc87vkuxcz32bqzst0ujwsu)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://lancaster.boxcn.net/s/gafj2hqq3l94boff7hburb2mizb5v32e "wine is required - see below")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.9-orange.svg?style=flat&logo=Linux&logoColor=white)](https://lancaster.boxcn.net/s/vmezt50g0it4ml6x1iyy98sk06757ktm "Tested on Debian10 and Ubuntu18.04.2")
 
 Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
