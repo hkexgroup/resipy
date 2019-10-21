@@ -389,7 +389,12 @@ class App(QMainWindow):
                 phiConvFactorlabel.setEnabled(False)
 
             # pre-processing
+            errorCombosShow(False)
+            for combobox in prepFnamesComboboxes:
+                combobox.clear()
             mwManualFiltering.clear()
+            self.recipErrApplyToAll = True
+            self.recipErrdataIndex = 0
             errFitType.currentIndexChanged.disconnect()
             errFitType.setCurrentIndex(0)
             errFitType.currentIndexChanged.connect(errFitTypeFunc)
@@ -637,7 +642,6 @@ class App(QMainWindow):
         def batchCheckFunc(state):
             if state == Qt.Checked:
                 self.iBatch = True
-                batchPrep.show()
                 if self.r2 is not None:
                     restartFunc()
                 buttonf.setText('Import multiple datasets')
@@ -646,7 +650,6 @@ class App(QMainWindow):
                 timeLapseCheck.setEnabled(False)
             else:
                 self.iBatch = False
-                batchPrep.hide()
                 if self.r2 is not None:
                     restartFunc()
                 buttonf.setText('Import Data')
@@ -774,7 +777,6 @@ class App(QMainWindow):
         hbox2.addWidget(dimInvGroup)
         hbox2.addWidget(timeLapseCheck)
         hbox2.addWidget(batchCheck)
-        hbox2.addWidget(batchPrep)
         hbox2.addWidget(boreholeCheck)
 
 
@@ -854,42 +856,44 @@ class App(QMainWindow):
                 fdir = os.path.dirname(fnames[0])
                 restartFunc()
                 self.datadir = os.path.dirname(fdir)
-                try:
-                    if self.r2.iBatch is False:
-                        self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
-                        self.r2.iBatchPrep = True
-                        ipCheck.setEnabled(False)
-                        infoDump('Time-lapse survey created.')
-                    else:
-                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=self.iBatchPrep)
-                        ipCheck.setEnabled(True)
-                        infoDump('Batch survey created.')
-                    fnamesCombo.clear()
-                    psContourCheck.setEnabled(True)
-                    for s in self.r2.surveys:
-                        fnamesCombo.addItem(s.name)
-                    fnamesCombo.show()
-                    fnamesComboLabel.show()
-                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
-                    plotPseudo()
-                    elecTable.initTable(self.r2.elec)
-                    tabImporting.setTabEnabled(1,True)
-                    btnInvNow.setEnabled(True)
-                    nbElecEdit.setText(str(len(self.r2.elec)))
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        pass # no reciprocals found
-                    else:
-    #                        tabPreProcessing.setTabEnabled(1, True)
-                        tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
-                        errHist()
-                    plotManualFiltering()
-                    activateTabs(True)
-                    if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
-                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                            ipCheck.setChecked(True)
-                except:
-                    errorDump('File format is not recognized (or directory contains invalid input files)')
+#                try:
+                if self.r2.iBatch is False:
+                    self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                    self.r2.iBatchPrep = True
+                    ipCheck.setEnabled(False)
+                    infoDump('Time-lapse survey created.')
+                else:
+                    self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=self.iBatchPrep)
+                    ipCheck.setEnabled(True)
+                    infoDump('Batch survey created.')
+                fnamesCombo.clear()
+                psContourCheck.setEnabled(True)
+                for s in self.r2.surveys:
+                    fnamesCombo.addItem(s.name)
+                errorCombosShow(True)
+                errorCombosFill(prepFnamesComboboxes)
+                fnamesCombo.show()
+                fnamesComboLabel.show()
+                buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
+                plotPseudo()
+                elecTable.initTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
+                btnInvNow.setEnabled(True)
+                nbElecEdit.setText(str(len(self.r2.elec)))
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    pass # no reciprocals found
+                else:
+#                        tabPreProcessing.setTabEnabled(1, True)
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+                    errHist()
+                plotManualFiltering()
+                activateTabs(True)
+                if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
+                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                        ipCheck.setChecked(True)
+#                except:
+#                    errorDump('File format is not recognized (or directory contains invalid input files)')
 
         def getfile():
             print('ftype = ', self.ftype)
@@ -1069,7 +1073,7 @@ class App(QMainWindow):
         fnamesComboLabel = QLabel('Choose a dataset to plot:')
         fnamesComboLabel.hide()
         
-        def indiPlots(index):
+        def indiPlots(index): #TODO: to come back here
             plotManualFiltering(index)
             plotError()
             errHist()
@@ -1780,44 +1784,52 @@ class App(QMainWindow):
 
         def errHist(index=0):
             if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
-                if self.r2.iBatchPrep is True:
+                if self.iBatch or self.iTimeLapse:
+                    recipErrorPLot.plot(self.r2.errorDist[index])
+                else: 
                     recipErrorPLot.plot(self.r2.errorDist)
-                else:
-                    recipErrorPLot.plot(self.r2.errorDist[self.dataIndex])
             else:
                 pass
 
         def recipFilter():
             try:
                 numSelectRemoved = 0
-                if self.r2.iBatch: 
-                    if self.r2.iBatchPrep is True: # only remove electrode not single measurements
-                        self.r2.filterElec(elec=np.where(self.r2.surveys[0].eselect)[0]+1)
-                        numElecRemoved = np.sum(self.r2.surveys[0].eselect)
+                if self.r2.iBatch or self.r2.iTimeLapse:
+                    if not self.recipErrApplyToAll:
+                        numSelectRemoved += self.r2.surveys[self.recipErrdataIndex].filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
                     else:
-                        numSelectRemoved += self.r2.surveys[self.dataIndex].filterData(~self.r2.surveys[self.dataIndex].iselect)
-                elif self.r2.iTimeLapse: # only remove electrode not single measurements
-                    self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
-                    numElecRemoved = np.sum(self.r2.surveys[0].eselect)
+                        try:
+                            for s in self.r2.surveys:
+                                numSelectRemoved += s.filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
+                        except:
+                            raise ValueError('Number of measurements in each survey does not match! Reset and retry individually.')
+#                    if self.r2.iBatchPrep is True: # only remove electrode not single measurements
+#                        self.r2.filterElec(elec=np.where(self.r2.surveys[0].eselect)[0]+1)
+#                        numElecRemoved = np.sum(self.r2.surveys[0].eselect)
+#                    else:
+#                        numSelectRemoved += self.r2.surveys[index].filterData(~self.r2.surveys[index].iselect)
+#                elif self.r2.iTimeLapse: # only remove electrode not single measurements
+#                    self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
+#                    numElecRemoved = np.sum(self.r2.surveys[0].eselect)
                 else:
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
                 if recipErrorInputLine.text() != '':
                     percent = float(recipErrorInputLine.text())
-                    numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.dataIndex)
+                    numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.recipErrdataIndex, batchPrep=self.recipErrApplyToAll)
                     if self.r2.iBatch or self.r2.iTimeLapse:
-                        if self.r2.iBatchPrep:
-                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected electrodes removed!" % (numRecipRemoved,percent,numElecRemoved))
-                        else:
-                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
-                    else:
+#                        if self.r2.iBatchPrep:
+#                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected electrodes removed!" % (numRecipRemoved,percent,numElecRemoved))
+#                        else:
+#                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
+#                    else:
                         infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
                 else:
-                    if self.r2.iBatch or self.r2.iTimeLapse:
-                        if self.r2.iBatchPrep:
-                            infoDump("%i selected electrodes removed!" % (numElecRemoved))
-                        else:
-                            infoDump("%i selected measurements removed!" % (numSelectRemoved))
-                    else:
+#                    if self.r2.iBatch or self.r2.iTimeLapse:
+#                        if self.r2.iBatchPrep:
+#                            infoDump("%i selected electrodes removed!" % (numElecRemoved))
+#                        else:
+#                            infoDump("%i selected measurements removed!" % (numSelectRemoved))
+#                    else:
                         infoDump("%i selected measurements removed!" % (numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
                     for s in self.r2.surveys:
@@ -1826,8 +1838,8 @@ class App(QMainWindow):
                     heatFilter()
                     iperrFitType.setCurrentIndex(0)
                     phaseplotError()
-                errHist()
-                plotManualFiltering(self.dataIndex)
+                errHist(self.recipErrdataIndex)
+                plotManualFiltering(self.recipErrdataIndex)
                 errFitType.setCurrentIndex(0)
                 plotError()
             except ValueError as e:
@@ -1891,12 +1903,77 @@ class App(QMainWindow):
 #        btnLayout.addWidget(btnDone)
 #        manualTopLayout.addLayout(btnLayout)
 #        manualLayout.addLayout(manualTopLayout, 0) # number is stretch factor
+        
+        def errorCombosShow(state=False): #showing/hiding pre-processing comboboxes
+            recipErrorfnamesCombo.setCurrentIndex(0)
+            errFitfnamesCombo.setCurrentIndex(0)
+            iperrFitfnamesCombo.setCurrentIndex(0)
+            phasefiltfnamesCombo.setCurrentIndex(0)
+            if state == False: 
+                recipErrorfnamesComboLabel.hide()
+                recipErrorfnamesCombo.hide()
+                errFitfnamesComboLabel.hide()
+                errFitfnamesCombo.hide()
+                iperrFitfnamesCombo.hide()
+                iperrFitfnamesComboLabel.hide()
+                phasefiltfnamesComboLabel.hide()
+                phasefiltfnamesCombo.hide()
+            else:
+                recipErrorfnamesComboLabel.show()
+                recipErrorfnamesCombo.show()
+                errFitfnamesComboLabel.show()
+                errFitfnamesCombo.show()
+                iperrFitfnamesCombo.show()
+                iperrFitfnamesComboLabel.show()
+                phasefiltfnamesComboLabel.show()
+                phasefiltfnamesCombo.show()
+        
+        def errorCombosFill(comboboxes=[]): #filling pre-processing comboboxes with fnames
+            for comboboxe in comboboxes:
+                comboboxe.clear()
+            
+            for comboboxe in comboboxes:
+                comboboxe.addItem('Apply to all')
+            
+            for s in self.r2.surveys:
+                for comboboxe in comboboxes:
+                    comboboxe.addItem(s.name)
 
         recipErrorLayout = QVBoxLayout()
         recipErrorTopLayout = QVBoxLayout()
+        recipErrorLabelLayout = QHBoxLayout()
 
         recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
-        recipErrorTopLayout.addWidget(recipErrorLabel)
+        recipErrorLabel.setAlignment(Qt.AlignLeft)
+        recipErrorLabelLayout.addWidget(recipErrorLabel, 1)
+        
+        recipErrorfnamesComboLabel = QLabel('Select a dataset:')
+        recipErrorfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        recipErrorLabelLayout.addWidget(recipErrorfnamesComboLabel)
+        
+        def recipErrorfnamesComboFunc(index):
+            if index == 0:
+                self.recipErrApplyToAll = True
+            elif index > 0: # show/hide make the index = -1
+                self.recipErrApplyToAll = False
+                plotManualFiltering(index-1)
+                errHist(index-1)
+                self.recipErrdataIndex = index-1
+#                plotError()
+                
+#            if self.r2.typ[0] == 'c':
+#                phaseplotError()
+#                heatRaw()
+#                heatFilter()
+            
+        
+        recipErrorfnamesCombo = QComboBox()
+        recipErrorfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        recipErrorfnamesCombo.setMinimumWidth(150)
+        recipErrorfnamesCombo.currentIndexChanged.connect(recipErrorfnamesComboFunc)
+        recipErrorLabelLayout.addWidget(recipErrorfnamesCombo)
+        
+        recipErrorTopLayout.addLayout(recipErrorLabelLayout)
 
 
         recipErrorInputlayout = QHBoxLayout()
@@ -1924,15 +2001,15 @@ class App(QMainWindow):
         recipErrorBtnLayout.setAlignment(Qt.AlignRight)
 
         def recipErrorUnpairedFunc():
-            numRemoved = self.r2.removeUnpaired(index=self.dataIndex)
+            numRemoved = self.r2.removeUnpaired(index=self.recipErrdataIndex, batchPrep=self.recipErrApplyToAll)
             if ipCheck.checkState() == Qt.Checked:
-                if self.r2.iBatchPrep:
+                if self.recipErrApplyToAll:
                     for s in self.r2.surveys:
                         s.dfPhaseReset = s.dfReset.copy()
                         s.filterDataIP = s.dfReset.copy()
                 else:
-                    self.r2.surveys[self.dataIndex].dfPhaseReset = self.r2.surveys[self.dataIndex].dfReset.copy()
-                    self.r2.surveys[self.dataIndex].filterDataIP = self.r2.surveys[self.dataIndex].dfReset.copy()
+                    self.r2.surveys[self.recipErrdataIndex].dfPhaseReset = self.r2.surveys[self.recipErrdataIndex].dfReset.copy()
+                    self.r2.surveys[self.recipErrdataIndex].filterDataIP = self.r2.surveys[self.recipErrdataIndex].dfReset.copy()
                 heatFilter()
                 iperrFitType.setCurrentIndex(0)
                 phaseplotError()
@@ -2019,11 +2096,11 @@ class App(QMainWindow):
             b_wgt.setText('0.0')
             b_wgtFunc()
 
-        def plotError():
-            if self.r2.iBatchPrep is True:
+        def plotError(index=0):
+            if not self.r2.iBatch or self.r2.iTimeLapse:
                 mwFitError.plot(self.r2.plotError)
             else:
-                mwFitError.plot(self.r2.plotError[self.dataIndex])
+                mwFitError.plot(self.r2.plotError[index])
             self.r2.err = False
 
 #        def fitLinError():
@@ -2079,6 +2156,8 @@ class App(QMainWindow):
                 b_wgt.setText('0.0')
                 b_wgtFunc()
 
+        errorTopLayout = QHBoxLayout()
+        
         errFitLabel = QLabel('Select an error model from the drop-down menu. Once\
                              fitted, the model will generate an error for each quadrupoles\
                              (even the ones with no reciprocals). This error will\
@@ -2086,7 +2165,26 @@ class App(QMainWindow):
                              and used in the inversion if both <code>a_wgt</code> and\
                              <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
         errFitLabel.setWordWrap(True)
-        errorLayout.addWidget(errFitLabel)
+        errFitLabel.setToolTip('In case of batch/time-lapse inversion, <i>all</i> datesets must either have an error model \
+                               or not have any error models (i.e., select separate error models for each individual dataset or "Apply to all"). \
+                               ResIPy can handle batch data with mixture of different error models.')
+        errFitLabel.setAlignment(Qt.AlignLeft)
+        errorTopLayout.addWidget(errFitLabel, 1)
+        
+        errFitfnamesComboLabel = QLabel('Select a dataset:')
+        errFitfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        errorTopLayout.addWidget(errFitfnamesComboLabel)
+        
+        def errFitfnamesComboFunc(index):
+            pass
+        
+        errFitfnamesCombo = QComboBox()
+        errFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        errFitfnamesCombo.setMinimumWidth(150)
+        errFitfnamesCombo.currentIndexChanged.connect(errFitfnamesComboFunc)
+        errorTopLayout.addWidget(errFitfnamesCombo)
+        
+        errorLayout.addLayout(errorTopLayout)
 
         errFitType = QComboBox()
         errFitType.addItem('Observed Errors')
@@ -2121,6 +2219,7 @@ class App(QMainWindow):
 
         ipLayout = QVBoxLayout()
         ipLayout.setAlignment(Qt.AlignTop)
+
 
         def phaseplotError():
             if self.r2.iBatchPrep is True:
@@ -2176,7 +2275,9 @@ class App(QMainWindow):
 #                b_wgtFunc()
 #                c_wgt.setText('0.0')
 #                c_wgtFunc()
-
+        
+        ipTopLayout = QHBoxLayout()
+        
         iperrFitLabel = QLabel('Select an error model from the drop-down menu. Once\
                      fitted, the model will generate an error for each quadrupoles\
                      (even the ones with no reciprocals). This error will\
@@ -2184,7 +2285,26 @@ class App(QMainWindow):
                      and used in the inversion if both <code>a_wgt</code> and\
                      <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
         iperrFitLabel.setWordWrap(True)
-        ipLayout.addWidget(iperrFitLabel)
+        iperrFitLabel.setToolTip('In case of batch/time-lapse inversion, <i>all</i> datesets must either have an error model \
+                                 or not have any error models (i.e., select separate error models for each individual dataset or "Apply to all"). \
+                                 ResIPy can handle batch data with mixture of different error models.')
+        iperrFitLabel.setAlignment(Qt.AlignLeft)
+        ipTopLayout.addWidget(iperrFitLabel, 1)
+        
+        iperrFitfnamesComboLabel = QLabel('Select a dataset:')
+        iperrFitfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        ipTopLayout.addWidget(iperrFitfnamesComboLabel)
+        
+        def iperrFitfnamesComboFunc(index):
+            pass
+        
+        iperrFitfnamesCombo = QComboBox()
+        iperrFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        iperrFitfnamesCombo.setMinimumWidth(150)
+        iperrFitfnamesCombo.currentIndexChanged.connect(iperrFitfnamesComboFunc)
+        ipTopLayout.addWidget(iperrFitfnamesCombo)
+        
+        ipLayout.addLayout(ipTopLayout)
 
         iperrFitType = QComboBox()
         iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
@@ -2211,6 +2331,32 @@ class App(QMainWindow):
         ipLayout.addLayout(ipErrPlotLayout,1)
 
         phasefiltlayout = QVBoxLayout()
+        
+        phaseLabelLayout = QHBoxLayout()
+        
+        phasefiltLabel = QLabel('<b>Filter the data based on the phase/IP measurements.</b><br>\
+                                Below graphs show the status of filtered data versus raw input.')
+        phasefiltLabel.setWordWrap(True)
+        phasefiltLabel.setAlignment(Qt.AlignLeft)
+        phaseLabelLayout.addWidget(phasefiltLabel, 1)
+        
+        phasefiltfnamesComboLabel = QLabel('Select a dataset:')
+        phasefiltfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        phaseLabelLayout.addWidget(phasefiltfnamesComboLabel)
+        
+        def phasefiltfnamesComboFunc(index):
+            if index == 0:
+                pass
+            pass
+        
+        phasefiltfnamesCombo = QComboBox()
+        phasefiltfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        phasefiltfnamesCombo.setMinimumWidth(150)
+        phasefiltfnamesCombo.currentIndexChanged.connect(phasefiltfnamesComboFunc)
+        phaseLabelLayout.addWidget(phasefiltfnamesCombo)
+        
+        
+        phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
             if self.r2.iBatchPrep is True:
@@ -2426,6 +2572,10 @@ class App(QMainWindow):
         ipWidget.setVisible(False)
         ipWidget.setLayout(ipLayout)
         tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
+        
+        errorCombosShow(False) #hiding all file selection comboboxes in pre-processing
+
+        prepFnamesComboboxes = [recipErrorfnamesCombo, errFitfnamesCombo, iperrFitfnamesCombo, phasefiltfnamesCombo]
 
         tabPreProcessing.setTabEnabled(0, True) # Reciprocal filter
         tabPreProcessing.setTabEnabled(1, False) # IP filter
