@@ -395,6 +395,8 @@ class App(QMainWindow):
             mwManualFiltering.clear()
             self.recipErrApplyToAll = True
             self.recipErrdataIndex = 0
+            self.errFitApplyToAll = True
+            self.errFitdataIndex = 0
             errFitType.currentIndexChanged.disconnect()
             errFitType.setCurrentIndex(0)
             errFitType.currentIndexChanged.connect(errFitTypeFunc)
@@ -870,6 +872,7 @@ class App(QMainWindow):
                 psContourCheck.setEnabled(True)
                 for s in self.r2.surveys:
                     fnamesCombo.addItem(s.name)
+                    self.errFitPLotIndexList.append(0)
                 errorCombosShow(True)
                 errorCombosFill(prepFnamesComboboxes)
                 fnamesCombo.show()
@@ -1795,14 +1798,15 @@ class App(QMainWindow):
             try:
                 numSelectRemoved = 0
                 if self.r2.iBatch or self.r2.iTimeLapse:
-                    if not self.recipErrApplyToAll:
-                        numSelectRemoved += self.r2.surveys[self.recipErrdataIndex].filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
-                    else:
-                        try:
-                            for s in self.r2.surveys:
-                                numSelectRemoved += s.filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
-                        except:
-                            raise ValueError('Number of measurements in each survey does not match! Reset and retry individually.')
+                    if np.sum(self.r2.surveys[self.recipErrdataIndex].iselect) != 0:
+                        if not self.recipErrApplyToAll:
+                            numSelectRemoved += self.r2.surveys[self.recipErrdataIndex].filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
+                        else:
+                            try:
+                                for s in self.r2.surveys:
+                                    numSelectRemoved += s.filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
+                            except:
+                                raise ValueError('Number of measurements among surveys does not match! Reset and retry individually.')
 #                    if self.r2.iBatchPrep is True: # only remove electrode not single measurements
 #                        self.r2.filterElec(elec=np.where(self.r2.surveys[0].eselect)[0]+1)
 #                        numElecRemoved = np.sum(self.r2.surveys[0].eselect)
@@ -1850,28 +1854,30 @@ class App(QMainWindow):
                               'Reset the filters and redo the filterings, first reciprocity then phase.')
 
         def resetRecipFilter():
-            numRestored = len(self.r2.surveys[self.dataIndex].dfReset) - len(self.r2.surveys[self.dataIndex].df)
-            if self.r2.iBatchPrep:
+            numRestored = 0
+            if self.recipErrApplyToAll:
                 for s in self.r2.surveys:
+                    numRestored += len(s.dfReset) - len(s.df)
                     s.df = s.dfReset.copy()
             else:
-                self.r2.surveys[self.dataIndex].df = self.r2.surveys[self.dataIndex].dfReset.copy()
+                numRestored = len(self.r2.surveys[self.recipErrdataIndex].dfReset) - len(self.r2.surveys[self.recipErrdataIndex].df)
+                self.r2.surveys[self.recipErrdataIndex].df = self.r2.surveys[self.recipErrdataIndex].dfReset.copy()
             if recipErrorInputLine.text() != '':
-                errHist()
+                errHist(self.recipErrdataIndex)
                 recipErrorInputLine.setText('')
             if ipCheck.checkState() == Qt.Checked:
-                if self.r2.iBatchPrep:
+                if self.recipErrApplyToAll:
                     for s in self.r2.surveys:
                         s.dfPhaseReset = s.dfReset.copy()
                         s.filterDataIP = s.dfReset.copy()
                 else:
-                    self.r2.surveys[self.dataIndex].dfPhaseReset = self.r2.surveys[self.dataIndex].dfReset.copy()
-                    self.r2.surveys[self.dataIndex].filterDataIP = self.r2.surveys[self.dataIndex].dfReset.copy()
+                    self.r2.surveys[self.recipErrdataIndex].dfPhaseReset = self.r2.surveys[self.recipErrdataIndex].dfReset.copy()
+                    self.r2.surveys[self.recipErrdataIndex].filterDataIP = self.r2.surveys[self.recipErrdataIndex].dfReset.copy()
                 heatFilter()
                 iperrFitType.setCurrentIndex(0)
                 phaseplotError()
-            errHist()
-            plotManualFiltering()
+            errHist(self.recipErrdataIndex)
+            plotManualFiltering(self.recipErrdataIndex)
             errFitType.setCurrentIndex(0)
             plotError()
             infoDump('%i measurements restored!' % numRestored)
@@ -2117,7 +2123,7 @@ class App(QMainWindow):
 #            self.r2.errTyp = 'pwl'
 
         def errFitTypeFunc(index):
-            if self.r2.iBatchPrep is True:
+            if not self.r2.iBatch or self.r2.iTimeLapse:
                 if index == 0:
                     plotError()
                 elif index == 1:
@@ -2133,18 +2139,24 @@ class App(QMainWindow):
                     print('NOT IMPLEMENTED YET')
             else:
                 if index == 0:
-                    plotError()
+                    plotError(self.errFitdataIndex)
                 elif index == 1:
-                    mwFitError.plot(self.r2.linfit[self.dataIndex])
+                    mwFitError.plot(self.r2.linfit[self.errFitdataIndex])
                     self.r2.err = True
                 elif index == 2:
-                    mwFitError.plot(self.r2.pwlfit[self.dataIndex])
+                    mwFitError.plot(self.r2.pwlfit[self.errFitdataIndex])
                     self.r2.err = True
                 elif index == 3:
-                    mwFitError.plot(self.r2.lmefit[self.dataIndex])
+                    mwFitError.plot(self.r2.lmefit[self.errFitdataIndex])
                     self.r2.err = True
                 else:
                     print('NOT IMPLEMENTED YET')
+                self.errFitPLotIndexList[self.errFitdataIndex] = index
+                
+                if self.r2 is not None and self.errFitApplyToAll:
+                    for s, i in zip(self.r2.surveys, range(len(self.errFitPLotIndexList))):
+                        s.df['resError'] = self.r2.surveys[self.errFitdataIndex].errorModel(s.df)
+                        self.errFitPLotIndexList[i] = index
             if index == 0:
                 a_wgt.setText('0.01')
                 a_wgtFunc()
@@ -2175,8 +2187,17 @@ class App(QMainWindow):
         errFitfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
         errorTopLayout.addWidget(errFitfnamesComboLabel)
         
+        self.errFitPLotIndexList = [] ################# <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<TEST REMOVE
+        
         def errFitfnamesComboFunc(index):
-            pass
+            if index == 0:
+                self.errFitApplyToAll = True
+            elif index > 0: # show/hide make the index = -1
+                self.errFitApplyToAll = False
+                plotError(index-1)
+                self.errFitdataIndex = index-1
+                errFitType.setCurrentIndex(self.errFitPLotIndexList[index-1])
+                errFitTypeFunc(self.errFitPLotIndexList[index-1])
         
         errFitfnamesCombo = QComboBox()
         errFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
