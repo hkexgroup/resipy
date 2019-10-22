@@ -390,6 +390,7 @@ class App(QMainWindow):
 
             # pre-processing
             errorCombosShow(False)
+#            errorCombosRestart()
             for combobox in prepFnamesComboboxes:
                 combobox.clear()
             mwManualFiltering.clear()
@@ -861,46 +862,47 @@ class App(QMainWindow):
                 fdir = os.path.dirname(fnames[0])
                 restartFunc()
                 self.datadir = os.path.dirname(fdir)
-                try:
-                    if self.r2.iBatch is False:
-                        self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
-    #                    self.r2.iBatchPrep = True
-                        ipCheck.setEnabled(False)
-                        infoDump('Time-lapse survey created.')
-                    else:
-                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
-                        ipCheck.setEnabled(True)
-                        infoDump('Batch survey created.')
-                    fnamesCombo.clear()
-                    psContourCheck.setEnabled(True)
-                    for s in self.r2.surveys:
-                        fnamesCombo.addItem(s.name)
-                        self.errFitPLotIndexList.append(0)
-                        self.iperrFitPLotIndexList.append(0)
-                    errorCombosShow(True)
-                    errorCombosFill(prepFnamesComboboxes)
-                    fnamesCombo.show()
-                    fnamesComboLabel.show()
-                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
-                    plotPseudo()
-                    elecTable.initTable(self.r2.elec)
-                    tabImporting.setTabEnabled(1,True)
-                    btnInvNow.setEnabled(True)
-                    nbElecEdit.setText(str(len(self.r2.elec)))
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        pass # no reciprocals found
-                    else:
-    #                        tabPreProcessing.setTabEnabled(1, True)
-                        tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
-                        errHist()
-                    plotManualFiltering()
-                    activateTabs(True)
-                    if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
-                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                            ipCheck.setChecked(True)
-                except:
-                    errorDump('File format is not recognized (or directory contains invalid input files)')
+#                try:
+                if self.r2.iBatch is False:
+                    self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
+#                    self.r2.iBatchPrep = True
+                    ipCheck.setEnabled(False)
+                    infoDump('Time-lapse survey created.')
+                else:
+                    self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
+                    ipCheck.setEnabled(True)
+                    infoDump('Batch survey created.')
+                fnamesCombo.clear()
+                psContourCheck.setEnabled(True)
+                
+                for s in self.r2.surveys:
+                    fnamesCombo.addItem(s.name)
+                    self.errFitPLotIndexList.append(0)
+                    self.iperrFitPLotIndexList.append(0)
+                errorCombosShow(True)
+                errorCombosFill(prepFnamesComboboxes)
+                fnamesCombo.show()
+                fnamesComboLabel.show()
+                buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
+                plotPseudo()
+                elecTable.initTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
+                btnInvNow.setEnabled(True)
+                nbElecEdit.setText(str(len(self.r2.elec)))
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    recipOrNoRecipShow(recipPresence = False)
+                else:
+                    recipOrNoRecipShow(recipPresence = True)
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+                    errHist()
+                plotManualFiltering()
+                activateTabs(True)
+                if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
+                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                        ipCheck.setChecked(True)
+#                except:
+#                    errorDump('File format is not recognized (one or all files!)')
 
         def getfile():
             print('ftype = ', self.ftype)
@@ -1938,6 +1940,21 @@ class App(QMainWindow):
                 phasefiltfnamesComboLabel.show()
                 phasefiltfnamesCombo.show()
         
+#        def errorCombosRestart():
+#            recipErrorfnamesCombo.currentIndexChanged.disconnect()
+#            errFitfnamesCombo.currentIndexChanged.disconnect()
+#            iperrFitfnamesCombo.currentIndexChanged.disconnect()
+#            phasefiltfnamesCombo.currentIndexChanged.disconnect()
+#            recipErrorfnamesCombo.setCurrentIndex(0)
+#            errFitfnamesCombo.setCurrentIndex(0)
+#            iperrFitfnamesCombo.setCurrentIndex(0)
+#            phasefiltfnamesCombo.setCurrentIndex(0)
+#            recipErrorfnamesCombo.currentIndexChanged.connect(recipErrorfnamesComboFunc)
+#            errFitfnamesCombo.currentIndexChanged.connect(errFitfnamesComboFunc)
+#            iperrFitfnamesCombo.currentIndexChanged.connect(iperrFitfnamesComboFunc)
+#            phasefiltfnamesCombo.currentIndexChanged.connect(phasefiltfnamesComboFunc)
+            
+        
         def errorCombosFill(comboboxes=[]): #filling pre-processing comboboxes with fnames
             for comboboxe in comboboxes:
                 comboboxe.clear()
@@ -2056,7 +2073,7 @@ class App(QMainWindow):
             if fname != '':
                 elec = elecTable.getTable() # getting the topography info
                 self.r2.param['lineTitle'] = titleEdit.text()
-                if not self.r2.iTimeLapse or self.r2.iBatch:
+                if not (self.r2.iBatch or self.r2.iTimeLapse):
                     spacing = float(elecDx.text())
                 else:
                     spacing = None
@@ -2109,7 +2126,7 @@ class App(QMainWindow):
             b_wgtFunc()
 
         def plotError(index=0):
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 mwFitError.plot(self.r2.plotError)
             else:
                 mwFitError.plot(self.r2.plotError[index])
@@ -2129,7 +2146,7 @@ class App(QMainWindow):
 #            self.r2.errTyp = 'pwl'
 
         def errFitTypeFunc(index):
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 if index == 0:
                     plotError()
                 elif index == 1:
@@ -2249,7 +2266,7 @@ class App(QMainWindow):
 
 
         def phaseplotError(index=0):
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 mwIPFiltering.plot(self.r2.phaseplotError)
             else:
                 mwIPFiltering.plot(self.r2.phaseplotError[index])
@@ -2259,7 +2276,7 @@ class App(QMainWindow):
 #            self.r2.errTypIP = 'pwlip'
 
         def iperrFitTypeFunc(index):
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 if index == 0:
                     phaseplotError()
                 elif index == 1:
@@ -2348,7 +2365,7 @@ class App(QMainWindow):
         ipLayout.addLayout(ipTopLayout)
 
         iperrFitType = QComboBox()
-        iperrFitType.addItem('Observed discrepancies') ##### BY default does not show!! should be selected after the power law (don't know why!!!)
+        iperrFitType.addItem('Observed discrepancies') 
         iperrFitType.addItem('Power law')
         iperrFitType.addItem('Parabola')
         iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
@@ -2386,12 +2403,11 @@ class App(QMainWindow):
         phaseLabelLayout.addWidget(phasefiltfnamesComboLabel)
         
         def phasefiltfnamesComboFunc(index):
-#            phaseplotError(index)
             self.phasefiltdataIndex = index
-            heatRaw()
-            heatFilter()
-#            iperrFitType.setCurrentIndex(self.phasefiltPLotIndexList[index])
-#            iperrFitTypeFunc(self.phasefiltPLotIndexList[index])
+            if self.r2.surveys != []:
+                heatRaw()
+                heatFilter()
+
         
         phasefiltfnamesCombo = QComboBox()
         phasefiltfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
@@ -2403,7 +2419,7 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.iprangefilt(float(phivminEdit.text()),
                                     float(phivmaxEdit.text()))
             else:
@@ -2412,21 +2428,21 @@ class App(QMainWindow):
             heatFilter()
 
         def removerecip():
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.removerecip()
             else:
                 self.r2.removerecip[self.phasefiltdataIndex]()
             heatFilter()
 
         def removenested():
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.removenested()
             else:
                 self.r2.removenested[self.phasefiltdataIndex]()
             heatFilter()
 
         def convFactK():
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.surveys[0].kFactor = float(phiConvFactor.text())
             else:
                 self.r2.surveys[self.phasefiltdataIndex].kFactor = float(phiConvFactor.text())
@@ -2549,7 +2565,7 @@ class App(QMainWindow):
         ipfiltlayout = QHBoxLayout()
 
         def heatRaw():
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.surveys[0].filt_typ = 'Raw'
                 raw_hmp.plot(self.r2.heatmap)
             else:
@@ -2557,7 +2573,7 @@ class App(QMainWindow):
                 raw_hmp.plot(self.r2.heatmap[self.phasefiltdataIndex])
 
         def heatFilter():
-            if not self.r2.iBatch or self.r2.iTimeLapse:
+            if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.surveys[0].filt_typ = 'Filtered'
                 filt_hmp.plot(self.r2.heatmap)
             else:
@@ -2576,7 +2592,7 @@ class App(QMainWindow):
 
         def dcaFiltering():
             try:
-                if not self.r2.iBatch or self.r2.iTimeLapse:
+                if not (self.r2.iBatch or self.r2.iTimeLapse):
                     self.r2.surveys[0].dca(dump=dcaDump)
                 else:
                     self.r2.surveys[self.phasefiltdataIndex].dca(dump=dcaDump)

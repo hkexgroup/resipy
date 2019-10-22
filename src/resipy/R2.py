@@ -440,7 +440,8 @@ class R2(object): # R2 master class instanciated by the GUI
     def indiPrep(self):
         """Clears up the pre-processing global functions and fills them with per survey functions"""
         
-        if not self.iBatch or self.iTimeLapse:
+        if not (self.iBatch or self.iTimeLapse):
+            print('incorrect')
             self.elec = self.surveys[0].elec
             self.plotError = self.surveys[0].plotError
             self.errorDist = self.surveys[0].errorDist
@@ -456,6 +457,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removenested = self.surveys[0].removenested
             self.addFilteredIP = self.surveys[0].addFilteredIP
         else:
+            print('correct')
 #            self.elec = [] # for now it's excluded to be read from survey[0], later must be per survey
             self.plotError = []
             self.errorDist = []
@@ -510,19 +512,19 @@ class R2(object): # R2 master class instanciated by the GUI
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
-                                   parser=parser, dump=dump)
+                                   parser=parser, dump=dump, iBatchPrep=iBatchPrep)
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
         
 #        self.iBatchPrep = iBatchPrep
-        if iBatchPrep is False:
-            self.indiPrep()
+#        if iBatchPrep is False:
+#            self.indiPrep()
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
                               spacing=None, parser=None, isurveys=[],
-                              dump=print):
+                              dump=print, iBatchPrep=True):
         """Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -599,6 +601,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
         self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
+        
+        if iBatchPrep is False: # currently overwrites the above bigSurvey
+            self.indiPrep()
         
         print("%i survey files imported"%len(self.surveys))
         
