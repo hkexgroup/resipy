@@ -516,8 +516,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.setBorehole(self.iBorehole)
         
 #        self.iBatchPrep = iBatchPrep
-#        if iBatchPrep is False:
-        self.indiPrep()
+        if iBatchPrep is False:
+            self.indiPrep()
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
