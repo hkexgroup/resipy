@@ -258,8 +258,6 @@ class App(QMainWindow):
         self.parser = None
         self.fname = None
         self.iBatch = False
-#        self.iBatchPrep = True
-#        self.dataIndex = 0
         self.iTimeLapse = False
         self.iBorehole = False
         self.iForward = False
@@ -862,47 +860,46 @@ class App(QMainWindow):
                 fdir = os.path.dirname(fnames[0])
                 restartFunc()
                 self.datadir = os.path.dirname(fdir)
-#                try:
-                if self.r2.iBatch is False:
-                    self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
-#                    self.r2.iBatchPrep = True
-                    ipCheck.setEnabled(False)
-                    infoDump('Time-lapse survey created.')
-                else:
-                    self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
-                    ipCheck.setEnabled(True)
-                    infoDump('Batch survey created.')
-                fnamesCombo.clear()
-                psContourCheck.setEnabled(True)
-                
-                for s in self.r2.surveys:
-                    fnamesCombo.addItem(s.name)
-                    self.errFitPLotIndexList.append(0)
-                    self.iperrFitPLotIndexList.append(0)
-                errorCombosShow(True)
-                errorCombosFill(prepFnamesComboboxes)
-                fnamesCombo.show()
-                fnamesComboLabel.show()
-                buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
-                plotPseudo()
-                elecTable.initTable(self.r2.elec)
-                tabImporting.setTabEnabled(1,True)
-                btnInvNow.setEnabled(True)
-                nbElecEdit.setText(str(len(self.r2.elec)))
-                if all(self.r2.surveys[0].df['irecip'].values == 0):
-                    recipOrNoRecipShow(recipPresence = False)
-                else:
-                    recipOrNoRecipShow(recipPresence = True)
-                    tabPreProcessing.setTabEnabled(2, True)
-                    plotError()
-                    errHist()
-                plotManualFiltering()
-                activateTabs(True)
-                if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
-                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                        ipCheck.setChecked(True)
-#                except:
-#                    errorDump('File format is not recognized (one or all files!)')
+                try:
+                    if self.r2.iBatch is False:
+                        self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
+                        ipCheck.setEnabled(False)
+                        infoDump('Time-lapse survey created.')
+                    else:
+                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
+                        ipCheck.setEnabled(True)
+                        infoDump('Batch survey created.')
+                    fnamesCombo.clear()
+                    psContourCheck.setEnabled(True)
+                    
+                    for s in self.r2.surveys:
+                        fnamesCombo.addItem(s.name)
+                        self.errFitPLotIndexList.append(0)
+                        self.iperrFitPLotIndexList.append(0)
+                    errorCombosShow(True)
+                    errorCombosFill(prepFnamesComboboxes)
+                    fnamesCombo.show()
+                    fnamesComboLabel.show()
+                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
+                    plotPseudo()
+                    elecTable.initTable(self.r2.elec)
+                    tabImporting.setTabEnabled(1,True)
+                    btnInvNow.setEnabled(True)
+                    nbElecEdit.setText(str(len(self.r2.elec)))
+                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                        recipOrNoRecipShow(recipPresence = False)
+                    else:
+                        recipOrNoRecipShow(recipPresence = True)
+                        tabPreProcessing.setTabEnabled(2, True)
+                        plotError()
+                        errHist()
+                    plotManualFiltering()
+                    activateTabs(True)
+                    if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
+                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            ipCheck.setChecked(True)
+                except:
+                    errorDump('File format is not recognized (one or all files!)')
 
         def getfile():
             print('ftype = ', self.ftype)
@@ -1082,27 +1079,13 @@ class App(QMainWindow):
         fnamesComboLabel = QLabel('Choose a dataset to plot:')
         fnamesComboLabel.hide()
         
-        def indiPlots(index): #TODO: to come back here
-            plotManualFiltering(index)
-            plotError()
-            errHist()
-            if self.r2.typ[0] == 'c':
-                phaseplotError()
-                heatRaw()
-                heatFilter()
-        
         def fnamesComboFunc(index):
             self.pParams['index'] = index
             self.pParamsIP['index'] = index
-#            self.dataIndex = index
             plotPseudo()
             if self.r2.typ[0] == 'c':
                 plotPseudoIP()
                 dcaProgress.setValue(0)
-#            if self.r2.iBatchPrep is False:
-#                indiPlots(index)
-#                errFitType.setCurrentIndex(0)
-#                iperrFitType.setCurrentIndex(0)
 
         fnamesCombo = QComboBox()
         fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
@@ -1803,16 +1786,22 @@ class App(QMainWindow):
         def recipFilter():
             try:
                 numSelectRemoved = 0
+#                numElecRemoved = 0
                 if self.r2.iBatch or self.r2.iTimeLapse:
                     if np.sum(self.r2.surveys[self.recipErrdataIndex].iselect) != 0:
                         if not self.recipErrApplyToAll:
                             numSelectRemoved += self.r2.surveys[self.recipErrdataIndex].filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
                         else:
+                            
                             try:
                                 for s in self.r2.surveys:
                                     numSelectRemoved += s.filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
                             except:
-                                raise ValueError('Number of measurements among surveys does not match! Reset and retry individually.')
+                                if np.sum(self.r2.surveys[self.recipErrdataIndex].eselect) != 0:
+                                    for s in self.r2.surveys:
+                                        s.filterElec(elec=np.where(self.r2.surveys[self.recipErrdataIndex].eselect)[0]+1)
+                                else:
+                                    raise ValueError('Number of measurements among surveys do not match! Reset and retry individually.')
 #                    if self.r2.iBatchPrep is True: # only remove electrode not single measurements
 #                        self.r2.filterElec(elec=np.where(self.r2.surveys[0].eselect)[0]+1)
 #                        numElecRemoved = np.sum(self.r2.surveys[0].eselect)
