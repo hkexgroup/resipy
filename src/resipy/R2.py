@@ -455,8 +455,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removerecip = self.surveys[0].removerecip
             self.removenested = self.surveys[0].removenested
             self.addFilteredIP = self.surveys[0].addFilteredIP
+            
         else:
-#            self.elec = [] # for now it's excluded to be read from survey[0], later must be per survey
             self.plotError = []
             self.errorDist = []
             self.linfit = []
@@ -470,8 +470,8 @@ class R2(object): # R2 master class instanciated by the GUI
             self.removerecip = []
             self.removenested = []
             self.addFilteredIP = []
+            
             for s in self.surveys:
-#                self.elec.append(s.elec)
                 self.plotError.append(s.plotError)
                 self.errorDist.append(s.errorDist)
                 self.linfit.append(s.linfit)
@@ -514,10 +514,6 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
-        
-#        self.iBatchPrep = iBatchPrep
-#        if iBatchPrep is False:
-#            self.indiPrep()
 
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
@@ -600,7 +596,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.plotIPFit = self.bigSurvey.plotIPFit
         self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
         
-        if iBatchPrep is False: # currently overwrites the above bigSurvey
+        if iBatchPrep is False: # currently overwrites the above bigSurvey in the GUI but not the API
             self.indiPrep()
         
         print("%i survey files imported"%len(self.surveys))
