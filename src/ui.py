@@ -388,7 +388,6 @@ class App(QMainWindow):
 
             # pre-processing
             errorCombosShow(False)
-#            errorCombosRestart()
             for combobox in prepFnamesComboboxes:
                 combobox.clear()
             mwManualFiltering.clear()
@@ -1786,7 +1785,7 @@ class App(QMainWindow):
         def recipFilter():
             try:
                 numSelectRemoved = 0
-#                numElecRemoved = 0
+                numElecRemoved = 0
                 if self.r2.iBatch or self.r2.iTimeLapse:
                     if np.sum(self.r2.surveys[self.recipErrdataIndex].iselect) != 0:
                         if not self.recipErrApplyToAll:
@@ -1798,37 +1797,25 @@ class App(QMainWindow):
                                     numSelectRemoved += s.filterData(~self.r2.surveys[self.recipErrdataIndex].iselect)
                             except:
                                 if np.sum(self.r2.surveys[self.recipErrdataIndex].eselect) != 0:
+                                    numElecRemoved = np.sum(self.r2.surveys[self.recipErrdataIndex].eselect)
                                     for s in self.r2.surveys:
                                         s.filterElec(elec=np.where(self.r2.surveys[self.recipErrdataIndex].eselect)[0]+1)
                                 else:
                                     raise ValueError('Number of measurements among surveys do not match! Reset and retry individually.')
-#                    if self.r2.iBatchPrep is True: # only remove electrode not single measurements
-#                        self.r2.filterElec(elec=np.where(self.r2.surveys[0].eselect)[0]+1)
-#                        numElecRemoved = np.sum(self.r2.surveys[0].eselect)
-#                    else:
-#                        numSelectRemoved += self.r2.surveys[index].filterData(~self.r2.surveys[index].iselect)
-#                elif self.r2.iTimeLapse: # only remove electrode not single measurements
-#                    self.r2.filterElec(np.where(self.r2.surveys[0].eselect)[0]+1)
-#                    numElecRemoved = np.sum(self.r2.surveys[0].eselect)
                 else:
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
                 if recipErrorInputLine.text() != '':
                     percent = float(recipErrorInputLine.text())
                     numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.recipErrdataIndex, batchPrep=self.recipErrApplyToAll)
-                    if self.r2.iBatch or self.r2.iTimeLapse:
-#                        if self.r2.iBatchPrep:
-#                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected electrodes removed!" % (numRecipRemoved,percent,numElecRemoved))
-#                        else:
-#                            infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
-#                    else:
+                    if numElecRemoved != 0:
+                        infoDump("%i measurements with greater than %3.1f%% reciprocal error, \
+                                 %i selected electrodes and %i measurements removed!" % (numRecipRemoved,percent,numElecRemoved,numSelectRemoved))
+                    else:
                         infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
                 else:
-#                    if self.r2.iBatch or self.r2.iTimeLapse:
-#                        if self.r2.iBatchPrep:
-#                            infoDump("%i selected electrodes removed!" % (numElecRemoved))
-#                        else:
-#                            infoDump("%i selected measurements removed!" % (numSelectRemoved))
-#                    else:
+                    if numElecRemoved != 0:
+                        infoDump("%i selected electrodes and %i measurements removed!" % (numElecRemoved, numSelectRemoved))
+                    else:
                         infoDump("%i selected measurements removed!" % (numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
                     for s in self.r2.surveys:
@@ -1929,21 +1916,6 @@ class App(QMainWindow):
                 phasefiltfnamesComboLabel.show()
                 phasefiltfnamesCombo.show()
         
-#        def errorCombosRestart():
-#            recipErrorfnamesCombo.currentIndexChanged.disconnect()
-#            errFitfnamesCombo.currentIndexChanged.disconnect()
-#            iperrFitfnamesCombo.currentIndexChanged.disconnect()
-#            phasefiltfnamesCombo.currentIndexChanged.disconnect()
-#            recipErrorfnamesCombo.setCurrentIndex(0)
-#            errFitfnamesCombo.setCurrentIndex(0)
-#            iperrFitfnamesCombo.setCurrentIndex(0)
-#            phasefiltfnamesCombo.setCurrentIndex(0)
-#            recipErrorfnamesCombo.currentIndexChanged.connect(recipErrorfnamesComboFunc)
-#            errFitfnamesCombo.currentIndexChanged.connect(errFitfnamesComboFunc)
-#            iperrFitfnamesCombo.currentIndexChanged.connect(iperrFitfnamesComboFunc)
-#            phasefiltfnamesCombo.currentIndexChanged.connect(phasefiltfnamesComboFunc)
-            
-        
         def errorCombosFill(comboboxes=[]): #filling pre-processing comboboxes with fnames
             for comboboxe in comboboxes:
                 comboboxe.clear()
@@ -1977,12 +1949,6 @@ class App(QMainWindow):
                 plotManualFiltering(index-1)
                 errHist(index-1)
                 self.recipErrdataIndex = index-1
-#                plotError()
-                
-#            if self.r2.typ[0] == 'c':
-#                phaseplotError()
-#                heatRaw()
-#                heatFilter()
             
         
         recipErrorfnamesCombo = QComboBox()
