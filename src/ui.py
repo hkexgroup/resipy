@@ -3132,8 +3132,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iseq = 0
                 self.importBtn = None
                 self.fname = ''
-                self.createRow()
-                self.showArg()
+#                self.createRow() # this create floating windows
+#                self.showArg()
                 
             def createRow(self):
                 self.combo = QComboBox()
@@ -3141,9 +3141,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.combo.addItem(row[1])
                 self.combo.currentIndexChanged.connect(self.comboFunc)
                 self.addWidget(self.combo)
-                for a in ['a','n','m']:
+                for a, b in zip(['a','n','m'], ['1','8','']):
                     lab = QLabel(a + '=')
-                    field = QLineEdit()
+                    field = QLineEdit(b)
                     field.setValidator(QIntValidator())
                     self.labels.append(lab)
                     self.fields.append(field)
@@ -3210,8 +3210,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         seqRows = []
         seqRow = RowOpt()
         seqRowLayout.addLayout(seqRow)
-        seqRow.fields[0].setText('1') # default dipole-dipole sequence
-        seqRow.fields[1].setText('8')
         seqRows.append(seqRow)
         
         DpDp = resource_path('image/dipdip.png')
@@ -3425,6 +3423,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         fwdSplitter.setCollapsible(1, False)
         
         fwdSlpitterLayout.addWidget(fwdSplitter)
+        
+        # instantiate the first row of the table
+        # need to do this here as the layout needs to be integrated otherwise
+        # it creates floating windows at the start
+        seqRow.createRow()
+        seqRow.showArg()
         
         tabForward.setLayout(fwdSlpitterLayout)
 
