@@ -224,7 +224,6 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iBorehole = False # to tell the software to not plot pseudoSection
         self.iTimeLapse = False # to enable timelapse inversion
         self.iBatch = False # to enable batch inversion
-        self.iBatchPrep = True
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
@@ -793,7 +792,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
 #    def lmeErrorFit(self, index=0, ):
-    def lmefit(self, index=-1, ax=None, rpath=None):
+    def lmefit(self, index=-1, ax=None, rpath=None, iplot=True):
         '''Fit a linear mixed effect (LME) model by having the electrodes as
         as grouping variables.
         
@@ -807,14 +806,16 @@ class R2(object): # R2 master class instanciated by the GUI
             otherwise a new figure will be created.
         rpath : str, optional
             Path of the directory with R (for Windows only).
+        iplot : bool, optional
+            If `True` plot it.
         '''
         if index == -2: # apply to combined data of bigSurvey
             print('ERROR : LME survey can not be fitted on combined data.')
         elif index == -1: # apply to each
             for s in self.surveys:
-                s.lmefit(ax=ax, rpath=rpath)
+                s.lmefit(ax=ax, rpath=rpath, iplot=iplot)
         else:
-            self.surveys[index].lmefit(ax=ax, rpath=rpath)
+            self.surveys[index].lmefit(ax=ax, rpath=rpath, iplot=iplot)
                 
         
 #    def plotErrorIP(self, index=0, ax=None):
@@ -1647,14 +1648,22 @@ class R2(object): # R2 master class instanciated by the GUI
                 if 'recipMean0' in s.df.columns:
                     s.df = s.df.drop('recipMean0', axis=1)
                 s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
-                
+                # resError and phaseError should already have been populated
+                # handle the case when SOME survey were fitted but not all
+                # then we use the bigSurvey default fit to fullfill them
                 if err is True and errTyp == 'global':
-                    if self.bigSurvey.errorModel is not None:
+                    if np.sum(np.isnan(s.df['resError'])) != 0: # there is some nan
+                        print('Survey {:s} has no fitted error model, default to combined fit.'.format(s.name))
+                        if self.bigSurvey.errorModel is None:
+                            self.bigSurvey.pwlfit() # default fit
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
-                        if self.typ[0] == 'c':
-                            s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
-                    # if not it means that the 'resError' columns has already
-                    # been populated when the files has been imported
+                    if self.typ[0] == 'c' and np.sum(np.isnan(s.df['phaseError'])) != 0: # there is some nan
+                        print('Survey {:s} has no fitted IP error model, default to combined fit.'.format(s.name))
+                        if self.bigSurvey.errorModel is None:
+                            self.bigSurvey.plotIPFit()
+                        s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
+                # if not it means that the 'resError' columns has already
+                # been populated when the files has been imported
                     
                 res0Bool = False if self.param['reg_mode'] == 1 else True
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool, 
@@ -1681,11 +1690,20 @@ class R2(object): # R2 master class instanciated by the GUI
         elif self.iBatch is True:
             content = ''
             for i, s in enumerate(self.surveys):
+                # resError and phaseError should already have been populated
+                # handle the case when SOME survey were fitted but not all
+                # then we use the bigSurvey default fit to fullfill them
                 if err is True and errTyp == 'global':
-                     if self.bigSurvey.errorModel is not None:
+                    if np.sum(np.isnan(s.df['resError'])) != 0: # there is some nan
+                        print('Survey {:s} has no fitted error model, default to combined fit.'.format(s.name))
+                        if self.bigSurvey.errorModel is None:
+                            self.bigSurvey.pwlfit() # default fit
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
-                        if self.typ[0] == 'c':
-                            s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
+                    if self.typ[0] == 'c' and np.sum(np.isnan(s.df['phaseError'])) != 0: # there is some nan
+                        print('Survey {:s} has no fitted IP error model, default to combined fit.'.format(s.name))
+                        if self.bigSurvey.errorModel is None:
+                            self.bigSurvey.plotIPFit()
+                        s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
                     # if not it means that the 'resError' columns has already
                     # been populated when the files has been imported
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
