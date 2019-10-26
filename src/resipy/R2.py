@@ -487,7 +487,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.addFilteredIP.append(s.addFilteredIP)
         
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
-                          parser=None, isurveys=[], dump=print, iBatchPrep=True):
+                          parser=None, isurveys=[], dump=print):
         """Read multiples files from a folders (sorted by alphabetical order).
         
         Parameters
@@ -510,7 +510,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """  
         self.createTimeLapseSurvey(dirname=dirname, ftype=ftype, info=info,
                                    spacing=spacing, isurveys=isurveys, 
-                                   parser=parser, dump=dump, iBatchPrep=iBatchPrep)
+                                   parser=parser, dump=dump)
         self.iTimeLapse = False
         self.iBatch = True
         self.setBorehole(self.iBorehole)
@@ -518,7 +518,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def createTimeLapseSurvey(self, dirname, ftype='Syscal', info={},
                               spacing=None, parser=None, isurveys=[],
-                              dump=print, iBatchPrep=True):
+                              dump=print):
         """Read electrodes and quadrupoles data and return 
         a survey object.
         
@@ -565,7 +565,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.elec = self.surveys[0].elec
         self.setBorehole(self.iBorehole)
         
-        # create bigSurvey
+        # create bigSurvey (useful if we want to fit a single error model
+        # based on the combined data of all the surveys)
         print('creating bigSurvey')
         self.bigSurvey = Survey(files[0], ftype=ftype, spacing=spacing)
         # then override the df
@@ -595,9 +596,6 @@ class R2(object): # R2 master class instanciated by the GUI
         self.phaseplotError = self.bigSurvey.phaseplotError
         self.plotIPFit = self.bigSurvey.plotIPFit
         self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
-        
-        if iBatchPrep is False: # currently overwrites the above bigSurvey in the GUI but not the API
-            self.indiPrep()
         
         print("%i survey files imported"%len(self.surveys))
         
@@ -685,6 +683,44 @@ class R2(object): # R2 master class instanciated by the GUI
         return indexes               
                     
     
+    def plotError(self, index=0, **kwargs):
+        
+        
+    def errorDist(self, index=0, ):
+        
+        
+    def linErrorFit(self, index=0, ):
+        
+        
+    def pwlErrorFit(self, index=0, ):
+    
+        
+    def plotErrorIP(self, index=0):
+    
+        
+    def pwlErrorFitIP(self, index=0):
+        
+        
+    def parabolErrorFitIP(self, index=0):
+    
+        
+    def heatmap(self, index=0):
+        
+        
+    def rangeFilteringIP(self, index=0):
+    
+        
+    def removeRecip(self, index=0):
+    
+        
+    def removeNested(self, index=0):
+        
+        
+    def addFilteredIP(self, index=0):
+        
+        
+        
+            
     def filterElec(self, elec=[]):
         """Filter out specific electrodes given in all surveys.
         
@@ -692,7 +728,6 @@ class R2(object): # R2 master class instanciated by the GUI
         ----------
         elec : list
             List of electrode number to be removed.
-        
         """
         for e in elec:
             for i, s in enumerate(self.surveys):
@@ -701,17 +736,21 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
     
     
-    def filterRecip(self, index=0, percent=20, batchPrep=True):
+    def filterRecip(self, index=-1, percent=20):
         """Filter on reciprocal errors.
         
         Parameters
         ----------
+        index : int, optional
+            Index of the survey on which to apply the processing. If the
+            processing is to be applied to all surveys then specifiy 
+            `index=-1` (default).
         percent : float, optional
             Percentage of reciprocal error above witch a measurement will be
             discarded. 20% by default.
         """
         numRemoved = 0
-        if batchPrep:
+        if index == -1: # apply to all surveys
             for s in self.surveys:
                 numRemoved += s.filterRecip(percent)
         else:
@@ -719,12 +758,19 @@ class R2(object): # R2 master class instanciated by the GUI
         return numRemoved
     
     
-    def removeUnpaired(self, index=0, batchPrep=True):
+    def removeUnpaired(self, index=-1):
         """Remove quadrupoles that don't have reciprocals. This might
         remove dummy measurements added for sequence optimization.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey on which to apply the processing. If the
+            processing is to be applied to all surveys then specifiy 
+            `index=-1` (default).
         """
         numRemoved = 0
-        if batchPrep:
+        if index == -1: # apply to all surveys
             for s in self.surveys:
                 numRemoved += s.removeUnpaired()
         else:

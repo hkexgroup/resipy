@@ -23,6 +23,25 @@ from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  res
                      stingParser, ericParser, lippmannParser)
 from resipy.DCA import DCA
 
+
+import warnings
+import functools
+
+def deprecated(func):
+    """This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used."""
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+        warnings.simplefilter('always', DeprecationWarning)  # turn off filter
+        warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                      category=DeprecationWarning,
+                      stacklevel=2)
+        warnings.simplefilter('default', DeprecationWarning)  # reset filter
+        return func(*args, **kwargs)
+    return new_func
+
+
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
@@ -621,7 +640,12 @@ class Survey(object):
         else:
             t = '-'
         return t    
-        
+    
+    
+    def pwlfitIP(self, ax=None):
+        self.plotIPFit(ax=ax)
+    
+    @deprecated
     def plotIPFit(self, ax=None):
         """Plot the reciprocal phase errors with a power-law fit.
         
@@ -675,7 +699,10 @@ class Survey(object):
         if ax is None:
             return fig   
 
+    def parabolafitIP(self, ax=None):
+        self.plotIPFitParabola(ax=ax)
 
+    @deprecated
     def plotIPFitParabola(self, ax=None):
         """Plot the reciprocal phase errors with a parabola fit.
         

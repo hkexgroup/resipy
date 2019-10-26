@@ -661,7 +661,7 @@ class App(QMainWindow):
                 timeLapseCheck.setEnabled(True)
         batchCheck = QCheckBox('Batch Inversion')
         batchCheck.stateChanged.connect(batchCheckFunc)
-        batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings.')
+        batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings and same electrodes.')
         
 #        def bachPrepFunc(state):
 #            try:
@@ -1921,7 +1921,7 @@ class App(QMainWindow):
                 comboboxe.clear()
             
             for comboboxe in comboboxes:
-                comboboxe.addItem('Apply to all')
+                comboboxe.addItem('Apply to All')
             
             for s in self.r2.surveys:
                 for comboboxe in comboboxes:
