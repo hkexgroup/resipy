@@ -360,8 +360,8 @@ class R2(object): # R2 master class instanciated by the GUI
     def setTitle(self,linetitle):
         """Set the title of the survey name when inverting data. Input is a string.
         """
-        if isinstance(linetitle,str):
-            self.param['lineTitle']=linetitle
+        if isinstance(linetitle, str):
+            self.param['lineTitle'] = linetitle
         else:
             print("Cannot set Survey title as input is not a string")
     
@@ -405,37 +405,20 @@ class R2(object): # R2 master class instanciated by the GUI
             # attribute method of Survey object to R2file://
 #            self.pseudoIP = self.surveys[0].pseudoIP
 #            self.pseudo = self.surveys[0].pseudo
-            self.plotError = self.surveys[0].plotError
-            self.errorDist = self.surveys[0].errorDist
-            self.linfit = self.surveys[0].linfit
-            self.lmefit = self.surveys[0].lmefit
-            self.pwlfit = self.surveys[0].pwlfit
-            self.phaseplotError = self.surveys[0].phaseplotError
-            self.plotIPFit = self.surveys[0].plotIPFit
-            self.plotIPFitParabola = self.surveys[0].plotIPFitParabola
-            self.heatmap = self.surveys[0].heatmap
-            self.iprangefilt = self.surveys[0].iprangefilt
-            self.removerecip = self.surveys[0].removerecip
-            self.removenested = self.surveys[0].removenested
-            self.addFilteredIP = self.surveys[0].addFilteredIP
+#            self.plotError = self.surveys[0].plotError
+#            self.errorDist = self.surveys[0].errorDist
+#            self.linfit = self.surveys[0].linfit
+#            self.lmefit = self.surveys[0].lmefit
+#            self.pwlfit = self.surveys[0].pwlfit
+#            self.phaseplotError = self.surveys[0].phaseplotError
+#            self.plotIPFit = self.surveys[0].plotIPFit
+#            self.plotIPFitParabola = self.surveys[0].plotIPFitParabola
+#            self.heatmap = self.surveys[0].heatmap
+#            self.iprangefilt = self.surveys[0].iprangefilt
+#            self.removerecip = self.surveys[0].removerecip
+#            self.removenested = self.surveys[0].removenested
+#            self.addFilteredIP = self.surveys[0].addFilteredIP
     
-    
-#    def lmefit(self, each=False, ax=None):
-#        """Fit a LME model model.
-#        
-#        Parameters
-#        ----------
-#        each : bool, optional
-#            If `True`, then the error model will be applied for each survey.
-#        ax : Matplotlib.Axes, optional
-#            If specified, the plot will be plotted against this axis.
-#        """
-#        if len(surveys) > 1 and each is True:
-#            for s in self.surveys:
-#                s.lmefit()
-#        else:
-#            self.bigSurvey.lmefit()
-            
         
     def indiPrep(self):
         """Clears up the pre-processing global functions and fills them with per survey functions"""
@@ -588,16 +571,16 @@ class R2(object): # R2 master class instanciated by the GUI
         self.bigSurvey.ndata = df.shape[0]
 #        self.pseudo = self.surveys[0].pseudo # just display first pseudo section
 
-        self.plotError = self.bigSurvey.plotError
-        self.errorDist = self.bigSurvey.errorDist
-        self.linfit = self.bigSurvey.linfit
-        self.lmefit = self.bigSurvey.lmefit
-        self.pwlfit = self.bigSurvey.pwlfit
-        self.phaseplotError = self.bigSurvey.phaseplotError
-        self.plotIPFit = self.bigSurvey.plotIPFit
-        self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
+#        self.plotError = self.bigSurvey.plotError
+#        self.errorDist = self.bigSurvey.errorDist
+#        self.linfit = self.bigSurvey.linfit
+#        self.lmefit = self.bigSurvey.lmefit
+#        self.pwlfit = self.bigSurvey.pwlfit
+#        self.phaseplotError = self.bigSurvey.phaseplotError
+#        self.plotIPFit = self.bigSurvey.plotIPFit
+#        self.plotIPFitParabola = self.bigSurvey.plotIPFitParabola
         
-        print("%i survey files imported"%len(self.surveys))
+        print("{:d} survey files imported".format(len(self.surveys)))
         
         
     def pseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
@@ -682,44 +665,325 @@ class R2(object): # R2 master class instanciated by the GUI
     
         return indexes               
                     
+#%% pre-processing and error models for unique, combined or multiple surveys
+    '''idea, using the value of the index argument to identify the scope of
+    the function.
+    index = -2 : apply/show data from combined survey (bigSurvey)
+    index = -1 : apply to each datasets the same type of model
+    index > 0 : apply an error model to the selected unique survey
+    '''
     
-    def plotError(self, index=0, **kwargs):
+    def plotError(self, index=0, ax=None):
+        """Plot the reciprocal errors.
         
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to plot. If `index == -1` then all combined
+            data of all survey will be plotted together. Default is to plot
+            the first survey (`index==0`).
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
         
-    def errorDist(self, index=0, ):
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # show them all from bigSurvey
+            self.bigSurvey.plotError(ax=ax)
+        else:
+            self.surveys[index].plotError(ax=ax)
         
-        
-    def linErrorFit(self, index=0, ):
-        
-        
-    def pwlErrorFit(self, index=0, ):
     
+#    def plotErrorDist(self, index=0, ax=None):
+    def errorDist(self, index=0, ax=None):
+        """Calculate and plots reciprocal error probablity histogram.
+        Good data will have a bell shape (normal) distribution where most datapoints have near
+        zero reciprocal error.
         
-    def plotErrorIP(self, index=0):
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to plot. Default is first survey `index == 0`.
+            If `index == -2` then the error distribution of the combined data 
+            will be plotted.
+        ax : Matplotlib.Axes
+            If specified, the graph will be plotted against it.
+        """
+        if index == -2: # show them all from bigSurvey
+            self.bigSurvey.errorDist(ax=ax)
+        else:
+            self.surveys[index].errorDist(ax=ax)
+        
+        
+    def removeDummy(self, index=-1):
+        """Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
+        measurements added for speed).
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to process. If `index == -1` (default) then the
+            processing is applied on all survey independantly.
+        """
+        if index == -1:
+            for s in self.surveys:
+                s.removeDummy()
+        else:
+            self.surveys[index].removeDummy()
+            
+            
+#    def linErrorFit(self, index=-1, ax=None):
+    def linfit(self, index=-1, ax=None):
+        """Fit a linear relationship to the resistivity data.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # apply to combined survey
+            self.bigSurvey.linfit(ax=ax)
+            for s in self.surveys:
+                s.df['resError'] = self.bigSurvey.errorModel(s.df)
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.linfit(ax=ax) #TODO check this will replot on the same axis
+        else:
+            self.surveys[index].linfit(ax=ax)
+        
+
+#    def pwlErrorFit(self, index=-1, ax=None):
+    def pwlfit(self, index=-1, ax=None):
+        """Fit an power law to the resistivity data.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # apply to combined data of bigSurvey
+            self.bigSurvey.pwlfit(ax=ax)
+            for s in self.surveys:
+                s.df['resError'] = self.bigSurvey.errorModel(s.df)
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.pwlfit(ax=ax)
+        else:
+            self.surveys[index].pwlfit(ax=ax)
+
+
+#    def lmeErrorFit(self, index=0, ):
+    def lmefit(self, index=-1, ax=None, rpath=None):
+        '''Fit a linear mixed effect (LME) model by having the electrodes as
+        as grouping variables.
+        
+        Parameters
+        ----------
+        Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        ax : matplotlib.Axes, optional
+            If specified, the graph will be plotted against this axis,
+            otherwise a new figure will be created.
+        rpath : str, optional
+            Path of the directory with R (for Windows only).
+        '''
+        if index == -2: # apply to combined data of bigSurvey
+            print('ERROR : LME survey can not be fitted on combined data.')
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.lmefit(ax=ax, rpath=rpath)
+        else:
+            self.surveys[index].lmefit(ax=ax, rpath=rpath)
+                
+        
+#    def plotErrorIP(self, index=0, ax=None):
+    def phasePlotError(self, index=0, ax=None):
+        """Plot the reciprocal phase discrepancies against the reciprocal mean
+        transfer resistance.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to show. Default is the first survey
+            `index == 0`. If `ìndex == -2` then the combined data from all 
+            surveys are shown.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib.Figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # show with combined data of bigSurvey
+            self.bigSurvey.phasePlotError()
+        else:
+            self.surveys[index].phasePlotError()
+        
+        
+#    def pwlErrorFitIP(self, index=0):
+    def plotIPFit(self, index=-1, ax=None):
+        """Plot the reciprocal phase errors with a power-law fit.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # apply to combined data of bigSurvey
+            self.bigSurvey.plotIPFit(ax=ax)
+            for s in self.surveys:
+                s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.plotIPFit(ax=ax)
+        else:
+            self.surveys[index].plotIPFit(ax=ax)
+        
+#    def parabolErrorFitIP(self, index=0):
+    def plotIPFitParabola(self, index=-1, ax=None):
+        """Plot the reciprocal phase errors with a parabola fit.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        if index == -2: # apply to combined data of bigSurvey
+            self.bigSurvey.plotIPFitParabola(ax=ax)
+            for s in self.surveys:
+                s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.plotIPFitParabola(ax=ax)
+        else:
+            self.surveys[index].plotIPFitParabola(ax=ax)
+        
+        
+    def heatmap(self, index=0, ax=None):
+        """Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
+        Orozco, A. F., K. H. Williams, and A. Kemna (2013), 
+        Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, 
+        Near Surf. Geophys., 11(5), 531–544, doi:10.3997/1873-0604.2013020)
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. Default is the first survey
+            `index == 0`.
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        
+        Returns
+        -------
+        fig : matplotlib figure, optional
+            If ax is not specified, the function will return a figure object.
+        """
+        self.surveys[index].heatmap()
+        
+        
+#    def rangeFilteringIP(self, index=0):
+    def iprangefilt(self, phimin, phimax, index=-1):
+        """Filter IP data according to a specified range.
+        
+        Parameters
+        ----------
+        phimin : float
+            Minimium phase angle [mrad].
+        phimax : float
+            Maximum phase angle [mrad].
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default)
+            then the fit is done on all surveys independantly.
+        """
+        if index == -1: # apply to each
+            for s in self.surveys:
+                s.iprangefilt(phimin, phimax)
+        else:
+            self.surveys[index].iprangefilt(phimin, phimax)
     
-        
-    def pwlErrorFitIP(self, index=0):
-        
-        
-    def parabolErrorFitIP(self, index=0):
     
+#    def removeRecip(self, index=0):
+    def removerecip(self, index=0):
+        # TODO not sure why we have this function ...
+        """Remove reciprocal. Additional arguments to be
+        passed to :func: `~resipy.Survey.removerecip`.
+        """
+        if index == -2: # apply to combined data of bigSurvey
+            self.bigSurvey.removerecip()
+            for s in self.surveys:
+                s.df['phaseError'] = self.bigSurvey.removerecip(s.df['ip'])
+        elif index == -1: # apply to each
+            for s in self.surveys:
+                s.removerecip()
+        else:
+            self.surveys[index].removerecip()
         
-    def heatmap(self, index=0):
+        
+#    def removeNested(self, index=0):
+    def removenested(self, index=-1):
+        """Removes nested measurements:
+        Where M or N are in between A and B.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to fit. If `index == -1` (default) then the fit
+            is done on all surveys independantly.
+            If `ìndex == -2` then the fit is done on the combined surveys.
+        """
+        if index == -1: # apply to each
+            for s in self.surveys:
+                s.removenested()
+        else:
+            self.surveys[index].removenested()
         
         
-    def rangeFilteringIP(self, index=0):
-    
-        
-    def removeRecip(self, index=0):
-    
-        
-    def removeNested(self, index=0):
-        
-        
-    def addFilteredIP(self, index=0):
-        
-        
-        
+    def addFilteredIP(self):
+        """Add filtered IP to the dataframes.
+        """
+        for s in self.surveys:
+            s.addFilteredIP(**kwargs)
+            
             
     def filterElec(self, elec=[]):
         """Filter out specific electrodes given in all surveys.
@@ -777,14 +1041,17 @@ class R2(object): # R2 master class instanciated by the GUI
             numRemoved = self.surveys[index].removeUnpaired()
         return numRemoved
 
+
     def removeneg(self):
         """Remove negative apparent resistivty values
         """
         for s in self.surveys:
             s.removeneg()
             
+            
     def computeDOI(self):
-        """Compute the Depth Of Investigation (DOI).
+        """Compute the Depth Of Investigation (DOI) based on electrode
+        positions and the larger dipole spacing.
         """
         elec = self.elec.copy()
         
@@ -1380,6 +1647,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if 'recipMean0' in s.df.columns:
                     s.df = s.df.drop('recipMean0', axis=1)
                 s.df = pd.merge(s.df, df0, on=['a','b','m','n'], how='left')
+                
                 if err is True and errTyp == 'global':
                     if self.bigSurvey.errorModel is not None:
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)

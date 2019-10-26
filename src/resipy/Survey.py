@@ -126,8 +126,12 @@ class Survey(object):
         # add error measured to the error columns (so they can be used if no error model are fitted)
         if 'magErr' in self.df.columns:
             self.df['resError'] = self.df['magErr'].copy()
+        else:
+            self.df['resError'] = np.nan
         if 'phiErr' in self.df.columns:
             self.df['phaseError'] = self.df['phiErr'].copy()
+        else:
+            self.df['phaseError'] = np.nan
             
         self.dfOrigin = data.copy() # unmodified
         self.elec = elec
@@ -463,6 +467,11 @@ class Survey(object):
         """Calculate and plots reciprocal error probablity histogram.
         Good data will have a bell shape (normal) distribution where most datapoints have near
         zero reciprocal error.
+        
+        Parameters
+        ----------
+        ax : Matplotlib.Axes
+            If specified, the graph will be plotted against it.
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -890,7 +899,7 @@ class Survey(object):
             If specified, the graph will be plotted against this axis,
             otherwise a new figure will be created.
         rpath : str, optional
-            Paht of the directory with R (for Windows only).
+            Path of the directory with R (for Windows only).
         '''
         # MATLAB code: lme4= fitlme(tbl,'recipErr~recipR+(recipR|c1)+(recipR|c2)+(recipR|p1)+(recipR|p2)'); 
         # requires R
@@ -971,7 +980,7 @@ class Survey(object):
             print('ERROR in Survey.lmefit(): Rscript command might not be available or the lme4 package is not installed.', e)
 
 
-    def heatmap(self,ax=None):
+    def heatmap(self, ax=None):
         """Plot a phase heatmap (x = M, y = A and value = -phi) based on: 
             Orozco, A. F., K. H. Williams, and A. Kemna (2013), 
             Time-lapse spectral induced polarization imaging of stimulated uranium bioremediation, 
@@ -1022,6 +1031,7 @@ class Survey(object):
         if ax is None:
             return fig
     
+    
     def iprangefilt(self, phimin, phimax):
         """Filter IP data according to a specified range.
         
@@ -1047,12 +1057,13 @@ class Survey(object):
     def removerecip(self):
         """Removing reciprocal measurements from dataset - only for visualization purposes on heatmap()
         """
-        
+        print('==============removerecip is used here !!---------------')
         if self.filterDataIP.empty:
             self.filterDataIP = self.df.query('irecip>=0')
         else:
             self.filterDataIP = self.filterDataIP.query('irecip>=0')
         self.addFilteredIP()
+
 
     def removenested(self):
         """Removes nested measurements:
@@ -1366,9 +1377,8 @@ class Survey(object):
                 
         # write error for DC
         if err is True:
-            if 'resError' in df.columns: # the columns exists
-                if np.sum(np.isnan(df['resError'])) == 0: # no NaN inside
-                    protocol['resError'] = df['resError'].values
+            if np.sum(np.isnan(df['resError'])) == 0: # no NaN inside
+                protocol['resError'] = df['resError'].values
                 if errTot == True: # we want to add modelling error to that
                     print('Using total error')
                     if 'modErr' not in df.columns:
@@ -1380,9 +1390,8 @@ class Survey(object):
                 
         # write error for IP
         if (ip is True) and (err is True): # ip is present and we want error
-            if 'phaseError' in df.columns: # column exists
-                if np.sum(np.isnan(df['phaseError'])) == 0: # no NaN inside
-                    protocol['phaseError'] = df['phaseError'].values
+            if np.sum(np.isnan(df['phaseError'])) == 0: # no NaN inside
+                protocol['phaseError'] = df['phaseError'].values
             else:
                 raise ValueError('You requested IP error but none can be found.')
 
