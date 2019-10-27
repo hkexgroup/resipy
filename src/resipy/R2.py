@@ -819,7 +819,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 
         
 #    def plotErrorIP(self, index=0, ax=None):
-    def phasePlotError(self, index=0, ax=None):
+    def phaseplotError(self, index=0, ax=None):
         """Plot the reciprocal phase discrepancies against the reciprocal mean
         transfer resistance.
         
@@ -838,9 +838,9 @@ class R2(object): # R2 master class instanciated by the GUI
             If ax is not specified, the function will return a figure object.
         """
         if index == -2: # show with combined data of bigSurvey
-            self.bigSurvey.phasePlotError()
+            self.bigSurvey.phaseplotError(ax=ax)
         else:
-            self.surveys[index].phasePlotError()
+            self.surveys[index].phaseplotError(ax=ax)
         
         
 #    def pwlErrorFitIP(self, index=0):
@@ -983,8 +983,28 @@ class R2(object): # R2 master class instanciated by the GUI
         """Add filtered IP to the dataframes.
         """
         for s in self.surveys:
-            s.addFilteredIP(**kwargs)
+            s.addFilteredIP()
             
+    def dca(self, index=-1, dump=print):
+        """Execute DCA filtering. Decay Curve Analysis (DCA) based on.
+        Flores Orozco, A., Gallistl, J., Bücker, M., & Williams, K. H. (2017)., 
+        Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
+        Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey to use for processing. Default `index == -1`
+            will apply the processing to all surveys.
+        dump : function, optional
+            Function onto pass the progress.
+        """
+        if index == -1:
+            for s in self.surveys:
+                s.dca(dump=dump)
+        else:
+            self.surveys[index].dca(dump=dump)
+        
             
     def filterElec(self, elec=[]):
         """Filter out specific electrodes given in all surveys.
