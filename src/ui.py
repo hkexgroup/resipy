@@ -392,19 +392,19 @@ class App(QMainWindow):
                 combobox.clear()
             mwManualFiltering.clear()
             self.recipErrApplyToAll = True
-            self.recipErrdataIndex = 0
+            self.recipErrdataIndex = -1 # -1 is apply the function to all individually
             self.errFitApplyToAll = True
-            self.errFitdataIndex = 0
+            self.errFitdataIndex = -1
             errFitType.currentIndexChanged.disconnect()
             errFitType.setCurrentIndex(0)
             errFitType.currentIndexChanged.connect(errFitTypeFunc)
-            self.errFitPlotIndexList = []
             mwFitError.clear()
-            mwIPFiltering.clear()
+            mwIPFitError.clear()
             iperrFitType.currentIndexChanged.disconnect()
             iperrFitType.setCurrentIndex(0)
             iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
             self.errFitPlotIndexList = []
+            self.iperrFitPlotIndexList = []
             phivminEdit.setText('0')
             phivmaxEdit.setText('25')
             dcaProgress.setValue(0)
@@ -859,46 +859,47 @@ class App(QMainWindow):
                 fdir = os.path.dirname(fnames[0])
                 restartFunc()
                 self.datadir = os.path.dirname(fdir)
-                try:
-                    if self.r2.iBatch is False:
-                        self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
-                        ipCheck.setEnabled(False)
-                        infoDump('Time-lapse survey created.')
-                    else:
-                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump, iBatchPrep=False)
-                        ipCheck.setEnabled(True)
-                        infoDump('Batch survey created.')
-                    fnamesCombo.clear()
-                    psContourCheck.setEnabled(True)
-                    
-                    for s in self.r2.surveys:
-                        fnamesCombo.addItem(s.name)
-                        self.errFitPlotIndexList.append(0)
-                        self.errFitPlotIndexList.append(0)
-                    errorCombosShow(True)
-                    errorCombosFill(prepFnamesComboboxes)
-                    fnamesCombo.show()
-                    fnamesComboLabel.show()
-                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
-                    plotPseudo()
-                    elecTable.initTable(self.r2.elec)
-                    tabImporting.setTabEnabled(1,True)
-                    btnInvNow.setEnabled(True)
-                    nbElecEdit.setText(str(len(self.r2.elec)))
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        recipOrNoRecipShow(recipPresence = False)
-                    else:
-                        recipOrNoRecipShow(recipPresence = True)
-                        tabPreProcessing.setTabEnabled(2, True)
-                        plotError()
-                        errHist()
-                    plotManualFiltering()
-                    activateTabs(True)
-                    if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
-                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                            ipCheck.setChecked(True)
-                except:
-                    errorDump('File format is not recognized (one or all files!)')
+#                try:
+                if self.r2.iBatch is False:
+                    self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                    ipCheck.setEnabled(False)
+                    infoDump('Time-lapse survey created.')
+                else:
+                    self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
+                    ipCheck.setEnabled(True)
+                    infoDump('Batch survey created.')
+                fnamesCombo.clear()
+                psContourCheck.setEnabled(True)
+                
+                for s in self.r2.surveys:
+                    fnamesCombo.addItem(s.name)
+                    self.errFitPlotIndexList.append(0)
+                    self.iperrFitPlotIndexList.append(0)
+                errorCombosShow(True)
+                errorCombosFill(prepFnamesComboboxes)
+                fnamesCombo.show()
+                fnamesComboLabel.show()
+                buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
+                plotPseudo()
+                elecTable.initTable(self.r2.elec)
+                tabImporting.setTabEnabled(1,True)
+                btnInvNow.setEnabled(True)
+                nbElecEdit.setText(str(len(self.r2.elec)))
+                if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    recipOrNoRecipShow(recipPresence=False)
+                else:
+                    recipOrNoRecipShow(recipPresence=True)
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+                    errHist()
+                plotManualFiltering()
+                activateTabs(True)
+                if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
+                    if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                        ipCheck.setChecked(True)
+#                except Exception as e:
+#                    print('Error in getdir(): ', e)
+#                    errorDump('File format is not recognized (one or all files!)')
 
         def getfile():
             print('ftype = ', self.ftype)
@@ -1743,11 +1744,36 @@ class App(QMainWindow):
         customParser.setLayout(parserLayout)
 
 
-        #%% tab 2 PRE PROCESSING
+#%% ===================== pre-processing tab =====================
         tabPreProcessing = QTabWidget()
         tabs.addTab(tabPreProcessing, 'Pre-processing')
-        tabs.setTabEnabled(1,False)
+        tabs.setTabEnabled(1, False)
 
+        
+#%% reciprocal filtering tab (or just normal filtering if no reciprocal)
+        recipErrorWidget = QWidget()
+        tabPreProcessing.addTab(recipErrorWidget, 'Reciprocal error analysis')
+        tabPreProcessing.setTabEnabled(0, True)
+
+        recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
+        recipErrorLabel.setAlignment(Qt.AlignLeft)
+        
+        recipErrorfnamesComboLabel = QLabel('Select a dataset:')
+        recipErrorfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        
+        def recipErrorfnamesComboFunc(index):
+            if index == 0:
+                self.recipErrApplyToAll = True
+            elif index > 0: # show/hide make the index = -1
+                self.recipErrApplyToAll = False
+                plotManualFiltering(index-1)
+                errHist(index-1)
+                self.recipErrdataIndex = index-1    
+        recipErrorfnamesCombo = QComboBox()
+        recipErrorfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        recipErrorfnamesCombo.setMinimumWidth(150)
+        recipErrorfnamesCombo.currentIndexChanged.connect(recipErrorfnamesComboFunc)
+        
         def recipOrNoRecipShow(recipPresence = True): # changes the reciprocal filtering tab stuff
             if recipPresence == True:
                 tabPreProcessing.setTabText(0, 'Reciprocal Filtering')
@@ -1776,9 +1802,10 @@ class App(QMainWindow):
         def errHist(index=0):
             if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
                 if self.iBatch or self.iTimeLapse:
-                    recipErrorPLot.plot(self.r2.errorDist[index])
+                    recipErrorPlot.setCallback(self.r2.errorDist)
+                    recipErrorPlot.replot(index=index)
                 else: 
-                    recipErrorPLot.plot(self.r2.errorDist)
+                    recipErrorPlot.plot(self.r2.errorDist)
             else:
                 pass
 
@@ -1806,7 +1833,7 @@ class App(QMainWindow):
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
                 if recipErrorInputLine.text() != '':
                     percent = float(recipErrorInputLine.text())
-                    numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.recipErrdataIndex, batchPrep=self.recipErrApplyToAll)
+                    numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.recipErrdataIndex)
                     if numElecRemoved != 0:
                         infoDump("%i measurements with greater than %3.1f%% reciprocal error, \
                                  %i selected electrodes and %i measurements removed!" % (numRecipRemoved,percent,numElecRemoved,numSelectRemoved))
@@ -1864,131 +1891,13 @@ class App(QMainWindow):
             plotError()
             infoDump('%i measurements restored!' % numRestored)
 
-#        manualLayout = QVBoxLayout()
 
-#        def btnDoneFunc():
-#            self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
-#            infoDump('Data have been manually filtered.')
-#            plotManualFiltering()
-#            plotError()
-
-#        manualTopLayout = QVBoxLayout()
-#        manualTopLayout.setAlignment(Qt.AlignTop)
-#        notice = QLabel('Click on the dots to select them. Press "Apply" to remove them.')
-#        manualTopLayout.addWidget(notice)
-#
-#        btnLayout = QHBoxLayout()
-
-#        btnStart = QPushButton('Start')
-#        btnStart.setAutoDefault(True)
-#        btnStart.clicked.connect(plotManualFiltering)
-#        btnStart.setToolTip('Plot a clickable pseudo section with electrodes.')
-#        btnLayout.addWidget(btnStart)
-#        btnDone = QPushButton('Apply')
-#        btnDone.setAutoDefault(True)
-#        btnDone.clicked.connect(btnDoneFunc)
-#        btnDone.setToolTip('This will erase all selected quadrupoles definitively.')
-#        btnLayout.addWidget(btnDone)
-#        manualTopLayout.addLayout(btnLayout)
-#        manualLayout.addLayout(manualTopLayout, 0) # number is stretch factor
-        
-        def errorCombosShow(state=False): #showing/hiding pre-processing comboboxes
-            recipErrorfnamesCombo.setCurrentIndex(0)
-            errFitfnamesCombo.setCurrentIndex(0)
-            iperrFitfnamesCombo.setCurrentIndex(0)
-            phasefiltfnamesCombo.setCurrentIndex(0)
-            if state == False: 
-                recipErrorfnamesComboLabel.hide()
-                recipErrorfnamesCombo.hide()
-                errFitfnamesComboLabel.hide()
-                errFitfnamesCombo.hide()
-                iperrFitfnamesCombo.hide()
-                iperrFitfnamesComboLabel.hide()
-                phasefiltfnamesComboLabel.hide()
-                phasefiltfnamesCombo.hide()
-            else:
-                recipErrorfnamesComboLabel.show()
-                recipErrorfnamesCombo.show()
-                errFitfnamesComboLabel.show()
-                errFitfnamesCombo.show()
-                iperrFitfnamesCombo.show()
-                iperrFitfnamesComboLabel.show()
-                phasefiltfnamesComboLabel.show()
-                phasefiltfnamesCombo.show()
-        
-        def errorCombosFill(comboboxes=[]): #filling pre-processing comboboxes with fnames
-            for comboboxe in comboboxes:
-                comboboxe.clear()
-            
-            for comboboxe in comboboxes:
-                comboboxe.addItem('Apply to All')
-            
-            for s in self.r2.surveys:
-                for comboboxe in comboboxes:
-                    comboboxe.addItem(s.name)
-                    
-            phasefiltfnamesCombo.removeItem(0) #"Apply to all" won't work with phase filtering process.
-
-
-#%% reciprocal filtering tab (or just normal filtering if no reciprocal)
-        recipErrorWidget = QWidget()
-        tabPreProcessing.addTab(recipErrorWidget, 'Reciprocal error analysis')
-        tabPreProcessing.setTabEnabled(0, True)
-
-        recipErrorLayout = QVBoxLayout()
-        recipErrorTopLayout = QVBoxLayout()
-        recipErrorLabelLayout = QHBoxLayout()
-
-        recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
-        recipErrorLabel.setAlignment(Qt.AlignLeft)
-        recipErrorLabelLayout.addWidget(recipErrorLabel, 1)
-        
-        recipErrorfnamesComboLabel = QLabel('Select a dataset:')
-        recipErrorfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
-        recipErrorLabelLayout.addWidget(recipErrorfnamesComboLabel)
-        
-        def recipErrorfnamesComboFunc(index):
-            if index == 0:
-                self.recipErrApplyToAll = True
-            elif index > 0: # show/hide make the index = -1
-                self.recipErrApplyToAll = False
-                plotManualFiltering(index-1)
-                errHist(index-1)
-                self.recipErrdataIndex = index-1
-            
-        
-        recipErrorfnamesCombo = QComboBox()
-        recipErrorfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        recipErrorfnamesCombo.setMinimumWidth(150)
-        recipErrorfnamesCombo.currentIndexChanged.connect(recipErrorfnamesComboFunc)
-        recipErrorLabelLayout.addWidget(recipErrorfnamesCombo)
-        
-        recipErrorTopLayout.addLayout(recipErrorLabelLayout)
-
-
-        recipErrorInputlayout = QHBoxLayout()
-
-        recipErrorInputLeftlayout = QHBoxLayout()
-        recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
-
-        recipErrorInputLeftlayoutL = QHBoxLayout()
-        recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
         recipErrorInputLabel = QLabel('Percent error threshold:')
-        recipErrorInputLeftlayoutL.addWidget(recipErrorInputLabel)
-        recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
-
-        recipErrorInputLineLayout = QHBoxLayout()
-        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
 
         recipErrorInputLine = QLineEdit('')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
-        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
-        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
-        recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
 
-        recipErrorBtnLayout = QHBoxLayout()
-        recipErrorBtnLayout.setAlignment(Qt.AlignRight)
 
         def recipErrorUnpairedFunc():
             index = -1 if self.recipErrdataIndex else self.recipErrdataIndex
@@ -2016,20 +1925,17 @@ class App(QMainWindow):
         recipErrorUnpairedBtn.setFixedWidth(150)
         recipErrorUnpairedBtn.setToolTip('Remove quadrupoles without reciprocals')
         recipErrorUnpairedBtn.clicked.connect(recipErrorUnpairedFunc)
-        recipErrorBtnLayout.addWidget(recipErrorUnpairedBtn)
 
         recipErrorPltbtn = QPushButton('Apply filters')
         recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
         recipErrorPltbtn.clicked.connect(recipFilter)
         recipErrorPltbtn.setFixedWidth(150)
-        recipErrorBtnLayout.addWidget(recipErrorPltbtn)
         
         recipErrorResetbtn = QPushButton('Reset')
         recipErrorResetbtn.setStyleSheet("color: red")
         recipErrorResetbtn.setToolTip('This will restore all deleted measurements at this stage')
         recipErrorResetbtn.clicked.connect(resetRecipFilter)
         recipErrorResetbtn.setFixedWidth(150)
-        recipErrorBtnLayout.addWidget(recipErrorResetbtn)
         
         def saveFilteredData():
             fname, savetyp = QFileDialog.getSaveFileName(tabImportingData,'Save Filtered Data', 
@@ -2048,25 +1954,57 @@ class App(QMainWindow):
         recipErrorSavebtn.setToolTip('This will save the data in available formats (e.g., Res2DInv.dat)')
         recipErrorSavebtn.clicked.connect(saveFilteredData)
         recipErrorSavebtn.setFixedWidth(150)
-        recipErrorBtnLayout.addWidget(recipErrorSavebtn)
+       
+        recipErrorPlot = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
-        recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
-        recipErrorTopLayout.addLayout(recipErrorInputlayout)
+        # layout
+        recipErrorLayout = QVBoxLayout()
 
+        recipErrorTopLayout = QVBoxLayout()
         recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
 
-        recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPLot = MatplotlibWidget(navi=True, aspect='auto', itight=True)
-        recipErrorPlotLayout.addWidget(recipErrorPLot)
+        recipErrorLabelLayout = QHBoxLayout()
+        recipErrorLabelLayout.addWidget(recipErrorLabel, 1)
+        recipErrorLabelLayout.addWidget(recipErrorfnamesComboLabel)
+        recipErrorLabelLayout.addWidget(recipErrorfnamesCombo)
+        recipErrorTopLayout.addLayout(recipErrorLabelLayout)
+
+        recipErrorInputlayout = QHBoxLayout()
+        recipErrorTopLayout.addLayout(recipErrorInputlayout)
+
+        recipErrorInputLeftlayout = QHBoxLayout()
+        recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
+        recipErrorInputLeftlayoutL = QHBoxLayout()
+        recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
+        recipErrorInputLeftlayoutL.addWidget(recipErrorInputLabel)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
+        recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
+
+        recipErrorBtnLayout = QHBoxLayout()
+        recipErrorBtnLayout.setAlignment(Qt.AlignRight)
+        recipErrorBtnLayout.addWidget(recipErrorUnpairedBtn)
+        recipErrorBtnLayout.addWidget(recipErrorPltbtn)
+        recipErrorBtnLayout.addWidget(recipErrorResetbtn)
+        recipErrorBtnLayout.addWidget(recipErrorSavebtn)
+        recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
+
+        recipErrorInputLineLayout = QHBoxLayout()
+        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
+
+       
+        #tab widgets for the graphs
+        recipErrorBottomTabs = QTabWidget()
 
         recipErrorBottomLayout = QVBoxLayout()
-
-        recipErrorBottomTabs = QTabWidget()
+        recipErrorPlotLayout = QVBoxLayout()
+        recipErrorPlotLayout.addWidget(recipErrorPlot)
 
         recipErrorPseudoPlotLayout = QVBoxLayout()
         mwManualFiltering = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         recipErrorPseudoPlotLayout.addWidget(mwManualFiltering)
-#        manualPseudoPlotLayout.setLayout(manualBottomLayout)
+
         pseudoSectionPlotTab = QWidget()
         pseudoSectionPlotTab.setLayout(recipErrorPseudoPlotLayout)
         recipErrorBottomTabs.addTab(pseudoSectionPlotTab, 'Pseudo Section')
@@ -2078,9 +2016,6 @@ class App(QMainWindow):
         recipErrorBottomLayout.addWidget(recipErrorBottomTabs)
 #        manualBottomLayout.addWidget(mwManualFiltering)
         recipErrorLayout.addLayout(recipErrorBottomLayout, 1) # '1' to keep the plot in largest strech
-
-
-        # layout
         
 
         recipErrorWidget.setLayout(recipErrorLayout)
@@ -2122,26 +2057,28 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.iprangefilt(float(phivminEdit.text()),
+            if self.r2.iBatch or self.r2.iTimeLapse:
+                self.r2.iprangefilt(-1, # apply to all
+                                    float(phivminEdit.text()),
                                     float(phivmaxEdit.text()))
             else:
-                self.r2.iprangefilt[self.phasefiltdataIndex](float(phivminEdit.text()),
+                self.r2.iprangefilt(self.phasefiltdataIndex,
+                                    float(phivminEdit.text()),
                                     float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.removerecip()
+            if self.r2.iBatch or self.r2.iTimeLapse:
+                self.r2.removerecip(-1)
             else:
-                self.r2.removerecip[self.phasefiltdataIndex]()
+                self.r2.removerecip(self.phasefiltdataIndex)
             heatFilter()
 
         def removenested():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.removenested()
+            if self.r2.iBatch or self.r2.iTimeLapse:
+                self.r2.removenested(-1)
             else:
-                self.r2.removenested[self.phasefiltdataIndex]()
+                self.r2.removenested(self.phasefiltdataIndex)
             heatFilter()
 
         def convFactK():
@@ -2273,7 +2210,8 @@ class App(QMainWindow):
                 raw_hmp.plot(self.r2.heatmap)
             else:
                 self.r2.surveys[self.phasefiltdataIndex].filt_typ = 'Raw'
-                raw_hmp.plot(self.r2.heatmap[self.phasefiltdataIndex])
+                raw_hmp.setCallback(self.r2.heatmap)
+                raw_hmp.replot(index=self.phasefiltdataIndex)
 
         def heatFilter():
             if not (self.r2.iBatch or self.r2.iTimeLapse):
@@ -2281,7 +2219,8 @@ class App(QMainWindow):
                 filt_hmp.plot(self.r2.heatmap)
             else:
                 self.r2.surveys[self.phasefiltdataIndex].filt_typ = 'Filtered'
-                filt_hmp.plot(self.r2.heatmap[self.phasefiltdataIndex])
+                filt_hmp.setCallback(self.r2.heatmap)
+                filt_hmp.replot(index=self.phasefiltdataIndex)
 
         raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -2299,6 +2238,7 @@ class App(QMainWindow):
                     self.r2.surveys[0].dca(dump=dcaDump)
                 else:
                     self.r2.surveys[self.phasefiltdataIndex].dca(dump=dcaDump)
+                #TODO might need to abstract dca to R2
                 heatFilter()
             except:
                 errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
@@ -2323,7 +2263,7 @@ class App(QMainWindow):
         ipfiltWidget.setLayout(phasefiltlayout)
 
 
-#%% resistance error tab
+#%% resistance error modelling tab
         errorWidget = QWidget()
         tabPreProcessing.addTab(errorWidget, 'Resistance Error Model')
         tabPreProcessing.setTabEnabled(2, False)
@@ -2347,7 +2287,7 @@ class App(QMainWindow):
             if index == 0: # fit on each, apply to each
                 self.errFitdataIndex = -1
                 plotError(0)
-            elif index == 1: # fit all, apply to each (bigSurvey)
+            elif index == 1: # fit on all combined, apply to each (bigSurvey)
                 self.errFitdataIndex = -2
                 plotError(-2)
             else:
@@ -2369,11 +2309,15 @@ class App(QMainWindow):
         mwFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
         def plotError(index=0):
+            if len(self.r2.surveys) == 0:
+                return
             mwFitError.setCallback(self.r2.plotError)
-            mwFitError.replot(index)
+            mwFitError.replot(index=index)
             self.r2.err = False
 
         def errFitTypeFunc(index):
+            if len(self.r2.surveys) == 0:
+                return
             if index != 0:
                 if self.errFitdataIndex == -1:
                     infoDump('Error model applied individually on all datasets')
@@ -2396,7 +2340,7 @@ class App(QMainWindow):
                 
             # record the type of fit for each survey
             if self.errFitdataIndex == -1: # same model for each
-                self.errFitPlotIndexList = [index]*len(self.surveys)
+                self.errFitPlotIndexList = [index]*len(self.r2.surveys)
             elif self.errFitdataIndex == -2: # same fit from bigSurvey apply on all
                 pass
             elif self.errFitdataIndex > 0:
@@ -2484,55 +2428,64 @@ class App(QMainWindow):
         def iperrFitfnamesComboFunc(index):
             if index == 0:
                 self.iperrFitApplyToAll = True
+                self.iperrFitdataIndex = -1 # fit each, apply each
+                phaseplotError(0)
+            elif index == 1:
+                self.iperrFitdataIndex = -2 # fit combined, apply each
+                phaseplotError(-2)
             elif index > 0: # show/hide make the index = -1
                 self.iperrFitApplyToAll = False
-                phaseplotError(index-1)
-                self.iperrFitdataIndex = index-1
-                iperrFitType.setCurrentIndex(self.errFitPlotIndexList[index-1])
-                iperrFitTypeFunc(self.errFitPlotIndexList[index-1])
+                phaseplotError(index-2)
+                self.iperrFitdataIndex = index-2
+                iperrFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
+                iperrFitTypeFunc(self.errFitPlotIndexList[index-2])
         iperrFitfnamesCombo = QComboBox()
         iperrFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         iperrFitfnamesCombo.setMinimumWidth(150)
         iperrFitfnamesCombo.currentIndexChanged.connect(iperrFitfnamesComboFunc)
         
-        mwIPFiltering = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        mwIPFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
         def phaseplotError(index=0):
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                mwIPFiltering.plot(self.r2.phaseplotError)
-            else:
-                mwIPFiltering.plot(self.r2.phaseplotError[index])
+            if len(self.r2.surveys) == 0:
+                return
+            mwIPFitError.setCallback(self.r2.phaseplotError)
+            mwIPFitError.replot(index=index)
 
         def iperrFitTypeFunc(index):
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                if index == 0:
-                    phaseplotError()
-                elif index == 1:
-                    mwIPFiltering.plot(self.r2.plotIPFit)
-                    self.r2.err = True
-                elif index == 2:
-                    mwIPFiltering.plot(self.r2.plotIPFitParabola)
-                    self.r2.err = True
-                else:
-                    print('NOT IMPLEMENTED YET')
-            else:
-                if index == 0:
-                    phaseplotError(self.iperrFitdataIndex)
-                elif index == 1:
-                    mwIPFiltering.plot(self.r2.plotIPFit[self.iperrFitdataIndex])
-                    self.r2.err = True
-                elif index == 2:
-                    mwIPFiltering.plot(self.r2.plotIPFitParabola[self.iperrFitdataIndex])
-                    self.r2.err = True
-                else:
-                    print('NOT IMPLEMENTED YET')
-                self.errFitPlotIndexList[self.iperrFitdataIndex] = index
-                    
-                if self.r2 is not None and self.iperrFitApplyToAll: #Still beta. I don't know how to visualize a data based on a known error model.
-                    for s, i in zip(self.r2.surveys, range(len(self.errFitPlotIndexList))):
-                        s.df['phaseError'] = self.r2.surveys[self.iperrFitdataIndex].phaseErrorModel(s.df) #this correctly applies chosen error model on the data, but doesn't visualize it correctly
-                        self.errFitPlotIndexList[i] = index
-                    infoDump('Error model applied on all datasets!')
+            if len(self.r2.surveys) == 0:
+                return
+            if index != 0:
+                if self.iperrFitdataIndex == -1:
+                    infoDump('IP error model applied individually on all datasets')
+                elif self.iperrFitdataIndex == -2:
+                    infoDump('IP error model fit on the combined datasets and then applied to all datasets.')
+            if index == 0:
+                phaseplotError(self.iperrFitdataIndex)
+            elif index == 1:
+                mwIPFitError.setCallback(self.r2.plotIPFit)
+                mwIPFitError.replot(index=self.iperrFitdataIndex)
+                self.r2.err = True
+            elif index == 2:
+                mwIPFitError.setCallback(self.r2.plotIPFitParabola)
+                mwIPFitError.replot(index=self.iperrFitdataIndex)
+                self.r2.err = True
+                
+            # record the type of fit for each survey
+            if self.iperrFitdataIndex == -1: # same model for each
+                self.iperrFitPlotIndexList = [index]*len(self.r2.surveys)
+            elif self.iperrFitdataIndex == -2: # same fit from bigSurvey apply on all
+                pass
+            elif self.iperrFitdataIndex > 0:
+                self.iperrFitPlotIndexList[self.iperrFitdataIndex] = index
+            print('iperrFitPlotIndexList', self.iperrFitPlotIndexList)
+                
+            
+#                if self.r2 is not None and self.iperrFitApplyToAll: #Still beta. I don't know how to visualize a data based on a known error model.
+#                    for s, i in zip(self.r2.surveys, range(len(self.errFitPlotIndexList))):
+#                        s.df['phaseError'] = self.r2.surveys[self.iperrFitdataIndex].phaseErrorModel(s.df) #this correctly applies chosen error model on the data, but doesn't visualize it correctly
+#                        self.errFitPlotIndexList[i] = index
+#                    infoDump('Error model applied on all datasets!')
                 
             if index == 0:
                 a_wgt.setText('0.02')
@@ -2584,15 +2537,56 @@ class App(QMainWindow):
         ipLayout.addLayout(errIPFitLayout)
         
         ipErrPlotLayout = QVBoxLayout()
-        ipErrPlotLayout.addWidget(mwIPFiltering)
+        ipErrPlotLayout.addWidget(mwIPFitError)
         ipLayout.addLayout(ipErrPlotLayout,1)
 
         ipWidget.setLayout(ipLayout)
 
 
-        # additional actions                      
+#%% additional actions for pre-processing tab
+
+        def errorCombosShow(state=False): #showing/hiding pre-processing comboboxes
+            recipErrorfnamesCombo.setCurrentIndex(0)
+            errFitfnamesCombo.setCurrentIndex(0)
+            iperrFitfnamesCombo.setCurrentIndex(0)
+            phasefiltfnamesCombo.setCurrentIndex(0)
+            if state == False: 
+                recipErrorfnamesComboLabel.hide()
+                recipErrorfnamesCombo.hide()
+                errFitfnamesComboLabel.hide()
+                errFitfnamesCombo.hide()
+                iperrFitfnamesCombo.hide()
+                iperrFitfnamesComboLabel.hide()
+                phasefiltfnamesComboLabel.hide()
+                phasefiltfnamesCombo.hide()
+            else:
+                recipErrorfnamesComboLabel.show()
+                recipErrorfnamesCombo.show()
+                errFitfnamesComboLabel.show()
+                errFitfnamesCombo.show()
+                iperrFitfnamesCombo.show()
+                iperrFitfnamesComboLabel.show()
+                phasefiltfnamesComboLabel.show()
+                phasefiltfnamesCombo.show()
+        
+        def errorCombosFill(comboboxes=[]): #filling pre-processing comboboxes with fnames
+            for comboboxe in comboboxes:
+                comboboxe.clear()
+            
+            for comboboxe in comboboxes:
+                comboboxe.addItem('Apply to Each')
+            
+            for comboboxe in comboboxes[2:]: # only for error modelling
+                comboboxe.addItem('Combined Fit')
+            
+            for s in self.r2.surveys:
+                for comboboxe in comboboxes:
+                    comboboxe.addItem(s.name)
+                    
+            phasefiltfnamesCombo.removeItem(0) #"Apply to all" won't work with phase filtering process.
+                     
         errorCombosShow(False) #hiding all file selection comboboxes in pre-processing
-        prepFnamesComboboxes = [recipErrorfnamesCombo, errFitfnamesCombo, iperrFitfnamesCombo, phasefiltfnamesCombo]
+        prepFnamesComboboxes = [recipErrorfnamesCombo, phasefiltfnamesCombo, errFitfnamesCombo, iperrFitfnamesCombo]
 
 
 
