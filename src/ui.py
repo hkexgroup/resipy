@@ -408,7 +408,7 @@ class App(QMainWindow):
             phivminEdit.setText('0')
             phivmaxEdit.setText('25')
             dcaProgress.setValue(0)
-            self.phasefiltdataIndex = 0
+            self.phaseFiltDataIndex = 0
             tabPreProcessing.setTabEnabled(0, True)
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
@@ -2039,7 +2039,7 @@ class App(QMainWindow):
         phaseLabelLayout.addWidget(phasefiltfnamesComboLabel)
         
         def phasefiltfnamesComboFunc(index):
-            self.phasefiltdataIndex = index
+            self.phaseFiltDataIndex = index
             if self.r2.surveys != []:
                 heatRaw()
                 heatFilter()
@@ -2060,30 +2060,30 @@ class App(QMainWindow):
                                     float(phivminEdit.text()),
                                     float(phivmaxEdit.text()))
             else:
-                self.r2.iprangefilt(self.phasefiltdataIndex,
+                self.r2.iprangefilt(self.phaseFiltDataIndex,
                                     float(phivminEdit.text()),
                                     float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
             if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.removerecip(-1)
+                self.r2.filterRecip(-1)
             else:
-                self.r2.removerecip(self.phasefiltdataIndex)
+                self.r2.filterRecip(self.phaseFiltDataIndex)
             heatFilter()
 
         def removenested():
             if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.removenested(-1)
+                self.r2.filterNested(-1)
             else:
-                self.r2.removenested(self.phasefiltdataIndex)
+                self.r2.filterNested(self.phaseFiltDataIndex)
             heatFilter()
 
         def convFactK():
             if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.surveys[0].kFactor = float(phiConvFactor.text())
             else:
-                self.r2.surveys[self.phasefiltdataIndex].kFactor = float(phiConvFactor.text())
+                self.r2.surveys[self.phaseFiltDataIndex].kFactor = float(phiConvFactor.text())
             heatFilter()
 
         phitoplayout = QHBoxLayout()
@@ -2133,27 +2133,27 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
 
         def filt_reset():
-            self.r2.surveys[self.phasefiltdataIndex].filterDataIP = self.r2.surveys[self.phasefiltdataIndex].dfPhaseReset.copy()
-            self.r2.surveys[self.phasefiltdataIndex].df = self.r2.surveys[self.phasefiltdataIndex].dfPhaseReset.copy()
+            self.r2.surveys[self.phaseFiltDataIndex].filterDataIP = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
+            self.r2.surveys[self.phaseFiltDataIndex].df = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
             heatFilter()
             dcaProgress.setValue(0)
             infoDump('All phase filteres are now reset!')
 
         def phiCbarRange():
-            self.r2.surveys[self.phasefiltdataIndex].phiCbarmin = float(phiCbarminEdit.text())
-            self.r2.surveys[self.phasefiltdataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
+            self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
+            self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
             heatFilter()
             heatRaw()
 
         def phiCbarDataRange():
-            minDataIP = np.min(self.r2.surveys[self.phasefiltdataIndex].dfOrigin['ip'])
-            maxDataIP = np.max(self.r2.surveys[self.phasefiltdataIndex].dfOrigin['ip'])
+            minDataIP = np.min(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+            maxDataIP = np.max(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
             if self.ftype == 'ProtocolIP':
-                self.r2.surveys[self.phasefiltdataIndex].phiCbarmin = -maxDataIP
-                self.r2.surveys[self.phasefiltdataIndex].phiCbarMax = -minDataIP
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
             else:
-                self.r2.surveys[self.phasefiltdataIndex].phiCbarmin = minDataIP
-                self.r2.surveys[self.phasefiltdataIndex].phiCbarMax = maxDataIP
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
 
@@ -2205,20 +2205,20 @@ class App(QMainWindow):
         def heatRaw():
             if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.surveys[0].filt_typ = 'Raw'
-                raw_hmp.plot(self.r2.heatmap)
+                raw_hmp.plot(self.r2.showHeatmap)
             else:
-                self.r2.surveys[self.phasefiltdataIndex].filt_typ = 'Raw'
-                raw_hmp.setCallback(self.r2.heatmap)
-                raw_hmp.replot(index=self.phasefiltdataIndex)
+                self.r2.surveys[self.phaseFiltDataIndex].filt_typ = 'Raw'
+                raw_hmp.setCallback(self.r2.showHeatmap)
+                raw_hmp.replot(index=self.phaseFiltDataIndex)
 
         def heatFilter():
             if not (self.r2.iBatch or self.r2.iTimeLapse):
                 self.r2.surveys[0].filt_typ = 'Filtered'
-                filt_hmp.plot(self.r2.heatmap)
+                filt_hmp.plot(self.r2.showHeatmap)
             else:
-                self.r2.surveys[self.phasefiltdataIndex].filt_typ = 'Filtered'
-                filt_hmp.setCallback(self.r2.heatmap)
-                filt_hmp.replot(index=self.phasefiltdataIndex)
+                self.r2.surveys[self.phaseFiltDataIndex].filt_typ = 'Filtered'
+                filt_hmp.setCallback(self.r2.showHeatmap)
+                filt_hmp.replot(index=self.phaseFiltDataIndex)
 
         raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -2235,7 +2235,7 @@ class App(QMainWindow):
                 if not (self.r2.iBatch or self.r2.iTimeLapse):
                     self.r2.surveys[0].dca(dump=dcaDump)
                 else:
-                    self.r2.surveys[self.phasefiltdataIndex].dca(dump=dcaDump)
+                    self.r2.surveys[self.phaseFiltDataIndex].dca(dump=dcaDump)
                 #TODO might need to abstract dca to R2
                 heatFilter()
             except:
@@ -2309,7 +2309,7 @@ class App(QMainWindow):
         def plotError(index=0):
             if len(self.r2.surveys) == 0:
                 return
-            mwFitError.setCallback(self.r2.plotError)
+            mwFitError.setCallback(self.r2.showError)
             mwFitError.replot(index=index)
             self.r2.err = False
 
@@ -2324,11 +2324,11 @@ class App(QMainWindow):
             if index == 0:
                 plotError(self.errFitdataIndex)
             elif index == 1:
-                mwFitError.setCallback(self.r2.linfit)
+                mwFitError.setCallback(self.r2.fitErrorLin)
                 mwFitError.replot(index=self.errFitdataIndex)
                 self.r2.err = True
             elif index == 2:
-                mwFitError.setCallback(self.r2.pwlfit)
+                mwFitError.setCallback(self.r2.fitErrorPwl)
                 mwFitError.replot(index=self.errFitdataIndex)
                 self.r2.err = True
             elif index == 3:
@@ -2447,7 +2447,7 @@ class App(QMainWindow):
         def phaseplotError(index=0):
             if len(self.r2.surveys) == 0:
                 return
-            mwIPFitError.setCallback(self.r2.phaseplotError)
+            mwIPFitError.setCallback(self.r2.showErrorIP)
             mwIPFitError.replot(index=index)
 
         def iperrFitTypeFunc(index):
@@ -2461,11 +2461,11 @@ class App(QMainWindow):
             if index == 0:
                 phaseplotError(self.iperrFitdataIndex)
             elif index == 1:
-                mwIPFitError.setCallback(self.r2.plotIPFit)
+                mwIPFitError.setCallback(self.r2.fitErrorPwlIP)
                 mwIPFitError.replot(index=self.iperrFitdataIndex)
                 self.r2.err = True
             elif index == 2:
-                mwIPFitError.setCallback(self.r2.plotIPFitParabola)
+                mwIPFitError.setCallback(self.r2.fitErrorParabolaIP)
                 mwIPFitError.replot(index=self.iperrFitdataIndex)
                 self.r2.err = True
                 
