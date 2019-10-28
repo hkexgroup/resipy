@@ -1851,7 +1851,7 @@ class App(QMainWindow):
                 plotManualFiltering(self.recipErrDataIndex)
                 errFitType.setCurrentIndex(0)
                 plotError()
-        except ValueError as e:
+            except ValueError as e:
                 if ipCheck.checkState() != Qt.Checked:
                     errorDump(e)
                 else:
