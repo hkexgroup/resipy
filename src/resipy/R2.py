@@ -500,7 +500,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib.Axes, optional
             If specified, axis along which to plot the graph.
         **kwargs : optional
-            Passed to `Survey.pseudo()`.
+            Passed to `Survey.showPseudo()`.
         """
         self.surveys[index].showPseudo(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
@@ -520,9 +520,9 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib.Axes, optional
             If specified, axis along which to plot the graph.
         **kwargs : optional
-            Passed to `Survey.pseudo()`.
+            Passed to `Survey.showPseudoIP()`.
         """
-        self.surveys[index].pseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
+        self.surveys[index].showPseudoIP(vmin=vmin, vmax=vmax, ax=ax, **kwargs)
 
 
     def matchSurveys(self):
@@ -611,12 +611,20 @@ class R2(object): # R2 master class instanciated by the GUI
             self.surveys[index].showErrorDist(ax=ax)
 
 
-    def filterManual(self, index=-1, ax=None):
-        """Interactive manual filtering.
+    def filterManual(self, index=-1, ax=None, **kwargs):
+        """Interactive manually filters the data visually. The manually selected
+        points index are stored in `Survey.iselect` or `Survey.eselect``if it is
+        an electrodes. Use `Survey.filterData()` to filter them out for a single
+        survey. Or `R2._filterSimilarQuads()` to filter quadrupoles amongs all
+        `R2.surveys`.
         """
-        #TODO
-        pass
-
+        if index == -1:
+            for s in self.surveys:
+                s.iselect = np.zeros(s.df.shape[0], dtype=bool)
+                s.eselect = np.zeros(len(s.elec), dtype=bool)
+            self.surveys[0].filterManual(ax=ax, **kwargs)
+        else:
+            self.surveys[index].filterManual(ax=ax, **kwargs)
 
 
     def filterDummy(self, index=-1):
@@ -631,9 +639,9 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if index == -1:
             for s in self.surveys:
-                s.removeDummy()
+                s.filterDummy()
         else:
-            self.surveys[index].removeDummy()
+            self.surveys[index].filterDummy()
 
 
     def fitErrorLin(self, index=-1, ax=None):
@@ -659,7 +667,16 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.df['resError'] = self.bigSurvey.errorModel(s.df)
         elif index == -1: # apply to each
             for s in self.surveys:
-                s.fitErrorLin(ax=ax) #TODO check this will replot on the same axis
+                s.fitErrorLin(ax=ax)
+            # redo the legend
+            newlegend = []
+            if ax is not None:
+                legends = ax.get_legend().get_texts()
+                for a in legends:
+                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
+                ax.get_legend().remove()
+                ax.legend(newlegend, fontsize=10)
+                ax.set_title(ax.get_title().split('\n')[0])
         else:
             self.surveys[index].fitErrorLin(ax=ax)
 
@@ -688,12 +705,21 @@ class R2(object): # R2 master class instanciated by the GUI
         elif index == -1: # apply to each
             for s in self.surveys:
                 s.fitErrorPwl(ax=ax)
+            # redo the legend
+            newlegend = []
+            if ax is not None:
+                legends = ax.get_legend().get_texts()
+                for a in legends:
+                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
+                ax.get_legend().remove()
+                ax.legend(newlegend, fontsize=10)
+                ax.set_title(ax.get_title().split('\n')[0])
         else:
-            self.surveys[index].pwlfit(ax=ax)
+            self.surveys[index].fitErrorPwl(ax=ax)
 
 
     def fitErrorLME(self, index=-1, ax=None, rpath=None, iplot=True):
-        '''Fit a linear mixed effect (LME) model by having the electrodes as
+        """Fit a linear mixed effect (LME) model by having the electrodes as
         as grouping variables.
 
         Parameters
@@ -708,17 +734,25 @@ class R2(object): # R2 master class instanciated by the GUI
             Path of the directory with R (for Windows only).
         iplot : bool, optional
             If `True` plot it.
-        '''
+        """
         if index == -2: # apply to combined data of bigSurvey
             print('ERROR : LME survey can not be fitted on combined data.')
         elif index == -1: # apply to each
             for s in self.surveys:
                 s.fitErrorLME(ax=ax, rpath=rpath, iplot=iplot)
+            # redo the legend
+            newlegend = []
+            if ax is not None:
+                legends = ax.get_legend().get_texts()
+                for a in legends:
+                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
+                ax.get_legend().remove()
+                ax.legend(newlegend, fontsize=10)
         else:
             self.surveys[index].fitErrorLME(ax=ax, rpath=rpath, iplot=iplot)
 
 
-    def showErroIP(self, index=0, ax=None):
+    def showErrorIP(self, index=0, ax=None):
         """Plot the reciprocal phase discrepancies against the reciprocal mean
         transfer resistance.
 
@@ -766,6 +800,15 @@ class R2(object): # R2 master class instanciated by the GUI
         elif index == -1: # apply to each
             for s in self.surveys:
                 s.fitErrorPwlIP(ax=ax)
+            # redo the legend
+            newlegend = []
+            if ax is not None:
+                legends = ax.get_legend().get_texts()
+                for a in legends:
+                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
+                ax.get_legend().remove()
+                ax.legend(newlegend, fontsize=10)
+                ax.set_title(ax.get_title().split('\n')[0])
         else:
             self.surveys[index].fitErrorPwlIP(ax=ax)
 
@@ -794,6 +837,15 @@ class R2(object): # R2 master class instanciated by the GUI
         elif index == -1: # apply to each
             for s in self.surveys:
                 s.fitErrorParabolaIP(ax=ax)
+            # redo the legend
+            newlegend = []
+            if ax is not None:
+                legends = ax.get_legend().get_texts()
+                for a in legends:
+                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
+                ax.get_legend().remove()
+                ax.legend(newlegend, fontsize=10)
+                ax.set_title(ax.get_title().split('\n')[0])
         else:
             self.surveys[index].fitErrorParabolaIP(ax=ax)
 
@@ -818,22 +870,42 @@ class R2(object): # R2 master class instanciated by the GUI
         fig : matplotlib figure, optional
             If ax is not specified, the function will return a figure object.
         """
-        self.surveys[index].showHeatmap()
+        self.surveys[index].showHeatmap(ax=ax)
 
 
 
-    def filterRangeIP(self, phimin, phimax, index=-1):
+    def _filterSimilarQuad(self, quads):
+        """Filter out similar quadrupole based on iselect (Survey.filterManual)
+        from the specified survey.
+        
+        Parameters
+        ----------
+        quads : array
+            2D array with an ABMN quadrupole per row.
+        """
+        totalRemoved = 0
+        for s in self.surveys:
+            i2keep = np.ones(s.df.shape[0], dtype=bool)
+            for quad in quads:
+                ie = (s.df[['a','b','m','n']].values == quad).all(1)
+                i2keep = i2keep & ~ie
+            s.filterData(i2keep)
+            totalRemoved += np.sum(~i2keep)
+        return totalRemoved
+
+
+    def filterRangeIP(self, index=-1, phimin=None, phimax=None):
         """Filter IP data according to a specified range.
 
         Parameters
         ----------
-        phimin : float
-            Minimium phase angle [mrad].
-        phimax : float
-            Maximum phase angle [mrad].
         index : int, optional
             Index of the survey to fit. If `index == -1` (default)
             then the fit is done on all surveys independantly.
+        phimin : float, optional
+            Minimium phase angle [mrad].
+        phimax : float, optional
+            Maximum phase angle [mrad].
         """
         if index == -1: # apply to each
             for s in self.surveys:
@@ -844,7 +916,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def filterRecipIP(self, index=0):
         """Remove reciprocal for IP data ONLY. Additional arguments to be
-        passed to :func: `~resipy.Survey.removerecip`.
+        passed to :func: `~resipy.Survey.filterRecipIP`.
         """
         if index == -2: # apply to combined data of bigSurvey
             self.bigSurvey.filterRecipIP()
@@ -1532,12 +1604,12 @@ class R2(object): # R2 master class instanciated by the GUI
                     if np.sum(np.isnan(s.df['resError'])) != 0: # there is some nan
                         print('Survey {:s} has no fitted error model, default to combined fit.'.format(s.name))
                         if self.bigSurvey.errorModel is None:
-                            self.bigSurvey.pwlfit() # default fit
+                            self.bigSurvey.fitErrorPwl() # default fit
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
                     if self.typ[0] == 'c' and np.sum(np.isnan(s.df['phaseError'])) != 0: # there is some nan
                         print('Survey {:s} has no fitted IP error model, default to combined fit.'.format(s.name))
                         if self.bigSurvey.errorModel is None:
-                            self.bigSurvey.plotIPFit()
+                            self.bigSurvey.fitErrorPwlIP()
                         s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
                 # if not it means that the 'resError' columns has already
                 # been populated when the files has been imported
@@ -1574,12 +1646,12 @@ class R2(object): # R2 master class instanciated by the GUI
                     if np.sum(np.isnan(s.df['resError'])) != 0: # there is some nan
                         print('Survey {:s} has no fitted error model, default to combined fit.'.format(s.name))
                         if self.bigSurvey.errorModel is None:
-                            self.bigSurvey.pwlfit() # default fit
+                            self.bigSurvey.fitErrroPwl() # default fit
                         s.df['resError'] = self.bigSurvey.errorModel(s.df)
                     if self.typ[0] == 'c' and np.sum(np.isnan(s.df['phaseError'])) != 0: # there is some nan
                         print('Survey {:s} has no fitted IP error model, default to combined fit.'.format(s.name))
                         if self.bigSurvey.errorModel is None:
-                            self.bigSurvey.plotIPFit()
+                            self.bigSurvey.fitErrorPwlIP()
                         s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
                     # if not it means that the 'resError' columns has already
                     # been populated when the files has been imported
@@ -2400,8 +2472,6 @@ class R2(object): # R2 master class instanciated by the GUI
             phase0[idx] = ipValues[key]
         self.mesh.attr_cache['phase0'] = phase0
 
-        print('assignRes0-------------', np.sum(fixed), np.sum(phase0))
-
 
 
     def setRefModel(self, res0):
@@ -2697,7 +2767,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.zlim[0] = self.doi
 
         if iplot is True:
-            self.pseudo()
+            self.showPseudo()
         dump('Forward modelling done.')
 
 
@@ -2817,7 +2887,7 @@ class R2(object): # R2 master class instanciated by the GUI
             b_wgt documented in the R2 documentation
         """
         for s in self.surveys:
-            s.estError(a_wgt=a_wgt,b_wgt=b_wgt)
+            s.estimateError(a_wgt=a_wgt,b_wgt=b_wgt)
 
     def addFlatError(self,pnct=2.5):
         """Add a flat percentage error to resistivity data (for each survey in
@@ -2858,7 +2928,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.meshParams = {}
             if 'interp_method' in self.meshParams:
                 del self.meshParams['interp_method']
-            self.createModellingMesh(**self.meshParams)
+            self.createModelErrorMesh(**self.meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh
             fix_me = True
@@ -3060,7 +3130,7 @@ class R2(object): # R2 master class instanciated by the GUI
         return array, errors
 
 
-    def showPseudoError(self, ax=None, vmin=None, vmax=None):
+    def showPseudoInvError(self, ax=None, vmin=None, vmax=None):
         """Plot pseudo section of errors from file `f001_err.dat`.
 
         Parameters
@@ -3080,7 +3150,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
 
-    def showPseudoInvError(self, ax=None, vmin=None, vmax=None):
+    def showPseudoInvErrorIP(self, ax=None, vmin=None, vmax=None):
         """Display normalized phase error.
 
         Parameters
@@ -3345,7 +3415,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             res_name = 'Resistivity(Ohm-m)'
         for i in range(len(self.meshResults)):
-            self.meshResults[i].reciprocal(res_name,'Conductivity(S/m)')
+            self.meshResults[i].computeReciprocal(res_name,'Conductivity(S/m)')
 
 
     def computeDiff(self):
@@ -3470,145 +3540,147 @@ class R2(object): # R2 master class instanciated by the GUI
 
 #%% deprecated funcions
 
-    def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
-        warnings.warn('The function is deprecated, use showPseudoIP() instead.',
-                      DeprecationWarning)
-        self.showPseudoIP(index=index, vmin=vmin, vmax=vmax, ax=ax, **kwargs)
-
-    def plotError(self, index=0, ax=None):
-        warnings.warn('This function is deprecated, use showError() instead.',
-                      DeprecationWarning)
-        self.showError(index=index, ax=ax)
-
-    def errorDist(self, index=0, ax=None):
-        warnings.warn('This function is deprecated, use showErrorDist() instead.',
-                      DeprecationWarning)
-        self.showErrorDist(index=index, ax=ax)
-
-    def removeDummy(self, index=-1):
-        warnings.warn('This function is deprecated, use filterDummy() instead.',
-                      DeprecationWarning)
-        self.filterDummy(index=index)
-
-    def linfit(self, index=-1, ax=None):
-        warnings.warn('This function is deprecated, use fitErrorLin() instead.',
-                      DeprecationWarning)
-        self.fitErrorLin(index=index, ax=ax)
-
-
-    def pwlfit(self, index=-1, ax=None):
-        warnings.warn('This function is deprecated, use fitErrorPwl() instead.',
-                      DeprecationWarning)
-        self.fitErrorPwl(index=index, ax=ax)
-
-    def lmefit(self, index=-1, ax=None, rpath=None, iplot=True):
-        warnings.warn('This function is deprecated, use fitErrorLME() instead.',
-                      DeprecationWarning)
-        self.fitErrorLME(index=index, ax=ax, rpath=rpath, iplot=iplot)
-
-    def phaseplotError(self, index=0, ax=None):
-        warnings.warn('This function is deprecated, use showErrorIP() instead.',
-                      DeprecationWarning)
-        self.showErrorIP(index=index, ax=ax)
-
-    def plotIPFit(self, index=-1, ax=None):
-        warnings.warn('This function is deprecated, use fitErrorPwlIP() instead.',
-                      DeprecationWarning)
-        self.fitErrorPwlIP(index=index, ax=ax)
-
-    def plotIPFitParabola(self, index=-1, ax=None):
-        warnings.warn('This function is deprecated, use fitErrorParabolaIP() instead.',
-                      DeprecationWarning)
-        self.fitErrorParabolaIP(index=index, ax=ax)
-
-    def heatmap(self, index=0, ax=None):
-        warnings.warn('This function is deprecated, use showHeatmap() instead.',
-                      DeprecationWarning)
-        self.showHeatmap(index=index, ax=ax)
-
-    def removenested(self, index=-1):
-        warnings.warn('This function is deprecated, use filterNested() instead.',
-                      DeprecationWarning)
-        self.filterNested(index=index)
-
-    def dca(self, index=-1, dump=print):
-        warnings.warn('This function is deprecated, use filterDCA() instead.',
-                      DeprecationWarning)
-        self.filterDCA(index=index, dump=dump)
-
-    def removerecip(self, index=0):
-        warnings.warn('This function is deprecated, use filterRecip() instead.',
-                      DeprecationWarning)
-        self.filterRecip(index=index)
-
-    def iprangefilt(self, phimin, phimax, index=-1):
-        warnings.warn('This function is deprecated, use filterRangeIP() instead.',
-                      DeprecationWarning)
-        self.filterRangeIP(phimin, phimax, index=index)
-    def removeUnpaired(self, index=-1):
-        warnings.warn('This function is deprecated, use filterUnpaired() instead.',
-                      DeprecationWarning)
-        self.filterUnpaired(index=index)
-
-    def removeneg(self):
-        warnings.warn('This function is deprecated, use filterNegative() instead.',
-                      DeprecationWarning)
-        self.filterNegative()
-
-    def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
-        warnings.warn('This function is deprecated, use setStartingRes() instead.',
-                      DeprecationWarning)
-        self.setStartingRes(regionValues=regionValues, zoneValues=zoneValues, fixedValues=fixedValues, ipValues=ipValues)
-
-
-    def assignRefModel(self, res0):
-        warnings.warn('This function is deprecated, use setRefModel() instead.',
-                      DeprecationWarning)
-        self.setRefModel(res0=res0)
-
-
-    def createModellingMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
-                   cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
-        warnings.warn('This function is deprecated, use createModelErrorMesh() instead.',
-                      DeprecationWarning)
-        self.createModelErrorMesh(typ=typ, buried=buried, surface=surface, cl_factor=cl_factor,
-                                  cl=cl, dump=dump, res0=res0, show_output=show_output, doi=doi, **kwargs)
-
-    def estError(self, a_wgt=0.01, b_wgt=0.02):
-        warnings.warn('This function is deprecated, use estimateError() instead.',
-                      DeprecationWarning)
-        self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
-
-    def pseudoError(self, ax=None, vmin=None, vmax=None):
-        warnings.warn('This function is deprecated, use showPseudInvError() instead.',
-                      DeprecationWarning)
-        self.showPseudoInvError(ax=ax, vmin=vmin, vmax=vmax)
-
-
-    def pseudoErrorIP(self, ax=None, vmin=None, vmax=None):
-        warnings.warn('This function is deprecated, use showErrorIP() instead.',
-                      DeprecationWarning)
-        self.showErrorIP(ax=ax, vmin=vmin, vmax=vmax)
-
-
-    def showInversionErrors(self, ax=None):
-        warnings.warn('This function is deprecated, use showInvError() instead.',
-                      DeprecationWarning)
-        self.showInvError(ax=ax)
-
-
-    def compCond(self):
-        warnings.warn('This function is deprecated, use computeCond() instead.',
-                      DeprecationWarning)
-        self.computeCond()
-
-    def compDiff(self):
-        warnings.warn('This function is deprecated, use computeDiff() instead.',
-                      DeprecationWarning)
-        self.computeDiff()
-
-
-    def pseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
-        warnings.warn('The function is deprecated, use showPseudo() instead.',
-                      DeprecationWarning)
-        self.showPseudo(index=index, vmin=vmin, vmax=vmax, ax=ax, **kwargs)
+#    def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
+#        warnings.warn('The function is deprecated, use showPseudoIP() instead.',
+#                      DeprecationWarning)
+#        self.showPseudoIP(index=index, vmin=vmin, vmax=vmax, ax=ax, **kwargs)
+#
+#    def plotError(self, index=0, ax=None):
+#        warnings.warn('This function is deprecated, use showError() instead.',
+#                      DeprecationWarning)
+#        self.showError(index=index, ax=ax)
+#
+#    def errorDist(self, index=0, ax=None):
+#        warnings.warn('This function is deprecated, use showErrorDist() instead.',
+#                      DeprecationWarning)
+#        self.showErrorDist(index=index, ax=ax)
+#
+#    def removeDummy(self, index=-1):
+#        warnings.warn('This function is deprecated, use filterDummy() instead.',
+#                      DeprecationWarning)
+#        self.filterDummy(index=index)
+#
+#    def linfit(self, index=-1, ax=None):
+#        warnings.warn('This function is deprecated, use fitErrorLin() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorLin(index=index, ax=ax)
+#
+#
+#    def pwlfit(self, index=-1, ax=None):
+#        warnings.warn('This function is deprecated, use fitErrorPwl() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorPwl(index=index, ax=ax)
+#
+#    def lmefit(self, index=-1, ax=None, rpath=None, iplot=True):
+#        warnings.warn('This function is deprecated, use fitErrorLME() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorLME(index=index, ax=ax, rpath=rpath, iplot=iplot)
+#
+#    def phaseplotError(self, index=0, ax=None):
+#        warnings.warn('This function is deprecated, use showErrorIP() instead.',
+#                      DeprecationWarning)
+#        self.showErrorIP(index=index, ax=ax)
+#
+#    def plotIPFit(self, index=-1, ax=None):
+#        warnings.warn('This function is deprecated, use fitErrorPwlIP() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorPwlIP(index=index, ax=ax)
+#
+#    def plotIPFitParabola(self, index=-1, ax=None):
+#        warnings.warn('This function is deprecated, use fitErrorParabolaIP() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorParabolaIP(index=index, ax=ax)
+#
+#    def heatmap(self, index=0, ax=None):
+#        warnings.warn('This function is deprecated, use showHeatmap() instead.',
+#                      DeprecationWarning)
+#        self.showHeatmap(index=index, ax=ax)
+#
+#    def removenested(self, index=-1):
+#        warnings.warn('This function is deprecated, use filterNested() instead.',
+#                      DeprecationWarning)
+#        self.filterNested(index=index)
+#
+#    def dca(self, index=-1, dump=print):
+#        warnings.warn('This function is deprecated, use filterDCA() instead.',
+#                      DeprecationWarning)
+#        self.filterDCA(index=index, dump=dump)
+#
+#    def removerecip(self, index=0):
+#        warnings.warn('This function is deprecated, use filterRecip() instead.',
+#                      DeprecationWarning)
+#        self.filterRecip(index=index)
+#
+#    def iprangefilt(self, phimin, phimax, index=-1):
+#        warnings.warn('This function is deprecated, use filterRangeIP() instead.',
+#                      DeprecationWarning)
+#        self.filterRangeIP(phimin, phimax, index=index)
+#        
+#    def removeUnpaired(self, index=-1):
+#        warnings.warn('This function is deprecated, use filterUnpaired() instead.',
+#                      DeprecationWarning)
+#        n = self.filterUnpaired(index=index)
+#        return n
+#    
+#    def removeneg(self):
+#        warnings.warn('This function is deprecated, use filterNegative() instead.',
+#                      DeprecationWarning)
+#        self.filterNegative()
+#
+#    def assignRes0(self, regionValues={}, zoneValues={}, fixedValues={}, ipValues={}):
+#        warnings.warn('This function is deprecated, use setStartingRes() instead.',
+#                      DeprecationWarning)
+#        self.setStartingRes(regionValues=regionValues, zoneValues=zoneValues, fixedValues=fixedValues, ipValues=ipValues)
+#
+#
+#    def assignRefModel(self, res0):
+#        warnings.warn('This function is deprecated, use setRefModel() instead.',
+#                      DeprecationWarning)
+#        self.setRefModel(res0=res0)
+#
+#
+#    def createModellingMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
+#                   cl=-1, dump=print, res0=100, show_output=True, doi=None, **kwargs):
+#        warnings.warn('This function is deprecated, use createModelErrorMesh() instead.',
+#                      DeprecationWarning)
+#        self.createModelErrorMesh(typ=typ, buried=buried, surface=surface, cl_factor=cl_factor,
+#                                  cl=cl, dump=dump, res0=res0, show_output=show_output, doi=doi, **kwargs)
+#
+#    def estError(self, a_wgt=0.01, b_wgt=0.02):
+#        warnings.warn('This function is deprecated, use estimateError() instead.',
+#                      DeprecationWarning)
+#        self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
+#
+#    def pseudoError(self, ax=None, vmin=None, vmax=None):
+#        warnings.warn('This function is deprecated, use showPseudInvError() instead.',
+#                      DeprecationWarning)
+#        self.showPseudoInvError(ax=ax, vmin=vmin, vmax=vmax)
+#
+#
+#    def pseudoErrorIP(self, ax=None, vmin=None, vmax=None):
+#        warnings.warn('This function is deprecated, use showErrorIP() instead.',
+#                      DeprecationWarning)
+#        self.showPseudoErrorIP(ax=ax, vmin=vmin, vmax=vmax)
+#
+#
+#    def showInversionErrors(self, ax=None):
+#        warnings.warn('This function is deprecated, use showInvError() instead.',
+#                      DeprecationWarning)
+#        self.showInvError(ax=ax)
+#
+#
+#    def compCond(self):
+#        warnings.warn('This function is deprecated, use computeCond() instead.',
+#                      DeprecationWarning)
+#        self.computeCond()
+#
+#    def compDiff(self):
+#        warnings.warn('This function is deprecated, use computeDiff() instead.',
+#                      DeprecationWarning)
+#        self.computeDiff()
+#
+#
+#    def pseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
+#        warnings.warn('The function is deprecated, use showPseudo() instead.',
+#                      DeprecationWarning)
+#        self.showPseudo(index=index, vmin=vmin, vmax=vmax, ax=ax, **kwargs)

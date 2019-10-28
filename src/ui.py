@@ -394,7 +394,8 @@ class App(QMainWindow):
             self.recipErrApplyToAll = True
             self.recipErrDataIndex = -1 # -1 is apply the function to all individually
             self.errFitApplyToAll = True
-            self.errFitdataIndex = -1
+            self.errFitDataIndex = -1
+            self.iperrFitDataIndex = -1
             errFitType.currentIndexChanged.disconnect()
             errFitType.setCurrentIndex(0)
             errFitType.currentIndexChanged.connect(errFitTypeFunc)
@@ -1173,14 +1174,14 @@ class App(QMainWindow):
         tabImportingDataLayout.addLayout(metaLayout, 40)
 
         def plotPseudo():
-            mwPseudo.setCallback(self.r2.pseudo)
+            mwPseudo.setCallback(self.r2.showPseudo)
             if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
                 mwPseudo.replot(aspect='auto', **self.pParams)
             else:
                 mwPseudo.replot(aspect='auto', **self.pParams)
 
         def plotPseudoIP():
-            mwPseudoIP.setCallback(self.r2.pseudoIP)
+            mwPseudoIP.setCallback(self.r2.showPseudoIP)
             mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
 
         pseudoLayout = QHBoxLayout()
@@ -1797,43 +1798,38 @@ class App(QMainWindow):
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
         def plotManualFiltering(index=0):
-            mwManualFiltering.plot(self.r2.surveys[index].manualFiltering)
+            mwManualFiltering.setCallback(self.r2.filterManual)
+            mwManualFiltering.replot(index=index)
 
         def errHist(index=0):
             if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
                 if self.iBatch or self.iTimeLapse:
-                    recipErrorPlot.setCallback(self.r2.errorDist)
+                    recipErrorPlot.setCallback(self.r2.showErrorDist)
                     recipErrorPlot.replot(index=index)
                 else: 
-                    recipErrorPlot.plot(self.r2.errorDist)
+                    recipErrorPlot.plot(self.r2.showErrorDist)
             else:
                 pass
 
-        def recipFilter():
+        def recipFilter(): # filter selected quad/elec or by reciprocal error
             try:
+                # compute index of the survey displayed (index == 0 if applyToEach)
+                index = 0 if self.recipErrDataIndex < 0 else self.recipErrDataIndex
+                numElecRemoved = np.sum(self.r2.surveys[index].eselect)
+                # don't need filterElec as the selected points are in iselect anyway
                 numSelectRemoved = 0
-                numElecRemoved = 0
                 if self.r2.iBatch or self.r2.iTimeLapse:
-                    if np.sum(self.r2.surveys[self.recipErrDataIndex].iselect) != 0:
-                        if not self.recipErrApplyToAll:
-                            numSelectRemoved += self.r2.surveys[self.recipErrDataIndex].filterData(~self.r2.surveys[self.recipErrDataIndex].iselect)
-                        else:
-                            
-                            try:
-                                for s in self.r2.surveys:
-                                    numSelectRemoved += s.filterData(~self.r2.surveys[self.recipErrDataIndex].iselect)
-                            except:
-                                if np.sum(self.r2.surveys[self.recipErrDataIndex].eselect) != 0:
-                                    numElecRemoved = np.sum(self.r2.surveys[self.recipErrDataIndex].eselect)
-                                    for s in self.r2.surveys:
-                                        s.filterElec(elec=np.where(self.r2.surveys[self.recipErrDataIndex].eselect)[0]+1)
-                                else:
-                                    raise ValueError('Number of measurements among surveys do not match! Reset and retry individually.')
+                    if not self.recipErrApplyToAll:
+                        numSelectRemoved += self.r2.surveys[index].filterData(~self.r2.surveys[index].iselect)
+                    else:
+                        s = self.r2.surveys[index] # index should be 0 as we select on the 1st survey only
+                        quads = s.df[s.iselect][['a','b','m','n']].values
+                        numSelectRemoved += self.r2._filterSimilarQuad(quads) # this will remove the same quads to all surveys
                 else:
                     numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
                 if recipErrorInputLine.text() != '':
                     percent = float(recipErrorInputLine.text())
-                    numRecipRemoved = self.r2.filterRecip(percent=percent, index=self.recipErrDataIndex)
+                    numRecipRemoved = self.r2.filterRecip(index=self.recipErrDataIndex, percent=percent)
                     if numElecRemoved != 0:
                         infoDump("%i measurements with greater than %3.1f%% reciprocal error, \
                                  %i selected electrodes and %i measurements removed!" % (numRecipRemoved,percent,numElecRemoved,numSelectRemoved))
@@ -1855,7 +1851,7 @@ class App(QMainWindow):
                 plotManualFiltering(self.recipErrDataIndex)
                 errFitType.setCurrentIndex(0)
                 plotError()
-            except ValueError as e:
+        except ValueError as e:
                 if ipCheck.checkState() != Qt.Checked:
                     errorDump(e)
                 else:
@@ -1901,7 +1897,7 @@ class App(QMainWindow):
 
         def recipErrorUnpairedFunc():
             index = -1 if self.recipErrDataIndex else self.recipErrDataIndex
-            numRemoved = self.r2.removeUnpaired(index=index)
+            numRemoved = self.r2.filterUnpaired(index=index)
             if ipCheck.checkState() == Qt.Checked:
                 if self.recipErrApplyToAll:
                     for s in self.r2.surveys:
@@ -1913,8 +1909,8 @@ class App(QMainWindow):
                 heatFilter()
                 iperrFitType.setCurrentIndex(0)
                 phaseplotError()
-            errHist()
-            plotManualFiltering()
+            errHist(self.recipErrDataIndex)
+            plotManualFiltering(self.recipErrDataIndex)
             errFitType.setCurrentIndex(0)
             plotError()
             infoDump('%i unpaired quadrupoles removed!' % numRemoved)
@@ -2056,20 +2052,20 @@ class App(QMainWindow):
 
         def phirange():
             if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.iprangefilt(-1, # apply to all
-                                    float(phivminEdit.text()),
-                                    float(phivmaxEdit.text()))
+                self.r2.filterRangeIP(-1, # apply to all
+                                      float(phivminEdit.text()),
+                                      float(phivmaxEdit.text()))
             else:
-                self.r2.iprangefilt(self.phaseFiltDataIndex,
-                                    float(phivminEdit.text()),
-                                    float(phivmaxEdit.text()))
+                self.r2.filterRangeIP(self.phaseFiltDataIndex,
+                                      float(phivminEdit.text()),
+                                      float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
             if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.filterRecip(-1)
+                self.r2.filterRecipIP(-1)
             else:
-                self.r2.filterRecip(self.phaseFiltDataIndex)
+                self.r2.filterRecipIP(self.phaseFiltDataIndex)
             heatFilter()
 
         def removenested():
@@ -2232,11 +2228,7 @@ class App(QMainWindow):
 
         def dcaFiltering():
             try:
-                if not (self.r2.iBatch or self.r2.iTimeLapse):
-                    self.r2.surveys[0].dca(dump=dcaDump)
-                else:
-                    self.r2.surveys[self.phaseFiltDataIndex].dca(dump=dcaDump)
-                #TODO might need to abstract dca to R2
+                self.r2.filterDCA(index=self.phaseFiltDataIndex, dump=dcaDump)
                 heatFilter()
             except:
                 errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
@@ -2283,13 +2275,13 @@ class App(QMainWindow):
         
         def errFitfnamesComboFunc(index):
             if index == 0: # fit on each, apply to each
-                self.errFitdataIndex = -1
+                self.errFitDataIndex = -1
                 plotError(0)
             elif index == 1: # fit on all combined, apply to each (bigSurvey)
-                self.errFitdataIndex = -2
+                self.errFitDataIndex = -2
                 plotError(-2)
             else:
-                self.errFitdataIndex = index-2
+                self.errFitDataIndex = index-2
                 plotError(index-2)
                 errFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
                 errFitTypeFunc(self.errFitPlotIndexList[index-2])
@@ -2317,37 +2309,37 @@ class App(QMainWindow):
             if len(self.r2.surveys) == 0:
                 return
             if index != 0:
-                if self.errFitdataIndex == -1:
+                if self.errFitDataIndex == -1:
                     infoDump('Error model applied individually on all datasets')
-                elif self.errFitdataIndex == -2:
+                elif self.errFitDataIndex == -2:
                     infoDump('Error model fit on the combined datasets and then applied to all datasets.')
             if index == 0:
-                plotError(self.errFitdataIndex)
+                plotError(self.errFitDataIndex)
             elif index == 1:
                 mwFitError.setCallback(self.r2.fitErrorLin)
-                mwFitError.replot(index=self.errFitdataIndex)
+                mwFitError.replot(index=self.errFitDataIndex)
                 self.r2.err = True
             elif index == 2:
                 mwFitError.setCallback(self.r2.fitErrorPwl)
-                mwFitError.replot(index=self.errFitdataIndex)
+                mwFitError.replot(index=self.errFitDataIndex)
                 self.r2.err = True
             elif index == 3:
-                mwFitError.setCallback(self.r2.lmefit)
-                mwFitError.replot(index=self.errFitdataIndex)
+                mwFitError.setCallback(self.r2.fitErrorLME)
+                mwFitError.replot(index=self.errFitDataIndex)
                 self.r2.err = True
                 
             # record the type of fit for each survey
-            if self.errFitdataIndex == -1: # same model for each
+            if self.errFitDataIndex == -1: # same model for each
                 self.errFitPlotIndexList = [index]*len(self.r2.surveys)
-            elif self.errFitdataIndex == -2: # same fit from bigSurvey apply on all
+            elif self.errFitDataIndex == -2: # same fit from bigSurvey apply on all
                 pass
-            elif self.errFitdataIndex > 0:
-                self.errFitPlotIndexList[self.errFitdataIndex] = index
+            elif self.errFitDataIndex > 0:
+                self.errFitPlotIndexList[self.errFitDataIndex] = index
             print('errFitPlotIndexList', self.errFitPlotIndexList)
                 
 #                if self.r2 is not None and self.errFitApplyToAll: #Still beta. I don't know how to visualize a data based on a known error model.
 #                    for s, i in zip(self.r2.surveys, range(len(self.errFitPlotIndexList))):
-#                        s.df['resError'] = self.r2.surveys[self.errFitdataIndex].errorModel(s.df) #this correctly applies chosen error model on the data, but doesn't visualize it correctly
+#                        s.df['resError'] = self.r2.surveys[self.errFitDataIndex].errorModel(s.df) #this correctly applies chosen error model on the data, but doesn't visualize it correctly
 #                        self.errFitPlotIndexList[i] = index
 #                    infoDump('Error model applied on all datasets!')
             
@@ -2426,15 +2418,15 @@ class App(QMainWindow):
         def iperrFitfnamesComboFunc(index):
             if index == 0:
                 self.iperrFitApplyToAll = True
-                self.iperrFitdataIndex = -1 # fit each, apply each
+                self.iperrFitDataIndex = -1 # fit each, apply each
                 phaseplotError(0)
             elif index == 1:
-                self.iperrFitdataIndex = -2 # fit combined, apply each
+                self.iperrFitDataIndex = -2 # fit combined, apply each
                 phaseplotError(-2)
             elif index > 0: # show/hide make the index = -1
                 self.iperrFitApplyToAll = False
                 phaseplotError(index-2)
-                self.iperrFitdataIndex = index-2
+                self.iperrFitDataIndex = index-2
                 iperrFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
                 iperrFitTypeFunc(self.errFitPlotIndexList[index-2])
         iperrFitfnamesCombo = QComboBox()
@@ -2454,34 +2446,34 @@ class App(QMainWindow):
             if len(self.r2.surveys) == 0:
                 return
             if index != 0:
-                if self.iperrFitdataIndex == -1:
+                if self.iperrFitDataIndex == -1:
                     infoDump('IP error model applied individually on all datasets')
-                elif self.iperrFitdataIndex == -2:
+                elif self.iperrFitDataIndex == -2:
                     infoDump('IP error model fit on the combined datasets and then applied to all datasets.')
             if index == 0:
-                phaseplotError(self.iperrFitdataIndex)
+                phaseplotError(self.iperrFitDataIndex)
             elif index == 1:
                 mwIPFitError.setCallback(self.r2.fitErrorPwlIP)
-                mwIPFitError.replot(index=self.iperrFitdataIndex)
+                mwIPFitError.replot(index=self.iperrFitDataIndex)
                 self.r2.err = True
             elif index == 2:
                 mwIPFitError.setCallback(self.r2.fitErrorParabolaIP)
-                mwIPFitError.replot(index=self.iperrFitdataIndex)
+                mwIPFitError.replot(index=self.iperrFitDataIndex)
                 self.r2.err = True
                 
             # record the type of fit for each survey
-            if self.iperrFitdataIndex == -1: # same model for each
+            if self.iperrFitDataIndex == -1: # same model for each
                 self.iperrFitPlotIndexList = [index]*len(self.r2.surveys)
-            elif self.iperrFitdataIndex == -2: # same fit from bigSurvey apply on all
+            elif self.iperrFitDataIndex == -2: # same fit from bigSurvey apply on all
                 pass
-            elif self.iperrFitdataIndex > 0:
-                self.iperrFitPlotIndexList[self.iperrFitdataIndex] = index
+            elif self.iperrFitDataIndex > 0:
+                self.iperrFitPlotIndexList[self.iperrFitDataIndex] = index
             print('iperrFitPlotIndexList', self.iperrFitPlotIndexList)
                 
             
 #                if self.r2 is not None and self.iperrFitApplyToAll: #Still beta. I don't know how to visualize a data based on a known error model.
 #                    for s, i in zip(self.r2.surveys, range(len(self.errFitPlotIndexList))):
-#                        s.df['phaseError'] = self.r2.surveys[self.iperrFitdataIndex].phaseErrorModel(s.df) #this correctly applies chosen error model on the data, but doesn't visualize it correctly
+#                        s.df['phaseError'] = self.r2.surveys[self.iperrFitDataIndex].phaseErrorModel(s.df) #this correctly applies chosen error model on the data, but doesn't visualize it correctly
 #                        self.errFitPlotIndexList[i] = index
 #                    infoDump('Error model applied on all datasets!')
                 
@@ -3242,21 +3234,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # region 0 doesn't exist
-            self.r2.assignRes0(dict(zip(regid, x)),
-                               dict(zip(regid, zones)),
-                               dict(zip(regid, fixed)),
-                               dict(zip(regid, phase0)))
+            self.r2.setStartingRes(dict(zip(regid, x)),
+                                   dict(zip(regid, zones)),
+                                   dict(zip(regid, fixed)),
+                                   dict(zip(regid, phase0)))
             noise = float(noiseEdit.text()) / 100 #percentage to proportion
             noiseIP = float(noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             calcAspectRatio()
-            forwardPseudo.plot(self.r2.surveys[0].pseudo, aspect='auto')
+            forwardPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
             fwdContour.setVisible(True)
             tabs.setTabEnabled(4, True)
             tabs.setTabEnabled(5, True)
             tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
-                forwardPseudoIP.plot(self.r2.surveys[0].pseudoIP, aspect='auto')
+                forwardPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
         forwardBtn = QPushButton('Forward Modelling')
         forwardBtn.setAutoDefault(True)
         forwardBtn.clicked.connect(forwardBtnFunc)
@@ -3283,10 +3275,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 contour = False
                 
-            forwardPseudo.setCallback(self.r2.surveys[0].pseudo)
+            forwardPseudo.setCallback(self.r2.surveys[0].showPseudo)
             forwardPseudo.replot(aspect='auto', contour=contour)
             if self.r2.typ[0] == 'c':
-                forwardPseudoIP.setCallback(self.r2.surveys[0].pseudoIP)
+                forwardPseudoIP.setCallback(self.r2.surveys[0].showPseudoIP)
                 forwardPseudoIP.replot(aspect='auto', contour=contour)
         
         fwdContour = QCheckBox('Contour')
@@ -4064,10 +4056,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.r2.createMesh()
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
-            self.r2.assignRes0(dict(zip(regid, x)),
-                               dict(zip(regid, zones)),
-                               dict(zip(regid, fixed)),
-                               dict(zip(regid, phase0)))
+            self.r2.setStartingRes(dict(zip(regid, x)),
+                                   dict(zip(regid, zones)),
+                                   dict(zip(regid, fixed)),
+                                   dict(zip(regid, phase0)))
 
 #            f = print if self.parallel is True else func
 #            if self.parallel is True:
@@ -4532,7 +4524,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorLayout = QVBoxLayout()
 
         def plotInvError():
-            mwInvError.plot(self.r2.pseudoError, aspect = self.plotAspect)
+            mwInvError.plot(self.r2.showPseudoInvError, aspect = self.plotAspect)
 
         mwInvError = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
@@ -4544,7 +4536,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorLayout2Plot = QVBoxLayout()
 
         def plotInvError2():
-            mwInvError2.plot(self.r2.showInversionErrors)
+            mwInvError2.plot(self.r2.showInvError)
         mwInvError2 = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
