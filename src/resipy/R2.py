@@ -2105,7 +2105,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # compute difference in percent in case of reg_mode == 1
         if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
             try:
-                self.compDiff()
+                self.computeDiff()
             except:
                 pass
 #            resRef = np.array(self.meshResults[0].attr_cache['Resistivity(Ohm-m)'])
@@ -3080,7 +3080,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
 
-    def showPseudoIP(self, ax=None, vmin=None, vmax=None):
+    def showPseudoInvError(self, ax=None, vmin=None, vmax=None):
         """Display normalized phase error.
 
         Parameters
@@ -3580,9 +3580,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
 
     def pseudoError(self, ax=None, vmin=None, vmax=None):
-        warnings.warn('This function is deprecated, use showPseudoError() instead.',
+        warnings.warn('This function is deprecated, use showPseudInvError() instead.',
                       DeprecationWarning)
-        self.showPseudoError(ax=ax, vmin=vmin, vmax=vmax)
+        self.showPseudoInvError(ax=ax, vmin=vmin, vmax=vmax)
 
 
     def pseudoErrorIP(self, ax=None, vmin=None, vmax=None):

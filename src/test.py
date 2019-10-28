@@ -33,16 +33,16 @@ print('-------------Testing simple 2D inversion ------------')
 t0 = time.time()
 k = R2()
 k.createSurvey('./resipy/test/syscalFileTopo.csv', ftype='Syscal')
-k.pseudo(contour=True)
+k.showPseudo(contour=True)
 k.importElec('./resipy/test/elecTopo.csv')
 #k.createMesh(typ='quad',elemx=4)
 #k.showMesh()
 k.createMesh(typ='trian',cl=0.1, cl_factor=5)
 k.showMesh()
-#k.linfit()
-k.pwlfit()
+#k.fitErrorLin()
+k.fitErrorPwl()
 k.err = True
-#k.lmefit(iplot=True)
+#k.fitErrorLME(iplot=True)
 k.computeModelError()
 
 k.write2in()
@@ -88,7 +88,7 @@ k.err=True # there is already error inside the protocol.dat imported
 k.invert()
 k.showResults(attr='Magnitude(Ohm-m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
-k.pseudoError()
+k.showPseudoError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -101,8 +101,8 @@ k.createTimeLapseSurvey(['resipy/test/testTimelapse/17031501.csv',
                          'resipy/test/testTimelapse/17051601.csv',
                          'resipy/test/testTimelapse/17040301.csv'])
 #k.createTimeLapseSurvey('resipy/test/testTimelapse')
-k.linfit()
-k.pwlfit()
+k.fitErrorLin()
+k.fitErrorPwl()
 k.err = True
 k.invert(iplot=False, parallel=True, ncores=2)
 k.saveInvPlots(attr='difference(percent)')
@@ -118,8 +118,8 @@ print('-------------Testing Time-lapse in // ------------')
 t0 = time.time()
 k = R2()
 k.createTimeLapseSurvey('resipy/test/testTimelapse')
-k.linfit()
-k.pwlfit()
+k.fitErrorLin()
+k.fitErrorPwl()
 k.err = True
 k.param['reg_mode'] = 1
 k.invert(iplot=False, parallel=True)
@@ -138,10 +138,10 @@ k = R2()
 k.createBatchSurvey('resipy/test/testTimelapse')
 for s in k.surveys:
     s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
-k.removeUnpaired()
+k.filterUnpaired()
 k.filterElec([])
 k.createMesh('trian')
-k.pwlfit()
+k.fitErrorPwl()
 k.err = True
 k.invert(parallel=True, iMoveElec=True)
 k.showResults(index=0)
@@ -303,8 +303,8 @@ k.showResults()
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
-k.pseudoError()
-k.showInversionErrors()
+k.showPseudoInvError()
+k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -363,7 +363,7 @@ k.createMesh(cl=2)
 k.param['reg_mode'] = 1 # background regularization
 k.err = True # test using estimated error model 
 k.errTyp = 'survey'
-k.estError()
+k.estimateError()
 k.computeModelError()
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
