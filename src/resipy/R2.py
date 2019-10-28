@@ -19,7 +19,7 @@ OS = platform.system()
 sys.path.append(os.path.relpath('..'))
 
 #import ResIPy resipy packages 
-from resipy.Survey import Survey
+from resipy.Survey import Survey, deprecated
 from resipy.r2in import write2in
 import resipy.meshTools as mt
 import resipy.isinpolygon as iip
@@ -695,7 +695,6 @@ class R2(object): # R2 master class instanciated by the GUI
             self.surveys[index].plotError(ax=ax)
         
     
-#    def plotErrorDist(self, index=0, ax=None):
     def errorDist(self, index=0, ax=None):
         """Calculate and plots reciprocal error probablity histogram.
         Good data will have a bell shape (normal) distribution where most datapoints have near
@@ -714,7 +713,13 @@ class R2(object): # R2 master class instanciated by the GUI
             self.bigSurvey.errorDist(ax=ax)
         else:
             self.surveys[index].errorDist(ax=ax)
-        
+    
+    
+    def filterManual(self, index=-1, ax=None):
+        """Interactive manual filtering.
+        """
+        if 
+    
         
     def removeDummy(self, index=-1):
         """Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
@@ -3441,68 +3446,68 @@ class R2(object): # R2 master class instanciated by the GUI
             self.surveys[i].elec2distance() # go through each survey and compute electrode
         self.elec = self.surveys[0].elec
         
-    
-    def timelapseErrorModel(self, ax=None):
-        """Fit an power law to time-lapse datasets.
-        
-        Parameters
-        ----------
-        ax : matplotlib axis, optional
-            If specified, graph will be plotted on the given axis.
-        
-        Returns
-        -------
-        fig : matplotlib figure, optional
-            If ax is not specified, the function will return a figure object.
-        """
-        if ax is None:
-            fig, ax = plt.subplots()        
-        numbins = 20
-        
-        if 'recipMean' not in self.df.columns:
-            self.reciprocal()
-        dfg = self.df[self.df['irecip'] > 0]
-        binsize = int(len(dfg['recipMean'])/numbins) 
-        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
-        bins = np.zeros((numbins,2))
-        for i in range(numbins): # bining 
-            ns=i*binsize
-            ne=ns+binsize-1
-            bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
-            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
-#        print(bins)
-#        print(np.sum(np.isnan(bins)))
-#        print(np.sum(np.isinf(bins)))
-#        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
-        coefs = np.polyfit(np.log(bins[:,0]), np.log(bins[:,1]), 1)[::-1] #order is of coefs is opposite to lstqd       
-        R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
-        ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
-        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
-        ax.plot(bins[:,0],R_error_predict,'r', label="Power Law Fit")
-        ax.set_xscale('log')
-        ax.set_yscale('log')
-        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
-        ax.set_ylabel(r'$R_{error} [\Omega]$')
-        ax.set_xlabel(r'$R_{avg} [\Omega]$')      
-        ax.legend(loc='best', frameon=True)
-        R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
-        a1 = np.exp(coefs[0])
-        a2 = coefs[1]
-#        a3 = np.exp(coefs[0])
-#        a4 = coefs[1]
-        print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
-        if a1 > 0.001:
-            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
-        else:
-            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
-        self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
-        def errorModel(df):
-            x = df['recipMean'].values
-            return a1*(np.abs(x)**a2)
-        self.errorModel = errorModel
-#        self.errorModel = lambda x : a1*(np.abs(x)**a2)
-        if ax is None:
-            return fig
+# WIP
+#    def timelapseErrorModel(self, ax=None):
+#        """Fit an power law to time-lapse datasets.
+#        
+#        Parameters
+#        ----------
+#        ax : matplotlib axis, optional
+#            If specified, graph will be plotted on the given axis.
+#        
+#        Returns
+#        -------
+#        fig : matplotlib figure, optional
+#            If ax is not specified, the function will return a figure object.
+#        """
+#        if ax is None:
+#            fig, ax = plt.subplots()        
+#        numbins = 20
+#        
+#        if 'recipMean' not in self.df.columns:
+#            self.computeReciprocal()
+#        dfg = self.df[self.df['irecip'] > 0]
+#        binsize = int(len(dfg['recipMean'])/numbins) 
+#        error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
+#        bins = np.zeros((numbins,2))
+#        for i in range(numbins): # bining 
+#            ns=i*binsize
+#            ne=ns+binsize-1
+#            bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
+#            bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()    
+##        print(bins)
+##        print(np.sum(np.isnan(bins)))
+##        print(np.sum(np.isinf(bins)))
+##        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
+#        coefs = np.polyfit(np.log(bins[:,0]), np.log(bins[:,1]), 1)[::-1] #order is of coefs is opposite to lstqd       
+#        R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
+#        ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
+#        ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
+#        ax.plot(bins[:,0],R_error_predict,'r', label="Power Law Fit")
+#        ax.set_xscale('log')
+#        ax.set_yscale('log')
+#        # lines above are work around to https://github.com/matplotlib/matplotlib/issues/5541/
+#        ax.set_ylabel(r'$R_{error} [\Omega]$')
+#        ax.set_xlabel(r'$R_{avg} [\Omega]$')      
+#        ax.legend(loc='best', frameon=True)
+#        R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
+#        a1 = np.exp(coefs[0])
+#        a2 = coefs[1]
+##        a3 = np.exp(coefs[0])
+##        a4 = coefs[1]
+#        print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
+#        if a1 > 0.001:
+#            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+#        else:
+#            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+#        self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
+#        def errorModel(df):
+#            x = df['recipMean'].values
+#            return a1*(np.abs(x)**a2)
+#        self.errorModel = errorModel
+##        self.errorModel = lambda x : a1*(np.abs(x)**a2)
+#        if ax is None:
+#            return fig
     
         
     def compCond(self):
