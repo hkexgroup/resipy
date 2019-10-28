@@ -51,7 +51,6 @@ class Survey(object):
         reciprocal. Note that if none of the quadrupoles have reciprocal
         they will all be kept anyway.
     """
-    
     def __init__(self, fname, ftype='', name='', spacing=None, parser=None, keepAll=True):
         self.elec = []
         self.df = pd.DataFrame()
@@ -813,7 +812,7 @@ class Survey(object):
 #        self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
-x
+        
         
     def fitErrorLin(self, ax=None):
         """Fit a linear relationship to the resistivity data.
@@ -1041,10 +1040,9 @@ x
         self.addFilteredIP()
         
     
-    def filterRecip(self):
+    def filterRecipIP(self):
         """Removing reciprocal measurements from dataset - only for visualization purposes on heatmap()
         """
-        print('==============removerecip is used here !!---------------')
         if self.filterDataIP.empty:
             self.filterDataIP = self.df.query('irecip>=0')
         else:
