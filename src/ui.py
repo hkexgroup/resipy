@@ -2290,7 +2290,7 @@ class App(QMainWindow):
                 plotError(-2)
             else:
                 self.errFitdataIndex = index-2
-                plotError(index-2)
+#                plotError(index-2)
                 errFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
                 errFitTypeFunc(self.errFitPlotIndexList[index-2])
         errFitfnamesCombo = QComboBox()
