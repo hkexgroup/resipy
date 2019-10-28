@@ -61,6 +61,8 @@ class Survey(object):
         self.protocolIPFlag = False
         self.kFactor = 1
         self.errorModel = None # function instanticated after fitting an error model with reciprocal errors
+        self.iselect = None # use in filterManual()
+        self.eselect = None # idem
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
                         'Sting', 'ABEM-Lund', 'Lippmann']# add parser types here! 
@@ -321,8 +323,6 @@ class Survey(object):
                 self.df.loc[ie, 'recipMean'] = self.df.loc[ie, 'resist'].values
             print('filterData:', np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
             return np.sum(~i2keep)
-    
-    
 
     
     
@@ -507,13 +507,13 @@ class Survey(object):
         if all(np.isnan(self.df['recipError']) == True):
             raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
         reciprocalErrRel = np.abs(self.df['reciprocalErrRel'].replace(np.nan, 0))
-        igood = reciprocalErrRel < (pcnt/100) # good indexes to keep 
+        igood = reciprocalErrRel < (percent/100) # good indexes to keep 
         df_temp = self.df.copy()
         self.df = df_temp[igood] #keep the indexes where the error is below the threshold
         self.dfPhaseReset = self.df.copy()
         if debug:
             numRemoved = len(df_temp)-len(self.df)
-            msgDump = "%i measurements with greater than %3.1f%% reciprocal error removed!" % (numRemoved,pcnt)
+            msgDump = "%i measurements with greater than %3.1f%% reciprocal error removed!" % (numRemoved, percent)
             print(msgDump)
             return numRemoved
         
@@ -658,9 +658,14 @@ class Survey(object):
             If ax is not specified, the function will return a figure object.
         """
         if ax is None:
-            fig, ax = plt.subplots()        
-        numbins_ip = 16
-        binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
+            fig, ax = plt.subplots()
+#        numbins_ip = 16
+#        binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip)
+        binsize_ip = 16 # default to 20 sample per bins
+        numbins_ip = int(self.df.shape[0]/binsize_ip) # max 20 bins
+        if numbins_ip > 20: # we want max 20 bins
+            binsize_ip = int(len(self.df['reci_IP_err'])/20) # at least 20 samples per bin
+            numbins_ip = 20
         Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on input  phase range
@@ -713,8 +718,13 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()        
-        numbins_ip = 16
-        binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
+#        numbins_ip = 16
+#        binsize_ip = int(len(self.df['reci_IP_err'])/numbins_ip) 
+        binsize_ip = 16 # default to 20 sample per bins
+        numbins_ip = int(self.df.shape[0]/binsize_ip) # max 20 bins
+        if numbins_ip > 20: # we want max 20 bins
+            binsize_ip = int(len(self.df['reci_IP_err'])/20) # at least 20 samples per bin
+            numbins_ip = 20
         Rn = np.abs(self.df['recipMean'])
         phasedisc = self.df['reci_IP_err']
         error_input_ip = (pd.concat((Rn,phasedisc),axis=1).rename(columns = {'recipMean':'absRn','reci_IP_err':'Phase_dicrep'})).sort_values(by='absRn').reset_index(drop = True).dropna().query('Phase_dicrep>%s & Phase_dicrep<%s' % (-self.phiCbarMax, self.phiCbarMax))# Sorting data based on R. the querry is based on environmental IP
@@ -766,11 +776,14 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()        
-        numbins = 20
         if 'recipMean' not in self.df.columns:
             self.computeReciprocal()
         dfg = self.df[self.df['irecip'] > 0]
-        binsize = int(len(dfg['recipMean'])/numbins) 
+        binsize = 20 # default to 20 sample per bins
+        numbins = int(dfg.shape[0]/binsize) # max 20 bins
+        if numbins > 20: # we want max 20 bins
+            binsize = int(len(dfg['recipMean'])/20) # at least 20 samples per bin
+            numbins = 20
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         error_input['recipError'] = error_input['recipError']
         bins = np.zeros((numbins,2))
@@ -809,7 +822,6 @@ class Survey(object):
             x = df['recipMean'].values
             return a1*(np.abs(x)**a2)
         self.errorModel = errorModel
-#        self.errorModel = lambda x : a1*(np.abs(x)**a2)
         if ax is None:
             return fig
         
@@ -829,11 +841,14 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()        
-        numbins = 20
         if 'recipMean' not in self.df.columns:
             self.computeReciprocal()
         dfg = self.df[self.df['irecip'] > 0]
-        binsize = int(len(dfg['recipMean'])/numbins) 
+        binsize = 20 # default to 20 sample per bins
+        numbins = int(dfg.shape[0]/binsize) # max 20 bins
+        if numbins > 20: # we want max 20 bins
+            binsize = int(len(dfg['recipMean'])/20) # at least 20 samples per bin
+            numbins = 20
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         error_input['recipError'] = error_input['recipError']
         bins = np.zeros((numbins,2))
@@ -844,7 +859,11 @@ class Survey(object):
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
 #        coefs= np.linalg.lstsq(np.vstack([bins[:,0], np.ones(len(bins[:,0]))]).T, bins[:,1], rcond=None)[0] # calculating fitting coefficients (a,m) 
         coefs = np.polyfit(bins[:,0], bins[:,1], 1)
+#        if coefs[1] < 0: # we don't want negative error -> doesn't make sense
+#            slope = np.polyfit(bins[:,0], bins[:,1], 0)
+#            coefs = [slope, 0]
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
+        print(np.min(R_error_predict)) # TODO negative error here ! that's why the red fit line goes down
         ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
         ax.plot(bins[:,0],R_error_predict,'r', label="Linear Fit")
@@ -961,6 +980,8 @@ class Survey(object):
             ax.set_title('Linear Mixed Effect Model Fit')
             ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
             ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+            ax.set_xscale('log')
+            ax.set_yscale('log')
         except Exception as e:
             print('ERROR in Survey.lmefit(): Rscript command might not be available or the lme4 package is not installed.', e)
 
@@ -1811,145 +1832,142 @@ class Survey(object):
             fh.write(line)
 
 
-#%% deprecated methods
-    def basicFilter(self):
-        warnings.warn('This function is deprecated, use filterDefault() instead',
-                      DeprecationWarning)
-        self.filterDefault()
-        
-    def removeUnpaired(self):
-        warnings.warn('This function is deprecated, use filterUnpaired() instead',
-              DeprecationWarning)
-        self.filterUnpaired()
-    
-    def estError(self, a_wgt=0.01, b_wgt=0.02):
-        warnings.warn('The function is deprecated, use estimateError() instead.',
-                      DeprecationWarning)
-        self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
-            
-    
-    def filterdip(self, elec): # deleted specific elec data
-        warnings.warn('The function is deprecated, use filterElec() instead.',
-                      DeprecationWarning)
-        index = (self.array == elec[0]).any(-1)
-        for i in range(1,len(elec)):
-            index = index | (self.array == elec[i]).any(-1)
-        self.filterData(~index)
-
-
-    def dca(self, dump=print):
-        warnings.warn('The function is deprecated, use filterDCA() instead.',
-                      DeprecationWarning)
-        self.filterDCA(dump=dump)
-
-        
-    def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
-                        log=False, geom=False, label='', vmin=None, vmax=None):
-        warnings.warn('The function is deprecated, use filterManual() instead.',
-                      DeprecationWarning)
-        self.filterManual(ax=ax, figsize=figsize, contour=contour,
-                          log=log, geom=geom, label=label, vmin=vmin, vmax=vmax)
- 
-    def pseudo(self, ax=None, bx=None, **kwargs):
-        warnings.warn('The function is deprecated, use showPseudo() instead.',
-                      DeprecationWarning)
-        self.pseudo(ax=ax, bx=bx, **kwargs)
-    
-    
-    def pseudoIP(self, ax=None, bx=None, **kwargs):
-        warnings.warn('The function is deprecated, use showPseudoIP() instead.',
-                      DeprecationWarning)
-        self.showPseudoIP(ax=ax, bx=bx, **kwargs)
-    
-    
-    def reciprocal(self):
-        warnings.warn('This function is deprecated, use computeReciprocal() instead',
-              DeprecationWarning)
-        out = self.computeReciprocal()
-        return out
-    
-    
-    def errorDist(self, ax=None):
-        warnings.warn('This function is deprecated, use showErrorDist() instead',
-              DeprecationWarning)
-        self.showErrorDist(ax=ax)
-
-
-    def removeDummy(self):
-        warnings.warn('This function is deprecated, use filterDummy() instead',
-              DeprecationWarning)
-        self.filterDummy()
-    
-    
-    def plotError(self, ax=None):
-        warnings.warn('The function is deprecated, use showError() instead.',
-                      DeprecationWarning)
-        self.showError(ax=ax)
-    
-        
-    def phaseplotError(self, ax=None):
-        warnings.warn('The function is deprecated, use showErrorIP() instead.',
-                      DeprecationWarning)
-        self.showErrorIP(self, ax=ax)
-        
-        
-    def pwlfitIP(self, ax=None):
-        warnings.warn('The function is deprecated, use fitErrorPwlIP() instead.',
-                      DeprecationWarning)
-        self.fitErrorPwlIP(ax=ax)
-        
-    
-    def plotIPFitParabola(self, ax=None):
-        warnings.warn('The function is deprecated, use fitErrorParabolaIP() instead.',
-                      DeprecationWarning)
-        self.fitErrorParabolaIP(ax=ax)
-        
-
-    def pwlfit(self, ax=None):
-        warnings.warn('The function is deprecated, use fitErrorPwl() instead.',
-                      DeprecationWarning)
-        self.fitErrorPwl(ax=ax)
-              
-    
-    def pwlfit(self, ax=None):
-        warnings.warn('The function is deprecated, use fitErrorPwl() instead.',
-                      DeprecationWarning)
-        self.fitErrorPwl(ax=ax)
-        
-
-    def lmefit(self, iplot=True, ax=None, rpath=None):
-        warnings.warn('The function is deprecated, use fitErrorLME() instead.',
-                      DeprecationWarning)
-        self.fitErrorLME(iplot=iplot, ax=ax, rpath=rpath)
-    
-    
-    def heatmap(self, ax=None):
-        warnings.warn('The function is deprecated, use showHeatmap instead.',
-                      DeprecationWarning)
-        self.showHeatmap()
-    
-    
-    def iprangefilt(self, phimin, phimax):
-        warnings.warn('The function is deprecated, use showError() instead.',
-                      DeprecationWarning)
-        self.filterRangeIP(phimin, phimax)
-    
-    
-    def removerecip(self):
-        warnings.warn('The function is deprecated, use filterRecip() instead.',
-                      DeprecationWarning)
-        self.filterRecip(self)
-    
-    
-    def removenested(self):
-        warnings.warn('The function is deprecated, use filterNested() instead.',
-                      DeprecationWarning)
-        
-        
-    def removeneg(self):
-        warnings.warn('The function is deprecated, use filterNegative() instead.',
-                      DeprecationWarning)
-        self.filterNegative()
-        
-        
+##%% deprecated methods
+#    def basicFilter(self):
+#        warnings.warn('This function is deprecated, use filterDefault() instead',
+#                      DeprecationWarning)
+#        self.filterDefault()
+#        
+#    def removeUnpaired(self):
+#        warnings.warn('This function is deprecated, use filterUnpaired() instead',
+#              DeprecationWarning)
+#        n = self.filterUnpaired()
+#        return n
+#    
+#    def estError(self, a_wgt=0.01, b_wgt=0.02):
+#        warnings.warn('The function is deprecated, use estimateError() instead.',
+#                      DeprecationWarning)
+#        self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
+#            
+#    
+#    def filterdip(self, elec): # deleted specific elec data
+#        warnings.warn('The function is deprecated, use filterElec() instead.',
+#                      DeprecationWarning)
+#        index = (self.array == elec[0]).any(-1)
+#        for i in range(1,len(elec)):
+#            index = index | (self.array == elec[i]).any(-1)
+#        n = self.filterData(~index)
+#        return n
+#
+#
+#    def dca(self, dump=print):
+#        warnings.warn('The function is deprecated, use filterDCA() instead.',
+#                      DeprecationWarning)
+#        self.filterDCA(dump=dump)
+#
+#        
+#    def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
+#                        log=False, geom=False, label='', vmin=None, vmax=None):
+#        warnings.warn('The function is deprecated, use filterManual() instead.',
+#                      DeprecationWarning)
+#        self.filterManual(ax=ax, figsize=figsize, contour=contour,
+#                          log=log, geom=geom, label=label, vmin=vmin, vmax=vmax)
+# 
+#    def pseudo(self, ax=None, bx=None, **kwargs):
+#        warnings.warn('The function is deprecated, use showPseudo() instead.',
+#                      DeprecationWarning)
+#        self.pseudo(ax=ax, bx=bx, **kwargs)
+#    
+#    
+#    def pseudoIP(self, ax=None, bx=None, **kwargs):
+#        warnings.warn('The function is deprecated, use showPseudoIP() instead.',
+#                      DeprecationWarning)
+#        self.showPseudoIP(ax=ax, bx=bx, **kwargs)
+#    
+#    
+#    def reciprocal(self):
+#        warnings.warn('This function is deprecated, use computeReciprocal() instead',
+#              DeprecationWarning)
+#        out = self.computeReciprocal()
+#        return out
+#    
+#    
+#    def errorDist(self, ax=None):
+#        warnings.warn('This function is deprecated, use showErrorDist() instead',
+#              DeprecationWarning)
+#        self.showErrorDist(ax=ax)
+#
+#
+#    def removeDummy(self):
+#        warnings.warn('This function is deprecated, use filterDummy() instead',
+#              DeprecationWarning)
+#        n = self.filterDummy()
+#        return n
+#    
+#    
+#    def plotError(self, ax=None):
+#        warnings.warn('The function is deprecated, use showError() instead.',
+#                      DeprecationWarning)
+#        self.showError(ax=ax)
+#    
+#        
+#    def phaseplotError(self, ax=None):
+#        warnings.warn('The function is deprecated, use showErrorIP() instead.',
+#                      DeprecationWarning)
+#        self.showErrorIP(self, ax=ax)
+#        
+#        
+#    def pwlfitIP(self, ax=None):
+#        warnings.warn('The function is deprecated, use fitErrorPwlIP() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorPwlIP(ax=ax)
+#        
+#    
+#    def plotIPFitParabola(self, ax=None):
+#        warnings.warn('The function is deprecated, use fitErrorParabolaIP() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorParabolaIP(ax=ax)
+#              
+#    
+#    def pwlfit(self, ax=None):
+#        warnings.warn('The function is deprecated, use fitErrorPwl() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorPwl(ax=ax)
+#        
+#
+#    def lmefit(self, iplot=True, ax=None, rpath=None):
+#        warnings.warn('The function is deprecated, use fitErrorLME() instead.',
+#                      DeprecationWarning)
+#        self.fitErrorLME(iplot=iplot, ax=ax, rpath=rpath)
+#    
+#    
+#    def heatmap(self, ax=None):
+#        warnings.warn('The function is deprecated, use showHeatmap instead.',
+#                      DeprecationWarning)
+#        self.showHeatmap()
+#    
+#    
+#    def iprangefilt(self, phimin, phimax):
+#        warnings.warn('The function is deprecated, use showError() instead.',
+#                      DeprecationWarning)
+#        self.filterRangeIP(phimin, phimax)
+#    
+#    
+#    def removerecip(self):
+#        warnings.warn('The function is deprecated, use filterRecip() instead.',
+#                      DeprecationWarning)
+#        self.filterRecip(self)
+#    
+#    
+#    def removenested(self):
+#        warnings.warn('The function is deprecated, use filterNested() instead.',
+#                      DeprecationWarning)
+#        self.filterNested()
+#        
+#    def removeneg(self):
+#        warnings.warn('The function is deprecated, use filterNegative() instead.',
+#                      DeprecationWarning)
+#        self.filterNegative()
+#        
+#        
         
