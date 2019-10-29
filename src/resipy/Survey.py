@@ -1832,142 +1832,142 @@ class Survey(object):
             fh.write(line)
 
 
-##%% deprecated methods
-#    def basicFilter(self):
-#        warnings.warn('This function is deprecated, use filterDefault() instead',
-#                      DeprecationWarning)
-#        self.filterDefault()
-#        
-#    def removeUnpaired(self):
-#        warnings.warn('This function is deprecated, use filterUnpaired() instead',
-#              DeprecationWarning)
-#        n = self.filterUnpaired()
-#        return n
-#    
-#    def estError(self, a_wgt=0.01, b_wgt=0.02):
-#        warnings.warn('The function is deprecated, use estimateError() instead.',
-#                      DeprecationWarning)
-#        self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
-#            
-#    
-#    def filterdip(self, elec): # deleted specific elec data
-#        warnings.warn('The function is deprecated, use filterElec() instead.',
-#                      DeprecationWarning)
-#        index = (self.array == elec[0]).any(-1)
-#        for i in range(1,len(elec)):
-#            index = index | (self.array == elec[i]).any(-1)
-#        n = self.filterData(~index)
-#        return n
-#
-#
-#    def dca(self, dump=print):
-#        warnings.warn('The function is deprecated, use filterDCA() instead.',
-#                      DeprecationWarning)
-#        self.filterDCA(dump=dump)
-#
-#        
-#    def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
-#                        log=False, geom=False, label='', vmin=None, vmax=None):
-#        warnings.warn('The function is deprecated, use filterManual() instead.',
-#                      DeprecationWarning)
-#        self.filterManual(ax=ax, figsize=figsize, contour=contour,
-#                          log=log, geom=geom, label=label, vmin=vmin, vmax=vmax)
-# 
-#    def pseudo(self, ax=None, bx=None, **kwargs):
-#        warnings.warn('The function is deprecated, use showPseudo() instead.',
-#                      DeprecationWarning)
-#        self.pseudo(ax=ax, bx=bx, **kwargs)
-#    
-#    
-#    def pseudoIP(self, ax=None, bx=None, **kwargs):
-#        warnings.warn('The function is deprecated, use showPseudoIP() instead.',
-#                      DeprecationWarning)
-#        self.showPseudoIP(ax=ax, bx=bx, **kwargs)
-#    
-#    
-#    def reciprocal(self):
-#        warnings.warn('This function is deprecated, use computeReciprocal() instead',
-#              DeprecationWarning)
-#        out = self.computeReciprocal()
-#        return out
-#    
-#    
-#    def errorDist(self, ax=None):
-#        warnings.warn('This function is deprecated, use showErrorDist() instead',
-#              DeprecationWarning)
-#        self.showErrorDist(ax=ax)
-#
-#
-#    def removeDummy(self):
-#        warnings.warn('This function is deprecated, use filterDummy() instead',
-#              DeprecationWarning)
-#        n = self.filterDummy()
-#        return n
-#    
-#    
-#    def plotError(self, ax=None):
-#        warnings.warn('The function is deprecated, use showError() instead.',
-#                      DeprecationWarning)
-#        self.showError(ax=ax)
-#    
-#        
-#    def phaseplotError(self, ax=None):
-#        warnings.warn('The function is deprecated, use showErrorIP() instead.',
-#                      DeprecationWarning)
-#        self.showErrorIP(self, ax=ax)
-#        
-#        
-#    def pwlfitIP(self, ax=None):
-#        warnings.warn('The function is deprecated, use fitErrorPwlIP() instead.',
-#                      DeprecationWarning)
-#        self.fitErrorPwlIP(ax=ax)
-#        
-#    
-#    def plotIPFitParabola(self, ax=None):
-#        warnings.warn('The function is deprecated, use fitErrorParabolaIP() instead.',
-#                      DeprecationWarning)
-#        self.fitErrorParabolaIP(ax=ax)
-#              
-#    
-#    def pwlfit(self, ax=None):
-#        warnings.warn('The function is deprecated, use fitErrorPwl() instead.',
-#                      DeprecationWarning)
-#        self.fitErrorPwl(ax=ax)
-#        
-#
-#    def lmefit(self, iplot=True, ax=None, rpath=None):
-#        warnings.warn('The function is deprecated, use fitErrorLME() instead.',
-#                      DeprecationWarning)
-#        self.fitErrorLME(iplot=iplot, ax=ax, rpath=rpath)
-#    
-#    
-#    def heatmap(self, ax=None):
-#        warnings.warn('The function is deprecated, use showHeatmap instead.',
-#                      DeprecationWarning)
-#        self.showHeatmap()
-#    
-#    
-#    def iprangefilt(self, phimin, phimax):
-#        warnings.warn('The function is deprecated, use showError() instead.',
-#                      DeprecationWarning)
-#        self.filterRangeIP(phimin, phimax)
-#    
-#    
-#    def removerecip(self):
-#        warnings.warn('The function is deprecated, use filterRecip() instead.',
-#                      DeprecationWarning)
-#        self.filterRecip(self)
-#    
-#    
-#    def removenested(self):
-#        warnings.warn('The function is deprecated, use filterNested() instead.',
-#                      DeprecationWarning)
-#        self.filterNested()
-#        
-#    def removeneg(self):
-#        warnings.warn('The function is deprecated, use filterNegative() instead.',
-#                      DeprecationWarning)
-#        self.filterNegative()
-#        
-#        
+#%% deprecated methods
+    def basicFilter(self):
+        warnings.warn('This function is deprecated, use filterDefault() instead',
+                      DeprecationWarning)
+        self.filterDefault()
+        
+    def removeUnpaired(self):
+        warnings.warn('This function is deprecated, use filterUnpaired() instead',
+              DeprecationWarning)
+        n = self.filterUnpaired()
+        return n
+    
+    def estError(self, a_wgt=0.01, b_wgt=0.02):
+        warnings.warn('The function is deprecated, use estimateError() instead.',
+                      DeprecationWarning)
+        self.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
+            
+    
+    def filterdip(self, elec): # deleted specific elec data
+        warnings.warn('The function is deprecated, use filterElec() instead.',
+                      DeprecationWarning)
+        index = (self.array == elec[0]).any(-1)
+        for i in range(1,len(elec)):
+            index = index | (self.array == elec[i]).any(-1)
+        n = self.filterData(~index)
+        return n
+
+
+    def dca(self, dump=print):
+        warnings.warn('The function is deprecated, use filterDCA() instead.',
+                      DeprecationWarning)
+        self.filterDCA(dump=dump)
+
+        
+    def manualFiltering(self, ax=None, figsize=(12,3), contour=False,
+                        log=False, geom=False, label='', vmin=None, vmax=None):
+        warnings.warn('The function is deprecated, use filterManual() instead.',
+                      DeprecationWarning)
+        self.filterManual(ax=ax, figsize=figsize, contour=contour,
+                          log=log, geom=geom, label=label, vmin=vmin, vmax=vmax)
+ 
+    def pseudo(self, ax=None, bx=None, **kwargs):
+        warnings.warn('The function is deprecated, use showPseudo() instead.',
+                      DeprecationWarning)
+        self.pseudo(ax=ax, bx=bx, **kwargs)
+    
+    
+    def pseudoIP(self, ax=None, bx=None, **kwargs):
+        warnings.warn('The function is deprecated, use showPseudoIP() instead.',
+                      DeprecationWarning)
+        self.showPseudoIP(ax=ax, bx=bx, **kwargs)
+    
+    
+    def reciprocal(self):
+        warnings.warn('This function is deprecated, use computeReciprocal() instead',
+              DeprecationWarning)
+        out = self.computeReciprocal()
+        return out
+    
+    
+    def errorDist(self, ax=None):
+        warnings.warn('This function is deprecated, use showErrorDist() instead',
+              DeprecationWarning)
+        self.showErrorDist(ax=ax)
+
+
+    def removeDummy(self):
+        warnings.warn('This function is deprecated, use filterDummy() instead',
+              DeprecationWarning)
+        n = self.filterDummy()
+        return n
+    
+    
+    def plotError(self, ax=None):
+        warnings.warn('The function is deprecated, use showError() instead.',
+                      DeprecationWarning)
+        self.showError(ax=ax)
+    
+        
+    def phaseplotError(self, ax=None):
+        warnings.warn('The function is deprecated, use showErrorIP() instead.',
+                      DeprecationWarning)
+        self.showErrorIP(self, ax=ax)
+        
+        
+    def pwlfitIP(self, ax=None):
+        warnings.warn('The function is deprecated, use fitErrorPwlIP() instead.',
+                      DeprecationWarning)
+        self.fitErrorPwlIP(ax=ax)
+        
+    
+    def plotIPFitParabola(self, ax=None):
+        warnings.warn('The function is deprecated, use fitErrorParabolaIP() instead.',
+                      DeprecationWarning)
+        self.fitErrorParabolaIP(ax=ax)
+              
+    
+    def pwlfit(self, ax=None):
+        warnings.warn('The function is deprecated, use fitErrorPwl() instead.',
+                      DeprecationWarning)
+        self.fitErrorPwl(ax=ax)
+        
+
+    def lmefit(self, iplot=True, ax=None, rpath=None):
+        warnings.warn('The function is deprecated, use fitErrorLME() instead.',
+                      DeprecationWarning)
+        self.fitErrorLME(iplot=iplot, ax=ax, rpath=rpath)
+    
+    
+    def heatmap(self, ax=None):
+        warnings.warn('The function is deprecated, use showHeatmap instead.',
+                      DeprecationWarning)
+        self.showHeatmap()
+    
+    
+    def iprangefilt(self, phimin, phimax):
+        warnings.warn('The function is deprecated, use showError() instead.',
+                      DeprecationWarning)
+        self.filterRangeIP(phimin, phimax)
+    
+    
+    def removerecip(self):
+        warnings.warn('The function is deprecated, use filterRecip() instead.',
+                      DeprecationWarning)
+        self.filterRecip(self)
+    
+    
+    def removenested(self):
+        warnings.warn('The function is deprecated, use filterNested() instead.',
+                      DeprecationWarning)
+        self.filterNested()
+        
+    def removeneg(self):
+        warnings.warn('The function is deprecated, use filterNegative() instead.',
+                      DeprecationWarning)
+        self.filterNegative()
+        
+        
         
