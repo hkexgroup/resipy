@@ -24,7 +24,7 @@ from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  res
 from resipy.DCA import DCA
 
 import warnings
-
+warnings.simplefilter('default')
 
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 

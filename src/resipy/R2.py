@@ -33,6 +33,7 @@ apiPath = os.path.abspath(os.path.join(os.path.abspath(__file__), '../'))
 print('API path = ', apiPath)
 print('ResIPy version = ',str(ResIPy_version))
 
+warnings.simplefilter('default') # this will show the deprecation warnings
 
 '''NOTE
 pre-processing and error models for unique, combined or multiple surveys:
