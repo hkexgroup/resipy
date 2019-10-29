@@ -4698,17 +4698,26 @@ USA: Trelgol Publishing, (2006).
             versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
             versionCheck = versionSource.read().decode()
             version = versionCheck.split()[1] # assuming version number is in 2nd line of version.txt
+            changeLogSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/CHANGELOG?inline=false')
+            changeLogTxt = changeLogSource.read().decode()
+            newChangesRaw = changeLogTxt.split('\n\n')[0].split('\n')
+            newChanges = ''.join('{}<br>'*len(newChangesRaw[2:])).format(*newChangesRaw[2:])
             print('online version :', version)
         except:
             pass
-        return version
+        return [version, newChanges]
     
-    def updateCheckerShow(self, version):
+    def updateCheckerShow(self, msgInput):
+        version = msgInput[0]
+        newChanges = msgInput[1]
         if ResIPy_version != version:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
-            msg.setInformativeText('''Please download the latest version of ResIPy at:<p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p><br>''')
+            msg.setInformativeText('''Please download the latest version of ResIPy at:\
+                                   <p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p>\
+                                   New updates:<br>\
+                                   %s''' % newChanges)
             msg.setWindowTitle("New version available")
             bttnUpY = msg.addButton(QMessageBox.Yes)
             bttnUpY.setText('Update')
