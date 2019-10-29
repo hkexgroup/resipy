@@ -1556,7 +1556,8 @@ class Mesh:
         home_dir = os.path.expanduser('~')
         drive_letter = home_dir.split('\\')[0]
         #find paraview in program files?
-        path = drive_letter+'\Program Files'
+#        path = drive_letter+'\Program Files'
+        path = os.path.join(drive_letter, os.sep,'Program Files')
         contents = os.listdir(path)
         found = False
         for i,pname in enumerate(contents):
@@ -1566,7 +1567,8 @@ class Mesh:
                 break
     
         if not found:#try looking in x86 porgram files instead
-            path = drive_letter+'\Program Files (x86)'
+#            path = drive_letter+'\Program Files (x86)'
+            path = os.path.join(drive_letter, os.sep,'Program Files (x86)')
             contents = os.listdir(path)
             for i,pname in enumerate(contents):
                 if pname.find("ParaView") != -1:
@@ -1577,7 +1579,8 @@ class Mesh:
         if not found:
             return False, 'n/a' 
         else:
-            return True, os.path.join(para_dir,'bin\paraview.exe')
+#            return True, os.path.join(para_dir,'bin\paraview.exe')
+            return True, os.path.join(para_dir,'bin','paraview.exe')
         #the string output can be run in the console if it is enclosed in speech
         #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
         
@@ -2783,7 +2786,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -2'
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
@@ -3033,7 +3037,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
