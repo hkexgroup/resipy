@@ -1054,7 +1054,7 @@ class R2(object): # R2 master class instanciated by the GUI
         iremote = np.in1d(self.elec[:,0], remote_flags)
         elec = elec[~iremote,:]
 
-        if all(self.elec[:,1] == 0): # 2D survey:
+        if self.typ == 'R2' or self.typ == 'cR2': # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
                 maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
@@ -1154,7 +1154,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.doi = doi
 
         if typ == 'default':
-            if all(self.elec[:,1] == 0): # it's a 2D mesh
+            if self.typ == 'R2' or self.typ == 'cR2': # it's a 2D mesh
                 typ = 'quad'
                 print('Using a quadrilateral mesh.')
             else:
@@ -1561,6 +1561,11 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             ipBool = False
 
+        if self.typ == 'R2' or self.typ == 'cR2':
+            threed = False
+        else:
+            threed = True
+            
         if err is None:
             err = self.err
         errTyp = self.errTyp # either 'global' (default) or 'survey'
@@ -1618,7 +1623,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 res0Bool = False if self.param['reg_mode'] == 1 else True
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
-                                            isubset=indexes[i+1])
+                                            isubset=indexes[i+1], threed=threed)
                 content = content + str(protocol.shape[0]) + '\n'
                 content = content + protocol.to_csv(sep='\t', header=False, index=False)
 
@@ -1632,7 +1637,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if 'mesh3d.dat' in os.listdir(self.dirname):
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
-                    s.write2protocol(os.path.join(refdir, 'protocol.dat'),err=err) # no subset for background, just use all
+                    s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
@@ -1656,7 +1661,7 @@ class R2(object): # R2 master class instanciated by the GUI
                         s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
                     # if not it means that the 'resError' columns has already
                     # been populated when the files has been imported
-                df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot)
+                df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot, threed=threed)
                 content = content + str(len(df)) + '\n'
                 content = content + df.to_csv(sep='\t', header=False, index=False)
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
@@ -1665,7 +1670,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # for normal inversion (one survey) --------------------------
         else:
             self.surveys[0].write2protocol(os.path.join(self.dirname, 'protocol.dat'),
-                        err=err, ip=ipBool, errTot=errTot)
+                        err=err, ip=ipBool, errTot=errTot, threed=threed)
 
 
     def runR2(self, dirname='', dump=print):
@@ -2979,7 +2984,7 @@ class R2(object): # R2 master class instanciated by the GUI
             seq = np.vstack(seq)
             seq = np.unique(seq, axis=0)
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
-        if all(self.elec[:,1] == 0) is False: # it's a 3D survey
+        if self.typ == 'R3t' or self.typ == 'cR3t': # it's a 3D survey
             protocol.insert(1, 'sa', 1)
             protocol.insert(3, 'sb', 1)
             protocol.insert(5, 'sm', 1)

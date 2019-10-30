@@ -1304,8 +1304,8 @@ class Survey(object):
     
     
     def write2protocol(self, outputname='', err=False, errTot=False,
-                       ip=False, res0=False, isubset=None):
-        """Write a protocol.dat file for R2 or cR2.
+                       ip=False, res0=False, isubset=None, threed=False):
+        """Write a protocol.dat file for R2, cR2, R3t, cR3t.
         
         Parameters
         ----------
@@ -1326,6 +1326,9 @@ class Survey(object):
             If specified, it will be used to take a subset of the original
             array. It can be used for difference inversion to take measurements
             in common between all the surveys.
+        threed : bool, optional
+            If `True`, it's for a 3D survey (and then add line numbers) or for
+            a 2D survey (default).
             
         Returns
         -------
@@ -1385,7 +1388,7 @@ class Survey(object):
 
                     
         # if it's 3D, we add the line number (all electrode on line 1)
-        if all(self.elec[:,1] == 0) is False:
+        if threed:
             protocol.insert(1, 'sa', 1)
             protocol.insert(3, 'sb', 1)
             protocol.insert(5, 'sm', 1)
