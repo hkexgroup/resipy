@@ -1445,6 +1445,7 @@ class App(QMainWindow):
         self.delimiter = ''
         def delimFunc(index):
             delimiterBox.hide()
+            delimiterBox.clear()
             if index == 0:
                 self.delimiter = ''
             if index == 1: 
@@ -1457,7 +1458,9 @@ class App(QMainWindow):
                 self.delimiter = ';'
             elif index == 5:
                 delimiterBox.show()
-                self.delimiter = delimiterBox.text()
+                
+        def customDelimFunc():
+            self.delimiter = delimiterBox.text()
 
         delimiterMenue = QComboBox()
         delimiterMenue.setMinimumWidth(200)
@@ -1466,6 +1469,7 @@ class App(QMainWindow):
         
         delimiterBox = QLineEdit()
         delimiterBox.setFixedWidth(100)
+        delimiterBox.editingFinished.connect(customDelimFunc)
         delimiterBox.hide()
         
         delimiterLabel = QLabel('Delimiter:')
