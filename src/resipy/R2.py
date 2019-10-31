@@ -671,7 +671,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.fitErrorLin(ax=ax)
             # redo the legend
             newlegend = []
-            if ax is not None:
+            if ax is not None and len(self.surveys) > 1:
                 legends = ax.get_legend().get_texts()
                 for a in legends:
                     newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
@@ -708,7 +708,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.fitErrorPwl(ax=ax)
             # redo the legend
             newlegend = []
-            if ax is not None:
+            if ax is not None and len(self.surveys) > 1:
                 legends = ax.get_legend().get_texts()
                 for a in legends:
                     newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
@@ -743,7 +743,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.fitErrorLME(ax=ax, rpath=rpath, iplot=iplot)
             # redo the legend
             newlegend = []
-            if ax is not None:
+            if ax is not None and len(self.surveys) > 1:
                 legends = ax.get_legend().get_texts()
                 for a in legends:
                     newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
@@ -803,7 +803,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.fitErrorPwlIP(ax=ax)
             # redo the legend
             newlegend = []
-            if ax is not None:
+            if ax is not None and len(self.surveys) > 1:
                 legends = ax.get_legend().get_texts()
                 for a in legends:
                     newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
@@ -840,7 +840,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 s.fitErrorParabolaIP(ax=ax)
             # redo the legend
             newlegend = []
-            if ax is not None:
+            if ax is not None and len(self.surveys) > 1:
                 legends = ax.get_legend().get_texts()
                 for a in legends:
                     newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
