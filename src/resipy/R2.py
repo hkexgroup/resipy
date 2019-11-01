@@ -797,7 +797,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if index == -2: # apply to combined data of bigSurvey
             self.bigSurvey.fitErrorPwlIP(ax=ax)
             for s in self.surveys:
-                s.df['phaseError'] = self.bigSurvey.fitErrorPwlIP(s.df)
+                s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
         elif index == -1: # apply to each
             for s in self.surveys:
                 s.fitErrorPwlIP(ax=ax)
@@ -834,7 +834,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if index == -2: # apply to combined data of bigSurvey
             self.bigSurvey.fitErrorParabolaIP(ax=ax)
             for s in self.surveys:
-                s.df['phaseError'] = self.bigSurvey.fitErrorParabolaIP(s.df)
+                s.df['phaseError'] = self.bigSurvey.phaseErrorModel(s.df)
         elif index == -1: # apply to each
             for s in self.surveys:
                 s.fitErrorParabolaIP(ax=ax)
