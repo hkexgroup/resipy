@@ -52,6 +52,33 @@ k.showResults(attr='Conductivity(mS/m)')
 #k.showInParaview()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
+#%% testing error models
+k = R2()
+k.createBatchSurvey('./resipy/test/timelapseIP')
+k.fitErrorLin(index=-1)
+k.fitErrorLin(index=-2)
+k.fitErrorLin(index=0)
+k.fitErrorLin(index=1)
+k.fitErrorLin(index=2)
+
+k.fitErrorPwl(index=-1)
+k.fitErrorPwl(index=-2)
+k.fitErrorPwl(index=0)
+k.fitErrorPwl(index=1)
+k.fitErrorPwl(index=2)
+
+k.fitErrorPwlIP(index=-1)
+k.fitErrorPwlIP(index=-2)
+k.fitErrorPwlIP(index=0)
+k.fitErrorPwlIP(index=1)
+k.fitErrorPwlIP(index=2)
+
+k.fitErrorParabolaIP(index=-1)
+k.fitErrorParabolaIP(index=-2)
+k.fitErrorParabolaIP(index=0)
+k.fitErrorParabolaIP(index=1)
+k.fitErrorParabolaIP(index=2)
+
 
 #%% test for borehole
 plt.close('all')
