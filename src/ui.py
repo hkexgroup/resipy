@@ -2285,7 +2285,7 @@ class App(QMainWindow):
                 self.errFitDataIndex = -2
                 plotError(-2)
             else:
-                self.errFitDataIndex = index-2
+                self.errFitDataIndex = index - 2
                 plotError(index-2)
                 errFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
                 errFitTypeFunc(self.errFitPlotIndexList[index-2])
@@ -2337,7 +2337,7 @@ class App(QMainWindow):
                 self.errFitPlotIndexList = [index]*len(self.r2.surveys)
             elif self.errFitDataIndex == -2: # same fit from bigSurvey apply on all
                 pass
-            elif self.errFitDataIndex > 0:
+            elif self.errFitDataIndex >= 0:
                 self.errFitPlotIndexList[self.errFitDataIndex] = index
             print('errFitPlotIndexList', self.errFitPlotIndexList)
                 
@@ -2421,18 +2421,16 @@ class App(QMainWindow):
         
         def iperrFitfnamesComboFunc(index):
             if index == 0:
-                self.iperrFitApplyToAll = True
                 self.iperrFitDataIndex = -1 # fit each, apply each
                 phaseplotError(0)
             elif index == 1:
                 self.iperrFitDataIndex = -2 # fit combined, apply each
                 phaseplotError(-2)
             elif index > 0: # show/hide make the index = -1
-                self.iperrFitApplyToAll = False
-                phaseplotError(index-2)
                 self.iperrFitDataIndex = index-2
-                iperrFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
-                iperrFitTypeFunc(self.errFitPlotIndexList[index-2])
+                phaseplotError(index-2)
+                iperrFitType.setCurrentIndex(self.iperrFitPlotIndexList[index-2])
+                iperrFitTypeFunc(self.iperrFitPlotIndexList[index-2])
         iperrFitfnamesCombo = QComboBox()
         iperrFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         iperrFitfnamesCombo.setMinimumWidth(150)
@@ -2445,6 +2443,7 @@ class App(QMainWindow):
                 return
             mwIPFitError.setCallback(self.r2.showErrorIP)
             mwIPFitError.replot(index=index)
+            self.r2.err = False
 
         def iperrFitTypeFunc(index):
             if len(self.r2.surveys) == 0:
@@ -2470,7 +2469,7 @@ class App(QMainWindow):
                 self.iperrFitPlotIndexList = [index]*len(self.r2.surveys)
             elif self.iperrFitDataIndex == -2: # same fit from bigSurvey apply on all
                 pass
-            elif self.iperrFitDataIndex > 0:
+            elif self.iperrFitDataIndex >= 0:
                 self.iperrFitPlotIndexList[self.iperrFitDataIndex] = index
             print('iperrFitPlotIndexList', self.iperrFitPlotIndexList)
                 
