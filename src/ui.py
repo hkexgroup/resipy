@@ -1445,6 +1445,8 @@ class App(QMainWindow):
             if fname != '':
                 self.fnameManual = fname
                 openFileBtn.setText(fname + ' (Click to change)')
+                parseBtnFunc()
+                parseBtn.setEnabled(True)
         openFileBtn = QPushButton('Open File')
         openFileBtn.setAutoDefault(True)
         openFileBtn.clicked.connect(openFileBtnFunc)
@@ -1467,7 +1469,8 @@ class App(QMainWindow):
             except ValueError as e:
                 errorDump('Parsing error:' + str(e))
 
-        parseBtn = QPushButton('Import')
+        parseBtn = QPushButton('Reorder')
+        parseBtn.setEnabled(False)
         parseBtn.setAutoDefault(True)
         parseBtn.clicked.connect(parseBtnFunc)
 
