@@ -555,7 +555,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(True)
                 meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
-                resetMeshBtn.setVisible(True)
+                resetMeshBtn.setVisible(False)
 
                 # inversion settings
                 show3DOptions(True)
