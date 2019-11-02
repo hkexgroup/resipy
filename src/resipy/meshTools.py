@@ -953,7 +953,8 @@ class Mesh:
         polly.set_edgecolor(edge_color)
         polly.set_cmap(color_map) # set color map 
         polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
-        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
+#        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
+        ax.add_collection3d(polly, zs=0, zdir='z') # for matplotlib > 3.0.2
         self.cax = polly
         
         if color_bar:#add the color bar 
