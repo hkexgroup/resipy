@@ -3110,9 +3110,14 @@ class R2(object): # R2 master class instanciated by the GUI
             fig.savefig(os.path.join(outputdir, fname + '.png'))
 
 
-    def getInvError(self):
+    def getInvError(self, index=0):
         """Collect inversion error from _err.dat or .err file after inversion.
 
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey (if Timelapse or batch). Default is 0.
+            
         Returns
         -------
         array : numpy.array
@@ -3120,27 +3125,25 @@ class R2(object): # R2 master class instanciated by the GUI
         errors : numpy.array
             Vector of normalized error.
         """
-#        if self.typ == 'R2': # old format
-#            err = np.genfromtxt(os.path.join(self.dirname, 'f001_err.dat'), skip_header=1)
-#            array = err[:,[-2,-1,-4,-3]].astype(int)
-#            errors = err[:,0]
         if self.typ == 'cR2' or self.typ == 'R2':
-            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
+            df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(index+1)), delim_whitespace=True)
             array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
             errors = np.array(df['Normalised_Error'])
         elif self.typ == 'R3t' or self.typ == 'cR3t':
-            err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)
+            err = np.genfromtxt(os.path.join(self.dirname, 'f{:03.0f}.err'.format(index+1)), skip_header=1)
             array = err[:,[-3,-1,-7,-5]].astype(int)
             errors = err[:,0]
 
         return array, errors
 
 
-    def showPseudoInvError(self, ax=None, vmin=None, vmax=None):
+    def showPseudoInvError(self, index=0, ax=None, vmin=None, vmax=None):
         """Plot pseudo section of errors from file `f001_err.dat`.
 
         Parameters
         ----------
+        index : int, optional
+            Index of the survey (if time-lapse or batch). Default `index == 0`.
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         vmin : float, optional
@@ -3148,7 +3151,7 @@ class R2(object): # R2 master class instanciated by the GUI
         vmax : float, optional
             Max value.
         """
-        array, errors = self.getInvError()
+        array, errors = self.getInvError(index=index)
 
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors',
@@ -3156,11 +3159,13 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
 
-    def showPseudoInvErrorIP(self, ax=None, vmin=None, vmax=None):
+    def showPseudoInvErrorIP(self, index=0, ax=None, vmin=None, vmax=None):
         """Display normalized phase error.
 
         Parameters
         ----------
+        index : int, optional
+            Index of the survey (if time-lapse or batch). Default `index == 0`.
         ax : matplotlib axis
             If specified, the graph will be plotted against `ax`.
         vmin : float, optional
@@ -3169,18 +3174,25 @@ class R2(object): # R2 master class instanciated by the GUI
             Max value.
         """
         if self.typ == 'cR2':
-            df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
-            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int)
+            df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(index+1)), delim_whitespace=True)
+            array = np.array([df['C+'], df['C-'], df['P+'], df['P-']], dtype=int)
             errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array.T, errors, spacing, ax=ax, label='Normalized Errors',
                log=False, geom=False, contour=False, vmin=None, vmax=None)
 
 
-    def showInvError(self, ax=None):
+    def showInvError(self, index=0, ax=None):
         """Display inversion error by measurment numbers.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of survey (if time-lapse or batch). Default `index == 0`.
+        ax : matplotlib axis
+            If provided, the graph will be plotted against this axis.
         """
-        _, errors = self.getInvError()
+        _, errors = self.getInvError(index=index)
         measurement_no = np.arange(1,len(errors)+1)
         #make figure
         if ax is None:

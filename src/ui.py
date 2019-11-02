@@ -4083,14 +4083,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 resultStackLayout.setCurrentIndex(1)
 #                resultStackLayout.setCurrentIndex(0)
 #                mwInvResult.setCallback(self.r2.showSlice)
-            if self.r2.iBorehole is False:
-                try:
-                    plotInvError()
-                except Exception as e:
-                    print('plotInvError FAILED:', e)
-                    pass
+#            if self.r2.iBorehole is False:
+#                try:
+#                    plotInvError()
+#                except Exception as e:
+#                    print('plotInvError FAILED:', e)
+#                    pass
             try:
-                plotInvError2()
+#                plotInvError2()
+                prepareInvError()
             except Exception as e:
                 errorDump(e)
                 pass
@@ -4464,36 +4465,78 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
 
         #%% tab 6 POSTPROCESSING
-        tabPostProcessing = QTabWidget()
+        tabPostProcessing = QWidget()
         tabs.addTab(tabPostProcessing, 'Post-processing')
         tabs.setTabEnabled(6,False)
+        
+        errorGraphs = QTabWidget()
 
-        invError = QWidget()
-        tabPostProcessing.addTab(invError, 'Pseudo Section Error')
-        invErrorLayout = QVBoxLayout()
-
-        def plotInvError():
-            mwInvError.plot(self.r2.showPseudoInvError, aspect = self.plotAspect)
+        def prepareInvError():
+            names = [s.name for s in self.r2.surveys]
+            if self.r2.iTimeLapse:
+                names = names[1:]
+            invErrorCombo.disconnect()
+            invErrorCombo.clear()
+            for name in names:
+                invErrorCombo.addItem(name)
+            invErrorCombo.currentIndexChanged.connect(invErrorComboFunc)
+            invErrorComboFunc(0)
+        
+        def invErrorComboFunc(index):
+            try:
+                plotInvError2(index)
+                if self.iBorehole is False:
+                    plotInvError(index)
+            except Exception as e:
+                print('Could not print error: ', e)
+        invErrorCombo = QComboBox()
+        invErrorCombo.currentIndexChanged.connect(invErrorComboFunc)
+        invErrorComboLabel = QLabel('Choose dataset:')
+        
+        def plotInvError(index=0):
+            mwInvError.setCallback(self.r2.showPseudoInvError)
+            mwInvError.replot(index=index, aspect=self.plotAspect)
 
         mwInvError = MatplotlibWidget(navi=True, aspect='auto')
-        invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
-        invError.setLayout(invErrorLayout)
+      
 
-        invError2 = QWidget()
-        tabPostProcessing.addTab(invError2, 'Normalised Errors')
-        invErrorLayout2 = QVBoxLayout()
-        invErrorLayout2Plot = QVBoxLayout()
-
-        def plotInvError2():
-            mwInvError2.plot(self.r2.showInvError)
+        def plotInvError2(index=0):
+            mwInvError2.setCallback(self.r2.showInvError)
+            mwInvError2.replot(index=index)
         mwInvError2 = MatplotlibWidget(navi=True, aspect='auto')
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
+
+
+        # layout
+        postProcessingLayout = QVBoxLayout()
+        
+        topInvErrorLayout = QHBoxLayout()
+        topInvErrorLayout.addWidget(invErrorComboLabel)
+        topInvErrorLayout.addWidget(invErrorCombo)
+        postProcessingLayout.addLayout(topInvErrorLayout)
+        postProcessingLayout.addWidget(errorGraphs)
+        
+        invError = QWidget()
+        errorGraphs.addTab(invError, 'Pseudo Section of Inversion Errors')
+
+        invErrorLayout = QVBoxLayout()
+        invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
+        invError.setLayout(invErrorLayout)
+
+        invError2 = QWidget()
+        errorGraphs.addTab(invError2, 'Normalised Inversion Errors')
+        invErrorLayout2 = QVBoxLayout()
+        invErrorLayout2Plot = QVBoxLayout()
+
         invErrorLayout2Plot.addWidget(mwInvError2, Qt.AlignCenter)
         invErrorLayout2.addLayout(invErrorLayout2Plot, 1)
         invErrorLayout2.addWidget(invErrorLabel)
         invError2.setLayout(invErrorLayout2)
+        
+        tabPostProcessing.setLayout(postProcessingLayout)
+
 
 
         #%% Help tab
