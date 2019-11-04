@@ -4062,6 +4062,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #                        sectionId.addItem('Initial Model')
                     for mesh in self.r2.meshResults:
                         sectionId.addItem(mesh.mesh_title)
+                    replotSection() # first time it is draw
                     outStackLayout.setCurrentIndex(0)
                     showDisplayOptions(True)
                     btnInvert.setText('Invert')
@@ -4116,7 +4117,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.r2.getResults()
             displayAttribute(arg=defaultAttr)
             # graph will be plotted because changeSection will be called
-            sectionId.activated.connect(changeSection)
 #            attributeName.activated.connect(changeAttribute)
 
 
@@ -4226,7 +4226,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #                print('sorry same attribute not found')
             self.displayParams['attr'] = self.attr[resistIndex]
             attributeName.setCurrentIndex(resistIndex)
-            attributeName.activated.connect(changeAttribute)
             #sectionId.setCurrentIndex(0)
 
         def changeAttribute(index):
@@ -4255,10 +4254,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         sectionId = QComboBox()
         sectionId.setToolTip('Change survey or see initial model.')
+        sectionId.activated.connect(changeSection)
         displayOptions.addWidget(sectionId, 20)
 
         attributeName = QComboBox()
         attributeName.setToolTip('Change attribute to display.')
+        attributeName.activated.connect(changeAttribute)
         displayOptions.addWidget(attributeName, 20)
 
         vminLabel = QLabel('Min:')
