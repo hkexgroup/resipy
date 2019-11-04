@@ -3108,6 +3108,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             a = RowOpt()
             seqRows.append(a)
             seqRowLayout.addLayout(a)
+            a.createRow()
+            a.showArg()
         addRowBtn = QPushButton('Add sequence')
         addRowBtn.adjustSize()
         addRowBtn.clicked.connect(addRowBtnFunc)
