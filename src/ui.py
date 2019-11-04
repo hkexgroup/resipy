@@ -2273,7 +2273,10 @@ class App(QMainWindow):
                 elif self.errFitDataIndex == -2:
                     infoDump('Error model fit on the combined datasets and then applied to all datasets.')
             if index == 0:
-                plotError(self.errFitDataIndex)
+                if self.errFitDataIndex > 0:
+                    plotError(self.errFitDataIndex)
+                else:
+                    plotError(0)
             elif index == 1:
                 mwFitError.setCallback(self.r2.fitErrorLin)
                 mwFitError.replot(index=self.errFitDataIndex)
@@ -2404,7 +2407,10 @@ class App(QMainWindow):
                 elif self.iperrFitDataIndex == -2:
                     infoDump('IP error model fit on the combined datasets and then applied to all datasets.')
             if index == 0:
-                phaseplotError(self.iperrFitDataIndex)
+                if self.iperrFitDataIndex > 0:
+                    phaseplotError(self.iperrFitDataIndex)
+                else:
+                    phaseplotError(0)
             elif index == 1:
                 mwIPFitError.setCallback(self.r2.fitErrorPwlIP)
                 mwIPFitError.replot(index=self.iperrFitDataIndex)
