@@ -397,14 +397,10 @@ class App(QMainWindow):
             self.errFitApplyToAll = True
             self.errFitDataIndex = -1
             self.iperrFitDataIndex = -1
-            errFitType.currentIndexChanged.disconnect()
             errFitType.setCurrentIndex(0)
-            errFitType.currentIndexChanged.connect(errFitTypeFunc)
             mwFitError.clear()
             mwIPFitError.clear()
-            iperrFitType.currentIndexChanged.disconnect()
             iperrFitType.setCurrentIndex(0)
-            iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
             self.errFitPlotIndexList = []
             self.iperrFitPlotIndexList = []
             phivminEdit.setText('0')
@@ -452,13 +448,8 @@ class App(QMainWindow):
             self.inversionOutput = ''
             logText.setText('')
             mwRMS.clear()
-            try: # try because maybe the user hasn't inverted yet
-                sectionId.currentIndexChanged.disconnect()
-                sectionId.clear()
-                attributeName.currentIndexChanged.disconnect()
-                attributeName.clear()
-            except:
-                pass
+            sectionId.clear()
+            attributeName.clear()
 
             vminEdit.setText('')
             vmaxEdit.setText('')
@@ -800,7 +791,7 @@ class App(QMainWindow):
         fileType.addItem('ABEM-Lund')
         fileType.addItem('Lippmann')
         fileType.addItem('Custom')
-        fileType.currentIndexChanged.connect(fileTypeFunc)
+        fileType.activated.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
         fileType.setToolTip('Select data format.')
 
@@ -1049,7 +1040,7 @@ class App(QMainWindow):
         fnamesCombo = QComboBox()
         fnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         fnamesCombo.setMinimumWidth(150)
-        fnamesCombo.currentIndexChanged.connect(fnamesComboFunc)
+        fnamesCombo.activated.connect(fnamesComboFunc)
 #        fnamesCombo.setEnabled(False)
         fnamesCombo.hide()
         
@@ -1423,7 +1414,7 @@ class App(QMainWindow):
         delimiterMenue = QComboBox()
         delimiterMenue.setMinimumWidth(200)
         delimiterMenue.addItems(['Select delimiter','Comma','Tab','Space','Semicolon', 'Other'])
-        delimiterMenue.currentIndexChanged.connect(delimFunc)
+        delimiterMenue.activated.connect(delimFunc)
         
         delimiterBox = QLineEdit()
         delimiterBox.setFixedWidth(100)
@@ -1738,7 +1729,7 @@ class App(QMainWindow):
         recipErrorfnamesCombo = QComboBox()
         recipErrorfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         recipErrorfnamesCombo.setMinimumWidth(150)
-        recipErrorfnamesCombo.currentIndexChanged.connect(recipErrorfnamesComboFunc)
+        recipErrorfnamesCombo.activated.connect(recipErrorfnamesComboFunc)
         
         def recipOrNoRecipShow(recipPresence = True): # changes the reciprocal filtering tab stuff
             if recipPresence == True:
@@ -2009,7 +2000,7 @@ class App(QMainWindow):
         phasefiltfnamesCombo = QComboBox()
         phasefiltfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         phasefiltfnamesCombo.setMinimumWidth(150)
-        phasefiltfnamesCombo.currentIndexChanged.connect(phasefiltfnamesComboFunc)
+        phasefiltfnamesCombo.activated.connect(phasefiltfnamesComboFunc)
         phaseLabelLayout.addWidget(phasefiltfnamesCombo)
         
         
@@ -2253,7 +2244,7 @@ class App(QMainWindow):
         errFitfnamesCombo = QComboBox()
         errFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         errFitfnamesCombo.setMinimumWidth(150)
-        errFitfnamesCombo.currentIndexChanged.connect(errFitfnamesComboFunc)
+        errFitfnamesCombo.activated.connect(errFitfnamesComboFunc)
         
         def errorModelSpecified():
             a_wgt.setText('0.0')
@@ -2320,7 +2311,7 @@ class App(QMainWindow):
         errFitType.addItem('Power-law')
         if platform.system() == 'Linux':
             errFitType.addItem('Linear Mixed Effect (requires R and the lme4 package, dc surveys only for now)')
-        errFitType.currentIndexChanged.connect(errFitTypeFunc)
+        errFitType.activated.connect(errFitTypeFunc)
         errFitType.setToolTip('Select an error model to use.')
 
         def saveErrBtnFunc():
@@ -2390,7 +2381,7 @@ class App(QMainWindow):
         iperrFitfnamesCombo = QComboBox()
         iperrFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         iperrFitfnamesCombo.setMinimumWidth(150)
-        iperrFitfnamesCombo.currentIndexChanged.connect(iperrFitfnamesComboFunc)
+        iperrFitfnamesCombo.activated.connect(iperrFitfnamesComboFunc)
         
         mwIPFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
@@ -2454,7 +2445,7 @@ class App(QMainWindow):
         iperrFitType.addItem('Observed discrepancies') 
         iperrFitType.addItem('Power law')
         iperrFitType.addItem('Parabola')
-        iperrFitType.currentIndexChanged.connect(iperrFitTypeFunc)
+        iperrFitType.activated.connect(iperrFitTypeFunc)
         iperrFitType.setToolTip('Select an error model for IP.')
         
         saveIPErrBtn = QPushButton('Save Error Data')
@@ -3019,7 +3010,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.combo = QComboBox()
                 for row in seqData:
                     self.combo.addItem(row[1])
-                self.combo.currentIndexChanged.connect(self.comboFunc)
+                self.combo.activated.connect(self.comboFunc)
                 self.addWidget(self.combo)
                 for a, b in zip(['a','n','m'], ['1','8','']):
                     lab = QLabel(a + '=')
@@ -3407,7 +3398,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #        job_type = QComboBox()
 #        job_type.addItem('Inversion [1]')
 #        job_type.addItem('Forward [0]')
-#        job_type.currentIndexChanged.connect(job_typeFunc)
+#        job_type.activated.connect(job_typeFunc)
 #        invForm.addRow(QLabel('Job Type:'), job_type)
 
         self.parallel = False
@@ -3459,7 +3450,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         flux_type = QComboBox()
         flux_type.addItem('3D')
         flux_type.addItem('2D')
-        flux_type.currentIndexChanged.connect(flux_typeFunc)
+        flux_type.activated.connect(flux_typeFunc)
         invForm.addRow(flux_typeLabel, flux_type)
 
         def singular_typeFunc(state):
@@ -3483,7 +3474,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         res_matrix.addItem('True Resolution Matrix [2]')
         res_matrix.addItem('Sensitivity map [3]')
         res_matrix.setCurrentIndex(1)
-        res_matrix.currentIndexChanged.connect(res_matrixFunc)
+        res_matrix.activated.connect(res_matrixFunc)
         advForm.addRow(res_matrixLabel, res_matrix)
 
         def scaleFunc():
@@ -3543,7 +3534,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         inv_type.addItem('Qualitative Solution [3]')
         inv_type.addItem('Blocked Linear Regularized Inversion [4]')
         inv_type.setCurrentIndex(1)
-        inv_type.currentIndexChanged.connect(inv_typeFunc)
+        inv_type.activated.connect(inv_typeFunc)
         invForm.addRow(inv_typeLabel, inv_type)
 
         def inv_type3DFunc(index):
@@ -3560,7 +3551,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         inv_type3D.addItem('Normal Regularisation [0]')
         inv_type3D.addItem('Background Regularisation [1]')
         inv_type3D.addItem('Difference Regularisation [2]')
-        inv_type3D.currentIndexChanged.connect(inv_type3DFunc)
+        inv_type3D.activated.connect(inv_type3DFunc)
         invForm.addRow(inv_type3DLabel, inv_type3D)
         inv_type3DLabel.setVisible(False)
         inv_type3D.setVisible(False)
@@ -3573,7 +3564,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         data_type.addItem('Normal [0]')
         data_type.addItem('Logarithmic [1]')
         data_type.setCurrentIndex(1)
-        data_type.currentIndexChanged.connect(data_typeFunc)
+        data_type.activated.connect(data_typeFunc)
         invForm.addRow(data_typeLabel, data_type)
 
         def reg_modeFunc(index):
@@ -3584,7 +3575,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         reg_mode.addItem('Normal regularization [0]')
         reg_mode.addItem('Regularization from initial model [1]')
         reg_mode.addItem('Regularization from difference inversion [2]')
-        reg_mode.currentIndexChanged.connect(reg_modeFunc)
+        reg_mode.activated.connect(reg_modeFunc)
         invForm.addRow(reg_modeLabel, reg_mode)
 
         def toleranceFunc():
@@ -3628,7 +3619,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         error_mod.addItem('Update the weights [1]')
         error_mod.addItem('Update the weights (recommended) [2]')
         error_mod.setCurrentIndex(2)
-        error_mod.currentIndexChanged.connect(error_modFunc)
+        error_mod.activated.connect(error_modFunc)
         advForm.addRow(error_modLabel, error_mod)
 
 
@@ -4030,12 +4021,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     text = f.read()
                 func(text)
             self.r2.proc = None
-            try:
-                sectionId.currentIndexChanged.disconnect()
-                sectionId.clear()
-            except:
-#                print('no method connected to sectionId yet')
-                pass
+            sectionId.clear()
 
             # displaying results or error
             def printR2out():
@@ -4118,8 +4104,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.r2.getResults()
             displayAttribute(arg=defaultAttr)
             # graph will be plotted because changeSection will be called
-            sectionId.currentIndexChanged.connect(changeSection)
-#            attributeName.currentIndexChanged.connect(changeAttribute)
+            sectionId.activated.connect(changeSection)
+#            attributeName.activated.connect(changeAttribute)
 
 
         def replotSection(): # main plotting function
@@ -4214,11 +4200,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.attr = list(self.r2.meshResults[self.displayParams['index']].attr_cache)
             resistIndex = 0
             c = -1
-            try:
-                attributeName.currentIndexChanged.disconnect() # avoid unwanted plotting
-            except:
-                print('no method connected yet to attribute name')
-                pass
             attributeName.clear() # delete all items (after disconnect otherwise it triggers it !)
             for i in range(len(self.attr)):
                 if self.attr[i] == 'Resistivity(log10)':
@@ -4233,7 +4214,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #                print('sorry same attribute not found')
             self.displayParams['attr'] = self.attr[resistIndex]
             attributeName.setCurrentIndex(resistIndex)
-            attributeName.currentIndexChanged.connect(changeAttribute)
+            attributeName.activated.connect(changeAttribute)
             #sectionId.setCurrentIndex(0)
 
         def changeAttribute(index):
@@ -4296,7 +4277,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         for cmap in cmaps:
             cmapCombo.addItem(cmap)
         cmapCombo.setCurrentIndex(0)
-        cmapCombo.currentIndexChanged.connect(cmapComboFunc)
+        cmapCombo.activated.connect(cmapComboFunc)
         displayOptions.addWidget(cmapComboLabel)
         displayOptions.addWidget(cmapCombo)
 
@@ -4486,7 +4467,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             invErrorCombo.clear()
             for name in names:
                 invErrorCombo.addItem(name)
-            invErrorCombo.currentIndexChanged.connect(invErrorComboFunc)
+            invErrorCombo.activated.connect(invErrorComboFunc)
             invErrorComboFunc(0)
         
         def invErrorComboFunc(index):
@@ -4497,7 +4478,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             except Exception as e:
                 print('Could not print error: ', e)
         invErrorCombo = QComboBox()
-        invErrorCombo.currentIndexChanged.connect(invErrorComboFunc)
+        invErrorCombo.activated.connect(invErrorComboFunc)
         invErrorComboLabel = QLabel('Choose dataset:')
         
         def plotInvError(index=0):
