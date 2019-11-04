@@ -1721,6 +1721,9 @@ class App(QMainWindow):
         def recipErrorfnamesComboFunc(index):
             if index == 0:
                 self.recipErrApplyToAll = True
+                self.recipErrDataIndex = -1
+                plotManualFiltering(0)
+                errHist(0)
             elif index > 0: # show/hide makes the index = -1
                 self.recipErrApplyToAll = False
                 plotManualFiltering(index-1)
@@ -3175,7 +3178,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 errorDump('Please specify a mesh and an initial model first.')
                 return
-            seqCreateFunc()
+            try:
+                seqCreateFunc()
+            except:
+                errorDump('Error in sequence generation')
+                return
+            if len(self.r2.sequence) == 0:
+                errorDump('Sequence is empty, can not run forward model.')
+                return
             forwardOutputStack.setCurrentIndex(0)
             forwardLogText.clear()
             QApplication.processEvents()
