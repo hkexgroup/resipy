@@ -389,6 +389,7 @@ class App(QMainWindow):
             # pre-processing
             errorCombosShow(False)
             for combobox in prepFnamesComboboxes:
+                combobox.blockSignals(True)
                 combobox.clear()
             mwManualFiltering.clear()
             self.recipErrApplyToAll = True
@@ -2524,7 +2525,10 @@ class App(QMainWindow):
             for s in self.r2.surveys:
                 for comboboxe in comboboxes:
                     comboboxe.addItem(s.name)
-                    
+            
+            for combo in comboboxes:
+                combo.blockSignals(False)
+                
             phasefiltfnamesCombo.removeItem(0) #"Apply to all" won't work with phase filtering process.
                      
         errorCombosShow(False) #hiding all file selection comboboxes in pre-processing
