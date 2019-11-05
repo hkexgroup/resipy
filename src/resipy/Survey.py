@@ -1025,15 +1025,15 @@ class Survey(object):
         m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=self.phiCbarmin, vmax=self.phiCbarMax)
         ax.xaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['a'].max()+1,4))
         ax.yaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['m'].max(),4))
-        ax.set_ylabel('A',fontsize = 22)
-        ax.set_xlabel('M',fontsize = 22)
-        ax.tick_params(labelsize=18)
-        ax.set_title('%s\n%s measurements' % (self.filt_typ, dflen), fontsize=20)     
+        ax.set_ylabel('A')#,fontsize = 22)
+        ax.set_xlabel('M')#,fontsize = 22)
+#        ax.tick_params(labelsize=18)
+        ax.set_title('%s\n%s measurements' % (self.filt_typ, dflen))#, fontsize=20)     
         ax.grid(False)
         if self.cbar==True:
             cbhnf = fig.colorbar(m, ax=ax)
-            cbhnf.set_label(r'-$\phi$ [mrad]', fontsize=20)
-            cbhnf.ax.tick_params(labelsize=18)
+            cbhnf.set_label(r'-$\phi$ [mrad]')#, fontsize=20)
+#            cbhnf.ax.tick_params(labelsize=18)
         if ax is None:
             return fig
     
