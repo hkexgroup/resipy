@@ -406,7 +406,7 @@ class App(QMainWindow):
             phivminEdit.setText('0')
             phivmaxEdit.setText('25')
             dcaProgress.setValue(0)
-            self.phaseFiltDataIndex = 0
+            self.phaseFiltDataIndex = -1
             tabPreProcessing.setTabEnabled(0, True)
             tabPreProcessing.setTabEnabled(1, False)
             tabPreProcessing.setTabEnabled(2, False)
@@ -1994,7 +1994,10 @@ class App(QMainWindow):
         phaseLabelLayout.addWidget(phasefiltfnamesComboLabel)
         
         def phasefiltfnamesComboFunc(index):
-            self.phaseFiltDataIndex = index
+            if index == 0:
+                self.phaseFiltDataIndex = -1
+            elif index > 0:
+                self.phaseFiltDataIndex = index-1
             if self.r2.surveys != []:
                 heatRaw()
                 heatFilter()
@@ -2010,28 +2013,28 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
-            if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.filterRangeIP(-1, # apply to all
-                                      float(phivminEdit.text()),
-                                      float(phivmaxEdit.text()))
-            else:
-                self.r2.filterRangeIP(self.phaseFiltDataIndex,
-                                      float(phivminEdit.text()),
-                                      float(phivmaxEdit.text()))
+#            if self.r2.iBatch or self.r2.iTimeLapse:
+#                self.r2.filterRangeIP(-1, # apply to all
+#                                      float(phivminEdit.text()),
+#                                      float(phivmaxEdit.text()))
+#            else:
+            self.r2.filterRangeIP(self.phaseFiltDataIndex,
+                                  float(phivminEdit.text()),
+                                  float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
-            if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.filterRecipIP(-1)
-            else:
-                self.r2.filterRecipIP(self.phaseFiltDataIndex)
+#            if self.r2.iBatch or self.r2.iTimeLapse:
+#                self.r2.filterRecipIP(-1)
+#            else:
+            self.r2.filterRecipIP(self.phaseFiltDataIndex)
             heatFilter()
 
         def removenested():
-            if self.r2.iBatch or self.r2.iTimeLapse:
-                self.r2.filterNested(-1)
-            else:
-                self.r2.filterNested(self.phaseFiltDataIndex)
+#            if self.r2.iBatch or self.r2.iTimeLapse:
+#                self.r2.filterNested(-1)
+#            else:
+            self.r2.filterNested(self.phaseFiltDataIndex)
             heatFilter()
 
         def convFactK():
@@ -2088,11 +2091,18 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phitoplayout,0)
 
         def filt_reset():
-            self.r2.surveys[self.phaseFiltDataIndex].filterDataIP = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
-            self.r2.surveys[self.phaseFiltDataIndex].df = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    s.filterDataIP = s.dfPhaseReset.copy()
+                    s.df = s.dfPhaseReset.copy()
+                infoDump('Phase filters are now reset for all datasets!')
+            else:
+                self.r2.surveys[self.phaseFiltDataIndex].filterDataIP = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
+                self.r2.surveys[self.phaseFiltDataIndex].df = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
+                infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             dcaProgress.setValue(0)
-            infoDump('All phase filteres are now reset!')
+            
 
         def phiCbarRange():
             self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
@@ -2158,22 +2168,30 @@ class App(QMainWindow):
         ipfiltlayout = QHBoxLayout()
 
         def heatRaw():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.surveys[0].filt_typ = 'Raw'
-                raw_hmp.plot(self.r2.showHeatmap)
+#            if not (self.r2.iBatch or self.r2.iTimeLapse):
+#                self.r2.surveys[0].filt_typ = 'Raw'
+#                raw_hmp.plot(self.r2.showHeatmap)
+#            else:
+            if self.phaseFiltDataIndex == -1:
+                index = 0
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].filt_typ = 'Raw'
-                raw_hmp.setCallback(self.r2.showHeatmap)
-                raw_hmp.replot(index=self.phaseFiltDataIndex)
+                index = self.phaseFiltDataIndex
+            self.r2.surveys[index].filt_typ = 'Raw'
+            raw_hmp.setCallback(self.r2.showHeatmap)
+            raw_hmp.replot(index=index)
 
         def heatFilter():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.surveys[0].filt_typ = 'Filtered'
-                filt_hmp.plot(self.r2.showHeatmap)
+#            if not (self.r2.iBatch or self.r2.iTimeLapse):
+#                self.r2.surveys[0].filt_typ = 'Filtered'
+#                filt_hmp.plot(self.r2.showHeatmap)
+#            else:
+            if self.phaseFiltDataIndex == -1:
+                index = 0
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].filt_typ = 'Filtered'
-                filt_hmp.setCallback(self.r2.showHeatmap)
-                filt_hmp.replot(index=self.phaseFiltDataIndex)
+                index = self.phaseFiltDataIndex
+            self.r2.surveys[index].filt_typ = 'Filtered'
+            filt_hmp.setCallback(self.r2.showHeatmap)
+            filt_hmp.replot(index=index)
 
         raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -2187,8 +2205,12 @@ class App(QMainWindow):
 
         def dcaFiltering():
             try:
+                dcaButton.setEnabled(False) # prevent multiple clicks!
+                if len(self.r2.surveys) > 1 and self.phaseFiltDataIndex == -1: # well, DCA is long!!
+                    infoDump('DCA will run %s times. Please be patient!' % len(self.r2.surveys))
                 self.r2.filterDCA(index=self.phaseFiltDataIndex, dump=dcaDump)
                 heatFilter()
+                dcaButton.setEnabled(True)
             except:
                 errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
 
@@ -2529,7 +2551,7 @@ class App(QMainWindow):
             for combo in comboboxes:
                 combo.blockSignals(False)
                 
-            phasefiltfnamesCombo.removeItem(0) #"Apply to all" won't work with phase filtering process.
+#            phasefiltfnamesCombo.removeItem(0) #"Apply to all" won't work with phase filtering process.
                      
         errorCombosShow(False) #hiding all file selection comboboxes in pre-processing
         prepFnamesComboboxes = [recipErrorfnamesCombo, phasefiltfnamesCombo, errFitfnamesCombo, iperrFitfnamesCombo]
