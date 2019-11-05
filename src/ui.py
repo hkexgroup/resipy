@@ -2236,7 +2236,7 @@ class App(QMainWindow):
 
         phasefiltlayout.addLayout(dcaLayout, 1)
         phasefiltlayout.addLayout(resetlayout, 2)
-        phasefiltlayout.addLayout(ipfiltlayout, 2)
+        phasefiltlayout.addLayout(ipfiltlayout, 3)
 
 
         # layout
