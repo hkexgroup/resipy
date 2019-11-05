@@ -4502,6 +4502,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def prepareInvError():
             names = [s.name for s in self.r2.surveys]
+            if len(names) > 1:
+                invErrorComboLabel.show()
+                invErrorCombo.show()
+            else:
+                invErrorComboLabel.hide()
+                invErrorCombo.hide()
+                
             if self.r2.iTimeLapse:
                 names = names[1:]
             invErrorCombo.disconnect()
@@ -4520,7 +4527,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 print('Could not print error: ', e)
         invErrorCombo = QComboBox()
         invErrorCombo.activated.connect(invErrorComboFunc)
+        invErrorCombo.hide()
         invErrorComboLabel = QLabel('Choose dataset:')
+        invErrorComboLabel.hide()
         
         def plotInvError(index=0):
             mwInvError.setCallback(self.r2.showPseudoInvError)
