@@ -4090,6 +4090,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #                        sectionId.addItem('Initial Model')
                     for mesh in self.r2.meshResults:
                         sectionId.addItem(mesh.mesh_title)
+                    if self.iForward is True:
+                        self.displayParams['index'] = 1
                     replotSection() # first time it is draw
                     outStackLayout.setCurrentIndex(0)
                     showDisplayOptions(True)
