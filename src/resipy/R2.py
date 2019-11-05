@@ -3135,7 +3135,46 @@ class R2(object): # R2 master class instanciated by the GUI
             errors = err[:,0]
 
         return array, errors
-
+    
+    
+    def parseInvError(self):
+        a = 1 if self.iTimeLapse else 0
+        if self.typ == 'cR2' or self.typ == 'R2':
+            dfs = []
+            if self.iTimeLapse:
+                df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
+                dfs.append(df)
+            for i in range(a, len(self.surveys)):
+                df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1)), delim_whitespace=True)
+                dfs.append(df)
+        elif self.typ == 'R3t' or self.typ == 'cR3t':
+            dfs = []
+            if self.iTimeLapse:
+                err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)
+                df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
+                                  columns=['P+','P-','C+','C-', 'Normalised_Error'])
+                dfs.append(df)
+            for i in range(a, len(self.surveys)):
+                err = np.genfromtxt(os.path.join(self.dirname, 'f{:03.0f}.err'.format(i+1)), skip_header=1)
+                df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
+                                  columns=['P+','P-','C+','C-', 'Normalised_Error'])
+                dfs.append(df)
+        #TODO not implemented for cR3t and phase misfit
+        
+        # merge the columns to each survey dataframe
+        for s, df in zip(self.surveys, dfs):
+            df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
+            cols = ['a','b','m','n','resInvError']
+            if self.typ[0] == 'c':
+                df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
+                cols += ['phaseInvMisfit']
+            if 'resInvError' in s.df.columns:
+                s.df = s.df.drop('resInvError', axis=1)
+            if 'phaseInvMisfit' in s.df.columns:
+                s.df = s.df.drop('phaseInvMisfit', axis=1)
+            s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
+        # TODO assign the errors to normal and reciprocal ? in case we use recipMean only ?
+                    
 
     def showPseudoInvError(self, index=0, ax=None, vmin=None, vmax=None):
         """Plot pseudo section of errors from file `f001_err.dat`.
