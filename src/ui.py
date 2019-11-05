@@ -406,6 +406,8 @@ class App(QMainWindow):
             phivminEdit.setText('0')
             phivmaxEdit.setText('25')
             dcaProgress.setValue(0)
+            dcaButton.setEnabled(False)
+            dcaProgress.setEnabled(False)
             self.phaseFiltDataIndex = -1
             tabPreProcessing.setTabEnabled(0, True)
             tabPreProcessing.setTabEnabled(1, False)
@@ -847,6 +849,9 @@ class App(QMainWindow):
                     if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
                         if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            dcaButton.setEnabled(True)
+                            dcaProgress.setEnabled(True)
                 except Exception as e:
                     print('Error in getdir(): ', e)
                     errorDump('File format is not recognized (one or all files!)')
@@ -909,6 +914,9 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                    if self.ftype == 'Syscal':
+                        dcaButton.setEnabled(True)
+                        dcaProgress.setEnabled(True)
                    
                 plotPseudo()
 
@@ -2213,6 +2221,7 @@ class App(QMainWindow):
                 dcaButton.setEnabled(True)
             except:
                 errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
+                dcaButton.setEnabled(True)
 
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
@@ -2220,12 +2229,14 @@ class App(QMainWindow):
         dcaButton.setAutoDefault(True)
         dcaButton.clicked.connect(dcaFiltering)
         dcaProgress = QProgressBar()
+        dcaButton.setEnabled(False)
+        dcaProgress.setEnabled(False)
         dcaLayout.addWidget(dcaButton)
         dcaLayout.addWidget(dcaProgress)
 
         phasefiltlayout.addLayout(dcaLayout, 1)
         phasefiltlayout.addLayout(resetlayout, 2)
-        phasefiltlayout.addLayout(ipfiltlayout, 3)
+        phasefiltlayout.addLayout(ipfiltlayout, 2)
 
 
         # layout
