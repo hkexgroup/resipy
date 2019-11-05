@@ -1423,31 +1423,33 @@ class Survey(object):
         dump(100)
         
     
-    def filterManual(self, ax=None, figsize=(12,3), contour=False,
-                     log=False, geom=False, label='', vmin=None, vmax=None):
-        """Manually filters the data visually.
+    def filterManual(self, attr='resist', ax=None, log=False, geom=True,
+                     label='Apprent Resistivity [$\Omega.m$]',
+                     vmin=None, vmax=None):
+        """Manually filters the data visually. The points manually selected are
+        flagged in the `Survey.iselect` vector and can subsequently be removed
+        by calling `Survey.filterData(~Survey.iselect)`.
         
         Parameters
         ----------
+        attr : str, optional
+            Columns of `Survey.df` to use for plotting. Default is `resist` (
+            transfer resistance).
         ax : matplotlib axis, optional
             If specified, the graph is plotted along the axis.
-        
-        Returns
-        -------
-            If `ax` is not None, a matplotlib figure is returned.
+        log : bool, optional
+            If `True``then all data will be log transformed.
+        geom : bool, optional
+            If `True` the values will be multiplied by the geometric factor (default).
+        label : str, optional
+            Label of the colorbar.
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-#        if all(self.df['irecip'].values != 0) is False:
-#            print('choose recipError')
-#            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
-#            clabel = 'Reciprocal Error [%]'
-#        else:
-#            print('choose resist')
-        geom = True
-        resist = self.df['resist'].values
-        clabel = 'Apparent Resistivity [$\Omega.m$]'
-        if label == '':
-            label = clabel
+        resist = self.df[attr].values
         inan = np.isnan(resist)
         resist = resist.copy()[~inan]
         array = array.copy()[~inan]
@@ -1476,7 +1478,7 @@ class Survey(object):
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-        
+
         array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
@@ -1484,7 +1486,6 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
         
         def onpick(event):
             if lines[event.artist] == 'data':
@@ -1494,7 +1495,6 @@ class Survey(object):
                     setSelect(isame, False)
                 else:
                     setSelect(isame, True)
-            
             if lines[event.artist] == 'elec':
                 ie = (array == (event.ind[0]+1)).any(-1)
                 if all(ipoints[ie] == True):
@@ -1509,8 +1509,7 @@ class Survey(object):
                 elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
-            killed.figure.canvas.draw()                
-                
+            killed.figure.canvas.draw()                                
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -1520,15 +1519,12 @@ class Survey(object):
                          vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
-        cax.figure.canvas.mpl_connect('pick_event', onpick)
-        
+        cax.figure.canvas.mpl_connect('pick_event', onpick)        
         killed, = cax.axes.plot([],[],'rx')
         elecKilled, = cax.axes.plot([],[],'rx')
         x = cax.get_offsets()[:,0]
-        y = cax.get_offsets()[:,1]
-        
+        y = cax.get_offsets()[:,1]        
         ipoints = np.zeros(len(y),dtype=bool)
-
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
           
     
