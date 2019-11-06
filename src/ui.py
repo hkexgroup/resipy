@@ -4737,6 +4737,7 @@ USA: Trelgol Publishing, (2006).
     # based on https://kushaldas.in/posts/pyqt5-thread-example.html
     def updateChecker(self): # check for new updates on gitlab
         version = ResIPy_version
+        newChanges = ''
         try:
             versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
             versionCheck = versionSource.read().decode()
