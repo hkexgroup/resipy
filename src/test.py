@@ -340,6 +340,11 @@ k.showPseudoInvError()
 k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
+#%% create 3D mesh from 2D lines
+k = R2(typ='R3t')
+k.create3DSurvey('resipy/test/testTimelapse')
+k.invert()
+
 
 #%% 3D testing importing a mesh
 from resipy.R2 import R2

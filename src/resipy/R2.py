@@ -485,6 +485,64 @@ class R2(object): # R2 master class instanciated by the GUI
         print("{:d} survey files imported".format(len(self.surveys)))
 
 
+    def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal', name=None):
+        """Create a 3D survey based on 2D regularly spaced surveys.
+        
+        Parameters
+        ----------
+        fname : list of str
+            List of 2D filenames in the right order for the grid or directory
+            name (the files will be sorted alphabetically in this last case).
+        lineSpacing : float, optional
+            Spacing in meter between each line.
+        zigzag : bool, optional
+            If `True` then one survey out of two will be flipped.
+            #TODO not implemented yet
+        ftype : str, optional
+            Type of the survey to choose which parser to use.
+        name : str, optional
+            Name of the merged 3D survey.
+        """
+        if isinstance(fname, list): # it's a list of filename
+            fnames = fname
+        else: # it's a directory and we import all the files inside
+            if os.path.isdir(fname):
+                fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
+                # this filter out hidden file as well
+            else:
+                raise ValueError('fname should be a directory path or a list of filenames')
+
+        surveys = []
+        for fname in fnames:
+            surveys.append(Survey(fname, ftype=ftype))
+        survey0 = surveys[0]
+        
+        # check this is a regular grid
+        nelec = survey0.elec.shape[0]
+        for s in surveys:
+            if s.elec.shape[0] != nelec:
+                raise ValueError('Survey {:s} has {:d} electrodes while the first survey has {:d}.'
+                                 'All surveys should have the same number of electrodes.'.format(s.name, s.elec.shape[0], nelec))
+        # build global electrodes and merged dataframe
+        elec = []
+        dfs = []
+        for i, s in enumerate(surveys):
+            e = s.elec.copy()
+            e[:,1] = i*lineSpacing
+            elec.append(e)
+            df = s.df.copy()
+            df.loc[:,['a','b','m','n']] = df.loc[:,['a','b','m','n']] + i*nelec
+            dfs.append(df)
+        elec = np.vstack(elec)
+        dfm = pd.concat(dfs, axis=0, sort=False).reset_index(drop=True)
+        
+        survey0.elec = elec
+        survey0.df = dfm
+        survey0.name = '3Dfrom2Dlines' if name is None else name
+        self.surveys= [survey0]
+        self.elec = elec
+        
+
 
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
