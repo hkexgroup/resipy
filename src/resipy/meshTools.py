@@ -588,8 +588,12 @@ class Mesh:
             try:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
-                    alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-#                    alphas = np.logspace(0, -1, self.num_elms)#array of alpha values 
+                    thresh = np.percentile(weights, 50, interpolation='nearest')
+                    x = np.sort(weights)
+                    i = np.where(x > thresh)[0][0]
+                    x = np.argsort(weights)
+                    alphas = np.zeros(self.num_elms)
+                    alphas[:i] = np.linspace(1, 0, len(alphas[:i]))
                     raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                     raw_alpha[:, -1] = alphas
                     alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
