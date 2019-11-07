@@ -171,6 +171,10 @@ class MatplotlibWidget(QWidget):
             axes = figure.get_axes()
         self.figure = figure
         self.axis = axes
+        self.xlim = None
+        self.ylim = None
+        self.xlim0 = None
+        self.ylim0 = None
         self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)#, stretch = 1, alignment=Qt.AlignCenter)
@@ -180,6 +184,7 @@ class MatplotlibWidget(QWidget):
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
+            self.navi_toolbar.actions()[0].triggered.connect(self.getHome)
             self.layoutVertical.addWidget(self.navi_toolbar)        
 
     def setMinMax(self, vmin=None, vmax=None):
@@ -206,14 +211,46 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')            
         self.callback = callback
         callback(ax=ax)
+        self.setHome(ax)
+        ax.callbacks.connect('xlim_changed', self.on_xlims_change)
+        ax.callbacks.connect('ylim_changed', self.on_ylims_change)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
+        self.restoreZoom()
         self.canvas.draw()
-
 
     def setCallback(self, callback):
         self.callback = callback
+
+    def on_xlims_change(self, ax):
+        print('xlim', ax.get_xlim())
+        self.xlim = ax.get_xlim()
+        
+    def on_ylims_change(self, ax):
+        print('ylim', ax.get_ylim())
+        self.ylim = ax.get_ylim()
+
+    def setHome(self, ax):
+        xlim = ax.get_xlim()
+        print('setHome xlim=', xlim, ' (xlim0=', self.xlim0, '...', end='')
+        #TODO not a good condition below
+        if (xlim[0] != 0) & (xlim[1] != 1): # it means callback actually plot smth
+            self.xlim0 = ax.get_xlim()
+            self.ylim0 = ax.get_ylim()
+            print('saved')
+        else:
+            print('cancelled')
+
+    def getHome(self):
+        print('getHome', self.xlim0, self.ylim0)
+        self.axis.set_xlim(self.xlim0)
+        self.axis.set_ylim(self.ylim0)
+        
+    def restoreZoom(self):
+        print('=== restoreZoom', self.xlim, self.ylim)
+        self.figure.axes[0].set_xlim(self.xlim)
+        self.figure.axes[0].set_ylim(self.ylim)
 
     def replot(self, threed=False, aspect=None, **kwargs):
         self.figure.clear()
@@ -222,10 +259,16 @@ class MatplotlibWidget(QWidget):
         else:
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
+        if self.xlim0 is None:
+            self.setHome(ax)
         self.callback(ax=ax, **kwargs)
+        ax.callbacks.connect('xlim_changed', self.on_xlims_change)
+        ax.callbacks.connect('ylim_changed', self.on_ylims_change)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
+        if self.xlim0 is not None:
+            self.restoreZoom()
         self.canvas.draw()
 
 
