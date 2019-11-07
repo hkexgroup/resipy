@@ -4385,7 +4385,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensLayout.addWidget(sensLabel)
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setMinimum(0)
-        sensSlider.setMaximum(10)
+        sensSlider.setMaximum(9.8)
         sensSlider.setValue(1)
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
