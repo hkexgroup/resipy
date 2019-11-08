@@ -4006,7 +4006,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.end = False
             outStackLayout.setCurrentIndex(0)
             cmapCombo.setCurrentIndex(0)
-            sensSlider.setValue(1)
+            sensSlider.setValue(5)
             mwInvResult.clear()
             mwRMS.clear()
             logText.setText('')
@@ -4386,7 +4386,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setMinimum(0)
         sensSlider.setMaximum(9.8)
-        sensSlider.setValue(1)
+        sensSlider.setValue(5)
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
         sensLayout.addWidget(sensSlider)
