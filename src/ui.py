@@ -222,6 +222,10 @@ class MatplotlibWidget(QWidget):
 
     def setCallback(self, callback):
         self.callback = callback
+        self.xlim0 = None
+        self.ylim0 = None
+        self.xlim = None
+        self.ylim = None
 
     def on_xlims_change(self, ax):
         print('xlim', ax.get_xlim())
@@ -235,7 +239,7 @@ class MatplotlibWidget(QWidget):
         xlim = ax.get_xlim()
         print('setHome xlim=', xlim, ' (xlim0=', self.xlim0, '...', end='')
         #TODO not a good condition below
-        if (xlim[0] != 0) & (xlim[1] != 1): # it means callback actually plot smth
+        if (xlim[0] != 0) | (xlim[1] != 1): # it means callback actually plot smth
             self.xlim0 = ax.get_xlim()
             self.ylim0 = ax.get_ylim()
             print('saved')
@@ -246,6 +250,7 @@ class MatplotlibWidget(QWidget):
         print('getHome', self.xlim0, self.ylim0)
         self.axis.set_xlim(self.xlim0)
         self.axis.set_ylim(self.ylim0)
+        self.canvas.draw()
         
     def restoreZoom(self):
         print('=== restoreZoom', self.xlim, self.ylim)
@@ -253,15 +258,17 @@ class MatplotlibWidget(QWidget):
         self.figure.axes[0].set_ylim(self.ylim)
 
     def replot(self, threed=False, aspect=None, **kwargs):
+        print('replot ============')
         self.figure.clear()
         if threed is False:
             ax = self.figure.add_subplot(111)
         else:
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
-        if self.xlim0 is None:
-            self.setHome(ax)
         self.callback(ax=ax, **kwargs)
+        if self.xlim0 is None:
+            print('xlim0 is None')
+            self.setHome(ax)
         ax.callbacks.connect('xlim_changed', self.on_xlims_change)
         ax.callbacks.connect('ylim_changed', self.on_ylims_change)
         if aspect == None:
@@ -856,8 +863,11 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
+                        if len(fnames) < 2:
+                            errorDump('at least two files needed for timelapse.')
+                            return
                         self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
-                        ipCheck.setEnabled(False)
+                        ipCheck.setEnabled(False) # TODO enable IP for timelapse
                         infoDump('Time-lapse survey created.')
                     else:
                         self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
