@@ -439,6 +439,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         if isinstance(dirname, list): # it's a list of filename
+            if len(dirname) < 2:
+                raise ValueError('at least two files needed for timelapse inversion')
+                return
             files = dirname
         else: # it's a directory and we import all the files inside
             if os.path.isdir(dirname):
