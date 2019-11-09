@@ -4050,7 +4050,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.end = False
             outStackLayout.setCurrentIndex(0)
             cmapCombo.setCurrentIndex(0)
-            sensSlider.setValue(1)
+            sensSlider.setValue(5)
             mwInvResult.clear()
             mwRMS.clear()
             logText.setText('')
@@ -4193,7 +4193,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis', 'sensPrc':0.1}
+                                  'cmap':'viridis', 'sensPrc':0.5}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
@@ -4429,8 +4429,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensLayout.addWidget(sensLabel)
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setMinimum(0)
-        sensSlider.setMaximum(10)
-        sensSlider.setValue(1)
+        sensSlider.setMaximum(9.8)
+        sensSlider.setValue(5)
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
         sensLayout.addWidget(sensSlider)
