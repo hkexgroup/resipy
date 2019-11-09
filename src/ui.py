@@ -211,13 +211,9 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')            
         self.callback = callback
         callback(ax=ax)
-        self.setHome(ax)
-        ax.callbacks.connect('xlim_changed', self.on_xlims_change)
-        ax.callbacks.connect('ylim_changed', self.on_ylims_change)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
-        self.restoreZoom()
         self.canvas.draw()
 
     def setCallback(self, callback):
@@ -226,39 +222,36 @@ class MatplotlibWidget(QWidget):
         self.ylim0 = None
         self.xlim = None
         self.ylim = None
+    
+    ''' to keep the zoom level we register event on xylim change and store it
+    as attribute of the MatplotlibWidget. At first drawn of the figure by
+    replot() we also set up xlim0 and ylim0 to be triggered by the 'home'
+    button. If another replot is triggered the plot will programmatically
+    restore the previous zoom level using getHome()
+    '''
 
     def on_xlims_change(self, ax):
-        print('xlim', ax.get_xlim())
         self.xlim = ax.get_xlim()
         
     def on_ylims_change(self, ax):
-        print('ylim', ax.get_ylim())
         self.ylim = ax.get_ylim()
 
     def setHome(self, ax):
         xlim = ax.get_xlim()
-        print('setHome xlim=', xlim, ' (xlim0=', self.xlim0, '...', end='')
-        #TODO not a good condition below
         if (xlim[0] != 0) | (xlim[1] != 1): # it means callback actually plot smth
             self.xlim0 = ax.get_xlim()
             self.ylim0 = ax.get_ylim()
-            print('saved')
-        else:
-            print('cancelled')
 
     def getHome(self):
-        print('getHome', self.xlim0, self.ylim0)
         self.axis.set_xlim(self.xlim0)
         self.axis.set_ylim(self.ylim0)
         self.canvas.draw()
         
     def restoreZoom(self):
-        print('=== restoreZoom', self.xlim, self.ylim)
         self.figure.axes[0].set_xlim(self.xlim)
         self.figure.axes[0].set_ylim(self.ylim)
 
     def replot(self, threed=False, aspect=None, **kwargs):
-        print('replot ============')
         self.figure.clear()
         if threed is False:
             ax = self.figure.add_subplot(111)
@@ -267,7 +260,6 @@ class MatplotlibWidget(QWidget):
         self.axis = ax
         self.callback(ax=ax, **kwargs)
         if self.xlim0 is None:
-            print('xlim0 is None')
             self.setHome(ax)
         ax.callbacks.connect('xlim_changed', self.on_xlims_change)
         ax.callbacks.connect('ylim_changed', self.on_ylims_change)
@@ -277,7 +269,6 @@ class MatplotlibWidget(QWidget):
         if self.xlim0 is not None:
             self.restoreZoom()
         self.canvas.draw()
-
 
     def clear(self):
         self.axis.clear()
