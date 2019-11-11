@@ -1455,7 +1455,7 @@ class Survey(object):
         
     
     def filterManual(self, attr='resist', ax=None, log=False, geom=True,
-                     label='Apprent Resistivity [$\Omega.m$]',
+                     label=r'Apprent Resistivity [$\Omega.m$]',
                      vmin=None, vmax=None):
         """Manually filters the data visually. The points manually selected are
         flagged in the `Survey.iselect` vector and can subsequently be removed
@@ -1562,13 +1562,21 @@ class Survey(object):
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
         
         # TODO: needs a prper way of numbering that actually falls on the electrode points
+        # put the numbers right next to the electrodes
+        elecNumber = 1 + np.arange(len(elecpos))
+#        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
+        
+        # on the axis
         ax2 = ax.twiny()
         ax2.set_xlabel('Electrode number')
+        ax2.set_xticks(elecpos[::5])
+        ax2.set_xticklabels(elecNumber[::5])
         ax2.set_xlim(ax.get_xlim())
-        ax2xticks = [tick.get_text() for tick in ax.get_xticklabels()]
-        ax2xticks[1] = 1
-        ax2xticks[-2] = nelec
-        ax2.set_xticklabels(ax2xticks)
+        
+#        ax2xticks = [tick.get_text() for tick in ax.get_xticklabels()]
+#        ax2xticks[1] = 1
+#        ax2xticks[-2] = nelec
+#        ax2.set_xticklabels(ax2xticks)
 
 
     
