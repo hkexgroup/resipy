@@ -129,6 +129,10 @@ class Survey(object):
 
         if ftype == 'BGS Prime':
             self.checkTxSign()
+        if ftype == 'Syscal':
+            if np.all(self.df['vp'] >= 0):
+                self.checkTxSign()
+            
 
         # apply basic filtering
         self.filterDefault()
@@ -168,6 +172,29 @@ class Survey(object):
         out = "Survey class with %i measurements and %i electrodes"%(len(self.df),len(self.elec[:,0]))
         return out
  
+    
+    def calcGeomFactor(self):
+        """Calculating geometric factor (K) for the data
+        Returns
+        -------
+        K : array
+            Array of geometric factors for each quadrupoles.
+        """
+        
+        elecpos = self.elec[:,0]
+        array = self.df[['a','b','m','n']].values.copy().astype(int)
+        
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        return K
+        
     
     def checkTxSign(self):
         """Checking the sign of the transfer resistances (2D survey only !).
@@ -284,6 +311,10 @@ class Survey(object):
         self.df = self.df.append(data)
         if ftype == 'BGS Prime':
             self.checkTxSign()
+        if ftype == 'Syscal':
+            if np.all(self.df['vp'] >= 0):
+                self.checkTxSign()
+            
         self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
         self.computeReciprocal()
