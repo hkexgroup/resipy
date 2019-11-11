@@ -4539,7 +4539,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 plotInvError2(index)
                 if self.iBorehole is False:
-                    self.r2.parseInvError()
                     plotInvError(index)
                     self.invErrorIndex = index
             except Exception as e:
