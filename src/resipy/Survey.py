@@ -1561,7 +1561,6 @@ class Survey(object):
         ipoints = np.zeros(len(y),dtype=bool)
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
         
-        # TODO: needs a prper way of numbering that actually falls on the electrode points
         # put the numbers right next to the electrodes
         elecNumber = 1 + np.arange(len(elecpos))
 #        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
