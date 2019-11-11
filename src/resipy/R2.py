@@ -3163,7 +3163,12 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # merge the columns to each survey dataframe
         for s, df in zip(self.surveys, dfs):
-            df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
+            if self.typ == 'cR2': #TODO figureout why Andy's code produce different f001_err.dat files
+                df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError']))) #there is something wrong here. R2 and cR2 produce different f001_err.dat! 'P+','P-','C+','C-' are different!!
+            elif self.typ == 'R2':
+                df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
+            else: # for 3D ones
+                df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
             cols = ['a','b','m','n','resInvError']
             if self.typ[0] == 'c':
                 df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
@@ -3191,7 +3196,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Max value.
         """
         array, errors = self.getInvError(index=index)
-
+        self.parseInvError()
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array, errors, spacing, ax=ax, label='Normalized Errors',
                log=False, geom=False, contour=False, vmin=vmin, vmax=vmax)
@@ -3216,6 +3221,7 @@ class R2(object): # R2 master class instanciated by the GUI
             df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(index+1)), delim_whitespace=True)
             array = np.array([df['C+'], df['C-'], df['P+'], df['P-']], dtype=int)
             errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
+        self.parseInvError()
         spacing = np.diff(self.elec[[0,1],0])
         pseudo(array.T, errors, spacing, ax=ax, label='Normalized Errors',
                log=False, geom=False, contour=False, vmin=None, vmax=None)
