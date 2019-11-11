@@ -1546,6 +1546,7 @@ class Survey(object):
         else:
             fig = ax.figure
         caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+        
         cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
                          vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax)
@@ -1559,7 +1560,17 @@ class Survey(object):
         y = cax.get_offsets()[:,1]        
         ipoints = np.zeros(len(y),dtype=bool)
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
-          
+        
+        # TODO: needs a prper way of numbering that actually falls on the electrode points
+        ax2 = ax.twiny()
+        ax2.set_xlabel('Electrode number')
+        ax2.set_xlim(ax.get_xlim())
+        ax2xticks = [tick.get_text() for tick in ax.get_xticklabels()]
+        ax2xticks[1] = 1
+        ax2xticks[-2] = nelec
+        ax2.set_xticklabels(ax2xticks)
+
+
     
     def filterElec(self, elec=[]):
         """Filter out specific electrodes given.

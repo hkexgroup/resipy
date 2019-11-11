@@ -3173,7 +3173,7 @@ class R2(object): # R2 master class instanciated by the GUI
             else: # for 3D ones
                 df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
             cols = ['a','b','m','n','resInvError']
-            if self.typ[0] == 'c':
+            if self.typ == 'cR2':
                 df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
                 cols += ['phaseInvMisfit']
             if 'resInvError' in s.df.columns:
