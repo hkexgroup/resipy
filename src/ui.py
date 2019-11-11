@@ -4525,9 +4525,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 invErrorComboLabel.hide()
                 invErrorCombo.hide()
-                
-            if self.r2.iTimeLapse:
-                names = names[1:]
+
             invErrorCombo.disconnect()
             invErrorCombo.clear()
             for name in names:
@@ -4549,9 +4547,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorComboLabel = QLabel('Choose dataset:')
         invErrorComboLabel.hide()
         
-#        def plotInvError(index=0):
-#            mwInvError.setCallback(self.r2.showPseudoInvError)
-#            mwInvError.replot(index=index, aspect=self.plotAspect)
         def plotInvError(index=0):
             mwInvError.setCallback(self.r2.filterManual)
             mwInvError.replot(index=index, aspect=self.plotAspect, attr='resInvError', label='Normalized Error', geom=False)
@@ -4562,7 +4557,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 i2remove = self.r2.surveys[self.invErrorIndex].iselect
                 if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0): 
-                    # as the selection is only done on normal dataset, reciprocal paire should be removed too
+                    # as the selection is only done on normal dataset, reciprocal pair should be removed too
                     recipPaires = self.r2.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
                     ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires)
                     i2remove = i2remove + ie

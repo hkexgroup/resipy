@@ -3145,7 +3145,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.typ == 'cR2' or self.typ == 'R2':
             dfs = []
             if self.iTimeLapse:
-                df = pd.read_csv(os.path.join(self.dirname, 'f001_err.dat'), delim_whitespace=True)
+                df = pd.read_csv(os.path.join(self.dirname, 'ref/f001_err.dat'), delim_whitespace=True)
                 dfs.append(df)
             for i in range(len(self.surveys)-a):
                 df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1)), delim_whitespace=True)
@@ -3153,7 +3153,7 @@ class R2(object): # R2 master class instanciated by the GUI
         elif self.typ == 'R3t' or self.typ == 'cR3t':
             dfs = []
             if self.iTimeLapse:
-                err = np.genfromtxt(os.path.join(self.dirname, 'f001.err'), skip_header=1)
+                err = np.genfromtxt(os.path.join(self.dirname, 'ref/f001.err'), skip_header=1)
                 df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
                                   columns=['P+','P-','C+','C-', 'Normalised_Error'])
                 dfs.append(df)
