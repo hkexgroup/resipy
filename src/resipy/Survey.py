@@ -1519,6 +1519,8 @@ class Survey(object):
                          vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax)
         cbar.set_label(label)
+        ax.set_xlabel('Distance [m]')
+        ax.set_ylabel('Pseudo depth [m]')
         cax.figure.canvas.mpl_connect('pick_event', onpick)        
         killed, = cax.axes.plot([],[],'rx')
         elecKilled, = cax.axes.plot([],[],'rx')

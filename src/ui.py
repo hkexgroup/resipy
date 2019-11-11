@@ -619,10 +619,12 @@ class App(QMainWindow):
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
                 self.iBorehole = True
+                errorGraphs.setTabEnabled(0, False)
                 if self.r2 is not None:
                     self.r2.setBorehole(True)
             else:
                 self.iBorehole = False
+                errorGraphs.setTabEnabled(0, True)
                 if self.r2 is not None:
                     self.r2.setBorehole(False)
             try:
@@ -4501,6 +4503,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         tabs.setTabEnabled(6,False)
         
         errorGraphs = QTabWidget()
+        
+        invPseudoErrLabel = QLabel('Select datapoints on the pseudo section to remove and reinvert the data.')
 
         def prepareInvError():
             names = [s.name for s in self.r2.surveys]
@@ -4524,7 +4528,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 plotInvError2(index)
                 if self.iBorehole is False:
+                    self.r2.parseInvError()
                     plotInvError(index)
+                    self.invErrorIndex = index
             except Exception as e:
                 print('Could not print error: ', e)
         invErrorCombo = QComboBox()
@@ -4533,11 +4539,40 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorComboLabel = QLabel('Choose dataset:')
         invErrorComboLabel.hide()
         
+#        def plotInvError(index=0):
+#            mwInvError.setCallback(self.r2.showPseudoInvError)
+#            mwInvError.replot(index=index, aspect=self.plotAspect)
         def plotInvError(index=0):
-            mwInvError.setCallback(self.r2.showPseudoInvError)
-            mwInvError.replot(index=index, aspect=self.plotAspect)
+            mwInvError.setCallback(self.r2.filterManual)
+            mwInvError.replot(index=index, aspect=self.plotAspect, attr='resInvError', label='Normalized Error', geom=False)
 
         mwInvError = MatplotlibWidget(navi=True, aspect='auto')
+        
+        def invErrorFiltFunc():
+            try:
+                i2remove = self.r2.surveys[self.invErrorIndex].iselect
+                if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0):
+                    recipPaires = self.r2.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
+                    ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires)
+                    i2remove = i2remove + ie
+                self.r2.surveys[self.invErrorIndex].filterData(~i2remove)
+                plotInvError(self.invErrorIndex)
+            except:
+                errorDump('Something went wrong!')
+                pass
+        
+        invErrorFilterBtn = QPushButton('Remove selected')
+        invErrorFilterBtn.setFixedWidth(150)
+        invErrorFilterBtn.clicked.connect(invErrorFiltFunc)
+        
+        def invErrorReinvert():
+            tabs.setCurrentIndex(5) # jump to inversion tab
+            btnInvert.animateClick() # invert
+        
+        invErrorReinvertBtn = QPushButton('Invert')
+        invErrorReinvertBtn.setFixedWidth(150)
+        invErrorReinvertBtn.clicked.connect(invErrorReinvert)
+        invErrorReinvertBtn.setStyleSheet('background-color: green')
       
 
         def plotInvError2(index=0):
@@ -4562,6 +4597,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
         errorGraphs.addTab(invError, 'Pseudo Section of Inversion Errors')
 
         invErrorLayout = QVBoxLayout()
+        invErrorLayout.setAlignment(Qt.AlignTop)
+        
+        invErrorTopLayout = QHBoxLayout()
+        invErrorTopLayoutL = QHBoxLayout()
+        invErrorTopLayoutL.addWidget(invPseudoErrLabel)
+        invErrorTopLayout.addLayout(invErrorTopLayoutL)
+        
+        invErrorTopLayoutR = QHBoxLayout()
+        invErrorTopLayoutR.setAlignment(Qt.AlignRight)
+        invErrorTopLayoutR.addWidget(invErrorFilterBtn)
+        invErrorTopLayoutR.addWidget(invErrorReinvertBtn)
+        invErrorTopLayout.addLayout(invErrorTopLayoutR)
+        
+        invErrorLayout.addLayout(invErrorTopLayout, 0)
+        
         invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
 
