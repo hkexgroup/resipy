@@ -406,6 +406,8 @@ class App(QMainWindow):
             phivminEdit.setText('0')
             phivmaxEdit.setText('25')
             dcaProgress.setValue(0)
+            dcaButton.setEnabled(False)
+            dcaProgress.setEnabled(False)
             self.phaseFiltDataIndex = -1
             tabPreProcessing.setTabEnabled(0, True)
             tabPreProcessing.setTabEnabled(1, False)
@@ -849,6 +851,9 @@ class App(QMainWindow):
                     if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
                         if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            dcaButton.setEnabled(True)
+                            dcaProgress.setEnabled(True)
                 except Exception as e:
                     print('Error in getdir(): ', e)
                     errorDump('File format is not recognized (one or all files!)')
@@ -911,6 +916,9 @@ class App(QMainWindow):
                 if 'ip' in self.r2.surveys[0].df.columns:
                     if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                         ipCheck.setChecked(True)
+                    if self.ftype == 'Syscal':
+                        dcaButton.setEnabled(True)
+                        dcaProgress.setEnabled(True)
                    
                 plotPseudo()
 
@@ -2215,6 +2223,7 @@ class App(QMainWindow):
                 dcaButton.setEnabled(True)
             except:
                 errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
+                dcaButton.setEnabled(True)
 
         dcaLayout = QHBoxLayout()
         dcaButton = QPushButton('DCA filtering')
@@ -2222,6 +2231,8 @@ class App(QMainWindow):
         dcaButton.setAutoDefault(True)
         dcaButton.clicked.connect(dcaFiltering)
         dcaProgress = QProgressBar()
+        dcaButton.setEnabled(False)
+        dcaProgress.setEnabled(False)
         dcaLayout.addWidget(dcaButton)
         dcaLayout.addWidget(dcaProgress)
 
@@ -3997,7 +4008,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.end = False
             outStackLayout.setCurrentIndex(0)
             cmapCombo.setCurrentIndex(0)
-            sensSlider.setValue(1)
+            sensSlider.setValue(5)
             mwInvResult.clear()
             mwRMS.clear()
             logText.setText('')
@@ -4140,7 +4151,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis', 'sensPrc':0.1}
+                                  'cmap':'viridis', 'sensPrc':0.5}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
@@ -4376,8 +4387,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensLayout.addWidget(sensLabel)
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setMinimum(0)
-        sensSlider.setMaximum(10)
-        sensSlider.setValue(1)
+        sensSlider.setMaximum(9.8)
+        sensSlider.setValue(5)
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
         sensLayout.addWidget(sensSlider)
@@ -4776,6 +4787,7 @@ USA: Trelgol Publishing, (2006).
     # based on https://kushaldas.in/posts/pyqt5-thread-example.html
     def updateChecker(self): # check for new updates on gitlab
         version = ResIPy_version
+        newChanges = ''
         try:
             versionSource = urlRequest.urlopen('https://gitlab.com/hkex/pyr2/raw/master/src/version.txt?inline=false')
             versionCheck = versionSource.read().decode()
