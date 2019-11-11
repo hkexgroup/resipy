@@ -4525,7 +4525,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 invErrorComboLabel.hide()
                 invErrorCombo.hide()
-
+                
+            if self.r2.iTimeLapse:
+                names[0] = names[0] + ' (Ref)'
+                
             invErrorCombo.disconnect()
             invErrorCombo.clear()
             for name in names:
@@ -4542,9 +4545,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             except Exception as e:
                 print('Could not print error: ', e)
         invErrorCombo = QComboBox()
+        invErrorCombo.setMinimumWidth(250)
+        invErrorCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         invErrorCombo.activated.connect(invErrorComboFunc)
         invErrorCombo.hide()
-        invErrorComboLabel = QLabel('Choose dataset:')
+        invErrorComboLabel = QLabel('Choose a dataset to plot the error:')
         invErrorComboLabel.hide()
         
         def plotInvError(index=0):
@@ -4595,8 +4600,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         postProcessingLayout = QVBoxLayout()
         
         topInvErrorLayout = QHBoxLayout()
-        topInvErrorLayout.addWidget(invErrorComboLabel)
-        topInvErrorLayout.addWidget(invErrorCombo)
+        topInvErrorLayout.addWidget(invErrorComboLabel, 1)
+        topInvErrorLayout.addWidget(invErrorCombo, 0)
         postProcessingLayout.addLayout(topInvErrorLayout)
         postProcessingLayout.addWidget(errorGraphs)
         
