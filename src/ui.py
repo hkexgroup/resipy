@@ -921,13 +921,13 @@ class App(QMainWindow):
                         dcaProgress.setEnabled(True)
                    
                 plotPseudo()
-
+    
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
                 nbElecEdit.setText(str(len(self.r2.elec)))
                 elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
-#                fnamesCombo.setEnabled(False)
+    #                fnamesCombo.setEnabled(False)
                 fnamesCombo.hide()
                 fnamesComboLabel.hide()
             except Exception as e:
