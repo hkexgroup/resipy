@@ -4559,10 +4559,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0): 
                     # as the selection is only done on normal dataset, reciprocal pair should be removed too
                     recipPaires = self.r2.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
-                    ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires)
+                    ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires[recipPaires != 0]) 
                     i2remove = i2remove + ie
                 self.r2.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
+                plotInvError2(self.invErrorIndex)
             except:
                 errorDump('Something went wrong!')
                 pass
