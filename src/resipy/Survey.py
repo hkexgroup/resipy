@@ -1545,14 +1545,30 @@ class Survey(object):
             fig, ax = plt.subplots()
         else:
             fig = ax.figure
-        caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
         
-        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
-                         vmax=vmax)
-        cbar = fig.colorbar(cax, ax=ax)
-        cbar.set_label(label)
-        ax.set_xlabel('Distance [m]')
+        # put the numbers right next to the electrodes
+        elecNumber = 1 + np.arange(len(elecpos))
+#        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
+        
+        # on the axis
+        ax2 = ax.twiny()
+        ax.set_xlabel('Electrode number')
         ax.set_ylabel('Pseudo depth [m]')
+        ax.xaxis.set_label_position('top')
+        ax.xaxis.set_ticks_position('top')
+        ax.set_xticks(elecpos[::5])
+        ax.set_xticklabels(elecNumber[::5])
+        
+        
+        caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+        
+        cax = ax2.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
+                         vmax=vmax)
+        cbar = fig.colorbar(cax, ax=ax2)
+        cbar.set_label(label)
+        ax2.set_xlabel('Distance [m]')
+        ax2.xaxis.set_label_position('bottom')
+        ax2.xaxis.set_ticks_position('bottom')
         cax.figure.canvas.mpl_connect('pick_event', onpick)        
         killed, = cax.axes.plot([],[],'rx')
         elecKilled, = cax.axes.plot([],[],'rx')
@@ -1561,17 +1577,20 @@ class Survey(object):
         ipoints = np.zeros(len(y),dtype=bool)
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
         
+        ax.set_xlim(ax2.get_xlim()) # here to get correct limits form ax2
+
+        
         # put the numbers right next to the electrodes
-        elecNumber = 1 + np.arange(len(elecpos))
-#        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
-        
-        # on the axis
-        ax2 = ax.twiny()
-        ax2.set_xlabel('Electrode number')
-        ax2.set_xticks(elecpos[::5])
-        ax2.set_xticklabels(elecNumber[::5])
-        ax2.set_xlim(ax.get_xlim())
-        
+#        elecNumber = 1 + np.arange(len(elecpos))
+##        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
+#        
+#        # on the axis
+#        ax2 = ax.twiny()
+#        ax2.set_xlabel('Electrode number')
+#        ax2.set_xticks(elecpos[::5])
+#        ax2.set_xticklabels(elecNumber[::5])
+#        ax2.set_xlim(ax.get_xlim())
+
 #        ax2xticks = [tick.get_text() for tick in ax.get_xticklabels()]
 #        ax2xticks[1] = 1
 #        ax2xticks[-2] = nelec
