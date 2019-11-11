@@ -3163,7 +3163,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # merge the columns to each survey dataframe
         for s, df in zip(self.surveys, dfs):
-            if self.typ == 'cR2': #TODO figureout why Andy's code produce different f001_err.dat files
+            if self.typ == 'cR2': #TODO figure out why Andy's code produce different f001_err.dat files
                 df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError']))) #there is something wrong here. R2 and cR2 produce different f001_err.dat! 'P+','P-','C+','C-' are different!!
             elif self.typ == 'R2':
                 df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
@@ -3178,7 +3178,8 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'phaseInvMisfit' in s.df.columns:
                 s.df = s.df.drop('phaseInvMisfit', axis=1)
             s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
-        # TODO assign the errors to normal and reciprocal ? in case we use recipMean only ?
+        # TODO assign the errors to normal and reciprocal ? in case we use recipMean only ? 
+        # This error has nothing to do with reciprocity!
                     
 
     def showPseudoInvError(self, index=0, ax=None, vmin=None, vmax=None):

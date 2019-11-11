@@ -4557,12 +4557,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             mwInvError.setCallback(self.r2.filterManual)
             mwInvError.replot(index=index, aspect=self.plotAspect, attr='resInvError', label='Normalized Error', geom=False)
 
-        mwInvError = MatplotlibWidget(navi=True, aspect='auto')
+        mwInvError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         
         def invErrorFiltFunc():
             try:
                 i2remove = self.r2.surveys[self.invErrorIndex].iselect
-                if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0):
+                if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0): 
+                    # as the selection is only done on normal dataset, reciprocal paire should be removed too
                     recipPaires = self.r2.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
                     ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires)
                     i2remove = i2remove + ie
@@ -4589,7 +4590,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def plotInvError2(index=0):
             mwInvError2.setCallback(self.r2.showInvError)
             mwInvError2.replot(index=index)
-        mwInvError2 = MatplotlibWidget(navi=True, aspect='auto')
+        mwInvError2 = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
