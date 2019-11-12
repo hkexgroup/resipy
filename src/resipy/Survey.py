@@ -1548,7 +1548,8 @@ class Survey(object):
         
         # put the numbers right next to the electrodes
         elecNumber = 1 + np.arange(len(elecpos))
-#        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
+#        [ax.text(a, 0, str(b), horizontalalignment='center', verticalalignment='bottom') for a,b in zip(elecpos[::5], elecNumber[::5])]
+#        ax2 = ax
         
         # on the axis
         ax2 = ax.twiny()
@@ -1578,7 +1579,6 @@ class Survey(object):
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
         
         ax.set_xlim(ax2.get_xlim()) # here to get correct limits form ax2
-
         
         # put the numbers right next to the electrodes
 #        elecNumber = 1 + np.arange(len(elecpos))
