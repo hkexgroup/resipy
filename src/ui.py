@@ -4554,7 +4554,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def plotInvError(index=0):
             mwInvError.setCallback(self.r2.filterManual)
-            mwInvError.replot(index=index, aspect=self.plotAspect, attr='resInvError', label='Normalized Error', geom=False)
+            mwInvError.replot(index=index, attr='resInvError', label='Normalized Error', geom=False)
 
         mwInvError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         
