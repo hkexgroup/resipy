@@ -171,6 +171,10 @@ class MatplotlibWidget(QWidget):
             axes = figure.get_axes()
         self.figure = figure
         self.axis = axes
+        self.xlim = None
+        self.ylim = None
+        self.xlim0 = None
+        self.ylim0 = None
         self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)#, stretch = 1, alignment=Qt.AlignCenter)
@@ -180,6 +184,7 @@ class MatplotlibWidget(QWidget):
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
+            self.navi_toolbar.actions()[0].triggered.connect(self.getHome)
             self.layoutVertical.addWidget(self.navi_toolbar)        
 
     def setMinMax(self, vmin=None, vmax=None):
@@ -211,9 +216,40 @@ class MatplotlibWidget(QWidget):
         ax.set_aspect(aspect)
         self.canvas.draw()
 
-
     def setCallback(self, callback):
         self.callback = callback
+        self.xlim0 = None
+        self.ylim0 = None
+        self.xlim = None
+        self.ylim = None
+    
+    ''' to keep the zoom level we register event on xylim change and store it
+    as attribute of the MatplotlibWidget. At first drawn of the figure by
+    replot() we also set up xlim0 and ylim0 to be triggered by the 'home'
+    button. If another replot is triggered the plot will programmatically
+    restore the previous zoom level using getHome()
+    '''
+
+    def on_xlims_change(self, ax):
+        self.xlim = ax.get_xlim()
+        
+    def on_ylims_change(self, ax):
+        self.ylim = ax.get_ylim()
+
+    def setHome(self, ax):
+        xlim = ax.get_xlim()
+        if (xlim[0] != 0) | (xlim[1] != 1): # it means callback actually plot smth
+            self.xlim0 = ax.get_xlim()
+            self.ylim0 = ax.get_ylim()
+
+    def getHome(self):
+        self.axis.set_xlim(self.xlim0)
+        self.axis.set_ylim(self.ylim0)
+        self.canvas.draw()
+        
+    def restoreZoom(self):
+        self.figure.axes[0].set_xlim(self.xlim)
+        self.figure.axes[0].set_ylim(self.ylim)
 
     def replot(self, threed=False, aspect=None, **kwargs):
         self.figure.clear()
@@ -223,11 +259,16 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
+        if self.xlim0 is None:
+            self.setHome(ax)
+        ax.callbacks.connect('xlim_changed', self.on_xlims_change)
+        ax.callbacks.connect('ylim_changed', self.on_ylims_change)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
+        if self.xlim0 is not None:
+            self.restoreZoom()
         self.canvas.draw()
-
 
     def clear(self):
         self.axis.clear()
@@ -815,8 +856,11 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
+                        if len(fnames) < 2:
+                            errorDump('at least two files needed for timelapse.')
+                            return
                         self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
-                        ipCheck.setEnabled(False)
+                        ipCheck.setEnabled(False) # TODO enable IP for timelapse
                         infoDump('Time-lapse survey created.')
                     else:
                         self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
