@@ -129,6 +129,10 @@ class Survey(object):
 
         if ftype == 'BGS Prime':
             self.checkTxSign()
+        if ftype == 'Syscal':
+            if np.all(self.df['vp'] >= 0):
+                self.checkTxSign()
+            
 
         # apply basic filtering
         self.filterDefault()
@@ -168,6 +172,29 @@ class Survey(object):
         out = "Survey class with %i measurements and %i electrodes"%(len(self.df),len(self.elec[:,0]))
         return out
  
+    
+    def calcGeomFactor(self):
+        """Calculating geometric factor (K) for the data
+        Returns
+        -------
+        K : array
+            Array of geometric factors for each quadrupoles.
+        """
+        
+        elecpos = self.elec[:,0]
+        array = self.df[['a','b','m','n']].values.copy().astype(int)
+        
+        apos = elecpos[array[:,0]-1]
+        bpos = elecpos[array[:,1]-1]
+        mpos = elecpos[array[:,2]-1]
+        npos = elecpos[array[:,3]-1]
+        AM = np.abs(apos-mpos)
+        BM = np.abs(bpos-mpos)
+        AN = np.abs(apos-npos)
+        BN = np.abs(bpos-npos)
+        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+        return K
+        
     
     def checkTxSign(self):
         """Checking the sign of the transfer resistances (2D survey only !).
@@ -284,6 +311,10 @@ class Survey(object):
         self.df = self.df.append(data)
         if ftype == 'BGS Prime':
             self.checkTxSign()
+        if ftype == 'Syscal':
+            if np.all(self.df['vp'] >= 0):
+                self.checkTxSign()
+            
         self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
         self.computeReciprocal()
@@ -1423,31 +1454,33 @@ class Survey(object):
         dump(100)
         
     
-    def filterManual(self, ax=None, figsize=(12,3), contour=False,
-                     log=False, geom=False, label='', vmin=None, vmax=None):
-        """Manually filters the data visually.
+    def filterManual(self, attr='resist', ax=None, log=False, geom=True,
+                     label=r'Apprent Resistivity [$\Omega.m$]',
+                     vmin=None, vmax=None):
+        """Manually filters the data visually. The points manually selected are
+        flagged in the `Survey.iselect` vector and can subsequently be removed
+        by calling `Survey.filterData(~Survey.iselect)`.
         
         Parameters
         ----------
+        attr : str, optional
+            Columns of `Survey.df` to use for plotting. Default is `resist` (
+            transfer resistance).
         ax : matplotlib axis, optional
             If specified, the graph is plotted along the axis.
-        
-        Returns
-        -------
-            If `ax` is not None, a matplotlib figure is returned.
+        log : bool, optional
+            If `True``then all data will be log transformed.
+        geom : bool, optional
+            If `True` the values will be multiplied by the geometric factor (default).
+        label : str, optional
+            Label of the colorbar.
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-#        if all(self.df['irecip'].values != 0) is False:
-#            print('choose recipError')
-#            resist = 100*self.df['reciprocalErrRel'].values # some nan here are not plotted !!!
-#            clabel = 'Reciprocal Error [%]'
-#        else:
-#            print('choose resist')
-        geom = True
-        resist = self.df['resist'].values
-        clabel = 'Apparent Resistivity [$\Omega.m$]'
-        if label == '':
-            label = clabel
+        resist = self.df[attr].values
         inan = np.isnan(resist)
         resist = resist.copy()[~inan]
         array = array.copy()[~inan]
@@ -1476,7 +1509,7 @@ class Survey(object):
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-        
+
         array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
             + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
@@ -1484,7 +1517,6 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
         
         def onpick(event):
             if lines[event.artist] == 'data':
@@ -1494,7 +1526,6 @@ class Survey(object):
                     setSelect(isame, False)
                 else:
                     setSelect(isame, True)
-            
             if lines[event.artist] == 'elec':
                 ie = (array == (event.ind[0]+1)).any(-1)
                 if all(ipoints[ie] == True):
@@ -1509,28 +1540,63 @@ class Survey(object):
                 elecKilled.set_ydata(np.zeros(len(elecpos))[self.eselect])
             killed.set_xdata(x[ipoints])
             killed.set_ydata(y[ipoints])
-            killed.figure.canvas.draw()                
-                
+            killed.figure.canvas.draw()                                
         if ax is None:
             fig, ax = plt.subplots()
         else:
             fig = ax.figure
-        caxElec, = ax.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
-        cax = ax.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
-                         vmax=vmax)
-        cbar = fig.colorbar(cax, ax=ax)
-        cbar.set_label(label)
-        cax.figure.canvas.mpl_connect('pick_event', onpick)
         
+        # put the numbers right next to the electrodes
+        elecNumber = 1 + np.arange(len(elecpos))
+#        [ax.text(a, 0, str(b), horizontalalignment='center', verticalalignment='bottom') for a,b in zip(elecpos[::5], elecNumber[::5])]
+#        ax2 = ax
+        
+        # on the axis
+        ax2 = ax.twiny()
+        ax.set_xlabel('Electrode number')
+        ax.set_ylabel('Pseudo depth [m]')
+        ax.xaxis.set_label_position('top')
+        ax.xaxis.set_ticks_position('top')
+        ax.set_xticks(elecpos[::5])
+        ax.set_xticklabels(elecNumber[::5])
+        
+        
+        caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+        
+        cax = ax2.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
+                         vmax=vmax)
+        cbar = fig.colorbar(cax, ax=ax2)
+        cbar.set_label(label)
+        ax2.set_xlabel('Distance [m]')
+        ax2.xaxis.set_label_position('bottom')
+        ax2.xaxis.set_ticks_position('bottom')
+        cax.figure.canvas.mpl_connect('pick_event', onpick)        
         killed, = cax.axes.plot([],[],'rx')
         elecKilled, = cax.axes.plot([],[],'rx')
         x = cax.get_offsets()[:,0]
-        y = cax.get_offsets()[:,1]
-        
+        y = cax.get_offsets()[:,1]        
         ipoints = np.zeros(len(y),dtype=bool)
-
         lines = {cax:'data',caxElec:'elec',killed:'killed'}
-          
+        
+        ax.set_xlim(ax2.get_xlim()) # here to get correct limits form ax2
+        
+        # put the numbers right next to the electrodes
+#        elecNumber = 1 + np.arange(len(elecpos))
+##        [ax.text(a, 0, str(b)) for a,b in zip(elecpos[::5], elecNumber[::5])]
+#        
+#        # on the axis
+#        ax2 = ax.twiny()
+#        ax2.set_xlabel('Electrode number')
+#        ax2.set_xticks(elecpos[::5])
+#        ax2.set_xticklabels(elecNumber[::5])
+#        ax2.set_xlim(ax.get_xlim())
+
+#        ax2xticks = [tick.get_text() for tick in ax.get_xticklabels()]
+#        ax2xticks[1] = 1
+#        ax2xticks[-2] = nelec
+#        ax2.set_xticklabels(ax2xticks)
+
+
     
     def filterElec(self, elec=[]):
         """Filter out specific electrodes given.
