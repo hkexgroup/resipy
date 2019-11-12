@@ -1909,7 +1909,7 @@ class App(QMainWindow):
 
 
         def recipErrorUnpairedFunc():
-            index = -1 if self.recipErrDataIndex else self.recipErrDataIndex
+            index = -1 if self.recipErrDataIndex < 0 else self.recipErrDataIndex
             numRemoved = self.r2.filterUnpaired(index=index)
             if ipCheck.checkState() == Qt.Checked:
                 if self.recipErrApplyToAll:
