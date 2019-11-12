@@ -2064,7 +2064,12 @@ class R2(object): # R2 master class instanciated by the GUI
             self.runR2(dump=dump)
             
         # extract inversion errors
-        self.getInvError()
+        try: # this is in the case getInvError() is called after the file .err is
+            # created by R2 but before it is populated (when killing the run)
+            self.getInvError()
+        except:
+            print('Could not retrieve files maybe inversion failed')
+            return
 
         if iplot is True:
             self.showResults()
@@ -3145,29 +3150,43 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def getInvError(self):
         a = 1 if self.iTimeLapse else 0
-        if self.typ == 'cR2' or self.typ == 'R2':
-            dfs = []
-            if self.iTimeLapse:
-                df = pd.read_csv(os.path.join(self.dirname, 'ref/f001_err.dat'), delim_whitespace=True)
-                dfs.append(df)
-            for i in range(len(self.surveys)-a):
-                df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1)), delim_whitespace=True)
-                dfs.append(df)
-        elif self.typ == 'R3t' or self.typ == 'cR3t':
-            dfs = []
-            if self.iTimeLapse:
-                err = np.genfromtxt(os.path.join(self.dirname, 'ref/f001.err'), skip_header=1)
-                df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
-                                  columns=['P+','P-','C+','C-', 'Normalised_Error'])
-                dfs.append(df)
-            for i in range(len(self.surveys)-a):
-                err = np.genfromtxt(os.path.join(self.dirname, 'f{:03.0f}.err'.format(i+1)), skip_header=1)
-                df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
-                                  columns=['P+','P-','C+','C-', 'Normalised_Error'])
-                dfs.append(df)
-        #TODO not implemented for cR3t and phase misfit
+        try:
+            if self.typ == 'cR2' or self.typ == 'R2':
+                dfs = []
+                if self.iTimeLapse:
+                    fname = os.path.join(self.dirname, 'ref/f001_err.dat')
+                    if os.path.exists(fname):                    
+                        df = pd.read_csv(fname, delim_whitespace=True)
+                        dfs.append(df)
+                for i in range(len(self.surveys)-a):
+                    fname = os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1))
+                    if os.path.exists(fname):
+                        df = pd.read_csv(fname, delim_whitespace=True)
+                        dfs.append(df)
+            elif self.typ == 'R3t' or self.typ == 'cR3t':
+                dfs = []
+                if self.iTimeLapse:
+                    fname = os.path.join(self.dirname, 'ref/f001.err')
+                    if os.path.exists(fname):
+                        err = np.genfromtxt(fname, skip_header=1)
+                        df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
+                                          columns=['P+','P-','C+','C-', 'Normalised_Error'])
+                        dfs.append(df)
+                for i in range(len(self.surveys)-a):
+                    fname = os.path.join(self.dirname, 'f{:03.0f}.err'.format(i+1))
+                    if os.path.exists(fname):
+                        err = np.genfromtxt(fname, skip_header=1)
+                        df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
+                                          columns=['P+','P-','C+','C-', 'Normalised_Error'])
+                        dfs.append(df)
+            #TODO not implemented for cR3t and phase misfit
+        except:
+            return # this code is error prone (mainly to empty dataframe error)
         
         # merge the columns to each survey dataframe
+        if  np.sum([df.shape[0] > 0 for df in dfs]) != len(self.surveys):
+            print('error in reading error files (do not exists or empty')
+            return # this check the number of dfs AND the fact that they are not empty
         for s, df in zip(self.surveys, dfs):
             if self.typ == 'cR2': #TODO figure out why Andy's code produce different f001_err.dat files
                 df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError']))) #there is something wrong here. R2 and cR2 produce different f001_err.dat! 'P+','P-','C+','C-' are different!!
@@ -3186,6 +3205,7 @@ class R2(object): # R2 master class instanciated by the GUI
             s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
         # TODO assign the errors to normal and reciprocal ? in case we use recipMean only ? 
         # This error has nothing to do with reciprocity!
+
                     
 
     def showPseudoInvError(self, index=0, ax=None, vmin=None, vmax=None):
