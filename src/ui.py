@@ -395,6 +395,9 @@ class App(QMainWindow):
                 reg_mode.setCurrentIndex(0)
             activateTabs(False)
             
+            bottomSplitter.setSizes([0,1100])
+            topSplitter.setSizes([100,250])
+            
             # importing
             self.parser = None
             self.plotAspect = 'equal'
@@ -3925,6 +3928,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         splitterMainLayout = QHBoxLayout()
         
         topSplitter = QSplitter(Qt.Vertical)
+        topSplitter.setChildrenCollapsible(False)
 
         invLayout = QVBoxLayout()
 
@@ -4049,6 +4053,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #            self.processes.append(process)
 
         def logInversion():
+            bottomSplitter.setSizes([0,1100])
+            topSplitter.setSizes([100,250])
             self.end = False
             outStackLayout.setCurrentIndex(0)
             cmapCombo.setCurrentIndex(0)
@@ -4511,6 +4517,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         bottomSplitter.addWidget(bottomRSplitter)
         
         bottomSplitter.setSizes([0,1100])
+        bottomSplitter.setCollapsible(1, False)
         resultLayout.addWidget(bottomSplitter)
 #        resultLayout.addLayout(resultStackLayout, 90)
 
