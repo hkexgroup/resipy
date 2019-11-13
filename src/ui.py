@@ -2070,81 +2070,90 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
-#            if self.r2.iBatch or self.r2.iTimeLapse:
-#                self.r2.filterRangeIP(-1, # apply to all
-#                                      float(phivminEdit.text()),
-#                                      float(phivmaxEdit.text()))
-#            else:
             self.r2.filterRangeIP(self.phaseFiltDataIndex,
                                   float(phivminEdit.text()),
                                   float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
-#            if self.r2.iBatch or self.r2.iTimeLapse:
-#                self.r2.filterRecipIP(-1)
-#            else:
             self.r2.filterRecipIP(self.phaseFiltDataIndex)
             heatFilter()
 
         def removenested():
-#            if self.r2.iBatch or self.r2.iTimeLapse:
-#                self.r2.filterNested(-1)
-#            else:
             self.r2.filterNested(self.phaseFiltDataIndex)
             heatFilter()
 
         def convFactK():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.surveys[0].kFactor = float(phiConvFactor.text())
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    s.kFactor = float(phiConvFactor.text())
             else:
                 self.r2.surveys[self.phaseFiltDataIndex].kFactor = float(phiConvFactor.text())
             heatFilter()
+            heatRaw()
 
         phitoplayout = QHBoxLayout()
+        phitoplayoutL = QHBoxLayout()
+        phitoplayoutL.setAlignment(Qt.AlignLeft)
+        phitoplayoutC = QHBoxLayout()
+        phitoplayoutC.setAlignment(Qt.AlignRight)
+        phitoplayoutR = QHBoxLayout()
+        phitoplayoutR.setAlignment(Qt.AlignRight)
         phiConvFactorlabel = QLabel('Conversion factor k (φ = -kM):')
         phiConvFactorlabel.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor = QLineEdit()
-        phiConvFactor.setFixedWidth(50)
+        phiConvFactor.setFixedWidth(100)
         phiConvFactor.setValidator(QDoubleValidator())
         phiConvFactor.setText('1.2')
         phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
-        rangelabel = QLabel('     Phase range filtering:')
+        rangelabel = QLabel('Phase range filtering:')
+#        rangelabel.setAlignment(Qt.AlignRight | Qt.AlignHCenter)
         phivminlabel = QLabel('-φ min:')
+#        phivminlabel.setAlignment(Qt.AlignRight | Qt.AlignHCenter)
         phivminEdit = QLineEdit()
+        phivminEdit.setFixedWidth(100)
         phivminEdit.setValidator(QDoubleValidator())
         phivmaxlabel = QLabel('-φ max:')
+#        phivmaxlabel.setAlignment(Qt.AlignRight | Qt.AlignHCenter)
         phivmaxEdit = QLineEdit()
+        phivmaxEdit.setFixedWidth(100)
         phivmaxEdit.setValidator(QDoubleValidator())
         phivminEdit.setText('0')
         phivmaxEdit.setText('25')
         rangebutton = QPushButton('Apply')
+        rangebutton.setFixedWidth(150)
         rangebutton.setAutoDefault(True)
         rangebutton.clicked.connect(phirange)
 
         recipfilt = QPushButton('Remove reciprocals')
+        recipfilt.setFixedWidth(150)
         recipfilt.setToolTip('Reciprocal measurements will not be considered for inversion in ResIPy.\nThis filter just visualize the removal')
         recipfilt.setAutoDefault(True)
         recipfilt.setEnabled(False)
         recipfilt.clicked.connect(removerecip)
 
         nestedfilt = QPushButton('Remove nested')
+        nestedfilt.setFixedWidth(150)
         nestedfilt.setToolTip('Measurments where M and/or N are inbetween A and B will be removed.\nNOTE: Wenner like arrays will also be affected')
         nestedfilt.setAutoDefault(True)
         nestedfilt.clicked.connect(removenested)
 
-        phitoplayout.addWidget(phiConvFactorlabel)
-        phitoplayout.addWidget(phiConvFactor)
-        phitoplayout.addWidget(rangelabel)
-        phitoplayout.addWidget(phivminlabel)
-        phitoplayout.addWidget(phivminEdit)
-        phitoplayout.addWidget(phivmaxlabel)
-        phitoplayout.addWidget(phivmaxEdit)
-        phitoplayout.addWidget(rangebutton)
-        phitoplayout.addWidget(recipfilt)
-        phitoplayout.addWidget(nestedfilt)
-
+        phitoplayoutL.addWidget(phiConvFactorlabel)
+        phitoplayoutL.addWidget(phiConvFactor)
+        phitoplayoutC.addWidget(rangelabel)
+        phitoplayoutR.addWidget(phivminlabel)
+        phitoplayoutR.addWidget(phivminEdit)
+        phitoplayoutR.addWidget(phivmaxlabel)
+        phitoplayoutR.addWidget(phivmaxEdit)
+        phitoplayoutR.addWidget(rangebutton)
+        phitoplayoutR.addWidget(recipfilt)
+        phitoplayoutR.addWidget(nestedfilt)
+        
+        phitoplayout.addLayout(phitoplayoutL, 0)
+        phitoplayout.addLayout(phitoplayoutC, 1)
+        phitoplayout.addLayout(phitoplayoutR, 0)
+        
         phasefiltlayout.addLayout(phitoplayout,0)
 
         def filt_reset():
@@ -2162,31 +2171,52 @@ class App(QMainWindow):
             
 
         def phiCbarRange():
-            self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
-            self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    s.phiCbarmin = float(phiCbarminEdit.text())
+                    s.phiCbarMax = float(phiCbarMaxEdit.text())
+            else:
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
             heatFilter()
             heatRaw()
 
         def phiCbarDataRange():
-            minDataIP = np.min(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
-            maxDataIP = np.max(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
-            if self.ftype == 'ProtocolIP':
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    minDataIP = np.min(s.dfOrigin['ip'])
+                    maxDataIP = np.max(s.dfOrigin['ip'])
+                    if self.ftype == 'ProtocolIP':
+                        s.phiCbarmin = -maxDataIP
+                        s.phiCbarMax = -minDataIP
+                    else:
+                        s.phiCbarmin = minDataIP
+                        s.phiCbarMax = maxDataIP
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
+                minDataIP = np.min(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+                maxDataIP = np.max(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+                if self.ftype == 'ProtocolIP':
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
+                else:
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
 
         resetlayout = QHBoxLayout()
+        resetlayoutL = QHBoxLayout()
+        resetlayoutL.setAlignment(Qt.AlignLeft)
+        resetlayoutR = QHBoxLayout()
+        resetlayoutR.setAlignment(Qt.AlignRight)
+        
         phaseSavebtn = QPushButton('Save data')
         phaseSavebtn.setStyleSheet("color: green")
         phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
         phaseSavebtn.clicked.connect(saveFilteredData)
         phaseSavebtn.setFixedWidth(150)
         
-        filtreset = QPushButton('Reset all "phase" filters')
+        filtreset = QPushButton('Reset phase filters')
         filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
@@ -2194,15 +2224,16 @@ class App(QMainWindow):
         filtreset.setFixedWidth(150)
         phiCbarminlabel = QLabel('Colorbar min: ')
         phiCbarminEdit = QLineEdit()
-#        phiCbarminEdit.setFixedWidth(80)
+        phiCbarminEdit.setFixedWidth(100)
         phiCbarminEdit.setValidator(QDoubleValidator())
         phiCbarminEdit.setText('0')
         phiCbarMaxlabel = QLabel('Colorbar Max: ')
         phiCbarMaxEdit = QLineEdit()
-#        phiCbarMaxEdit.setFixedWidth(80)
+        phiCbarMaxEdit.setFixedWidth(100)
         phiCbarMaxEdit.setValidator(QDoubleValidator())
         phiCbarMaxEdit.setText('25')
         phiCbarrangebutton = QPushButton('Apply')
+        phiCbarrangebutton.setFixedWidth(150)
         phiCbarrangebutton.setToolTip('This is not a filtering step.')
         phiCbarrangebutton.setAutoDefault(True)
         phiCbarrangebutton.clicked.connect(phiCbarRange)
@@ -2211,24 +2242,23 @@ class App(QMainWindow):
         phiCbarDatarangebutton.setAutoDefault(True)
         phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
         phiCbarDatarangebutton.setFixedWidth(150)
-        resetlayout.addWidget(phiCbarminlabel)
-        resetlayout.addWidget(phiCbarminEdit)
-        resetlayout.addWidget(phiCbarMaxlabel)
-        resetlayout.addWidget(phiCbarMaxEdit)
-        resetlayout.addWidget(phiCbarrangebutton)
-        resetlayout.addWidget(phiCbarDatarangebutton)
-        resetlayout.addWidget(filtreset)
-        resetlayout.addWidget(phaseSavebtn)
+        resetlayoutL.addWidget(phiCbarminlabel)
+        resetlayoutL.addWidget(phiCbarminEdit)
+        resetlayoutL.addWidget(phiCbarMaxlabel)
+        resetlayoutL.addWidget(phiCbarMaxEdit)
+        resetlayoutL.addWidget(phiCbarrangebutton)
+        resetlayoutL.addWidget(phiCbarDatarangebutton)
+        resetlayoutR.addWidget(filtreset)
+        resetlayoutR.addWidget(phaseSavebtn)
+        
+        resetlayout.addLayout(resetlayoutL, 0)
+        resetlayout.addLayout(resetlayoutR, 1)
 #        recipfilt.clicked.connect("add function")
 
 
         ipfiltlayout = QHBoxLayout()
 
         def heatRaw():
-#            if not (self.r2.iBatch or self.r2.iTimeLapse):
-#                self.r2.surveys[0].filt_typ = 'Raw'
-#                raw_hmp.plot(self.r2.showHeatmap)
-#            else:
             if self.phaseFiltDataIndex == -1:
                 index = 0
             else:
@@ -2238,10 +2268,6 @@ class App(QMainWindow):
             raw_hmp.replot(index=index)
 
         def heatFilter():
-#            if not (self.r2.iBatch or self.r2.iTimeLapse):
-#                self.r2.surveys[0].filt_typ = 'Filtered'
-#                filt_hmp.plot(self.r2.showHeatmap)
-#            else:
             if self.phaseFiltDataIndex == -1:
                 index = 0
             else:
