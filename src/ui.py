@@ -1236,15 +1236,22 @@ class App(QMainWindow):
                     vals = np.zeros(self.nrow, dtype=bool)
                 j = np.where(np.array(self.headers) == 'Buried')[0][0]
                 for i in range(len(vals)):
+                    checkBoxWidget = QWidget()
+                    checkBoxLayout = QHBoxLayout()
+                    checkBoxLayout.setContentsMargins(5,5,5,5)
+                    checkBoxLayout.setAlignment(Qt.AlignCenter)
                     buriedCheck = QCheckBox()
                     buriedCheck.setChecked(bool(vals[i]))
-                    self.setCellWidget(i, j, buriedCheck)
+                    checkBoxLayout.addWidget(buriedCheck)
+                    checkBoxWidget.setLayout(checkBoxLayout)
+                    self.setCellWidget(i, j, checkBoxWidget)
 
             def getBuried(self):
                 j = np.where(self.headers == 'Buried')[0][0]
                 self.buried = np.zeros(self.nrow, dtype=bool)
                 for i in range(self.nrow):
-                    buriedCheck = self.cellWidget(i, j)
+                    buriedCheck = self.cellWidget(i, j).findChildren(QCheckBox)[0]
+                    print(buriedCheck)
                     if buriedCheck.isChecked() is True:
                         self.buried[i] = True
                 return self.buried
@@ -2885,10 +2892,12 @@ class App(QMainWindow):
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn.setFixedWidth(150)
         importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
 
 
         importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
+        importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         importCustomMeshLabel2.setWordWrap(True)
         def importCustomMeshFunc2():
             elec = elecTable.getTable()
@@ -2910,6 +2919,7 @@ class App(QMainWindow):
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn2 = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn2.setFixedWidth(150)
         importCustomMeshBtn2.clicked.connect(importCustomMeshFunc2)
         importCustomMeshBtn2.setToolTip('Import .msh or .vtk file. The electrodes will be snapped to the closest node.')
 
@@ -2937,7 +2947,14 @@ class App(QMainWindow):
                 self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
                 self.setItem(0,1,QTableWidgetItem('0')) # phase [mrad]
                 self.setItem(0,2,QTableWidgetItem('1')) # zone
-                self.setCellWidget(0,3, QCheckBox())
+                checkBoxWidget = QWidget()
+                checkBoxLayout = QHBoxLayout()
+                checkBoxLayout.setContentsMargins(5,5,5,5)
+                checkBoxLayout.setAlignment(Qt.AlignCenter)
+                checkBoxLayout.addWidget(QCheckBox())
+                checkBoxWidget.setLayout(checkBoxLayout)
+                self.setCellWidget(0,3, checkBoxWidget)
+                
 
             def addRow(self):
                 self.nrow = self.nrow + 1
@@ -2945,7 +2962,13 @@ class App(QMainWindow):
                 self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
                 self.setItem(self.nrow-1, 1, QTableWidgetItem('0'))
                 self.setItem(self.nrow-1, 2, QTableWidgetItem('1'))
-                self.setCellWidget(self.nrow-1, 3, QCheckBox())
+                checkBoxWidget = QWidget()
+                checkBoxLayout = QHBoxLayout()
+                checkBoxLayout.setContentsMargins(5,5,5,5)
+                checkBoxLayout.setAlignment(Qt.AlignCenter)
+                checkBoxLayout.addWidget(QCheckBox())
+                checkBoxWidget.setLayout(checkBoxLayout)
+                self.setCellWidget(self.nrow-1, 3, checkBoxWidget)
 
             def getTable(self):
                 res0 = np.zeros(self.nrow)
@@ -2956,7 +2979,7 @@ class App(QMainWindow):
                     res0[j] = float(self.item(j,0).text())
                     phase0[j] = float(self.item(j,1).text())
                     zones[j] = int(self.item(j,2).text())
-                    fixed[j] = self.cellWidget(j,3).isChecked()
+                    fixed[j] = self.cellWidget(j,3).findChildren(QCheckBox)[0].isChecked()
                 return res0, phase0, zones, fixed
 
             def reset(self):
