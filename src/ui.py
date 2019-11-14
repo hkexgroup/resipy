@@ -2815,6 +2815,8 @@ class App(QMainWindow):
 #        clEdit.setValidator(QDoubleValidator())
 #        clEdit.setText('-1')
         clGrid = QGridLayout()
+        clGrid.setContentsMargins(9,0,9,0)
+        clGrid.setSpacing(2)
         clFineLabel = QLabel('Fine')
         clFineLabel.setStyleSheet('font:12px;')
         clCoarseLabel = QLabel('Coarse')
@@ -2917,6 +2919,8 @@ class App(QMainWindow):
             self.r2.mesh = None
             self.r2.geom_input = {}
         resetMeshBtn = QPushButton('Reset Mesh')
+        resetMeshBtn.setStyleSheet("color: red")
+        resetMeshBtn.setFixedWidth(150)
         resetMeshBtn.clicked.connect(resetMeshBtnFunc)
         
 
@@ -2987,6 +2991,7 @@ class App(QMainWindow):
         meshLayout = QVBoxLayout()
 
         meshOptionQuadLayout = QHBoxLayout()
+        meshOptionQuadLayout.setAlignment(Qt.AlignVCenter)
         meshOptionQuadLayout.addWidget(nnodesLabel)
 #        meshOptionQuadLayout.addWidget(nnodesEdit)
         meshOptionQuadLayout.addWidget(nnodesSld)
@@ -3021,6 +3026,7 @@ class App(QMainWindow):
         
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
+        meshQuadLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
         meshTrianLayout = QVBoxLayout()
         meshTetraLayout = QVBoxLayout()
         meshQuadGroup = QGroupBox()
@@ -3030,8 +3036,8 @@ class App(QMainWindow):
         meshTetraGroup = QGroupBox()
         meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
-        meshQuadLayout.addLayout(meshOptionQuadLayout)
-        meshQuadLayout.addWidget(meshQuad)
+        meshQuadLayout.addLayout(meshOptionQuadLayout, 1)
+        meshQuadLayout.addWidget(meshQuad, 0)
         meshQuadGroup.setLayout(meshQuadLayout)
         meshChoiceLayout.addWidget(meshQuadGroup)
 
@@ -3051,7 +3057,7 @@ class App(QMainWindow):
         meshChoiceLayout.addWidget(meshTetraGroup)
         meshTetraGroup.setHidden(True)
 
-        meshLayout.addLayout(meshChoiceLayout, 20)
+        meshLayout.addLayout(meshChoiceLayout, 0)
 
         instructionLayout = QHBoxLayout()
         instructionLayout.addWidget(instructionLabel, 92)
@@ -3078,7 +3084,7 @@ class App(QMainWindow):
         meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
 
-        meshLayout.addLayout(meshOutputStack, 80)
+        meshLayout.addLayout(meshOutputStack, 1)
 
 
         tabMesh.setLayout(meshLayout)
