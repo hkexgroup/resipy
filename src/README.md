@@ -13,8 +13,9 @@ This is an open-source project, everyone is welcome to contribute.
 In addition to this python package that provideds the API,
 a multi-platform standalone Graphical User Interface (GUI) is also available to download.
 
-Please see the gitlab repository for more information: **https://gitlab.com/hkex/pyr2
-**
+Please see the gitlab repository for more information and to download the executable for the GUI: **https://gitlab.com/hkex/pyr2**
+
+Or the online documentation: **https://hkex.gitlab.io/pyr2**
 
 
 
