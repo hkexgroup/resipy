@@ -1194,11 +1194,11 @@ class App(QMainWindow):
 #        pseudoLayout.setAlignment(Qt.AlignHCenter | Qt.AlignCenter)
 
         mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
-        pseudoLayout.addWidget(mwPseudo)
+        pseudoLayout.addWidget(mwPseudo, 50)
 
         mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         mwPseudoIP.setVisible(False)
-        pseudoLayout.addWidget(mwPseudoIP)
+        pseudoLayout.addWidget(mwPseudoIP, 50)
 
         tabImportingDataLayout.addLayout(pseudoLayout, 60)
         tabImportingData.setLayout(tabImportingDataLayout)
@@ -2102,7 +2102,7 @@ class App(QMainWindow):
         phiConvFactorlabel = QLabel('Conversion factor k (φ = -kM):')
         phiConvFactorlabel.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor = QLineEdit()
-        phiConvFactor.setFixedWidth(100)
+        phiConvFactor.setFixedWidth(50)
         phiConvFactor.setValidator(QDoubleValidator())
         phiConvFactor.setText('1.2')
         phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
@@ -2110,16 +2110,16 @@ class App(QMainWindow):
         rangelabel = QLabel('Phase range filtering:')
         phivminlabel = QLabel('-φ min:')
         phivminEdit = QLineEdit()
-        phivminEdit.setFixedWidth(100)
+        phivminEdit.setFixedWidth(50)
         phivminEdit.setValidator(QDoubleValidator())
         phivmaxlabel = QLabel('-φ max:')
         phivmaxEdit = QLineEdit()
-        phivmaxEdit.setFixedWidth(100)
+        phivmaxEdit.setFixedWidth(50)
         phivmaxEdit.setValidator(QDoubleValidator())
         phivminEdit.setText('0')
         phivmaxEdit.setText('25')
         rangebutton = QPushButton('Apply')
-        rangebutton.setFixedWidth(150)
+        rangebutton.setFixedWidth(100)
         rangebutton.setAutoDefault(True)
         rangebutton.clicked.connect(phirange)
 
@@ -2221,20 +2221,20 @@ class App(QMainWindow):
         filtreset.setFixedWidth(150)
         phiCbarminlabel = QLabel('Colorbar min: ')
         phiCbarminEdit = QLineEdit()
-        phiCbarminEdit.setFixedWidth(100)
+        phiCbarminEdit.setFixedWidth(50)
         phiCbarminEdit.setValidator(QDoubleValidator())
         phiCbarminEdit.setText('0')
         phiCbarMaxlabel = QLabel('Colorbar Max: ')
         phiCbarMaxEdit = QLineEdit()
-        phiCbarMaxEdit.setFixedWidth(100)
+        phiCbarMaxEdit.setFixedWidth(50)
         phiCbarMaxEdit.setValidator(QDoubleValidator())
         phiCbarMaxEdit.setText('25')
         phiCbarrangebutton = QPushButton('Apply')
-        phiCbarrangebutton.setFixedWidth(150)
+        phiCbarrangebutton.setFixedWidth(100)
         phiCbarrangebutton.setToolTip('This is not a filtering step.')
         phiCbarrangebutton.setAutoDefault(True)
         phiCbarrangebutton.clicked.connect(phiCbarRange)
-        phiCbarDatarangebutton = QPushButton('Scale to raw data range')
+        phiCbarDatarangebutton = QPushButton('Raw data range')
         phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
         phiCbarDatarangebutton.setAutoDefault(True)
         phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
@@ -4409,7 +4409,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cmapCombo.activated.connect(cmapComboFunc)
         displayOptions.addWidget(cmapComboLabel)
         displayOptions.addWidget(cmapCombo)
-
+        
         def showEdges(status):
             if status == Qt.Checked:
                 self.displayParams['edge_color'] = 'k'
@@ -4417,6 +4417,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.displayParams['edge_color'] = 'none'
             replotSection()
         edgeCheck= QCheckBox('Edges')
+        edgeCheck.setStyleSheet("margin: 0px")#"QCheckBox{padding-bottom:0; margin-bottom:0}")
         edgeCheck.setChecked(False)
         edgeCheck.setToolTip('Show edges of each mesh cell.')
         edgeCheck.stateChanged.connect(showEdges)
@@ -4431,6 +4432,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.displayParams['contour'] = False
             replotSection()
         contourCheck = QCheckBox('Contour')
+        contourCheck.setStyleSheet("margin: 0px")
         contourCheck.stateChanged.connect(contourCheckFunc)
         contourCheck.setToolTip('Grid and contour the data.')
         displayOptions.addWidget(contourCheck)
@@ -4451,17 +4453,22 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def sensSliderFunc(val):
             val = val/10.0
             print('value changed', val)
+            sensLabel.setText('Sensitivity overlay (%s%%)' % (int(val*100)))
+            infoDump('Overlay sensitivity threshold is set to %s%%'% (int(val*100))) #to remove some ambiguity with this slider for people!
             self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
         sensLayout = QVBoxLayout()
-        sensLabel = QLabel('Sensitivity')
-        sensLabel.setAlignment(Qt.AlignCenter )
-        sensLayout.addWidget(sensLabel)
+        sensLayout.setSpacing(2)
         sensSlider = QSlider(Qt.Horizontal)
+        sensSlider.setFixedWidth(150)
         sensSlider.setMinimum(0)
         sensSlider.setMaximum(9.8)
         sensSlider.setValue(5)
+        sensLabel = QLabel('Sensitivity overlay (%s%%)' % str(sensSlider.value()*10))
+        sensLabel.setAlignment(Qt.AlignCenter )
+        sensLayout.addWidget(sensLabel)
+        
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
         sensLayout.addWidget(sensSlider)
@@ -4513,13 +4520,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
-                    cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis,
+                    cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis, 
                     paraviewBtn, btnSave, sensWidget]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
 
         resultLayout = QVBoxLayout()
+        resultLayout.setContentsMargins(9,0,9,9)
         resultLayout.addLayout(displayOptions, 20)
 
         mwInvResult = MatplotlibWidget(navi=True, itight=False, aspect=self.plotAspect)
@@ -4565,11 +4573,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
         outStackLayout.setCurrentIndex(0)
         
         topInvLayout = QWidget()
+        topInvLayout.setObjectName('topInvLayout')
+        topInvLayout.setStyleSheet("QWidget#topInvLayout {border:1px solid rgb(185,185,185)}")
         topInvLayout.setLayout(invLayout)
         
         topSplitter.addWidget(topInvLayout)
         
         bottomInvLayout = QWidget()
+        bottomInvLayout.setObjectName('bottomInvLayout')
+        bottomInvLayout.setStyleSheet("QWidget#bottomInvLayout {border:1px solid rgb(185,185,185)}")
         bottomInvLayout.setLayout(outStackLayout)
         
         topSplitter.addWidget(bottomInvLayout)
