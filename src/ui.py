@@ -4423,7 +4423,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.displayParams['edge_color'] = 'none'
             replotSection()
         edgeCheck= QCheckBox('Edges')
-        edgeCheck.setStyleSheet("margin: 0px")#"QCheckBox{padding-bottom:0; margin-bottom:0}")
         edgeCheck.setChecked(False)
         edgeCheck.setToolTip('Show edges of each mesh cell.')
         edgeCheck.stateChanged.connect(showEdges)
@@ -4438,7 +4437,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.displayParams['contour'] = False
             replotSection()
         contourCheck = QCheckBox('Contour')
-        contourCheck.setStyleSheet("margin: 0px")
         contourCheck.stateChanged.connect(contourCheckFunc)
         contourCheck.setToolTip('Grid and contour the data.')
         displayOptions.addWidget(contourCheck)
@@ -4465,6 +4463,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             replotSection()
         sensWidget = QWidget()
         sensLayout = QVBoxLayout()
+        sensLayout.setContentsMargins(0,9,0,9)
         sensLayout.setSpacing(2)
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setFixedWidth(150)
