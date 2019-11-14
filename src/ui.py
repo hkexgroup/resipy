@@ -1251,7 +1251,6 @@ class App(QMainWindow):
                 self.buried = np.zeros(self.nrow, dtype=bool)
                 for i in range(self.nrow):
                     buriedCheck = self.cellWidget(i, j).findChildren(QCheckBox)[0]
-                    print(buriedCheck)
                     if buriedCheck.isChecked() is True:
                         self.buried[i] = True
                 return self.buried
