@@ -3166,6 +3166,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         val = True
                     self.labels[i].setVisible(val)
                     self.fields[i].setVisible(val)
+                if self.seq == 'multigrad':
+                    self.labels[-1].setText('s=')
                     
             def remove(self):
                 self.combo.deleteLater()
@@ -3407,9 +3409,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #        forwardLayout.addLayout(forwardOutputStack, 60)
 
         fwdTopWidget = QWidget()
+        fwdTopWidget.setObjectName('fwdTopWidget')
+        fwdTopWidget.setStyleSheet("QWidget#fwdTopWidget {border:1px solid rgb(185,185,185)}")
         fwdTopWidget.setLayout(forwardLayout)
         
         fwdBottomWidget = QWidget()
+        fwdBottomWidget.setObjectName('fwdBottomWidget')
+        fwdBottomWidget.setStyleSheet("QWidget#fwdBottomWidget {border:1px solid rgb(185,185,185)}")
         fwdBottomWidget.setLayout(forwardOutputStack)
         
         fwdSplitter.addWidget(fwdTopWidget)
