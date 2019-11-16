@@ -35,7 +35,7 @@ if OS == 'Windows':
                 cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
                 os.popen(cmd)
                 print('done.')
-            except (PermissionError, FileNotFoundError):
+            except:# (PermissionError, FileNotFoundError):
                 print('ERROR')
 
 
