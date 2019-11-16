@@ -70,7 +70,10 @@ class MyZipFile(ZipFile):
 
         ret_val = self._extract_member(member, path, pwd)
         attr = member.external_attr >> 16
-        os.chmod(ret_val, attr)
+        #os.chmod(ret_val, attr) # IMPORTANT this line needs to be commented otherwise we got the _MEIxxxxx issue
+        # changing the permission of somes files makes them unremovable by the splascreen bootloader when the program finished
+        # this leads to accumulation of _MEIxxxxx temporary files in C:\Users\User\AppData\Local\Temp\
+        # this issue is windows specific, on Linux, the temporary folder in /tmp is removed even when we uncomment this line
         return ret_val
 
 
@@ -156,19 +159,18 @@ if __name__ == "__main__":
     print('Main app will be run in appDir = ', appDir)
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
-    if OS == 'Linux':
-        os.system(os.path.join(appDir, 'ResIPy'))
-    else:
-        Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
-    # this last one doesn't work on linux WHEN COMPILED and I don't know why
+    #if OS == 'Linux':
+    print('running the main app')
+    os.system(os.path.join(appDir, 'ResIPy.exe'))
+    #else:
+    #    Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None)
 
-#  need to comment the following lines as the exit signal is given by the main app
-#    sys.exit()
-#    sys.exit(app.exec_()) 
+    print('splashScreen is exiting')
+    sys.exit(0) # send the SIGTERM signal -> works
+#    sys.exit(app.exec_()) # doesn't work
     
 """ NOTE
 This approach increase significantly the size of the package from 150 to 210 MB
 Another approach would be to load all modules in this script and just unzip the
 sources and run `python ui.py`.
 """
-

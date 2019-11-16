@@ -36,7 +36,7 @@ exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
           name='ResIPy',
-          debug=False,
+          debug=True,
           strip=False,
           upx=True,
           console=False)
