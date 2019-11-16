@@ -8,26 +8,7 @@ from zipfile import ZipFile, ZipInfo
 from subprocess import Popen, call
 import os, sys, shutil, platform, time 
 
-OS = platform.system()
-
-#from multiprocessing import Pool
-
-#workaround to deal with removing old _MEI folders on windows 
-if OS == 'Windows':
-    usrname = os.getlogin()
-    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
-    files = sorted(os.listdir(temp_path))
-    print('Checking for old _MEI directories in %s'%temp_path)
-    for f in files:
-        if f.find('_MEI')==0:
-            print('removing %s ...'%f,end='')
-            try:
-                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
-                os.popen(cmd)
-                print('done.')
-            except (PermissionError, FileNotFoundError):
-                print('ERROR')
-            
+OS = platform.system()           
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -39,6 +20,23 @@ else:
         bundle_dir = os.path.dirname(os.path.abspath(__file__))
 print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
+
+#workaround to deal with removing old _MEI folders on windows 
+if OS == 'Windows':
+    active_MEI = bundle_dir.split('\\')[-1]
+    usrname = os.getlogin()
+    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
+    files = sorted(os.listdir(temp_path))
+    print('Checking for old _MEI directories in %s'%temp_path)
+    for f in files:
+        if f.find('_MEI')==0 and f!=active_MEI:
+            print('removing %s ...'%f,end='')
+            try:
+                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
+                os.popen(cmd)
+                print('done.')
+            except (PermissionError, FileNotFoundError):
+                print('ERROR')
 
 
 """ PERMISSION ISSUE WITH ZIPFILE MODULE
