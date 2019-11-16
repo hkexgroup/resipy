@@ -22,9 +22,8 @@ if OS == 'Windows':
         if f.find('_MEI')==0:
             print('removing %s ...'%f,end='')
             try:
-                cmd = ['RMDIR',os.path.join(temp_path,f),'/s','/q']
-#                    shutil.rmtree(os.path.join(temp_path,f))
-                call(cmd)
+                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
+                os.popen(cmd)
                 print('done.')
             except (PermissionError, FileNotFoundError):
                 print('ERROR')
