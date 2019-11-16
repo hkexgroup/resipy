@@ -4,6 +4,7 @@ v2.0.1
 -Fix custom parser not reading two first lines
 -Improved display scaling for high DPI screen
 
+
 v2.0.0
 ------
 -New forward modeling tab design
