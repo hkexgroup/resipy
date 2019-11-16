@@ -165,7 +165,8 @@ if __name__ == "__main__":
     if OS == 'Linux':
         os.system(os.path.join(appDir, 'ResIPy'))
     else:
-        Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
+        p = Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
+        p.communicate() # block and wait for the main program to finish
     # this last one doesn't work on linux WHEN COMPILED and I don't know why
     
     print('splashScreen is exiting')
