@@ -14,6 +14,8 @@ from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySe
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer#, QProcess, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
 
 #%% General crash ERROR
@@ -131,7 +133,7 @@ class customThread(QThread):
 
 
 #%%
-QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
+#QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
 
 #print('elpased', time.time()-a)
 
