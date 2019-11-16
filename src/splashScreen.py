@@ -5,17 +5,29 @@ from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
 from PyQt5.QtGui import QPixmap, QIcon, QMovie
 from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
-from subprocess import Popen
-import os
-import sys
-import time
-import shutil
-import platform
+from subprocess import Popen, call
+import os, sys, shutil, platform, time 
 
 OS = platform.system()
 
 #from multiprocessing import Pool
 
+#workaround to deal with removing old _MEI folders on windows 
+if OS == 'Windows':
+    usrname = os.getlogin()
+    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
+    files = sorted(os.listdir(temp_path))
+    print('Checking for old _MEI directories in %s'%temp_path)
+    for f in files:
+        if f.find('_MEI')==0:
+            print('removing %s ...'%f,end='')
+            try:
+                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
+                os.popen(cmd)
+                print('done.')
+            except (PermissionError, FileNotFoundError):
+                print('ERROR')
+            
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
