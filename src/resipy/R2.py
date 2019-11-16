@@ -2536,7 +2536,7 @@ class R2(object): # R2 master class instanciated by the GUI
         qs = []
         nelec = len(self.elec)
         def addCustSeq(fname):
-            seq = pd.read_csv(fname, header=1)
+            seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
                 raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
             else:
