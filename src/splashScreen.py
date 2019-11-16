@@ -25,7 +25,7 @@ print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
 
 #workaround to deal with removing old _MEI folders on windows 
-if OS == 'Windows':
+if OS == 'Windowssss':
     active_MEI = bundle_dir.split('\\')[-1]
     usrname = os.getlogin()
     temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
@@ -162,12 +162,12 @@ if __name__ == "__main__":
     print('Main app will be run in appDir = ', appDir)
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
-    #if OS == 'Linux':
-    print('running the main app')
-    os.system(os.path.join(appDir, 'ResIPy.exe'))
-    #else:
-    #    Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None)
-
+    if OS == 'Linux':
+        os.system(os.path.join(appDir, 'ResIPy'))
+    else:
+        Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
+    # this last one doesn't work on linux WHEN COMPILED and I don't know why
+    
     print('splashScreen is exiting')
     sys.exit(0) # send the SIGTERM signal -> works
 #    sys.exit(app.exec_()) # doesn't work
