@@ -7,6 +7,9 @@ from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
 from subprocess import Popen, call
 import os, sys, shutil, platform, time 
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
 
 OS = platform.system()           
 
