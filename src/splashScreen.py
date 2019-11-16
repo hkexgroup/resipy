@@ -25,7 +25,7 @@ print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
 
 #workaround to deal with removing old _MEI folders on windows 
-if OS == 'Windowssss':
+if OS == 'Windows':
     active_MEI = bundle_dir.split('\\')[-1]
     usrname = os.getlogin()
     temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
