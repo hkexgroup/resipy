@@ -1,3 +1,10 @@
+v2.0.1
+------
+-Fix bug where _MEIxxxx temporary folder not removed after exiting the app (Windows only)
+-Fix custom parser not reading two first lines
+-Improved display scaling for high DPI screen
+
+
 v2.0.0
 ------
 -New forward modeling tab design

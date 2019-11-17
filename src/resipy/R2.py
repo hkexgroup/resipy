@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '2.0.0' # ResIPy version (semantic versionning in use)
+ResIPy_version = '2.0.1' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -2536,7 +2536,7 @@ class R2(object): # R2 master class instanciated by the GUI
         qs = []
         nelec = len(self.elec)
         def addCustSeq(fname):
-            seq = pd.read_csv(fname, header=1)
+            seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
                 raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
             else:
