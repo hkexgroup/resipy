@@ -7,6 +7,9 @@ from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
 from subprocess import Popen, call
 import os, sys, shutil, platform, time 
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
 
 OS = platform.system()           
 
@@ -21,22 +24,23 @@ else:
 print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
 
-#workaround to deal with removing old _MEI folders on windows 
-if OS == 'Windows':
-    active_MEI = bundle_dir.split('\\')[-1]
-    usrname = os.getlogin()
-    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
-    files = sorted(os.listdir(temp_path))
-    print('Checking for old _MEI directories in %s'%temp_path)
-    for f in files:
-        if f.find('_MEI')==0 and f!=active_MEI:
-            print('removing %s ...'%f,end='')
-            try:
-                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
-                os.popen(cmd)
-                print('done.')
-            except (PermissionError, FileNotFoundError):
-                print('ERROR')
+#workaround to deal with removing old _MEI folders on windows (works when compile WITH console=True)
+# but this can cause trouble if multple instance of the software are run at the same time
+#if OS == 'Windows':
+#    active_MEI = bundle_dir.split('\\')[-1]
+#    usrname = os.getlogin()
+#    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
+#    files = sorted(os.listdir(temp_path))
+#    print('Checking for old _MEI directories in %s'%temp_path)
+#    for f in files:
+#        if f.find('_MEI')==0 and f!=active_MEI:
+#            print('removing %s ...'%f,end='')
+#            try:
+#                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
+#                os.popen(cmd)
+#                print('done.')
+#            except:# (PermissionError, FileNotFoundError):
+#                print('ERROR')
 
 
 """ PERMISSION ISSUE WITH ZIPFILE MODULE
@@ -159,12 +163,13 @@ if __name__ == "__main__":
     print('Main app will be run in appDir = ', appDir)
     os.chdir(appDir)
 #    os.system(['python3', 'ui.py']) # this work fine
-    #if OS == 'Linux':
-    print('running the main app')
-    os.system(os.path.join(appDir, 'ResIPy.exe'))
-    #else:
-    #    Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None)
-
+    if OS == 'Linux':
+        os.system(os.path.join(appDir, 'ResIPy'))
+    else:
+        p = Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
+        p.communicate() # block and wait for the main program to finish
+    # this last one doesn't work on linux WHEN COMPILED and I don't know why
+    
     print('splashScreen is exiting')
     sys.exit(0) # send the SIGTERM signal -> works
 #    sys.exit(app.exec_()) # doesn't work
