@@ -307,7 +307,10 @@ class App(QMainWindow):
         self.inputPhaseFlag = False
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
-        self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
+        if frozen == 'not':
+            self.datadir = os.path.join(bundle_dir, '../examples')
+        else:
+            self.datadir = os.path.join(bundle_dir, 'resipy', 'examples')
         self.plotAspect = 'equal'
         self.iDesign = False # boolean to know if the mesh has been designed before meshing
 

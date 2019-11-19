@@ -536,7 +536,7 @@ class Survey(object):
             Print output to screen. Default is True. 
         """
         if all(np.isnan(self.df['recipError']) == True):
-            raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
+            raise ValueError("No reciprocal measurements present, cannot filter by reciprocal!")
         reciprocalErrRel = np.abs(self.df['reciprocalErrRel'].replace(np.nan, 0))
         igood = reciprocalErrRel < (percent/100) # good indexes to keep 
         df_temp = self.df.copy()
