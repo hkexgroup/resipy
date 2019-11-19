@@ -1,15 +1,35 @@
+v2.0.1
+------
+-Fix bug where _MEIxxxx temporary folder not removed after exiting the app (Windows only)
+-Fix custom sequence not reading two first lines
+-Improved display scaling for high DPI screen
+
+
+v2.0.0
+------
+-New forward modeling tab design
+-Ability to design model before meshing
+-Capability of individual data analysis (batch/time-lapse only)
+-Uniform methods names (API)
+-Faster 3D mesh interpolation
+-Support for "Lippmann" data input
+-Addition of sensitivity slider (inversion)
+-Interactive post processing (similar to pre-processing)
+-Minor bug fixes
+
+
 v1.0.2
 ------
-WPI implementation for 3D survey but not enable in the interface. Different
-forward model are now available with explanation.
+-WPI implementation for 3D survey but not enable in the interface. Different
+-forward model are now available with explanation.
 
 
 v1.0.1 (=v1.05 in non semantic versioning)
 ------------------------------------------
-Important bug corrections from v1.0.0
+-Important bug corrections from v1.0.0
 
 
 v1.0.0
 ------
-First release version featuring full 2D inversion, time-lapse inversion for both
-DC and IP + filtering options.
+-First release version featuring full 2D inversion, time-lapse inversion for both
+-DC and IP + filtering options.

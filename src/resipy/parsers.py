@@ -95,28 +95,40 @@ def syscalParser(fname, spacing=None):
                                     'M19 (mV/V)':'M19',
                                     'M20 (mV/V)':'M20',
                                     'TM1 (ms)':'TM1'})
-        
-        array = df[['a','b','m','n']].values
-        arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        if arrayMin != 0:
-            array -= arrayMin
-        espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-        if spacing is None:
-            spacing = espacing
-        array = np.round(array/spacing+1).astype(int)
-        df[['a','b','m','n']] = array
+    
         df['resist'] = df['vp']/df['i']
-        imax = int(np.max(array))
-        elec = np.zeros((imax,3))
-        elec[:,0] = np.arange(0,imax)*spacing
+
+        if spacing is None:    
+            # for unregularly spaced array
+            array = df[['a','b','m','n']].values
+            arrayMin = np.min(np.unique(np.sort(array.flatten())))
+            if arrayMin != 0: # all surveys must start from x = 0
+                array -= arrayMin
+            val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+            elecLabel = 1 + np.arange(len(val))
+            newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+            df.loc[:,['a','b','m','n']] = newval
+            elec = np.c_[val, np.zeros((len(val),2))]
+        else:        
+            # for regularly spaced array (NOTE deprecated ?)
+            array = df[['a','b','m','n']].values
+            arrayMin = np.min(np.unique(np.sort(array.flatten())))
+            if arrayMin != 0:
+                array -= arrayMin
+            espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
+            if spacing is None:
+                spacing = espacing
+            array = np.round(array/spacing+1).astype(int)
+            df[['a','b','m','n']] = array
+            imax = int(np.max(array))
+            elec = np.zeros((imax,3))
+            elec[:,0] = np.arange(0,imax)*spacing
                 
         return elec, df
     
 #test code
 #elec, df = syscalParser('test/syscalFile.csv')
-#elec, df = syscalParser('/media/jkl/data/phd/tmp/projects/ahdb/survey2018-08-14/data/ert/18081401.csv', 0.5)
-#print(df[['a','b','m','n']])
-#print(elec)
+#elec, df = syscalParser('test/pole-dipole-survey/Long_south_PDF_63_10_1_filt_5.csv')
 
 #%% protocol.dat forward modelling parser
 
@@ -853,7 +865,7 @@ def stingParser(fname):
 
 #fname = '070708L5_trial1.stg'
 #stingParser(fname)
-
+#%%
 def ericParser(file_path):
     """
     Reads *.ohm ASCII-files with information related to the profile, comment,
@@ -995,3 +1007,38 @@ def ericParser(file_path):
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     return elec,df
+#%% 
+def lippmannParser(fname):
+    with open(fname, 'r') as fh:
+        dump = fh.readlines()
+
+    #getting electrode locations
+    elec_lineNum_s = [i for i in range(len(dump)) if '* Electrode positions *' in dump[i]]
+    elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Remote electrode positions *' in dump[i]]
+    elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
+    elec_raw = pd.read_csv(fname, sep='\s+', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
+    elec = np.array(elec_raw.iloc[:,-3:])
+
+    #getting data
+    data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
+    data_headers = dump[data_linNum_s[0]+1].split()[1:]
+    df = pd.read_csv(fname, sep='\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+    df = df.rename(columns={'A':'a',
+                            'B':'b',
+                            'M':'m',
+                            'N':'n',
+                            'I':'i',
+                            'U':'vp',})
+    if 'phi' in df.columns:
+        df = df.rename(columns={'phi':'ip'})
+        df = df[['a','b','m','n','i','vp','ip']]
+    else:
+        df = df[['a','b','m','n','i','vp']]
+        df['ip'] = 0
+        
+    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
+    
+    #calculations
+    df['resist'] = df['vp']/df['i']
+
+    return elec, df

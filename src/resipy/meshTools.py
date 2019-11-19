@@ -112,6 +112,7 @@ class Mesh:
         self.regions = regions
         self.surface = None # surface points for cropping the mesh when contouring
         #decide if mesh is 3D or not 
+        self.iremote = None # specify which electrode is remote
         if max(node_y) - min(node_y) == 0: # mesh is probably 2D 
             self.ndims=2
         else:
@@ -160,10 +161,10 @@ class Mesh:
         except KeyError as e:
             #print('error in add_attr_dict', e)
             pass
-        try: # add the physical flag from the msh parsing as cell_attribute
-            obj.attr_cache['cell_attributes'] = mesh_info['parameters']
-        except Exception as e:
-            print('Failed to add cell_attributes:', e)
+#        try: # add the physical flag from the msh parsing as cell_attribute
+#            obj.attr_cache['cell_attributes'] = mesh_info['parameters']
+#        except Exception as e:
+#            print('Failed to add cell_attributes:', e)
         try:
             obj.regions = mesh_info['element_ranges']
         except KeyError:
@@ -404,12 +405,18 @@ class Mesh:
             self.fig = ax.figure
             self.ax = ax
         #if no dimensions are given then set the plot limits to edge of mesh
+        
+        if self.iremote is None:
+            iremote = np.zeros(len(self.elec_x), dtype=bool)
+        else:
+            iremote = self.iremote
+        elec_x = self.elec_x[~iremote]
         try: 
             if xlim=="default":
-                xlim=[min(self.elec_x),max(self.elec_x)]
+                xlim=[min(elec_x),max(elec_x)]
             if zlim=="default":
-                doiEstimate = 2/3*np.abs(self.elec_x[0]-self.elec_x[-1]) # TODO depends on longest dipole
-                #print(doiEstimate)
+                doiEstimate = 2/3*np.abs(elec_x[0]-elec_x[-1])
+                # longest dipole calculation available in R2 class
                 zlim=[min(self.elec_z)-doiEstimate,max(self.elec_z)]
         except AttributeError:
             if xlim=="default":
@@ -581,8 +588,12 @@ class Mesh:
             try:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
-                    alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-#                    alphas = np.logspace(0, -1, self.num_elms)#array of alpha values 
+                    thresh = np.percentile(weights, 50, interpolation='nearest')
+                    x = np.sort(weights)
+                    i = np.where(x > thresh)[0][0]
+                    x = np.argsort(weights)
+                    alphas = np.zeros(self.num_elms)
+                    alphas[:i] = np.linspace(1, 0, len(alphas[:i]))
                     raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                     raw_alpha[:, -1] = alphas
                     alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
@@ -592,60 +603,77 @@ class Mesh:
                     #*** i still cant figure out why this is because its the same code used to plot the resistivities 
                     ax.add_collection(alpha_coll)
                 else:
-                    x = np.array(self.attr_cache['Sensitivity(log10)'])
-                    alphas = np.zeros(len(x))
-                    xmin, xmax = np.nanmin(x), np.nanmax(x)
-                    xnorm = (x-xmin)/(xmax-xmin) # should all be between 0 and 1
-                    i2mask = xnorm < sensPrc
-                    xnorm[i2mask] = 0
-                    xnorm[~i2mask] = 1
-                    raw_alpha = np.ones((2, 4), dtype=float)
-                    raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
-                    alpha_map = ListedColormap(raw_alpha)
-                    if contour is False:
-                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
-                        ax.add_collection(alpha_coll)
-                    else: # if contour is True, cropSurface() should have been defined
-                        xc = np.array(self.elm_centre[0])
-                        yc = np.array(self.elm_centre[2])
-                        x = np.array(self.node_x)
-                        y = np.array(self.node_z)
-                        zc = xnorm # normalized sensitivity here
-                        
-                        # doesn't work as the QHull alright discard the elements forming the topo :/
-    #                    from scipy.interpolate import LinearNDInterpolator
-    #                    lin = LinearNDInterpolator(np.c_[xc, yc], zc)
-    #                    z = lin(np.c_[x, y])
-    #                    print(np.sum(np.isnan(z)))
-    #                    inan = ~np.isnan(z)
-    #                    x, y, z = x[inan], y[inan], z[inan]
-    #                    triang = tri.Triangulation(x, y)
-                        
-                        # adding surface points to form surface triangles
-                        if self.surface is not None:
-                            xf, yf = self.surface[:,0], self.surface[:,1]
-                            zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-                            xc = np.r_[xc, xf]
-                            yc = np.r_[yc, yf]
-                            zc = np.r_[zc, zf]
-                        triang = tri.Triangulation(xc, yc) # build grid based on centroids and surface points
-                        z = zc
+                    weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
+                    thresh = np.percentile(weights, sensPrc*100, interpolation='nearest')
+                    x = np.sort(weights)
+                    i = np.where(x > thresh)[0][0]
+                    x = np.argsort(weights)
+                    alphas = np.zeros(self.num_elms)
+                    alphas[:i] = np.linspace(1, 0, len(alphas[:i]))
+                    raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                    raw_alpha[:, -1] = alphas
+                    alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                    #make alpha collection
+                    alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+                    #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
+                    #*** i still cant figure out why this is because its the same code used to plot the resistivities 
+                    ax.add_collection(alpha_coll)
                     
-                        # discarding triangles out of surface
-                        if self.surface is not None:        
-                            try:
-                                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-                            except Exception as e:
-                                print('Error in Mesh.show for contouring: ', e)
-                        
-                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
+                    # legacy implementation of the mesh cropping below (don't delete it)
+#                    x = np.array(self.attr_cache['Sensitivity(log10)'])
+#                    alphas = np.zeros(len(x))
+#                    xmin, xmax = np.nanmin(x), np.nanmax(x)
+#                    xnorm = (x-xmin)/(xmax-xmin) # should all be between 0 and 1
+#                    i2mask = xnorm < sensPrc
+#                    xnorm[i2mask] = 0
+#                    xnorm[~i2mask] = 1
+#                    raw_alpha = np.ones((2, 4), dtype=float)
+#                    raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
+#                    alpha_map = ListedColormap(raw_alpha)
+#                    if contour is False:
+#                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
+#                        ax.add_collection(alpha_coll)
+#                    else: # if contour is True, cropSurface() should have been defined
+#                        xc = np.array(self.elm_centre[0])
+#                        yc = np.array(self.elm_centre[2])
+#                        x = np.array(self.node_x)
+#                        y = np.array(self.node_z)
+#                        zc = xnorm # normalized sensitivity here
+#                        
+#                        # doesn't work as the QHull alright discard the elements forming the topo :/
+#    #                    from scipy.interpolate import LinearNDInterpolator
+#    #                    lin = LinearNDInterpolator(np.c_[xc, yc], zc)
+#    #                    z = lin(np.c_[x, y])
+#    #                    print(np.sum(np.isnan(z)))
+#    #                    inan = ~np.isnan(z)
+#    #                    x, y, z = x[inan], y[inan], z[inan]
+#    #                    triang = tri.Triangulation(x, y)
+#                        
+#                        # adding surface points to form surface triangles
+#                        if self.surface is not None:
+#                            xf, yf = self.surface[:,0], self.surface[:,1]
+#                            zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                            xc = np.r_[xc, xf]
+#                            yc = np.r_[yc, yf]
+#                            zc = np.r_[zc, zf]
+#                        triang = tri.Triangulation(xc, yc) # build grid based on centroids and surface points
+#                        z = zc
+#                    
+#                        # discarding triangles out of surface
+#                        if self.surface is not None:        
+#                            try:
+#                                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+#                            except Exception as e:
+#                                print('Error in Mesh.show for contouring: ', e)
+#                        
+#                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
                                                     
             except Exception as e:
                 print('Error in the sensitivity overlay:', e)
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(self.elec_x,self.elec_z,'ko')
+                ax.plot(elec_x, self.elec_z[~iremote],'ko')
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
@@ -946,7 +974,8 @@ class Mesh:
         polly.set_edgecolor(edge_color)
         polly.set_cmap(color_map) # set color map 
         polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
-        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
+#        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
+        ax.add_collection3d(polly, zs=0, zdir='z') # for matplotlib > 3.0.2
         self.cax = polly
         
         if color_bar:#add the color bar 
@@ -1549,7 +1578,8 @@ class Mesh:
         home_dir = os.path.expanduser('~')
         drive_letter = home_dir.split('\\')[0]
         #find paraview in program files?
-        path = drive_letter+'\Program Files'
+#        path = drive_letter+'\Program Files'
+        path = os.path.join(drive_letter, os.sep,'Program Files')
         contents = os.listdir(path)
         found = False
         for i,pname in enumerate(contents):
@@ -1559,7 +1589,8 @@ class Mesh:
                 break
     
         if not found:#try looking in x86 porgram files instead
-            path = drive_letter+'\Program Files (x86)'
+#            path = drive_letter+'\Program Files (x86)'
+            path = os.path.join(drive_letter, os.sep,'Program Files (x86)')
             contents = os.listdir(path)
             for i,pname in enumerate(contents):
                 if pname.find("ParaView") != -1:
@@ -1570,7 +1601,8 @@ class Mesh:
         if not found:
             return False, 'n/a' 
         else:
-            return True, os.path.join(para_dir,'bin\paraview.exe')
+#            return True, os.path.join(para_dir,'bin\paraview.exe')
+            return True, os.path.join(para_dir,'bin','paraview.exe')
         #the string output can be run in the console if it is enclosed in speech
         #marks , ie <"C/program files/ParaView5.X/bin/paraview.exe">
         
@@ -1596,7 +1628,7 @@ class Mesh:
                 raise NameError("Excepted string type argument for 'loc'")
                 
         self.write_vtk(fname)#write vtk to working directory with all associated attributes
-        op_sys = platform.system()#find kernal type
+        op_sys = platform.system()#find kernel type
         if op_sys == "Windows":
             if look4: # find where paraview is installed 
                 found, cmd_line = self.findParaview()
@@ -2457,10 +2489,10 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         surface_x = np.array([])
         surface_z = np.array([])
     else: #if surface_x != None and surface_y != None:
-            if len(surface_x) != len(surface_z):
-                raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
-            surface_x = np.array(surface_x)
-            surface_z = np.array(surface_z)
+        if len(surface_x) != len(surface_z):
+            raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
+        surface_x = np.array(surface_x)
+        surface_z = np.array(surface_z)
     
     bh_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -2479,17 +2511,17 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
                 bh_flag = True
         
         if len(surface_idx)>0:# then surface electrodes are present
-            Ex=np.array(elec_x)[surface_idx]
-            Ey=np.array(elec_z)[surface_idx]
-        elif len(surface_idx)== 0 and len(surface_x)>0:
+            Ex = np.array(elec_x)[surface_idx]
+            Ey = np.array(elec_z)[surface_idx]
+        elif len(surface_idx) == 0 and len(surface_x) > 0:
             #case where you have surface topography but no surface electrodes 
-            Ex=np.array(surface_x)
-            Ey=np.array(surface_z)
-            elec=np.c_[Ex,Ey]
+            Ex = np.array(surface_x)
+            Ey = np.array(surface_z)
+            elec = np.c_[Ex, Ey]
         elif len(surface_idx)== 0:
             #fail safe if no surface electrodes are present to generate surface topography 
-            Ex=np.array([elec_x[np.argmin(elec_x)],elec_x[np.argmax(elec_x)]])
-            Ey=np.array([elec_z[np.argmax(elec_z)],elec_z[np.argmax(elec_z)]])
+            Ex = np.array([elec_x[np.argmin(elec_x)], elec_x[np.argmax(elec_x)]])
+            Ey = np.array([elec_z[np.argmax(elec_z)], elec_z[np.argmax(elec_z)]])
     else:
         pass
         #elec = np.c_[elec_x,elec_y]
@@ -2557,13 +2589,13 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         
     # create topo
     if bh_flag: # only use surface electrodes to make the topography if buried electrodes present
-        X = np.append(Ex,surface_x) 
-        Y = np.append(Ey,surface_z)
+        X = np.append(Ex, surface_x) 
+        Y = np.append(Ey, surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
     else: # all electrodes are assumed to be on the surface 
-        X = np.append(elec[:,0],surface_x)
-        Y = np.append(elec[:,1],surface_z)
+        X = np.append(elec[:,0], surface_x)
+        Y = np.append(elec[:,1], surface_z)
         idx = np.argsort(X)
         topo = np.interp(meshx, X[idx], Y[idx])
     
@@ -2612,16 +2644,16 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
                   np.arange(y_dim+1,fnl_node+1),
                   np.arange(1,fnl_node-y_dim+1))
     
-    del_idx=np.arange(y_dim-1,len(node_mappins[0]),y_dim)#the above has too many indexes at the changeover of columns so some need deleting
+    del_idx = np.arange(y_dim-1,len(node_mappins[0]),y_dim)#the above has too many indexes at the changeover of columns so some need deleting
     
     node_mappins = [list(np.delete(node_mappins[i],del_idx)) for i in range(4)]#delete excess node placements
     #compute node x and y  (and z)
-    node_x,node_z=np.meshgrid(meshx,meshz)
+    node_x,node_z = np.meshgrid(meshx,meshz)
     #account for topography in the y direction 
     node_z = [topo-node_z[i,:] for i in range(y_dim)]#list comprehension to add topography to the mesh, (could use numpy here??)
-    node_z=np.array(node_z).flatten(order='F')
-    node_x=node_x.flatten(order='F')
-    node_y=np.array([0]*len(node_x))
+    node_z = np.array(node_z).flatten(order='F')
+    node_x = node_x.flatten(order='F')
+    node_y = np.array([0]*len(node_x))
     
     #compute element centres and areas
     centriod_x=[]
@@ -2653,7 +2685,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
                     (centriod_x,centriod_y,centriod_z),
                     areas,
                     [9],
-                    [0]*no_elms,
+                    [1]*no_elms,
                     'no attribute')
     
     #find the node which the electrodes are actually on in terms of the mesh. 
@@ -2678,7 +2710,8 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
     isort = np.argsort(xsurf)
     mesh.surface = surfacePoints[isort, :]
 
-    return mesh,meshx,meshz,topo,elec_node
+    return mesh, meshx, meshz, topo, elec_node
+
 
 
 #%% build a triangle mesh - using the gmsh wrapper
@@ -2775,7 +2808,8 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
     
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -2'
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
@@ -2809,6 +2843,10 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True,
         os.remove(file_name+".geo");os.remove(file_name+".msh")
 
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+    
+    # add remote if any
+    iremote = np.array([a == 'remote' for a in elec_type])
+    mesh.iremote = iremote
     
     # point at the surface
     xsurf = []
@@ -2934,7 +2972,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     
     rem_elec_idx = []
     if elec_type is not None:
-        warnings.warn("Borehole electrode meshes still in development!")
+#        warnings.warn("Borehole electrode meshes still in development!")
         if not isinstance(elec_type,list):
             raise TypeError("'elec_type' argument should be of type 'list', got type %s"%str(type(elec_type)))
         elif len(elec_type) != len(elec_x):
@@ -3021,7 +3059,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
             
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
-        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
@@ -3293,9 +3332,9 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     #check operating system 
     OpSys=platform.system()    
     if OpSys=='Darwin':
-        print("Kernal type: macOS")
+        print("Kernel type: macOS")
     else:
-        print("Kernal type: %s"%OpSys)
+        print("Kernel type: %s"%OpSys)
     #check the amount of ram 
     if OpSys=="Linux":
         p = Popen('free -m', stdout=PIPE, shell=True)

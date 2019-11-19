@@ -251,11 +251,13 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         topo_z = [elec_z[min_idx],elec_z[max_idx]]
     else:
         topo_x = geom_input['surface'][0]
-        topo_z = geom_input['surface'][1] 
-        
+        topo_z = geom_input['surface'][1]
+
     #catch where x coordinates dont change
-    if max(topo_x)-min(topo_x) < 0.2: # they have the same x coordinate 
-        topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
+    if bh_flag or bu_flag:
+        elecspacing = (min(electrodes[0]) - max(electrodes[0]))/len(electrodes)
+        if max(topo_x)-min(topo_x) < 0.2*elecspacing and len(topo_x) != 1: # they have the same x coordinate 
+            topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
                   
     if dp_len == -1 and len(elec_x)>0:#compute maximum dipole length
         dp_len = abs(np.max(elec_x) - np.min(elec_x))
@@ -297,21 +299,26 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode']*len(elec_x))   
     
+    # increase the size of the fine mesh region on both side of the survey
+#    e_left = np.min(elec_x) - 4*np.median(np.abs(np.diff(elec_x)))
+#    e_right = np.max(elec_x) + 4
+    
     #deal with end case electrodes, check max topo points are outside survey bounds 
     try:
         min_idx = np.argmin(elec_x)
-        max_idx = np.argmax(elec_z)
+        max_idx = np.argmax(elec_x)
         if min(elec_x) == min(x_pts):
-            x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.diff(elec_x))) # in this case extend the survey bounds beyond the first electrode 
+            x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.abs(np.diff(elec_x)))) # in this case extend the survey bounds beyond the first electrode 
             y_pts = np.append(y_pts,elec_z[min_idx])
             flag.append('topography point')#add a flag
             
         if max(elec_x) == max(x_pts):
-            x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.diff(elec_x)))
+            x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.abs(np.diff(elec_x))))
             y_pts = np.append(y_pts,elec_z[max_idx])
             flag.append('topography point')
     
-    except ValueError: # then there are no surface electrodes, in which case
+    except Exception as e: # then there are no surface electrodes, in which case
+        print('Error in assigning additional points on each side of transect: ', e)
         min_idx = np.argmin(electrodes[0])
         max_idx = np.argmax(electrodes[0])
         if min(electrodes[0]) == min(x_pts):
@@ -381,16 +388,14 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     if bh_flag: #not allowing mesh refinement for boreholes currently
         cl_factor = 1   
     
-    #reflect surface topography at base of fine mesh area. 
-    x_base = x_pts[::2]
-    z_base = moving_average(y_pts[::2] - abs(doi),N=5) # compute the depth to the points at the base of the survey, + downsample
-    if len(x_pts)%2 == 0:#bug fix
-        z_base = np.append(z_base,y_pts[-1]- abs(doi))#puts in extra point at base underneath last x and y point
-        x_base = np.append(x_base,x_pts[-1])
-    # a smoothed version of the topography ... 
+    #reflect surface topography at base of fine mesh area, should be a smoothed version of the topography
+    x_base = x_pts
+#    z_base = moving_average(y_pts - abs(doi),N=5) # compute the depth to the points at the base of the survey
+    z_base = y_pts - abs(doi)
+    
+    # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
     if np.max(z_base) > np.min(electrodes[1]):
-        #warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
-        raise Exception("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!")
+        warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
     
     basal_pnt_cache = []
     for i in range(len(x_base)):
@@ -422,23 +427,23 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
     fh.write("\n//Background region (Neumann boundary) points\n")
-    cl_factor2=50#characteristic length multipleier for Neumann boundary 
-    cl2=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
-    fh.write("cl2=%.2f;//characteristic length for background region\n" %cl2)
+    cl_factor2=25*cl_factor#characteristic length multipleier for Neumann boundary 
+    cln=cl*cl_factor2#assign new cl, this is so mesh elements get larger from the main model
+    fh.write("cln=%.2f;//characteristic length for background region\n" %cln)
     #Background region propeties, follow rule of thumb that background should be 5*largest dipole 
     flank=5*dp_len
     b_max_depth=-abs(doi)-(3*dp_len)#background max depth
     #add Neumann boundaries on left hand side
     n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
     tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
     tot_pnts=tot_pnts+1;n_pnt_cache[1]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
     #add Neumann boundary points on right hand side
     tot_pnts=tot_pnts+1;n_pnt_cache[2]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
     tot_pnts=tot_pnts+1;n_pnt_cache[3]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
     #make lines encompassing all the points - counter clock wise fashion
     fh.write("//make lines encompassing all the background points - counter clock wise fashion\n")
     
@@ -1089,7 +1094,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
-           cl=-1, cl_factor=3, cln_factor=100, dp_len=-1, mesh_refinement=None):
+           cl=-1, cl_factor=8, cln_factor=100, dp_len=-1, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1494,36 +1499,3 @@ def msh_parse_3d(file_path):
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     return mesh_dict 
-    
-#%% test block 
-#import parsers as prs     
-#import survey 
-#elec, df = prs.res2invInputParser(os.path.join(pyR2_location,r'api/test/res2d_forward_error.dat'))
-##elec, df = prs.syscalParser(r'C:\Users\jamyd91\Documents\2PhD_projects\R2gui\Data\example_feild_data.txt')
-##slope geometry 
-#width=170;#width of slope:
-#top=100;#top of slope: 100m above datum
-#bottom=50;#base of slope 50m ODM;
-#ends_addon=40;# how much to add to the width of the slope
-#bottom_addon=10;#how much to add to the bottom of the model 
-#X=np.array([-ends_addon,0,width,width+ends_addon]);#compile geometry into arrays
-#Y=np.array([bottom,bottom,top,top])
-#
-##%triangular mesh - create geometry and run gmsh wrapper
-#electrodes = [elec.T[0],elec.T[1]]
-#geom_input = {'surface':[X,Y]}
-##
-#genGeoFile(electrodes, None,geom_input)
-##%%
-#poly2x=np.array([-40,200,200,-40])
-#poly2y=np.array([70,70,100,100])
-#poly_data = {'region1':[poly2x,poly2y]}
-#mesh_dict = gmsh2R2mesh(file_path='ask_to_open',save_path='default',return_mesh=True,poly_data=poly_data)
-
-#%% bore hole test 
-#geom_input={'surface':[[-2,10],[0,0]]}
-#electrodes=[[0,0,2,2,6,6,8,8],[0,2,0,2,0,2,0,2]]
-#typ = ['electrode','buried']*4
-#node,old_nodes = genGeoFile(electrodes, typ,geom_input)   
-
-

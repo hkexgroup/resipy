@@ -5,17 +5,13 @@ from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
 from PyQt5.QtGui import QPixmap, QIcon, QMovie
 from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
-from subprocess import Popen
-import os
-import sys
-import time
-import shutil
-import platform
+from subprocess import Popen, call
+import os, sys, shutil, platform, time 
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
-OS = platform.system()
 
-#from multiprocessing import Pool
-
+OS = platform.system()           
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -27,6 +23,24 @@ else:
         bundle_dir = os.path.dirname(os.path.abspath(__file__))
 print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
+
+#workaround to deal with removing old _MEI folders on windows (works when compile WITH console=True)
+# but this can cause trouble if multple instance of the software are run at the same time
+#if OS == 'Windows':
+#    active_MEI = bundle_dir.split('\\')[-1]
+#    usrname = os.getlogin()
+#    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
+#    files = sorted(os.listdir(temp_path))
+#    print('Checking for old _MEI directories in %s'%temp_path)
+#    for f in files:
+#        if f.find('_MEI')==0 and f!=active_MEI:
+#            print('removing %s ...'%f,end='')
+#            try:
+#                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
+#                os.popen(cmd)
+#                print('done.')
+#            except:# (PermissionError, FileNotFoundError):
+#                print('ERROR')
 
 
 """ PERMISSION ISSUE WITH ZIPFILE MODULE
@@ -60,7 +74,10 @@ class MyZipFile(ZipFile):
 
         ret_val = self._extract_member(member, path, pwd)
         attr = member.external_attr >> 16
-        os.chmod(ret_val, attr)
+        #os.chmod(ret_val, attr) # IMPORTANT this line needs to be commented otherwise we got the _MEIxxxxx issue
+        # changing the permission of somes files makes them unremovable by the splascreen bootloader when the program finished
+        # this leads to accumulation of _MEIxxxxx temporary files in C:\Users\User\AppData\Local\Temp\
+        # this issue is windows specific, on Linux, the temporary folder in /tmp is removed even when we uncomment this line
         return ret_val
 
 
@@ -149,16 +166,16 @@ if __name__ == "__main__":
     if OS == 'Linux':
         os.system(os.path.join(appDir, 'ResIPy'))
     else:
-        Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
+        p = Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
+        p.communicate() # block and wait for the main program to finish
     # this last one doesn't work on linux WHEN COMPILED and I don't know why
-
-#  need to comment the following lines as the exit signal is given by the main app
-#    sys.exit()
-#    sys.exit(app.exec_()) 
+    
+    print('splashScreen is exiting')
+    sys.exit(0) # send the SIGTERM signal -> works
+#    sys.exit(app.exec_()) # doesn't work
     
 """ NOTE
 This approach increase significantly the size of the package from 150 to 210 MB
 Another approach would be to load all modules in this script and just unzip the
 sources and run `python ui.py`.
 """
-
