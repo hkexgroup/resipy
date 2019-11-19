@@ -33,16 +33,16 @@ print('-------------Testing simple 2D inversion ------------')
 t0 = time.time()
 k = R2()
 k.createSurvey('./resipy/test/syscalFileTopo.csv', ftype='Syscal')
-k.pseudo(contour=True)
+k.showPseudo(contour=True)
 k.importElec('./resipy/test/elecTopo.csv')
 #k.createMesh(typ='quad',elemx=4)
 #k.showMesh()
 k.createMesh(typ='trian',cl=0.1, cl_factor=5)
 k.showMesh()
-#k.linfit()
-k.pwlfit()
+#k.fitErrorLin()
+k.fitErrorPwl()
 k.err = True
-#k.lmefit(iplot=True)
+#k.fitErrorLME(iplot=True)
 k.computeModelError()
 
 k.write2in()
@@ -51,6 +51,33 @@ k.invert()
 k.showResults(attr='Conductivity(mS/m)')
 #k.showInParaview()
 print('elapsed: {:.4}s'.format(time.time() - t0))
+
+#%% testing error models
+k = R2()
+k.createBatchSurvey('./resipy/test/timelapseIP')
+k.fitErrorLin(index=-1)
+k.fitErrorLin(index=-2)
+k.fitErrorLin(index=0)
+k.fitErrorLin(index=1)
+k.fitErrorLin(index=2)
+
+k.fitErrorPwl(index=-1)
+k.fitErrorPwl(index=-2)
+k.fitErrorPwl(index=0)
+k.fitErrorPwl(index=1)
+k.fitErrorPwl(index=2)
+
+k.fitErrorPwlIP(index=-1)
+k.fitErrorPwlIP(index=-2)
+k.fitErrorPwlIP(index=0)
+k.fitErrorPwlIP(index=1)
+k.fitErrorPwlIP(index=2)
+
+k.fitErrorParabolaIP(index=-1)
+k.fitErrorParabolaIP(index=-2)
+k.fitErrorParabolaIP(index=0)
+k.fitErrorParabolaIP(index=1)
+k.fitErrorParabolaIP(index=2)
 
 
 #%% test for borehole
@@ -77,18 +104,24 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 plt.close('all')
 print('-------------Testing IP ------------')
 t0 = time.time()
+
 k = R2(typ='cR2')
 #k.createSurvey('resipy/test/IP/rifleday8.csv', ftype='Syscal')
-#k.createSurvey('resipy/test/IP/syscalFileIP.csv')
+k.createSurvey('resipy/test/IP/syscalFileIP.csv')
+k.showPseudoIP()
+k.showErrorIP()
+k.fitErrorPwlIP()
+k.fitErrorParabolaIP()
+
+k = R2(typ='cR2')
 k.createSurvey('resipy/test/IP/protocolIP2D.dat', ftype='ProtocolIP')
-k.createMesh('quad')
-#k.pwlfit()
-#k.plotIPFit()
 k.err=True # there is already error inside the protocol.dat imported
 k.invert()
 k.showResults(attr='Magnitude(Ohm-m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
-k.pseudoError()
+k.showPseudoInvError()
+k.showPseudoInvErrorIP()
+k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -97,9 +130,12 @@ plt.close('all')
 print('-------------Testing Time-lapse in // ------------')
 t0 = time.time()
 k = R2()
-k.createTimeLapseSurvey('resipy/test/testTimelapse')
-k.linfit()
-k.pwlfit()
+k.createTimeLapseSurvey(['resipy/test/testTimelapse/17031501.csv',
+                         'resipy/test/testTimelapse/17051601.csv',
+                         'resipy/test/testTimelapse/17040301.csv'])
+#k.createTimeLapseSurvey('resipy/test/testTimelapse')
+k.fitErrorLin()
+k.fitErrorPwl()
 k.err = True
 k.invert(iplot=False, parallel=True, ncores=2)
 k.saveInvPlots(attr='difference(percent)')
@@ -115,8 +151,8 @@ print('-------------Testing Time-lapse in // ------------')
 t0 = time.time()
 k = R2()
 k.createTimeLapseSurvey('resipy/test/testTimelapse')
-k.linfit()
-k.pwlfit()
+k.fitErrorLin()
+k.fitErrorPwl()
 k.err = True
 k.param['reg_mode'] = 1
 k.invert(iplot=False, parallel=True)
@@ -135,10 +171,10 @@ k = R2()
 k.createBatchSurvey('resipy/test/testTimelapse')
 for s in k.surveys:
     s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
-k.removeUnpaired()
+k.filterUnpaired()
 k.filterElec([])
 k.createMesh('trian')
-k.pwlfit()
+k.fitErrorPwl()
 k.err = True
 k.invert(parallel=True, iMoveElec=True)
 k.showResults(index=0)
@@ -275,7 +311,7 @@ buried = x[:,2].astype(bool) # specify which electrodes are buried (in the river
 k.filterElec([21, 2]) # filter out problematic electrodes 21 and 2
 k.createMesh(typ='trian', buried=buried, surface=surface, cl=0.2, cl_factor=10)
 xy = k.elec[1:21,[0,2]] # adding river water level using 2 topo points
-k.addRegion(xy, res0=32, blocky=True, fixed=False) # fixed river resistivity to 32 Ohm.m
+k.addRegion(xy, res0=32, blocky=False, fixed=False) # fixed river resistivity to 32 Ohm.m
 k.param['b_wgt'] = 0.05 # setting up higher noise level
 k.invert()
 k.showResults(sens=False, vmin=1.2, vmax=2.2, zlim=[88, 93])
@@ -300,8 +336,8 @@ k.showResults()
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
-k.pseudoError()
-k.showInversionErrors()
+k.showPseudoInvError()
+k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 
 
@@ -360,7 +396,7 @@ k.createMesh(cl=2)
 k.param['reg_mode'] = 1 # background regularization
 k.err = True # test using estimated error model 
 k.errTyp = 'survey'
-k.estError()
+k.estimateError()
 k.computeModelError()
 k.invert(parallel=True, iMoveElec=True)
 k.showInParaview()
