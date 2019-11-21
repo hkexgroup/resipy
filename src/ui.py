@@ -1527,7 +1527,7 @@ class App(QMainWindow):
                 fillBoxes(boxes) # last one is elecSpacingEdit
                 infoDump('Parsing successful.')
             except ValueError as e:
-                errorDump('Parsing error:' + str(e))
+                errorDump('Parsing error:' + str(e) + ' - Incorrect delimiter or skip headers')
 
         parseBtn = QPushButton('Reorder')
         parseBtn.setEnabled(False)
