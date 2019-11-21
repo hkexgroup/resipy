@@ -20,7 +20,7 @@ from scipy.stats.kde import gaussian_kde
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
-                     stingParser, ericParser, lippmannParser)
+                     stingParser, ericParser, lippmannParser, aresParser)
 from resipy.DCA import DCA
 
 import warnings
@@ -65,7 +65,7 @@ class Survey(object):
         self.eselect = None # idem
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -93,6 +93,8 @@ class Survey(object):
                 elec, data = ericParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
+            elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)
@@ -306,6 +308,8 @@ class Survey(object):
                 elec, data = ericParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
+            elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
