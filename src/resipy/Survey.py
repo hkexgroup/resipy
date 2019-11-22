@@ -1158,21 +1158,52 @@ class Survey(object):
             ax.set_ylabel('Chargeability [mV/V]')
     
     
+#    def computeK(self):
+#        """Compute geomatrix factor (assuming flat 2D surface) and store it
+#        in self.df['K'].
+#        """
+#        array = self.df[['a','b','m','n']].values.astype(int)
+#        elecpos = self.elec[:,0]
+#
+#        apos = elecpos[array[:,0]-1]
+#        bpos = elecpos[array[:,1]-1]
+#        mpos = elecpos[array[:,2]-1]
+#        npos = elecpos[array[:,3]-1]
+#        AM = np.abs(apos-mpos)
+#        BM = np.abs(bpos-mpos)
+#        AN = np.abs(apos-npos)
+#        BN = np.abs(bpos-npos)
+#        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+#        
+#        self.df['K'] = K
+        
     def computeK(self):
         """Compute geomatrix factor (assuming flat 2D surface) and store it
         in self.df['K'].
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
-
-        apos = elecpos[array[:,0]-1]
-        bpos = elecpos[array[:,1]-1]
-        mpos = elecpos[array[:,2]-1]
-        npos = elecpos[array[:,3]-1]
-        AM = np.abs(apos-mpos)
-        BM = np.abs(bpos-mpos)
-        AN = np.abs(apos-npos)
-        BN = np.abs(bpos-npos)
+        elec = self.elec
+        aposx = elec[:,0][array[:,0]-1]
+        aposy = elec[:,1][array[:,0]-1]
+        aposz = elec[:,2][array[:,0]-1]
+        
+        bposx = elec[:,0][array[:,1]-1]
+        bposy = elec[:,1][array[:,1]-1]
+        bposz = elec[:,2][array[:,1]-1]
+        
+        mposx = elec[:,0][array[:,2]-1]
+        mposy = elec[:,1][array[:,2]-1]
+        mposz = elec[:,2][array[:,2]-1]
+        
+        nposx = elec[:,0][array[:,3]-1]
+        nposy = elec[:,1][array[:,3]-1]
+        nposz = elec[:,2][array[:,3]-1]
+        
+        AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
+        BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
+        AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
+        BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
+        
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         
         self.df['K'] = K
@@ -1204,16 +1235,17 @@ class Survey(object):
         resist = self.df['resist'].values
         
         if geom: # compute and applied geometric factor
-            apos = elecpos[array[:,0]-1]
-            bpos = elecpos[array[:,1]-1]
-            mpos = elecpos[array[:,2]-1]
-            npos = elecpos[array[:,3]-1]
-            AM = np.abs(apos-mpos)
-            BM = np.abs(bpos-mpos)
-            AN = np.abs(apos-npos)
-            BN = np.abs(bpos-npos)
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-            resist = resist*K
+#            apos = elecpos[array[:,0]-1]
+#            bpos = elecpos[array[:,1]-1]
+#            mpos = elecpos[array[:,2]-1]
+#            npos = elecpos[array[:,3]-1]
+#            AM = np.abs(apos-mpos)
+#            BM = np.abs(bpos-mpos)
+#            AN = np.abs(apos-npos)
+#            BN = np.abs(bpos-npos)
+#            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            self.computeK()
+            resist = resist*self.df['K']
 
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
@@ -1611,6 +1643,20 @@ class Survey(object):
             i2keep = (self.df[['a','b','m','n']].values != e).all(1)
             self.filterData(i2keep)
             print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
+    
+    def filterAppResist(self,threshold=[0,2000]):
+        """Filter measurements by apparent resistivity for surface surveys 
+        Parameters
+        -----------
+        threshold: tuple, list
+            2by 1 array of minimum and maxium apparent resistivity values  
+        """
+        df = self.df.copy()
+        self.computeK()
+        appRes = self.df['K']*self.df['resist']
+        ikeep = (appRes>threshold[0]) & (appRes<threshold[1])
+        self.df = df[ikeep]
+        self.df.reset_index()
     
     
     def shuntIndexes(self, debug=True): 

@@ -1042,7 +1042,17 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         for s in self.surveys:
             s.filterNegative()
-
+            
+    
+    def filterAppResist(self,threshold=(0,2000)):
+        """Filter measurements by apparent resistivity for surface surveys 
+        Parameters
+        -----------
+        threshold: tuple, list
+            2by 1 array of minimum and maxium apparent resistivity values  
+        """
+        for s in self.surveys:
+            s.filterAppResist(threshold)
 
 
     def computeDOI(self):
