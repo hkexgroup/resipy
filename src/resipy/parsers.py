@@ -1009,6 +1009,8 @@ def ericParser(file_path):
     return elec,df
 #%% 
 def lippmannParser(fname):
+    """Read in *.tx0 file from Lippmann instruments
+    """
     with open(fname, 'r') as fh:
         dump = fh.readlines()
 
@@ -1028,7 +1030,7 @@ def lippmannParser(fname):
                             'M':'m',
                             'N':'n',
                             'I':'i',
-                            'U':'vp',})
+                            'U':'vp'})
     if 'phi' in df.columns:
         df = df.rename(columns={'phi':'ip'})
         df = df[['a','b','m','n','i','vp','ip']]
@@ -1041,4 +1043,55 @@ def lippmannParser(fname):
     #calculations
     df['resist'] = df['vp']/df['i']
 
+    return elec, df
+
+#%%
+def aresParser(fname, spacing=None):
+    """Read in *.2dm file from ARES II
+    """
+    with open(fname, 'r') as fh:
+        dump = fh.readlines()
+    
+    #getting spacing
+    spacing_lineNum = [i for i in range(len(dump)) if 'Electrode distance' in dump[i]]
+    if spacing_lineNum != []:
+        spacing = dump[spacing_lineNum[0]].split()[2]
+
+    #getting data
+    data_linNum_s = [i for i in range(len(dump)) if 'Measured data' in dump[i]]
+    df = pd.read_csv(fname, sep='\s+', skiprows=data_linNum_s[0]+1, index_col=False)
+    df = df.rename(columns={'C1[el]':'a',
+                            'C2[el]':'b',
+                            'P1[el]':'m',
+                            'P2[el]':'n',
+                            'I[mA]':'i',
+                            'U[mV]':'vp'})
+    
+    #Building electrode locations
+    array = df[['a','b','m','n']].values
+    arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    if arrayMin != 0: # all surveys must start from x = 0
+        array -= arrayMin
+    val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+    elecLabel = 1 + np.arange(len(val))
+    newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    df.loc[:,['a','b','m','n']] = newval
+    
+    #calculations
+#    if 'EP[mV]' in df.columns: # TODO: correct this when you figure out how the IP values are calculated 
+#        df['ip'] = df['EP[mV]']/df['vp'] # not sure this is correct way of calculating IP
+#        df = df[['a','b','m','n','i','vp','ip']]
+#    else:
+    df = df[['a','b','m','n','i','vp']] # should be under "else:"
+    df['ip'] = 0 # should be under "else:"
+    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
+    
+    df['resist'] = df['vp']/df['i']
+    
+    #builting electrode table
+    if spacing is not None:
+        elec = np.c_[val*float(spacing), np.zeros((len(val),2))]
+    else:
+        elec = np.c_[val, np.zeros((len(val),2))]
+    
     return elec, df

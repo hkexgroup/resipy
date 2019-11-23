@@ -14,6 +14,8 @@ from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator#, QKeySe
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer#, QProcess, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
+QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
 
 #%% General crash ERROR
@@ -131,7 +133,7 @@ class customThread(QThread):
 
 
 #%%
-QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
+#QT_AUTO_SCREEN_SCALE_FACTOR = True # for high dpi display
 
 #print('elpased', time.time()-a)
 
@@ -171,6 +173,10 @@ class MatplotlibWidget(QWidget):
             axes = figure.get_axes()
         self.figure = figure
         self.axis = axes
+        self.xlim = None
+        self.ylim = None
+        self.xlim0 = None
+        self.ylim0 = None
         self.aspect = aspect
         self.layoutVertical = QVBoxLayout(self)
         self.layoutVertical.addWidget(self.canvas)#, stretch = 1, alignment=Qt.AlignCenter)
@@ -180,6 +186,7 @@ class MatplotlibWidget(QWidget):
         if navi is True:
             self.navi_toolbar = NavigationToolbar(self.canvas, self)
             self.navi_toolbar.setMaximumHeight(30)
+            self.navi_toolbar.actions()[0].triggered.connect(self.getHome)
             self.layoutVertical.addWidget(self.navi_toolbar)        
 
     def setMinMax(self, vmin=None, vmax=None):
@@ -211,9 +218,40 @@ class MatplotlibWidget(QWidget):
         ax.set_aspect(aspect)
         self.canvas.draw()
 
-
     def setCallback(self, callback):
         self.callback = callback
+        self.xlim0 = None
+        self.ylim0 = None
+        self.xlim = None
+        self.ylim = None
+    
+    ''' to keep the zoom level we register event on xylim change and store it
+    as attribute of the MatplotlibWidget. At first drawn of the figure by
+    replot() we also set up xlim0 and ylim0 to be triggered by the 'home'
+    button. If another replot is triggered the plot will programmatically
+    restore the previous zoom level using getHome()
+    '''
+
+    def on_xlims_change(self, ax):
+        self.xlim = ax.get_xlim()
+        
+    def on_ylims_change(self, ax):
+        self.ylim = ax.get_ylim()
+
+    def setHome(self, ax):
+        xlim = ax.get_xlim()
+        if (xlim[0] != 0) | (xlim[1] != 1): # it means callback actually plot smth
+            self.xlim0 = ax.get_xlim()
+            self.ylim0 = ax.get_ylim()
+
+    def getHome(self):
+        self.axis.set_xlim(self.xlim0)
+        self.axis.set_ylim(self.ylim0)
+        self.canvas.draw()
+        
+    def restoreZoom(self):
+        self.figure.axes[0].set_xlim(self.xlim)
+        self.figure.axes[0].set_ylim(self.ylim)
 
     def replot(self, threed=False, aspect=None, **kwargs):
         self.figure.clear()
@@ -223,11 +261,16 @@ class MatplotlibWidget(QWidget):
             ax = self.figure.add_subplot(111, projection='3d')
         self.axis = ax
         self.callback(ax=ax, **kwargs)
+        if self.xlim0 is None:
+            self.setHome(ax)
+        ax.callbacks.connect('xlim_changed', self.on_xlims_change)
+        ax.callbacks.connect('ylim_changed', self.on_ylims_change)
         if aspect == None:
             aspect = self.aspect
         ax.set_aspect(aspect)
+        if self.xlim0 is not None:
+            self.restoreZoom()
         self.canvas.draw()
-
 
     def clear(self):
         self.axis.clear()
@@ -264,7 +307,10 @@ class App(QMainWindow):
         self.inputPhaseFlag = False
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
-        self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
+        if frozen == 'not':
+            self.datadir = os.path.join(bundle_dir, '../examples')
+        else:
+            self.datadir = os.path.join(bundle_dir, 'resipy', 'examples')
         self.plotAspect = 'equal'
         self.iDesign = False # boolean to know if the mesh has been designed before meshing
 
@@ -353,6 +399,9 @@ class App(QMainWindow):
             else:
                 reg_mode.setCurrentIndex(0)
             activateTabs(False)
+            
+            bottomSplitter.setSizes([0,1100])
+            topSplitter.setSizes([100,250])
             
             # importing
             self.parser = None
@@ -621,10 +670,12 @@ class App(QMainWindow):
         def boreholeCheckFunc(state):
             if state == Qt.Checked:
                 self.iBorehole = True
+                errorGraphs.setTabEnabled(0, False)
                 if self.r2 is not None:
                     self.r2.setBorehole(True)
             else:
                 self.iBorehole = False
+                errorGraphs.setTabEnabled(0, True)
                 if self.r2 is not None:
                     self.r2.setBorehole(False)
             try:
@@ -771,7 +822,7 @@ class App(QMainWindow):
                 self.fformat = 'DAT (*.dat)'
             elif index == 5:
                 self.ftype = 'Sting'
-                self.fformat = ''
+                self.fformat = 'Sting (*.stg)'
             elif index == 6:
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
@@ -779,6 +830,9 @@ class App(QMainWindow):
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt)'
             elif index == 8:
+                self.ftype = 'ARES'
+                self.fformat = 'ARES (*.2dm)'
+            elif index == 9:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -792,6 +846,7 @@ class App(QMainWindow):
         fileType.addItem('Sting')
         fileType.addItem('ABEM-Lund')
         fileType.addItem('Lippmann')
+        fileType.addItem('ARES')
         fileType.addItem('Custom')
         fileType.activated.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
@@ -813,8 +868,11 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     if self.r2.iBatch is False:
+                        if len(fnames) < 2:
+                            errorDump('at least two files needed for timelapse.')
+                            return
                         self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=infoDump)
-                        ipCheck.setEnabled(False)
+                        ipCheck.setEnabled(False) # TODO enable IP for timelapse
                         infoDump('Time-lapse survey created.')
                     else:
                         self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=infoDump)
@@ -919,13 +977,13 @@ class App(QMainWindow):
                         dcaProgress.setEnabled(True)
                    
                 plotPseudo()
-
+    
                 infoDump(fname + ' imported successfully')
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
                 nbElecEdit.setText(str(len(self.r2.elec)))
                 elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
-#                fnamesCombo.setEnabled(False)
+    #                fnamesCombo.setEnabled(False)
                 fnamesCombo.hide()
                 fnamesComboLabel.hide()
             except Exception as e:
@@ -1145,11 +1203,11 @@ class App(QMainWindow):
 #        pseudoLayout.setAlignment(Qt.AlignHCenter | Qt.AlignCenter)
 
         mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
-        pseudoLayout.addWidget(mwPseudo)
+        pseudoLayout.addWidget(mwPseudo, 50)
 
         mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         mwPseudoIP.setVisible(False)
-        pseudoLayout.addWidget(mwPseudoIP)
+        pseudoLayout.addWidget(mwPseudoIP, 50)
 
         tabImportingDataLayout.addLayout(pseudoLayout, 60)
         tabImportingData.setLayout(tabImportingDataLayout)
@@ -1187,15 +1245,21 @@ class App(QMainWindow):
                     vals = np.zeros(self.nrow, dtype=bool)
                 j = np.where(np.array(self.headers) == 'Buried')[0][0]
                 for i in range(len(vals)):
+                    checkBoxWidget = QWidget()
+                    checkBoxLayout = QHBoxLayout()
+                    checkBoxLayout.setContentsMargins(5,5,5,5)
+                    checkBoxLayout.setAlignment(Qt.AlignCenter)
                     buriedCheck = QCheckBox()
                     buriedCheck.setChecked(bool(vals[i]))
-                    self.setCellWidget(i, j, buriedCheck)
+                    checkBoxLayout.addWidget(buriedCheck)
+                    checkBoxWidget.setLayout(checkBoxLayout)
+                    self.setCellWidget(i, j, checkBoxWidget)
 
             def getBuried(self):
                 j = np.where(self.headers == 'Buried')[0][0]
                 self.buried = np.zeros(self.nrow, dtype=bool)
                 for i in range(self.nrow):
-                    buriedCheck = self.cellWidget(i, j)
+                    buriedCheck = self.cellWidget(i, j).findChildren(QCheckBox)[0]
                     if buriedCheck.isChecked() is True:
                         self.buried[i] = True
                 return self.buried
@@ -1467,7 +1531,7 @@ class App(QMainWindow):
                 fillBoxes(boxes) # last one is elecSpacingEdit
                 infoDump('Parsing successful.')
             except ValueError as e:
-                errorDump('Parsing error:' + str(e))
+                errorDump('Parsing error:' + str(e) + ' - Incorrect delimiter or skip headers')
 
         parseBtn = QPushButton('Reorder')
         parseBtn.setEnabled(False)
@@ -1672,7 +1736,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            fileType.setCurrentIndex(8)
+            fileType.setCurrentIndex(9)
             tabImporting.setCurrentIndex(0)
 
 
@@ -1863,7 +1927,7 @@ class App(QMainWindow):
 
 
         def recipErrorUnpairedFunc():
-            index = -1 if self.recipErrDataIndex else self.recipErrDataIndex
+            index = -1 if self.recipErrDataIndex < 0 else self.recipErrDataIndex
             numRemoved = self.r2.filterUnpaired(index=index)
             if ipCheck.checkState() == Qt.Checked:
                 if self.recipErrApplyToAll:
@@ -2021,38 +2085,35 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
-#            if self.r2.iBatch or self.r2.iTimeLapse:
-#                self.r2.filterRangeIP(-1, # apply to all
-#                                      float(phivminEdit.text()),
-#                                      float(phivmaxEdit.text()))
-#            else:
             self.r2.filterRangeIP(self.phaseFiltDataIndex,
                                   float(phivminEdit.text()),
                                   float(phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
-#            if self.r2.iBatch or self.r2.iTimeLapse:
-#                self.r2.filterRecipIP(-1)
-#            else:
             self.r2.filterRecipIP(self.phaseFiltDataIndex)
             heatFilter()
 
         def removenested():
-#            if self.r2.iBatch or self.r2.iTimeLapse:
-#                self.r2.filterNested(-1)
-#            else:
             self.r2.filterNested(self.phaseFiltDataIndex)
             heatFilter()
 
         def convFactK():
-            if not (self.r2.iBatch or self.r2.iTimeLapse):
-                self.r2.surveys[0].kFactor = float(phiConvFactor.text())
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    s.kFactor = float(phiConvFactor.text())
             else:
                 self.r2.surveys[self.phaseFiltDataIndex].kFactor = float(phiConvFactor.text())
             heatFilter()
+            heatRaw()
 
         phitoplayout = QHBoxLayout()
+        phitoplayoutL = QHBoxLayout()
+        phitoplayoutL.setAlignment(Qt.AlignLeft)
+        phitoplayoutC = QHBoxLayout()
+        phitoplayoutC.setAlignment(Qt.AlignRight)
+        phitoplayoutR = QHBoxLayout()
+        phitoplayoutR.setAlignment(Qt.AlignRight)
         phiConvFactorlabel = QLabel('Conversion factor k (φ = -kM):')
         phiConvFactorlabel.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor = QLineEdit()
@@ -2061,41 +2122,50 @@ class App(QMainWindow):
         phiConvFactor.setText('1.2')
         phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
-        rangelabel = QLabel('     Phase range filtering:')
+        rangelabel = QLabel('Phase range filtering:')
         phivminlabel = QLabel('-φ min:')
         phivminEdit = QLineEdit()
+        phivminEdit.setFixedWidth(50)
         phivminEdit.setValidator(QDoubleValidator())
         phivmaxlabel = QLabel('-φ max:')
         phivmaxEdit = QLineEdit()
+        phivmaxEdit.setFixedWidth(50)
         phivmaxEdit.setValidator(QDoubleValidator())
         phivminEdit.setText('0')
         phivmaxEdit.setText('25')
         rangebutton = QPushButton('Apply')
+        rangebutton.setFixedWidth(100)
         rangebutton.setAutoDefault(True)
         rangebutton.clicked.connect(phirange)
 
         recipfilt = QPushButton('Remove reciprocals')
+        recipfilt.setFixedWidth(150)
         recipfilt.setToolTip('Reciprocal measurements will not be considered for inversion in ResIPy.\nThis filter just visualize the removal')
         recipfilt.setAutoDefault(True)
         recipfilt.setEnabled(False)
         recipfilt.clicked.connect(removerecip)
 
         nestedfilt = QPushButton('Remove nested')
+        nestedfilt.setFixedWidth(150)
         nestedfilt.setToolTip('Measurments where M and/or N are inbetween A and B will be removed.\nNOTE: Wenner like arrays will also be affected')
         nestedfilt.setAutoDefault(True)
         nestedfilt.clicked.connect(removenested)
 
-        phitoplayout.addWidget(phiConvFactorlabel)
-        phitoplayout.addWidget(phiConvFactor)
-        phitoplayout.addWidget(rangelabel)
-        phitoplayout.addWidget(phivminlabel)
-        phitoplayout.addWidget(phivminEdit)
-        phitoplayout.addWidget(phivmaxlabel)
-        phitoplayout.addWidget(phivmaxEdit)
-        phitoplayout.addWidget(rangebutton)
-        phitoplayout.addWidget(recipfilt)
-        phitoplayout.addWidget(nestedfilt)
-
+        phitoplayoutL.addWidget(phiConvFactorlabel)
+        phitoplayoutL.addWidget(phiConvFactor)
+        phitoplayoutC.addWidget(rangelabel)
+        phitoplayoutR.addWidget(phivminlabel)
+        phitoplayoutR.addWidget(phivminEdit)
+        phitoplayoutR.addWidget(phivmaxlabel)
+        phitoplayoutR.addWidget(phivmaxEdit)
+        phitoplayoutR.addWidget(rangebutton)
+        phitoplayoutR.addWidget(recipfilt)
+        phitoplayoutR.addWidget(nestedfilt)
+        
+        phitoplayout.addLayout(phitoplayoutL, 0)
+        phitoplayout.addLayout(phitoplayoutC, 1)
+        phitoplayout.addLayout(phitoplayoutR, 0)
+        
         phasefiltlayout.addLayout(phitoplayout,0)
 
         def filt_reset():
@@ -2113,31 +2183,52 @@ class App(QMainWindow):
             
 
         def phiCbarRange():
-            self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
-            self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    s.phiCbarmin = float(phiCbarminEdit.text())
+                    s.phiCbarMax = float(phiCbarMaxEdit.text())
+            else:
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
+                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
             heatFilter()
             heatRaw()
 
         def phiCbarDataRange():
-            minDataIP = np.min(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
-            maxDataIP = np.max(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
-            if self.ftype == 'ProtocolIP':
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
+            if self.phaseFiltDataIndex == -1:
+                for s in self.r2.surveys:
+                    minDataIP = np.min(s.dfOrigin['ip'])
+                    maxDataIP = np.max(s.dfOrigin['ip'])
+                    if self.ftype == 'ProtocolIP':
+                        s.phiCbarmin = -maxDataIP
+                        s.phiCbarMax = -minDataIP
+                    else:
+                        s.phiCbarmin = minDataIP
+                        s.phiCbarMax = maxDataIP
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
+                minDataIP = np.min(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+                maxDataIP = np.max(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+                if self.ftype == 'ProtocolIP':
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
+                else:
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
+                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
 
         resetlayout = QHBoxLayout()
+        resetlayoutL = QHBoxLayout()
+        resetlayoutL.setAlignment(Qt.AlignLeft)
+        resetlayoutR = QHBoxLayout()
+        resetlayoutR.setAlignment(Qt.AlignRight)
+        
         phaseSavebtn = QPushButton('Save data')
         phaseSavebtn.setStyleSheet("color: green")
         phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
         phaseSavebtn.clicked.connect(saveFilteredData)
         phaseSavebtn.setFixedWidth(150)
         
-        filtreset = QPushButton('Reset all "phase" filters')
+        filtreset = QPushButton('Reset phase filters')
         filtreset.setStyleSheet("color: red")
         filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
         filtreset.setAutoDefault(True)
@@ -2145,41 +2236,41 @@ class App(QMainWindow):
         filtreset.setFixedWidth(150)
         phiCbarminlabel = QLabel('Colorbar min: ')
         phiCbarminEdit = QLineEdit()
-#        phiCbarminEdit.setFixedWidth(80)
+        phiCbarminEdit.setFixedWidth(50)
         phiCbarminEdit.setValidator(QDoubleValidator())
         phiCbarminEdit.setText('0')
         phiCbarMaxlabel = QLabel('Colorbar Max: ')
         phiCbarMaxEdit = QLineEdit()
-#        phiCbarMaxEdit.setFixedWidth(80)
+        phiCbarMaxEdit.setFixedWidth(50)
         phiCbarMaxEdit.setValidator(QDoubleValidator())
         phiCbarMaxEdit.setText('25')
         phiCbarrangebutton = QPushButton('Apply')
+        phiCbarrangebutton.setFixedWidth(100)
         phiCbarrangebutton.setToolTip('This is not a filtering step.')
         phiCbarrangebutton.setAutoDefault(True)
         phiCbarrangebutton.clicked.connect(phiCbarRange)
-        phiCbarDatarangebutton = QPushButton('Scale to raw data range')
+        phiCbarDatarangebutton = QPushButton('Raw data range')
         phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
         phiCbarDatarangebutton.setAutoDefault(True)
         phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
         phiCbarDatarangebutton.setFixedWidth(150)
-        resetlayout.addWidget(phiCbarminlabel)
-        resetlayout.addWidget(phiCbarminEdit)
-        resetlayout.addWidget(phiCbarMaxlabel)
-        resetlayout.addWidget(phiCbarMaxEdit)
-        resetlayout.addWidget(phiCbarrangebutton)
-        resetlayout.addWidget(phiCbarDatarangebutton)
-        resetlayout.addWidget(filtreset)
-        resetlayout.addWidget(phaseSavebtn)
+        resetlayoutL.addWidget(phiCbarminlabel)
+        resetlayoutL.addWidget(phiCbarminEdit)
+        resetlayoutL.addWidget(phiCbarMaxlabel)
+        resetlayoutL.addWidget(phiCbarMaxEdit)
+        resetlayoutL.addWidget(phiCbarrangebutton)
+        resetlayoutL.addWidget(phiCbarDatarangebutton)
+        resetlayoutR.addWidget(filtreset)
+        resetlayoutR.addWidget(phaseSavebtn)
+        
+        resetlayout.addLayout(resetlayoutL, 0)
+        resetlayout.addLayout(resetlayoutR, 1)
 #        recipfilt.clicked.connect("add function")
 
 
         ipfiltlayout = QHBoxLayout()
 
         def heatRaw():
-#            if not (self.r2.iBatch or self.r2.iTimeLapse):
-#                self.r2.surveys[0].filt_typ = 'Raw'
-#                raw_hmp.plot(self.r2.showHeatmap)
-#            else:
             if self.phaseFiltDataIndex == -1:
                 index = 0
             else:
@@ -2189,10 +2280,6 @@ class App(QMainWindow):
             raw_hmp.replot(index=index)
 
         def heatFilter():
-#            if not (self.r2.iBatch or self.r2.iTimeLapse):
-#                self.r2.surveys[0].filt_typ = 'Filtered'
-#                filt_hmp.plot(self.r2.showHeatmap)
-#            else:
             if self.phaseFiltDataIndex == -1:
                 index = 0
             else:
@@ -2743,6 +2830,8 @@ class App(QMainWindow):
 #        clEdit.setValidator(QDoubleValidator())
 #        clEdit.setText('-1')
         clGrid = QGridLayout()
+        clGrid.setContentsMargins(9,0,9,0)
+        clGrid.setSpacing(2)
         clFineLabel = QLabel('Fine')
         clFineLabel.setStyleSheet('font:12px;')
         clCoarseLabel = QLabel('Coarse')
@@ -2811,10 +2900,12 @@ class App(QMainWindow):
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn.setFixedWidth(150)
         importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
 
 
         importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
+        importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         importCustomMeshLabel2.setWordWrap(True)
         def importCustomMeshFunc2():
             elec = elecTable.getTable()
@@ -2836,6 +2927,7 @@ class App(QMainWindow):
                 except Exception as e:
                     errorDump('Error importing mesh' + str(e))
         importCustomMeshBtn2 = QPushButton('Import Custom Mesh')
+        importCustomMeshBtn2.setFixedWidth(150)
         importCustomMeshBtn2.clicked.connect(importCustomMeshFunc2)
         importCustomMeshBtn2.setToolTip('Import .msh or .vtk file. The electrodes will be snapped to the closest node.')
 
@@ -2845,6 +2937,8 @@ class App(QMainWindow):
             self.r2.mesh = None
             self.r2.geom_input = {}
         resetMeshBtn = QPushButton('Reset Mesh')
+        resetMeshBtn.setStyleSheet("color: red")
+        resetMeshBtn.setFixedWidth(150)
         resetMeshBtn.clicked.connect(resetMeshBtnFunc)
         
 
@@ -2861,7 +2955,14 @@ class App(QMainWindow):
                 self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
                 self.setItem(0,1,QTableWidgetItem('0')) # phase [mrad]
                 self.setItem(0,2,QTableWidgetItem('1')) # zone
-                self.setCellWidget(0,3, QCheckBox())
+                checkBoxWidget = QWidget()
+                checkBoxLayout = QHBoxLayout()
+                checkBoxLayout.setContentsMargins(5,5,5,5)
+                checkBoxLayout.setAlignment(Qt.AlignCenter)
+                checkBoxLayout.addWidget(QCheckBox())
+                checkBoxWidget.setLayout(checkBoxLayout)
+                self.setCellWidget(0,3, checkBoxWidget)
+                
 
             def addRow(self):
                 self.nrow = self.nrow + 1
@@ -2869,7 +2970,13 @@ class App(QMainWindow):
                 self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
                 self.setItem(self.nrow-1, 1, QTableWidgetItem('0'))
                 self.setItem(self.nrow-1, 2, QTableWidgetItem('1'))
-                self.setCellWidget(self.nrow-1, 3, QCheckBox())
+                checkBoxWidget = QWidget()
+                checkBoxLayout = QHBoxLayout()
+                checkBoxLayout.setContentsMargins(5,5,5,5)
+                checkBoxLayout.setAlignment(Qt.AlignCenter)
+                checkBoxLayout.addWidget(QCheckBox())
+                checkBoxWidget.setLayout(checkBoxLayout)
+                self.setCellWidget(self.nrow-1, 3, checkBoxWidget)
 
             def getTable(self):
                 res0 = np.zeros(self.nrow)
@@ -2880,7 +2987,7 @@ class App(QMainWindow):
                     res0[j] = float(self.item(j,0).text())
                     phase0[j] = float(self.item(j,1).text())
                     zones[j] = int(self.item(j,2).text())
-                    fixed[j] = self.cellWidget(j,3).isChecked()
+                    fixed[j] = self.cellWidget(j,3).findChildren(QCheckBox)[0].isChecked()
                 return res0, phase0, zones, fixed
 
             def reset(self):
@@ -2915,6 +3022,7 @@ class App(QMainWindow):
         meshLayout = QVBoxLayout()
 
         meshOptionQuadLayout = QHBoxLayout()
+        meshOptionQuadLayout.setAlignment(Qt.AlignVCenter)
         meshOptionQuadLayout.addWidget(nnodesLabel)
 #        meshOptionQuadLayout.addWidget(nnodesEdit)
         meshOptionQuadLayout.addWidget(nnodesSld)
@@ -2949,6 +3057,7 @@ class App(QMainWindow):
         
         meshChoiceLayout = QHBoxLayout()
         meshQuadLayout = QVBoxLayout()
+        meshQuadLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
         meshTrianLayout = QVBoxLayout()
         meshTetraLayout = QVBoxLayout()
         meshQuadGroup = QGroupBox()
@@ -2958,8 +3067,8 @@ class App(QMainWindow):
         meshTetraGroup = QGroupBox()
         meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
-        meshQuadLayout.addLayout(meshOptionQuadLayout)
-        meshQuadLayout.addWidget(meshQuad)
+        meshQuadLayout.addLayout(meshOptionQuadLayout, 1)
+        meshQuadLayout.addWidget(meshQuad, 0)
         meshQuadGroup.setLayout(meshQuadLayout)
         meshChoiceLayout.addWidget(meshQuadGroup)
 
@@ -2979,7 +3088,7 @@ class App(QMainWindow):
         meshChoiceLayout.addWidget(meshTetraGroup)
         meshTetraGroup.setHidden(True)
 
-        meshLayout.addLayout(meshChoiceLayout, 20)
+        meshLayout.addLayout(meshChoiceLayout, 0)
 
         instructionLayout = QHBoxLayout()
         instructionLayout.addWidget(instructionLabel, 92)
@@ -3006,7 +3115,7 @@ class App(QMainWindow):
         meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
 
-        meshLayout.addLayout(meshOutputStack, 80)
+        meshLayout.addLayout(meshOutputStack, 1)
 
 
         tabMesh.setLayout(meshLayout)
@@ -3094,6 +3203,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         val = True
                     self.labels[i].setVisible(val)
                     self.fields[i].setVisible(val)
+                if self.seq == 'multigrad':
+                    self.labels[-1].setText('s=')
                     
             def remove(self):
                 self.combo.deleteLater()
@@ -3104,6 +3215,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.rmBtn.deleteLater()
                 self.importBtn.deleteLater()
                 self.deleteLater()
+                if self.seq == 'custSeq':
+                    self.fname = ''
             
             def getData(self):
                 if self.seq == 'custSeq':
@@ -3134,7 +3247,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum1': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
-           'custSeq': 'Use the button to import a custom CSV file (no header)\ncolumn1: C+, column2: C-, column3: P+, column4: P-'
+           'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-'
             }
         
         arrayLabel = QLabel('Sequence help will be display here.')
@@ -3335,9 +3448,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #        forwardLayout.addLayout(forwardOutputStack, 60)
 
         fwdTopWidget = QWidget()
+        fwdTopWidget.setObjectName('fwdTopWidget')
+        fwdTopWidget.setStyleSheet("QWidget#fwdTopWidget {border:1px solid rgb(185,185,185)}")
         fwdTopWidget.setLayout(forwardLayout)
         
         fwdBottomWidget = QWidget()
+        fwdBottomWidget.setObjectName('fwdBottomWidget')
+        fwdBottomWidget.setStyleSheet("QWidget#fwdBottomWidget {border:1px solid rgb(185,185,185)}")
         fwdBottomWidget.setLayout(forwardOutputStack)
         
         fwdSplitter.addWidget(fwdTopWidget)
@@ -3879,6 +3996,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         splitterMainLayout = QHBoxLayout()
         
         topSplitter = QSplitter(Qt.Vertical)
+        topSplitter.setChildrenCollapsible(False)
 
         invLayout = QVBoxLayout()
 
@@ -4003,10 +4121,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #            self.processes.append(process)
 
         def logInversion():
+            bottomSplitter.setSizes([0,1100])
+            topSplitter.setSizes([100,250])
             self.end = False
             outStackLayout.setCurrentIndex(0)
             cmapCombo.setCurrentIndex(0)
-            sensSlider.setValue(1)
+            sensSlider.setValue(5)
             mwInvResult.clear()
             mwRMS.clear()
             logText.setText('')
@@ -4149,7 +4269,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis', 'sensPrc':0.1}
+                                  'cmap':'viridis', 'sensPrc':0.5}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
@@ -4334,7 +4454,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cmapCombo.activated.connect(cmapComboFunc)
         displayOptions.addWidget(cmapComboLabel)
         displayOptions.addWidget(cmapCombo)
-
+        
         def showEdges(status):
             if status == Qt.Checked:
                 self.displayParams['edge_color'] = 'k'
@@ -4376,17 +4496,23 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def sensSliderFunc(val):
             val = val/10.0
             print('value changed', val)
+            sensLabel.setText('Sensitivity overlay (%s%%)' % (int(val*100)))
+            infoDump('Overlay sensitivity threshold is set to %s%%'% (int(val*100))) #to remove some ambiguity with this slider for people!
             self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
         sensLayout = QVBoxLayout()
-        sensLabel = QLabel('Sensitivity')
+        sensLayout.setContentsMargins(0,9,0,9)
+        sensLayout.setSpacing(2)
+        sensSlider = QSlider(Qt.Horizontal)
+        sensSlider.setFixedWidth(150)
+        sensSlider.setMinimum(0)
+        sensSlider.setMaximum(9.8)
+        sensSlider.setValue(5)
+        sensLabel = QLabel('Sensitivity overlay (%s%%)' % str(sensSlider.value()*10))
         sensLabel.setAlignment(Qt.AlignCenter )
         sensLayout.addWidget(sensLabel)
-        sensSlider = QSlider(Qt.Horizontal)
-        sensSlider.setMinimum(0)
-        sensSlider.setMaximum(10)
-        sensSlider.setValue(1)
+        
         sensSlider.setToolTip('Normalized sensivity threshold')
         sensSlider.valueChanged.connect(sensSliderFunc)
         sensLayout.addWidget(sensSlider)
@@ -4438,13 +4564,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
-                    cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis,
+                    cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis, 
                     paraviewBtn, btnSave, sensWidget]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
 
         resultLayout = QVBoxLayout()
+        resultLayout.setContentsMargins(9,0,9,9)
         resultLayout.addLayout(displayOptions, 20)
 
         mwInvResult = MatplotlibWidget(navi=True, itight=False, aspect=self.plotAspect)
@@ -4465,6 +4592,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         bottomSplitter.addWidget(bottomRSplitter)
         
         bottomSplitter.setSizes([0,1100])
+        bottomSplitter.setCollapsible(1, False)
         resultLayout.addWidget(bottomSplitter)
 #        resultLayout.addLayout(resultStackLayout, 90)
 
@@ -4489,11 +4617,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
         outStackLayout.setCurrentIndex(0)
         
         topInvLayout = QWidget()
+        topInvLayout.setObjectName('topInvLayout')
+        topInvLayout.setStyleSheet("QWidget#topInvLayout {border:1px solid rgb(185,185,185)}")
         topInvLayout.setLayout(invLayout)
         
         topSplitter.addWidget(topInvLayout)
         
         bottomInvLayout = QWidget()
+        bottomInvLayout.setObjectName('bottomInvLayout')
+        bottomInvLayout.setStyleSheet("QWidget#bottomInvLayout {border:1px solid rgb(185,185,185)}")
         bottomInvLayout.setLayout(outStackLayout)
         
         topSplitter.addWidget(bottomInvLayout)
@@ -4512,6 +4644,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         tabs.setTabEnabled(6,False)
         
         errorGraphs = QTabWidget()
+        
+        invPseudoErrLabel = QLabel('Select datapoints on the pseudo section to remove and reinvert the data.')
 
         def prepareInvError():
             names = [s.name for s in self.r2.surveys]
@@ -4523,7 +4657,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 invErrorCombo.hide()
                 
             if self.r2.iTimeLapse:
-                names = names[1:]
+                names[0] = names[0] + ' (Ref)'
+                
             invErrorCombo.disconnect()
             invErrorCombo.clear()
             for name in names:
@@ -4536,25 +4671,56 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 plotInvError2(index)
                 if self.iBorehole is False:
                     plotInvError(index)
+                    self.invErrorIndex = index
             except Exception as e:
                 print('Could not print error: ', e)
         invErrorCombo = QComboBox()
+        invErrorCombo.setMinimumWidth(250)
+        invErrorCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         invErrorCombo.activated.connect(invErrorComboFunc)
         invErrorCombo.hide()
-        invErrorComboLabel = QLabel('Choose dataset:')
+        invErrorComboLabel = QLabel('Choose a dataset to plot the error:')
         invErrorComboLabel.hide()
         
         def plotInvError(index=0):
-            mwInvError.setCallback(self.r2.showPseudoInvError)
-            mwInvError.replot(index=index, aspect=self.plotAspect)
+            mwInvError.setCallback(self.r2.filterManual)
+            mwInvError.replot(index=index, attr='resInvError', label='Normalized Error', geom=False)
 
-        mwInvError = MatplotlibWidget(navi=True, aspect='auto')
+        mwInvError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        
+        def invErrorFiltFunc():
+            try:
+                i2remove = self.r2.surveys[self.invErrorIndex].iselect
+                if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0): 
+                    # as the selection is only done on normal dataset, reciprocal pair should be removed too
+                    recipPaires = self.r2.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
+                    ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires[recipPaires != 0]) 
+                    i2remove = i2remove + ie
+                self.r2.surveys[self.invErrorIndex].filterData(~i2remove)
+                plotInvError(self.invErrorIndex)
+                plotInvError2(self.invErrorIndex)
+            except:
+                errorDump('Something went wrong!')
+                pass
+        
+        invErrorFilterBtn = QPushButton('Remove selected')
+        invErrorFilterBtn.setFixedWidth(150)
+        invErrorFilterBtn.clicked.connect(invErrorFiltFunc)
+        
+        def invErrorReinvert():
+            tabs.setCurrentIndex(5) # jump to inversion tab
+            btnInvert.animateClick() # invert
+        
+        invErrorReinvertBtn = QPushButton('Invert')
+        invErrorReinvertBtn.setFixedWidth(150)
+        invErrorReinvertBtn.clicked.connect(invErrorReinvert)
+        invErrorReinvertBtn.setStyleSheet('background-color: green')
       
 
         def plotInvError2(index=0):
             mwInvError2.setCallback(self.r2.showInvError)
             mwInvError2.replot(index=index)
-        mwInvError2 = MatplotlibWidget(navi=True, aspect='auto')
+        mwInvError2 = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
@@ -4564,8 +4730,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         postProcessingLayout = QVBoxLayout()
         
         topInvErrorLayout = QHBoxLayout()
-        topInvErrorLayout.addWidget(invErrorComboLabel)
-        topInvErrorLayout.addWidget(invErrorCombo)
+        topInvErrorLayout.addWidget(invErrorComboLabel, 1)
+        topInvErrorLayout.addWidget(invErrorCombo, 0)
         postProcessingLayout.addLayout(topInvErrorLayout)
         postProcessingLayout.addWidget(errorGraphs)
         
@@ -4573,6 +4739,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
         errorGraphs.addTab(invError, 'Pseudo Section of Inversion Errors')
 
         invErrorLayout = QVBoxLayout()
+        invErrorLayout.setAlignment(Qt.AlignTop)
+        
+        invErrorTopLayout = QHBoxLayout()
+        invErrorTopLayoutL = QHBoxLayout()
+        invErrorTopLayoutL.addWidget(invPseudoErrLabel)
+        invErrorTopLayout.addLayout(invErrorTopLayoutL)
+        
+        invErrorTopLayoutR = QHBoxLayout()
+        invErrorTopLayoutR.setAlignment(Qt.AlignRight)
+        invErrorTopLayoutR.addWidget(invErrorFilterBtn)
+        invErrorTopLayoutR.addWidget(invErrorReinvertBtn)
+        invErrorTopLayout.addLayout(invErrorTopLayoutR)
+        
+        invErrorLayout.addLayout(invErrorTopLayout, 0)
+        
         invErrorLayout.addWidget(mwInvError, Qt.AlignCenter)
         invError.setLayout(invErrorLayout)
 

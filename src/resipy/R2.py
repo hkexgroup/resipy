@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '1.2.0' # ResIPy version (semantic versionning in use)
+ResIPy_version = '2.0.1' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -439,6 +439,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iTimeLapse = True
         self.iTimeLapseReciprocal = [] # true if survey has reciprocal
         if isinstance(dirname, list): # it's a list of filename
+            if len(dirname) < 2:
+                raise ValueError('at least two files needed for timelapse inversion')
+                return
             files = dirname
         else: # it's a directory and we import all the files inside
             if os.path.isdir(dirname):
@@ -1097,7 +1100,17 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         for s in self.surveys:
             s.filterNegative()
-
+            
+    
+    def filterAppResist(self,threshold=(0,2000)):
+        """Filter measurements by apparent resistivity for surface surveys 
+        Parameters
+        -----------
+        threshold: tuple, list
+            2by 1 array of minimum and maxium apparent resistivity values  
+        """
+        for s in self.surveys:
+            s.filterAppResist(threshold)
 
 
     def computeDOI(self):
@@ -2117,6 +2130,14 @@ class R2(object): # R2 master class instanciated by the GUI
             self.runParallel(dump=dump, iMoveElec=iMoveElec, ncores=ncores, rmDirTree=rmDirTree)
         else:
             self.runR2(dump=dump)
+            
+        # extract inversion errors
+        try: # this is in the case getInvError() is called after the file .err is
+            # created by R2 but before it is populated (when killing the run)
+            self.getInvError()
+        except:
+            print('Could not retrieve files maybe inversion failed')
+            return
 
         if iplot is True:
             self.showResults()
@@ -2583,7 +2604,7 @@ class R2(object): # R2 master class instanciated by the GUI
         qs = []
         nelec = len(self.elec)
         def addCustSeq(fname):
-            seq = pd.read_csv(fname, header=1)
+            seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
                 raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
             else:
@@ -3168,32 +3189,92 @@ class R2(object): # R2 master class instanciated by the GUI
             fig.savefig(os.path.join(outputdir, fname + '.png'))
 
 
-    def getInvError(self, index=0):
-        """Collect inversion error from _err.dat or .err file after inversion.
+#    def getInvError(self, index=0):
+#        """Collect inversion error from _err.dat or .err file after inversion.
+#
+#        Parameters
+#        ----------
+#        index : int, optional
+#            Index of the survey (if Timelapse or batch). Default is 0.
+#            
+#        Returns
+#        -------
+#        array : numpy.array
+#            Contains the quadrupoles.
+#        errors : numpy.array
+#            Vector of normalized error.
+#        """
+#        if self.typ == 'cR2' or self.typ == 'R2':
+#            df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(index+1)), delim_whitespace=True)
+#            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
+#            errors = np.array(df['Normalised_Error'])
+#        elif self.typ == 'R3t' or self.typ == 'cR3t':
+#            err = np.genfromtxt(os.path.join(self.dirname, 'f{:03.0f}.err'.format(index+1)), skip_header=1)
+#            array = err[:,[-3,-1,-7,-5]].astype(int)
+#            errors = err[:,0]
+#
+#        return array, errors
+    
+    
+    def getInvError(self):
+        a = 1 if self.iTimeLapse else 0
+        try:
+            if self.typ == 'cR2' or self.typ == 'R2':
+                dfs = []
+                if self.iTimeLapse:
+                    fname = os.path.join(self.dirname, 'ref/f001_err.dat')
+                    if os.path.exists(fname):                    
+                        df = pd.read_csv(fname, delim_whitespace=True)
+                        dfs.append(df)
+                for i in range(len(self.surveys)-a):
+                    fname = os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1))
+                    if os.path.exists(fname):
+                        df = pd.read_csv(fname, delim_whitespace=True)
+                        dfs.append(df)
+            elif self.typ == 'R3t' or self.typ == 'cR3t':
+                dfs = []
+                if self.iTimeLapse:
+                    fname = os.path.join(self.dirname, 'ref/f001.err')
+                    if os.path.exists(fname):
+                        err = np.genfromtxt(fname, skip_header=1)
+                        df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
+                                          columns=['P+','P-','C+','C-', 'Normalised_Error'])
+                        dfs.append(df)
+                for i in range(len(self.surveys)-a):
+                    fname = os.path.join(self.dirname, 'f{:03.0f}.err'.format(i+1))
+                    if os.path.exists(fname):
+                        err = np.genfromtxt(fname, skip_header=1)
+                        df = pd.DataFrame(err[:,[-3, -1, -7, -5, 0]],
+                                          columns=['P+','P-','C+','C-', 'Normalised_Error'])
+                        dfs.append(df)
+            #TODO not implemented for cR3t and phase misfit
+        except:
+            return # this code is error prone (mainly to empty dataframe error)
+        
+        # merge the columns to each survey dataframe
+        if  np.sum([df.shape[0] > 0 for df in dfs]) != len(self.surveys):
+            print('error in reading error files (do not exists or empty')
+            return # this check the number of dfs AND the fact that they are not empty
+        for s, df in zip(self.surveys, dfs):
+            if self.typ == 'cR2': #TODO figure out why Andy's code produce different f001_err.dat files
+                df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError']))) #there is something wrong here. R2 and cR2 produce different f001_err.dat! 'P+','P-','C+','C-' are different!!
+            elif self.typ == 'R2':
+                df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
+            else: # for 3D ones
+                df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
+            cols = ['a','b','m','n','resInvError']
+            if self.typ == 'cR2':
+                df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
+                cols += ['phaseInvMisfit']
+            if 'resInvError' in s.df.columns:
+                s.df = s.df.drop('resInvError', axis=1)
+            if 'phaseInvMisfit' in s.df.columns:
+                s.df = s.df.drop('phaseInvMisfit', axis=1)
+            s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
+        # TODO assign the errors to normal and reciprocal ? in case we use recipMean only ? 
+        # This error has nothing to do with reciprocity!
 
-        Parameters
-        ----------
-        index : int, optional
-            Index of the survey (if Timelapse or batch). Default is 0.
-            
-        Returns
-        -------
-        array : numpy.array
-            Contains the quadrupoles.
-        errors : numpy.array
-            Vector of normalized error.
-        """
-        if self.typ == 'cR2' or self.typ == 'R2':
-            df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(index+1)), delim_whitespace=True)
-            array = np.array([df['C+'],df['C-'],df['P+'],df['P-']],dtype=int).T
-            errors = np.array(df['Normalised_Error'])
-        elif self.typ == 'R3t' or self.typ == 'cR3t':
-            err = np.genfromtxt(os.path.join(self.dirname, 'f{:03.0f}.err'.format(index+1)), skip_header=1)
-            array = err[:,[-3,-1,-7,-5]].astype(int)
-            errors = err[:,0]
-
-        return array, errors
-
+                    
 
     def showPseudoInvError(self, index=0, ax=None, vmin=None, vmax=None):
         """Plot pseudo section of errors from file `f001_err.dat`.
@@ -3209,12 +3290,8 @@ class R2(object): # R2 master class instanciated by the GUI
         vmax : float, optional
             Max value.
         """
-        array, errors = self.getInvError(index=index)
-
-        spacing = np.diff(self.elec[[0,1],0])
-        pseudo(array, errors, spacing, ax=ax, label='Normalized Errors',
-               log=False, geom=False, contour=False, vmin=vmin, vmax=vmax)
-
+        self.surveys[index].filterManual(attr='resInvError', vmin=vmin, vmax=vmax,
+                    ax=ax, geom=False, log=False)
 
 
     def showPseudoInvErrorIP(self, index=0, ax=None, vmin=None, vmax=None):
@@ -3231,14 +3308,9 @@ class R2(object): # R2 master class instanciated by the GUI
         vmax : float, optional
             Max value.
         """
-        if self.typ == 'cR2':
-            df = pd.read_csv(os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(index+1)), delim_whitespace=True)
-            array = np.array([df['C+'], df['C-'], df['P+'], df['P-']], dtype=int)
-            errors = np.array(df['Calculated_Phase']-df['Observed_Phase'])
-        spacing = np.diff(self.elec[[0,1],0])
-        pseudo(array.T, errors, spacing, ax=ax, label='Normalized Errors',
-               log=False, geom=False, contour=False, vmin=None, vmax=None)
-
+        self.surveys[index].filterManual(attr='phaseInvMisfit', vmin=vmin, vmax=vmax,
+                    ax=ax, geom=False, log=False)
+        
 
     def showInvError(self, index=0, ax=None):
         """Display inversion error by measurment numbers.
@@ -3250,7 +3322,8 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib axis
             If provided, the graph will be plotted against this axis.
         """
-        _, errors = self.getInvError(index=index)
+        errors = self.surveys[index].df['resInvError'].values
+        errors = errors[~np.isnan(errors)]
         measurement_no = np.arange(1,len(errors)+1)
         #make figure
         if ax is None:
