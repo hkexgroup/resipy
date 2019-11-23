@@ -20,7 +20,7 @@ from scipy.stats.kde import gaussian_kde
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
-                     stingParser, ericParser, lippmannParser)
+                     stingParser, ericParser, lippmannParser, aresParser)
 from resipy.DCA import DCA
 
 import warnings
@@ -65,7 +65,7 @@ class Survey(object):
         self.eselect = None # idem
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -93,6 +93,8 @@ class Survey(object):
                 elec, data = ericParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
+            elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)
@@ -306,6 +308,8 @@ class Survey(object):
                 elec, data = ericParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
+            elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
@@ -536,7 +540,7 @@ class Survey(object):
             Print output to screen. Default is True. 
         """
         if all(np.isnan(self.df['recipError']) == True):
-            raise ValueError("No reciprocol measurements present, cannot filter by reciprocol!")
+            raise ValueError("No reciprocal measurements present, cannot filter by reciprocal!")
         reciprocalErrRel = np.abs(self.df['reciprocalErrRel'].replace(np.nan, 0))
         igood = reciprocalErrRel < (percent/100) # good indexes to keep 
         df_temp = self.df.copy()
@@ -1158,21 +1162,52 @@ class Survey(object):
             ax.set_ylabel('Chargeability [mV/V]')
     
     
+#    def computeK(self):
+#        """Compute geomatrix factor (assuming flat 2D surface) and store it
+#        in self.df['K'].
+#        """
+#        array = self.df[['a','b','m','n']].values.astype(int)
+#        elecpos = self.elec[:,0]
+#
+#        apos = elecpos[array[:,0]-1]
+#        bpos = elecpos[array[:,1]-1]
+#        mpos = elecpos[array[:,2]-1]
+#        npos = elecpos[array[:,3]-1]
+#        AM = np.abs(apos-mpos)
+#        BM = np.abs(bpos-mpos)
+#        AN = np.abs(apos-npos)
+#        BN = np.abs(bpos-npos)
+#        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+#        
+#        self.df['K'] = K
+        
     def computeK(self):
         """Compute geomatrix factor (assuming flat 2D surface) and store it
         in self.df['K'].
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
-
-        apos = elecpos[array[:,0]-1]
-        bpos = elecpos[array[:,1]-1]
-        mpos = elecpos[array[:,2]-1]
-        npos = elecpos[array[:,3]-1]
-        AM = np.abs(apos-mpos)
-        BM = np.abs(bpos-mpos)
-        AN = np.abs(apos-npos)
-        BN = np.abs(bpos-npos)
+        elec = self.elec
+        aposx = elec[:,0][array[:,0]-1]
+        aposy = elec[:,1][array[:,0]-1]
+        aposz = elec[:,2][array[:,0]-1]
+        
+        bposx = elec[:,0][array[:,1]-1]
+        bposy = elec[:,1][array[:,1]-1]
+        bposz = elec[:,2][array[:,1]-1]
+        
+        mposx = elec[:,0][array[:,2]-1]
+        mposy = elec[:,1][array[:,2]-1]
+        mposz = elec[:,2][array[:,2]-1]
+        
+        nposx = elec[:,0][array[:,3]-1]
+        nposy = elec[:,1][array[:,3]-1]
+        nposz = elec[:,2][array[:,3]-1]
+        
+        AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
+        BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
+        AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
+        BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
+        
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         
         self.df['K'] = K
@@ -1204,16 +1239,17 @@ class Survey(object):
         resist = self.df['resist'].values
         
         if geom: # compute and applied geometric factor
-            apos = elecpos[array[:,0]-1]
-            bpos = elecpos[array[:,1]-1]
-            mpos = elecpos[array[:,2]-1]
-            npos = elecpos[array[:,3]-1]
-            AM = np.abs(apos-mpos)
-            BM = np.abs(bpos-mpos)
-            AN = np.abs(apos-npos)
-            BN = np.abs(bpos-npos)
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-            resist = resist*K
+#            apos = elecpos[array[:,0]-1]
+#            bpos = elecpos[array[:,1]-1]
+#            mpos = elecpos[array[:,2]-1]
+#            npos = elecpos[array[:,3]-1]
+#            AM = np.abs(apos-mpos)
+#            BM = np.abs(bpos-mpos)
+#            AN = np.abs(apos-npos)
+#            BN = np.abs(bpos-npos)
+#            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            self.computeK()
+            resist = resist*self.df['K']
 
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
@@ -1230,7 +1266,7 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1251,6 +1287,7 @@ class Survey(object):
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             
+        ax.invert_yaxis() # to remove negative sign in y axis    
         ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1298,7 +1335,7 @@ class Survey(object):
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1327,6 +1364,7 @@ class Survey(object):
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
 #            cbar.set_label(label)
 #            ax.set_title('Phase Shift\npseudo section')
+        ax.invert_yaxis() # to remove negative sign in y axis
         ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1516,7 +1554,7 @@ class Survey(object):
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
         
         def onpick(event):
             if lines[event.artist] == 'data':
@@ -1552,6 +1590,7 @@ class Survey(object):
 #        ax2 = ax
         
         # on the axis
+        ax.invert_yaxis() # to remove negative sign in y axis
         ax2 = ax.twiny()
         ax.set_xlabel('Electrode number')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1611,6 +1650,20 @@ class Survey(object):
             i2keep = (self.df[['a','b','m','n']].values != e).all(1)
             self.filterData(i2keep)
             print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
+    
+    def filterAppResist(self,threshold=[0,2000]):
+        """Filter measurements by apparent resistivity for surface surveys 
+        Parameters
+        -----------
+        threshold: tuple, list
+            2by 1 array of minimum and maxium apparent resistivity values  
+        """
+        df = self.df.copy()
+        self.computeK()
+        appRes = self.df['K']*self.df['resist']
+        ikeep = (appRes>threshold[0]) & (appRes<threshold[1])
+        self.df = df[ikeep]
+        self.df.reset_index()
     
     
     def shuntIndexes(self, debug=True): 
@@ -1945,7 +1998,7 @@ class Survey(object):
     def pseudo(self, ax=None, bx=None, **kwargs):
         warnings.warn('The function is deprecated, use showPseudo() instead.',
                       DeprecationWarning)
-        self.pseudo(ax=ax, bx=bx, **kwargs)
+        self.showPseudo(ax=ax, bx=bx, **kwargs)
     
     
     def pseudoIP(self, ax=None, bx=None, **kwargs):

@@ -307,7 +307,10 @@ class App(QMainWindow):
         self.inputPhaseFlag = False
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
-        self.datadir = os.path.join(bundle_dir, 'resipy', 'test')
+        if frozen == 'not':
+            self.datadir = os.path.join(bundle_dir, '../examples')
+        else:
+            self.datadir = os.path.join(bundle_dir, 'resipy', 'examples')
         self.plotAspect = 'equal'
         self.iDesign = False # boolean to know if the mesh has been designed before meshing
 
@@ -819,7 +822,7 @@ class App(QMainWindow):
                 self.fformat = 'DAT (*.dat)'
             elif index == 5:
                 self.ftype = 'Sting'
-                self.fformat = ''
+                self.fformat = 'Sting (*.stg)'
             elif index == 6:
                 self.ftype = 'ABEM-Lund'
                 self.fformat = 'OHM (*.OHM *.ohm)'
@@ -827,6 +830,9 @@ class App(QMainWindow):
                 self.ftype = 'Lippmann'
                 self.fformat = 'TX0 (*.tx0 *.TX0);;Text (*.txt)'
             elif index == 8:
+                self.ftype = 'ARES'
+                self.fformat = 'ARES (*.2dm)'
+            elif index == 9:
                 self.ftype = 'Custom'
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -840,6 +846,7 @@ class App(QMainWindow):
         fileType.addItem('Sting')
         fileType.addItem('ABEM-Lund')
         fileType.addItem('Lippmann')
+        fileType.addItem('ARES')
         fileType.addItem('Custom')
         fileType.activated.connect(fileTypeFunc)
         fileType.setFixedWidth(150)
@@ -1524,7 +1531,7 @@ class App(QMainWindow):
                 fillBoxes(boxes) # last one is elecSpacingEdit
                 infoDump('Parsing successful.')
             except ValueError as e:
-                errorDump('Parsing error:' + str(e))
+                errorDump('Parsing error:' + str(e) + ' - Incorrect delimiter or skip headers')
 
         parseBtn = QPushButton('Reorder')
         parseBtn.setEnabled(False)
@@ -1729,7 +1736,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 importFile(self.fnameManual)
-            fileType.setCurrentIndex(8)
+            fileType.setCurrentIndex(9)
             tabImporting.setCurrentIndex(0)
 
 

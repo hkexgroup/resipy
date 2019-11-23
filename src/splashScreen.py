@@ -77,7 +77,8 @@ class MyZipFile(ZipFile):
 
         ret_val = self._extract_member(member, path, pwd)
         attr = member.external_attr >> 16
-        #os.chmod(ret_val, attr) # IMPORTANT this line needs to be commented otherwise we got the _MEIxxxxx issue
+        if OS != 'Windows':
+            os.chmod(ret_val, attr) # IMPORTANT this line needs to be commented otherwise we got the _MEIxxxxx issue
         # changing the permission of somes files makes them unremovable by the splascreen bootloader when the program finished
         # this leads to accumulation of _MEIxxxxx temporary files in C:\Users\User\AppData\Local\Temp\
         # this issue is windows specific, on Linux, the temporary folder in /tmp is removed even when we uncomment this line
