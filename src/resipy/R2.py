@@ -153,12 +153,13 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True,
     pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
         + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
     xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-    ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+    ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
     if ax is None:
         fig, ax = plt.subplots()
     else:
         fig = ax.figure
+    ax.invert_yaxis() # to remove negative sign in y axis
     cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
     cbar = fig.colorbar(cax, ax=ax)
     cbar.set_label(label)

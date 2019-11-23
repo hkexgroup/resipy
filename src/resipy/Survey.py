@@ -1266,7 +1266,7 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1287,6 +1287,7 @@ class Survey(object):
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             
+        ax.invert_yaxis() # to remove negative sign in y axis    
         ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1334,7 +1335,7 @@ class Survey(object):
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1363,6 +1364,7 @@ class Survey(object):
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
 #            cbar.set_label(label)
 #            ax.set_title('Phase Shift\npseudo section')
+        ax.invert_yaxis() # to remove negative sign in y axis
         ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1996,7 +1998,7 @@ class Survey(object):
     def pseudo(self, ax=None, bx=None, **kwargs):
         warnings.warn('The function is deprecated, use showPseudo() instead.',
                       DeprecationWarning)
-        self.pseudo(ax=ax, bx=bx, **kwargs)
+        self.showPseudo(ax=ax, bx=bx, **kwargs)
     
     
     def pseudoIP(self, ax=None, bx=None, **kwargs):
