@@ -2044,7 +2044,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
-               rmDirTree=True):
+               rmDirTree=True, modelDOI=False):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
 
@@ -2074,9 +2074,17 @@ class R2(object): # R2 master class instanciated by the GUI
             default all the cores available are used).
         rmDirTree : bool, optional
             Remove excess directories and files created during parallel inversion
+        modelDOI : bool, optional
+            If `True`, the Depth of Investigation will be model by reinverting
+            the data on with an initial res0 different of an order of magnitude.
+            Note that this option is only available for *single* survey.
         """
         # clean meshResults list
         self.meshResults = []
+        
+        # modelDOI force to use full mesh
+        if modelDOI is True and len(self.surveys) == 1:
+            param['num_xy_poly'] = 0
 
         # create mesh if not already done
         if 'mesh' not in self.param:
@@ -2115,7 +2123,7 @@ class R2(object): # R2 master class instanciated by the GUI
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
             self.write2in(param=param)
-            self.runR2(refdir, dump=dump) # this line actaully runs R2
+            self.runR2(refdir, dump=dump) # this line actually runs R2
             if self.typ=='R3t' or self.typ=='cR3t':
                 shutil.copy(os.path.join(refdir, 'f001.dat'),
                             os.path.join(self.dirname, 'Start_res.dat'))
@@ -2135,13 +2143,50 @@ class R2(object): # R2 master class instanciated by the GUI
         try: # this is in the case getInvError() is called after the file .err is
             # created by R2 but before it is populated (when killing the run)
             self.getInvError()
+            self.getResults()
         except:
             print('Could not retrieve files maybe inversion failed')
             return
 
+        # run modelDOI
+        if modelDOI:
+            if len(self.surveys) == 1: # enforce for only 1 survey
+                self.modelDOI(dump=dump)
+            else:
+                raise ValueError('modelDOI() option only for single survey')
+        
         if iplot is True:
             self.showResults()
 
+
+    def modelDOI(self, dump=print):
+        """Will rerun the inversion with an initial resistivity 10 times larger.
+        From the two different inversion a senstivity limit will be computed.
+        """
+        dump('===== Re-running inversion with initial resistivity * 10 =====')
+        # backup current mesh results
+        res0 = np.array(self.mesh.attr_cache['res0'])
+        res1 = res0 * 10
+        mesh0 = self.meshResults[0]
+        self.mesh.attr_cache['res0b'] = list(res1)
+        self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
+        self.runR2(dump=dump)
+        self.getResults()
+        mesh1 = self.meshResults[0]
+        
+        # sensitivity = difference between final inversion / difference init values
+        invValues1 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
+        invValues2 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        sens = (invValues1 - invValues2)/(res0-res1)
+        sensScaled = np.abs(sens)
+        mesh0.attr_cache['doiSens'] = sensScaled
+        sensScaledCut = np.copy(sensScaled)
+        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
+        mesh0.attr_cache['sensCutOff'] = sensScaledCut
+        # TODO why not replace the 'sensitivity' attribute directly so we can tweak it in the UI with the slider
+        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
+        self.meshResults = [mesh0]
+        
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,

@@ -3607,6 +3607,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
         notCropping = QCheckBox()
         notCropping.stateChanged.connect(notCroppingFunc)
         advForm.addRow(notCroppingLabel, notCropping)
+        
+        modelDOILabel = QLabel('<a href="modelDOI">Model DOI</a>')
+        modelDOILabel.linkActivated.connect(showHelp2)
+        modelDOICheck = QCheckBox()
+        advForm.addRow(modelDOILabel, modelDOICheck)
 
         def flux_typeFunc(index):
             if index == 0:
@@ -4186,7 +4191,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #                    text = f.read()
 #                func(text)
 #            else:
-            self.r2.invert(iplot=False, dump=func, modErr=self.modErr, parallel=self.parallel)
+            self.r2.invert(iplot=False, dump=func, modErr=self.modErr,
+                           parallel=self.parallel, modelDOI=modelDOICheck.isChecked())
             if self.parallel is True: # replace the log output by the R2.out
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()
