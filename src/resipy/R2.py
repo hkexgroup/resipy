@@ -153,12 +153,13 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True,
     pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
         + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
     xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-    ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+    ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
     if ax is None:
         fig, ax = plt.subplots()
     else:
         fig = ax.figure
+    ax.invert_yaxis() # to remove negative sign in y axis
     cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
     cbar = fig.colorbar(cax, ax=ax)
     cbar.set_label(label)
@@ -1042,7 +1043,17 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         for s in self.surveys:
             s.filterNegative()
-
+            
+    
+    def filterAppResist(self,threshold=(0,2000)):
+        """Filter measurements by apparent resistivity for surface surveys 
+        Parameters
+        -----------
+        threshold: tuple, list
+            2by 1 array of minimum and maxium apparent resistivity values  
+        """
+        for s in self.surveys:
+            s.filterAppResist(threshold)
 
 
     def computeDOI(self):
@@ -2203,6 +2214,74 @@ class R2(object): # R2 master class instanciated by the GUI
 #                res = np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
 #                mesh.attr_cache['difference(percent)'] = (res-resRef)/resRef*100
 
+    
+    def getR2out(self):
+        """Reat the .out file and parse its content.
+        
+        Returns
+        -------
+        Dataframe with the dataset name, and the RMS decrease for each iteration.
+        """
+        fname = os.path.join(self.dirname, self.typ + '.out')
+        with open(fname, 'r') as f:
+            lines = f.readlines()
+        name = ''
+        idataset = 0
+        iiter = 0
+        resRMS = np.nan
+        phaseRMS = np.nan
+        irow = 0
+        df = pd.DataFrame(columns=['name', 'dataset', 'iteration', 'resRMS', 'phaseRMS', 'success'])
+        for x in lines:
+            success = 'N/A'
+            line = x.split()
+            if len(line) > 1:
+                if line[0] == 'Iteration':
+                    iiter += 1
+                elif (line[0] == 'Measurements') & (line[1] == 'read:'):
+                    c = float(line[2])
+                    d = float(line[5])
+                elif line[0] == 'Final':
+                    resRMS = float(line[3])
+                    df.loc[irow, :] = [name, idataset, iiter, resRMS, phaseRMS, success]
+                    irow += 1
+                elif line[0] == 'FATAL:':
+                    resRMS = np.nan
+                elif line[0] == 'Processing':
+                    iiter = 0
+                    idataset += 1
+                    if idataset <= len(self.surveys):
+                        name = self.surveys[idataset-1].name
+                    else:
+                        name = 'dataset{:03.0f}'.format(idataset)
+        df = df.apply(pd.to_numeric, errors='ignore').reset_index(drop=True)
+        return df
+
+
+    def showRMS(self, index=0, ax=None):
+        """Show the RMS decrease for each iteration.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the dataset for which to plot the RMS.
+        ax : matplotlib axis, optional
+            If provided, the graph will be plotted against it.
+        """
+        df = self.getR2out()
+        idatasets = np.unique(df['dataset'])
+        if ax is None:
+            fig, ax = plt.subplots()
+        ax.set_title(self.surveys[index].name)
+        offset = 0
+        for i in idatasets:
+            ie = df['dataset'] == i
+            ax.plot(offset + df[ie]['iteration'], df[ie]['resRMS'], '.-')
+            offset += np.sum(ie)
+        ax.set_xlabel('Iterations')
+        ax.set_ylabel('RMS misfit')
+        ax.set_xticks([],[])
+        
 
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         """Show inverted section based on the `_res.dat``file instead of the
