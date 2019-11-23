@@ -588,8 +588,12 @@ class Mesh:
             try:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
-                    alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-#                    alphas = np.logspace(0, -1, self.num_elms)#array of alpha values 
+                    thresh = np.percentile(weights, 50, interpolation='nearest')
+                    x = np.sort(weights)
+                    i = np.where(x > thresh)[0][0]
+                    x = np.argsort(weights)
+                    alphas = np.zeros(self.num_elms)
+                    alphas[:i] = np.linspace(1, 0, len(alphas[:i]))
                     raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                     raw_alpha[:, -1] = alphas
                     alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
@@ -599,53 +603,70 @@ class Mesh:
                     #*** i still cant figure out why this is because its the same code used to plot the resistivities 
                     ax.add_collection(alpha_coll)
                 else:
-                    x = np.array(self.attr_cache['Sensitivity(log10)'])
-                    alphas = np.zeros(len(x))
-                    xmin, xmax = np.nanmin(x), np.nanmax(x)
-                    xnorm = (x-xmin)/(xmax-xmin) # should all be between 0 and 1
-                    i2mask = xnorm < sensPrc
-                    xnorm[i2mask] = 0
-                    xnorm[~i2mask] = 1
-                    raw_alpha = np.ones((2, 4), dtype=float)
-                    raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
-                    alpha_map = ListedColormap(raw_alpha)
-                    if contour is False:
-                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
-                        ax.add_collection(alpha_coll)
-                    else: # if contour is True, cropSurface() should have been defined
-                        xc = np.array(self.elm_centre[0])
-                        yc = np.array(self.elm_centre[2])
-                        x = np.array(self.node_x)
-                        y = np.array(self.node_z)
-                        zc = xnorm # normalized sensitivity here
-                        
-                        # doesn't work as the QHull alright discard the elements forming the topo :/
-    #                    from scipy.interpolate import LinearNDInterpolator
-    #                    lin = LinearNDInterpolator(np.c_[xc, yc], zc)
-    #                    z = lin(np.c_[x, y])
-    #                    print(np.sum(np.isnan(z)))
-    #                    inan = ~np.isnan(z)
-    #                    x, y, z = x[inan], y[inan], z[inan]
-    #                    triang = tri.Triangulation(x, y)
-                        
-                        # adding surface points to form surface triangles
-                        if self.surface is not None:
-                            xf, yf = self.surface[:,0], self.surface[:,1]
-                            zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-                            xc = np.r_[xc, xf]
-                            yc = np.r_[yc, yf]
-                            zc = np.r_[zc, zf]
-                        triang = tri.Triangulation(xc, yc) # build grid based on centroids and surface points
-                        z = zc
+                    weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
+                    thresh = np.percentile(weights, sensPrc*100, interpolation='nearest')
+                    x = np.sort(weights)
+                    i = np.where(x > thresh)[0][0]
+                    x = np.argsort(weights)
+                    alphas = np.zeros(self.num_elms)
+                    alphas[:i] = np.linspace(1, 0, len(alphas[:i]))
+                    raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                    raw_alpha[:, -1] = alphas
+                    alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                    #make alpha collection
+                    alpha_coll = PolyCollection(coordinates, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+                    #*** the above line can cuase issues "attribute error" no np.array has not attribute get_transform, 
+                    #*** i still cant figure out why this is because its the same code used to plot the resistivities 
+                    ax.add_collection(alpha_coll)
                     
-                        # discarding triangles out of surface
-                        if self.surface is not None:        
-                            try:
-                                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-                            except Exception as e:
-                                print('Error in Mesh.show for contouring: ', e)
-                        
-                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
+                    # legacy implementation of the mesh cropping below (don't delete it)
+#                    x = np.array(self.attr_cache['Sensitivity(log10)'])
+#                    alphas = np.zeros(len(x))
+#                    xmin, xmax = np.nanmin(x), np.nanmax(x)
+#                    xnorm = (x-xmin)/(xmax-xmin) # should all be between 0 and 1
+#                    i2mask = xnorm < sensPrc
+#                    xnorm[i2mask] = 0
+#                    xnorm[~i2mask] = 1
+#                    raw_alpha = np.ones((2, 4), dtype=float)
+#                    raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
+#                    alpha_map = ListedColormap(raw_alpha)
+#                    if contour is False:
+#                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
+#                        ax.add_collection(alpha_coll)
+#                    else: # if contour is True, cropSurface() should have been defined
+#                        xc = np.array(self.elm_centre[0])
+#                        yc = np.array(self.elm_centre[2])
+#                        x = np.array(self.node_x)
+#                        y = np.array(self.node_z)
+#                        zc = xnorm # normalized sensitivity here
+#                        
+#                        # doesn't work as the QHull alright discard the elements forming the topo :/
+#    #                    from scipy.interpolate import LinearNDInterpolator
+#    #                    lin = LinearNDInterpolator(np.c_[xc, yc], zc)
+#    #                    z = lin(np.c_[x, y])
+#    #                    print(np.sum(np.isnan(z)))
+#    #                    inan = ~np.isnan(z)
+#    #                    x, y, z = x[inan], y[inan], z[inan]
+#    #                    triang = tri.Triangulation(x, y)
+#                        
+#                        # adding surface points to form surface triangles
+#                        if self.surface is not None:
+#                            xf, yf = self.surface[:,0], self.surface[:,1]
+#                            zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                            xc = np.r_[xc, xf]
+#                            yc = np.r_[yc, yf]
+#                            zc = np.r_[zc, zf]
+#                        triang = tri.Triangulation(xc, yc) # build grid based on centroids and surface points
+#                        z = zc
+#                    
+#                        # discarding triangles out of surface
+#                        if self.surface is not None:        
+#                            try:
+#                                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+#                            except Exception as e:
+#                                print('Error in Mesh.show for contouring: ', e)
+#                        
+#                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
                                                     
             except Exception as e:
                 print('Error in the sensitivity overlay:', e)
