@@ -870,12 +870,19 @@ class Mesh:
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         
-        if xlim=="default":
-            xlim=[min(self.elec_x), max(self.elec_x)]
-        if ylim=="default":
-            ylim=[min(self.elec_y), max(self.elec_y)]
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
+        try: 
+            if xlim=="default":
+                xlim=[min(self.elec_x), max(self.elec_x)]
+            if ylim=="default":
+                ylim=[min(self.elec_y), max(self.elec_y)]
+        except AttributeError:
+            if xlim=="default":
+                xlim=[min(self.node_x), max(self.node_x)]
+            if ylim=="default":
+                ylim=[min(self.node_y), max(self.node_y)]
+
             
         if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
@@ -1640,7 +1647,7 @@ class Mesh:
             else:
                 cmd_line = '"' + loc + '"'#use provided location 
             try:
-                os.popen(cmd_line+' '+fname)
+                Popen(cmd_line+' '+fname,shell=True)
             except PermissionError:
                 print("Windows has blocked launching paraview, program try running as admin")      
         else:
@@ -2073,6 +2080,33 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             elm_len=abs(n2[0]-n1[0])#element length
             elm_hgt=abs(n2[1]-n3[1])#element hieght
             areas.append(elm_len*elm_hgt)
+        elif int(elm_data[0])==6: # this following code is getting silly in how long it is. Need to work on a more efficent way
+            if i==0:
+                vert_no=6
+            no_pts.append(int(elm_data[0]))
+            #nodes
+            node1.append(int(elm_data[1]))
+            node2.append(int(elm_data[2]))
+            node3.append(int(elm_data[3]))
+            node4.append(int(elm_data[4]))
+            node5.append(int(elm_data[5]))
+            node6.append(int(elm_data[6]))
+            #assuming element centres are the average of the x - y coordinates for the quad
+            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])],z_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
+            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])],z_coord[int(elm_data[2])])
+            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])],z_coord[int(elm_data[3])])
+            n4=(x_coord[int(elm_data[4])],y_coord[int(elm_data[4])],z_coord[int(elm_data[4])])
+            n5=(x_coord[int(elm_data[5])],y_coord[int(elm_data[5])],z_coord[int(elm_data[5])]) 
+            n6=(x_coord[int(elm_data[6])],y_coord[int(elm_data[6])],z_coord[int(elm_data[6])])
+            centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0],n5[0],n6[0])))
+            centriod_y.append(np.mean((n1[1],n2[1],n3[1],n4[1],n5[1],n6[1])))
+            centriod_z.append(np.mean((n1[2],n2[2],n3[2],n4[2],n5[2],n6[2])))
+            #estimate element VOLUMES, base area times height.  
+            base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+            mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+            height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+            thick=abs(n5[2]-n1[2])#element hieght
+            areas.append(0.5*base*height*thick)
         elif int(elm_data[0])==8: # this following code is getting silly in how long it is. Need to work on a more efficent way
             if i==0:
                 vert_no=8
@@ -2124,6 +2158,8 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         node_maps=(node1,node2,node3)
     elif vert_no==4:
         node_maps=(node1,node2,node3,node4)  
+    elif vert_no==6:
+        node_maps=(node1,node2,node3,node4,node5,node6)
     elif vert_no==8:
         node_maps=(node1,node2,node3,node4,node5,node6,node7,node8)
         
@@ -2169,6 +2205,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         attr_dict = {"no attributes":[float("nan")]*no_elms}
         values_oi= [0]*no_elms
         parameter_title = "n/a"
+        
     #print("finished importing mesh.\n")
     #information in a dictionary, this is easier to debug than an object in spyder: 
     mesh_dict = {'num_nodes':no_nodes,#number of nodes
@@ -2188,15 +2225,14 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
+    
     mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object
-#    print(mesh.attr_cache.keys())
     try:
         if mesh.ndims==2:
             mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
         else:
             mesh.add_sensitivity(mesh.attr_cache['Sensitivity_map(log10)'])
     except:
-        #print('no sensitivity')
         pass 
     
     mesh.mesh_title = title

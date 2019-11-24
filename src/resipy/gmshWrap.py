@@ -1366,7 +1366,7 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
 #%% parse a .msh file
 def msh_parse_3d(file_path):
     """
-    Converts a 3d gmsh mesh file into a mesh class used in pyR2
+    Converts a 3d gmsh mesh file into a mesh class used in ResIPy
     
     Parameters
     ----------
@@ -1407,7 +1407,6 @@ def msh_parse_3d(file_path):
     y_coord=[0]*no_nodes
     z_coord=[0]*no_nodes
     #read in node information
-    count = 0 
     node_idx = 1
     for i in range(node_start, node_end):
         line_info=dump[i].split()
@@ -1441,14 +1440,28 @@ def msh_parse_3d(file_path):
     elem_entity = []#which plane surface the element is assocaited with
     node1 = []#first node of triangle 
     node2 = []
-    node3 = []#last node of triangle
-    node4 = [] 
+    node3 = []
+    node4 = []#last node of tetrahedra
+    node5 = []
+    node6 = []
     npere = 4 
     ignored_elements=0#count the number of ignored elements
     for i in range(element_start,element_end):
         line_data=[int(k) for k in dump[i].split()]
         if line_data[1]==4:# then its the right element type!
         #convert string info into floats and cache data
+            prism = False
+            nat_elm_num.append(line_data[0])
+            elm_type.append(line_data[1]) 
+            number_of_tags.append(line_data[2]) 
+            phys_entity.append(line_data[3]) 
+            elem_entity.append(line_data[4]) 
+            node1.append(line_data[5]-1) #we have to take 1 off here cos of how python indexes lists and tuples
+            node2.append(line_data[6]-1) 
+            node3.append(line_data[7]-1)
+            node4.append(line_data[8]-1)
+        elif line_data[1]==6: # prism mesh 
+            prism = True
             nat_elm_num.append(line_data[0])
             elm_type.append(line_data[1]) 
             number_of_tags.append(line_data[2]) 
@@ -1458,9 +1471,11 @@ def msh_parse_3d(file_path):
             node2.append(line_data[6]-1) 
             node3.append(line_data[7]-1)
             node4.append(line_data[8]-1)
+            node5.append(line_data[9]-1)
+            node6.append(line_data[10]-1)
         else:
             ignored_elements += 1
-    print("ignoring %i non-tetrahedra elements in the mesh file, as they are not required for R3t"%ignored_elements)
+    print("ignoring %i non-tetrahedra (or prism) elements in the mesh file, as they are not required for R3t"%ignored_elements)
     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
     
     #compute element centres 
@@ -1468,34 +1483,176 @@ def msh_parse_3d(file_path):
     centriod_y=[]
     centriod_z=[]
     areas=[]
-    for i in range(real_no_elements):
-        n1=(x_coord[node1[i]],y_coord[node1[i]],z_coord[node1[i]])#define node coordinates
-        n2=(x_coord[node2[i]],y_coord[node2[i]],z_coord[node2[i]])#we have to take 1 off here cos of how python indexes lists and tuples
-        n3=(x_coord[node3[i]],y_coord[node3[i]],z_coord[node3[i]])
-        n4=(x_coord[node4[i]],y_coord[node4[i]],z_coord[node4[i]])
-        centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/npere)
-        centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/npere)
-        centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/npere)
-        
-    node_dump = [node1,node2,node3,node4]
+    
+    if not prism:
+        node_dump = [node1,node2,node3,node4]
+        cell_typ = [10]
+        for i in range(real_no_elements):
+            n1=(x_coord[node1[i]],y_coord[node1[i]],z_coord[node1[i]])#define node coordinates
+            n2=(x_coord[node2[i]],y_coord[node2[i]],z_coord[node2[i]])
+            n3=(x_coord[node3[i]],y_coord[node3[i]],z_coord[node3[i]])
+            n4=(x_coord[node4[i]],y_coord[node4[i]],z_coord[node4[i]])
+            centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/npere)
+            centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/npere)
+            centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/npere)
+    else:
+        node_dump = [node1,node2,node3,node4,node5,node6]
+        cell_typ = [13]
+        for i in range(real_no_elements):
+            n1=(x_coord[node1[i]],y_coord[node1[i]],z_coord[node1[i]])#define node coordinates
+            n2=(x_coord[node2[i]],y_coord[node2[i]],z_coord[node2[i]])
+            n3=(x_coord[node3[i]],y_coord[node3[i]],z_coord[node3[i]])
+            n4=(x_coord[node4[i]],y_coord[node4[i]],z_coord[node4[i]])
+            n5=(x_coord[node5[i]],y_coord[node5[i]],z_coord[node5[i]])
+            n6=(x_coord[node6[i]],y_coord[node6[i]],z_coord[node6[i]])
+            centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0],n5[0],n6[0]))/npere)
+            centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1],n5[1],n6[1]))/npere)
+            centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2],n5[2],n6[2]))/npere)
+            
+    
     
     mesh_dict = {'num_elms':real_no_elements,
             'num_nodes':no_nodes,
-    #        'num_regions':0,
-    #        'element_ranges':assctns,
             'dump':dump,      
             'node_x':x_coord,#x coordinates of nodes 
             'node_y':y_coord,#y coordinates of nodes
             'node_z':z_coord,#z coordinates of nodes 
             'node_id':node_num,#node id number 
             'elm_id':np.arange(1,real_no_elements+1,1),#element id number 
-            'num_elm_nodes':3,#number of points which make an element
+            'num_elm_nodes':elm_type[0],#number of points which make an element
             'node_data':node_dump,#nodes of element vertices
             'elm_centre':[centriod_x,centriod_y,centriod_z],#centre of elements (x,y,z)
             'elm_area':areas,
-            'cell_type':[10],
+            'cell_type':cell_typ,
             'parameters':phys_entity,#the values of the attributes given to each cell 
             'parameter_title':'material',
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     return mesh_dict 
+
+#%% column mesh
+def column_mesh(electrodes, electrode_type = None, poly=None, z_lim= None, 
+                radius = None, file_path='column_mesh.geo', cl=-1, elemz=4):
+    """Make a prism mesh 
+    Parameters
+    ------------
+    electrodes: list of array likes
+        first column/list is the x coordinates of electrode positions, second column
+        is the elevation. Z coordinates must normalised to the flat surface if given.ie. 
+        z is the depth below the surface. 
+    electrode_type: list, optional 
+        Describes whether electrode is inside, on the side of, or on the end of the column.
+        options are: "side" , "end" , "inside" 
+    poly: list, tuple, optional 
+        Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+        x and y coordinates, ie (poly_x, poly_y)
+    z_lim: list, tuple, optional 
+        top and bottom z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        radius of column
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    elemz: int, optional
+        Number of layers in between each electrode inside the column mesh. 
+    """
+    elec_x = electrodes[0]
+    elec_y = electrodes[1]
+    elec_z = electrodes[2]
+    if z_lim is None:
+        z_lim = [min(elec_z),max(elec_z)]
+        #print(z_lim)
+    if radius is None:
+        radius  = max(electrodes[0])
+    
+    num_elec = len(elec_z)
+    
+       
+    fh = open(file_path,'w')
+    fh.write("// ResIPy column (or prism) mesh script\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write("cl=%f;\n"%cl)
+    
+    if poly is None:
+        fh.write("// Make a circle which is extruded\n")
+        fh.write("Point (1) = {0,0,%f,cl};\n"%(z_lim[0]))
+        fh.write("Point (2) = {%f,0,%f,cl};\n"%(radius,z_lim[0]))
+        fh.write("Point (3) = {0,%f,%f,cl};\n"%(radius,z_lim[0]))
+        fh.write("Point (4) = {0,-%f,%f,cl};\n"%(radius,z_lim[0]))
+        fh.write("Point (5) = {-%f,0,%f,cl};\n"%(radius,z_lim[0]))
+        fh.write("Circle (1) = {2,1,3};\n")
+        fh.write("Circle (2) = {3,1,4};\n")
+        fh.write("Circle (3) = {4,1,5};\n")
+        fh.write("Circle (4) = {5,1,2};\n")
+
+        fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
+        fh.write("Plane Surface(1) = {1};\n\n")
+        edges = 3
+        pt_no = 6
+    else:
+        poly_x = poly[0]
+        poly_y = poly[1]
+        pt_no = 0
+        #make a node for each vertex in the polygon 
+        for i in range(len(poly_x)):
+            pt_no += 1
+            fh.write("Point (%i) = {%f,%f,%f,cl};//polygon point\n"%(pt_no,poly_x[i],poly_y[i],z_lim[0]))
+        # connect the nodes with lines 
+        ln_no = 0
+        for i in range(pt_no-1):
+            ln_no += 1
+            fh.write("Line (%i) = {%i,%i};//polygon line\n"%(ln_no,i+1,i+2))
+        ln_no+=1
+        fh.write("Line (%i) = {%i,%i};//closing line\n"%(ln_no,pt_no,1))
+        edges = ln_no
+        #form a line loop and surface
+        fh.write("Line Loop(1) = {")
+        [fh.write('%i,'%(i+1)) for i in range(ln_no-1)]
+        fh.write("%i};\n"%ln_no)
+        fh.write("Plane Surface(1) = {1};\n\n")
+            
+    #insert inside / end on nodes into the mesh 
+    
+    if electrode_type is not None: 
+        if not isinstance(electrode_type,list) and not isinstance(electrode_type,tuple):
+            raise TypeError ("Expected list type argument for 'electrode_type'")
+        fh.write("//Points inside the column\n")
+        x = []
+        y = [] # ignore repeated vertices 
+        for i in range(num_elec):
+            if electrode_type[i]=='end' and elec_x[i] not in x or elec_y[i] not in y:
+                pt_no+=1
+                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],z_lim[0]))
+                fh.write("Point {%i} In Surface {1};\n"%pt_no)
+                x.append(elec_x[i])
+                y.append(elec_y[i])
+            
+    uni_z = np.unique(elec_z)
+    surface = 1
+    
+    if min(uni_z)<z_lim[0]:
+        fh.close()
+        raise ValueError ("Minimum z coordinate of column electrodes is out of bounds")
+    
+    #extrude surfaces 
+    fh.write("//Extrude planes in between each electrode.\n") 
+    if uni_z[0] > z_lim[0]:
+        diff = uni_z[0] - z_lim[0]            
+        fh.write('Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;}//Base of column to first electrode on the side of the column\n'%(diff,surface,elemz))
+        surface += edges + 1
+        
+    for i in range(0,len(uni_z)-1):
+        #work out the amount to extrude 
+        diff = uni_z[i+1] - uni_z[i]            
+        fh.write('Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;}\n'%(diff,surface,elemz))
+        surface += edges + 1
+        
+    if uni_z[-1] < z_lim[1]:
+        diff =  z_lim[1] - uni_z[-1]           
+        fh.write('Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;}//Last electrode on the side of the column to the top of the column\n'%(diff,surface,elemz))
+        surface += edges + 1
+        
+    fh.close()
