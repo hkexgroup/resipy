@@ -846,6 +846,9 @@ class Mesh:
         
         if self.ndims==2:
             warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D show will be unstable")
+        elif self.type2VertsNo() == 6: # use column mesh show instead 
+            self.show_prism_mesh()
+            return 
             
         #decide which attribute to plot, we may decide to have other attritbutes! 
         if attr is None: 
@@ -1039,6 +1042,155 @@ class Mesh:
         elms = np.array(self.con_matrix).T
         nodes = np.array([self.node_x, self.node_y, self.node_z]).T
         sliceMesh(nodes, elms, values, label=attr, dim=dim, vmin=vmin, vmax=vmax, ax=ax)
+        
+        
+    def show_prism_mesh(self,color_map = 'Spectral',#displays the mesh using matplotlib
+             color_bar = True,
+             ax = None,
+             electrodes = True,
+             sens = False,
+             edge_color = 'k',
+             alpha = 1,
+             vmax=None,
+             vmin=None,
+             attr=None,
+             xlim = "default",
+             ylim = "default",
+             zlim = "default"):
+        """
+        """
+        
+        if not isinstance(color_map,str):#check the color map variable is a string
+            raise NameError('color_map variable is not a string')
+        
+        if self.ndims==2:
+            warnings.warn("Use mesh.show() for 2D meshes")
+            return 
+            
+        #decide which attribute to plot, we may decide to have other attritbutes! 
+        if attr is None: 
+            #plots default attribute
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        else:
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except (KeyError, AttributeError):
+                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+        
+        t0 = time.time() # benchmark function
+        
+        #make 3D figure 
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            fig = ax.figure
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        
+        if zlim=="default":
+            zlim=[min(self.node_z),max(self.node_z)]
+        if xlim=="default":
+            xlim=[min(self.node_x), max(self.node_x)]
+        if ylim=="default":
+            ylim=[min(self.node_y), max(self.node_y)]
+        #set axis limits     
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_zlim(zlim) # doesn't seem to work in the UI
+        #set color bar limits
+
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
+            
+        if edge_color == None or edge_color=='none' or edge_color=='None':
+            edge_color='face'#set the edge colours to the colours of the polygon patches
+            
+        #construct patches 
+        print('constructing patches')
+        face_list = []
+        assign = [] 
+        sensi = []
+        S = [0]*self.num_elms 
+        if sens:
+            try:
+                S = self.sensitivity
+            except AttributeError:
+                sens = False
+                print('no sensitivities to plot')
+                
+        con_mat = self.con_matrix # just plotting top and bottom parts of elements 
+        for i in range(self.num_elms):
+            idx1 = con_mat[0][i]
+            idx2 = con_mat[1][i]
+            idx3 = con_mat[2][i]
+            idx4 = con_mat[3][i]
+            idx5 = con_mat[4][i]
+            idx6 = con_mat[5][i]
+            vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
+            vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
+            vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
+            vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
+            vert5 = (self.node_x[idx5],self.node_y[idx5],self.node_z[idx5])
+            vert6 = (self.node_x[idx6],self.node_y[idx6],self.node_z[idx6])
+            
+            top = (vert1,vert2,vert3)
+            bot = (vert4,vert5,vert6)
+            
+            if top not in face_list:
+                face_list.append(top)
+                assign.append(X[i])
+                sensi.append(S[i])
+            if bot not in face_list:
+                face_list.append(bot)
+                assign.append(X[i])
+                sensi.append(S[i])
+            
+        #add patches to 3D figure 
+        polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
+        polly.set_alpha(alpha)#add some transparancy to the elements
+        try:
+            polly.set_array(np.array(assign))
+        except MemoryError:#catch this error and print something more helpful than matplotlibs output
+            raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
+        polly.set_edgecolor(edge_color)
+        polly.set_cmap(color_map) # set color map 
+        polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
+#        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
+        ax.add_collection3d(polly, zs=0, zdir='z') # for matplotlib > 3.0.2
+        self.cax = polly
+        
+        if color_bar:#add the color bar 
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
+            self.cbar.set_label(color_bar_title) #set colorbar title
+            
+        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
+        
+        if sens: #add sensitivity to plot if available
+            try:
+                weights = np.array(sensi) #values assigned to alpha channels 
+                alphas = np.linspace(1, 0, len(sensi))#array of alpha values 
+                raw_alpha = np.ones((len(sensi),4),dtype=float) #raw alpha values 
+                raw_alpha[..., -1] = alphas
+                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+                #make alpha collection
+                alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+                ax.add_collection(alpha_coll)
+            except AttributeError:
+                print("no sensitivities in mesh object to plot")
+            
+        if electrodes: #try add electrodes to figure if we have them 
+            try: 
+                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z),
+                           s=20, c='k', marker='o')
+            except AttributeError as e:
+                print("could not plot 3d electrodes, error = "+str(e))
+                
+        print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
         
         
     def assign_zone(self,poly_data):
@@ -1411,7 +1563,7 @@ class Mesh:
         
         #write to mesh.dat total num of elements and nodes
         if self.ndims==3:
-            fid.write('%i %i 1 0 4\n'%(self.num_elms,self.num_nodes))
+            fid.write('%i %i 1 0 %i\n'%(self.num_elms,self.num_nodes,self.type2VertsNo()))
         else:
             fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
 
@@ -3187,6 +3339,100 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh
+
+#%% column mesh 
+def prism_mesh(elec_x,elec_y,elec_z, poly=None, z_lim= None, 
+               radius = None, file_path='column_mesh.geo',
+               keep_files=True,
+               show_output=True, 
+               path='exe', dump=print,
+               **kwargs):
+    """Make a prism mesh 
+    Parameters
+    ------------
+    elec_x: array like
+        electrode x coordinates 
+    elec_y: array like 
+        electrode y coordinates 
+    elec_z: array like 
+        electrode z coordinates 
+    poly: list, tuple, optional 
+        Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+        x and y coordinates, ie (poly_x, poly_y)
+    z_lim: list, tuple, optional 
+        top and bottom z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        radius of column
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    elemz: int, optional
+        Number of layers in between each electrode inside the column mesh. 
+    """
+    #error checks 
+    if len(elec_x) != len(elec_y):
+        raise ValueError("mismatch in electrode x and y vector length, they should be equal")
+        
+    #make prism mesh command script
+    file_name="prism_mesh"
+    gw.column_mesh([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
+    #note that this column mesh function doesnt return the electrode nodes 
+    
+    
+    #check directories 
+    if path == "exe":
+        ewd = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                path)
+    else:
+        ewd = path # points to the location of the .exe 
+        # else its assumed a custom directory has been given to the gmsh.exe 
+    # handling gmsh
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
+    elif platform.system() == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
+            else:
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
+    else:
+        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
+        else: # fallback on wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        
+    if show_output: 
+        try:
+            p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        except: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3'] # use .exe through wine instead
+            p = Popen(cmd_line, stdout=PIPE, shell=False)
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            dump(line.decode('utf-8'))
+    else:
+        call(cmd_line)#run gmsh 
+        
+    #convert into mesh.dat
+    mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
+    mesh = Mesh.mesh_dict2class(mesh_dict) # convert output of parser into an object
+    
+    mesh.move_elec_nodes(elec_x,elec_y,elec_z)
+    
+    if keep_files is False: 
+        os.remove(file_name+".geo");os.remove(file_name+".msh")
+        
+    return mesh 
+    
+    
 
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):

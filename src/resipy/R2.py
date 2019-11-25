@@ -1129,8 +1129,9 @@ class R2(object): # R2 master class instanciated by the GUI
         Parameters
         ----------
         typ : str, optional
-            Type of mesh. Eithter 'quad' or 'trian'. If no topography, 'quad'
-            mesh will be chosen.
+            Type of mesh. Eithter 'quad' or 'trian' in the case of 2d surveys.
+            If no topography, 'quad' mesh will be chosen; 'tetra' is used for 
+            3D surveys, but 'prism' can be used for column type experiments. 
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
@@ -1177,8 +1178,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         #check if remote electrodes present?
         if remote is None: # automatic detection
-            remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+            remote_flags = [-9999999, -999999, -99999,-9999,-999]
+                        #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
             remote = np.in1d(self.elec[:,0], remote_flags)
             if np.sum(remote) > 0:
                 print('remote electrode detected')
@@ -1213,7 +1214,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
-        elif typ == 'trian' or typ == 'tetra':
+        elif typ == 'trian' or typ == 'tetra' or typ=='prism':
             elec = self.elec.copy()
             geom_input = {}
             elec_x = self.elec[:,0]
@@ -1265,10 +1266,17 @@ class R2(object): # R2 master class instanciated by the GUI
                              cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
+            if typ=='prism':
+                mesh = mt.prism_mesh(elec_x, elec_y, elec_z,
+                                     path=os.path.join(self.apiPath, 'exe'),
+                                     cl=cl, dump=dump, show_output=show_output,
+                                     **kwargs)
+                self.param['num_xy_poly'] = 0
+                
             os.chdir(ui_dir)#change back to original directory
 
             self.param['mesh_type'] = 3
-            e_nodes = mesh.e_nodes + 1 # +1 because of indexing staring at 0 in python
+            e_nodes = np.array(mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
 
         self.mesh = mesh
@@ -1537,14 +1545,15 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # TODO not sure the sorting fixed element issue if for 3D as well
 
-        meshFile = os.path.join(self.dirname, name)
-        elems, nodes = readMeshDat(meshFile)
-        ifixed = elems[:,-2] == 0
-        elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
-        elems2[:,0] = 1 + np.arange(elems2.shape[0])
-        ifixed2 = elems2[:,-2] == 0
-        elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
-        writeMeshDat(meshFile, elems2, nodes)
+        if self.mesh.ndims == 2:
+            meshFile = os.path.join(self.dirname, name)
+            elems, nodes = readMeshDat(meshFile)
+            ifixed = elems[:,-2] == 0
+            elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
+            elems2[:,0] = 1 + np.arange(elems2.shape[0])
+            ifixed2 = elems2[:,-2] == 0
+            elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
+            writeMeshDat(meshFile, elems2, nodes)
 
         res0File = os.path.join(self.dirname, 'res0.dat')
         resistivityFile = os.path.join(self.dirname, 'resistivity.dat')
@@ -2822,6 +2831,13 @@ class R2(object): # R2 master class instanciated by the GUI
             seq[ie,3] = seq2[ie,2]
 
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        # if it's 3D, we add the line number (all electrode on line 1)
+        if self.typ[-2] == '3':
+            protocol.insert(1, 'sa', 1)
+            protocol.insert(3, 'sb', 1)
+            protocol.insert(5, 'sm', 1)
+            protocol.insert(7, 'sn', 1)  
+            
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
@@ -2850,6 +2866,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
+        elif self.typ[-2] == '3':
+            self.createSurvey(os.path.join(fwdDir, self.typ + '.fwd'), ftype='Protocol')
         else:
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
