@@ -44,6 +44,9 @@ k = R2()
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
 
+k = R2(typ='R3t')
+k.create3DSurvey(testdir + 'dc-2d-timelapse/data')
+
 timings['methods-importing'] = time.time() - tstart
 
 #%% filtering
@@ -384,10 +387,6 @@ k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
 
-#%% create 3D mesh from 2D lines
-k = R2(typ='R3t')
-k.create3DSurvey('resipy/test/testTimelapse')
-k.invert()
 
 
 #%% 3D testing importing a mesh
