@@ -210,6 +210,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
+        self.ishowDOI = False # if True will show the Depth of Investigation modelled
 
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -2182,10 +2183,10 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh0.attr_cache['doiSens'] = sensScaled
         sensScaledCut = np.copy(sensScaled)
         sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
-        mesh0.attr_cache['sensCutOff'] = sensScaledCut
         # TODO why not replace the 'sensitivity' attribute directly so we can tweak it in the UI with the slider
-        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
-        self.meshResults = [mesh0]
+#        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
+        self.ishowDOI = True
+        self.meshResults = [mesh0] # restore initial mesh object
         
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -2222,6 +2223,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if attr not in keys:
             print('Attribute not found, revert to default')
             attr = keys[0]
+        if ax is None:
+            fig, ax = plt.subplots()
         if len(self.meshResults) > 0:
             if zlim is None:
                 zlim = self.zlim
@@ -2229,6 +2232,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
                                 zlim=zlim, clabel=clabel, **kwargs)
+                if self.ishowDOI:
+                    mesh = self.meshResults[index]
+                    centroids = np.array(mesh.elm_centre).T[:,[0,2]]
+                    z = np.array(mesh.attr_cache['doiSens'])
+                    ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.02], colors='red')
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
