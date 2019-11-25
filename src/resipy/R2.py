@@ -2176,13 +2176,18 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh1 = self.meshResults[0]
         
         # sensitivity = difference between final inversion / difference init values
-        invValues1 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
-        invValues2 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
-        sens = (invValues1 - invValues2)/(res0-res1)
+        invValues0 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
+        invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        # method 1
+        sens = (invValues0 - invValues1)/(res0-res1)
         sensScaled = np.abs(sens)
+#        sensScaled = (sensScaled - np.min(sensScaled))/np.max(sensScaled) # doesn't really help
+        # method 2
+#        sens = np.corrcoef(invValues0, invValues1) # should be convolve on 5x5 cells
+#        sensScaled = (sens - 1)/2
         mesh0.attr_cache['doiSens'] = sensScaled
-        sensScaledCut = np.copy(sensScaled)
-        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
+#        sensScaledCut = np.copy(sensScaled)
+#        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
         # TODO why not replace the 'sensitivity' attribute directly so we can tweak it in the UI with the slider
 #        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
         self.ishowDOI = True
