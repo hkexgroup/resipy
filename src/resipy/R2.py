@@ -2234,9 +2234,9 @@ class R2(object): # R2 master class instanciated by the GUI
                                 zlim=zlim, clabel=clabel, **kwargs)
                 if self.ishowDOI:
                     mesh = self.meshResults[index]
-                    centroids = np.array(mesh.elm_centre).T[:,[0,2]]
+                    centroids = np.c_[mesh.elm_centre[0], mesh.elm_centre[2]]
                     z = np.array(mesh.attr_cache['doiSens'])
-                    ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.02], colors='red')
+                    ax.tricontour(centroids[:,0], centroids[:,1], z, colors='red')
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,

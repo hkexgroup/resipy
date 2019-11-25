@@ -4223,8 +4223,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     # this could failed if we invert homogeneous model -> vtk
                     #file size = 0 -> R2.getResults() -> vtk_import failed
                     plotSection()
-#                    if self.iForward is True:
-#                        sectionId.addItem('Initial Model')
+    #                    if self.iForward is True:
+    #                        sectionId.addItem('Initial Model')
                     for mesh in self.r2.meshResults:
                         sectionId.addItem(mesh.mesh_title)
                     if self.iForward is True:
@@ -4281,7 +4281,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             edgeCheck.setChecked(False)
             vminEdit.setText('')
             vmaxEdit.setText('')
-            self.r2.getResults()
             displayAttribute(arg=defaultAttr)
             # graph will be plotted because changeSection will be called
 #            attributeName.activated.connect(changeAttribute)
