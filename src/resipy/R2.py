@@ -2228,8 +2228,6 @@ class R2(object): # R2 master class instanciated by the GUI
         if attr not in keys:
             print('Attribute not found, revert to default')
             attr = keys[0]
-        if ax is None:
-            fig, ax = plt.subplots()
         if len(self.meshResults) > 0:
             if zlim is None:
                 zlim = self.zlim
@@ -2241,7 +2239,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh = self.meshResults[index]
                     centroids = np.c_[mesh.elm_centre[0], mesh.elm_centre[2]]
                     z = np.array(mesh.attr_cache['doiSens'])
-                    ax.tricontour(centroids[:,0], centroids[:,1], z, colors='red')
+                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, colors='red')
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
