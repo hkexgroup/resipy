@@ -910,7 +910,7 @@ class Mesh:
         # search through each element to see if it is on the edge of the mesh, 
         # this step is important as it is very expensive to plot anything in 3D using matplotlib 
         # triangles on the edge of the mesh will be used only once
-        tri_combo = np.zeros((self.num_elms,4),dtype='float64')
+        
         elm_x = self.elm_centre[0]
         elm_y = self.elm_centre[1]
         elm_z = self.elm_centre[2]
@@ -919,6 +919,15 @@ class Mesh:
         temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
         con_mat=temp_con_mat[:,in_elem] # truncate elements
         inside_numel = len(con_mat[0])#number of inside elements 
+        tri_combo = np.zeros((inside_numel,4),dtype='float64')
+        
+        S = [0]*self.num_elms 
+        if sens:
+            try:
+                S = self.sensitivities
+            except AttributeError:
+                sens = False
+                print('no sensitivities to plot')
         
         for i in range(inside_numel):
             idx1 = con_mat[0][i]#extract indexes 
@@ -936,9 +945,7 @@ class Mesh:
             tri_combo[i,2] = face3#face 3 
             tri_combo[i,3] = face4#face 4 
             
-        #shape = tri_combo.shape
-        tri_combo = tri_combo.flatten()
-        temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
+        temp,index,counts = np.unique(tri_combo.flatten(),return_index=True,return_counts=True) # find the unique values 
         single_vals_idx = counts==1 # faces on edge of volume only appear once
         edge_element_idx = index[single_vals_idx]/4
         face_element_idx = np.floor(edge_element_idx)
@@ -947,6 +954,8 @@ class Mesh:
         truncated_numel = len(face_element_idx)
         face_list = [0] * truncated_numel
         assign = [0] * truncated_numel # the number assigned to each face
+        sensi = [0] * truncated_numel # the sensitivity assigned to each face
+        
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
             idx1 = con_mat[0][ref]
@@ -959,21 +968,17 @@ class Mesh:
             vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
             vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
             
-            face1 = (vert1,vert2,vert3)
-            face2 = (vert1,vert2,vert4)
-            face3 = (vert2,vert3,vert4)
-            face4 = (vert1,vert4,vert3)
-            
             if face_probe[i] == 0: #if single_val_idx. == 0 > face1
-                face_list[i] = face1#face 1 
+                face_list[i] = (vert1,vert2,vert3)#face 1 
             elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
-                face_list[i] = face2#face 2
+                face_list[i] = (vert1,vert2,vert4)#face 2
             elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
-                face_list[i] = face3#face 3 
+                face_list[i] = (vert2,vert3,vert4)#face 3 
             elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
-                face_list[i] = face4#face 4
+                face_list[i] = (vert1,vert4,vert3)#face 4
             
             assign[i] = X[ref]#get attribute value into assigned array
+            sensi[i] = S[ref]
           
         polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
         polly.set_alpha(alpha)#add some transparancy to the elements
@@ -995,17 +1000,14 @@ class Mesh:
 #        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
         
         if sens: #add sensitivity to plot if available
-            try:
-                weights = np.array(self.sensitivities) #values assigned to alpha channels 
-                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
-                raw_alpha[..., -1] = alphas
-                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
-                #make alpha collection
-                alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
-                ax.add_collection(alpha_coll)
-            except AttributeError:
-                print("no sensitivities in mesh object to plot")
+            weights = np.array(sensi) #values assigned to alpha channels 
+            alphas = np.linspace(1, 0, len(sensi))#array of alpha values 
+            raw_alpha = np.ones((len(sensi),4),dtype=float) #raw alpha values 
+            raw_alpha[..., -1] = alphas
+            alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+            #make alpha collection
+            alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+            ax.add_collection(alpha_coll)
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
@@ -1064,7 +1066,9 @@ class Mesh:
             raise NameError('color_map variable is not a string')
         
         if self.ndims==2:
-            warnings.warn("Use mesh.show() for 2D meshes")
+            warnings.warn("Use Mesh.show() for 2D meshes")
+        elif self.type2VertsNo() != 6:
+            warnings.warn("Function can only be used to display prism meshes")
             return 
             
         #decide which attribute to plot, we may decide to have other attritbutes! 
@@ -1111,19 +1115,18 @@ class Mesh:
             edge_color='face'#set the edge colours to the colours of the polygon patches
             
         #construct patches 
-        print('constructing patches')
-        face_list = []
-        assign = [] 
-        sensi = []
+        #print('constructing patches')
         S = [0]*self.num_elms 
         if sens:
             try:
-                S = self.sensitivity
+                S = self.sensitivities
             except AttributeError:
                 sens = False
                 print('no sensitivities to plot')
                 
         con_mat = self.con_matrix # just plotting top and bottom parts of elements 
+        combo = np.zeros((self.num_elms,5),dtype='float64')
+        
         for i in range(self.num_elms):
             idx1 = con_mat[0][i]
             idx2 = con_mat[1][i]
@@ -1131,6 +1134,42 @@ class Mesh:
             idx4 = con_mat[3][i]
             idx5 = con_mat[4][i]
             idx6 = con_mat[5][i]
+            
+            #assign each face a code 
+            fc1 = int(str(idx1)+str(idx2)+str(idx3))#face code 1 
+            fc2 = int(str(idx4)+str(idx5)+str(idx6))#face code 2 
+            fc3 = int(str(idx1)+str(idx2)+str(idx5)+str(idx4))#face code 3
+            fc4 = int(str(idx2)+str(idx3)+str(idx6)+str(idx5))#face code 4 
+            fc5 = int(str(idx1)+str(idx3)+str(idx6)+str(idx4))#face code 5
+            
+            combo[i,0] = fc1
+            combo[i,1] = fc2
+            combo[i,2] = fc3
+            combo[i,3] = fc4
+            combo[i,4] = fc5
+            
+        #return combo
+        temp,index,counts = np.unique(combo.flatten(),return_index=True,return_counts=True) 
+        single_vals_idx = counts==1 # faces on edge of volume only appear once
+        edge_element_idx = index[single_vals_idx]/5
+        face_element_idx = np.floor(edge_element_idx)
+        face_probe = edge_element_idx - np.floor(edge_element_idx)
+        face_probe = np.round(face_probe,1) # round to nearest 1 decimal 
+        
+        
+        truncated_numel = len(face_element_idx)
+        face_list = [()] * truncated_numel
+        assign = [0] * truncated_numel # the number assigned to each face
+        sensi = [0] * truncated_numel # the sensitivity assigned to each face
+            
+        for i in range(truncated_numel):
+            ref = int(face_element_idx[i])
+            idx1 = con_mat[0][ref]
+            idx2 = con_mat[1][ref]
+            idx3 = con_mat[2][ref]
+            idx4 = con_mat[3][ref]
+            idx5 = con_mat[4][ref]
+            idx6 = con_mat[5][ref]
             vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
             vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
             vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
@@ -1138,17 +1177,19 @@ class Mesh:
             vert5 = (self.node_x[idx5],self.node_y[idx5],self.node_z[idx5])
             vert6 = (self.node_x[idx6],self.node_y[idx6],self.node_z[idx6])
             
-            top = (vert1,vert2,vert3)
-            bot = (vert4,vert5,vert6)
-            
-            if top not in face_list:
-                face_list.append(top)
-                assign.append(X[i])
-                sensi.append(S[i])
-            if bot not in face_list:
-                face_list.append(bot)
-                assign.append(X[i])
-                sensi.append(S[i])
+            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
+                face_list[i] = (vert1,vert2,vert3)#face 1 
+            elif face_probe[i] == 0.2:#if single_val_idx. == 0.2 > face2
+                face_list[i] = (vert4,vert5,vert6)#face 2
+            elif face_probe[i] == 0.4:#if single_val_idx. == 0.4 > face3
+                face_list[i] = (vert1,vert2,vert5,vert4)#face 3 
+            elif face_probe[i] == 0.6:#if single_val_idx. == 0.6 > face4
+                face_list[i] = (vert2,vert3,vert6,vert5)#face 4
+            elif face_probe[i] == 0.8:#if single_val_idx. == 0.8 > face5
+                face_list[i] = (vert1,vert3,vert6,vert4)
+                
+            sensi[i] = S[ref]
+            assign[i] = X[ref]
             
         #add patches to 3D figure 
         polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
@@ -1171,17 +1212,14 @@ class Mesh:
         ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
         
         if sens: #add sensitivity to plot if available
-            try:
-                weights = np.array(sensi) #values assigned to alpha channels 
-                alphas = np.linspace(1, 0, len(sensi))#array of alpha values 
-                raw_alpha = np.ones((len(sensi),4),dtype=float) #raw alpha values 
-                raw_alpha[..., -1] = alphas
-                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
-                #make alpha collection
-                alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
-                ax.add_collection(alpha_coll)
-            except AttributeError:
-                print("no sensitivities in mesh object to plot")
+            weights = np.array(sensi) #values assigned to alpha channels 
+            alphas = np.linspace(1, 0, len(sensi))#array of alpha values 
+            raw_alpha = np.ones((len(sensi),4),dtype=float) #raw alpha values 
+            raw_alpha[..., -1] = alphas
+            alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+            #make alpha collection
+            alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+            ax.add_collection(alpha_coll)
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 

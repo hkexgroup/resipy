@@ -1214,16 +1214,16 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
     #add points to file at z = zero 
     no_pts = 1
     loop_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, max_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, max_x, max_y, 0))#multiply by 2 grow the elements away from electrodes 
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, max_x, min_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, max_x, min_y, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, min_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, min_x, min_y, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, min_x, max_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, min_x, max_y, 0))
     
     #add line loop
     no_lns = 0 
@@ -1681,20 +1681,29 @@ def column_mesh(electrodes, poly=None, z_lim= None,
     
     #extrude surfaces 
     fh.write("//Extrude planes in between each electrode.\n") 
+    seg = 0 # segment number 
     if uni_z[0] > z_lim[0]:
-        diff = uni_z[0] - z_lim[0]            
-        fh.write('Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;}//Base of column to first electrode on the side of the column\n'%(diff,surface,elemz))
+        diff = uni_z[0] - z_lim[0]   
+        seg += 1         
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};//Base of column to first electrode on the side of the column\n'%(seg,diff,surface,elemz))
         surface += edges + 1
         
     for i in range(0,len(uni_z)-1):
         #work out the amount to extrude 
-        diff = uni_z[i+1] - uni_z[i]            
-        fh.write('Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;}\n'%(diff,surface,elemz))
+        diff = uni_z[i+1] - uni_z[i]    
+        seg += 1          
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};\n'%(seg,diff,surface,elemz))
         surface += edges + 1
         
     if uni_z[-1] < z_lim[1]:
-        diff =  z_lim[1] - uni_z[-1]           
-        fh.write('Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;}//Last electrode on the side of the column to the top of the column\n'%(diff,surface,elemz))
+        diff =  z_lim[1] - uni_z[-1]     
+        seg += 1  
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};//Last electrode on the side of the column to the top of the column\n'%(seg,diff,surface,elemz))
         surface += edges + 1
+        
+    fh.write('Physical Volume(1) = {')
+    for i in range(seg-1):
+        fh.write('seg%i[1],'%(i+1))
+    fh.write('seg%i[1]};'%(i+1))
         
     fh.close()

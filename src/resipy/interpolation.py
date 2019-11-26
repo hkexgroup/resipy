@@ -3,6 +3,8 @@
 import sys
 import numpy as np
 import resipy.isinpolygon as iip
+import concurrent.futures 
+import threading
 import warnings 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
@@ -85,6 +87,161 @@ def cdist(x1, y1, x2, y2):
     return dist
 
 #%% interpolation using 4 known points. 
+def interp2d_old(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='bilinear'):
+    """Compute z values for unstructured data using bilinear or spline interpolation. Coordinates
+    outside the bounds of interpolation can be extrapolated using nearest neighbour
+    algorithm on the interpolated and known z coordinates.  
+    
+    Bilinear /cubic /spline interpolation requires knowledge of 4 points orientated around the 
+    xyz coordinate to be estimated. 
+    
+    Parameters
+    ------------
+    xnew: array like
+        x coordinates for the interpolated values
+    ynew: array like 
+        y coordinates for the interpolated values
+    xknown: array like
+        x coordinates for the known values 
+    yknown: array like
+        y coordinates for the known values 
+    zknown: array like
+        z coordinates for the known values 
+    method: 
+        kind of interpolation done, options are bilinear and spline (more to come)
+    extrapolate: bool, optional
+        Flag for if extrapolation is to be used if new coordinates lie outside 
+        the bounds where it is not possible to interpolate a value. 
+        
+    Returns
+    ------------
+    znew: numpy array
+        z coordinates at xnew and ynew.
+        
+    """
+    #check if inputs are arrays
+    if len(xknown)==0 or len(xnew)==0:
+        raise ValueError('Empty array passed to interp2d!')
+    return_list = False 
+    if type(xnew) != 'numpy.ndarray':
+        xnew = np.array(xnew)
+        #return_list = True
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+        
+        
+    #preallocate array for new z coordinates / interpolated values  
+    znew = np.zeros_like(xnew)
+    znew.fill(np.nan)
+    #outside = np.logical_not(inside)
+    num_pts = len(xnew)
+    
+    #add a bit of padding to prevent artefacts
+    x_diff = np.min(np.diff(np.sort(xknown)))
+    y_diff = np.min(np.diff(np.sort(yknown)))
+    fudgex=0.001*x_diff
+    fudgey=0.001*y_diff
+    
+#    def quad_dist(xnew, ynew, xknown, yknown,fudgex,fudgey):
+#        quad1 = (xknown < xnew-fudgex) & (yknown < ynew-fudgey) # bottom left quad
+#        quad2 = (xknown < xnew-fudgex) & (yknown > ynew+fudgey) # top left quad
+#        quad3 = (xknown > xnew+fudgex) & (yknown > ynew+fudgey) # top right quad
+#        quad4 = (xknown > xnew+fudgex) & (yknown < ynew-fudgey) # bottom right quad
+#        
+#        dist1 = pdist(xnew, ynew, xknown[quad1], yknown[quad1])#distances to each quad 
+#        dist2 = pdist(xnew, ynew, xknown[quad2], yknown[quad2])
+#        dist3 = pdist(xnew, ynew, xknown[quad3], yknown[quad3])
+#        dist4 = pdist(xnew, ynew, xknown[quad4], yknown[quad4])
+#        return dist1, dist2, dist3, dist4
+            
+    #compute new values inside survey
+    for i in range(num_pts):
+        if np.isnan(znew[i]): # point is not already known, else there is no need to interpolate
+            #find closest 4 points in each quad
+#            dist1, dist2, dist3, dist4 = quad_dist(xnew[i],ynew[i],xknown,yknown,fudgex,fudgey)
+            quad1 = (xknown < xnew[i]-fudgex) & (yknown < ynew[i]-fudgey) # bottom left quad
+            quad2 = (xknown < xnew[i]-fudgex) & (yknown > ynew[i]+fudgey) # top left quad
+            quad3 = (xknown > xnew[i]+fudgex) & (yknown > ynew[i]+fudgey) # top right quad
+            quad4 = (xknown > xnew[i]+fudgex) & (yknown < ynew[i]-fudgey) # bottom right quad
+            
+            dist1 = pdist(xnew[i], ynew[i], xknown[quad1], yknown[quad1])#distances to each quad 
+            dist2 = pdist(xnew[i], ynew[i], xknown[quad2], yknown[quad2])
+            dist3 = pdist(xnew[i], ynew[i], xknown[quad3], yknown[quad3])
+            dist4 = pdist(xnew[i], ynew[i], xknown[quad4], yknown[quad4])
+            
+            if len(dist1)!=0 and len(dist2)!=0 and len(dist3)!=0 and len(dist4)!=0:
+                #then the conditions needed to interpolate in a quad are met
+                idx1 = np.argmin(dist1)#find closest index for each quad 
+                idx2 = np.argmin(dist2)
+                idx3 = np.argmin(dist3)
+                idx4 = np.argmin(dist4)
+                
+                x = np.array((xknown[quad1][idx1],
+                              xknown[quad2][idx2],
+                              xknown[quad3][idx3],
+                              xknown[quad4][idx4]))
+                y = np.array((yknown[quad1][idx1],
+                              yknown[quad2][idx2],
+                              yknown[quad3][idx3],
+                              yknown[quad4][idx4]))
+                z = np.array((zknown[quad1][idx1],
+                              zknown[quad2][idx2],
+                              zknown[quad3][idx3],
+                              zknown[quad4][idx4]))
+                
+                if len(x.shape)==1:#bug fix to deal with numpy being finicky, arrays need 2 dimensions 
+                    x.shape += (1,)
+                    z.shape += (1,)#append 1 dimension to the numpy array shape (otherwise np.concentrate wont work)
+                    y.shape += (1,)
+               
+                if method == 'spline':
+                    mod = thin_plate_spline_mod(x,y,z)
+                else:
+                    mod = bilinear_mod(x,y,z) # generate model   
+                    
+                inside_quad = iip.isinpolygon(xnew,ynew,(x,y))# any points which also fall inside the quad are interpolated
+#                xtemp = xnew[inside_quad]
+#                ytemp = ynew[inside_quad]
+#                inside_idx = np.argwhere(inside_quad==True)
+#                #double check the same indexes apply 
+#                for i in range(len(xtemp)):
+#                    dc1,dc2,dc3,dc4 = quad_dist(xtemp[i],ytemp[i],xknown,yknown,fudgex,fudgey)
+#                    if len(dist1)!=0 and len(dist2)!=0 and len(dist3)!=0 and len(dist4)!=0:
+#                        inside_quad[inside_idx[i]] = False
+#                    elif np.argmin(dc1)!=idx1 or np.argmin(dc2)!=idx2 or np.argmin(dc3)!=idx3 or np.argmin(dc4)!=idx4:# then indexes are not the same 
+#                        inside_quad[inside_idx[i]] = False
+                            
+                znew[inside_quad] = compute(mod,xnew[inside_quad],ynew[inside_quad])# interpolate point using model, can be unstable 
+#                znew[i] = compute(mod,xnew[i],ynew[i])# interpolate point using model 
+        
+    idx_nan = np.isnan(znew) # boolian indexes of where nans are
+    idx_num = np.where(idx_nan == False)
+    #extrapolate nans using nearest nieghbough interpolation
+    if extrapolate:
+        #combine known and interpolated values 
+        known_x = np.append(xknown,xnew[idx_num])
+        known_y = np.append(yknown,ynew[idx_num])
+        known_z = np.append(zknown,znew[idx_num])
+        extrap_x = xnew[idx_nan] # extrapolate using the gridded and interpolated data
+        extrap_y = ynew[idx_nan]
+        extrap_z = znew[idx_nan]
+        
+        for i in range(len(extrap_x)):
+        #for i in tqdm(range(len(extrap_x)),desc='extrapolating unknowns',ncols=100):#go through each extrapolated point and find the closest known coordinate
+            dist = pdist(extrap_x[i],extrap_y[i],known_x,known_y)
+            ref = np.argmin(dist)
+            extrap_z[i] = known_z[ref]
+        
+        znew[idx_nan] = extrap_z
+        
+    if return_list:
+        znew = list(znew)
+        
+    return znew # return new interpolated values 
+    
+#%% interpolation using 4 known points. 
 def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='bilinear'):
     """Compute z values for unstructured data using bilinear or spline interpolation. Coordinates
     outside the bounds of interpolation can be extrapolated using nearest neighbour
@@ -141,52 +298,56 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
     y_diff = np.min(np.diff(np.sort(yknown)))
     fudgex=0.001*x_diff
     fudgey=0.001*y_diff
+    
+    def pnt_interp(xnew, ynew, xknown, yknown, zknown,fudgex,fudgey,method):
+        quad1 = (xknown < xnew-fudgex) & (yknown < ynew-fudgey) # bottom left quad
+        quad2 = (xknown < xnew-fudgex) & (yknown > ynew+fudgey) # top left quad
+        quad3 = (xknown > xnew+fudgex) & (yknown > ynew+fudgey) # top right quad
+        quad4 = (xknown > xnew+fudgex) & (yknown < ynew-fudgey) # bottom right quad
+        
+        dist1 = pdist(xnew, ynew, xknown[quad1], yknown[quad1])#distances to each quad 
+        dist2 = pdist(xnew, ynew, xknown[quad2], yknown[quad2])
+        dist3 = pdist(xnew, ynew, xknown[quad3], yknown[quad3])
+        dist4 = pdist(xnew, ynew, xknown[quad4], yknown[quad4])
+        if len(dist1)!=0 and len(dist2)!=0 and len(dist3)!=0 and len(dist4)!=0:
+            #then the conditions needed to interpolate in a quad are met
+            idx1 = np.argmin(dist1)#find closest index for each quad 
+            idx2 = np.argmin(dist2)
+            idx3 = np.argmin(dist3)
+            idx4 = np.argmin(dist4)
+            
+            x = np.array((xknown[quad1][idx1],
+                          xknown[quad2][idx2],
+                          xknown[quad3][idx3],
+                          xknown[quad4][idx4]))
+            y = np.array((yknown[quad1][idx1],
+                          yknown[quad2][idx2],
+                          yknown[quad3][idx3],
+                          yknown[quad4][idx4]))
+            z = np.array((zknown[quad1][idx1],
+                          zknown[quad2][idx2],
+                          zknown[quad3][idx3],
+                          zknown[quad4][idx4]))
+            
+            if len(x.shape)==1:#bug fix to deal with numpy being finicky, arrays need 2 dimensions 
+                x.shape += (1,)
+                z.shape += (1,)#append 1 dimension to the numpy array shape (otherwise np.concentrate wont work)
+                y.shape += (1,)
+           
+            if method == 'spline':
+                mod = thin_plate_spline_mod(x,y,z)
+            else:
+                mod = bilinear_mod(x,y,z) # generate model   
+            znew = compute(mod,xnew,ynew)
+        else:
+            znew = float('nan')
+
+        return znew
+    
     #compute new values inside survey
-    for i in range(num_pts):
-        if np.isnan(znew[i]): # point is not already known, else there is no need to interpolate
-            #find closest 4 points in each quad
-            quad1 = (xknown < xnew[i]-fudgex) & (yknown < ynew[i]-fudgey) # bottom left quad
-            quad2 = (xknown < xnew[i]-fudgex) & (yknown > ynew[i]+fudgey) # top left quad
-            quad3 = (xknown > xnew[i]+fudgex) & (yknown > ynew[i]+fudgey) # top right quad
-            quad4 = (xknown > xnew[i]+fudgex) & (yknown < ynew[i]-fudgey) # bottom right quad
-            
-            dist1 = pdist(xnew[i], ynew[i], xknown[quad1], yknown[quad1])#distances to each quad 
-            dist2 = pdist(xnew[i], ynew[i], xknown[quad2], yknown[quad2])
-            dist3 = pdist(xnew[i], ynew[i], xknown[quad3], yknown[quad3])
-            dist4 = pdist(xnew[i], ynew[i], xknown[quad4], yknown[quad4])
-            
-            if len(dist1)!=0 and len(dist2)!=0 and len(dist3)!=0 and len(dist4)!=0:
-                #then the conditions needed to interpolate in a quad are met
-                idx1 = np.argmin(dist1)#find closest index for each quad 
-                idx2 = np.argmin(dist2)
-                idx3 = np.argmin(dist3)
-                idx4 = np.argmin(dist4)
-                
-                x = np.array((xknown[quad1][idx1],
-                              xknown[quad2][idx2],
-                              xknown[quad3][idx3],
-                              xknown[quad4][idx4]))
-                y = np.array((yknown[quad1][idx1],
-                              yknown[quad2][idx2],
-                              yknown[quad3][idx3],
-                              yknown[quad4][idx4]))
-                z = np.array((zknown[quad1][idx1],
-                              zknown[quad2][idx2],
-                              zknown[quad3][idx3],
-                              zknown[quad4][idx4]))
-                
-                if len(x.shape)==1:#bug fix to deal with numpy being finicky, arrays need 2 dimensions 
-                    x.shape += (1,)
-                    z.shape += (1,)#append 1 dimension to the numpy array shape (otherwise np.concentrate wont work)
-                    y.shape += (1,)
-               
-                if method == 'spline':
-                    mod = thin_plate_spline_mod(x,y,z)
-                else:
-                    mod = bilinear_mod(x,y,z) # generate model   
-                    
-                inside_quad = iip.isinpolygon(xnew,ynew,(x,y))# any points which also fall inside the quad are interpolated
-                znew[inside_quad] = compute(mod,xnew[inside_quad],ynew[inside_quad])# interpolate point using model 
+    znew = [pnt_interp(xnew[i], ynew[i], xknown, yknown, zknown,fudgex,fudgey,method) for i in range(num_pts)]
+    znew = np.array(znew)
+    # its worth parallising the function in the future over 2 cores for more speed 
         
     idx_nan = np.isnan(znew) # boolian indexes of where nans are
     idx_num = np.where(idx_nan == False)
@@ -212,7 +373,6 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
         znew = list(znew)
         
     return znew # return new interpolated values 
-    
 #%% inverse weighted distance
 def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate=True):
     """
