@@ -3,9 +3,7 @@
 import sys
 import numpy as np
 import resipy.isinpolygon as iip
-import concurrent.futures 
-import threading
-import warnings 
+#import concurrent.futures 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
 # see solution @ https://math.stackexchange.com/questions/828392/spatial-interpolation-for-irregular-grid
@@ -340,7 +338,7 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
                 mod = bilinear_mod(x,y,z) # generate model   
             znew = compute(mod,xnew,ynew)
         else:
-            znew = float('nan')
+            znew = np.nan
 
         return znew
     
