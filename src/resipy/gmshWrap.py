@@ -1600,6 +1600,7 @@ def column_mesh(electrodes, poly=None, z_lim= None,
     uni_z = np.unique(elec_z) # unique z values 
     
     if z_lim is None:
+        print('zlim not passed')
         z_lim = [min(elec_z),max(elec_z)]
     if radius is None:
         radius  = max(electrodes[0])

@@ -24,8 +24,7 @@ else:
 print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
 
-#workaround to deal with removing old _MEI folders on windows (works when compile WITH console=True)
-# but this can cause trouble if multple instance of the software are run at the same time
+#workaround to deal with removing old _MEI folders on windows (works when compile WITH console=False)
 if OS == 'Windows':
 
     week_seconds = 7*24*60*60
