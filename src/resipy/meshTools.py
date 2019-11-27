@@ -1060,6 +1060,42 @@ class Mesh:
              ylim = "default",
              zlim = "default"):
         """
+        Shows a 3D prism mesh. 
+        
+        Parameters
+        ----------
+        color_map : string, optional
+            color map reference 
+        color_bar : Boolean, optional 
+            `True` to plot colorbar 
+        xlim : tuple, optional
+            Axis x limits as `(xmin, xmax)`.
+        ylim : tuple, optional
+            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(ymin, ymax)`. 
+        ax : matplotlib axis handle, optional
+            Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
+        electrodes : boolean, optional
+            Enter true to add electrodes to plot (if available in mesh class)
+        sens : boolean, optional
+            Enter true to plot sensitivities (if available in mesh class). Note that for 3D this doesnt work so well. 
+        edge_color : string, optional
+            Color of the cell edges, set to `None` if you dont want an edge.
+        alpha: float, optional
+            Should be set between 0 and 1. Sets a transparancy value for the element faces. 
+        vmin : float, optional
+            Minimum limit for the color bar scale.
+        vmax : float, optional
+            Maximum limit for the color bar scale.
+        attr : string, optional
+            Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+            as the key for this dictionary.
+
+        Returns
+        ----------
+        figure : matplotlib figure 
+            Figure handle for the plotted mesh object.
         """
         
         if not isinstance(color_map,str):#check the color map variable is a string
@@ -3379,8 +3415,8 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     return mesh
 
 #%% column mesh 
-def prism_mesh(elec_x,elec_y,elec_z, poly=None, z_lim= None, 
-               radius = None, file_path='column_mesh.geo',
+def prism_mesh(elec_x,elec_y,elec_z, 
+               file_path='column_mesh.geo',
                keep_files=True,
                show_output=True, 
                path='exe', dump=print,
