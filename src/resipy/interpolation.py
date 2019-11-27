@@ -344,9 +344,10 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
     
     #compute new values inside survey
     znew = [pnt_interp(xnew[i], ynew[i], xknown, yknown, zknown,fudgex,fudgey,method) for i in range(num_pts)]
-    znew = np.array(znew)
+
+    znew = np.array(znew,dtype='float64')#need to specify data type on unix 
     # its worth parallising the function in the future over 2 cores for more speed 
-        
+    
     idx_nan = np.isnan(znew) # boolian indexes of where nans are
     idx_num = np.where(idx_nan == False)
     #extrapolate nans using nearest nieghbough interpolation

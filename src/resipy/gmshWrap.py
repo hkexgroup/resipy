@@ -1214,16 +1214,16 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
     #add points to file at z = zero 
     no_pts = 1
     loop_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, max_x, max_y, 0))#multiply by 2 grow the elements away from electrodes 
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, max_x, max_y, 0))#multiply by 2 grow the elements away from electrodes 
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, max_x, min_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, max_x, min_y, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, min_x, min_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, min_x, min_y, 0))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*2};\n"%(no_pts, min_x, max_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, min_x, max_y, 0))
     
     #add line loop
     no_lns = 0 
