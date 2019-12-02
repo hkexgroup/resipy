@@ -995,7 +995,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
 
 
-    def filterRecip(self, index=-1, percent=20):
+    def filterRecip(self, percent=20,index=-1):
         """Filter on reciprocal errors.
 
         Parameters
