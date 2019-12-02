@@ -2138,6 +2138,13 @@ class Mesh:
         for k in look_up_keys:
             look_up_array = np.array(look_up_cache[k])
             self.attr_cache[k] = look_up_array[idxes]
+            
+    def trans_mesh(self,x,y,z):
+        """Translate mesh 
+        """
+        self.node_x = np.array(self.node_x)+x
+        self.node_y = np.array(self.node_y)+y
+        self.node_z = np.array(self.node_z)+z
                                  
 #%% triangle centriod 
 def tri_cent(p,q,r):
