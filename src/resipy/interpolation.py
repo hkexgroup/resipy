@@ -286,8 +286,8 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
         
         
     #preallocate array for new z coordinates / interpolated values  
-    znew = np.zeros_like(xnew)
-    znew.fill(np.nan)
+#    znew = np.zeros_like(xnew)
+#    znew.fill(np.nan)
     #outside = np.logical_not(inside)
     num_pts = len(xnew)
     
@@ -345,11 +345,11 @@ def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='biline
     #compute new values inside survey
     znew = [pnt_interp(xnew[i], ynew[i], xknown, yknown, zknown,fudgex,fudgey,method) for i in range(num_pts)]
 
-    znew = np.array(znew,dtype='float64')#need to specify data type on unix 
+    znew = np.array(znew,dtype='float64').flatten()#need to specify data type on unix 
     # its worth parallising the function in the future over 2 cores for more speed 
     
-    idx_nan = np.isnan(znew) # boolian indexes of where nans are
-    idx_num = np.where(idx_nan == False)
+    idx_nan = np.isnan(znew).flatten() # boolian indexes of where nans are
+    idx_num = np.invert(idx_nan).flatten()
     #extrapolate nans using nearest nieghbough interpolation
     if extrapolate:
         #combine known and interpolated values 
