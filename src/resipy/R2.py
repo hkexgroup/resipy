@@ -995,7 +995,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
 
 
-    def filterRecip(self, index=-1, percent=20):
+    def filterRecip(self, percent=20,index=-1):
         """Filter on reciprocal errors.
 
         Parameters
@@ -1045,15 +1045,26 @@ class R2(object): # R2 master class instanciated by the GUI
             s.filterNegative()
             
     
-    def filterAppResist(self,threshold=(0,2000)):
+    def filterAppResist(self, index=-1, vmin=None, vmax=None):
         """Filter measurements by apparent resistivity for surface surveys 
         Parameters
         -----------
-        threshold: tuple, list
-            2by 1 array of minimum and maxium apparent resistivity values  
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
+        index : int, optional
+            Index of the survey on which to apply the processing. If the
+            processing is to be applied to all surveys then specifiy
+            `index=-1` (default).
         """
-        for s in self.surveys:
-            s.filterAppResist(threshold)
+        numRemoved = 0
+        if index == -1: # apply to all surveys
+            for s in self.surveys:
+                numRemoved += s.filterAppResist(vmin=vmin, vmax=vmax)
+        else:
+            numRemoved = self.surveys[index].filterAppResist(vmin=vmin, vmax=vmax)
+        return numRemoved
 
 
     def computeDOI(self):

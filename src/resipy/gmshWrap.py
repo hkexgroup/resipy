@@ -1597,11 +1597,12 @@ def column_mesh(electrodes, poly=None, z_lim= None,
     elec_x = electrodes[0]
     elec_y = electrodes[1]
     elec_z = electrodes[2]
-    uni_z = np.unique(elec_z) # unique z values 
+    #uni_z = np.unique(elec_z) # unique z values 
     
     if z_lim is None:
-        print('zlim not passed')
+#        print('zlim not passed')
         z_lim = [min(elec_z),max(elec_z)]
+
     if radius is None:
         radius  = max(electrodes[0])
     if cl == -1:
@@ -1676,35 +1677,33 @@ def column_mesh(electrodes, poly=None, z_lim= None,
             
     surface = 1
     
-    if min(uni_z)<z_lim[0]:
+    if min(elec_z)<z_lim[0] or max(elec_z) > z_lim[1]:
         fh.close()
-        raise ValueError ("Minimum z coordinate of column electrodes is out of bounds")
+        raise ValueError ("Z coordinate of column electrodes is out of bounds")
     
+    allz = np.append(elec_z,z_lim)
+    
+    uni_z = np.unique(allz)
     #extrude surfaces 
     fh.write("//Extrude planes in between each electrode.\n") 
     seg = 0 # segment number 
-    if uni_z[0] > z_lim[0]:
-        diff = uni_z[0] - z_lim[0]   
-        seg += 1         
-        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};//Base of column to first electrode on the side of the column\n'%(seg,diff,surface,elemz))
-        surface += edges + 1
         
     for i in range(0,len(uni_z)-1):
         #work out the amount to extrude 
         diff = uni_z[i+1] - uni_z[i]    
         seg += 1          
-        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};\n'%(seg,diff,surface,elemz))
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};'%(seg,diff,surface,elemz))
         surface += edges + 1
-        
-    if uni_z[-1] < z_lim[1]:
-        diff =  z_lim[1] - uni_z[-1]     
-        seg += 1  
-        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};//Last electrode on the side of the column to the top of the column\n'%(seg,diff,surface,elemz))
-        surface += edges + 1
+        if i==0:
+            fh.write('//Base of column\n')
+        elif i == len(uni_z)-2:
+            fh.write('//top of column\n')
+        else:
+            fh.write('\n')
         
     fh.write('Physical Volume(1) = {')
     for i in range(seg-1):
         fh.write('seg%i[1],'%(i+1))
-    fh.write('seg%i[1]};'%(i+1))
+    fh.write('seg%i[1]};'%(seg))
         
     fh.close()
