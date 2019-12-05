@@ -1811,26 +1811,38 @@ class App(QMainWindow):
                 tabPreProcessing.setTabText(0, 'Reciprocal Filtering')
                 recipErrorLabel.setText('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
                 recipErrorInputLabel.show()
+                rhoRangeInputLabel.hide()
+                rhoRangeMinInput.hide()
+                rhoRangeMaxInput.hide()
                 recipErrorInputLine.show()
                 recipErrorInputLine.setText('')
-                recipErrorPltbtn.setText('Apply filters')
+                rhoRangeMinInput.setText('')
+                rhoRangeMaxInput.setText('')
                 recipErrorUnpairedBtn.show()
                 recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
                 recipErrorBottomTabs.setTabEnabled(1, True)
             if recipPresence == False:
                 tabPreProcessing.setTabText(0, 'Manual Filtering')
-                recipErrorLabel.setText('<b>Select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
+                recipErrorLabel.setText('<b>Define a range of apparent resistivity to keep and/or select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
                 recipErrorInputLabel.hide()
+                rhoRangeInputLabel.show()
+                rhoRangeMinInput.show()
+                rhoRangeMaxInput.show()
                 recipErrorInputLine.setText('')
+                rhoRangeMinInput.setText('')
+                rhoRangeMaxInput.setText('')
                 recipErrorInputLine.hide()
                 recipErrorUnpairedBtn.hide()
-                recipErrorPltbtn.setText('Remove selected')
-                recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
+                recipErrorPltbtn.setToolTip('Removes measuremtns that are out side of defined "Apparent Resistivity" range and/or are manually selected!')
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
         def plotManualFiltering(index=0):
-            mwManualFiltering.setCallback(self.r2.filterManual)
-            mwManualFiltering.replot(index=index)
+            try:
+                mwManualFiltering.setCallback(self.r2.filterManual)
+                mwManualFiltering.replot(index=index)
+            except ValueError as e:
+                errorDump(e)
+                mwManualFiltering.clear()
 
         def errHist(index=0):
             if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
@@ -1867,10 +1879,17 @@ class App(QMainWindow):
                     else:
                         infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
                 else:
+                    numRhoRangeRemoved = 0
+                    rhoRangeText = ''
+                    if rhoRangeMinInput.text() != '' or rhoRangeMaxInput.text() != '':
+                        vmin = float(rhoRangeMinInput.text()) if rhoRangeMinInput.text() != '' else None
+                        vmax = float(rhoRangeMaxInput.text()) if rhoRangeMaxInput.text() != '' else None
+                        numRhoRangeRemoved = self.r2.filterAppResist(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
+                        rhoRangeText = '%i measurements outside of the range and ' % numRhoRangeRemoved
                     if numElecRemoved != 0:
-                        infoDump("%i selected electrodes and %i measurements removed!" % (numElecRemoved, numSelectRemoved))
+                        infoDump("%s%i selected electrodes and %i measurements removed!" % (rhoRangeText, numElecRemoved, numSelectRemoved))
                     else:
-                        infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                        infoDump("%s%i selected measurements removed!" % (rhoRangeText, numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
                     for s in self.r2.surveys:
                         s.dfPhaseReset = s.df
@@ -1916,14 +1935,31 @@ class App(QMainWindow):
             plotManualFiltering(self.recipErrDataIndex)
             errFitType.setCurrentIndex(0)
             plotError()
+            recipErrorInputLine.setText('')
+            rhoRangeMinInput.setText('')
+            rhoRangeMaxInput.setText('')
             infoDump('%i measurements restored!' % numRestored)
 
 
         recipErrorInputLabel = QLabel('Percent error threshold:')
-
         recipErrorInputLine = QLineEdit('')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
+        
+        rhoRangeInputLabel = QLabel('Apparent Resistivity:')
+        rhoRangeInputLabel.hide()
+        
+        rhoRangeMinInput = QLineEdit('')
+        rhoRangeMinInput.setPlaceholderText('min [Ωm]')
+        rhoRangeMinInput.setFixedWidth(80)
+        rhoRangeMinInput.setValidator(QDoubleValidator())
+        rhoRangeMinInput.hide()
+        
+        rhoRangeMaxInput = QLineEdit('')
+        rhoRangeMaxInput.setPlaceholderText('max [Ωm]')
+        rhoRangeMaxInput.setFixedWidth(80)
+        rhoRangeMaxInput.setValidator(QDoubleValidator())
+        rhoRangeMaxInput.hide()
 
 
         def recipErrorUnpairedFunc():
@@ -1993,16 +2029,26 @@ class App(QMainWindow):
         recipErrorLabelLayout.addWidget(recipErrorfnamesComboLabel)
         recipErrorLabelLayout.addWidget(recipErrorfnamesCombo)
         recipErrorTopLayout.addLayout(recipErrorLabelLayout)
-
+        
+        
         recipErrorInputlayout = QHBoxLayout()
         recipErrorTopLayout.addLayout(recipErrorInputlayout)
-
+        
         recipErrorInputLeftlayout = QHBoxLayout()
         recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
         recipErrorInputLeftlayoutL = QHBoxLayout()
         recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
         recipErrorInputLeftlayoutL.addWidget(recipErrorInputLabel)
+        recipErrorInputLeftlayoutL.addWidget(rhoRangeInputLabel)
         recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
+        
+        recipErrorInputLineLayout = QHBoxLayout()
+        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
+        recipErrorInputLineLayout.addWidget(rhoRangeMinInput)
+        recipErrorInputLineLayout.addWidget(rhoRangeMaxInput)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
+
         recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
 
         recipErrorBtnLayout = QHBoxLayout()
@@ -2012,13 +2058,7 @@ class App(QMainWindow):
         recipErrorBtnLayout.addWidget(recipErrorResetbtn)
         recipErrorBtnLayout.addWidget(recipErrorSavebtn)
         recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
-
-        recipErrorInputLineLayout = QHBoxLayout()
-        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
-        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
-        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
-
-       
+               
         #tab widgets for the graphs
         recipErrorBottomTabs = QTabWidget()
 
@@ -2123,11 +2163,11 @@ class App(QMainWindow):
         phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
         rangelabel = QLabel('Phase range filtering:')
-        phivminlabel = QLabel('-φ min:')
+        phivminlabel = QLabel('-φ<sub>min</sub>:')
         phivminEdit = QLineEdit()
         phivminEdit.setFixedWidth(50)
         phivminEdit.setValidator(QDoubleValidator())
-        phivmaxlabel = QLabel('-φ max:')
+        phivmaxlabel = QLabel('-φ<sub>max</sub>:')
         phivmaxEdit = QLineEdit()
         phivmaxEdit.setFixedWidth(50)
         phivmaxEdit.setValidator(QDoubleValidator())
@@ -2234,12 +2274,12 @@ class App(QMainWindow):
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
         filtreset.setFixedWidth(150)
-        phiCbarminlabel = QLabel('Colorbar min: ')
+        phiCbarminlabel = QLabel('Colorbar<sub>min</sub>: ')
         phiCbarminEdit = QLineEdit()
         phiCbarminEdit.setFixedWidth(50)
         phiCbarminEdit.setValidator(QDoubleValidator())
         phiCbarminEdit.setText('0')
-        phiCbarMaxlabel = QLabel('Colorbar Max: ')
+        phiCbarMaxlabel = QLabel('Colorbar<sub>Max</sub>: ')
         phiCbarMaxEdit = QLineEdit()
         phiCbarMaxEdit.setFixedWidth(50)
         phiCbarMaxEdit.setValidator(QDoubleValidator())
