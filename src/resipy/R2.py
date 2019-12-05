@@ -1045,15 +1045,23 @@ class R2(object): # R2 master class instanciated by the GUI
             s.filterNegative()
             
     
-    def filterAppResist(self,threshold=(0,2000)):
+    def filterAppResist(self, index=-1, threshold=(0,2000)):
         """Filter measurements by apparent resistivity for surface surveys 
         Parameters
         -----------
         threshold: tuple, list
-            2by 1 array of minimum and maxium apparent resistivity values  
+            2by 1 array of minimum and maxium apparent resistivity values
+        index : int, optional
+            Index of the survey on which to apply the processing. If the
+            processing is to be applied to all surveys then specifiy
+            `index=-1` (default).
         """
-        for s in self.surveys:
-            s.filterAppResist(threshold)
+        numRemoved = 0
+        if index == -1: # apply to all surveys
+            for s in self.surveys:
+                numRemoved += s.filterAppResist(threshold)
+        else:
+            numRemoved = self.surveys[index].filterAppResist(threshold)
 
 
     def computeDOI(self):

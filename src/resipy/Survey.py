@@ -1651,12 +1651,14 @@ class Survey(object):
             self.filterData(i2keep)
             print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
     
-    def filterAppResist(self,threshold=[0,2000]):
+    def filterAppResist(self, threshold=[0,2000], debug=True):
         """Filter measurements by apparent resistivity for surface surveys 
         Parameters
         -----------
         threshold: tuple, list
             2by 1 array of minimum and maxium apparent resistivity values  
+        debug : bool, optional
+            Print output to screen. Default is True.
         """
         df = self.df.copy()
         self.computeK()
@@ -1664,8 +1666,14 @@ class Survey(object):
         ikeep = (appRes>threshold[0]) & (appRes<threshold[1])
         self.df = df[ikeep]
         self.df.reset_index()
-    
-    
+        
+        if debug:
+            numRemoved = len(df)-len(self.df)
+            msgDump = "%i measurements outside [%s,%S] removed!" % (threshold[0], threshold[1])
+            print(msgDump)
+            return numRemoved
+
+
     def shuntIndexes(self, debug=True): 
         """Normalise the indexes the sequence matrix to start at 1.
         
