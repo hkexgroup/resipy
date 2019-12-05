@@ -1620,7 +1620,7 @@ class R2(object): # R2 master class instanciated by the GUI
             content = ''
             df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean']]
             df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0'})
-            for i, s in enumerate(self.surveys[1:]):
+            for i, s in enumerate(self.surveys):
                 if 'resist0' in s.df.columns:
                     s.df = s.df.drop('resist0', axis=1)
                 if 'recipMean0' in s.df.columns:
@@ -1646,12 +1646,10 @@ class R2(object): # R2 master class instanciated by the GUI
                 res0Bool = False if self.param['reg_mode'] == 1 else True
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
-                                            isubset=indexes[i+1], threed=threed)
-                content = content + str(protocol.shape[0]) + '\n'
-                content = content + protocol.to_csv(sep='\t', header=False, index=False)
-
+                                            isubset=indexes[i], threed=threed)
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
+                    print('+++++++++', s.name)
                     if os.path.exists(refdir) == False:
                         os.mkdir(refdir)
                     if 'mesh.dat' in os.listdir(self.dirname):
@@ -1661,6 +1659,10 @@ class R2(object): # R2 master class instanciated by the GUI
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
                     s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
+                else:
+                    content = content + str(protocol.shape[0]) + '\n'
+                    content = content + protocol.to_csv(sep='\t', header=False, index=False)
+
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
