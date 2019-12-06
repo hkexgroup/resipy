@@ -125,8 +125,7 @@ def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacin
 # 2D half space problem 
 def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                file_path='mesh.geo',doi=-1,dp_len=-1,cl=-1,cl_factor=2):
-    """
-    writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
+    """Writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
     Parameters
     ----------
@@ -1706,4 +1705,114 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         fh.write('seg%i[1],'%(i+1))
     fh.write('seg%i[1]};'%(seg))
         
+    fh.close()
+    
+    
+#%% Make an arbitary 2D shape 
+def mesh2d(electrodes, poly=None, origin = (0,0),
+                radius = None, file_path='2d_mesh.geo', cl=-1):
+    """Make a prism mesh 
+    Parameters
+    ------------
+    electrodes: list of array likes
+        first column/list is the x coordinates of electrode positions and so on ... 
+    poly: list, tuple, optional 
+        Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+        x and y coordinates, ie (poly_x, poly_y)
+    z_lim: list, tuple, optional 
+        top and bottom z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        radius of column
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    """
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+    
+    elec_x = np.array(electrodes[0])
+    elec_y = np.array(electrodes[1])
+    elec_z = np.array(len(elec_x)*[0])
+    
+    ox = origin[0]
+    oy = origin[1]
+
+    if radius is None:
+        radius  = max(electrodes[0])
+    if cl == -1:
+        dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
+        cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance   
+        
+    r = radius
+    
+    num_elec = len(elec_z)
+
+    fh = open(file_path,'w')
+    fh.write("// ResIPy 2d shape mesh script\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write("cl=%f;\n"%cl)
+    
+    if poly is None:
+        fh.write("// Make a circle\n")
+        fh.write("Point (1) = {%f,%f,%f,cl};\n"%(ox,oy,0))
+        fh.write("Point (2) = {%f,%f,%f,cl};\n"%(ox+r,oy,0))
+        fh.write("Point (3) = {%f,%f,%f,cl};\n"%(ox,oy-r,0))
+        fh.write("Point (4) = {%f,%f,%f,cl};\n"%(ox-r,oy,0))
+        fh.write("Point (5) = {%f,%f,%f,cl};\n"%(ox,oy+r,0))
+        fh.write("Circle (1) = {2,1,3};\n")
+        fh.write("Circle (2) = {3,1,4};\n")
+        fh.write("Circle (3) = {4,1,5};\n")
+        fh.write("Circle (4) = {5,1,2};\n")
+
+        fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
+        fh.write("Plane Surface(1) = {1};\n")
+        fh.write("Point {1} In Surface {1};\n\n")
+        pt_no = 6
+        
+        #work out which electrodes are inside or on the end of the column 
+        dist = np.sqrt((elec_x-ox)**2 + (elec_y-oy)**2)
+        inside = dist+0.00001 < radius 
+        x = [ox,ox-r,ox+r]
+        y = [oy,oy-r,oy+r]
+    else:
+        poly_x = poly[0]
+        poly_y = poly[1]
+        pt_no = 0
+        #make a node for each vertex in the polygon 
+        for i in range(len(poly_x)):
+            pt_no += 1
+            fh.write("Point (%i) = {%f,%f,%f,cl};//polygon point\n"%(pt_no,poly_x[i],poly_y[i],0))
+        # connect the nodes with lines 
+        ln_no = 0
+        for i in range(pt_no-1):
+            ln_no += 1
+            fh.write("Line (%i) = {%i,%i};//polygon line\n"%(ln_no,i+1,i+2))
+        ln_no+=1
+        fh.write("Line (%i) = {%i,%i};//closing line\n"%(ln_no,pt_no,1))
+        #form a line loop and surface
+        fh.write("Line Loop(1) = {")
+        [fh.write('%i,'%(i+1)) for i in range(ln_no-1)]
+        fh.write("%i};\n"%ln_no)
+        fh.write("Plane Surface(1) = {1};\n\n")
+        
+        #work out which electrodes are inside or on the end of the column 
+        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        x = poly_x
+        y = poly_y
+    
+    if all(inside) == False:
+        fh.write("//Points inside the shape\n")
+         # ignore repeated vertices 
+        for i in range(num_elec):
+            if inside[i] and elec_x[i] not in x or elec_y[i] not in y:
+                pt_no+=1
+                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],0))
+                fh.write("Point {%i} In Surface {1};\n"%pt_no)
+                x.append(elec_x[i])
+                y.append(elec_y[i])
+    
+    fh.write("//End\n")    
     fh.close()
