@@ -209,10 +209,6 @@ Previous releases
 -----------------
 Below are the links to previous releases of ResIPy/pyR2. Note that these releases may contain bugs/issues and it is recommended to always use
 the latest release available.
-- v2.0.0
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.0-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.0/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.0-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.0/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.0-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.0/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
 - v1.1.9
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-macOS.dmg)
