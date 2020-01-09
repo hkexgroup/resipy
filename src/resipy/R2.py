@@ -13,6 +13,7 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
+import resipy.interpolation as interp # for cropSurface()
 from matplotlib.path import Path
 
 OS = platform.system()
@@ -3189,8 +3190,43 @@ class R2(object): # R2 master class instanciated by the GUI
                     z = x[:,4]
                 else:
                     z = x[:,3]
-                cax = ax.tricontourf(triang, z, extend='both')
-                # TODO might want to crop surface here as well
+#                cax = ax.tricontourf(triang, z, extend='both')
+                
+                if self.mesh.surface is not None:
+                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+                    xc, yc, zc = x[:,0], x[:,1], z
+                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+                    xc = np.r_[xc, xf]
+                    yc = np.r_[yc, yf]
+                    zc = np.r_[zc, zf]
+                triang = tri.Triangulation(xc, yc) # build grid based on centroids
+
+                # make sure none of the triangle centroids are above the
+                # line of electrodes
+                def cropSurface(triang, xsurf, ysurf):
+                    trix = np.mean(triang.x[triang.triangles], axis=1)
+                    triy = np.mean(triang.y[triang.triangles], axis=1)
+                    
+                    i2keep = np.ones(len(trix), dtype=bool)
+                    for i in range(len(xsurf)-1):
+                        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+                        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+                        ie = ilateral & iabove
+                        i2keep[ie] = False
+                        if np.sum(ie) > 0: # if some triangles are above the min electrode
+                            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+                            offset = ysurf[i] - slope * xsurf[i]
+                            predy = offset + slope * trix[ie]
+                            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
+                            i2keep[np.where(ie)[0][ie2]] = True
+                    return i2keep
+                
+                if self.mesh.surface is not None:
+                    try:
+                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.surface[:,1]))
+                    except Exception as e:
+                        print('Error in Mesh.show for contouring: ', e)
+                cax = ax.tricontourf(triang, zc, extend='both')
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                 ax.set_aspect('equal')
