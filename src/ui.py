@@ -837,6 +837,8 @@ class App(QMainWindow):
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
                 self.ftype = '' # let to be guessed
+        fileTypeLabel = QLabel('File format:')
+        fileTypeLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         fileType = QComboBox()
         fileType.addItem('Syscal')
         fileType.addItem('Protocol')
@@ -1039,6 +1041,7 @@ class App(QMainWindow):
 
         hbox4 = QHBoxLayout()
         hbox4.addWidget(wdBtn)
+        hbox4.addWidget(fileTypeLabel)
         hbox4.addWidget(fileType)
 #        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
@@ -2856,13 +2859,14 @@ class App(QMainWindow):
 
 
         # additional options for quadrilateral mesh
-        nnodesLabel = QLabel('Number of nodes between electrode (4 -> 10):')
+        nnodesLabel = QLabel('Number of elements between electrodes (1 -> 10):')
 #        nnodesEdit = QLineEdit()
 #        nnodesEdit.setValidator(QIntValidator())
 #        nnodesEdit.setText('4')
         nnodesSld = QSlider(Qt.Horizontal)
-        nnodesSld.setMinimum(4)
+        nnodesSld.setMinimum(1)
         nnodesSld.setMaximum(10)
+        nnodesSld.setValue(4)
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
@@ -4332,7 +4336,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             cmap = self.displayParams['cmap']
             sensPrc = self.displayParams['sensPrc']
             if self.r2.typ[-1] == '2':
-                mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
+                mwInvResult.replot(threed=False, aspect=self.plotAspect, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
                                    vmin=vmin, vmax=vmax, color_map=cmap, sensPrc=sensPrc)
             else:
