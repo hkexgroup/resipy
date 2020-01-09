@@ -205,9 +205,9 @@ take up space. Navigate to `C:\Users\<username>\AppData\Local\Temp` if you want 
 be automatically deleted by Windows or third party apps (such as CC cleaner) when there is low disk-space.
 
 
-Previous releases
+All releases
 -----------------
-Below are the links to previous releases of ResIPy/pyR2. Note that these releases may contain bugs/issues and it is recommended to always use
+Below are the links to current and previous releases of ResIPy/pyR2. Note that previous releases may contain bugs/issues and it is recommended to always use
 the latest release available.
 - v2.0.1
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-windows.exe)
