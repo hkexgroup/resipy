@@ -3223,7 +3223,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 
                 if self.mesh.surface is not None:
                     try:
-                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.surface[:,1]))
+                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
                     except Exception as e:
                         print('Error in Mesh.show for contouring: ', e)
                 cax = ax.tricontourf(triang, zc, extend='both')
