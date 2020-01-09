@@ -1038,7 +1038,7 @@ class App(QMainWindow):
         btnInvNow.clicked.connect(btnInvNowFunc)
         btnInvNow.setEnabled(False)
         btnInvNow.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
-
+        
         hbox4 = QHBoxLayout()
         hbox4.addWidget(wdBtn)
         hbox4.addWidget(fileTypeLabel)
@@ -4949,6 +4949,7 @@ USA: Trelgol Publishing, (2006).
         layout.addWidget(errorLabel)
         self.table_widget.setLayout(layout)
         self.setCentralWidget(self.table_widget)
+        self.showMaximized() # maximizing window on start
         self.show()
 
 
