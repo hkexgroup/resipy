@@ -2750,9 +2750,9 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         x columns where the electrodes are. 
     """
     #formalities, error check
-    if elemx < 4:
-        print('elemx too small, set up to 4 at least')
-        elemx = 4
+#    if elemx < 4:
+#        print('elemx too small, set up to 4 at least')
+#        elemx = 4
         
     if surface_x is None or surface_z is None:
         surface_x = np.array([])
