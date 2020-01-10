@@ -3199,7 +3199,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     xc = np.r_[xc, xf]
                     yc = np.r_[yc, yf]
                     zc = np.r_[zc, zf]
-                triang = tri.Triangulation(xc, yc) # build grid based on centroids
+                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
 
                 # make sure none of the triangle centroids are above the
                 # line of electrodes
@@ -3226,6 +3226,10 @@ class R2(object): # R2 master class instanciated by the GUI
                         triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
                     except Exception as e:
                         print('Error in Mesh.show for contouring: ', e)
+                
+                if self.mesh.surface is None:
+                    zc = z.copy()
+                    
                 cax = ax.tricontourf(triang, zc, extend='both')
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
