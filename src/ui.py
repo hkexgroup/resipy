@@ -4,7 +4,17 @@ import os
 import sys
 import time
 #a = time.time()
-print('importing pyqt')
+print(
+'''
+============================================================
+d8888b. d88888b .d8888. d888888b d8888b. db    db
+88  `8D 88'     88'  YP   `88'   88  `8D `8b  d8'
+88oobY' 88ooooo `8bo.      88    88oodD'  `8bd8' 
+88`8b   88~~~~~   `Y8b.    88    88~~~      88   
+88 `88. 88.     db   8D   .88.   88         88   
+88   YD Y88888P `8888Y' Y888888P 88         YP   
+============================================================
+''')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget,
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame,
@@ -146,11 +156,11 @@ if getattr(sys, 'frozen', False):
 else:
         # we are running in a normal Python environment
         bundle_dir = os.path.dirname(os.path.abspath(__file__))
-print( 'we are',frozen,'frozen')
-print( 'bundle dir is', bundle_dir )
-print( 'sys.argv[0] is', sys.argv[0] )
-print( 'sys.executable is', sys.executable )
-print( 'os.getcwd is', os.getcwd() )
+#print( 'we are',frozen,'frozen')
+#print( 'bundle dir is', bundle_dir )
+#print( 'sys.argv[0] is', sys.argv[0] )
+#print( 'sys.executable is', sys.executable )
+#print( 'os.getcwd is', os.getcwd() )
 
 #%% MatplotlibWidget class
 class MatplotlibWidget(QWidget):
@@ -1635,7 +1645,6 @@ class App(QMainWindow):
         def importBtnFunc():
             restartFunc()
             self.r2 = R2()
-            print('importing data')
             colIndex = []
             newHeaders = []
             vals = getBoxes([aBox,bBox,mBox,nBox])
@@ -5084,7 +5093,6 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
-    print(os.path.join(bundle_dir, 'logo.png'))
     splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
@@ -5107,7 +5115,6 @@ if __name__ == '__main__':
     progressBar.setValue(1)
     app.processEvents()
 
-    print('importing matplotlib')
     import matplotlib
     matplotlib.use('Qt5Agg')
 
@@ -5123,15 +5130,12 @@ if __name__ == '__main__':
 #    fig.add_subplot(111, projection='3d')
 #    fig.show()
 
-    print('importing numpy')
     import numpy as np
     progressBar.setValue(4)
     app.processEvents()
-    print ('importing pandas')
     import pandas as pd
     progressBar.setValue(6)
     app.processEvents()
-    print('importing python libraries')
     from datetime import datetime
     progressBar.setValue(8)
     app.processEvents()
