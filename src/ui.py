@@ -518,8 +518,6 @@ class App(QMainWindow):
             mwInvError.clear()
             mwInvError2.clear()
 
-
-
 #        restartBtn = QPushButton('Reset UI')
 #        restartBtn.setAutoDefault(True)
 #        restartBtn.clicked.connect(restartFunc)
@@ -964,7 +962,6 @@ class App(QMainWindow):
                 except:
                     errorDump('File is not recognized.')
                     pass
-                print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     buttonfr.show()
                     recipOrNoRecipShow(recipPresence = False)
@@ -1200,6 +1197,36 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
+        
+        # update pseudo-sections due to electrodes update
+        def updateElec():
+            try:
+                elec = elecTable.getTable()
+                self.r2.setElec(elec)
+                self.r2.mesh = None
+                mwMesh.clear()
+                plotPseudo()
+                plotManualFiltering()
+                if self.r2.typ[0] == 'c':
+                    plotPseudoIP()
+            except Exception as e:
+                errorDump('Error updating pseudosection: ' + e)
+        
+        # tab focus events functions
+        self.currentImportTab = 0
+        self.currentTab = 0
+        def logImportTab(index):
+            if index != 1 and self.currentImportTab == 1: # elec tab looses focus
+                updateElec()
+            self.currentImportTab = index
+        def logTab(index):
+            if index != 0 and self.currentImportTab == 1:
+                # elec tab still visible but we moved out to another
+                # higher level tab
+                updateElec()
+            self.currentTab = index
+        tabImporting.currentChanged.connect(logImportTab)
+        tabs.currentChanged.connect(logTab)
 
         def plotPseudo():
             mwPseudo.setCallback(self.r2.showPseudo)
