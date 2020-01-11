@@ -4221,7 +4221,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.rmsIndexIP = []
             self.r2.param['lineTitle'] = titleEdit.text()
             if self.r2.mesh is None:
-                meshQuadFunc() # generate default mesh
+                meshTrianFunc() # generate default mesh
+                
 
             def func(text):
 #                print('t', text)
