@@ -68,6 +68,9 @@ r2help = {
                 "to set <code>max_iterations</code> to at least 20.</p>",
 'min_step' : "<p><code>min_step</code> is the minimum step length for attempting to improve solution. This is "
             "usually set to 0.001 to 0.01.</p>",
-'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.'
-    }
+'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.',
+'modelDOI' : "<p>If checked, the inversion will be rerun with a background an order of magnitude more resistive."
+            " The ration of the difference of inverted value divided by the difference in initial resistivity gives"
+            " a new estimate of the sensitivity and depth of investigation of the inversion.</p>"
+}
 
