@@ -801,16 +801,16 @@ class App(QMainWindow):
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
 
-        self.ftype = 'Syscal' # by default
-        self.fformat = 'Comma Separated Values (*.csv)' # default
+        self.ftype = 'Protocol' # by default
+        self.fformat = 'DAT (Tab delimited) (*.dat)' # default
 
         def fileTypeFunc(index):
             if index == 0:
-                self.ftype = 'Syscal'
-                self.fformat = 'Comma Separated Values (*.csv)'
-            elif index == 1:
                 self.ftype = 'Protocol'
                 self.fformat = 'DAT (Tab delimited) (*.dat)'
+            elif index == 1:
+                self.ftype = 'Syscal'
+                self.fformat = 'Comma Separated Values (*.csv)'            
             elif index == 2:
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat)'
@@ -840,8 +840,8 @@ class App(QMainWindow):
         fileTypeLabel = QLabel('File format:')
         fileTypeLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         fileType = QComboBox()
-        fileType.addItem('Syscal')
         fileType.addItem('Protocol')
+        fileType.addItem('Syscal')
         fileType.addItem('Protocol w/ IP')
         fileType.addItem('Res2Dinv')
         fileType.addItem('BGS Prime')
