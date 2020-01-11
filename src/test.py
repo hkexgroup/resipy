@@ -45,6 +45,9 @@ k = R2()
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
 
+k = R2(typ='R3t')
+k.create3DSurvey(testdir + 'dc-2d-timelapse/data')
+
 timings['methods-importing'] = time.time() - tstart
 
 #%% filtering

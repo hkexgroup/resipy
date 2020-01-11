@@ -537,6 +537,7 @@ class App(QMainWindow):
                 dimForward.setChecked(False)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
+                regular3DCheck.setVisible(False)
                 
                 #Pre-processing tab
                 recipErrorBottomTabs.setTabEnabled(0, True)
@@ -584,6 +585,7 @@ class App(QMainWindow):
                 dimInverse.setChecked(True)
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
+                regular3DCheck.setVisible(True)
                 
                 #Pre-processing tab
                 recipErrorBottomTabs.setTabEnabled(0, False)
@@ -717,6 +719,21 @@ class App(QMainWindow):
         batchCheck.stateChanged.connect(batchCheckFunc)
         batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings and same electrodes.')
         
+        def regular3DFunc(state):
+            if state == Qt.Checked:
+                lineSpacing.setVisible(True)
+                lineSpacingLabel.setVisible(True)
+                create3Dbtn.setVisible(True)
+                buttonf.setVisible(False)
+            else:
+                lineSpacing.setVisible(False)
+                lineSpacingLabel.setVisible(False)
+                create3Dbtn.setVisible(False)
+                buttonf.setVisible(True)
+        regular3DCheck = QCheckBox('3D survey from regular 2D lines')
+        regular3DCheck.stateChanged.connect(regular3DFunc)
+        regular3DCheck.setVisible(False)
+        
         # select inverse or forward model
         def dimForwardFunc():
             self.iForward = True
@@ -778,6 +795,7 @@ class App(QMainWindow):
         dimInvGroup.setStyleSheet('QGroupBox{border: 0px;'
                                 'border-style:inset;}')
 
+        
 
         hbox1 = QHBoxLayout()
 #        hbox1.addWidget(restartBtn)
@@ -792,6 +810,7 @@ class App(QMainWindow):
         hbox2.addWidget(timeLapseCheck)
         hbox2.addWidget(batchCheck)
         hbox2.addWidget(boreholeCheck)
+        hbox2.addWidget(regular3DCheck)
 
 
         # ask for working directory, and survey file to input
@@ -1035,6 +1054,62 @@ class App(QMainWindow):
         buttonfr.hide()
         buttonfr.setToolTip('Import file with reciprocal measurements (not mandatory).')
 
+        lineSpacing = QLineEdit('1')
+        lineSpacing.setValidator(QDoubleValidator())
+        lineSpacing.setMaximumWidth(100)
+        lineSpacing.setFixedWidth(120)
+        lineSpacing.setVisible(False)
+        lineSpacingLabel = QLabel('Line spacing [m]:')
+        lineSpacingLabel.setVisible(False)
+        lineSpacingLabel.setFixedWidth(120)
+
+        def create3DFunc():
+            fnames, _ = QFileDialog.getOpenFileNames(tabImportingData, 'Select file(s)', self.datadir, self.fformat)            
+            if fnames != []:
+                fdir = os.path.dirname(fnames[0])
+                restartFunc()
+                self.datadir = os.path.dirname(fdir)
+                val = float(lineSpacing.text())
+                try:
+                    self.r2.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    infoDump('3D survey from regular 2D lines created.')
+                    ipCheck.setEnabled(True)
+                    psContourCheck.setEnabled(True)
+                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
+                    calcAspectRatio()
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
+                    recipOrNoRecipShow(recipPresence = True)
+                    buttonfr.hide()
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+                    errHist()
+                    plotManualFiltering()
+                    elecTable.initTable(self.r2.elec)
+                    tabImporting.setTabEnabled(1,True)
+                    if 'ip' in self.r2.surveys[0].df.columns:
+                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            dcaButton.setEnabled(True)
+                            dcaProgress.setEnabled(True)               
+                    plotPseudo()
+                    btnInvNow.setEnabled(True)
+                    activateTabs(True)
+                    nbElecEdit.setText(str(len(self.r2.elec)))
+                    elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
+                    fnamesCombo.hide()
+                    fnamesComboLabel.hide()
+                except Exception as e:
+                    print('Error in create3DFunc(): ', e)
+                    errorDump('File format is not recognized or not all files go the same number of electrodes')
+        
+        create3Dbtn = QPushButton('Select 2D lines')
+        create3Dbtn.clicked.connect(create3DFunc)
+        create3Dbtn.setVisible(False)
+
+
         def btnInvNowFunc():
             tabs.setCurrentIndex(5) # jump to inversion tab
             btnInvert.animateClick() # invert
@@ -1053,6 +1128,9 @@ class App(QMainWindow):
 #        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
         hbox4.addWidget(buttonfr)
+        hbox4.addWidget(lineSpacingLabel)
+        hbox4.addWidget(lineSpacing)
+        hbox4.addWidget(create3Dbtn)
         hbox4.addWidget(btnInvNow)
 
         def ipCheckFunc(state):
@@ -3691,6 +3769,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
         notCropping = QCheckBox()
         notCropping.stateChanged.connect(notCroppingFunc)
         advForm.addRow(notCroppingLabel, notCropping)
+        
+        modelDOILabel = QLabel('<a href="modelDOI">Model DOI</a>')
+        modelDOILabel.linkActivated.connect(showHelp2)
+        modelDOICheck = QCheckBox()
+        advForm.addRow(modelDOILabel, modelDOICheck)
 
         def flux_typeFunc(index):
             if index == 0:
@@ -4271,7 +4354,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 #                    text = f.read()
 #                func(text)
 #            else:
-            self.r2.invert(iplot=False, dump=func, modErr=self.modErr, parallel=self.parallel)
+            self.r2.invert(iplot=False, dump=func, modErr=self.modErr,
+                           parallel=self.parallel, modelDOI=modelDOICheck.isChecked())
             if self.parallel is True: # replace the log output by the R2.out
                 with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
                     text = f.read()

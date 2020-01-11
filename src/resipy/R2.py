@@ -490,6 +490,66 @@ class R2(object): # R2 master class instanciated by the GUI
         print("{:d} survey files imported".format(len(self.surveys)))
 
 
+    def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
+                       name=None, parser=None):
+        """Create a 3D survey based on 2D regularly spaced surveys.
+        
+        Parameters
+        ----------
+        fname : list of str
+            List of 2D filenames in the right order for the grid or directory
+            name (the files will be sorted alphabetically in this last case).
+        lineSpacing : float, optional
+            Spacing in meter between each line.
+        zigzag : bool, optional
+            If `True` then one survey out of two will be flipped.
+            #TODO not implemented yet
+        ftype : str, optional
+            Type of the survey to choose which parser to use.
+        name : str, optional
+            Name of the merged 3D survey.
+        """
+        if isinstance(fname, list): # it's a list of filename
+            fnames = fname
+        else: # it's a directory and we import all the files inside
+            if os.path.isdir(fname):
+                fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
+                # this filter out hidden file as well
+            else:
+                raise ValueError('fname should be a directory path or a list of filenames')
+
+        surveys = []
+        for fname in fnames:
+            surveys.append(Survey(fname, ftype=ftype, parser=parser))
+        survey0 = surveys[0]
+        
+        # check this is a regular grid
+        nelec = survey0.elec.shape[0]
+        for s in surveys:
+            if s.elec.shape[0] != nelec:
+                raise ValueError('Survey {:s} has {:d} electrodes while the first survey has {:d}.'
+                                 'All surveys should have the same number of electrodes.'.format(s.name, s.elec.shape[0], nelec))
+        # build global electrodes and merged dataframe
+        elec = []
+        dfs = []
+        for i, s in enumerate(surveys):
+            e = s.elec.copy()
+            e[:,1] = i*lineSpacing
+            elec.append(e)
+            df = s.df.copy()
+            df.loc[:,['a','b','m','n']] = df.loc[:,['a','b','m','n']] + i*nelec
+            dfs.append(df)
+        elec = np.vstack(elec)
+        dfm = pd.concat(dfs, axis=0, sort=False).reset_index(drop=True)
+        
+        survey0.elec = elec
+        survey0.df = dfm
+        survey0.name = '3Dfrom2Dlines' if name is None else name
+        self.surveys= [survey0]
+        self.elec = elec
+        self.setBorehole(self.iBorehole)
+        
+
 
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
@@ -2010,7 +2070,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
-               rmDirTree=True):
+               rmDirTree=True, modelDOI=False):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
 
@@ -2040,9 +2100,17 @@ class R2(object): # R2 master class instanciated by the GUI
             default all the cores available are used).
         rmDirTree : bool, optional
             Remove excess directories and files created during parallel inversion
+        modelDOI : bool, optional
+            If `True`, the Depth of Investigation will be model by reinverting
+            the data on with an initial res0 different of an order of magnitude.
+            Note that this option is only available for *single* survey.
         """
         # clean meshResults list
         self.meshResults = []
+        
+        # modelDOI force to use full mesh
+        if modelDOI is True and len(self.surveys) == 1:
+            param['num_xy_poly'] = 0
 
         # create mesh if not already done
         if 'mesh' not in self.param:
@@ -2081,7 +2149,7 @@ class R2(object): # R2 master class instanciated by the GUI
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
             self.write2in(param=param)
-            self.runR2(refdir, dump=dump) # this line actaully runs R2
+            self.runR2(refdir, dump=dump) # this line actually runs R2
             if self.typ=='R3t' or self.typ=='cR3t':
                 shutil.copy(os.path.join(refdir, 'f001.dat'),
                             os.path.join(self.dirname, 'Start_res.dat'))
@@ -2101,13 +2169,50 @@ class R2(object): # R2 master class instanciated by the GUI
         try: # this is in the case getInvError() is called after the file .err is
             # created by R2 but before it is populated (when killing the run)
             self.getInvError()
+            self.getResults()
         except:
             print('Could not retrieve files maybe inversion failed')
             return
 
+        # run modelDOI
+        if modelDOI:
+            if len(self.surveys) == 1: # enforce for only 1 survey
+                self.modelDOI(dump=dump)
+            else:
+                raise ValueError('modelDOI() option only for single survey')
+        
         if iplot is True:
             self.showResults()
 
+
+    def modelDOI(self, dump=print):
+        """Will rerun the inversion with an initial resistivity 10 times larger.
+        From the two different inversion a senstivity limit will be computed.
+        """
+        dump('===== Re-running inversion with initial resistivity * 10 =====')
+        # backup current mesh results
+        res0 = np.array(self.mesh.attr_cache['res0'])
+        res1 = res0 * 10
+        mesh0 = self.meshResults[0]
+        self.mesh.attr_cache['res0b'] = list(res1)
+        self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
+        self.runR2(dump=dump)
+        self.getResults()
+        mesh1 = self.meshResults[0]
+        
+        # sensitivity = difference between final inversion / difference init values
+        invValues1 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
+        invValues2 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        sens = (invValues1 - invValues2)/(res0-res1)
+        sensScaled = np.abs(sens)
+        mesh0.attr_cache['doiSens'] = sensScaled
+        sensScaledCut = np.copy(sensScaled)
+        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
+        mesh0.attr_cache['sensCutOff'] = sensScaledCut
+        # TODO why not replace the 'sensitivity' attribute directly so we can tweak it in the UI with the slider
+        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
+        self.meshResults = [mesh0]
+        
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
