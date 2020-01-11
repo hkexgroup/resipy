@@ -18,7 +18,7 @@ import time
 #import matplotlib and numpy packages 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.collections import PolyCollection
+from matplotlib.collections import PolyCollection, PatchCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 from mpl_toolkits.mplot3d import Axes3D
@@ -673,7 +673,10 @@ class Mesh:
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+#                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+                radius = np.min(np.diff(elec_x))/7
+                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
+                ax.add_collection(PatchCollection(circles, color='k'))
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 

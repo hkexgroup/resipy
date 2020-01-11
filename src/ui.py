@@ -1199,19 +1199,23 @@ class App(QMainWindow):
         tabImportingDataLayout.addLayout(metaLayout, 40)
         
         # update pseudo-sections due to electrodes update
+        self.tempElec = None
         def updateElec():
             try:
                 elec = elecTable.getTable()
-                self.r2.setElec(elec)
-                self.r2.mesh = None
-                mwMesh.clear()
-                plotPseudo()
-                plotManualFiltering()
-                if self.r2.typ[0] == 'c':
-                    plotPseudoIP()
+                if self.tempElec is None or np.sum(elec-self.tempElec) != 0:
+                    self.tempElec = elec
+                    self.r2.setElec(elec)
+                    self.r2.mesh = None
+                    mwMesh.clear()
+                    if len(self.r2.surveys) > 0:
+                        plotPseudo()
+                        plotManualFiltering()
+                        if self.r2.typ[0] == 'c':
+                            plotPseudoIP()
             except Exception as e:
                 errorDump('Error updating pseudosection: ' + e)
-        
+    
         # tab focus events functions
         self.currentImportTab = 0
         self.currentTab = 0
@@ -1223,7 +1227,7 @@ class App(QMainWindow):
             if index != 0 and self.currentImportTab == 1:
                 # elec tab still visible but we moved out to another
                 # higher level tab
-                updateElec()
+                tabImporting.setCurrentIndex(0)
             self.currentTab = index
         tabImporting.currentChanged.connect(logImportTab)
         tabs.currentChanged.connect(logTab)
