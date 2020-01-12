@@ -1266,7 +1266,7 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1287,6 +1287,7 @@ class Survey(object):
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             
+        ax.invert_yaxis() # to remove negative sign in y axis    
         ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1334,7 +1335,7 @@ class Survey(object):
         pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1363,6 +1364,7 @@ class Survey(object):
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
 #            cbar.set_label(label)
 #            ax.set_title('Phase Shift\npseudo section')
+        ax.invert_yaxis() # to remove negative sign in y axis
         ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1516,6 +1518,9 @@ class Survey(object):
             Maximum value.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
+        if len(array) == 0:
+            raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
+
         resist = self.df[attr].values
         inan = np.isnan(resist)
         resist = resist.copy()[~inan]
@@ -1649,21 +1654,35 @@ class Survey(object):
             self.filterData(i2keep)
             print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
     
-    def filterAppResist(self,threshold=[0,2000]):
+    def filterAppResist(self, vmin=None, vmax=None, debug=True):
         """Filter measurements by apparent resistivity for surface surveys 
         Parameters
         -----------
-        threshold: tuple, list
-            2by 1 array of minimum and maxium apparent resistivity values  
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
+        debug : bool, optional
+            Print output to screen. Default is True.
         """
         df = self.df.copy()
         self.computeK()
         appRes = self.df['K']*self.df['resist']
-        ikeep = (appRes>threshold[0]) & (appRes<threshold[1])
+        if vmin is None:
+            vmin = np.min(appRes)
+        if vmax is None:
+            vmax = np.max(appRes)
+        ikeep = (appRes >= vmin) & (appRes <= vmax)
         self.df = df[ikeep]
         self.df.reset_index()
-    
-    
+        
+        if debug:
+            numRemoved = len(df)-len(self.df)
+            msgDump = "%i measurements outside [%s,%s] removed!" % (numRemoved, vmin, vmax)
+            print(msgDump)
+            return numRemoved
+
+
     def shuntIndexes(self, debug=True): 
         """Normalise the indexes the sequence matrix to start at 1.
         
@@ -1996,7 +2015,7 @@ class Survey(object):
     def pseudo(self, ax=None, bx=None, **kwargs):
         warnings.warn('The function is deprecated, use showPseudo() instead.',
                       DeprecationWarning)
-        self.pseudo(ax=ax, bx=bx, **kwargs)
+        self.showPseudo(ax=ax, bx=bx, **kwargs)
     
     
     def pseudoIP(self, ax=None, bx=None, **kwargs):

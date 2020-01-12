@@ -20,6 +20,7 @@ from resipy.R2 import R2
 tstart = time.time()
 timings = {}
 
+
 testdir = '../examples/'
 
 

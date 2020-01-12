@@ -18,7 +18,7 @@ import time
 #import matplotlib and numpy packages 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.collections import PolyCollection
+from matplotlib.collections import PolyCollection, PatchCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 from mpl_toolkits.mplot3d import Axes3D
@@ -673,7 +673,10 @@ class Mesh:
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+#                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+                radius = np.min(np.diff(elec_x))/7
+                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
+                ax.add_collection(PatchCollection(circles, color='k'))
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
@@ -846,6 +849,9 @@ class Mesh:
         
         if self.ndims==2:
             warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D show will be unstable")
+        elif self.type2VertsNo() == 6: # use column mesh show instead 
+            self.show_prism_mesh()
+            return 
             
         #decide which attribute to plot, we may decide to have other attritbutes! 
         if attr is None: 
@@ -870,12 +876,19 @@ class Mesh:
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         
-        if xlim=="default":
-            xlim=[min(self.elec_x), max(self.elec_x)]
-        if ylim=="default":
-            ylim=[min(self.elec_y), max(self.elec_y)]
         if zlim=="default":
             zlim=[min(self.node_z),max(self.node_z)]
+        try: 
+            if xlim=="default":
+                xlim=[min(self.elec_x), max(self.elec_x)]
+            if ylim=="default":
+                ylim=[min(self.elec_y), max(self.elec_y)]
+        except AttributeError:
+            if xlim=="default":
+                xlim=[min(self.node_x), max(self.node_x)]
+            if ylim=="default":
+                ylim=[min(self.node_y), max(self.node_y)]
+
             
         if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
@@ -900,7 +913,7 @@ class Mesh:
         # search through each element to see if it is on the edge of the mesh, 
         # this step is important as it is very expensive to plot anything in 3D using matplotlib 
         # triangles on the edge of the mesh will be used only once
-        tri_combo = np.zeros((self.num_elms,4),dtype='float64')
+        
         elm_x = self.elm_centre[0]
         elm_y = self.elm_centre[1]
         elm_z = self.elm_centre[2]
@@ -909,6 +922,15 @@ class Mesh:
         temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
         con_mat=temp_con_mat[:,in_elem] # truncate elements
         inside_numel = len(con_mat[0])#number of inside elements 
+        tri_combo = np.zeros((inside_numel,4),dtype='float64')
+        
+        S = [0]*self.num_elms 
+        if sens:
+            try:
+                S = self.sensitivities
+            except AttributeError:
+                sens = False
+                print('no sensitivities to plot')
         
         for i in range(inside_numel):
             idx1 = con_mat[0][i]#extract indexes 
@@ -926,9 +948,7 @@ class Mesh:
             tri_combo[i,2] = face3#face 3 
             tri_combo[i,3] = face4#face 4 
             
-        #shape = tri_combo.shape
-        tri_combo = tri_combo.flatten()
-        temp,index,counts = np.unique(tri_combo,return_index=True,return_counts=True) # find the unique values 
+        temp,index,counts = np.unique(tri_combo.flatten(),return_index=True,return_counts=True) # find the unique values 
         single_vals_idx = counts==1 # faces on edge of volume only appear once
         edge_element_idx = index[single_vals_idx]/4
         face_element_idx = np.floor(edge_element_idx)
@@ -937,6 +957,8 @@ class Mesh:
         truncated_numel = len(face_element_idx)
         face_list = [0] * truncated_numel
         assign = [0] * truncated_numel # the number assigned to each face
+        sensi = [0] * truncated_numel # the sensitivity assigned to each face
+        
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
             idx1 = con_mat[0][ref]
@@ -949,21 +971,17 @@ class Mesh:
             vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
             vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
             
-            face1 = (vert1,vert2,vert3)
-            face2 = (vert1,vert2,vert4)
-            face3 = (vert2,vert3,vert4)
-            face4 = (vert1,vert4,vert3)
-            
             if face_probe[i] == 0: #if single_val_idx. == 0 > face1
-                face_list[i] = face1#face 1 
+                face_list[i] = (vert1,vert2,vert3)#face 1 
             elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
-                face_list[i] = face2#face 2
+                face_list[i] = (vert1,vert2,vert4)#face 2
             elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
-                face_list[i] = face3#face 3 
+                face_list[i] = (vert2,vert3,vert4)#face 3 
             elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
-                face_list[i] = face4#face 4
+                face_list[i] = (vert1,vert4,vert3)#face 4
             
             assign[i] = X[ref]#get attribute value into assigned array
+            sensi[i] = S[ref]
           
         polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
         polly.set_alpha(alpha)#add some transparancy to the elements
@@ -985,17 +1003,14 @@ class Mesh:
 #        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
         
         if sens: #add sensitivity to plot if available
-            try:
-                weights = np.array(self.sensitivities) #values assigned to alpha channels 
-                alphas = np.linspace(1, 0, self.num_elms)#array of alpha values 
-                raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
-                raw_alpha[..., -1] = alphas
-                alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
-                #make alpha collection
-                alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
-                ax.add_collection(alpha_coll)
-            except AttributeError:
-                print("no sensitivities in mesh object to plot")
+            weights = np.array(sensi) #values assigned to alpha channels 
+            alphas = np.linspace(1, 0, len(sensi))#array of alpha values 
+            raw_alpha = np.ones((len(sensi),4),dtype=float) #raw alpha values 
+            raw_alpha[..., -1] = alphas
+            alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+            #make alpha collection
+            alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+            ax.add_collection(alpha_coll)
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
@@ -1032,6 +1047,227 @@ class Mesh:
         elms = np.array(self.con_matrix).T
         nodes = np.array([self.node_x, self.node_y, self.node_z]).T
         sliceMesh(nodes, elms, values, label=attr, dim=dim, vmin=vmin, vmax=vmax, ax=ax)
+        
+        
+    def show_prism_mesh(self,color_map = 'Spectral',#displays the mesh using matplotlib
+             color_bar = True,
+             ax = None,
+             electrodes = True,
+             sens = False,
+             edge_color = 'k',
+             alpha = 1,
+             vmax=None,
+             vmin=None,
+             attr=None,
+             xlim = "default",
+             ylim = "default",
+             zlim = "default"):
+        """
+        Shows a 3D prism mesh. 
+        
+        Parameters
+        ----------
+        color_map : string, optional
+            color map reference 
+        color_bar : Boolean, optional 
+            `True` to plot colorbar 
+        xlim : tuple, optional
+            Axis x limits as `(xmin, xmax)`.
+        ylim : tuple, optional
+            Axis y limits as `(ymin, ymax)`. 
+        zlim : tuple, optional
+            Axis z limits as `(ymin, ymax)`. 
+        ax : matplotlib axis handle, optional
+            Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
+        electrodes : boolean, optional
+            Enter true to add electrodes to plot (if available in mesh class)
+        sens : boolean, optional
+            Enter true to plot sensitivities (if available in mesh class). Note that for 3D this doesnt work so well. 
+        edge_color : string, optional
+            Color of the cell edges, set to `None` if you dont want an edge.
+        alpha: float, optional
+            Should be set between 0 and 1. Sets a transparancy value for the element faces. 
+        vmin : float, optional
+            Minimum limit for the color bar scale.
+        vmax : float, optional
+            Maximum limit for the color bar scale.
+        attr : string, optional
+            Which attribute in the mesh to plot, references a dictionary of attributes. attr is passed 
+            as the key for this dictionary.
+
+        Returns
+        ----------
+        figure : matplotlib figure 
+            Figure handle for the plotted mesh object.
+        """
+        
+        if not isinstance(color_map,str):#check the color map variable is a string
+            raise NameError('color_map variable is not a string')
+        
+        if self.ndims==2:
+            warnings.warn("Use Mesh.show() for 2D meshes")
+        elif self.type2VertsNo() != 6:
+            warnings.warn("Function can only be used to display prism meshes")
+            return 
+            
+        #decide which attribute to plot, we may decide to have other attritbutes! 
+        if attr is None: 
+            #plots default attribute
+            X=np.array(self.cell_attributes) # maps resistivity values on the color map
+            color_bar_title = self.atribute_title
+        else:
+            try:
+                X = np.array(self.attr_cache[attr])
+                color_bar_title = attr
+            except (KeyError, AttributeError):
+                raise KeyError("Cannot find attr_cache attribute in mesh object or 'attr' does not exist.")
+        
+        t0 = time.time() # benchmark function
+        
+        #make 3D figure 
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            fig = ax.figure
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        
+        if zlim=="default":
+            zlim=[min(self.node_z),max(self.node_z)]
+        if xlim=="default":
+            xlim=[min(self.node_x), max(self.node_x)]
+        if ylim=="default":
+            ylim=[min(self.node_y), max(self.node_y)]
+        #set axis limits     
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_zlim(zlim) # doesn't seem to work in the UI
+        #set color bar limits
+
+        if vmin is None:
+            vmin = np.min(X)
+        if vmax is None:
+            vmax = np.max(X)
+            
+        if edge_color == None or edge_color=='none' or edge_color=='None':
+            edge_color='face'#set the edge colours to the colours of the polygon patches
+            
+        #construct patches 
+        #print('constructing patches')
+        S = [0]*self.num_elms 
+        if sens:
+            try:
+                S = self.sensitivities
+            except AttributeError:
+                sens = False
+                print('no sensitivities to plot')
+                
+        con_mat = self.con_matrix # just plotting top and bottom parts of elements 
+        combo = np.zeros((self.num_elms,5),dtype='float64')
+        
+        for i in range(self.num_elms):
+            idx1 = con_mat[0][i]
+            idx2 = con_mat[1][i]
+            idx3 = con_mat[2][i]
+            idx4 = con_mat[3][i]
+            idx5 = con_mat[4][i]
+            idx6 = con_mat[5][i]
+            
+            #assign each face a code 
+            fc1 = int(str(idx1)+str(idx2)+str(idx3))#face code 1 
+            fc2 = int(str(idx4)+str(idx5)+str(idx6))#face code 2 
+            fc3 = int(str(idx1)+str(idx2)+str(idx5)+str(idx4))#face code 3
+            fc4 = int(str(idx2)+str(idx3)+str(idx6)+str(idx5))#face code 4 
+            fc5 = int(str(idx1)+str(idx3)+str(idx6)+str(idx4))#face code 5
+            
+            combo[i,0] = fc1
+            combo[i,1] = fc2
+            combo[i,2] = fc3
+            combo[i,3] = fc4
+            combo[i,4] = fc5
+            
+        #return combo
+        temp,index,counts = np.unique(combo.flatten(),return_index=True,return_counts=True) 
+        single_vals_idx = counts==1 # faces on edge of volume only appear once
+        edge_element_idx = index[single_vals_idx]/5
+        face_element_idx = np.floor(edge_element_idx)
+        face_probe = edge_element_idx - np.floor(edge_element_idx)
+        face_probe = np.round(face_probe,1) # round to nearest 1 decimal 
+        
+        
+        truncated_numel = len(face_element_idx)
+        face_list = [()] * truncated_numel
+        assign = [0] * truncated_numel # the number assigned to each face
+        sensi = [0] * truncated_numel # the sensitivity assigned to each face
+            
+        for i in range(truncated_numel):
+            ref = int(face_element_idx[i])
+            idx1 = con_mat[0][ref]
+            idx2 = con_mat[1][ref]
+            idx3 = con_mat[2][ref]
+            idx4 = con_mat[3][ref]
+            idx5 = con_mat[4][ref]
+            idx6 = con_mat[5][ref]
+            vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
+            vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
+            vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
+            vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
+            vert5 = (self.node_x[idx5],self.node_y[idx5],self.node_z[idx5])
+            vert6 = (self.node_x[idx6],self.node_y[idx6],self.node_z[idx6])
+            
+            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
+                face_list[i] = (vert1,vert2,vert3)#face 1 
+            elif face_probe[i] == 0.2:#if single_val_idx. == 0.2 > face2
+                face_list[i] = (vert4,vert5,vert6)#face 2
+            elif face_probe[i] == 0.4:#if single_val_idx. == 0.4 > face3
+                face_list[i] = (vert1,vert2,vert5,vert4)#face 3 
+            elif face_probe[i] == 0.6:#if single_val_idx. == 0.6 > face4
+                face_list[i] = (vert2,vert3,vert6,vert5)#face 4
+            elif face_probe[i] == 0.8:#if single_val_idx. == 0.8 > face5
+                face_list[i] = (vert1,vert3,vert6,vert4)
+                
+            sensi[i] = S[ref]
+            assign[i] = X[ref]
+            
+        #add patches to 3D figure 
+        polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
+        polly.set_alpha(alpha)#add some transparancy to the elements
+        try:
+            polly.set_array(np.array(assign))
+        except MemoryError:#catch this error and print something more helpful than matplotlibs output
+            raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
+        polly.set_edgecolor(edge_color)
+        polly.set_cmap(color_map) # set color map 
+        polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
+#        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
+        ax.add_collection3d(polly, zs=0, zdir='z') # for matplotlib > 3.0.2
+        self.cax = polly
+        
+        if color_bar:#add the color bar 
+            self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
+            self.cbar.set_label(color_bar_title) #set colorbar title
+            
+        ax.set_aspect('equal')#set aspect ratio equal (stops a funny looking mesh)
+        
+        if sens: #add sensitivity to plot if available
+            weights = np.array(sensi) #values assigned to alpha channels 
+            alphas = np.linspace(1, 0, len(sensi))#array of alpha values 
+            raw_alpha = np.ones((len(sensi),4),dtype=float) #raw alpha values 
+            raw_alpha[..., -1] = alphas
+            alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
+            #make alpha collection
+            alpha_coll = Poly3DCollection(face_list, array=weights, cmap=alpha_map, edgecolors='none', linewidths=0)#'face')
+            ax.add_collection(alpha_coll)
+            
+        if electrodes: #try add electrodes to figure if we have them 
+            try: 
+                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z),
+                           s=20, c='k', marker='o')
+            except AttributeError as e:
+                print("could not plot 3d electrodes, error = "+str(e))
+                
+        print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
         
         
     def assign_zone(self,poly_data):
@@ -1404,7 +1640,7 @@ class Mesh:
         
         #write to mesh.dat total num of elements and nodes
         if self.ndims==3:
-            fid.write('%i %i 1 0 4\n'%(self.num_elms,self.num_nodes))
+            fid.write('%i %i 1 0 %i\n'%(self.num_elms,self.num_nodes,self.type2VertsNo()))
         else:
             fid.write('%i %i\n'%(self.num_elms,self.num_nodes))
 
@@ -1640,7 +1876,7 @@ class Mesh:
             else:
                 cmd_line = '"' + loc + '"'#use provided location 
             try:
-                os.popen(cmd_line+' '+fname)
+                Popen(cmd_line+' '+fname,shell=True)
             except PermissionError:
                 print("Windows has blocked launching paraview, program try running as admin")      
         else:
@@ -1905,6 +2141,13 @@ class Mesh:
         for k in look_up_keys:
             look_up_array = np.array(look_up_cache[k])
             self.attr_cache[k] = look_up_array[idxes]
+            
+    def trans_mesh(self,x,y,z):
+        """Translate mesh 
+        """
+        self.node_x = np.array(self.node_x)+x
+        self.node_y = np.array(self.node_y)+y
+        self.node_z = np.array(self.node_z)+z
                                  
 #%% triangle centriod 
 def tri_cent(p,q,r):
@@ -2073,6 +2316,33 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             elm_len=abs(n2[0]-n1[0])#element length
             elm_hgt=abs(n2[1]-n3[1])#element hieght
             areas.append(elm_len*elm_hgt)
+        elif int(elm_data[0])==6: # this following code is getting silly in how long it is. Need to work on a more efficent way
+            if i==0:
+                vert_no=6
+            no_pts.append(int(elm_data[0]))
+            #nodes
+            node1.append(int(elm_data[1]))
+            node2.append(int(elm_data[2]))
+            node3.append(int(elm_data[3]))
+            node4.append(int(elm_data[4]))
+            node5.append(int(elm_data[5]))
+            node6.append(int(elm_data[6]))
+            #assuming element centres are the average of the x - y coordinates for the quad
+            n1=(x_coord[int(elm_data[1])],y_coord[int(elm_data[1])],z_coord[int(elm_data[1])])#in vtk files the 1st element id is 0 
+            n2=(x_coord[int(elm_data[2])],y_coord[int(elm_data[2])],z_coord[int(elm_data[2])])
+            n3=(x_coord[int(elm_data[3])],y_coord[int(elm_data[3])],z_coord[int(elm_data[3])])
+            n4=(x_coord[int(elm_data[4])],y_coord[int(elm_data[4])],z_coord[int(elm_data[4])])
+            n5=(x_coord[int(elm_data[5])],y_coord[int(elm_data[5])],z_coord[int(elm_data[5])]) 
+            n6=(x_coord[int(elm_data[6])],y_coord[int(elm_data[6])],z_coord[int(elm_data[6])])
+            centriod_x.append(np.mean((n1[0],n2[0],n3[0],n4[0],n5[0],n6[0])))
+            centriod_y.append(np.mean((n1[1],n2[1],n3[1],n4[1],n5[1],n6[1])))
+            centriod_z.append(np.mean((n1[2],n2[2],n3[2],n4[2],n5[2],n6[2])))
+            #estimate element VOLUMES, base area times height.  
+            base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+            mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+            height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+            thick=abs(n5[2]-n1[2])#element hieght
+            areas.append(0.5*base*height*thick)
         elif int(elm_data[0])==8: # this following code is getting silly in how long it is. Need to work on a more efficent way
             if i==0:
                 vert_no=8
@@ -2124,6 +2394,8 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         node_maps=(node1,node2,node3)
     elif vert_no==4:
         node_maps=(node1,node2,node3,node4)  
+    elif vert_no==6:
+        node_maps=(node1,node2,node3,node4,node5,node6)
     elif vert_no==8:
         node_maps=(node1,node2,node3,node4,node5,node6,node7,node8)
         
@@ -2169,6 +2441,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
         attr_dict = {"no attributes":[float("nan")]*no_elms}
         values_oi= [0]*no_elms
         parameter_title = "n/a"
+        
     #print("finished importing mesh.\n")
     #information in a dictionary, this is easier to debug than an object in spyder: 
     mesh_dict = {'num_nodes':no_nodes,#number of nodes
@@ -2188,15 +2461,14 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
             'cell_attributes':attr_dict,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
+    
     mesh = Mesh.mesh_dict2class(mesh_dict)#convert to mesh object
-#    print(mesh.attr_cache.keys())
     try:
         if mesh.ndims==2:
             mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
         else:
             mesh.add_sensitivity(mesh.attr_cache['Sensitivity_map(log10)'])
     except:
-        #print('no sensitivity')
         pass 
     
     mesh.mesh_title = title
@@ -2481,9 +2753,9 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         x columns where the electrodes are. 
     """
     #formalities, error check
-    if elemx < 4:
-        print('elemx too small, set up to 4 at least')
-        elemx = 4
+#    if elemx < 4:
+#        print('elemx too small, set up to 4 at least')
+#        elemx = 4
         
     if surface_x is None or surface_z is None:
         surface_x = np.array([])
@@ -3151,6 +3423,100 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh
+
+#%% column mesh 
+def prism_mesh(elec_x,elec_y,elec_z, 
+               file_path='column_mesh.geo',
+               keep_files=True,
+               show_output=True, 
+               path='exe', dump=print,
+               **kwargs):
+    """Make a prism mesh 
+    Parameters
+    ------------
+    elec_x: array like
+        electrode x coordinates 
+    elec_y: array like 
+        electrode y coordinates 
+    elec_z: array like 
+        electrode z coordinates 
+    poly: list, tuple, optional 
+        Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+        x and y coordinates, ie (poly_x, poly_y)
+    z_lim: list, tuple, optional 
+        top and bottom z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        radius of column
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    elemz: int, optional
+        Number of layers in between each electrode inside the column mesh. 
+    """
+    #error checks 
+    if len(elec_x) != len(elec_y):
+        raise ValueError("mismatch in electrode x and y vector length, they should be equal")
+        
+    #make prism mesh command script
+    file_name="prism_mesh"
+    gw.column_mesh([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
+    #note that this column mesh function doesnt return the electrode nodes 
+    
+    
+    #check directories 
+    if path == "exe":
+        ewd = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                path)
+    else:
+        ewd = path # points to the location of the .exe 
+        # else its assumed a custom directory has been given to the gmsh.exe 
+    # handling gmsh
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
+    elif platform.system() == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
+            else:
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
+    else:
+        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
+        else: # fallback on wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        
+    if show_output: 
+        try:
+            p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        except: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3'] # use .exe through wine instead
+            p = Popen(cmd_line, stdout=PIPE, shell=False)
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            dump(line.decode('utf-8'))
+    else:
+        call(cmd_line)#run gmsh 
+        
+    #convert into mesh.dat
+    mesh_dict = gw.msh_parse_3d(file_path = file_name+'.msh') # read in 3D mesh file
+    mesh = Mesh.mesh_dict2class(mesh_dict) # convert output of parser into an object
+    
+    mesh.move_elec_nodes(elec_x,elec_y,elec_z)
+    
+    if keep_files is False: 
+        os.remove(file_name+".geo");os.remove(file_name+".msh")
+        
+    return mesh 
+    
+    
 
 #%% write descrete points to a vtk file 
 def points2vtk (x,y,z,file_name="points.vtk",title='points'):
