@@ -2267,7 +2267,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.2], colors='k', linestyles=':')
                 if doiSens is True:
                     z = np.array(mesh.attr_cache['Sensitivity(log10)'])
-                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.001*np.nanmax(z)], colors='k', linestyles='--')
+                    levels=[np.log10(0.001*(10**np.nanmax(z)))]
+                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=levels, colors='k', linestyles='--')
                
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
