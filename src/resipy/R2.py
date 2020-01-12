@@ -13,6 +13,7 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
+import resipy.interpolation as interp # for cropSurface()
 from matplotlib.path import Path
 
 OS = platform.system()
@@ -153,12 +154,13 @@ def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True,
     pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
         + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
     xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-    ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+    ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
     if ax is None:
         fig, ax = plt.subplots()
     else:
         fig = ax.figure
+    ax.invert_yaxis() # to remove negative sign in y axis
     cax = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
     cbar = fig.colorbar(cax, ax=ax)
     cbar.set_label(label)
@@ -489,7 +491,8 @@ class R2(object): # R2 master class instanciated by the GUI
         print("{:d} survey files imported".format(len(self.surveys)))
 
 
-    def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal', name=None):
+    def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
+                       name=None, parser=None):
         """Create a 3D survey based on 2D regularly spaced surveys.
         
         Parameters
@@ -518,7 +521,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         surveys = []
         for fname in fnames:
-            surveys.append(Survey(fname, ftype=ftype))
+            surveys.append(Survey(fname, ftype=ftype, parser=parser))
         survey0 = surveys[0]
         
         # check this is a regular grid
@@ -545,6 +548,7 @@ class R2(object): # R2 master class instanciated by the GUI
         survey0.name = '3Dfrom2Dlines' if name is None else name
         self.surveys= [survey0]
         self.elec = elec
+        self.setBorehole(self.iBorehole)
         
 
 
@@ -1053,7 +1057,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed in survey', i+1)
 
 
-    def filterRecip(self, index=-1, percent=20):
+    def filterRecip(self, percent=20,index=-1):
         """Filter on reciprocal errors.
 
         Parameters
@@ -1103,15 +1107,26 @@ class R2(object): # R2 master class instanciated by the GUI
             s.filterNegative()
             
     
-    def filterAppResist(self,threshold=(0,2000)):
+    def filterAppResist(self, index=-1, vmin=None, vmax=None):
         """Filter measurements by apparent resistivity for surface surveys 
         Parameters
         -----------
-        threshold: tuple, list
-            2by 1 array of minimum and maxium apparent resistivity values  
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
+        index : int, optional
+            Index of the survey on which to apply the processing. If the
+            processing is to be applied to all surveys then specifiy
+            `index=-1` (default).
         """
-        for s in self.surveys:
-            s.filterAppResist(threshold)
+        numRemoved = 0
+        if index == -1: # apply to all surveys
+            for s in self.surveys:
+                numRemoved += s.filterAppResist(vmin=vmin, vmax=vmax)
+        else:
+            numRemoved = self.surveys[index].filterAppResist(vmin=vmin, vmax=vmax)
+        return numRemoved
 
 
     def computeDOI(self):
@@ -1187,8 +1202,9 @@ class R2(object): # R2 master class instanciated by the GUI
         Parameters
         ----------
         typ : str, optional
-            Type of mesh. Eithter 'quad' or 'trian'. If no topography, 'quad'
-            mesh will be chosen.
+            Type of mesh. Eithter 'quad' or 'trian' in the case of 2d surveys.
+            If no topography, 'quad' mesh will be chosen; 'tetra' is used for 
+            3D surveys, but 'prism' can be used for column type experiments. 
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
@@ -1235,8 +1251,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         #check if remote electrodes present?
         if remote is None: # automatic detection
-            remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+            remote_flags = [-9999999, -999999, -99999,-9999,-999]
+                        #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
             remote = np.in1d(self.elec[:,0], remote_flags)
             if np.sum(remote) > 0:
                 print('remote electrode detected')
@@ -1271,7 +1287,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
-        elif typ == 'trian' or typ == 'tetra':
+        elif typ == 'trian' or typ == 'tetra' or typ=='prism':
             elec = self.elec.copy()
             geom_input = {}
             elec_x = self.elec[:,0]
@@ -1323,10 +1339,17 @@ class R2(object): # R2 master class instanciated by the GUI
                              cl=cl, dump=dump, show_output=show_output,
                              doi=self.doi-np.max(elec_z), whole_space=whole_space,
                              **kwargs)
+            if typ=='prism':
+                mesh = mt.prism_mesh(elec_x, elec_y, elec_z,
+                                     path=os.path.join(self.apiPath, 'exe'),
+                                     cl=cl, dump=dump, show_output=show_output,
+                                     **kwargs)
+                self.param['num_xy_poly'] = 0
+                
             os.chdir(ui_dir)#change back to original directory
 
             self.param['mesh_type'] = 3
-            e_nodes = mesh.e_nodes + 1 # +1 because of indexing staring at 0 in python
+            e_nodes = np.array(mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
 
         self.mesh = mesh
@@ -1595,14 +1618,15 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # TODO not sure the sorting fixed element issue if for 3D as well
 
-        meshFile = os.path.join(self.dirname, name)
-        elems, nodes = readMeshDat(meshFile)
-        ifixed = elems[:,-2] == 0
-        elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
-        elems2[:,0] = 1 + np.arange(elems2.shape[0])
-        ifixed2 = elems2[:,-2] == 0
-        elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
-        writeMeshDat(meshFile, elems2, nodes)
+        if self.mesh.ndims == 2:
+            meshFile = os.path.join(self.dirname, name)
+            elems, nodes = readMeshDat(meshFile)
+            ifixed = elems[:,-2] == 0
+            elems2 = np.r_[elems[~ifixed,:], elems[ifixed,:]]
+            elems2[:,0] = 1 + np.arange(elems2.shape[0])
+            ifixed2 = elems2[:,-2] == 0
+            elems2[~ifixed2,-2] = 1 + np.arange(np.sum(~ifixed2))
+            writeMeshDat(meshFile, elems2, nodes)
 
         res0File = os.path.join(self.dirname, 'res0.dat')
         resistivityFile = os.path.join(self.dirname, 'resistivity.dat')
@@ -1669,7 +1693,7 @@ class R2(object): # R2 master class instanciated by the GUI
             content = ''
             df0 = self.surveys[0].df[['a','b','m','n','resist','recipMean']]
             df0 = df0.rename(columns={'resist':'resist0', 'recipMean':'recipMean0'})
-            for i, s in enumerate(self.surveys[1:]):
+            for i, s in enumerate(self.surveys):
                 if 'resist0' in s.df.columns:
                     s.df = s.df.drop('resist0', axis=1)
                 if 'recipMean0' in s.df.columns:
@@ -1695,12 +1719,10 @@ class R2(object): # R2 master class instanciated by the GUI
                 res0Bool = False if self.param['reg_mode'] == 1 else True
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
-                                            isubset=indexes[i+1], threed=threed)
-                content = content + str(protocol.shape[0]) + '\n'
-                content = content + protocol.to_csv(sep='\t', header=False, index=False)
-
+                                            isubset=indexes[i], threed=threed)
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
+                    print('+++++++++', s.name)
                     if os.path.exists(refdir) == False:
                         os.mkdir(refdir)
                     if 'mesh.dat' in os.listdir(self.dirname):
@@ -1710,6 +1732,10 @@ class R2(object): # R2 master class instanciated by the GUI
                         shutil.copy(os.path.join(self.dirname, 'mesh3d.dat'),
                                 os.path.join(self.dirname, 'ref', 'mesh3d.dat'))
                     s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
+                else:
+                    content = content + str(protocol.shape[0]) + '\n'
+                    content = content + protocol.to_csv(sep='\t', header=False, index=False)
+
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
@@ -2086,6 +2112,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # modelDOI force to use full mesh
         if modelDOI is True and len(self.surveys) == 1:
             param['num_xy_poly'] = 0
+            param['reg_mode'] = 1 # we need constrain to background
 
         # create mesh if not already done
         if 'mesh' not in self.param:
@@ -2161,7 +2188,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def modelDOI(self, dump=print):
-        """Will rerun the inversion with an initial resistivity 10 times larger.
+        """Will rerun the inversion with an alpha_s 10 times larger.
         From the two different inversion a senstivity limit will be computed.
         """
         dump('===== Re-running inversion with initial resistivity * 10 =====')
@@ -2171,27 +2198,22 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh0 = self.meshResults[0]
         self.mesh.attr_cache['res0b'] = list(res1)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
-        self.runR2(dump=dump)
+        self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh1 = self.meshResults[0]
         
         # sensitivity = difference between final inversion / difference init values
-        invValues0 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
-        invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
-        # method 1
-        sens = (invValues0 - invValues1)/(res0-res1)
+        invValues1 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
+        invValues2 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        sens = (invValues1 - invValues2)/(res0-res1)
         sensScaled = np.abs(sens)
-#        sensScaled = (sensScaled - np.min(sensScaled))/np.max(sensScaled) # doesn't really help
-        # method 2
-#        sens = np.corrcoef(invValues0, invValues1) # should be convolve on 5x5 cells
-#        sensScaled = (sens - 1)/2
         mesh0.attr_cache['doiSens'] = sensScaled
-#        sensScaledCut = np.copy(sensScaled)
-#        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
+        sensScaledCut = np.copy(sensScaled)
+        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
+        mesh0.attr_cache['sensCutOff'] = sensScaledCut
         # TODO why not replace the 'sensitivity' attribute directly so we can tweak it in the UI with the slider
-#        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
-        self.ishowDOI = True
-        self.meshResults = [mesh0] # restore initial mesh object
+        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
+        self.meshResults = [mesh0]
         
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -2327,6 +2349,74 @@ class R2(object): # R2 master class instanciated by the GUI
 #                res = np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
 #                mesh.attr_cache['difference(percent)'] = (res-resRef)/resRef*100
 
+    
+    def getR2out(self):
+        """Reat the .out file and parse its content.
+        
+        Returns
+        -------
+        Dataframe with the dataset name, and the RMS decrease for each iteration.
+        """
+        fname = os.path.join(self.dirname, self.typ + '.out')
+        with open(fname, 'r') as f:
+            lines = f.readlines()
+        name = ''
+        idataset = 0
+        iiter = 0
+        resRMS = np.nan
+        phaseRMS = np.nan
+        irow = 0
+        df = pd.DataFrame(columns=['name', 'dataset', 'iteration', 'resRMS', 'phaseRMS', 'success'])
+        for x in lines:
+            success = 'N/A'
+            line = x.split()
+            if len(line) > 1:
+                if line[0] == 'Iteration':
+                    iiter += 1
+                elif (line[0] == 'Measurements') & (line[1] == 'read:'):
+                    c = float(line[2])
+                    d = float(line[5])
+                elif line[0] == 'Final':
+                    resRMS = float(line[3])
+                    df.loc[irow, :] = [name, idataset, iiter, resRMS, phaseRMS, success]
+                    irow += 1
+                elif line[0] == 'FATAL:':
+                    resRMS = np.nan
+                elif line[0] == 'Processing':
+                    iiter = 0
+                    idataset += 1
+                    if idataset <= len(self.surveys):
+                        name = self.surveys[idataset-1].name
+                    else:
+                        name = 'dataset{:03.0f}'.format(idataset)
+        df = df.apply(pd.to_numeric, errors='ignore').reset_index(drop=True)
+        return df
+
+
+    def showRMS(self, index=0, ax=None):
+        """Show the RMS decrease for each iteration.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the dataset for which to plot the RMS.
+        ax : matplotlib axis, optional
+            If provided, the graph will be plotted against it.
+        """
+        df = self.getR2out()
+        idatasets = np.unique(df['dataset'])
+        if ax is None:
+            fig, ax = plt.subplots()
+        ax.set_title(self.surveys[index].name)
+        offset = 0
+        for i in idatasets:
+            ie = df['dataset'] == i
+            ax.plot(offset + df[ie]['iteration'], df[ie]['resRMS'], '.-')
+            offset += np.sum(ie)
+        ax.set_xlabel('Iterations')
+        ax.set_ylabel('RMS misfit')
+        ax.set_xticks([],[])
+        
 
     def showSection(self, fname='', ax=None, ilog10=True, isen=False, figsize=(8,3)):
         """Show inverted section based on the `_res.dat``file instead of the
@@ -2867,6 +2957,13 @@ class R2(object): # R2 master class instanciated by the GUI
             seq[ie,3] = seq2[ie,2]
 
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        # if it's 3D, we add the line number (all electrode on line 1)
+        if self.typ[-2] == '3':
+            protocol.insert(1, 'sa', 1)
+            protocol.insert(3, 'sb', 1)
+            protocol.insert(5, 'sm', 1)
+            protocol.insert(7, 'sn', 1)  
+            
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
@@ -2895,6 +2992,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
+        elif self.typ[-2] == '3':
+            self.createSurvey(os.path.join(fwdDir, self.typ + '.fwd'), ftype='Protocol')
         else:
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
@@ -3203,8 +3302,47 @@ class R2(object): # R2 master class instanciated by the GUI
                     z = x[:,4]
                 else:
                     z = x[:,3]
-                cax = ax.tricontourf(triang, z, extend='both')
-                # TODO might want to crop surface here as well
+#                cax = ax.tricontourf(triang, z, extend='both')
+                
+                if self.mesh.surface is not None:
+                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+                    xc, yc, zc = x[:,0], x[:,1], z
+                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+                    xc = np.r_[xc, xf]
+                    yc = np.r_[yc, yf]
+                    zc = np.r_[zc, zf]
+                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
+
+                # make sure none of the triangle centroids are above the
+                # line of electrodes
+                def cropSurface(triang, xsurf, ysurf):
+                    trix = np.mean(triang.x[triang.triangles], axis=1)
+                    triy = np.mean(triang.y[triang.triangles], axis=1)
+                    
+                    i2keep = np.ones(len(trix), dtype=bool)
+                    for i in range(len(xsurf)-1):
+                        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+                        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+                        ie = ilateral & iabove
+                        i2keep[ie] = False
+                        if np.sum(ie) > 0: # if some triangles are above the min electrode
+                            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+                            offset = ysurf[i] - slope * xsurf[i]
+                            predy = offset + slope * trix[ie]
+                            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
+                            i2keep[np.where(ie)[0][ie2]] = True
+                    return i2keep
+                
+                if self.mesh.surface is not None:
+                    try:
+                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+                    except Exception as e:
+                        print('Error in Mesh.show for contouring: ', e)
+                
+                if self.mesh.surface is None:
+                    zc = z.copy()
+                    
+                cax = ax.tricontourf(triang, zc, extend='both')
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                 ax.set_aspect('equal')

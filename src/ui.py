@@ -4,7 +4,17 @@ import os
 import sys
 import time
 #a = time.time()
-print('importing pyqt')
+print(
+'''
+============================================================
+d8888b. d88888b .d8888. d888888b d8888b. db    db
+88  `8D 88'     88'  YP   `88'   88  `8D `8b  d8'
+88oobY' 88ooooo `8bo.      88    88oodD'  `8bd8' 
+88`8b   88~~~~~   `Y8b.    88    88~~~      88   
+88 `88. 88.     db   8D   .88.   88         88   
+88   YD Y88888P `8888Y' Y888888P 88         YP   
+============================================================
+''')
 from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButton, QWidget,
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame,
@@ -146,11 +156,11 @@ if getattr(sys, 'frozen', False):
 else:
         # we are running in a normal Python environment
         bundle_dir = os.path.dirname(os.path.abspath(__file__))
-print( 'we are',frozen,'frozen')
-print( 'bundle dir is', bundle_dir )
-print( 'sys.argv[0] is', sys.argv[0] )
-print( 'sys.executable is', sys.executable )
-print( 'os.getcwd is', os.getcwd() )
+#print( 'we are',frozen,'frozen')
+#print( 'bundle dir is', bundle_dir )
+#print( 'sys.argv[0] is', sys.argv[0] )
+#print( 'sys.executable is', sys.executable )
+#print( 'os.getcwd is', os.getcwd() )
 
 #%% MatplotlibWidget class
 class MatplotlibWidget(QWidget):
@@ -508,8 +518,6 @@ class App(QMainWindow):
             mwInvError.clear()
             mwInvError2.clear()
 
-
-
 #        restartBtn = QPushButton('Reset UI')
 #        restartBtn.setAutoDefault(True)
 #        restartBtn.clicked.connect(restartFunc)
@@ -529,6 +537,7 @@ class App(QMainWindow):
                 dimForward.setChecked(False)
                 boreholeCheck.setChecked(False)
                 boreholeCheck.setEnabled(True)
+                regular3DCheck.setVisible(False)
                 
                 #Pre-processing tab
                 recipErrorBottomTabs.setTabEnabled(0, True)
@@ -576,6 +585,7 @@ class App(QMainWindow):
                 dimInverse.setChecked(True)
                 boreholeCheck.setChecked(True) # to disable pseudo-section
                 boreholeCheck.setEnabled(False)
+                regular3DCheck.setVisible(True)
                 
                 #Pre-processing tab
                 recipErrorBottomTabs.setTabEnabled(0, False)
@@ -709,6 +719,21 @@ class App(QMainWindow):
         batchCheck.stateChanged.connect(batchCheckFunc)
         batchCheck.setToolTip('Check if you want to invert multiple surveys with the same settings and same electrodes.')
         
+        def regular3DFunc(state):
+            if state == Qt.Checked:
+                lineSpacing.setVisible(True)
+                lineSpacingLabel.setVisible(True)
+                create3Dbtn.setVisible(True)
+                buttonf.setVisible(False)
+            else:
+                lineSpacing.setVisible(False)
+                lineSpacingLabel.setVisible(False)
+                create3Dbtn.setVisible(False)
+                buttonf.setVisible(True)
+        regular3DCheck = QCheckBox('3D survey from regular 2D lines')
+        regular3DCheck.stateChanged.connect(regular3DFunc)
+        regular3DCheck.setVisible(False)
+        
         # select inverse or forward model
         def dimForwardFunc():
             self.iForward = True
@@ -770,6 +795,7 @@ class App(QMainWindow):
         dimInvGroup.setStyleSheet('QGroupBox{border: 0px;'
                                 'border-style:inset;}')
 
+        
 
         hbox1 = QHBoxLayout()
 #        hbox1.addWidget(restartBtn)
@@ -784,6 +810,7 @@ class App(QMainWindow):
         hbox2.addWidget(timeLapseCheck)
         hbox2.addWidget(batchCheck)
         hbox2.addWidget(boreholeCheck)
+        hbox2.addWidget(regular3DCheck)
 
 
         # ask for working directory, and survey file to input
@@ -801,16 +828,16 @@ class App(QMainWindow):
         wdBtn.clicked.connect(getwd)
         wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
 
-        self.ftype = 'Syscal' # by default
-        self.fformat = 'Comma Separated Values (*.csv)' # default
+        self.ftype = 'Protocol' # by default
+        self.fformat = 'DAT (Tab delimited) (*.dat)' # default
 
         def fileTypeFunc(index):
             if index == 0:
-                self.ftype = 'Syscal'
-                self.fformat = 'Comma Separated Values (*.csv)'
-            elif index == 1:
                 self.ftype = 'Protocol'
                 self.fformat = 'DAT (Tab delimited) (*.dat)'
+            elif index == 1:
+                self.ftype = 'Syscal'
+                self.fformat = 'Comma Separated Values (*.csv)'            
             elif index == 2:
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat)'
@@ -837,9 +864,11 @@ class App(QMainWindow):
                 tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
                 self.ftype = '' # let to be guessed
+        fileTypeLabel = QLabel('File format:')
+        fileTypeLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         fileType = QComboBox()
-        fileType.addItem('Syscal')
         fileType.addItem('Protocol')
+        fileType.addItem('Syscal')
         fileType.addItem('Protocol w/ IP')
         fileType.addItem('Res2Dinv')
         fileType.addItem('BGS Prime')
@@ -952,7 +981,6 @@ class App(QMainWindow):
                 except:
                     errorDump('File is not recognized.')
                     pass
-                print('ok passed import')
                 if all(self.r2.surveys[0].df['irecip'].values == 0):
                     buttonfr.show()
                     recipOrNoRecipShow(recipPresence = False)
@@ -1026,6 +1054,62 @@ class App(QMainWindow):
         buttonfr.hide()
         buttonfr.setToolTip('Import file with reciprocal measurements (not mandatory).')
 
+        lineSpacing = QLineEdit('1')
+        lineSpacing.setValidator(QDoubleValidator())
+        lineSpacing.setMaximumWidth(100)
+        lineSpacing.setFixedWidth(120)
+        lineSpacing.setVisible(False)
+        lineSpacingLabel = QLabel('Line spacing [m]:')
+        lineSpacingLabel.setVisible(False)
+        lineSpacingLabel.setFixedWidth(120)
+
+        def create3DFunc():
+            fnames, _ = QFileDialog.getOpenFileNames(tabImportingData, 'Select file(s)', self.datadir, self.fformat)            
+            if fnames != []:
+                fdir = os.path.dirname(fnames[0])
+                restartFunc()
+                self.datadir = os.path.dirname(fdir)
+                val = float(lineSpacing.text())
+                try:
+                    self.r2.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    infoDump('3D survey from regular 2D lines created.')
+                    ipCheck.setEnabled(True)
+                    psContourCheck.setEnabled(True)
+                    buttonf.setText(os.path.basename(fdir) + ' (Press to change)')
+                    calcAspectRatio()
+                    if 'magErr' in self.r2.surveys[0].df.columns:
+                        a_wgt.setText('0.0')
+                        b_wgt.setText('0.0')
+                    recipOrNoRecipShow(recipPresence = True)
+                    buttonfr.hide()
+                    tabPreProcessing.setTabEnabled(2, True)
+                    plotError()
+                    errHist()
+                    plotManualFiltering()
+                    elecTable.initTable(self.r2.elec)
+                    tabImporting.setTabEnabled(1,True)
+                    if 'ip' in self.r2.surveys[0].df.columns:
+                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            dcaButton.setEnabled(True)
+                            dcaProgress.setEnabled(True)               
+                    plotPseudo()
+                    btnInvNow.setEnabled(True)
+                    activateTabs(True)
+                    nbElecEdit.setText(str(len(self.r2.elec)))
+                    elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
+                    fnamesCombo.hide()
+                    fnamesComboLabel.hide()
+                except Exception as e:
+                    print('Error in create3DFunc(): ', e)
+                    errorDump('File format is not recognized or not all files go the same number of electrodes')
+        
+        create3Dbtn = QPushButton('Select 2D lines')
+        create3Dbtn.clicked.connect(create3DFunc)
+        create3Dbtn.setVisible(False)
+
+
         def btnInvNowFunc():
             tabs.setCurrentIndex(5) # jump to inversion tab
             btnInvert.animateClick() # invert
@@ -1036,13 +1120,17 @@ class App(QMainWindow):
         btnInvNow.clicked.connect(btnInvNowFunc)
         btnInvNow.setEnabled(False)
         btnInvNow.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
-
+        
         hbox4 = QHBoxLayout()
         hbox4.addWidget(wdBtn)
+        hbox4.addWidget(fileTypeLabel)
         hbox4.addWidget(fileType)
 #        hbox4.addWidget(spacingEdit)
         hbox4.addWidget(buttonf)
         hbox4.addWidget(buttonfr)
+        hbox4.addWidget(lineSpacingLabel)
+        hbox4.addWidget(lineSpacing)
+        hbox4.addWidget(create3Dbtn)
         hbox4.addWidget(btnInvNow)
 
         def ipCheckFunc(state):
@@ -1187,6 +1275,40 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox4)
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
+        
+        # update pseudo-sections due to electrodes update
+        self.tempElec = None
+        def updateElec():
+            try:
+                elec = elecTable.getTable()
+                if self.tempElec is None or np.sum(elec-self.tempElec) != 0:
+                    self.tempElec = elec
+                    self.r2.setElec(elec)
+                    self.r2.mesh = None
+                    mwMesh.clear()
+                    if len(self.r2.surveys) > 0:
+                        plotPseudo()
+                        plotManualFiltering()
+                        if self.r2.typ[0] == 'c':
+                            plotPseudoIP()
+            except Exception as e:
+                errorDump('Error updating pseudosection: ' + e)
+    
+        # tab focus events functions
+        self.currentImportTab = 0
+        self.currentTab = 0
+        def logImportTab(index):
+            if index != 1 and self.currentImportTab == 1: # elec tab looses focus
+                updateElec()
+            self.currentImportTab = index
+        def logTab(index):
+            if index != 0 and self.currentImportTab == 1:
+                # elec tab still visible but we moved out to another
+                # higher level tab
+                tabImporting.setCurrentIndex(0)
+            self.currentTab = index
+        tabImporting.currentChanged.connect(logImportTab)
+        tabs.currentChanged.connect(logTab)
 
         def plotPseudo():
             mwPseudo.setCallback(self.r2.showPseudo)
@@ -1632,7 +1754,6 @@ class App(QMainWindow):
         def importBtnFunc():
             restartFunc()
             self.r2 = R2()
-            print('importing data')
             colIndex = []
             newHeaders = []
             vals = getBoxes([aBox,bBox,mBox,nBox])
@@ -1811,26 +1932,38 @@ class App(QMainWindow):
                 tabPreProcessing.setTabText(0, 'Reciprocal Filtering')
                 recipErrorLabel.setText('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
                 recipErrorInputLabel.show()
+                rhoRangeInputLabel.hide()
+                rhoRangeMinInput.hide()
+                rhoRangeMaxInput.hide()
                 recipErrorInputLine.show()
                 recipErrorInputLine.setText('')
-                recipErrorPltbtn.setText('Apply filters')
+                rhoRangeMinInput.setText('')
+                rhoRangeMaxInput.setText('')
                 recipErrorUnpairedBtn.show()
                 recipErrorPltbtn.setToolTip('Removes measuremtns that have either greater reciprocal error than "Percent error threshold" or are manually selected or both!')
                 recipErrorBottomTabs.setTabEnabled(1, True)
             if recipPresence == False:
                 tabPreProcessing.setTabText(0, 'Manual Filtering')
-                recipErrorLabel.setText('<b>Select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
+                recipErrorLabel.setText('<b>Define a range of apparent resistivity to keep and/or select datapoints to remove.</b><br><i>click on the dots to select them</i></br>')
                 recipErrorInputLabel.hide()
+                rhoRangeInputLabel.show()
+                rhoRangeMinInput.show()
+                rhoRangeMaxInput.show()
                 recipErrorInputLine.setText('')
+                rhoRangeMinInput.setText('')
+                rhoRangeMaxInput.setText('')
                 recipErrorInputLine.hide()
                 recipErrorUnpairedBtn.hide()
-                recipErrorPltbtn.setText('Remove selected')
-                recipErrorPltbtn.setToolTip('Removes measuremtns that are manually selected!')
+                recipErrorPltbtn.setToolTip('Removes measuremtns that are out side of defined "Apparent Resistivity" range and/or are manually selected!')
                 recipErrorBottomTabs.setTabEnabled(1, False)
 
         def plotManualFiltering(index=0):
-            mwManualFiltering.setCallback(self.r2.filterManual)
-            mwManualFiltering.replot(index=index)
+            try:
+                mwManualFiltering.setCallback(self.r2.filterManual)
+                mwManualFiltering.replot(index=index)
+            except ValueError as e:
+                errorDump(e)
+                mwManualFiltering.clear()
 
         def errHist(index=0):
             if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
@@ -1867,10 +2000,17 @@ class App(QMainWindow):
                     else:
                         infoDump("%i measurements with greater than %3.1f%% reciprocal error and %i selected measurements removed!" % (numRecipRemoved,percent,numSelectRemoved))
                 else:
+                    numRhoRangeRemoved = 0
+                    rhoRangeText = ''
+                    if rhoRangeMinInput.text() != '' or rhoRangeMaxInput.text() != '':
+                        vmin = float(rhoRangeMinInput.text()) if rhoRangeMinInput.text() != '' else None
+                        vmax = float(rhoRangeMaxInput.text()) if rhoRangeMaxInput.text() != '' else None
+                        numRhoRangeRemoved = self.r2.filterAppResist(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
+                        rhoRangeText = '%i measurements outside of the range and ' % numRhoRangeRemoved
                     if numElecRemoved != 0:
-                        infoDump("%i selected electrodes and %i measurements removed!" % (numElecRemoved, numSelectRemoved))
+                        infoDump("%s%i selected electrodes and %i measurements removed!" % (rhoRangeText, numElecRemoved, numSelectRemoved))
                     else:
-                        infoDump("%i selected measurements removed!" % (numSelectRemoved))
+                        infoDump("%s%i selected measurements removed!" % (rhoRangeText, numSelectRemoved))
                 if ipCheck.checkState() == Qt.Checked:
                     for s in self.r2.surveys:
                         s.dfPhaseReset = s.df
@@ -1916,14 +2056,31 @@ class App(QMainWindow):
             plotManualFiltering(self.recipErrDataIndex)
             errFitType.setCurrentIndex(0)
             plotError()
+            recipErrorInputLine.setText('')
+            rhoRangeMinInput.setText('')
+            rhoRangeMaxInput.setText('')
             infoDump('%i measurements restored!' % numRestored)
 
 
         recipErrorInputLabel = QLabel('Percent error threshold:')
-
         recipErrorInputLine = QLineEdit('')
         recipErrorInputLine.setFixedWidth(100)
         recipErrorInputLine.setValidator(QDoubleValidator())
+        
+        rhoRangeInputLabel = QLabel('Apparent Resistivity:')
+        rhoRangeInputLabel.hide()
+        
+        rhoRangeMinInput = QLineEdit('')
+        rhoRangeMinInput.setPlaceholderText('min [Ωm]')
+        rhoRangeMinInput.setFixedWidth(80)
+        rhoRangeMinInput.setValidator(QDoubleValidator())
+        rhoRangeMinInput.hide()
+        
+        rhoRangeMaxInput = QLineEdit('')
+        rhoRangeMaxInput.setPlaceholderText('max [Ωm]')
+        rhoRangeMaxInput.setFixedWidth(80)
+        rhoRangeMaxInput.setValidator(QDoubleValidator())
+        rhoRangeMaxInput.hide()
 
 
         def recipErrorUnpairedFunc():
@@ -1993,16 +2150,26 @@ class App(QMainWindow):
         recipErrorLabelLayout.addWidget(recipErrorfnamesComboLabel)
         recipErrorLabelLayout.addWidget(recipErrorfnamesCombo)
         recipErrorTopLayout.addLayout(recipErrorLabelLayout)
-
+        
+        
         recipErrorInputlayout = QHBoxLayout()
         recipErrorTopLayout.addLayout(recipErrorInputlayout)
-
+        
         recipErrorInputLeftlayout = QHBoxLayout()
         recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
         recipErrorInputLeftlayoutL = QHBoxLayout()
         recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
         recipErrorInputLeftlayoutL.addWidget(recipErrorInputLabel)
+        recipErrorInputLeftlayoutL.addWidget(rhoRangeInputLabel)
         recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
+        
+        recipErrorInputLineLayout = QHBoxLayout()
+        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
+        recipErrorInputLineLayout.addWidget(rhoRangeMinInput)
+        recipErrorInputLineLayout.addWidget(rhoRangeMaxInput)
+        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
+
         recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
 
         recipErrorBtnLayout = QHBoxLayout()
@@ -2012,13 +2179,7 @@ class App(QMainWindow):
         recipErrorBtnLayout.addWidget(recipErrorResetbtn)
         recipErrorBtnLayout.addWidget(recipErrorSavebtn)
         recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
-
-        recipErrorInputLineLayout = QHBoxLayout()
-        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
-        recipErrorInputLineLayout.addWidget(recipErrorInputLine)
-        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
-
-       
+               
         #tab widgets for the graphs
         recipErrorBottomTabs = QTabWidget()
 
@@ -2123,11 +2284,11 @@ class App(QMainWindow):
         phiConvFactor.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         phiConvFactor.editingFinished.connect(convFactK)
         rangelabel = QLabel('Phase range filtering:')
-        phivminlabel = QLabel('-φ min:')
+        phivminlabel = QLabel('-φ<sub>min</sub>:')
         phivminEdit = QLineEdit()
         phivminEdit.setFixedWidth(50)
         phivminEdit.setValidator(QDoubleValidator())
-        phivmaxlabel = QLabel('-φ max:')
+        phivmaxlabel = QLabel('-φ<sub>max</sub>:')
         phivmaxEdit = QLineEdit()
         phivmaxEdit.setFixedWidth(50)
         phivmaxEdit.setValidator(QDoubleValidator())
@@ -2234,12 +2395,12 @@ class App(QMainWindow):
         filtreset.setAutoDefault(True)
         filtreset.clicked.connect(filt_reset)
         filtreset.setFixedWidth(150)
-        phiCbarminlabel = QLabel('Colorbar min: ')
+        phiCbarminlabel = QLabel('Colorbar<sub>min</sub>: ')
         phiCbarminEdit = QLineEdit()
         phiCbarminEdit.setFixedWidth(50)
         phiCbarminEdit.setValidator(QDoubleValidator())
         phiCbarminEdit.setText('0')
-        phiCbarMaxlabel = QLabel('Colorbar Max: ')
+        phiCbarMaxlabel = QLabel('Colorbar<sub>Max</sub>: ')
         phiCbarMaxEdit = QLineEdit()
         phiCbarMaxEdit.setFixedWidth(50)
         phiCbarMaxEdit.setValidator(QDoubleValidator())
@@ -2816,13 +2977,14 @@ class App(QMainWindow):
 
 
         # additional options for quadrilateral mesh
-        nnodesLabel = QLabel('Number of nodes between electrode (4 -> 10):')
+        nnodesLabel = QLabel('Number of elements between electrodes (1 -> 10):')
 #        nnodesEdit = QLineEdit()
 #        nnodesEdit.setValidator(QIntValidator())
 #        nnodesEdit.setText('4')
         nnodesSld = QSlider(Qt.Horizontal)
-        nnodesSld.setMinimum(4)
+        nnodesSld.setMinimum(1)
         nnodesSld.setMaximum(10)
+        nnodesSld.setValue(4)
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
@@ -4140,16 +4302,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.rmsIndex = []
             self.rmsIP = []
             self.rmsIndexIP = []
-            self.r2.param['lineTitle'] = titleEdit.text()
-            if self.r2.mesh is None:
-                meshQuadFunc() # generate default mesh
+            self.r2.param['lineTitle'] = titleEdit.text()                
 
-            def func(text):
+            def func(text, end='\n'):
 #                print('t', text)
-                self.inversionOutput = text + '\n'
+                self.inversionOutput = text + end
                 cursor = logText.textCursor()
                 cursor.movePosition(cursor.End)
-                cursor.insertText(text+'\n')
+                cursor.insertText(text + end)
                 logText.ensureCursorVisible()
                 # plot RMS graph
                 text = self.inversionOutput
@@ -4174,9 +4334,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 self.r2.param['num_xy_poly'] = 0
 
-            # apply region for initial model
-            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
-                self.r2.createMesh()
+            # create default mesh is not specified
+            if self.r2.mesh is None:
+                func('Create default triangular mesh ...', end='')
+                meshTrianFunc()
+                func('done')
+
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
             self.r2.setStartingRes(dict(zip(regid, x)),
@@ -4297,7 +4460,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             cmap = self.displayParams['cmap']
             sensPrc = self.displayParams['sensPrc']
             if self.r2.typ[-1] == '2':
-                mwInvResult.replot(threed=False, index=index, edge_color=edge_color,
+                mwInvResult.replot(threed=False, aspect=self.plotAspect, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
                                    vmin=vmin, vmax=vmax, color_map=cmap, sensPrc=sensPrc)
             else:
@@ -4910,6 +5073,7 @@ USA: Trelgol Publishing, (2006).
         layout.addWidget(errorLabel)
         self.table_widget.setLayout(layout)
         self.setCentralWidget(self.table_widget)
+        self.showMaximized() # maximizing window on start
         self.show()
 
 
@@ -5044,7 +5208,6 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
-    print(os.path.join(bundle_dir, 'logo.png'))
     splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
@@ -5067,7 +5230,6 @@ if __name__ == '__main__':
     progressBar.setValue(1)
     app.processEvents()
 
-    print('importing matplotlib')
     import matplotlib
     matplotlib.use('Qt5Agg')
 
@@ -5083,15 +5245,12 @@ if __name__ == '__main__':
 #    fig.add_subplot(111, projection='3d')
 #    fig.show()
 
-    print('importing numpy')
     import numpy as np
     progressBar.setValue(4)
     app.processEvents()
-    print ('importing pandas')
     import pandas as pd
     progressBar.setValue(6)
     app.processEvents()
-    print('importing python libraries')
     from datetime import datetime
     progressBar.setValue(8)
     app.processEvents()
