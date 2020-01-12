@@ -2133,7 +2133,7 @@ class R2(object): # R2 master class instanciated by the GUI
             errTot = False
 
         # write configuration file
-        dump('Writing .in file and protocol.dat ...')
+        dump('Writing .in file and protocol.dat ...', end='')
         self.write2in(param=param) # R2.in
         self.write2protocol(errTot=errTot) # protocol.dat
         #check to make sure the number of electrodes in the protocal matches the
@@ -2191,10 +2191,10 @@ class R2(object): # R2 master class instanciated by the GUI
         """Will rerun the inversion with an alpha_s 10 times larger.
         From the two different inversion a senstivity limit will be computed.
         """
-        dump('===== Re-running inversion with initial resistivity * 10 =====')
+        dump('===== Re-running inversion with initial resistivity * 10 =====\n')
         # backup current mesh results
         res0 = np.array(self.mesh.attr_cache['res0'])
-        res1 = res0 * 10
+        res1 = res0 * 2
         mesh0 = self.meshResults[0]
         self.mesh.attr_cache['res0b'] = list(res1)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
@@ -2208,17 +2208,13 @@ class R2(object): # R2 master class instanciated by the GUI
         sens = (invValues1 - invValues2)/(res0-res1)
         sensScaled = np.abs(sens)
         mesh0.attr_cache['doiSens'] = sensScaled
-        sensScaledCut = np.copy(sensScaled)
-        sensScaledCut[sensScaled < 0.2] = np.nan # recommended value in the paper
-        mesh0.attr_cache['sensCutOff'] = sensScaledCut
-        # TODO why not replace the 'sensitivity' attribute directly so we can tweak it in the UI with the slider
-        mesh0.attr_cache['Sensitivity(log10)'] = sensScaled
         self.meshResults = [mesh0]
+        self.ishowDOI = True
         
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
-                    **kwargs):
+                    doi=False, doiSens=False, **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -2239,6 +2235,13 @@ class R2(object): # R2 master class instanciated by the GUI
             Name of the colormap to be used.
         clabel : str, optional
             Label of the colorbar (by default the label is the value of `attr`).
+        doi : bool, optional
+            If True, it will draw a dotted red line corresponding to 0.02 from the
+            Oldenburg and Li method. Note that `R2.modeDOI()` needs to be run
+            for that.
+        doiSens : bool, optional
+            If True, it will draw a dashed line corresponding to 0.001 of the maximum
+            of the log10 sensitivity.
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -2257,11 +2260,15 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
                                 zlim=zlim, clabel=clabel, **kwargs)
-                if self.ishowDOI:
-                    mesh = self.meshResults[index]
-                    centroids = np.c_[mesh.elm_centre[0], mesh.elm_centre[2]]
+                mesh = self.meshResults[index]
+                centroids = np.c_[mesh.elm_centre[0], mesh.elm_centre[2]]
+                if doi is True and self.ishowDOI is True:
                     z = np.array(mesh.attr_cache['doiSens'])
-                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, colors='red')
+                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.2], colors='k', linestyles=':')
+                if doiSens is True:
+                    z = np.array(mesh.attr_cache['Sensitivity(log10)'])
+                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.001*np.nanmax(z)], colors='k', linestyles='--')
+               
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
@@ -2921,7 +2928,7 @@ class R2(object): # R2 master class instanciated by the GUI
                         os.path.join(fwdDir, 'mesh3d.dat'))
 
         # write the forward .in file
-        dump('Writing .in file...')
+        dump('Writing .in file...', end='')
         fparam = self.param.copy()
         fparam['job_type'] = 0
         fparam['num_regions'] = 0
@@ -3265,6 +3272,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         self.fwdErrMdl = True # class now has a forward error model.
 
+
     def showIter(self, index=-2, ax=None):
         """Dispay temporary inverted section after each iteration.
 
@@ -3348,6 +3356,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel('Elevation [m]')
+                ax.set_xlim([np.min(self.elec[:,0]), np.max(self.elec[:,0])])
+                ax.set_ylim(self.zlim)
                 if iplot is True:
                     fig.show()
 

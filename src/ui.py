@@ -4362,7 +4362,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 func(text)
             self.r2.proc = None
             sectionId.clear()
-
+            
             # displaying results or error
             def printR2out():
                 print('--------INVERSION FAILED--------')
@@ -4438,10 +4438,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis', 'sensPrc':0.5}
+                                  'cmap':'viridis', 'sensPrc':0.5,
+                                  'doi':modelDOICheck.isChecked(),
+                                  'doiSens':False}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
+            doiSensCheck.setChecked(False)
             vminEdit.setText('')
             vmaxEdit.setText('')
             displayAttribute(arg=defaultAttr)
@@ -4459,10 +4462,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmax = self.displayParams['vmax']
             cmap = self.displayParams['cmap']
             sensPrc = self.displayParams['sensPrc']
+            doi = self.displayParams['doi']
+            doiSens = self.displayParams['doiSens']
             if self.r2.typ[-1] == '2':
                 mwInvResult.replot(threed=False, aspect=self.plotAspect, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
-                                   vmin=vmin, vmax=vmax, color_map=cmap, sensPrc=sensPrc)
+                                   vmin=vmin, vmax=vmax, color_map=cmap, 
+                                   sensPrc=sensPrc, doi=doi, doiSens=doiSens)
             else:
                 mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                      vmin=vmin, vmax=vmax, color_map=cmap)
@@ -4610,6 +4616,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
         displayOptions.addWidget(vmaxEdit, 10)
         displayOptions.addWidget(vMinMaxApply)
         
+        
+        def doiSensCheckFunc(status):
+            if status == Qt.Checked:
+                self.displayParams['doiSens'] = True
+            else:
+                self.displayParams['doiSens'] = False
+            replotSection()
+        doiSensCheck = QCheckBox('DOI estimate')
+        doiSensCheck.stateChanged.connect(doiSensCheckFunc)
+        doiSensCheck.setToolTip('Estimated Depth of Investigation (DOI) based on 0.001 '
+                            'of the max log10 sensitivity. See advanced settings for Oldenburg and Li DOI.')
+        displayOptions.addWidget(doiSensCheck)
+        
         cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','plasma','seismic', 'winter','autumn','rainbow']
         def cmapComboFunc(index):
@@ -4733,7 +4752,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis, 
-                    paraviewBtn, btnSave, sensWidget]
+                    paraviewBtn, btnSave, sensWidget, doiSensCheck]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
