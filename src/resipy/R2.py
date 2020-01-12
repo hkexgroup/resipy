@@ -2111,6 +2111,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # modelDOI force to use full mesh
         if modelDOI is True and len(self.surveys) == 1:
             param['num_xy_poly'] = 0
+            param['reg_mode'] = 1 # we need constrain to background
 
         # create mesh if not already done
         if 'mesh' not in self.param:
@@ -2186,7 +2187,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def modelDOI(self, dump=print):
-        """Will rerun the inversion with an initial resistivity 10 times larger.
+        """Will rerun the inversion with an alpha_s 10 times larger.
         From the two different inversion a senstivity limit will be computed.
         """
         dump('===== Re-running inversion with initial resistivity * 10 =====')
@@ -2196,7 +2197,7 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh0 = self.meshResults[0]
         self.mesh.attr_cache['res0b'] = list(res1)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
-        self.runR2(dump=dump)
+        self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh1 = self.meshResults[0]
         

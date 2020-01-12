@@ -4302,17 +4302,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.rmsIndex = []
             self.rmsIP = []
             self.rmsIndexIP = []
-            self.r2.param['lineTitle'] = titleEdit.text()
-            if self.r2.mesh is None:
-                meshTrianFunc() # generate default mesh
-                
+            self.r2.param['lineTitle'] = titleEdit.text()                
 
-            def func(text):
+            def func(text, end='\n'):
 #                print('t', text)
-                self.inversionOutput = text + '\n'
+                self.inversionOutput = text + end
                 cursor = logText.textCursor()
                 cursor.movePosition(cursor.End)
-                cursor.insertText(text+'\n')
+                cursor.insertText(text + end)
                 logText.ensureCursorVisible()
                 # plot RMS graph
                 text = self.inversionOutput
@@ -4337,9 +4334,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 self.r2.param['num_xy_poly'] = 0
 
-            # apply region for initial model
-            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
-                self.r2.createMesh()
+            # create default mesh is not specified
+            if self.r2.mesh is None:
+                func('Create default triangular mesh ...', end='')
+                meshTrianFunc()
+                func('done')
+
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
             self.r2.setStartingRes(dict(zip(regid, x)),
