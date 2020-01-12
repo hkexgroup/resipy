@@ -2,8 +2,8 @@ GUI for R2 family of codes
 ==========================
 (Note that **ResIPy** was called **pyR2** before 2019-04-16)
 
-ResIPy is a Python wrapper around the [R2 family of codes](http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm) (for 2D/3D DC/IP inversion)
-that provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
+ResIPy is a Python wrapper around the [R2 family of codes](http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm) (for 2D/3D DC/IP inversion).
+ResIPy provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
 for use in Jupyter notebook. Have a look at the [**documentation and the examples**](https://hkex.gitlab.io/pyr2) to know more.
 
 ResIPy aims to be 
@@ -19,7 +19,7 @@ Downloads
 Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
 
-Note for Mac and Linux users:
+Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
 - *wine* is still not supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
