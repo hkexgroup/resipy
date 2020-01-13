@@ -3533,10 +3533,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         forwardLogText = QTextEdit()
         forwardLogText.setReadOnly(True)
-        def forwardLogTextFunc(text):
+        def forwardLogTextFunc(text, end='\n'):
             cursor = forwardLogText.textCursor()
             cursor.movePosition(cursor.End)
-            cursor.insertText(text + '\n')
+            cursor.insertText(text + end)
             forwardLogText.ensureCursorVisible()
             QApplication.processEvents()
             if text == 'Forward modelling done.':
@@ -4336,9 +4336,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
             # create default mesh is not specified
             if self.r2.mesh is None:
-                func('Create default triangular mesh ...', end='')
+                func('Creating the mesh...', end='\n')
                 meshTrianFunc()
-                func('done')
+                func('done!\n')
 
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
