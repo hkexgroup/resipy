@@ -2191,7 +2191,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """Will rerun the inversion with an alpha_s 10 times larger.
         From the two different inversion a senstivity limit will be computed.
         """
-        dump('===== Re-running inversion with initial resistivity * 10 =====\n')
+        dump('===== Re-running inversion with initial resistivity * 2 =====\n')
         # backup current mesh results
         res0 = np.array(self.mesh.attr_cache['res0'])
         res1 = res0 * 2
@@ -2262,15 +2262,13 @@ class R2(object): # R2 master class instanciated by the GUI
                                 zlim=zlim, clabel=clabel, **kwargs)
                 mesh = self.meshResults[index]
                 centroids = np.c_[mesh.elm_centre[0], mesh.elm_centre[2]]
-                if doi is True and self.ishowDOI is True:
+                if doi is True and self.ishowDOI is True: # DOI based on Oldenburg and Li
                     z = np.array(mesh.attr_cache['doiSens'])
                     mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.2], colors='k', linestyles=':')
-                if doiSens is True:
-                    if doi is True and self.ishowDOI is True:
-                        z = np.array(mesh.attr_cache['doiSens'])
-                    else:
-                        z = np.array(mesh.attr_cache['Sensitivity(log10)'])
-                    levels=[np.log10(0.001*(10**np.nanmax(z)))]
+                if doiSens is True: # DOI based on log10(sensitivity)
+                    z = np.array(mesh.attr_cache['Sensitivity(log10)'])
+#                    levels=[np.log10(0.001*(10**np.nanmax(z)))]
+                    levels = [0.001*np.nanmax(z)]
                     mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=levels, colors='k', linestyles='--')
                
             else: # 3D case
