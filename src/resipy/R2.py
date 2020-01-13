@@ -596,7 +596,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """Will trim all surveys to get them ready for difference inversion
         where all datasets must have the same number of quadrupoles.
         """
-        print('Matching quadrupoles between surveys for difference inversion ...', end='')
+        print('Matching quadrupoles between surveys for difference inversion...', end='')
         t0 = time.time()
         dfs = [s.df for s in self.surveys]
 
@@ -1989,7 +1989,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 procs = self.r2.procs # and kill the running processes
                 for p in procs:
                     p.terminate()
-                print('all done')
+                print('all done!')
 
         self.proc = ProcsManagement(self)
 
@@ -2118,13 +2118,13 @@ class R2(object): # R2 master class instanciated by the GUI
         if 'mesh' not in self.param:
             dump('Create Rectangular mesh...')
             self.createMesh()
-            dump('done\n')
+            dump('done!\n')
 
         # compute modelling error if selected
         if modErr is True and self.fwdErrMdl is False: #check no error model exists
             dump('Computing error model ...')
             self.computeModelError()
-            dump('done\n')
+            dump('done!\n')
             errTot = True
         elif modErr is True and self.fwdErrMdl:
             # aviod computing error model again if it has already been run.
@@ -2133,7 +2133,7 @@ class R2(object): # R2 master class instanciated by the GUI
             errTot = False
 
         # write configuration file
-        dump('Writing .in file and protocol.dat ...', end='')
+        dump('Writing .in file and protocol.dat...', end='\n')
         self.write2in(param=param) # R2.in
         self.write2protocol(errTot=errTot) # protocol.dat
         #check to make sure the number of electrodes in the protocal matches the
@@ -2142,7 +2142,7 @@ class R2(object): # R2 master class instanciated by the GUI
         check = np.array((df['a'],df['b'],df['m'],df['n']))
         if len(self.elec) < np.max(check): # Make sure there are not more electrodes locations in the schedule file than in R2 class
             raise Exception("The number of electrodes given to ResIPy (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
-        dump('done\n')
+        dump('done!\n')
 
         # runs inversion
         if self.iTimeLapse == True and self.referenceMdl==False:
@@ -2929,20 +2929,20 @@ class R2(object): # R2 master class instanciated by the GUI
                         os.path.join(fwdDir, 'mesh3d.dat'))
 
         # write the forward .in file
-        dump('Writing .in file...', end='')
+        dump('Writing .in file...', end='\n')
         fparam = self.param.copy()
         fparam['job_type'] = 0
         fparam['num_regions'] = 0
         fparam['res0File'] = 'resistivity.dat' # just starting resistivity
 
         write2in(fparam, fwdDir, typ=self.typ)
-        dump('done\n')
+        dump('done!\n')
 
         # write the protocol.dat (that contains the sequence)
         if self.sequence is None:
             dump('Creating sequence ...')
             self.createSequence()
-            dump('done\n')
+            dump('done!\n')
         dump('Writing protocol.dat ...')
         seq = self.sequence
 
@@ -2977,7 +2977,7 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
-        dump('done\n')
+        dump('done!\n')
 
         # fun the inversion
         dump('Running forward model')
@@ -3604,7 +3604,7 @@ class R2(object): # R2 master class instanciated by the GUI
             **Windows ONLY** maps to the excuatable paraview.exe. The program
             will attempt to find the location of the paraview install if not given.
         """
-        print('Saving mesh as vtk ...', end='')
+        print('Saving mesh as vtk...', end='')
         self.saveMeshVtk() # save in default dirname
         print('done.\n Launching paraview.')
         self._toParaview(os.path.join(self.dirname, 'mesh.vtk'),
