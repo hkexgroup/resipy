@@ -550,6 +550,13 @@ class Mesh:
                             predy = offset + slope * trix[ie]
                             ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
                             i2keep[np.where(ie)[0][ie2]] = True
+                    
+                    # outside the survey area
+                    imin = np.argmin(xsurf)
+                    i2keep[(trix < xsurf[imin]) & (triy > xsurf[imin])] = False
+                    imax = np.argmax(xsurf)
+                    i2keep[(trix > xsurf[imax]) & (triy > xsurf[imax])] = False
+                    
                     return i2keep
                 
                 if self.surface is not None:
