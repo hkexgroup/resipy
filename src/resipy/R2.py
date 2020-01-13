@@ -2266,7 +2266,10 @@ class R2(object): # R2 master class instanciated by the GUI
                     z = np.array(mesh.attr_cache['doiSens'])
                     mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.2], colors='k', linestyles=':')
                 if doiSens is True:
-                    z = np.array(mesh.attr_cache['Sensitivity(log10)'])
+                    if doi is True and self.ishowDOI is True:
+                        z = np.array(mesh.attr_cache['doiSens'])
+                    else:
+                        z = np.array(mesh.attr_cache['Sensitivity(log10)'])
                     levels=[np.log10(0.001*(10**np.nanmax(z)))]
                     mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=levels, colors='k', linestyles='--')
                
