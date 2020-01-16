@@ -2191,7 +2191,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """Will rerun the inversion with an alpha_s 10 times larger.
         From the two different inversion a senstivity limit will be computed.
         """
-        dump('===== Re-running inversion with initial resistivity * 2 =====\n')
+        dump('===== Re-running inversion with initial resistivity * 10 =====\n')
         # backup current mesh results
         res0 = np.array(self.mesh.attr_cache['res0'])
         res1 = res0 * 10
