@@ -2194,7 +2194,7 @@ class R2(object): # R2 master class instanciated by the GUI
         dump('===== Re-running inversion with initial resistivity * 2 =====\n')
         # backup current mesh results
         res0 = np.array(self.mesh.attr_cache['res0'])
-        res1 = res0 * 2
+        res1 = res0 * 10
         mesh0 = self.meshResults[0]
         self.mesh.attr_cache['res0b'] = list(res1)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
