@@ -1351,6 +1351,7 @@ class App(QMainWindow):
                 self.ncol = ncol
                 self.selfInit = selfInit
                 self.initTable(np.array([['',''],['','']]), headers=headers)
+                self.horizontalHeader().sortIndicatorChanged.connect(self.setAllBuried)
 #                self.headers = np.array(headers)
 #                self.setHorizontalHeaderLabels(headers)
 #                self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -1377,6 +1378,16 @@ class App(QMainWindow):
                     checkBoxWidget.setLayout(checkBoxLayout)
                     self.setCellWidget(i, j, checkBoxWidget)
 
+            def setAllBuried(self, colIndex):
+                if  self.headers[colIndex] == 'Buried':
+                    j = np.where(self.headers == 'Buried')[0][0]
+                    for i in range(self.nrow):
+                        buriedCheck = self.cellWidget(i, j).findChildren(QCheckBox)[0]
+                        if buriedCheck.isChecked() is True:
+                            buriedCheck.setChecked(False)
+                        else:
+                            buriedCheck.setChecked(True)
+                            
             def getBuried(self):
                 j = np.where(self.headers == 'Buried')[0][0]
                 self.buried = np.zeros(self.nrow, dtype=bool)
@@ -1492,7 +1503,7 @@ class App(QMainWindow):
         elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
                            You can also use the form below to generate \
-                           regular electrode spacing.</i>')
+                           regular electrode spacing. <b>Click on the <font color="red">"Buried"</font> table header to check/unchek all</b></i>')
         elecLabel.setWordWrap(True)
 
         def elecButtonFunc():
