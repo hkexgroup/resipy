@@ -616,7 +616,7 @@ class Mesh:
                     i = np.where(x > thresh)[0][0]
                     x = np.argsort(weights)
                     alphas = np.zeros(self.num_elms)
-                    alphas[:i] = np.linspace(1, 0.1, len(alphas[:i]))
+                    alphas[:i] = np.linspace(1, 0.2, len(alphas[:i]))
                     raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
                     raw_alpha[:, -1] = alphas
                     alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
