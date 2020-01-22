@@ -212,6 +212,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
+        self.iremote = None # populate on electrode import, True if electrode is remote
 
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -229,7 +230,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def setElec(self, elec, elecList=None):
-        """Set electrodes.
+        """Set electrodes. Automatically identified remote electrode.
 
         Parameters
         ----------
@@ -281,6 +282,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.elec = initElec
                 for i in range(num_surveys):
                     self.surveys[i].elec = elecList[i] # set survey electrodes to each electrode coordinate
+        
+        # identified remote electrode
+        remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                    9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        self.iremote = np.in1d(self.elec[:,0], remote_flags)
+        if np.sum(self.iremote) > 0:
+            print('Detected {:d} remote electrode.'.format(np.sum(self.iremote)))
+    
         if len(self.surveys) > 0:
             self.computeDOI()
 
@@ -380,7 +389,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # define electrode position according to first survey
         if len(self.surveys) == 1:
-            self.elec = self.surveys[0].elec
+            self.elec = None
+            self.setElec(self.surveys[0].elec)
 
 
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
@@ -462,7 +472,8 @@ class R2(object): # R2 master class instanciated by the GUI
             # all surveys are imported whatever their length, they will be matched
             # later if reg_mode == 2 (difference inversion)
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
-        self.elec = self.surveys[0].elec
+        self.elec = None
+        self.setElec(self.surveys[0].elec)
         self.setBorehole(self.iBorehole)
 
         # create bigSurvey (useful if we want to fit a single error model
@@ -546,7 +557,8 @@ class R2(object): # R2 master class instanciated by the GUI
         survey0.df = dfm
         survey0.name = '3Dfrom2Dlines' if name is None else name
         self.surveys= [survey0]
-        self.elec = elec
+        self.elec = None
+        self.setElec(elec)
         self.setBorehole(self.iBorehole)
         
 
@@ -1132,14 +1144,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """Compute the Depth Of Investigation (DOI) based on electrode
         positions and the larger dipole spacing.
         """
-        elec = self.elec.copy()
-
-        #check if remote electrodes present?
-        remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-        iremote = np.in1d(self.elec[:,0], remote_flags)
-        elec = elec[~iremote,:]
-
+        elec = self.elec.copy()[~self.iremote,:]
         if self.typ == 'R2' or self.typ == 'cR2': # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
@@ -1250,9 +1255,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         #check if remote electrodes present?
         if remote is None: # automatic detection
-            remote_flags = [-9999999, -999999, -99999,-9999,-999]
-                        #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-            remote = np.in1d(self.elec[:,0], remote_flags)
+            remote = self.iremote
             if np.sum(remote) > 0:
                 print('remote electrode detected')
                 if typ == 'quad':
@@ -2278,9 +2281,7 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh = mt.vtk_import(fresults)
             mesh.mesh_title = self.surveys[0].name
             elec = self.elec.copy()
-            remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-            iremote = np.in1d(elec[:,0], remote_flags)
+            iremote = self.iremote
             mesh.elec_x = elec[~iremote,0]
             mesh.elec_y = elec[~iremote,1]
             mesh.elec_z = elec[~iremote,2]
@@ -2311,9 +2312,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
                     elec = self.elec.copy()
-                    remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                                9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-                    iremote = np.in1d(elec[:,0], remote_flags)
+                    iremote = self.iremote
                     mesh.elec_x = elec[~iremote,0]
                     mesh.elec_y = elec[~iremote,1]
                     mesh.elec_z = elec[~iremote,2]
@@ -2783,8 +2782,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
             df.to_csv(fname, index=False)
-
-
+            
 
     def importElec(self, fname=''):
         """Import electrodes positions.
@@ -3677,7 +3675,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         for i in range(len(self.surveys)):
             self.surveys[i].elec2distance() # go through each survey and compute electrode
-        self.elec = self.surveys[0].elec
+        self.elec = None
+        self.setElec(self.surveys[0].elec)
 
 # WIP
 #    def timelapseErrorModel(self, ax=None):
