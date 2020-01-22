@@ -4725,9 +4725,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def sensSliderFunc(val):
             val = val/10.0
-#            aa = np.linspace(0.00001, 0.01, 101)
-#            a = aa[int(val*100)]
-#            infoDump('Overlay sensitivity threshold is set to {:.0f}% of max sensitivity'.format(a)) #to remove some ambiguity with this slider for people!
+            aa = np.logspace(-5, -2, 101)
+            a = aa[int(val*100)]
+            infoDump('Overlay sensitivity threshold is set to {:.2E} X max sensitivity'.format((a))) #to remove some ambiguity with this slider for people!
             self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
