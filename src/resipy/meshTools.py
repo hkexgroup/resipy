@@ -563,7 +563,7 @@ class Mesh:
                     try:
                         triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
                     except Exception as e:
-                        print('Error in Mesh.show for contouring: ', e)
+                        print('Error in Mesh.show() for contouring: ', e)
                 
                 self.cax = ax.tricontourf(triang, zc, levels=levels, extend='both', cmap=color_map)
             
@@ -592,6 +592,9 @@ class Mesh:
 
         #biuld alpha channel if we have sensitivities 
         if sens:
+            if 'Sensitivity(log10)' not in self.attr_cache.keys():
+                print('ERROR: No sensitivity attribute found')
+                return
             try:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 

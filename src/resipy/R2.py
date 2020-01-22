@@ -114,6 +114,34 @@ def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
             f.write(footer)
 
 
+# make sure none of the triangle centroids are above the
+# line of electrodes
+def cropSurface(triang, xsurf, ysurf):
+    trix = np.mean(triang.x[triang.triangles], axis=1)
+    triy = np.mean(triang.y[triang.triangles], axis=1)
+    
+    i2keep = np.ones(len(trix), dtype=bool)
+    for i in range(len(xsurf)-1):
+        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+        ie = ilateral & iabove
+        i2keep[ie] = False
+        if np.sum(ie) > 0: # if some triangles are above the min electrode
+            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+            offset = ysurf[i] - slope * xsurf[i]
+            predy = offset + slope * trix[ie]
+            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
+            i2keep[np.where(ie)[0][ie2]] = True
+    
+    # outside the survey area
+    imin = np.argmin(xsurf)
+    i2keep[(trix < xsurf[imin]) & (triy > xsurf[imin])] = False
+    imax = np.argmax(xsurf)
+    i2keep[(trix > xsurf[imax]) & (triy > xsurf[imax])] = False
+    
+    return i2keep
+
+
 # distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
 def cdist(a):
     z = np.array([complex(x[0], x[1]) for x in a])
@@ -212,7 +240,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
-        self.ishowDOI = False # if True will show the Depth of Investigation modelled
+        self.doiComputed = False # if True will show the Depth of Investigation modelled
 
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -2209,7 +2237,7 @@ class R2(object): # R2 master class instanciated by the GUI
         sensScaled = np.abs(sens)
         mesh0.attr_cache['doiSens'] = sensScaled
         self.meshResults = [mesh0]
-        self.ishowDOI = True
+        self.doiComputed = True
         
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -2261,21 +2289,41 @@ class R2(object): # R2 master class instanciated by the GUI
                                 attr=attr, sens=sens, color_map=color_map,
                                 zlim=zlim, clabel=clabel, **kwargs)
                 mesh = self.meshResults[index]
-                centroids = np.c_[mesh.elm_centre[0], mesh.elm_centre[2]]
-                if doi is True and self.ishowDOI is True: # DOI based on Oldenburg and Li
-                    z = np.array(mesh.attr_cache['doiSens'])
-                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=[0.2], colors='k', linestyles=':')
+                if doi is True:
+                    if self.doiComputed is True: # DOI based on Oldenburg and Li
+                        zc = np.array(mesh.attr_cache['doiSens'])
+                        levels = [0.2]
+                        linestyle = ':'
+                    else:
+                        raise ValueError('Rerun the inversion with `modelDOI=True` first or use `doiSens`.')
                 if doiSens is True: # DOI based on log10(sensitivity)
-                    z = np.array(mesh.attr_cache['Sensitivity(log10)'])
-                    levels=[np.log10(0.001*(10**np.nanmax(z)))]
-                    mesh.ax.tricontour(centroids[:,0], centroids[:,1], z, levels=levels, colors='k', linestyles='--')
-               
+                    zc = np.array(mesh.attr_cache['Sensitivity(log10)'])
+                    levels=[np.log10(0.001*(10**np.nanmax(zc)))]
+                    linestyle = '--'
+                
+                # plotting of the sensitivity contour (need to cropSurface as well)
+                xc, yc = mesh.elm_centre[0], mesh.elm_centre[2]
+                if self.mesh.surface is not None:
+                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+                    xc = np.r_[xc, xf]
+                    yc = np.r_[yc, yf]
+                    zc = np.r_[zc, zf]
+                    triang = tri.Triangulation(xc, yc) # build grid based on centroid
+                if self.mesh.surface is not None:
+                    try:
+                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+                    except Exception as e:
+                        print('Error in cropSurface for contouring: ', e)
+                print('hello')
+                mesh.ax.tricontour(triang, zc, levels=levels, colors='k', linestyles=linestyle)               
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
                             **kwargs)
         else:
-            print('Unexpected Error')
+            raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
+
 
 
     def getResults(self):
@@ -3300,7 +3348,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(fs) > 1: # the last file is always open and not filled with data
 #            if self.param['mesh_type'] == 10:
 #                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
-#                # TODO change that to full meshTools
+#                # TODO change that to full meshTools?
 #
 #            else:
 #            x = np.genfromtxt(os.path.join(self.dirname, fs[index])) # too sensitive to empty columns of cR2 output
@@ -3320,34 +3368,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     xc = np.r_[xc, xf]
                     yc = np.r_[yc, yf]
                     zc = np.r_[zc, zf]
-                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
-
-                # make sure none of the triangle centroids are above the
-                # line of electrodes
-                def cropSurface(triang, xsurf, ysurf):
-                    trix = np.mean(triang.x[triang.triangles], axis=1)
-                    triy = np.mean(triang.y[triang.triangles], axis=1)
-                    
-                    i2keep = np.ones(len(trix), dtype=bool)
-                    for i in range(len(xsurf)-1):
-                        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
-                        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
-                        ie = ilateral & iabove
-                        i2keep[ie] = False
-                        if np.sum(ie) > 0: # if some triangles are above the min electrode
-                            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
-                            offset = ysurf[i] - slope * xsurf[i]
-                            predy = offset + slope * trix[ie]
-                            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
-                            i2keep[np.where(ie)[0][ie2]] = True
-                    
-                    # outside the survey area
-                    imin = np.argmin(xsurf)
-                    i2keep[(trix < xsurf[imin]) & (triy > xsurf[imin])] = False
-                    imax = np.argmax(xsurf)
-                    i2keep[(trix > xsurf[imax]) & (triy > xsurf[imax])] = False
-                    
-                    return i2keep
+                    triang = tri.Triangulation(xc, yc) # build grid based on centroids                
                 
                 if self.mesh.surface is not None:
                     try:
