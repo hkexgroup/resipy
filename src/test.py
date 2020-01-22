@@ -210,6 +210,19 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-borehole'] = time.time() - t0
 
 
+#%% test model DOI
+plt.close('all')
+print('============== Test modelDOI() =================)
+k = R2()
+#k.createSurvey('../examples/dc-2d-topo/syscal.csv')
+#k.importElec('../examples/dc-2d-topo/elec.csv')
+k.createSurvey('../examples/dc-2d/syscal.csv')
+k.createMesh('trian')
+k.invert(modelDOI=True)
+k.showResults(doiSens=True)
+k.showResults(doi=True)
+
+
 #%% test for IP
 plt.close('all')
 print('-------------Testing IP ------------')
