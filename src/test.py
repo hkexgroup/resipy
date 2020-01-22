@@ -109,12 +109,7 @@ k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.createMesh('quad')
 k.createMesh('trian')
 
-# 2D borehole
-k = R2()
-k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
-k.importElec(testdir + 'dc-2d-borehole/elec.csv')
-k.createMesh('quad')
-#k.createMesh('trian') # TODO failed !
+# 2D borehole (see example)
 
 # 3D flat
 #k = R2(typ='R3t') # tested in cases
