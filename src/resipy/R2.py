@@ -2137,11 +2137,9 @@ class R2(object): # R2 master class instanciated by the GUI
         # clean meshResults list
         self.meshResults = []
         
-        # modelDOI force to use full mesh
         if modelDOI is True and len(self.surveys) == 1:
-            param['num_xy_poly'] = 0
-            param['reg_mode'] = 1 # we need constrain to background
-
+            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
+        
         # create mesh if not already done
         if 'mesh' not in self.param:
             dump('Create Rectangular mesh...')
@@ -2216,28 +2214,46 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def modelDOI(self, dump=print):
-        """Will rerun the inversion with an alpha_s 10 times larger.
+        """Will rerun the inversion with a background constrain (alpha_s) with
+        the normal background and then a background 10 times more resistive.
         From the two different inversion a senstivity limit will be computed.
         """
-        dump('===== Re-running inversion with initial resistivity * 10 =====\n')
-        # backup current mesh results
+        # backup normal inversion (0 : original, 1 : normal background, 2: background *10)
         res0 = np.array(self.mesh.attr_cache['res0'])
-        res1 = res0 * 10
         mesh0 = self.meshResults[0]
+        param0 = self.param.copy()
+        self.param['reg_mode'] = 1 # we need constrain to background
+        self.write2in()
+        
+        dump('===== Re-running background constrained inversion with initial resistivity =====\n')
+        res1 = res0
         self.mesh.attr_cache['res0b'] = list(res1)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
         self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh1 = self.meshResults[0]
+
+        dump('===== Re-running background constrained inversion with initial resistivity * 10 =====\n')
+        res2 = res0 * 10
+        self.mesh.attr_cache['res0b'] = list(res2)
+        self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
+        self.runR2(dump=dump) # re-run inversion
+        self.getResults()
+        mesh2 = self.meshResults[0]
         
         # sensitivity = difference between final inversion / difference init values
-        invValues1 = np.array(mesh0.attr_cache['Resistivity(Ohm-m)'])
-        invValues2 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
-        sens = (invValues1 - invValues2)/(res0-res1)
+        invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
+        sens = (invValues1 - invValues2)/(res1-res2)
         sensScaled = np.abs(sens)
-        mesh0.attr_cache['doiSens'] = sensScaled
-        self.meshResults = [mesh0]
+        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
         self.doiComputed = True
+        
+        # restore
+        self.meshResults = [mesh0]
+        self.param = param0
+        self.write2in()
+        
         
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
@@ -2291,31 +2307,33 @@ class R2(object): # R2 master class instanciated by the GUI
                 mesh = self.meshResults[index]
                 if doi is True:
                     if self.doiComputed is True: # DOI based on Oldenburg and Li
-                        zc = np.array(mesh.attr_cache['doiSens'])
+                        z = np.array(mesh.attr_cache['doiSens'])
                         levels = [0.2]
                         linestyle = ':'
                     else:
                         raise ValueError('Rerun the inversion with `modelDOI=True` first or use `doiSens`.')
                 if doiSens is True: # DOI based on log10(sensitivity)
-                    zc = np.array(mesh.attr_cache['Sensitivity(log10)'])
-                    levels=[np.log10(0.001*(10**np.nanmax(zc)))]
+                    z = np.array(mesh.attr_cache['Sensitivity(log10)'])
+                    levels=[np.log10(0.001*(10**np.nanmax(z)))]
                     linestyle = '--'
                 
                 # plotting of the sensitivity contour (need to cropSurface as well)
-                xc, yc = mesh.elm_centre[0], mesh.elm_centre[2]
+                xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
                 if self.mesh.surface is not None:
+                    zc = z
                     xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
                     zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
                     xc = np.r_[xc, xf]
                     yc = np.r_[yc, yf]
                     zc = np.r_[zc, zf]
                     triang = tri.Triangulation(xc, yc) # build grid based on centroid
-                if self.mesh.surface is not None:
                     try:
                         triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
                     except Exception as e:
                         print('Error in cropSurface for contouring: ', e)
-                print('hello')
+                else:
+                    triang = tri.Triangulation(xc, yc)
+                    zc = z
                 mesh.ax.tricontour(triang, zc, levels=levels, colors='k', linestyles=linestyle)               
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
@@ -3368,15 +3386,12 @@ class R2(object): # R2 master class instanciated by the GUI
                     xc = np.r_[xc, xf]
                     yc = np.r_[yc, yf]
                     zc = np.r_[zc, zf]
-                    triang = tri.Triangulation(xc, yc) # build grid based on centroids                
-                
-                if self.mesh.surface is not None:
+                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
                     try:
                         triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
                     except Exception as e:
-                        print('Error in Mesh.show for contouring: ', e)
-                
-                if self.mesh.surface is None:
+                        print('Error in R2.showIter() for contouring: ', e)
+                else:
                     zc = z.copy()
                     
                 cax = ax.tricontourf(triang, zc, extend='both')
