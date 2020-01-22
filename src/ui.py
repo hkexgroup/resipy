@@ -4359,19 +4359,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 logText.ensureCursorVisible()
                 QApplication.processEvents()
 
-            # don't crop the mesh if that's what we'e chosen
-            if self.iCropping is True:
-                if self.num_xy_poly is not None:
-                    self.r2.param['num_xy_poly'] = self.num_xy_poly
-            else:
-                self.r2.param['num_xy_poly'] = 0
-
             # create default mesh is not specified
             if self.r2.mesh is None:
                 func('Creating the mesh...', end='\n')
                 meshTrianFunc()
                 func('done!\n')
 
+            # don't crop the mesh if that's what we've chosen
+            if self.iCropping is True:
+                if self.num_xy_poly is not None:
+                    self.r2.param['num_xy_poly'] = self.num_xy_poly
+            else:
+                self.r2.param['num_xy_poly'] = 0
+                
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
             self.r2.setStartingRes(dict(zip(regid, x)),

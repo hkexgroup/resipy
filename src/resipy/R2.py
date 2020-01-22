@@ -2136,6 +2136,10 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         # clean meshResults list
         self.meshResults = []
+        print('=======', self.param['num_xy_poly'])
+        
+        if modelDOI is True and len(self.surveys) == 1:
+            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
         
         # create mesh if not already done
         if 'mesh' not in self.param:
