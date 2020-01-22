@@ -2317,24 +2317,25 @@ class R2(object): # R2 master class instanciated by the GUI
                     levels=[np.log10(0.001*(10**np.nanmax(z)))]
                     linestyle = '--'
                 
-                # plotting of the sensitivity contour (need to cropSurface as well)
-                xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
-                if self.mesh.surface is not None:
-                    zc = z
-                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-                    xc = np.r_[xc, xf]
-                    yc = np.r_[yc, yf]
-                    zc = np.r_[zc, zf]
-                    triang = tri.Triangulation(xc, yc) # build grid based on centroid
-                    try:
-                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
-                    except Exception as e:
-                        print('Error in cropSurface for contouring: ', e)
-                else:
-                    triang = tri.Triangulation(xc, yc)
-                    zc = z
-                mesh.ax.tricontour(triang, zc, levels=levels, colors='k', linestyles=linestyle)               
+                if doi is True or doiSens is True:
+                    # plotting of the sensitivity contour (need to cropSurface as well)
+                    xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
+                    if self.mesh.surface is not None:
+                        zc = z
+                        xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+                        zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+                        xc = np.r_[xc, xf]
+                        yc = np.r_[yc, yf]
+                        zc = np.r_[zc, zf]
+                        triang = tri.Triangulation(xc, yc) # build grid based on centroid
+                        try:
+                            triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+                        except Exception as e:
+                            print('Error in cropSurface for contouring: ', e)
+                    else:
+                        triang = tri.Triangulation(xc, yc)
+                        zc = z
+                    mesh.ax.tricontour(triang, zc, levels=levels, colors='k', linestyles=linestyle)               
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
