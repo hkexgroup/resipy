@@ -3774,6 +3774,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
         modelDOILabel.linkActivated.connect(showHelp2)
         modelDOICheck = QCheckBox()
         advForm.addRow(modelDOILabel, modelDOICheck)
+        
+        sensDOILabel = QLabel('<a href="sensDOI">Display sensitivity based DOI</a>')
+        sensDOILabel.linkActivated.connect(showHelp2)
+        sensDOICheck = QCheckBox()
+        def sensDOIFunc(state):
+            if state == Qt.Checked:
+                self.displayParams['sensDOI'] = True
+            else:
+                self.displayParams['sensDOI'] = False
+        sensDOICheck.stateChanged.connect(sensDOIFunc)
+        advForm.addRow(sensDOILabel, sensDOICheck)
 
         def flux_typeFunc(index):
             if index == 0:
@@ -4444,7 +4455,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
-            doiSensCheck.setChecked(False)
+            doiCheck.setChecked(modelDOICheck.isChecked())
             vminEdit.setText('')
             vmaxEdit.setText('')
             displayAttribute(arg=defaultAttr)
@@ -4617,17 +4628,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         displayOptions.addWidget(vMinMaxApply)
         
         
-        def doiSensCheckFunc(status):
+        def doiCheckFunc(status):
             if status == Qt.Checked:
-                self.displayParams['doiSens'] = True
+                self.displayParams['doi'] = True
             else:
-                self.displayParams['doiSens'] = False
+                self.displayParams['doi'] = False
             replotSection()
-        doiSensCheck = QCheckBox('DOI estimate')
-        doiSensCheck.stateChanged.connect(doiSensCheckFunc)
-        doiSensCheck.setToolTip('Estimated Depth of Investigation (DOI) based on 0.001 '
-                            'of the max log10 sensitivity. See advanced settings for Oldenburg and Li DOI.')
-        displayOptions.addWidget(doiSensCheck)
+        doiCheck = QCheckBox('DOI')
+        doiCheck.stateChanged.connect(doiCheckFunc)
+        doiCheck.setToolTip('Depth of Investigation (DOI) based on Oldenburg and Li 1999.')
+        displayOptions.addWidget(doiCheck)
         
         cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','plasma','seismic', 'winter','autumn','rainbow']
@@ -4752,7 +4762,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis, 
-                    paraviewBtn, btnSave, sensWidget, doiSensCheck]
+                    paraviewBtn, btnSave, sensWidget, doiCheck]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default

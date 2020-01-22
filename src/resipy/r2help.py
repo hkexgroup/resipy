@@ -70,7 +70,9 @@ r2help = {
             "usually set to 0.001 to 0.01.</p>",
 'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.',
 'modelDOI' : "<p>If checked, the inversion will be rerun with a background an order of magnitude more resistive."
-            " The ration of the difference of inverted value divided by the difference in initial resistivity gives"
-            " a new estimate of the sensitivity and depth of investigation of the inversion.</p>"
+            " The ratio of the difference of inverted value divided by the difference in initial resistivity gives"
+            " a new estimate of the sensitivity and depth of investigation of the inversion (Oldenburg and Li, 1999)</p>",
+'sensDOI' : "<p>Sensitivity based DOI. If a dashed line will be drawn on the inverted section at 0.001*maxSensitivity."
+            "Note that this is not the DOI based on the Oldenburg and Li method.</p>"
 }
 
