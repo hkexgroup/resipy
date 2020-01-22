@@ -3770,21 +3770,29 @@ combination of multiple sequence is accepted as well as importing a custom seque
         notCropping.stateChanged.connect(notCroppingFunc)
         advForm.addRow(notCroppingLabel, notCropping)
         
+        def modelDOIFunc(status):
+            if status == Qt.Checked:
+                doiCheck.setVisible(True)
+                doiSensCheck.setVisible(False)
+            else:
+                doiCheck.setVisible(False)
+                doiSensCheck.setVisible(True)
         modelDOILabel = QLabel('<a href="modelDOI">Model DOI</a>')
         modelDOILabel.linkActivated.connect(showHelp2)
         modelDOICheck = QCheckBox()
+        modelDOICheck.stateChanged.connect(modelDOIFunc)
         advForm.addRow(modelDOILabel, modelDOICheck)
         
-        sensDOILabel = QLabel('<a href="sensDOI">Display sensitivity based DOI</a>')
-        sensDOILabel.linkActivated.connect(showHelp2)
-        sensDOICheck = QCheckBox()
-        def sensDOIFunc(state):
-            if state == Qt.Checked:
-                self.displayParams['sensDOI'] = True
-            else:
-                self.displayParams['sensDOI'] = False
-        sensDOICheck.stateChanged.connect(sensDOIFunc)
-        advForm.addRow(sensDOILabel, sensDOICheck)
+#        sensDOILabel = QLabel('<a href="sensDOI">Display sensitivity based DOI</a>')
+#        sensDOILabel.linkActivated.connect(showHelp2)
+#        sensDOICheck = QCheckBox()
+#        def sensDOIFunc(state):
+#            if state == Qt.Checked:
+#                self.displayParams['sensDOI'] = True
+#            else:
+#                self.displayParams['sensDOI'] = False
+#        sensDOICheck.stateChanged.connect(sensDOIFunc)
+#        advForm.addRow(sensDOILabel, sensDOICheck)
 
         def flux_typeFunc(index):
             if index == 0:
@@ -4635,9 +4643,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.displayParams['doi'] = False
             replotSection()
         doiCheck = QCheckBox('DOI')
+        doiCheck.setVisible(False)
         doiCheck.stateChanged.connect(doiCheckFunc)
         doiCheck.setToolTip('Depth of Investigation (DOI) based on Oldenburg and Li 1999.')
         displayOptions.addWidget(doiCheck)
+        
+        def doiSensCheckFunc(status):
+            if status == Qt.Checked:
+                self.displayParams['doiSens'] = True
+            else:
+                self.displayParams['doiSens'] = False
+            replotSection()
+        doiSensCheck = QCheckBox('DOI estimate')
+        doiSensCheck.stateChanged.connect(doiSensCheckFunc)
+        doiSensCheck.setToolTip('Depth of Investigation (DOI) estimated based on sensitivity.\nSee advanced inversion settings for DOI with the Oldengburg and Li method.')
+        displayOptions.addWidget(doiSensCheck)
         
         cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','plasma','seismic', 'winter','autumn','rainbow']
@@ -4762,7 +4782,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis, 
-                    paraviewBtn, btnSave, sensWidget, doiCheck]
+                    paraviewBtn, btnSave, sensWidget, doiCheck, doiSensCheck]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
