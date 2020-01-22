@@ -4725,9 +4725,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def sensSliderFunc(val):
             val = val/10.0
-            print('value changed', val)
-            sensLabel.setText('Sensitivity overlay (%s%%)' % (int(val*100)))
-            infoDump('Overlay sensitivity threshold is set to %s%%'% (int(val*100))) #to remove some ambiguity with this slider for people!
+#            aa = np.linspace(0.00001, 0.01, 101)
+#            a = aa[int(val*100)]
+#            infoDump('Overlay sensitivity threshold is set to {:.0f}% of max sensitivity'.format(a)) #to remove some ambiguity with this slider for people!
             self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
@@ -4739,7 +4739,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensSlider.setMinimum(0)
         sensSlider.setMaximum(9.8)
         sensSlider.setValue(5)
-        sensLabel = QLabel('Sensitivity overlay (%s%%)' % str(sensSlider.value()*10))
+        sensLabel = QLabel('Sensitivity overlay')
         sensLabel.setAlignment(Qt.AlignCenter )
         sensLayout.addWidget(sensLabel)
         
