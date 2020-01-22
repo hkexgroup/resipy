@@ -317,6 +317,8 @@ class App(QMainWindow):
         self.inputPhaseFlag = False
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
+        self.tempElec = None # place holder to compare the new electrode agains
+
         if frozen == 'not':
             self.datadir = os.path.join(bundle_dir, '../examples')
         else:
@@ -429,6 +431,7 @@ class App(QMainWindow):
             psContourCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
+            self.tempElec = None
             elecTable.initTable(np.array([['',''],['','']]))
             topoTable.initTable(np.array([['',''],['','']]))
 #            dimInverse.setChecked(True)
@@ -1277,7 +1280,6 @@ class App(QMainWindow):
         tabImportingDataLayout.addLayout(metaLayout, 40)
         
         # update pseudo-sections due to electrodes update
-        self.tempElec = None
         def updateElec():
             try:
                 elec = elecTable.getTable()
