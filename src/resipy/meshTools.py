@@ -688,10 +688,11 @@ class Mesh:
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-#                ax.plot(elec_x, self.elec_z[~iremote],'ko')
-                radius = np.min(np.diff(elec_x))/7
-                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
-                ax.add_collection(PatchCollection(circles, color='k'))
+                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+                ## below is buggy for boreholes in small scale tank experiments
+#                radius = np.min(np.diff(np.nonzero(elec_x)))/7
+#                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
+#                ax.add_collection(PatchCollection(circles, color='k'))
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
