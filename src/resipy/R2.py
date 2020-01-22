@@ -2223,6 +2223,9 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh0 = self.meshResults[0]
         param0 = self.param.copy()
         self.param['reg_mode'] = 1 # we need constrain to background
+        typ0 = self.typ
+        if self.typ[0] == 'c':
+            self.typ = self.typ[1:]
         self.write2in()
         
         dump('===== Re-running background constrained inversion with initial resistivity =====\n')
@@ -2252,6 +2255,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # restore
         self.meshResults = [mesh0]
         self.param = param0
+        self.typ = typ0
         self.write2in()
         
         
