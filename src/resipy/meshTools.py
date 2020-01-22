@@ -430,7 +430,7 @@ class Mesh:
             zlim=[zlim[0]-2,zlim[1]+2]
                 
         ##plot mesh! ##
-        a = time.time() #start timer on how long it takes to plot the mesh
+        t0 = time.time() #start timer on how long it takes to plot the mesh
         #compile mesh coordinates into polygon coordinates  
         nodes = np.c_[self.node_x, self.node_z]
         connection = np.array(self.con_matrix).T # connection matrix 
@@ -705,7 +705,7 @@ class Mesh:
             return ('x={:.2f} m, elevation={:.2f} m, value={:.3f}'.format(x,y,X[imin]))
         ax.format_coord = format_coord
 
-        print('Mesh plotted in %6.5f seconds'%(time.time()-a))
+        print('Mesh plotted in %6.2f seconds'%(time.time()-t0))
         
         if iplot == True:
             return fig
