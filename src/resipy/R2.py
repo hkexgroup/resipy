@@ -2136,15 +2136,17 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         # clean meshResults list
         self.meshResults = []
-        
-        if modelDOI is True and len(self.surveys) == 1:
-            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
-        
+            
         # create mesh if not already done
         if 'mesh' not in self.param:
             dump('Create Rectangular mesh...')
             self.createMesh()
             dump('done!\n')
+            
+        # run Oldenburg and Li DOI estimation
+        if modelDOI is True:
+            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
+            sensScaled = self.modelDOI(dump=dump)
 
         # compute modelling error if selected
         if modErr is True and self.fwdErrMdl is False: #check no error model exists
@@ -2198,17 +2200,13 @@ class R2(object): # R2 master class instanciated by the GUI
             # created by R2 but before it is populated (when killing the run)
             self.getInvError()
             self.getResults()
+            if modelDOI is True:
+                for m in self.meshResults:
+                    m.attr_cache['doiSens'] = sensScaled
         except:
             print('Could not retrieve files maybe inversion failed')
             return
 
-        # run modelDOI
-        if modelDOI:
-            if len(self.surveys) == 1: # enforce for only 1 survey
-                self.modelDOI(dump=dump)
-            else:
-                raise ValueError('modelDOI() option only for single survey')
-        
         if iplot is True:
             self.showResults()
 
@@ -2220,13 +2218,17 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         # backup normal inversion (0 : original, 1 : normal background, 2: background *10)
         res0 = np.array(self.mesh.attr_cache['res0'])
-        mesh0 = self.meshResults[0]
         param0 = self.param.copy()
         self.param['reg_mode'] = 1 # we need constrain to background
         typ0 = self.typ
         if self.typ[0] == 'c':
             self.typ = self.typ[1:]
+        iTimeLapse0 = self.iTimeLapse
+        self.iTimeLapse = False
+        surveys0 = self.surveys.copy()
+        self.surveys = [surveys0[0]] # just use first survey
         self.write2in()
+        self.write2protocol()
         
         dump('===== Re-running background constrained inversion with initial resistivity =====\n')
         res1 = res0
@@ -2249,15 +2251,17 @@ class R2(object): # R2 master class instanciated by the GUI
         invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
         sens = (invValues1 - invValues2)/(res1-res2)
         sensScaled = np.abs(sens)
-        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
+#        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
         self.doiComputed = True
         
         # restore
-        self.meshResults = [mesh0]
+        self.meshResults = []
         self.param = param0
         self.typ = typ0
-        self.write2in()
-        
+        self.surveys = surveys0
+        self.iTimeLapse = iTimeLapse0
+        # .in and protocol will be written in R2.invert()
+        return sensScaled
         
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
