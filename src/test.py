@@ -194,7 +194,7 @@ plt.close('all')
 print('-------------Testing borehole------------')
 t0 = time.time()
 k = R2()
-k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='forwardProtocolDC')
+k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
 x = np.genfromtxt(testdir + 'dc-2d-borehole/elec.csv', delimiter=',')
 k.elec[:,[0,2]] = x[:,:2]
 buried = x[:,2].astype(bool)
