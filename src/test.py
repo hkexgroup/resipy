@@ -24,7 +24,7 @@ timings = {}
 testdir = '../examples/'
 
 
-print('======================= general methods test =====================')
+print('======================= GENERAL METHOD TESTS =====================')
 #%% testing all importing features
 k = R2()
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
@@ -109,12 +109,7 @@ k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.createMesh('quad')
 k.createMesh('trian')
 
-# 2D borehole
-k = R2()
-k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
-k.importElec(testdir + 'dc-2d-borehole/elec.csv')
-k.createMesh('quad')
-#k.createMesh('trian') # TODO failed !
+# 2D borehole (see example)
 
 # 3D flat
 #k = R2(typ='R3t') # tested in cases
@@ -208,6 +203,18 @@ k.showIter(index=1)
 k.showResults(sens=False, contour=True)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-borehole'] = time.time() - t0
+
+
+#%% test for remote electrode
+plt.close('all')
+print('--------------- Remote Electrode ------------')
+k = R2()
+k.createSurvey(testdir + 'dc-2d-pole-dipole/syscal.csv')
+#k.showPseudo() # doesn't make sense for pole-dipole data
+k.createMesh('trian')
+k.showMesh()
+k.invert()
+k.showResults()
 
 
 #%% test for IP
@@ -323,7 +330,7 @@ plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
 t0 = time.time()
 k = R2(typ='cR2')
-k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
+k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.createMesh(typ='trian')
 #
 ## full resipy function
