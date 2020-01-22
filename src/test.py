@@ -253,7 +253,7 @@ k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
 #k.createTimeLapseSurvey(testdir + 'dc-2d-timelapse/data') # dirname or list of files
 k.fitErrorPwl()
 k.err = True
-k.invert(iplot=False, parallel=True)
+k.invert(iplot=False, parallel=True)#, modelDOI=True)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
