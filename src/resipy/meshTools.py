@@ -553,9 +553,9 @@ class Mesh:
                     
                     # outside the survey area
                     imin = np.argmin(xsurf)
-                    i2keep[(trix < xsurf[imin]) & (triy > xsurf[imin])] = False
+                    i2keep[(trix < xsurf[imin]) & (triy > ysurf[imin])] = False
                     imax = np.argmax(xsurf)
-                    i2keep[(trix > xsurf[imax]) & (triy > xsurf[imax])] = False
+                    i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False 
                     
                     return i2keep
                 

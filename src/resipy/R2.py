@@ -135,9 +135,9 @@ def cropSurface(triang, xsurf, ysurf):
     
     # outside the survey area
     imin = np.argmin(xsurf)
-    i2keep[(trix < xsurf[imin]) & (triy > xsurf[imin])] = False
+    i2keep[(trix < xsurf[imin]) & (triy > ysurf[imin])] = False
     imax = np.argmax(xsurf)
-    i2keep[(trix > xsurf[imax]) & (triy > xsurf[imax])] = False
+    i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False
     
     return i2keep
 
@@ -3355,6 +3355,9 @@ class R2(object): # R2 master class instanciated by the GUI
             Iteration number to show.
         ax : matplotib axis, optional
             If specified, the graph will be plotted along `ax`.
+        modelDOI : bool, optional
+            As modelDOI() is always computed using R2 (not cR2), this tells the
+            method to look for an R2 looking iteration file.
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -3382,7 +3385,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 if self.typ[0] == 'c' and modelDOI is False:
                     z = x[:,4]
                 else:
-                    z = x[:,3]
+                    z = x[:,3] # modelDOI is always computed with R2 not cR2
 #                cax = ax.tricontourf(triang, z, extend='both')
                 
                 if self.mesh.surface is not None:
