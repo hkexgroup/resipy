@@ -2249,12 +2249,8 @@ class R2(object): # R2 master class instanciated by the GUI
         mesh2 = self.meshResults[0]
         
         # sensitivity = difference between final inversion / difference init values
-        if self.typ[0] == 'c':
-            invValues1 = np.array(mesh1.attr_cache['Magnitude(Ohm-m)'])
-            invValues2 = np.array(mesh2.attr_cache['Magnitude(Ohm-m)'])
-        else:
-            invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
-            invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
+        invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
         sens = (invValues1 - invValues2)/(res1-res2)
         sensScaled = np.abs(sens)
 #        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
