@@ -3346,7 +3346,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.fwdErrMdl = True # class now has a forward error model.
 
 
-    def showIter(self, index=-2, ax=None):
+    def showIter(self, index=-2, ax=None, modelDOI=False):
         """Dispay temporary inverted section after each iteration.
 
         Parameters
@@ -3379,7 +3379,7 @@ class R2(object): # R2 master class instanciated by the GUI
             x = pd.read_csv(os.path.join(self.dirname, fs[index]), delim_whitespace=True).values
             if x.shape[0] > 0:
                 triang = tri.Triangulation(x[:,0],x[:,1])
-                if self.typ[0] == 'c':
+                if self.typ[0] == 'c' and modelDOI is False:
                     z = x[:,4]
                 else:
                     z = x[:,3]
