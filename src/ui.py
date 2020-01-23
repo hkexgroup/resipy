@@ -4727,7 +4727,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             val = val/10.0
             aa = np.logspace(-5, -2, 101)
             a = aa[int(val*100)]
-            infoDump('Overlay sensitivity threshold is set to {:.2E} X max sensitivity'.format((a))) #to remove some ambiguity with this slider for people!
+            infoDump('Overlay sensitivity threshold is set to: </i>{:.1E} X max_sensitivity<i>'.format((a))) #to remove some ambiguity with this slider for people!
             self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
@@ -4735,9 +4735,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensLayout.setContentsMargins(0,9,0,9)
         sensLayout.setSpacing(2)
         sensSlider = QSlider(Qt.Horizontal)
-        sensSlider.setFixedWidth(150)
+        sensSlider.setFixedWidth(110)
         sensSlider.setMinimum(0)
-        sensSlider.setMaximum(9.8)
+        sensSlider.setMaximum(10)
         sensSlider.setValue(5)
         sensLabel = QLabel('Sensitivity overlay')
         sensLabel.setAlignment(Qt.AlignCenter )
