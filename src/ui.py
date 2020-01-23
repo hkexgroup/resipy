@@ -993,6 +993,9 @@ class App(QMainWindow):
                     tabPreProcessing.setTabEnabled(2, True)
                     plotError()
                     errHist()
+                if self.r2.iremote is not None:
+                    if np.sum(self.r2.iremote) > 0:
+                        boreholeCheck.setChecked(True)
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
