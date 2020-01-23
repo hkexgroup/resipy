@@ -24,7 +24,7 @@ timings = {}
 testdir = '../examples/'
 
 
-print('======================= general methods test =====================')
+print('======================= GENERAL METHOD TESTS =====================')
 #%% testing all importing features
 k = R2()
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
@@ -332,7 +332,7 @@ plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
 t0 = time.time()
 k = R2(typ='cR2')
-k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
+k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.createMesh(typ='trian')
 #
 ## full resipy function
