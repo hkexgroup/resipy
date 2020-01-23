@@ -4249,7 +4249,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         if a[0] == 'End':
                             self.end = True
                         if a[0] == 'Iteration':
-                            mwInvResult.plot(self.r2.showIter, aspect = self.plotAspect)
+                            mwInvResult.plot(partial(self.r2.showIter, modelDOI=modelDOICheck.isChecked()), aspect=self.plotAspect)
             return newFlag
 
         def plotRMS(ax):
@@ -4730,11 +4730,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         displayOptions.addWidget(sensCheck)
         
         def sensSliderFunc(val):
-            val = val/10.0
-            aa = np.logspace(-5, -2, 101)
-            a = aa[int(val*100)]
-            infoDump('Overlay sensitivity threshold is set to: </i>{:.1E} X max_sensitivity<i>'.format((a))) #to remove some ambiguity with this slider for people!
-            self.displayParams['sensPrc'] = val
+            if val == 0:
+                self.displayParams['sens'] = False
+                infoDump('No sensitivity overlay displayed!')
+            else:
+                self.displayParams['sens'] = True
+                val = (val-1)/10.0
+                aa = np.logspace(-6, -1, 101)
+                a = aa[int(val*100)]
+                infoDump('Overlay sensitivity threshold is set to: </i>{:.1E} X max_sensitivity<i>'.format((a))) #to remove some ambiguity with this slider for people!
+                self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
         sensLayout = QVBoxLayout()
@@ -4743,7 +4748,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sensSlider = QSlider(Qt.Horizontal)
         sensSlider.setFixedWidth(110)
         sensSlider.setMinimum(0)
-        sensSlider.setMaximum(10)
+        sensSlider.setMaximum(11)
         sensSlider.setValue(5)
         sensLabel = QLabel('Sensitivity overlay')
         sensLabel.setAlignment(Qt.AlignCenter )
