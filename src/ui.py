@@ -4249,7 +4249,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         if a[0] == 'End':
                             self.end = True
                         if a[0] == 'Iteration':
-                            mwInvResult.plot(self.r2.showIter, aspect = self.plotAspect)
+                            mwInvResult.plot(partial(self.r2.showIter, modelDOI=modelDOICheck.isChecked()), aspect=self.plotAspect)
             return newFlag
 
         def plotRMS(ax):
