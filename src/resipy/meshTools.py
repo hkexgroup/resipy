@@ -617,7 +617,7 @@ class Mesh:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
                     a = np.log10(0.00001*(10**np.nanmax(weights)))
                     b = np.log10(0.01*(10**np.nanmax(weights)))
-                    ab = np.linspace(a, b, 100)
+                    ab = np.r_[[np.nanmax(weights)], np.linspace(a, b, 99)]
                     thresh = ab[int(sensPrc*100)]
 #                    thresh = np.percentile(weights, sensPrc*100, interpolation='nearest')
                     x = np.sort(weights)
