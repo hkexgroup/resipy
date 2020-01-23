@@ -599,7 +599,7 @@ class Mesh:
                 if sensPrc is None:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
                     thresh = np.log10(0.001*(10**np.nanmax(weights)))
-#                    thresh = np.percentile(weights, 50, interpolation='nearest')
+    #                    thresh = np.percentile(weights, 50, interpolation='nearest')
                     x = np.sort(weights)
                     i = np.where(x > thresh)[0][0]
                     x = np.argsort(weights)
@@ -617,9 +617,9 @@ class Mesh:
                     weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
                     a = np.log10(0.00001*(10**np.nanmax(weights)))
                     b = np.log10(0.01*(10**np.nanmax(weights)))
-                    ab = np.r_[[np.nanmax(weights)], np.linspace(a, b, 99)]
-                    thresh = ab[int(sensPrc*100)]
-#                    thresh = np.percentile(weights, sensPrc*100, interpolation='nearest')
+                    ab = np.linspace(a, b, 100)
+                    thresh = ab[int(sensPrc*99)]
+    #                    thresh = np.percentile(weights, sensPrc*100, interpolation='nearest')
                     x = np.sort(weights)
                     i = np.where(x > thresh)[0][0]
                     x = np.argsort(weights)
@@ -682,7 +682,7 @@ class Mesh:
 #                                print('Error in Mesh.show for contouring: ', e)
 #                        
 #                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
-                                                    
+#                                                    
             except Exception as e:
                 print('Error in the sensitivity overlay:', e)
         
