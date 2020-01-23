@@ -4736,7 +4736,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 self.displayParams['sens'] = True
                 val = (val-1)/10.0
-                aa = np.logspace(-5, -2, 101)
+                aa = np.logspace(-6, -1, 101)
                 a = aa[int(val*100)]
                 infoDump('Overlay sensitivity threshold is set to: </i>{:.1E} X max_sensitivity<i>'.format((a))) #to remove some ambiguity with this slider for people!
                 self.displayParams['sensPrc'] = val
