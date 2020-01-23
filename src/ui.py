@@ -996,6 +996,9 @@ class App(QMainWindow):
                 if self.r2.iremote is not None:
                     if np.sum(self.r2.iremote) > 0:
                         boreholeCheck.setChecked(True)
+                        meshQuadGroup.setEnabled(False)
+                    else:
+                        meshQuadGroup.setEnabled(True)
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
