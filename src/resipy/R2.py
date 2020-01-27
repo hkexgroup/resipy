@@ -3425,7 +3425,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 cax = ax.tricontourf(triang, z, extend='both')
                 self._clipContour(ax, cax)
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
-                ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
+                ax.plot(self.elec[:,0], self.elec[:,2], 'ko', markersize=4)
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel('Elevation [m]')
