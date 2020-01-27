@@ -367,11 +367,8 @@ class Mesh:
         # get points inside the polygon
         path = Path(polyline)
         centroids = np.c_[self.elm_centre[0], self.elm_centre[2]]
-        print(centroids)
         i2keep = path.contains_points(centroids) # TODO benchmark agains isinpolygon
-        print(polyline)
-        print(path)
-        print(np.sum(i2keep), len(i2keep))
+        # https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
         
         # filter element-based attribute
         ecx = np.array(self.elm_centre[0])[i2keep].tolist()
