@@ -470,7 +470,17 @@ class Mesh:
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
             #not currently checking if the passed variable is in the matplotlib library
-            
+        
+        if self.iremote is None:
+            try:
+                iremote = np.zeros(len(self.elec_x), dtype=bool)
+                self.iremote = iremote
+            except Exception as e:
+                print('No electrode found: ', e)
+                pass
+        else:
+            iremote = self.iremote
+        
         if self.ndims == 3:
             self.show_3D(color_map = color_map,#displays the mesh using matplotlib
              color_bar = color_bar, # pass arguments to 3D function
@@ -513,14 +523,6 @@ class Mesh:
             self.ax = ax
         #if no dimensions are given then set the plot limits to edge of mesh
         
-        if self.iremote is None:
-            try:
-                iremote = np.zeros(len(self.elec_x), dtype=bool)
-            except Exception as e:
-                print('No electrode found: ', e)
-                pass
-        else:
-            iremote = self.iremote
         try: 
             elec_x = self.elec_x[~iremote]
             if xlim=="default":
