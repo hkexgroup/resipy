@@ -2249,6 +2249,38 @@ class R2(object): # R2 master class instanciated by the GUI
         # .in and protocol will be written in R2.invert()
         return sensScaled
         
+    
+    
+    def _clipContour(self, ax, cont):
+        """Clip contours using mesh bound and surface if available.
+        
+        Parameters
+        ----------
+        ax : matplotlib.Axes
+            Axis.
+        cont : matplotlib.collections
+            Collection of contours.
+        """
+        # mask outer region
+        xmin = np.min(self.mesh.node_x)
+        xmax = np.max(self.mesh.node_x)
+        zmin = np.min(self.mesh.node_z)
+        zmax = np.max(self.mesh.node_z)
+        if self.mesh.surface is not None:
+            xsurf, zsurf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+        else:
+            verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zmax, zmin, zmin]]                
+        # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
+        path = mpath.Path(verts)
+        patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
+        ax.add_patch(patch) # need to add so it knows the transform
+        for col in cont.collections:
+            col.set_clip_path(patch)
+                    
+        
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
@@ -2314,22 +2346,24 @@ class R2(object): # R2 master class instanciated by the GUI
                 if doi is True or doiSens is True:
                     # plotting of the sensitivity contour (need to cropSurface as well)
                     xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
-                    if self.mesh.surface is not None:
-                        zc = z
-                        xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-                        zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-                        xc = np.r_[xc, xf]
-                        yc = np.r_[yc, yf]
-                        zc = np.r_[zc, zf]
-                        triang = tri.Triangulation(xc, yc) # build grid based on centroid
-                        try:
-                            triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
-                        except Exception as e:
-                            print('Error in cropSurface for contouring: ', e)
-                    else:
-                        triang = tri.Triangulation(xc, yc)
-                        zc = z
-                    mesh.ax.tricontour(triang, zc, levels=levels, colors='k', linestyles=linestyle)               
+#                    if self.mesh.surface is not None:
+#                        zc = z
+#                        xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+#                        zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                        xc = np.r_[xc, xf]
+#                        yc = np.r_[yc, yf]
+#                        zc = np.r_[zc, zf]
+#                        triang = tri.Triangulation(xc, yc) # build grid based on centroid
+#                        try:
+#                            triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+#                        except Exception as e:
+#                            print('Error in cropSurface for contouring: ', e)
+#                    else:
+#                        triang = tri.Triangulation(xc, yc)
+#                        zc = z
+                    triang = tri.Triangulation(xc, yc)
+                    cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
+                    self._clipContour(mesh.ax, cont)
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
@@ -3389,25 +3423,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     
                 
                 cax = ax.tricontourf(triang, z, extend='both')
-                
-                # mask outer region
-                xmin = np.min(self.mesh.node_x)
-                xmax = np.max(self.mesh.node_x)
-                zmin = np.min(self.mesh.node_z)
-                zmax = np.max(self.mesh.node_z)
-                if self.mesh.surface is not None:
-                    xsurf, zsurf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
-                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
-                else:
-                    verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
-                                  np.r_[zmin, zmax, zmax, zmin, zmin]]                
-                # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
-                path = mpath.Path(verts)
-                patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
-                ax.add_patch(patch) # need to add so it knows the transform
-                for col in cax.collections:
-                    col.set_clip_path(patch)
+                self._clipContour(ax, cax)
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                 ax.set_aspect('equal')
