@@ -14,7 +14,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 import resipy.interpolation as interp # for cropSurface()
-from matplotlib.path import Path
+import matplotlib.patches as mpatches
+import matplotlib.path as mpath
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -24,7 +25,6 @@ from resipy.Survey import Survey
 from resipy.r2in import write2in
 import resipy.meshTools as mt
 from resipy.meshTools import cropSurface
-from matplotlib.path import Path
 import resipy.isinpolygon as iip
 from resipy.template import parallelScript, startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
@@ -2208,7 +2208,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # build the cropping polygon
         if self.param['num_xy_poly'] != 0:
-            path = Path(self.param['xy_poly_table'])
+            path = mpath.Path(self.param['xy_poly_table'])
             iselect = path.contains_points(np.c_[self.mesh.elm_centre[0], self.mesh.elm_centre[2]])
             print(np.sum(iselect), len(iselect))
         else:
@@ -2568,7 +2568,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #        idx = selector.iselect
 
         centroids = np.array(self.mesh.elm_centre).T[:,[0,2]]
-        path = Path(np.array(xy))
+        path = mpath.Path(np.array(xy))
         idx = path.contains_points(centroids)
 
         self.regid = self.regid + 1
@@ -3372,26 +3372,42 @@ class R2(object): # R2 master class instanciated by the GUI
                     z = x[:,3] # modelDOI is always computed with R2 not cR2
 #                cax = ax.tricontourf(triang, z, extend='both')
                 
-                if self.mesh.surface is not None:
-                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-                    xc, yc, zc = x[:,0], x[:,1], z
-                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-                    xc = np.r_[xc, xf]
-                    yc = np.r_[yc, yf]
-                    zc = np.r_[zc, zf]
-                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
-                    try:
-                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
-                    except Exception as e:
-                        print('Error in R2.showIter() for contouring: ', e)
-                else:
-                    zc = z.copy()
+#                if self.mesh.surface is not None:
+#                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+#                    xc, yc, zc = x[:,0], x[:,1], z
+#                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                    xc = np.r_[xc, xf]
+#                    yc = np.r_[yc, yf]
+#                    zc = np.r_[zc, zf]
+#                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
+#                    try:
+#                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+#                    except Exception as e:
+#                        print('Error in R2.showIter() for contouring: ', e)
+#                else:
+#                    zc = z.copy()
                     
-                cax = ax.tricontourf(triang, zc, extend='both')
-#                trix = np.mean(triang.x[triang.triangles], axis=1)
-#                triy = np.mean(triang.y[triang.triangles], axis=1)
-#                ax.plot(trix, triy, 'k+')
-#                ax.triplot(triang, lw=0.5, color='white')
+                
+                cax = ax.tricontourf(triang, z, extend='both')
+                
+                # mask outer region
+                xmin = np.min(self.mesh.node_x)
+                xmax = np.max(self.mesh.node_x)
+                zmin = np.min(self.mesh.node_z)
+                zmax = np.max(self.mesh.node_z)
+                if self.mesh.surface is not None:
+                    xsurf, zsurf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+                else:
+                    verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
+                                  np.r_[zmin, zmax, zmax, zmin, zmin]]                
+                # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
+                path = mpath.Path(verts)
+                patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
+                ax.add_patch(patch) # need to add so it knows the transform
+                for col in cax.collections:
+                    col.set_clip_path(patch)
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                 ax.set_aspect('equal')
