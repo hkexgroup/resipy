@@ -775,7 +775,7 @@ class Mesh:
         if electrodes: #try add electrodes to figure if we have them 
             try: 
 #                ax.plot(elec_x, self.elec_z[~iremote],'ko')
-#                x = np.c_[self.elec_x, self.elec_y, self.elec_z]
+                x = np.c_[self.elec_x, self.elec_y, self.elec_z]
 #                if self.iremote is not None: # it's None for quad mesh
 #                    x = x[~self.iremote, :]
 #                x1 = np.repeat(x, len(x), axis=0)
