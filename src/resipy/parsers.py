@@ -877,33 +877,14 @@ def ericParser(file_path):
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
     fh.close()#close file handle, free up resources
-
-    #first find the general information
-    idx_oi = 0
-    line = dump[idx_oi]
-    sur_name = line.strip() #name of survey
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    x_location = float(vals[0])#First station coordinate
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
-    eric_version = str(vals[2]) + str(': ') + str(vals[3])
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    a_spac = float(vals[0]) #electrode spacing
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    no_protocols = int(vals[0])#no. of protocol used
-    idx_proto_file = 1
-    #declaration of variables
-    proto_file = []
-    proto_org = []
+    
+    #declaration of variables    
+    proto_file = []   
     array_type = []
+    proto_org = []
+    num_meas = []
+    mid_st_coord = []
+    idx_meas = []
     c1 = np.array(())
     c2 = np.array(())
     p1 = np.array(())
@@ -914,31 +895,56 @@ def ericParser(file_path):
     n_cycles = np.array(())
     n_tot_cycles = np.array(())
     total_x = np.array(())
+    h_dist = np.array(())
     data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
-
+    tot_num_meas = 0
+    #first find the general information
+    idx_oi = 0
+    line = dump[idx_oi]
+    sur_name = line.strip() #name of survey
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    x_location = float(vals[0])#First midstation coordinate
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
+    eric_version = str(vals[2]) + str(': ') + str(vals[3])
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    a_spac = float(vals[0]) #electrode spacing
+    idx_oi += 1
+    #line = dump[idx_oi]
+    #vals = line.strip().split()
+    #no_protocols = int(vals[0])#no. of protocol used
+    no_protocols = 0
+    idx_proto_file = 1
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    proto_file.append(str(vals[0]))
+    array_type.append(int(vals[1]))
+        
+    #First find how many protocol, measurements and mid first location are 
+    #included in the *.OHM file
     
-    while idx_proto_file <= no_protocols:
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        proto_file.append(str(vals[0]))
-        array_type.append(int(vals[1]))
-        #max_I_level.append(float(vals[2]))
-        #min_I_level.append(float(vals[3]))
-        #idx_prot_file += 1
-        n_cable = vals[0]
-        num_cable = int(n_cable[-4])
-        elec_in_cable = int(n_cable[-2:])
-        idx_oi += 1
-        line = dump[idx_oi]
-        proto_org.append(str(line))
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        num_meas = int(vals[0])
-        idx_oi += 3
-        for k in range(num_meas):
-            line = dump[idx_oi + k]
+    for i, line in enumerate(dump):
+        pro_type = line.strip().split('.')
+        if 'ORG' in pro_type or 'UP' in pro_type or 'DWN' in pro_type:
+            proto_org.append(str(line)) 
+            no_protocols = no_protocols + 1
+            linea = dump[i+1]
+            vals = linea.strip().split()
+            num_meas.append(int(vals[0]))
+            mid_st_coord.append(float(dump[i+2]))
+            idx_oi = i + 4
+            idx_meas.append(idx_oi)
+            
+    for i in range(len(num_meas)):
+        for k in range(num_meas[i]):
+            line = dump[idx_meas[i] + k]
             vals = line.strip().split()
             c1 = np.append(c1, float(vals[0]))
             c2 = np.append(c2, float(vals[1]))
@@ -950,12 +956,28 @@ def ericParser(file_path):
             n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
             data_dict['ip'].append(0)
             
-        idx_proto_file += 1
-    #Calculate electrode x locations
-    half_dist = float((a_spac * ((num_cable * elec_in_cable) - 1))/2)
-    half_dist = half_dist - x_location
-    largo = len(c1)
-    h_dist = np.array(())
+    min_dist_c1 = min(c1)
+    min_dist_p1 = min(p1)
+    if min_dist_c1 <= min_dist_p1:
+        min_dist = min_dist_c1
+    else:
+        min_dist = min_dist_p1
+        
+    max_dist_c2 = max(c2)
+    max_dist_p1 = max(p1)
+       
+    if max_dist_c2 >= max_dist_p1:
+        max_dist = max_dist_c2
+    else:
+        max_dist = max_dist_p1
+    
+    if min_dist <= 0.0:
+        half_dist = abs(min_dist)
+    else:
+        half_dist = 0.0
+        
+     
+    largo = len(c1)    
     for k in range(largo):
         h_dist = np.append(h_dist, half_dist)
     
@@ -980,11 +1002,10 @@ def ericParser(file_path):
     e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
     e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
     
-    if x_location == 0:
-        e_idx_c1 = np.add(e_idx_c1, 1)
-        e_idx_c2 = np.add(e_idx_c2, 1)
-        e_idx_p1 = np.add(e_idx_p1, 1)
-        e_idx_p2 = np.add(e_idx_p2, 1)
+    e_idx_c1 = np.add(e_idx_c1, 1)
+    e_idx_c2 = np.add(e_idx_c2, 1)
+    e_idx_p1 = np.add(e_idx_p1, 1)
+    e_idx_p2 = np.add(e_idx_p2, 1)
     
     data_dict['a'] = np.copy(e_idx_c1)
     data_dict['b'] = np.copy(e_idx_c2)
