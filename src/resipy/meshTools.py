@@ -1736,7 +1736,7 @@ class Mesh:
         #write out the data
         fh.write("CELL_DATA %i\n"%self.num_elms)
         for i,key in enumerate(self.attr_cache):
-            fh.write("SCALARS %s double 1\n"%key)
+            fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
             [fh.write("%8.6f "%self.attr_cache[key][j]) for j in range(self.num_elms)]
             fh.write("\n")
