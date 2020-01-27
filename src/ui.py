@@ -1004,6 +1004,7 @@ class App(QMainWindow):
                 else:
                     self.r2.setBorehole(False)
                 plotManualFiltering()
+                print('==========', self.r2.elec)
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
