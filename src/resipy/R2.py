@@ -23,6 +23,8 @@ sys.path.append(os.path.relpath('..'))
 from resipy.Survey import Survey
 from resipy.r2in import write2in
 import resipy.meshTools as mt
+from resipy.meshTools import cropSurface
+from matplotlib.path import Path
 import resipy.isinpolygon as iip
 from resipy.template import parallelScript, startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
@@ -112,34 +114,6 @@ def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1'):
     if threed is True: # for 3D only
         with open(fname, 'a') as f:
             f.write(footer)
-
-
-# make sure none of the triangle centroids are above the
-# line of electrodes
-def cropSurface(triang, xsurf, ysurf):
-    trix = np.mean(triang.x[triang.triangles], axis=1)
-    triy = np.mean(triang.y[triang.triangles], axis=1)
-    
-    i2keep = np.ones(len(trix), dtype=bool)
-    for i in range(len(xsurf)-1):
-        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
-        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
-        ie = ilateral & iabove
-        i2keep[ie] = False
-        if np.sum(ie) > 0: # if some triangles are above the min electrode
-            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
-            offset = ysurf[i] - slope * xsurf[i]
-            predy = offset + slope * trix[ie]
-            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
-            i2keep[np.where(ie)[0][ie2]] = True
-    
-    # outside the survey area
-    imin = np.argmin(xsurf)
-    i2keep[(trix < xsurf[imin]) & (triy > ysurf[imin])] = False
-    imax = np.argmax(xsurf)
-    i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False
-    
-    return i2keep
 
 
 # distance matrix function for 2D (numpy based from https://stackoverflow.com/questions/22720864/efficiently-calculating-a-euclidean-distance-matrix-using-numpy)
@@ -2147,7 +2121,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         # run Oldenburg and Li DOI estimation
         if modelDOI is True:
-            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
+#            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
             sensScaled = self.modelDOI(dump=dump)
 
         # compute modelling error if selected
@@ -2232,6 +2206,15 @@ class R2(object): # R2 master class instanciated by the GUI
         self.write2in()
         self.write2protocol()
         
+        # build the cropping polygon
+        if self.param['num_xy_poly'] != 0:
+            path = Path(self.param['xy_poly_table'])
+            iselect = path.contains_points(np.c_[self.mesh.elm_centre[0], self.mesh.elm_centre[2]])
+            print(np.sum(iselect), len(iselect))
+        else:
+            iselect = np.ones(len(self.mesh.elm_centre[0]), dtype=bool)
+        
+        # run first background constrained inversion
         dump('===== Re-running background constrained inversion with initial resistivity =====\n')
         res1 = res0
         self.mesh.attr_cache['res0b'] = list(res1)
@@ -2240,6 +2223,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.getResults()
         mesh1 = self.meshResults[0]
 
+        # run second background constrained inversion
         dump('===== Re-running background constrained inversion with initial resistivity * 10 =====\n')
         res2 = res0 * 10
         self.mesh.attr_cache['res0b'] = list(res2)
@@ -2251,7 +2235,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # sensitivity = difference between final inversion / difference init values
         invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
         invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
-        sens = (invValues1 - invValues2)/(res1-res2)
+        sens = (invValues1 - invValues2)/(res1[iselect]-res2[iselect])
         sensScaled = np.abs(sens)
 #        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
         self.doiComputed = True
@@ -3404,6 +3388,10 @@ class R2(object): # R2 master class instanciated by the GUI
                     zc = z.copy()
                     
                 cax = ax.tricontourf(triang, zc, extend='both')
+#                trix = np.mean(triang.x[triang.triangles], axis=1)
+#                triy = np.mean(triang.y[triang.triangles], axis=1)
+#                ax.plot(trix, triy, 'k+')
+#                ax.triplot(triang, lw=0.5, color='white')
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
                 ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
                 ax.set_aspect('equal')

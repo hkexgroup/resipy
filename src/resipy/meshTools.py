@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection, PatchCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
+from matplotlib.path import Path
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 #import R2gui API packages 
@@ -28,6 +29,68 @@ import resipy.gmshWrap as gw
 from resipy.isinpolygon import isinpolygon, isinvolume, in_box
 import resipy.interpolation as interp
 from resipy.sliceMesh import sliceMesh # mesh slicing function
+
+
+#%% cropSurface function
+def cropSurface(triang, xsurf, ysurf):
+    # check all centroid are below the surface
+    trix = np.mean(triang.x[triang.triangles], axis=1)
+    triy = np.mean(triang.y[triang.triangles], axis=1)
+    
+    i2keep = np.ones(len(trix), dtype=bool)
+    for i in range(len(xsurf)-1):
+        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+        ie = ilateral & iabove
+        i2keep[ie] = False
+        if np.sum(ie) > 0: # if some triangles are above the min electrode
+            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+            offset = ysurf[i] - slope * xsurf[i]
+            predy = offset + slope * trix[ie]
+            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
+            i2keep[np.where(ie)[0][ie2]] = True
+            
+    # outside the survey area
+    imin = np.argmin(xsurf)
+    i2keep[(trix < xsurf[imin]) & (triy > ysurf[imin])] = False
+    imax = np.argmax(xsurf)
+    i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False
+    
+    i2keep1 = i2keep.copy()
+
+    # check all nodes are below the surface
+    trix = triang.x
+    triy = triang.y
+    
+    i2keep = np.ones(len(trix), dtype=bool)
+    for i in range(len(xsurf)-1):
+        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
+        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
+        ie = ilateral & iabove
+        i2keep[ie] = False
+        if np.sum(ie) > 0: # if some triangles are above the min electrode
+            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
+            offset = ysurf[i] - slope * xsurf[i]
+            predy = offset + slope * trix[ie]
+            ie2 = triy[ie] <= predy # point is above the line joining continuous electrodes
+            i2keep[np.where(ie)[0][ie2]] = True
+            
+    # outside the survey area
+    imin = np.argmin(xsurf)
+    i2keep[(trix < xsurf[imin]) & (triy > ysurf[imin])] = False
+    imax = np.argmax(xsurf)
+    i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False
+    
+    i2delete = np.where(~i2keep)[0] # get indices
+    xi = np.in1d(triang.triangles[:,0], i2delete)
+    yi = np.in1d(triang.triangles[:,1], i2delete)
+    zi = np.in1d(triang.triangles[:,2], i2delete)
+    i2mask = xi | yi | zi
+    
+    i2keep2 = ~i2mask
+    
+    return i2keep1 & i2keep2
+
 
         
 #%% create mesh object
@@ -290,6 +353,50 @@ class Mesh:
         self.cell_attributes=new_attributes
         self.atribute_title=str(new_title)
     
+    
+    def crop(self, polyline):
+        """Crop the mesh given a polyline in 2D.
+        
+        Parameters
+        ----------
+        polyline : array of float
+            Array of size Nx2 with the XZ coordinates forming the polyline. Note
+            that the first and last coordinates should be the
+            same to close the polyline.
+        """
+        # get points inside the polygon
+        path = Path(polyline)
+        centroids = np.c_[self.elm_centre[0], self.elm_centre[2]]
+        print(centroids)
+        i2keep = path.contains_points(centroids) # TODO benchmark agains isinpolygon
+        print(polyline)
+        print(path)
+        print(np.sum(i2keep), len(i2keep))
+        
+        # filter element-based attribute
+        ecx = np.array(self.elm_centre[0])[i2keep].tolist()
+        ecy = np.array(self.elm_centre[1])[i2keep].tolist()
+        ecz = np.array(self.elm_centre[2])[i2keep].tolist()
+        self.elm_centre = (ecx, ecy, ecz)
+        self.con_matrix = tuple(np.array(self.con_matrix)[:,i2keep].tolist())
+        self.elm_area = np.array(self.elm_area)[i2keep].tolist()
+        self.elm_id = np.array(self.elm_id)[i2keep].tolist()
+        self.cell_attributes = np.array(self.cell_attributes)[i2keep].tolist()
+        for c in self.attr_cache.keys():
+            self.attr_cache[c] = np.array(self.attr_cache[c])[i2keep].tolist()
+        self.num_elms = np.sum(i2keep)
+        
+        # filter node-based attribute (may use the powerful np.searchsorted trick see parsers.py)
+        # ISSUE: some nodes might not be used after but filtering them
+        # out will change the node index value and we will need to update
+        # the con_matrix as well
+        # TODO
+#        self.node_x = np.array(self.node_x)[i2keep].tolist()
+#        self.node_y = np.array(self.node_y)[i2keep].tolist()
+#        self.node_z = np.array(self.node_z)[i2keep].tolist()
+#        self.node_id = np.array(self.node_id)[i2keep].tolist()
+#        self.num_nodes = np.sum(i2node)
+        
 
     def show(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
@@ -407,11 +514,15 @@ class Mesh:
         #if no dimensions are given then set the plot limits to edge of mesh
         
         if self.iremote is None:
-            iremote = np.zeros(len(self.elec_x), dtype=bool)
+            try:
+                iremote = np.zeros(len(self.elec_x), dtype=bool)
+            except Exception as e:
+                print('No electrode found: ', e)
+                pass
         else:
             iremote = self.iremote
-        elec_x = self.elec_x[~iremote]
         try: 
+            elec_x = self.elec_x[~iremote]
             if xlim=="default":
                 xlim=[min(elec_x),max(elec_x)]
             if zlim=="default":
@@ -531,33 +642,6 @@ class Mesh:
                     yc = np.r_[yc, yf]
                     zc = np.r_[zc, zf]
                 triang = tri.Triangulation(xc, yc) # build grid based on centroids
-
-                # make sure none of the triangle centroids are above the
-                # line of electrodes
-                def cropSurface(triang, xsurf, ysurf):
-                    trix = np.mean(triang.x[triang.triangles], axis=1)
-                    triy = np.mean(triang.y[triang.triangles], axis=1)
-                    
-                    i2keep = np.ones(len(trix), dtype=bool)
-                    for i in range(len(xsurf)-1):
-                        ilateral = (trix > xsurf[i]) & (trix <= xsurf[i+1])
-                        iabove = (triy > np.min([ysurf[i], ysurf[i+1]]))
-                        ie = ilateral & iabove
-                        i2keep[ie] = False
-                        if np.sum(ie) > 0: # if some triangles are above the min electrode
-                            slope = (ysurf[i+1]-ysurf[i])/(xsurf[i+1]-xsurf[i])
-                            offset = ysurf[i] - slope * xsurf[i]
-                            predy = offset + slope * trix[ie]
-                            ie2 = triy[ie] < predy # point is above the line joining continuous electrodes
-                            i2keep[np.where(ie)[0][ie2]] = True
-                    
-                    # outside the survey area
-                    imin = np.argmin(xsurf)
-                    i2keep[(trix < xsurf[imin]) & (triy > ysurf[imin])] = False
-                    imax = np.argmax(xsurf)
-                    i2keep[(trix > xsurf[imax]) & (triy > ysurf[imax])] = False 
-                    
-                    return i2keep
                 
                 if self.surface is not None:
                     try:
@@ -696,8 +780,9 @@ class Mesh:
                 x2 = np.tile(x.T, len(x)).T
                 dist = np.sqrt(np.sum((x1-x2)**2, axis=1))
                 radius = np.nanmin(dist[dist != 0])/5
-                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
-                ax.add_collection(PatchCollection(circles, color='k'))
+#                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
+#                ax.add_collection(PatchCollection(circles, color='k'))
+                ax.plot(x[:,0], x[:,2], 'ko', markersize=radius)
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
@@ -901,9 +986,9 @@ class Mesh:
             zlim=[min(self.node_z),max(self.node_z)]
         try: 
             if xlim=="default":
-                xlim=[min(self.elec_x), max(self.elec_x)]
+                xlim=[min(self.elec_x[~self.iremote]), max(self.elec_x[~self.iremote])]
             if ylim=="default":
-                ylim=[min(self.elec_y), max(self.elec_y)]
+                ylim=[min(self.elec_y[~self.iremote]), max(self.elec_y[~self.iremote])]
         except AttributeError:
             if xlim=="default":
                 xlim=[min(self.node_x), max(self.node_x)]
@@ -2401,7 +2486,7 @@ def vtk_import(file_path='mesh.vtk',parameter_title='default'):
     #compile some information   
     
     if len(centriod_z)==0:#check if mesh is 2D 
-        centriod_z==[0]*len(centriod_x)
+        centriod_z=[0]*len(centriod_x)
     if sum(z_coord)==0:#then mesh is 2D and node y and node z, centriod y and centriod z columns need swapping so they work in mesh tools 
         temp_y = y_coord
         y_coord = z_coord
