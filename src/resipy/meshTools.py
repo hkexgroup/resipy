@@ -18,7 +18,7 @@ import time
 #import matplotlib and numpy packages 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.collections import PolyCollection
+from matplotlib.collections import PolyCollection, PatchCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
 from mpl_toolkits.mplot3d import Axes3D
@@ -673,7 +673,16 @@ class Mesh:
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+#                ax.plot(elec_x, self.elec_z[~iremote],'ko')
+                x = np.c_[self.elec_x, self.elec_y, self.elec_z]
+                if self.iremote is not None: # it's None for quad mesh
+                    x = x[~self.iremote, :]
+                x1 = np.repeat(x, len(x), axis=0)
+                x2 = np.tile(x.T, len(x)).T
+                dist = np.sqrt(np.sum((x1-x2)**2, axis=1))
+                radius = np.nanmin(dist[dist != 0])/5
+                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
+                ax.add_collection(PatchCollection(circles, color='k'))
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
@@ -2750,9 +2759,9 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         x columns where the electrodes are. 
     """
     #formalities, error check
-    if elemx < 4:
-        print('elemx too small, set up to 4 at least')
-        elemx = 4
+#    if elemx < 4:
+#        print('elemx too small, set up to 4 at least')
+#        elemx = 4
         
     if surface_x is None or surface_z is None:
         surface_x = np.array([])
