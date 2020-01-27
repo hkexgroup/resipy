@@ -21,7 +21,8 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection, PatchCollection
 from matplotlib.colors import ListedColormap
 import matplotlib.tri as tri
-from matplotlib.path import Path
+import matplotlib.patches as mpatches
+import matplotlib.path as mpath
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 #import R2gui API packages 
@@ -354,6 +355,36 @@ class Mesh:
         self.atribute_title=str(new_title)
     
     
+    def _clipContour(self, ax, cont):
+        """Clip contours using mesh bound and surface if available.
+        
+        Parameters
+        ----------
+        ax : matplotlib.Axes
+            Axis.
+        cont : matplotlib.collections
+            Collection of contours.
+        """
+        # mask outer region
+        xmin = np.min(self.node_x)
+        xmax = np.max(self.node_x)
+        zmin = np.min(self.node_z)
+        zmax = np.max(self.node_z)
+        if self.surface is not None:
+            xsurf, zsurf = self.surface[:,0], self.surface[:,1]
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+        else:
+            verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zmax, zmin, zmin]]                
+        # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
+        path = mpath.Path(verts)
+        patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
+        ax.add_patch(patch) # need to add so it knows the transform
+        for col in cont.collections:
+            col.set_clip_path(patch)
+    
+    
     def crop(self, polyline):
         """Crop the mesh given a polyline in 2D.
         
@@ -365,7 +396,7 @@ class Mesh:
             same to close the polyline.
         """
         # get points inside the polygon
-        path = Path(polyline)
+        path = mpath.Path(polyline)
         centroids = np.c_[self.elm_centre[0], self.elm_centre[2]]
         i2keep = path.contains_points(centroids) # TODO benchmark agains isinpolygon
         # https://stackoverflow.com/questions/36399381/whats-the-fastest-way-of-checking-if-a-point-is-inside-a-polygon-in-python
@@ -634,22 +665,23 @@ class Mesh:
 #                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
             
             else: # fallback mode with tricontourf and cropSurface() (topo based on centroids) 
-                if self.surface is not None:
-                    xf, yf = self.surface[:,0], self.surface[:,1]
-                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-                    xc = np.r_[xc, xf]
-                    yc = np.r_[yc, yf]
-                    zc = np.r_[zc, zf]
+#                if self.surface is not None:
+#                    xf, yf = self.surface[:,0], self.surface[:,1]
+#                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                    xc = np.r_[xc, xf]
+#                    yc = np.r_[yc, yf]
+#                    zc = np.r_[zc, zf]
+#                triang = tri.Triangulation(xc, yc) # build grid based on centroids
+#                
+#                if self.surface is not None:
+#                    try:
+#                        triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
+#                    except Exception as e:
+#                        print('Error in Mesh.show() for contouring: ', e)
+#                
                 triang = tri.Triangulation(xc, yc) # build grid based on centroids
-                
-                if self.surface is not None:
-                    try:
-                        triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-                    except Exception as e:
-                        print('Error in Mesh.show() for contouring: ', e)
-                
                 self.cax = ax.tricontourf(triang, zc, levels=levels, extend='both', cmap=color_map)
-            
+                self._clipContour(ax, self.cax)
             
         ax.autoscale()
         #were dealing with patches and matplotlib isnt smart enough to know what the right limits are, hence set axis limits 
