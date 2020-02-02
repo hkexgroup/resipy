@@ -2213,24 +2213,35 @@ class R2(object): # R2 master class instanciated by the GUI
             print(np.sum(iselect), len(iselect))
         else:
             iselect = np.ones(len(self.mesh.elm_centre[0]), dtype=bool)
+            
+        # clean function
+        def cleandir():
+            dirname = self.dirname
+            os.remove(os.path.join(dirname, 'res0.dat'))
+            for f in os.listdir(dirname):
+                if f[:3] == 'f00':
+                    os.remove(os.path.join(dirname, f))
         
         # run first background constrained inversion
-        dump('===== Re-running background constrained inversion with initial resistivity =====\n')
+        dump('===== modelDOI: Running background constrained inversion with initial resistivity =====\n')
         res1 = res0
         self.mesh.attr_cache['res0b'] = list(res1)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
         self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh1 = self.meshResults[0]
-
+        cleandir()
+        
         # run second background constrained inversion
-        dump('===== Re-running background constrained inversion with initial resistivity * 10 =====\n')
+        dump('===== modelDOI: Running background constrained inversion with initial resistivity * 10 =====\n')
         res2 = res0 * 10
         self.mesh.attr_cache['res0b'] = list(res2)
         self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
         self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh2 = self.meshResults[0]
+        cleandir()
+        os.remove(os.path.join(self.dirname, 'R2.in'))
         
         # sensitivity = difference between final inversion / difference init values
         invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
@@ -2246,7 +2257,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.typ = typ0
         self.surveys = surveys0
         self.iTimeLapse = iTimeLapse0
-        # .in and protocol will be written in R2.invert()
+        # .in and protocol will be written again in R2.invert()
+        
         return sensScaled
         
     
