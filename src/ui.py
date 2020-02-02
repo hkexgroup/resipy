@@ -1555,6 +1555,8 @@ class App(QMainWindow):
                 electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
                               np.linspace(0.0, (nbElec-1)*dz, nbElec)]
             elecTable.initTable(electrodes)
+            elec = elecTable.getTable()
+            self.tempElec = elec
         elecGenButton = QPushButton('Generate')
         elecGenButton.setAutoDefault(True)
         elecGenButton.clicked.connect(elecGenButtonFunc)
