@@ -1004,7 +1004,6 @@ class App(QMainWindow):
                 else:
                     self.r2.setBorehole(False)
                 plotManualFiltering()
-                print('==========', self.r2.elec)
                 elecTable.initTable(self.r2.elec)
                 tabImporting.setTabEnabled(1,True)
                 if 'ip' in self.r2.surveys[0].df.columns:
@@ -1446,6 +1445,9 @@ class App(QMainWindow):
                 if headers is not None:
                     self.headers = np.array(headers)
                 self.ncol = len(self.headers)
+                if tt.shape[1] == 3 and len(self.headers) == 3: # 2D array but we have 3D position
+                    print('reducing 3D positions to 2D')
+                    tt = tt[:,[0,2]]
                 self.setColumnCount(len(self.headers)) # +1 for buried check column
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
