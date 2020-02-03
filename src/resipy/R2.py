@@ -1270,8 +1270,8 @@ class R2(object): # R2 master class instanciated by the GUI
             elec_z = self.elec[:,2]
             #add buried electrodes?
             elec_type = np.repeat('electrode',len(elec_x))
-            if buried is None and self.buried is not None:
-                buried = self.buried
+            if buried is None and self.iburied is not None:
+                buried = self.iburied
             if (buried is not None
                     and elec.shape[0] == len(buried)
                     and np.sum(buried) != 0):
@@ -1300,8 +1300,8 @@ class R2(object): # R2 master class instanciated by the GUI
             elec_y = self.elec[:,1]
             elec_z = self.elec[:,2]
             elec_type = np.repeat('electrode',len(elec_x))
-            if buried is None and self.buried is not None:
-                buried = self.buried
+            if buried is None and self.iburied is not None:
+                buried = self.iburied
             if (buried is not None
                     and elec.shape[0] == len(buried)
                     and np.sum(buried) != 0):
@@ -2930,9 +2930,9 @@ class R2(object): # R2 master class instanciated by the GUI
                 elec = df.values
             self.setElec(elec)
             if 'buried' in df.columns:
-                self.buried = df['buried'].values.astype(bool)
+                self.iburied = df['buried'].values.astype(bool)
             else:
-                self.buried = None
+                self.iburied = None
                 
                 
 
