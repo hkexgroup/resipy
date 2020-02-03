@@ -3451,9 +3451,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                        print('Error in R2.showIter() for contouring: ', e)
 #                else:
 #                    zc = z.copy()
-                    
-<<<<<<< HEAD
-                
+                                    
                 cax = ax.tricontourf(triang, z, extend='both')
                 self._clipContour(ax, cax)
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
