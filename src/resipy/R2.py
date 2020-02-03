@@ -13,7 +13,9 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
-from matplotlib.path import Path
+import resipy.interpolation as interp # for cropSurface()
+import matplotlib.patches as mpatches
+import matplotlib.path as mpath
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -22,6 +24,7 @@ sys.path.append(os.path.relpath('..'))
 from resipy.Survey import Survey
 from resipy.r2in import write2in
 import resipy.meshTools as mt
+from resipy.meshTools import cropSurface
 import resipy.isinpolygon as iip
 from resipy.template import parallelScript, startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
@@ -211,6 +214,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
+        self.iremote = None # populate on electrode import, True if electrode is remote
 
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -228,7 +232,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def setElec(self, elec, elecList=None):
-        """Set electrodes.
+        """Set electrodes. Automatically identified remote electrode.
 
         Parameters
         ----------
@@ -280,6 +284,14 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.elec = initElec
                 for i in range(num_surveys):
                     self.surveys[i].elec = elecList[i] # set survey electrodes to each electrode coordinate
+        
+        # identified remote electrode
+        remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                    9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        self.iremote = np.in1d(self.elec[:,0], remote_flags)
+        if np.sum(self.iremote) > 0:
+            print('Detected {:d} remote electrode.'.format(np.sum(self.iremote)))
+    
         if len(self.surveys) > 0:
             self.computeDOI()
 
@@ -379,7 +391,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # define electrode position according to first survey
         if len(self.surveys) == 1:
-            self.elec = self.surveys[0].elec
+            self.elec = None
+            self.setElec(self.surveys[0].elec)
 
 
     def createBatchSurvey(self, dirname, ftype='Syscal', info={}, spacing=None,
@@ -461,7 +474,8 @@ class R2(object): # R2 master class instanciated by the GUI
             # all surveys are imported whatever their length, they will be matched
             # later if reg_mode == 2 (difference inversion)
         self.iTimeLapseReciprocal = np.array(self.iTimeLapseReciprocal)
-        self.elec = self.surveys[0].elec
+        self.elec = None
+        self.setElec(self.surveys[0].elec)
         self.setBorehole(self.iBorehole)
 
         # create bigSurvey (useful if we want to fit a single error model
@@ -488,6 +502,67 @@ class R2(object): # R2 master class instanciated by the GUI
 
         print("{:d} survey files imported".format(len(self.surveys)))
 
+
+    def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
+                       name=None, parser=None):
+        """Create a 3D survey based on 2D regularly spaced surveys.
+        
+        Parameters
+        ----------
+        fname : list of str
+            List of 2D filenames in the right order for the grid or directory
+            name (the files will be sorted alphabetically in this last case).
+        lineSpacing : float, optional
+            Spacing in meter between each line.
+        zigzag : bool, optional
+            If `True` then one survey out of two will be flipped.
+            #TODO not implemented yet
+        ftype : str, optional
+            Type of the survey to choose which parser to use.
+        name : str, optional
+            Name of the merged 3D survey.
+        """
+        if isinstance(fname, list): # it's a list of filename
+            fnames = fname
+        else: # it's a directory and we import all the files inside
+            if os.path.isdir(fname):
+                fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
+                # this filter out hidden file as well
+            else:
+                raise ValueError('fname should be a directory path or a list of filenames')
+
+        surveys = []
+        for fname in fnames:
+            surveys.append(Survey(fname, ftype=ftype, parser=parser))
+        survey0 = surveys[0]
+        
+        # check this is a regular grid
+        nelec = survey0.elec.shape[0]
+        for s in surveys:
+            if s.elec.shape[0] != nelec:
+                raise ValueError('Survey {:s} has {:d} electrodes while the first survey has {:d}.'
+                                 'All surveys should have the same number of electrodes.'.format(s.name, s.elec.shape[0], nelec))
+        # build global electrodes and merged dataframe
+        elec = []
+        dfs = []
+        for i, s in enumerate(surveys):
+            e = s.elec.copy()
+            e[:,1] = i*lineSpacing
+            elec.append(e)
+            df = s.df.copy()
+            df.loc[:,['a','b','m','n']] = df.loc[:,['a','b','m','n']] + i*nelec
+            dfs.append(df)
+        elec = np.vstack(elec)
+        dfm = pd.concat(dfs, axis=0, sort=False).reset_index(drop=True)
+        
+        survey0.elec = elec
+        survey0.df = dfm
+        survey0.name = '3Dfrom2Dlines' if name is None else name
+        self.surveys= [survey0]
+        self.elec = None
+        self.setElec(elec)
+        self.setBorehole(self.iBorehole)
+        
 
 
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
@@ -534,7 +609,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """Will trim all surveys to get them ready for difference inversion
         where all datasets must have the same number of quadrupoles.
         """
-        print('Matching quadrupoles between surveys for difference inversion ...', end='')
+        print('Matching quadrupoles between surveys for difference inversion...', end='')
         t0 = time.time()
         dfs = [s.df for s in self.surveys]
 
@@ -1071,14 +1146,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """Compute the Depth Of Investigation (DOI) based on electrode
         positions and the larger dipole spacing.
         """
-        elec = self.elec.copy()
-
-        #check if remote electrodes present?
-        remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-        iremote = np.in1d(self.elec[:,0], remote_flags)
-        elec = elec[~iremote,:]
-
+        elec = self.elec.copy()[~self.iremote,:]
         if self.typ == 'R2' or self.typ == 'cR2': # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
@@ -1189,9 +1257,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         #check if remote electrodes present?
         if remote is None: # automatic detection
-            remote_flags = [-9999999, -999999, -99999,-9999,-999]
-                        #9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-            remote = np.in1d(self.elec[:,0], remote_flags)
+            remote = self.iremote
             if np.sum(remote) > 0:
                 print('remote electrode detected')
                 if typ == 'quad':
@@ -1927,7 +1993,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 procs = self.r2.procs # and kill the running processes
                 for p in procs:
                     p.terminate()
-                print('all done')
+                print('all done!')
 
         self.proc = ProcsManagement(self)
 
@@ -2009,7 +2075,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def invert(self, param={}, iplot=False, dump=print, modErr=False,
                parallel=False, iMoveElec=False, ncores=None,
-               rmDirTree=True):
+               rmDirTree=True, modelDOI=False):
         """Invert the data, first generate R2.in file, then run
         inversion using appropriate wrapper, then return results.
 
@@ -2039,21 +2105,30 @@ class R2(object): # R2 master class instanciated by the GUI
             default all the cores available are used).
         rmDirTree : bool, optional
             Remove excess directories and files created during parallel inversion
+        modelDOI : bool, optional
+            If `True`, the Depth of Investigation will be model by reinverting
+            the data on with an initial res0 different of an order of magnitude.
+            Note that this option is only available for *single* survey.
         """
         # clean meshResults list
         self.meshResults = []
-
+            
         # create mesh if not already done
         if 'mesh' not in self.param:
             dump('Create Rectangular mesh...')
             self.createMesh()
-            dump('done\n')
+            dump('done!\n')
+            
+        # run Oldenburg and Li DOI estimation
+        if modelDOI is True:
+#            self.param['num_xy_poly'] = 0 # we need full mesh to match the doiSens
+            sensScaled = self.modelDOI(dump=dump)
 
         # compute modelling error if selected
         if modErr is True and self.fwdErrMdl is False: #check no error model exists
             dump('Computing error model ...')
             self.computeModelError()
-            dump('done\n')
+            dump('done!\n')
             errTot = True
         elif modErr is True and self.fwdErrMdl:
             # aviod computing error model again if it has already been run.
@@ -2062,7 +2137,7 @@ class R2(object): # R2 master class instanciated by the GUI
             errTot = False
 
         # write configuration file
-        dump('Writing .in file and protocol.dat ...')
+        dump('Writing .in file and protocol.dat...', end='\n')
         self.write2in(param=param) # R2.in
         self.write2protocol(errTot=errTot) # protocol.dat
         #check to make sure the number of electrodes in the protocal matches the
@@ -2071,7 +2146,7 @@ class R2(object): # R2 master class instanciated by the GUI
         check = np.array((df['a'],df['b'],df['m'],df['n']))
         if len(self.elec) < np.max(check): # Make sure there are not more electrodes locations in the schedule file than in R2 class
             raise Exception("The number of electrodes given to ResIPy (%i) does not match the number of electrodes parsed in the scheduling file (%i)."%(len(self.elec),np.max(check)))
-        dump('done\n')
+        dump('done!\n')
 
         # runs inversion
         if self.iTimeLapse == True and self.referenceMdl==False:
@@ -2080,7 +2155,7 @@ class R2(object): # R2 master class instanciated by the GUI
             shutil.move(os.path.join(self.dirname,'res0.dat'),
                         os.path.join(refdir, 'res0.dat'))
             self.write2in(param=param)
-            self.runR2(refdir, dump=dump) # this line actaully runs R2
+            self.runR2(refdir, dump=dump) # this line actually runs R2
             if self.typ=='R3t' or self.typ=='cR3t':
                 shutil.copy(os.path.join(refdir, 'f001.dat'),
                             os.path.join(self.dirname, 'Start_res.dat'))
@@ -2100,6 +2175,10 @@ class R2(object): # R2 master class instanciated by the GUI
         try: # this is in the case getInvError() is called after the file .err is
             # created by R2 but before it is populated (when killing the run)
             self.getInvError()
+            self.getResults()
+            if modelDOI is True:
+                for m in self.meshResults:
+                    m.attr_cache['doiSens'] = sensScaled
         except:
             print('Could not retrieve files maybe inversion failed')
             return
@@ -2108,9 +2187,116 @@ class R2(object): # R2 master class instanciated by the GUI
             self.showResults()
 
 
+    def modelDOI(self, dump=print):
+        """Will rerun the inversion with a background constrain (alpha_s) with
+        the normal background and then a background 10 times more resistive.
+        From the two different inversion a senstivity limit will be computed.
+        """
+        # backup normal inversion (0 : original, 1 : normal background, 2: background *10)
+        res0 = np.array(self.mesh.attr_cache['res0'])
+        param0 = self.param.copy()
+        self.param['reg_mode'] = 1 # we need constrain to background
+        typ0 = self.typ
+        if self.typ[0] == 'c':
+            self.typ = self.typ[1:]
+        iTimeLapse0 = self.iTimeLapse
+        self.iTimeLapse = False
+        surveys0 = self.surveys.copy()
+        self.surveys = [surveys0[0]] # just use first survey
+        self.write2in()
+        self.write2protocol()
+        
+        # build the cropping polygon
+        if self.param['num_xy_poly'] != 0:
+            path = mpath.Path(self.param['xy_poly_table'])
+            iselect = path.contains_points(np.c_[self.mesh.elm_centre[0], self.mesh.elm_centre[2]])
+            print(np.sum(iselect), len(iselect))
+        else:
+            iselect = np.ones(len(self.mesh.elm_centre[0]), dtype=bool)
+            
+        # clean function
+        def cleandir():
+            dirname = self.dirname
+            os.remove(os.path.join(dirname, 'res0.dat'))
+            for f in os.listdir(dirname):
+                if f[:3] == 'f00':
+                    os.remove(os.path.join(dirname, f))
+        
+        # run first background constrained inversion
+        dump('===== modelDOI: Running background constrained inversion with initial resistivity =====\n')
+        res1 = res0
+        self.mesh.attr_cache['res0b'] = list(res1)
+        self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
+        self.runR2(dump=dump) # re-run inversion
+        self.getResults()
+        mesh1 = self.meshResults[0]
+        cleandir()
+        
+        # run second background constrained inversion
+        dump('===== modelDOI: Running background constrained inversion with initial resistivity * 10 =====\n')
+        res2 = res0 * 10
+        self.mesh.attr_cache['res0b'] = list(res2)
+        self.mesh.write_attr('res0b', 'res0.dat', self.dirname)
+        self.runR2(dump=dump) # re-run inversion
+        self.getResults()
+        mesh2 = self.meshResults[0]
+        cleandir()
+        os.remove(os.path.join(self.dirname, 'R2.in'))
+        
+        # sensitivity = difference between final inversion / difference init values
+        invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
+        invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
+        sens = (invValues1 - invValues2)/(res1[iselect]-res2[iselect])
+        sensScaled = np.abs(sens)
+#        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
+        self.doiComputed = True
+        
+        # restore
+        self.meshResults = []
+        self.param = param0
+        self.typ = typ0
+        self.surveys = surveys0
+        self.iTimeLapse = iTimeLapse0
+        # .in and protocol will be written again in R2.invert()
+        
+        return sensScaled
+        
+    
+    
+    def _clipContour(self, ax, cont):
+        """Clip contours using mesh bound and surface if available.
+        
+        Parameters
+        ----------
+        ax : matplotlib.Axes
+            Axis.
+        cont : matplotlib.collections
+            Collection of contours.
+        """
+        # mask outer region
+        xmin = np.min(self.mesh.node_x)
+        xmax = np.max(self.mesh.node_x)
+        zmin = np.min(self.mesh.node_z)
+        zmax = np.max(self.mesh.node_z)
+        if self.mesh.surface is not None:
+            xsurf, zsurf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+        else:
+            verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zmax, zmin, zmin]]                
+        # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
+        path = mpath.Path(verts)
+        patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
+        ax.add_patch(patch) # need to add so it knows the transform
+        for col in cont.collections:
+            col.set_clip_path(patch)
+                    
+        
+
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
-                    **kwargs):
+                    doi=False, doiSens=False, **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -2131,6 +2317,13 @@ class R2(object): # R2 master class instanciated by the GUI
             Name of the colormap to be used.
         clabel : str, optional
             Label of the colorbar (by default the label is the value of `attr`).
+        doi : bool, optional
+            If True, it will draw a dotted red line corresponding to 0.02 from the
+            Oldenburg and Li method. Note that `R2.modeDOI()` needs to be run
+            for that.
+        doiSens : bool, optional
+            If True, it will draw a dashed line corresponding to 0.001 of the maximum
+            of the log10 sensitivity.
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -2149,12 +2342,47 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.meshResults[index].show(ax=ax, edge_color=edge_color,
                                 attr=attr, sens=sens, color_map=color_map,
                                 zlim=zlim, clabel=clabel, **kwargs)
+                mesh = self.meshResults[index]
+                if doi is True:
+                    if self.doiComputed is True: # DOI based on Oldenburg and Li
+                        z = np.array(mesh.attr_cache['doiSens'])
+                        levels = [0.2]
+                        linestyle = ':'
+                    else:
+                        raise ValueError('Rerun the inversion with `modelDOI=True` first or use `doiSens`.')
+                if doiSens is True: # DOI based on log10(sensitivity)
+                    z = np.array(mesh.attr_cache['Sensitivity(log10)'])
+                    levels=[np.log10(0.001*(10**np.nanmax(z)))]
+                    linestyle = '--'
+                
+                if doi is True or doiSens is True:
+                    # plotting of the sensitivity contour (need to cropSurface as well)
+                    xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
+#                    if self.mesh.surface is not None:
+#                        zc = z
+#                        xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+#                        zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                        xc = np.r_[xc, xf]
+#                        yc = np.r_[yc, yf]
+#                        zc = np.r_[zc, zf]
+#                        triang = tri.Triangulation(xc, yc) # build grid based on centroid
+#                        try:
+#                            triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+#                        except Exception as e:
+#                            print('Error in cropSurface for contouring: ', e)
+#                    else:
+#                        triang = tri.Triangulation(xc, yc)
+#                        zc = z
+                    triang = tri.Triangulation(xc, yc)
+                    cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
+                    self._clipContour(mesh.ax, cont)
             else: # 3D case
                 self.meshResults[index].show(ax=ax,
                             attr=attr, color_map=color_map, clabel=clabel,
                             **kwargs)
         else:
-            print('Unexpected Error')
+            raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
+
 
 
     def getResults(self):
@@ -2171,9 +2399,7 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh = mt.vtk_import(fresults)
             mesh.mesh_title = self.surveys[0].name
             elec = self.elec.copy()
-            remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                        9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-            iremote = np.in1d(elec[:,0], remote_flags)
+            iremote = self.iremote
             mesh.elec_x = elec[~iremote,0]
             mesh.elec_y = elec[~iremote,1]
             mesh.elec_z = elec[~iremote,2]
@@ -2204,9 +2430,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
                     elec = self.elec.copy()
-                    remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                                9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
-                    iremote = np.in1d(elec[:,0], remote_flags)
+                    iremote = self.iremote
                     mesh.elec_x = elec[~iremote,0]
                     mesh.elec_y = elec[~iremote,1]
                     mesh.elec_z = elec[~iremote,2]
@@ -2390,7 +2614,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #        idx = selector.iselect
 
         centroids = np.array(self.mesh.elm_centre).T[:,[0,2]]
-        path = Path(np.array(xy))
+        path = mpath.Path(np.array(xy))
         idx = path.contains_points(centroids)
 
         self.regid = self.regid + 1
@@ -2676,8 +2900,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
             df.to_csv(fname, index=False)
-
-
+            
 
     def importElec(self, fname=''):
         """Import electrodes positions.
@@ -2808,20 +3031,20 @@ class R2(object): # R2 master class instanciated by the GUI
                         os.path.join(fwdDir, 'mesh3d.dat'))
 
         # write the forward .in file
-        dump('Writing .in file...')
+        dump('Writing .in file...', end='\n')
         fparam = self.param.copy()
         fparam['job_type'] = 0
         fparam['num_regions'] = 0
         fparam['res0File'] = 'resistivity.dat' # just starting resistivity
 
         write2in(fparam, fwdDir, typ=self.typ)
-        dump('done\n')
+        dump('done!\n')
 
         # write the protocol.dat (that contains the sequence)
         if self.sequence is None:
             dump('Creating sequence ...')
             self.createSequence()
-            dump('done\n')
+            dump('done!\n')
         dump('Writing protocol.dat ...')
         seq = self.sequence
 
@@ -2856,7 +3079,7 @@ class R2(object): # R2 master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False)
-        dump('done\n')
+        dump('done!\n')
 
         # fun the inversion
         dump('Running forward model')
@@ -2880,7 +3103,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
         elif self.typ[-2] == '3':
-            self.createSurvey(os.path.join(fwdDir, self.typ + '.fwd'), ftype='Protocol')
+            self.createSurvey(os.path.join(fwdDir, self.typ + '.fwd'), ftype='forwardProtocolDC')
         else:
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
@@ -3152,7 +3375,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         self.fwdErrMdl = True # class now has a forward error model.
 
-    def showIter(self, index=-2, ax=None):
+
+    def showIter(self, index=-2, ax=None, modelDOI=False):
         """Dispay temporary inverted section after each iteration.
 
         Parameters
@@ -3161,6 +3385,9 @@ class R2(object): # R2 master class instanciated by the GUI
             Iteration number to show.
         ax : matplotib axis, optional
             If specified, the graph will be plotted along `ax`.
+        modelDOI : bool, optional
+            As modelDOI() is always computed using R2 (not cR2), this tells the
+            method to look for an R2 looking iteration file.
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -3178,24 +3405,44 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(fs) > 1: # the last file is always open and not filled with data
 #            if self.param['mesh_type'] == 10:
 #                self.showSection(os.path.join(self.dirname, fs[index]), ax=ax)
-#                # TODO change that to full meshTools
+#                # TODO change that to full meshTools?
 #
 #            else:
 #            x = np.genfromtxt(os.path.join(self.dirname, fs[index])) # too sensitive to empty columns of cR2 output
             x = pd.read_csv(os.path.join(self.dirname, fs[index]), delim_whitespace=True).values
             if x.shape[0] > 0:
                 triang = tri.Triangulation(x[:,0],x[:,1])
-                if self.typ[0] == 'c':
+                if self.typ[0] == 'c' and modelDOI is False:
                     z = x[:,4]
                 else:
-                    z = x[:,3]
+                    z = x[:,3] # modelDOI is always computed with R2 not cR2
+#                cax = ax.tricontourf(triang, z, extend='both')
+                
+#                if self.mesh.surface is not None:
+#                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
+#                    xc, yc, zc = x[:,0], x[:,1], z
+#                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
+#                    xc = np.r_[xc, xf]
+#                    yc = np.r_[yc, yf]
+#                    zc = np.r_[zc, zf]
+#                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
+#                    try:
+#                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
+#                    except Exception as e:
+#                        print('Error in R2.showIter() for contouring: ', e)
+#                else:
+#                    zc = z.copy()
+                    
+                
                 cax = ax.tricontourf(triang, z, extend='both')
-                # TODO might want to crop surface here as well
+                self._clipContour(ax, cax)
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')
-                ax.plot(self.elec[:,0], self.elec[:,2], 'ko')
+                ax.plot(self.elec[:,0], self.elec[:,2], 'ko', markersize=4)
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel('Elevation [m]')
+                ax.set_xlim([np.min(self.elec[:,0]), np.max(self.elec[:,0])])
+                ax.set_ylim(self.zlim)
                 if iplot is True:
                     fig.show()
 
@@ -3441,7 +3688,7 @@ class R2(object): # R2 master class instanciated by the GUI
             **Windows ONLY** maps to the excuatable paraview.exe. The program
             will attempt to find the location of the paraview install if not given.
         """
-        print('Saving mesh as vtk ...', end='')
+        print('Saving mesh as vtk...', end='')
         self.saveMeshVtk() # save in default dirname
         print('done.\n Launching paraview.')
         self._toParaview(os.path.join(self.dirname, 'mesh.vtk'),
@@ -3531,7 +3778,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         for i in range(len(self.surveys)):
             self.surveys[i].elec2distance() # go through each survey and compute electrode
-        self.elec = self.surveys[0].elec
+        self.elec = None
+        self.setElec(self.surveys[0].elec)
 
 # WIP
 #    def timelapseErrorModel(self, ax=None):
