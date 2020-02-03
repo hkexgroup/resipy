@@ -1495,7 +1495,7 @@ class App(QMainWindow):
                                       str(nbElec) + ' lines (same number as number of electrodes).')
                             return
                     if 'Buried' in self.headers:
-                        if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
+                        if 1 <= len(np.unique(tt[:,-1])) <= 2: #only 1 and 0
                             self.initTable(tt[:,:-1])
                             self.setBuried(tt[:,-1])
                         else:
