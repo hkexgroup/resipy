@@ -480,6 +480,10 @@ class App(QMainWindow):
             # mesh
             mwMesh.clear()
             regionTable.reset()
+            
+            #forward model
+            forwardPseudo.clear()
+            forwardPseudoIP.clear()
 
             # inversion options
             flux_type.setCurrentIndex(0)
