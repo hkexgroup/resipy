@@ -531,9 +531,12 @@ class App(QMainWindow):
                 self.typ = self.typ.replace('3t','2')
                 if self.r2 is not None:
                     self.r2.typ = self.r2.typ.replace('3t','2')
-                    
                 # importing tab
+#                elecTable.setColumnHidden(2, True)
+#                topoTable.setColumnHidden(2, True)
                 elecTable.initTable(headers=['x','z','Buried'])
+                if self.r2 is not None:
+                    elecTable.initTable(self.r2.elec)
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
                 dimForward.setEnabled(True)
@@ -580,7 +583,11 @@ class App(QMainWindow):
                     self.r2.typ = self.r2.typ.replace('2', '3t')
 
                 # importing tab
+#                elecTable.setColumnHidden(2, False)
+#                topoTable.setColumnHidden(2, False)
                 elecTable.initTable(headers=['x','y','z','Buried'])
+                if self.r2 is not None:
+                    elecTable.initTable(self.r2.elec)
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
                 dimForward.setChecked(False)
@@ -1445,9 +1452,10 @@ class App(QMainWindow):
                 if headers is not None:
                     self.headers = np.array(headers)
                 self.ncol = len(self.headers)
-                if tt.shape[1] == 3 and len(self.headers) == 3: # 2D array but we have 3D position
-                    print('reducing 3D positions to 2D')
-                    tt = tt[:,[0,2]]
+                if tt is not None:
+                    if tt.shape[1] == 3 and len(self.headers) == 3: # 2D array but we have 3D position
+                        print('reducing 3D positions to 2D')
+                        tt = tt[:,[0,2]]
                 self.setColumnCount(len(self.headers)) # +1 for buried check column
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -1511,6 +1519,7 @@ class App(QMainWindow):
         topoLayout = QVBoxLayout()
 
         elecTable = ElecTable(headers=['x','z','Buried'])
+#        elecTable.setColumnHidden(2, True)
         elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
                            You can also use the form below to generate \
@@ -1578,6 +1587,7 @@ class App(QMainWindow):
         topoLayout.addWidget(elecTable)
 
         topoTable = ElecTable(headers=['x','z'], selfInit=True)
+#        topoTable.setColumnHidden(2, True)
         topoTable.initTable(np.array([['',''],['','']]))
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
