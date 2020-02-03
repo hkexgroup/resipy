@@ -3040,6 +3040,7 @@ class App(QMainWindow):
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
+        clLabel.setToolTip('Control the number and size of elements between electrodes.')
 #        clEdit = QLineEdit()
 #        clEdit.setValidator(QDoubleValidator())
 #        clEdit.setText('-1')
@@ -3058,6 +3059,7 @@ class App(QMainWindow):
         clGrid.addWidget(clFineLabel, 1,0,1,1)
         clGrid.addWidget(clCoarseLabel, 1,1,1,1)
         clFactorLabel = QLabel('Growth factor:')
+        clFactorLabel.setToolTip('Factor by which elements grow away from electrodes.')
 #        clFactorEdit = QLineEdit()
 #        clFactorEdit.setValidator(QDoubleValidator())
 #        clFactorEdit.setText('2')
