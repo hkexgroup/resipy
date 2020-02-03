@@ -310,17 +310,18 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
     elec[:,0] = xElec
     return elec, df
 
-# test code
-#elec1, df1 = protocol3DParser('api/test/protocol3Df.dat')
-#elec2, df2 = protocol3DParser('api/test/protocol3Di.dat')
-#elec3, df3 = protocol3DParser('api/test/protocol.dat')
-
 
 #%% forwardProtocolDC/IP parser
     
 def forwardProtocolDC(fname): # need specific as there is a appRes column
-    x = np.genfromtxt(fname, skip_header=1)
-    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','appRes'])
+    skip = 1
+    cnames = ['num','a','b','m','n','resist','appRes']
+    if fname.find('.fwd')!=-1:
+        skip=0
+        cnames =['num','sa','a','sb','b','sm','m','sn','n','resist','appRes']
+        print('3d import')
+    x = np.genfromtxt(fname, skip_header=skip)
+    df = pd.DataFrame(x, columns=cnames)
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))

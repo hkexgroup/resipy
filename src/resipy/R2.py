@@ -3122,7 +3122,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
         elif self.typ[-2] == '3':
-            self.createSurvey(os.path.join(fwdDir, self.typ + '.fwd'), ftype='Protocol')
+            self.createSurvey(os.path.join(fwdDir, self.typ + '.fwd'), ftype='forwardProtocolDC')
         else:
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
@@ -3452,6 +3452,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                else:
 #                    zc = z.copy()
                     
+<<<<<<< HEAD
                 
                 cax = ax.tricontourf(triang, z, extend='both')
                 self._clipContour(ax, cax)
