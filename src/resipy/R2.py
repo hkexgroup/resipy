@@ -2910,11 +2910,23 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
         """
-        elec = pd.read_csv(fname, header=None).values
-        if elec.shape[1] > 3:
+        with open(fname, 'r') as f:
+            try:
+                float(f.readline().split(',')[0])
+                header = None
+            except Exception:
+                header = 'infer'
+        df = pd.read_csv(fname, header=header)
+        if df.shape[1] > 3:
             raise ValueError('The file should have no more than 3 columns')
         else:
+            if header is not None:
+                elec = df[['x','y','z']].values
+            else:
+                elec = df.values
             self.setElec(elec)
+        
+        # TODO add possibility to parser buried electrode as well
 
 
     def importSequence(self, fname=''):
