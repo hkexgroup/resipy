@@ -189,7 +189,7 @@ plt.close('all')
 print('-------------Testing borehole------------')
 t0 = time.time()
 k = R2()
-k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='forwardProtocolDC')
+k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
 x = np.genfromtxt(testdir + 'dc-2d-borehole/elec.csv', delimiter=',')
 k.elec[:,[0,2]] = x[:,:2]
 buried = x[:,2].astype(bool)
@@ -205,16 +205,18 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-borehole'] = time.time() - t0
 
 
-#%% test for remote electrode
+#%% test model DOI
 plt.close('all')
-print('--------------- Remote Electrode ------------')
+print('============== Test modelDOI() =================')
 k = R2()
-k.createSurvey(testdir + 'dc-2d-pole-dipole/syscal.csv')
-#k.showPseudo() # doesn't make sense for pole-dipole data
+#k.createSurvey('../examples/dc-2d-topo/syscal.csv')
+#k.importElec('../examples/dc-2d-topo/elec.csv')
+#k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
+k.createSurvey('../examples/dc-2d/syscal.csv')
 k.createMesh('trian')
-k.showMesh()
-k.invert()
-k.showResults()
+k.invert(modelDOI=True)
+k.showResults(doiSens=True)
+k.showResults(doi=True)
 
 
 #%% test for IP
@@ -246,7 +248,7 @@ k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
 #k.createTimeLapseSurvey(testdir + 'dc-2d-timelapse/data') # dirname or list of files
 k.fitErrorPwl()
 k.err = True
-k.invert(iplot=False, parallel=True)
+k.invert(iplot=False, parallel=True)#, modelDOI=True)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
@@ -394,6 +396,7 @@ k.showPseudoInvError()
 k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
+
 
 
 #%% 3D testing importing a mesh
