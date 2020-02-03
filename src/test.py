@@ -11,6 +11,7 @@ RUN ALL SECTION ON THE TEST AND CHECK THE GRAPH PRODUCED
 
 import numpy as np
 import os
+import pandas as pd
 import time
 import matplotlib.pyplot as plt
 import resipy.meshTools as mt
@@ -190,13 +191,12 @@ print('-------------Testing borehole------------')
 t0 = time.time()
 k = R2()
 k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
-x = np.genfromtxt(testdir + 'dc-2d-borehole/elec.csv', delimiter=',')
-k.elec[:,[0,2]] = x[:,:2]
-buried = x[:,2].astype(bool)
-#k.importElec(testdir + 'dc-2d-borehole/elec.csv')
-#TODO formalize elec.csv (X, Y, Z, buried (optional))
-k.createMesh('trian', buried=buried, cl=0.5, cl_factor=20)
-k.createMesh('quad', buried=buried, elemx=12)
+#df = pd.read_csv(testdir + 'dc-2d-borehole/elec.csv')
+#k.setElec(df.values[:,:3])
+#buried = df.values[:,-1].astype(bool)
+k.importElec(testdir + 'dc-2d-borehole/elec.csv')
+k.createMesh('trian', cl=0.5, cl_factor=20)
+k.createMesh('quad', elemx=12)
 k.invert()
 k.showIter(index=0)
 k.showIter(index=1)
