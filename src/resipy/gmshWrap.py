@@ -1473,6 +1473,7 @@ def msh_parse_3d(file_path):
             node4.append(line_data[8]-1)
             node5.append(line_data[9]-1)
             node6.append(line_data[10]-1)
+            npere = 6
         else:
             ignored_elements += 1
     print("ignoring %i non-tetrahedra (or prism) elements in the mesh file, as they are not required for R3t"%ignored_elements)
@@ -1521,8 +1522,8 @@ def msh_parse_3d(file_path):
             else:
                 c_triangles_top.append((node4[i],node5[i],node6[i]))
             #see if prisms are upside down 
-            if n4[2] < n1[2]:
-                print('uppy duppy prism')
+#            if n4[2] < n1[2]:
+#                print('uppy duppy prism')
 
             #compute volume (for a prism this is 0.5*base*height*width)
             base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
@@ -1711,7 +1712,7 @@ def column_mesh(electrodes, poly=None, z_lim= None,
 #%% Make an arbitary 2D shape 
 def mesh2d(electrodes, poly=None, origin = (0,0),
                 radius = None, file_path='2d_mesh.geo', cl=-1):
-    """Make a prism mesh 
+    """Make generic 2d mesh. 
     Parameters
     ------------
     electrodes: list of array likes
@@ -1719,8 +1720,8 @@ def mesh2d(electrodes, poly=None, origin = (0,0),
     poly: list, tuple, optional 
         Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
         x and y coordinates, ie (poly_x, poly_y)
-    z_lim: list, tuple, optional 
-        top and bottom z coordinate of column, in the form (min(z),max(z))
+    origin: list, tuple, optional 
+        2 by 1 array of the x and y coordinates of the circle origin, only used if poly is None. 
     radius: float, optional 
         radius of column
     file_path: string, optional 

@@ -13,20 +13,20 @@ import matplotlib
 plt.ioff() # this disable interactive plotting
 
 figdir = './image/paper/'
-
+testdir = '../examples/'
 
 #%% general figure miniatures
 matplotlib.rcParams.update({'font.size': 12})
 figsize=(3, 1.5)
 
 k = R2()
-k.createSurvey(k.dirname + '/../test/IP/syscalFileIP.csv')
+k.createSurvey(testdir + 'ip-2d/syscal.csv')
 array = k.surveys[0].df[['a','b','m','n']].values
 ie = (array <= 12).all(-1)
 #k.surveys[0].df = k.surveys[0].df[ie].reset_index(drop=True)
 #k.surveys[0].df.loc[[4], 'resist'] = 100
 
-k.removeUnpaired()
+k.filterUnpaired()
 
 
 fig, ax = plt.subplots(figsize=figsize)

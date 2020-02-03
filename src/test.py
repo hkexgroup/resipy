@@ -24,7 +24,7 @@ timings = {}
 testdir = '../examples/'
 
 
-print('======================= general methods test =====================')
+print('======================= GENERAL METHOD TESTS =====================')
 #%% testing all importing features
 k = R2()
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
@@ -44,6 +44,9 @@ k.createSurvey(testdir + 'parser/sting.stg', ftype='Sting')
 k = R2()
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
+
+k = R2(typ='R3t')
+k.create3DSurvey(testdir + 'dc-2d-timelapse/data')
 
 timings['methods-importing'] = time.time() - tstart
 
@@ -106,12 +109,7 @@ k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.createMesh('quad')
 k.createMesh('trian')
 
-# 2D borehole
-k = R2()
-k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
-k.importElec(testdir + 'dc-2d-borehole/elec.csv')
-k.createMesh('quad')
-#k.createMesh('trian') # TODO failed !
+# 2D borehole (see example)
 
 # 3D flat
 #k = R2(typ='R3t') # tested in cases
@@ -191,7 +189,7 @@ plt.close('all')
 print('-------------Testing borehole------------')
 t0 = time.time()
 k = R2()
-k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='forwardProtocolDC')
+k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='Protocol')
 x = np.genfromtxt(testdir + 'dc-2d-borehole/elec.csv', delimiter=',')
 k.elec[:,[0,2]] = x[:,:2]
 buried = x[:,2].astype(bool)
@@ -205,6 +203,20 @@ k.showIter(index=1)
 k.showResults(sens=False, contour=True)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-borehole'] = time.time() - t0
+
+
+#%% test model DOI
+plt.close('all')
+print('============== Test modelDOI() =================')
+k = R2()
+#k.createSurvey('../examples/dc-2d-topo/syscal.csv')
+#k.importElec('../examples/dc-2d-topo/elec.csv')
+#k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
+k.createSurvey('../examples/dc-2d/syscal.csv')
+k.createMesh('trian')
+k.invert(modelDOI=True)
+k.showResults(doiSens=True)
+k.showResults(doi=True)
 
 
 #%% test for IP
@@ -236,7 +248,7 @@ k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
 #k.createTimeLapseSurvey(testdir + 'dc-2d-timelapse/data') # dirname or list of files
 k.fitErrorPwl()
 k.err = True
-k.invert(iplot=False, parallel=True)
+k.invert(iplot=False, parallel=True)#, modelDOI=True)
 k.saveInvPlots(attr='difference(percent)')
 k.showResults(index=1)
 k.showResults(index=2)
@@ -320,7 +332,7 @@ plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
 t0 = time.time()
 k = R2(typ='cR2')
-k.elec = np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))]
+k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.createMesh(typ='trian')
 #
 ## full resipy function
@@ -384,6 +396,7 @@ k.showPseudoInvError()
 k.showInvError()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
+
 
 
 #%% 3D testing importing a mesh

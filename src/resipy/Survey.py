@@ -159,8 +159,9 @@ class Survey(object):
         s_svy : Survey
             An instance of the Survey class.
         """
-        surrogate_file = 'test/protocol.dat'
-        path = os.path.join(os.path.dirname(os.path.realpath(__file__)),surrogate_file) # map to the protocol test file
+        surrogate_file = '\examples\dc-2d\protocol.dat'
+        path2resipy = os.path.realpath(__file__).replace('\\src\resipy\\',surrogate_file)
+        path = path2resipy # map to the protocol test file
         s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
         s_svy.df = df
         s_svy.elec = elec
@@ -1558,6 +1559,7 @@ class Survey(object):
             + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+
         
         def onpick(event):
             if lines[event.artist] == 'data':
