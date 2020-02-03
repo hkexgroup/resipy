@@ -766,7 +766,7 @@ def res2invInputParser(file_path):
                 if ex_pos[i] == ex_pos_topo[j]:
                     ez_pos[i] = ez_pos_topo[j]
         #print(ex_pos,ez_pos)
-        elec = np.column_stack((ex_pos,ez_pos,ey_pos))
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
               
        
     #add some protection against a dodgey file 
@@ -777,7 +777,7 @@ def res2invInputParser(file_path):
     if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
         ey_pos=[0]*num_elec
         ez_pos=[0]*num_elec  
-        elec = np.column_stack((ex_pos,ez_pos,ey_pos))
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
        
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
