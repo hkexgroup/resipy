@@ -317,6 +317,8 @@ class App(QMainWindow):
         self.inputPhaseFlag = False
         self.iCropping = True # by default crop the mesh
         self.num_xy_poly = None # to store the values
+        self.tempElec = None # place holder to compare the new electrode agains
+
         if frozen == 'not':
             self.datadir = os.path.join(bundle_dir, '../examples')
         else:
@@ -429,6 +431,7 @@ class App(QMainWindow):
             psContourCheck.setEnabled(False)
             tabImporting.setTabEnabled(1, False)
             mwPseudo.clear() # clearing figure
+            self.tempElec = None
             elecTable.initTable(np.array([['',''],['','']]))
             topoTable.initTable(np.array([['',''],['','']]))
 #            dimInverse.setChecked(True)
@@ -477,6 +480,10 @@ class App(QMainWindow):
             # mesh
             mwMesh.clear()
             regionTable.reset()
+            
+            #forward model
+            forwardPseudo.clear()
+            forwardPseudoIP.clear()
 
             # inversion options
             flux_type.setCurrentIndex(0)
@@ -528,9 +535,12 @@ class App(QMainWindow):
                 self.typ = self.typ.replace('3t','2')
                 if self.r2 is not None:
                     self.r2.typ = self.r2.typ.replace('3t','2')
-                    
                 # importing tab
+#                elecTable.setColumnHidden(2, True)
+#                topoTable.setColumnHidden(2, True)
                 elecTable.initTable(headers=['x','z','Buried'])
+                if self.r2 is not None:
+                    elecTable.initTable(self.r2.elec)
                 topoTable.initTable(headers=['x','z'])
                 elecDy.setEnabled(False)
                 dimForward.setEnabled(True)
@@ -577,7 +587,11 @@ class App(QMainWindow):
                     self.r2.typ = self.r2.typ.replace('2', '3t')
 
                 # importing tab
+#                elecTable.setColumnHidden(2, False)
+#                topoTable.setColumnHidden(2, False)
                 elecTable.initTable(headers=['x','y','z','Buried'])
+                if self.r2 is not None:
+                    elecTable.initTable(self.r2.elec)
                 topoTable.initTable(headers=['x','y','z'])
                 elecDy.setEnabled(True)
                 dimForward.setChecked(False)
@@ -993,6 +1007,9 @@ class App(QMainWindow):
                 if self.r2.iremote is not None:
                     if np.sum(self.r2.iremote) > 0:
                         boreholeCheck.setChecked(True)
+                        meshQuadGroup.setEnabled(False)
+                    else:
+                        meshQuadGroup.setEnabled(True)
                 if boreholeCheck.isChecked() is True:
                     self.r2.setBorehole(True)
                 else:
@@ -1280,7 +1297,6 @@ class App(QMainWindow):
         tabImportingDataLayout.addLayout(metaLayout, 40)
         
         # update pseudo-sections due to electrodes update
-        self.tempElec = None
         def updateElec():
             try:
                 elec = elecTable.getTable()
@@ -1440,6 +1456,10 @@ class App(QMainWindow):
                 if headers is not None:
                     self.headers = np.array(headers)
                 self.ncol = len(self.headers)
+                if tt is not None:
+                    if tt.shape[1] == 3 and len(self.headers) == 3: # 2D array but we have 3D position
+                        print('reducing 3D positions to 2D')
+                        tt = tt[:,[0,2]]
                 self.setColumnCount(len(self.headers)) # +1 for buried check column
                 self.setHorizontalHeaderLabels(self.headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -1487,7 +1507,7 @@ class App(QMainWindow):
                                       str(nbElec) + ' lines (same number as number of electrodes).')
                             return
                     if 'Buried' in self.headers:
-                        if len(np.unique(tt[:,-1])) == 2: #only 1 and 0
+                        if 1 <= len(np.unique(tt[:,-1])) <= 2: #only 1 and 0
                             self.initTable(tt[:,:-1])
                             self.setBuried(tt[:,-1])
                         else:
@@ -1503,6 +1523,7 @@ class App(QMainWindow):
         topoLayout = QVBoxLayout()
 
         elecTable = ElecTable(headers=['x','z','Buried'])
+#        elecTable.setColumnHidden(2, True)
         elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
                            You can also use the form below to generate \
@@ -1549,6 +1570,8 @@ class App(QMainWindow):
                 electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
                               np.linspace(0.0, (nbElec-1)*dz, nbElec)]
             elecTable.initTable(electrodes)
+            elec = elecTable.getTable()
+            self.tempElec = elec
         elecGenButton = QPushButton('Generate')
         elecGenButton.setAutoDefault(True)
         elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -1568,6 +1591,7 @@ class App(QMainWindow):
         topoLayout.addWidget(elecTable)
 
         topoTable = ElecTable(headers=['x','z'], selfInit=True)
+#        topoTable.setColumnHidden(2, True)
         topoTable.initTable(np.array([['',''],['','']]))
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
@@ -3547,10 +3571,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         forwardLogText = QTextEdit()
         forwardLogText.setReadOnly(True)
-        def forwardLogTextFunc(text):
+        def forwardLogTextFunc(text, end='\n'):
             cursor = forwardLogText.textCursor()
             cursor.movePosition(cursor.End)
-            cursor.insertText(text + '\n')
+            cursor.insertText(text + end)
             forwardLogText.ensureCursorVisible()
             QApplication.processEvents()
             if text == 'Forward modelling done.':
@@ -3784,10 +3808,29 @@ combination of multiple sequence is accepted as well as importing a custom seque
         notCropping.stateChanged.connect(notCroppingFunc)
         advForm.addRow(notCroppingLabel, notCropping)
         
+        def modelDOIFunc(status):
+            if status == Qt.Checked:
+                doiCheck.setVisible(True)
+                doiSensCheck.setVisible(False)
+            else:
+                doiCheck.setVisible(False)
+                doiSensCheck.setVisible(True)
         modelDOILabel = QLabel('<a href="modelDOI">Model DOI</a>')
         modelDOILabel.linkActivated.connect(showHelp2)
         modelDOICheck = QCheckBox()
+        modelDOICheck.stateChanged.connect(modelDOIFunc)
         advForm.addRow(modelDOILabel, modelDOICheck)
+        
+#        sensDOILabel = QLabel('<a href="sensDOI">Display sensitivity based DOI</a>')
+#        sensDOILabel.linkActivated.connect(showHelp2)
+#        sensDOICheck = QCheckBox()
+#        def sensDOIFunc(state):
+#            if state == Qt.Checked:
+#                self.displayParams['sensDOI'] = True
+#            else:
+#                self.displayParams['sensDOI'] = False
+#        sensDOICheck.stateChanged.connect(sensDOIFunc)
+#        advForm.addRow(sensDOILabel, sensDOICheck)
 
         def flux_typeFunc(index):
             if index == 0:
@@ -4225,7 +4268,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         if a[0] == 'End':
                             self.end = True
                         if a[0] == 'Iteration':
-                            mwInvResult.plot(self.r2.showIter, aspect = self.plotAspect)
+                            mwInvResult.plot(partial(self.r2.showIter, modelDOI=modelDOICheck.isChecked()), aspect=self.plotAspect)
             return newFlag
 
         def plotRMS(ax):
@@ -4341,19 +4384,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 logText.ensureCursorVisible()
                 QApplication.processEvents()
 
-            # don't crop the mesh if that's what we'e chosen
+            # create default mesh is not specified
+            if self.r2.mesh is None:
+                func('Creating the mesh...', end='\n')
+                meshTrianFunc()
+                func('done!\n')
+
+            # don't crop the mesh if that's what we've chosen
             if self.iCropping is True:
                 if self.num_xy_poly is not None:
                     self.r2.param['num_xy_poly'] = self.num_xy_poly
             else:
                 self.r2.param['num_xy_poly'] = 0
-
-            # create default mesh is not specified
-            if self.r2.mesh is None:
-                func('Create default triangular mesh ...', end='')
-                meshTrianFunc()
-                func('done')
-
+                
             x, phase0, zones, fixed = regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
             self.r2.setStartingRes(dict(zip(regid, x)),
@@ -4376,7 +4419,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 func(text)
             self.r2.proc = None
             sectionId.clear()
-
+            
             # displaying results or error
             def printR2out():
                 print('--------INVERSION FAILED--------')
@@ -4400,8 +4443,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     # this could failed if we invert homogeneous model -> vtk
                     #file size = 0 -> R2.getResults() -> vtk_import failed
                     plotSection()
-#                    if self.iForward is True:
-#                        sectionId.addItem('Initial Model')
+    #                    if self.iForward is True:
+    #                        sectionId.addItem('Initial Model')
                     for mesh in self.r2.meshResults:
                         sectionId.addItem(mesh.mesh_title)
                     if self.iForward is True:
@@ -4452,13 +4495,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams = {'index':0,'edge_color':'none',
                                   'sens':True, 'attr':defaultAttr,
                                   'contour':False, 'vmin':None, 'vmax':None,
-                                  'cmap':'viridis', 'sensPrc':0.5}
+                                  'cmap':'viridis', 'sensPrc':0.5,
+                                  'doi':modelDOICheck.isChecked(),
+                                  'doiSens':False}
             contourCheck.setChecked(False)
             sensCheck.setChecked(True)
             edgeCheck.setChecked(False)
+            doiCheck.setChecked(modelDOICheck.isChecked())
             vminEdit.setText('')
             vmaxEdit.setText('')
-            self.r2.getResults()
             displayAttribute(arg=defaultAttr)
             # graph will be plotted because changeSection will be called
 #            attributeName.activated.connect(changeAttribute)
@@ -4474,10 +4519,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmax = self.displayParams['vmax']
             cmap = self.displayParams['cmap']
             sensPrc = self.displayParams['sensPrc']
+            doi = self.displayParams['doi']
+            doiSens = self.displayParams['doiSens']
             if self.r2.typ[-1] == '2':
                 mwInvResult.replot(threed=False, aspect=self.plotAspect, index=index, edge_color=edge_color,
                                    contour=contour, sens=sens, attr=attr,
-                                   vmin=vmin, vmax=vmax, color_map=cmap, sensPrc=sensPrc)
+                                   vmin=vmin, vmax=vmax, color_map=cmap, 
+                                   sensPrc=sensPrc, doi=doi, doiSens=doiSens)
             else:
                 mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                      vmin=vmin, vmax=vmax, color_map=cmap)
@@ -4625,6 +4673,30 @@ combination of multiple sequence is accepted as well as importing a custom seque
         displayOptions.addWidget(vmaxEdit, 10)
         displayOptions.addWidget(vMinMaxApply)
         
+        
+        def doiCheckFunc(status):
+            if status == Qt.Checked:
+                self.displayParams['doi'] = True
+            else:
+                self.displayParams['doi'] = False
+            replotSection()
+        doiCheck = QCheckBox('DOI')
+        doiCheck.setVisible(False)
+        doiCheck.stateChanged.connect(doiCheckFunc)
+        doiCheck.setToolTip('Depth of Investigation (DOI) based on Oldenburg and Li 1999.')
+        displayOptions.addWidget(doiCheck)
+        
+        def doiSensCheckFunc(status):
+            if status == Qt.Checked:
+                self.displayParams['doiSens'] = True
+            else:
+                self.displayParams['doiSens'] = False
+            replotSection()
+        doiSensCheck = QCheckBox('DOI estimate')
+        doiSensCheck.stateChanged.connect(doiSensCheckFunc)
+        doiSensCheck.setToolTip('Depth of Investigation (DOI) estimated based on sensitivity.\nSee advanced inversion settings for DOI with the Oldengburg and Li method.')
+        displayOptions.addWidget(doiSensCheck)
+        
         cmapComboLabel = QLabel('Colormap')
         cmaps = ['viridis','plasma','seismic', 'winter','autumn','rainbow']
         def cmapComboFunc(index):
@@ -4677,22 +4749,27 @@ combination of multiple sequence is accepted as well as importing a custom seque
         displayOptions.addWidget(sensCheck)
         
         def sensSliderFunc(val):
-            val = val/10.0
-            print('value changed', val)
-            sensLabel.setText('Sensitivity overlay (%s%%)' % (int(val*100)))
-            infoDump('Overlay sensitivity threshold is set to %s%%'% (int(val*100))) #to remove some ambiguity with this slider for people!
-            self.displayParams['sensPrc'] = val
+            if val == 0:
+                self.displayParams['sens'] = False
+                infoDump('No sensitivity overlay displayed!')
+            else:
+                self.displayParams['sens'] = True
+                val = (val-1)/10.0
+                aa = np.logspace(-6, -1, 101)
+                a = aa[int(val*100)]
+                infoDump('Overlay sensitivity threshold is set to: </i>{:.1E} X max_sensitivity<i>'.format((a))) #to remove some ambiguity with this slider for people!
+                self.displayParams['sensPrc'] = val
             replotSection()
         sensWidget = QWidget()
         sensLayout = QVBoxLayout()
         sensLayout.setContentsMargins(0,9,0,9)
         sensLayout.setSpacing(2)
         sensSlider = QSlider(Qt.Horizontal)
-        sensSlider.setFixedWidth(150)
+        sensSlider.setFixedWidth(110)
         sensSlider.setMinimum(0)
-        sensSlider.setMaximum(9.8)
+        sensSlider.setMaximum(11)
         sensSlider.setValue(5)
-        sensLabel = QLabel('Sensitivity overlay (%s%%)' % str(sensSlider.value()*10))
+        sensLabel = QLabel('Sensitivity overlay')
         sensLabel.setAlignment(Qt.AlignCenter )
         sensLayout.addWidget(sensLabel)
         
@@ -4748,7 +4825,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def showDisplayOptions(val=True):
             opts = [sectionId, attributeName, vminEdit, vmaxEdit, vMinMaxApply,
                     cmapCombo, edgeCheck, contourCheck, sensCheck, sliceAxis, 
-                    paraviewBtn, btnSave, sensWidget]
+                    paraviewBtn, btnSave, sensWidget, doiCheck, doiSensCheck]
             [o.setEnabled(val) for o in opts]
 
         showDisplayOptions(False) # hidden by default
