@@ -1618,6 +1618,7 @@ class R2(object): # R2 master class instanciated by the GUI
         name = 'mesh.dat'
         if self.typ == 'R3t' or self.typ == 'cR3t':
             name = 'mesh3d.dat'
+            #paramFixed = self.mesh.parameteriseMesh()
         self.mesh.write_dat(os.path.join(self.dirname, name),
                             zone = self.mesh.attr_cache['zones'],
                             param = paramFixed)
