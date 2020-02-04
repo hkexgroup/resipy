@@ -1498,33 +1498,47 @@ class App(QMainWindow):
                 return table
 
             def readTable(self, fname, nbElec=None):
-                    df = pd.read_csv(fname, header=None)
-                    tt = df.values
-#                    tt = np.genfromtxt(fname)
-                    if nbElec is not None:
-                        if tt.shape[0] != nbElec:
-                            errorDump('The file must have exactly ' + \
-                                      str(nbElec) + ' lines (same number as number of electrodes).')
-                            return
-                    if 'Buried' in self.headers:
-                        if 1 <= len(np.unique(tt[:,-1])) <= 2: #only 1 and 0
-                            self.initTable(tt[:,:-1])
-                            self.setBuried(tt[:,-1])
-                        else:
-                            self.initTable(tt)
+                # identify if we have header (recommended) or not
+                with open(fname, 'r') as f:
+                    line = f.readline().split(',')[0]
+                try:
+                    float(line)
+                    header = None
+                except Exception:
+                    header = 'infer'
+                df = pd.read_csv(fname, header=header)
+                
+                # let's ensure we always have 4 columns
+                columns = ['x','y','z','buried']
+                df2 = pd.DataFrame(np.zeros((df.shape[0], 4)), columns=columns)
+                for i, l in enumerate(columns):
+                    if l in df.columns:
+                        df2[l] = df[l]
+                tt = df2.values
+                if nbElec is not None:
+                    if tt.shape[0] != nbElec:
+                        errorDump('The file must have exactly ' + \
+                                  str(nbElec) + ' lines (same number as number of electrodes).')
+                        return
+                if 'Buried' in self.headers:
+                    if 1 <= len(np.unique(tt[:,-1])) <= 2: #only 1 and 0
+                        self.initTable(tt[:,:-1])
+                        self.setBuried(tt[:,-1])
                     else:
                         self.initTable(tt)
-#                        if self.selfInit is True:
-#                            self.initTable(tt)
-#                        else:
-#                            self.setTable(tt)
+                else:
+                    self.initTable(tt)
+#                    if self.selfInit is True:
+#                        self.initTable(tt)
+#                    else:
+#                        self.setTable(tt)
 
 
         topoLayout = QVBoxLayout()
 
         elecTable = ElecTable(headers=['x','z','Buried'])
 #        elecTable.setColumnHidden(2, True)
-        elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (no headers).\
+        elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (x,y,z header).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
                            You can also use the form below to generate \
                            regular electrode spacing. <b>Click on the <font color="red">"Buried"</font> table header to check/unchek all</b></i>')
@@ -1540,7 +1554,7 @@ class App(QMainWindow):
                 elecTable.readTable(fname, nbElec=nbElec)
 #                if nbElec is None:
 #                    nbElecEdit.setText(str(int(self.r2.elec.shape[0])))
-        elecButton = QPushButton('Import from CSV files (no headers)')
+        elecButton = QPushButton('Import from CSV files (x, y, z headers)')
         elecButton.setAutoDefault(True)
         elecButton.clicked.connect(elecButtonFunc)
         nbElecEdit = QLineEdit()
@@ -1600,7 +1614,7 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getOpenFileName(tabImportingTopo,'Open File', directory=self.datadir)
             if fname != '':
                 topoTable.readTable(fname)
-        topoButton = QPushButton('Import from CSV files (no headers)')
+        topoButton = QPushButton('Import from CSV files (x, y, z headers)')
         topoButton.setAutoDefault(True)
         topoButton.clicked.connect(topoButtonFunc)
         def topoAddRowBtnFunc():
@@ -3026,6 +3040,7 @@ class App(QMainWindow):
 
         # additional options for triangular mesh
         clLabel = QLabel('Characteristic Length:')
+        clLabel.setToolTip('Control the number and size of elements between electrodes.')
 #        clEdit = QLineEdit()
 #        clEdit.setValidator(QDoubleValidator())
 #        clEdit.setText('-1')
@@ -3044,6 +3059,7 @@ class App(QMainWindow):
         clGrid.addWidget(clFineLabel, 1,0,1,1)
         clGrid.addWidget(clCoarseLabel, 1,1,1,1)
         clFactorLabel = QLabel('Growth factor:')
+        clFactorLabel.setToolTip('Factor by which elements grow away from electrodes.')
 #        clFactorEdit = QLineEdit()
 #        clFactorEdit.setValidator(QDoubleValidator())
 #        clFactorEdit.setText('2')
