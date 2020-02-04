@@ -222,15 +222,12 @@ class Mesh:
                      mesh_info['original_file_path'])
         try:
             obj.add_attr_dict(mesh_info['cell_attributes'])
-        except KeyError as e:
-            #print('error in add_attr_dict', e)
+        except KeyError:#try add cell attributes 
             pass
-#        try: # add the physical flag from the msh parsing as cell_attribute
-#            obj.attr_cache['cell_attributes'] = mesh_info['parameters']
-#        except Exception as e:
-#            print('Failed to add cell_attributes:', e)
+
         try:
-            obj.regions = mesh_info['element_ranges']
+            obj.regions = mesh_info['regions']
+            #try add regions to mesh 
         except KeyError:
             pass
                 
@@ -1521,8 +1518,7 @@ class Mesh:
             new_para[idx] = attr_list[i]
         
         self.attr_cache[new_key] = new_para
-        self.no_attributes += 1
-            
+        self.no_attributes += 1            
 
     def apply_func(self,mesh_paras,material_no,new_key,function,*args):
         """ Applies a function to a mesh by zone number and mesh parameter.
@@ -1692,6 +1688,50 @@ class Mesh:
         if len(np.unique(node_in_mesh)) != len(new_x):
             warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
+    
+    def parameteriseMesh(self,grouping=(2,4),regions=None):
+        """Group elements into larger entities for inverse equations in inversion
+        codes.
+        Parameters
+        -----------
+        grouping: tuple 
+            Should be the same length as the number of regions in the mesh. Defines 
+            the grouping applied to the 
+        regions: array like, optional
+            An array (of ints) the same as the number of elements, defines which region 
+            of the mesh elements belong to, can be the same as mesh zoning. 
+        """
+        if regions is None:
+            try:
+                regions = self.regions
+            except:
+                print('no regions found in mesh nor is one provided, skipping mesh parameterisation')
+                return 
+        if len(regions) != self.num_elms:
+            raise ValueError("Number of region entries doesn't match the number of elements")
+        
+        num_regions = np.unique(regions)
+        if len(num_regions) != len(grouping):
+            raise ValueError("mismatch in groupings and regions in mesh")
+        
+        regions = np.array(regions)
+        param = np.zeros_like(regions) # parameter array 
+        group = np.zeros_like(regions)
+        for i in range(len(num_regions)):
+            idx = regions == num_regions[i]
+            group[idx] = grouping[i]
+            
+        roll = 1
+        count = 0
+        for i in range(len(regions)):
+            param[i] = roll
+            count += 1
+            if group[i]==count:#reset the rolling parameter when count reaches the desired grouping 
+                count = 0
+                roll +=1 
+                
+        self.add_attribute(param,'parameter')
+        return param                       
     
     def truncateMesh(self,xlim=None,ylim=None,zlim=None):
         """Truncate the mesh to certian dimensions. Similar to how R3t behaves 
@@ -3469,21 +3509,21 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
-        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3 -optimize' 
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-optimize_threshold', '1']
             else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3', '-optimize', '-optimize_threshold', '1']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', '-optimize','-optimize_threshold', '1']
         else: # fallback on wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3', '-optimize','-optimize_threshold', '1']
         
     if show_output: 
         try:

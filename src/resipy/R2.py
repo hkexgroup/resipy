@@ -215,7 +215,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
         self.iremote = None # populate on electrode import, True if electrode is remote
-
+        self.iburied = None # populate on electrode import, True if electrode is buried
+        
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
         self.fwdErrMdl = False # is there is a forward modelling error already (due to the mesh)?
@@ -1269,11 +1270,12 @@ class R2(object): # R2 master class instanciated by the GUI
             elec_z = self.elec[:,2]
             #add buried electrodes?
             elec_type = np.repeat('electrode',len(elec_x))
+            if buried is None and self.iburied is not None:
+                buried = self.iburied
             if (buried is not None
                     and elec.shape[0] == len(buried)
                     and np.sum(buried) != 0):
                 elec_type[buried]='buried'
-
             elec_type = elec_type.tolist()
             surface_x = surface[:,0] if surface is not None else None
             surface_z = surface[:,2] if surface is not None else None
@@ -1298,6 +1300,8 @@ class R2(object): # R2 master class instanciated by the GUI
             elec_y = self.elec[:,1]
             elec_z = self.elec[:,2]
             elec_type = np.repeat('electrode',len(elec_x))
+            if buried is None and self.iburied is not None:
+                buried = self.iburied
             if (buried is not None
                     and elec.shape[0] == len(buried)
                     and np.sum(buried) != 0):
@@ -1614,6 +1618,7 @@ class R2(object): # R2 master class instanciated by the GUI
         name = 'mesh.dat'
         if self.typ == 'R3t' or self.typ == 'cR3t':
             name = 'mesh3d.dat'
+            #paramFixed = self.mesh.parameteriseMesh()
         self.mesh.write_dat(os.path.join(self.dirname, name),
                             zone = self.mesh.attr_cache['zones'],
                             param = paramFixed)
@@ -2910,12 +2915,27 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
         """
-        elec = pd.read_csv(fname, header=None).values
-        if elec.shape[1] > 3:
-            raise ValueError('The file should have no more than 3 columns')
+        with open(fname, 'r') as f:
+            try:
+                float(f.readline().split(',')[0])
+                header = None
+            except Exception:
+                header = 'infer'
+        df = pd.read_csv(fname, header=header)
+        if df.shape[1] > 4:
+            raise ValueError('The file should have no more than 4 columns')
         else:
+            if header is not None:
+                elec = df[['x','y','z']].values
+            else:
+                elec = df.values
             self.setElec(elec)
-
+            if 'buried' in df.columns:
+                self.iburied = df['buried'].values.astype(bool)
+            else:
+                self.iburied = None
+                
+                
 
     def importSequence(self, fname=''):
         """Import sequence for forward modelling.
@@ -3432,8 +3452,7 @@ class R2(object): # R2 master class instanciated by the GUI
 #                        print('Error in R2.showIter() for contouring: ', e)
 #                else:
 #                    zc = z.copy()
-                    
-                
+                                    
                 cax = ax.tricontourf(triang, z, extend='both')
                 self._clipContour(ax, cax)
                 fig.colorbar(cax, ax=ax, label=r'$\rho$ [$\Omega$.m]')

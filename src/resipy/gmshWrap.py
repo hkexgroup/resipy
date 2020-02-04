@@ -817,10 +817,12 @@ def msh_parse(file_path):
         node_dump[0].append(c_triangles[i][0]-1)#node 1
         node_dump[1].append(c_triangles[i][1]-1)#node 2
         node_dump[2].append(c_triangles[i][2]-1)#node 3
+    
     #return a dictionary detailing the mesh 
     return {'num_elms':real_no_elements,
             'num_nodes':no_nodes,
             'num_regions':no_regions,
+            'regions':elem_entity,
             'element_ranges':assctns,
             'dump':dump,      
             'node_x':x_coord,#x coordinates of nodes 
@@ -843,11 +845,9 @@ def msh_parse(file_path):
     #importing each other, as meshTools has a dependency on gmshWrap. 
         
 #%% 2D whole space 
-
 def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_input = None,
                        file_path='mesh.geo',cl=-1,cl_factor=50,doi=None,dp_len=None):
-    """
-    writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
+    """Writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
     
     Parameters
     ----------
@@ -1429,7 +1429,7 @@ def msh_parse_3d(file_path):
         if line.find("$EndElements") != -1:
             element_end = i
             break # stop the loop, should find the nodes start before the end 
-    print('reading connection matrix')
+    print('reading connection matrix...')
     
     #engage for loop - this time we want to filter out elements which are not tetrahedron
     #... looking at the gmsh docs its elements of type 2 we are after (R2 only needs this information) 
@@ -1563,6 +1563,7 @@ def msh_parse_3d(file_path):
             'cell_type':cell_typ,
             'parameters':phys_entity,#the values of the attributes given to each cell 
             'parameter_title':'material',
+            'regions':elem_entity,
             'dict_type':'mesh_info',
             'original_file_path':file_path} 
     return mesh_dict 
