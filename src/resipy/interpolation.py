@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 import resipy.isinpolygon as iip
-from scipy.spatial import Delaunay, ConvexHull
+from scipy.spatial import Delaunay, ConvexHull, cKDTree
 #import concurrent.futures 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
@@ -184,16 +184,19 @@ def interp2d_new(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='sp
     indexed_pairs = []
     count = 0
     vert = [] # quadrangle matrix >>> vertices of polygons, referenced later 
+    nvverts = np.array((vorx[nieghbours].flatten(),vory[nieghbours].flatten())).T # nieghboring veronoi vertices  
+    tree = cKDTree(np.array((vorx,vory)).T)#nearest look up 
+    dist, idv= tree.query(nvverts,2)#distances, veronoi index 
+    dist = dist[:,1].reshape(nieghbours.shape)# distances to closest neighbours 
+    idv = idv[:,1].reshape(nieghbours.shape)#indexes of closest neighbours 
+    best_idv = np.argmin(dist,axis=1)#best neighbours 
     
     #go through triangles and pair them up to form quads (an irregular grid)
     for i in range(len(tindex)):
         if inside[i]:
-            niegh_verts = np.array((vorx[nieghbours[i]],vory[nieghbours[i]])).T
-            verts = np.array((vorx[i],vory[i])).T
-            sqdist = (verts[0] - niegh_verts[:,0])**2 + (verts[1] - niegh_verts[:,1])**2
-            best_match = nieghbours[i][np.argmin(np.sqrt(sqdist))]
+            best_match = idv[i][best_idv[i]]
             idx = np.append(tindex[i],tindex[best_match])
-
+    
             if i in indexed_pairs or best_match in indexed_pairs:
                 #then the triangles have already been paired skip ahead 
                 count += 1

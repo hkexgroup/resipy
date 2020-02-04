@@ -3469,21 +3469,21 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     # handling gmsh
     if platform.system() == "Windows":#command line input will vary slighty by system 
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
-        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3 -optimize' 
     elif platform.system() == 'Darwin':
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-optimize']
             else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3', '-optimize']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', '-optimize']
         else: # fallback on wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3', '-optimize']
         
     if show_output: 
         try:
