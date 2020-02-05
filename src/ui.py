@@ -1178,6 +1178,8 @@ class App(QMainWindow):
                     self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                     heatFilter()
                 regionTable.setColumnHidden(1, False)
+                reg_modeLabel.setEnabled(False)
+                reg_mode.setEnabled(False)
 
             else:
                 self.r2.typ = self.r2.typ[1:]
@@ -1193,6 +1195,8 @@ class App(QMainWindow):
                     forwardPseudoIP.setVisible(False)
                     noiseLabelIP.hide()
                     noiseEditIP.hide()
+                reg_modeLabel.setEnabled(True)
+                reg_mode.setEnabled(True)
             print('mode', self.r2.typ)
 
         ipCheck = QCheckBox('Induced Polarization')
