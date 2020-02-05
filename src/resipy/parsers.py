@@ -880,6 +880,10 @@ def stingParser(fname):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
+    
     return elec,df
 
 #fname = '070708L5_trial1.stg'
@@ -1042,6 +1046,10 @@ def ericParser(file_path):
     ey_pos=[0]*num_elec
     ez_pos=[0]*num_elec  
     elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+    
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
        
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
@@ -1060,6 +1068,10 @@ def lippmannParser(fname):
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
     elec_raw = pd.read_csv(fname, sep='\s+', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
     elec = np.array(elec_raw.iloc[:,-3:])
+    
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
 
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
@@ -1133,5 +1145,9 @@ def aresParser(fname, spacing=None):
         elec = np.c_[val*float(spacing), np.zeros((len(val),2))]
     else:
         elec = np.c_[val, np.zeros((len(val),2))]
+    
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
     
     return elec, df
