@@ -998,15 +998,23 @@ def ericParser(file_path):
     else:
         half_dist = 0.0
         
-     
+    max_dist_p2 = max(p2) 
     largo = len(c1)    
     for k in range(largo):
         h_dist = np.append(h_dist, half_dist)
     
     c1 = np.add(c1, h_dist)
-    c2 = np.add(c2, h_dist)
+    if max_dist_c2 == 1e+38:
+        for k in range(largo):
+            c2[k] = -999999
+    else:
+        c2 = np.add(c2, h_dist)
     p1 = np.add(p1, h_dist)
-    p2 = np.add(p2, h_dist)
+    if max_dist_p2 == 1e+38:
+        for k in range(largo):
+            p2[k] = 999999
+    else:
+        p2 = np.add(p2, h_dist)
     
     total_x = np.append(total_x, c1)
     total_x = np.append(total_x, c2)
