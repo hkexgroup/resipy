@@ -3460,7 +3460,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel('Elevation [m]')
-                ax.set_xlim([np.min(self.elec[:,0]), np.max(self.elec[:,0])])
+                ax.set_xlim([np.min(self.elec[~self.iremote,:][:,0]), np.max(self.elec[~self.iremote,:][:,0])])
                 ax.set_ylim(self.zlim)
                 if iplot is True:
                     fig.show()
