@@ -1151,7 +1151,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if self.typ == 'R2' or self.typ == 'cR2': # 2D survey:
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
-                maxDist = np.max(np.abs(elec[array[:,0]-1,0] - elec[array[:,2]-1,0])) # max dipole separation
+                maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
                 self.doi = np.min(elec[:,2])-2/3*maxDist
             else:
                 self.doi = np.min(elec[:,2])-2/3*(np.max(elec[:,0]) - np.min(elec[:,0]))
@@ -3460,7 +3460,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel('Elevation [m]')
-                ax.set_xlim([np.min(self.elec[:,0]), np.max(self.elec[:,0])])
+                ax.set_xlim([np.min(self.elec[~self.iremote,:][:,0]), np.max(self.elec[~self.iremote,:][:,0])])
                 ax.set_ylim(self.zlim)
                 if iplot is True:
                     fig.show()
