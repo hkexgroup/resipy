@@ -63,6 +63,7 @@ class Survey(object):
         self.errorModel = None # function instanticated after fitting an error model with reciprocal errors
         self.iselect = None # use in filterManual()
         self.eselect = None # idem
+        self.iremote = None # to be set by R2 class when remote detected
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
                         'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
@@ -1261,11 +1262,22 @@ class Survey(object):
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
                 
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         
+        if self.iremote is not None:
+            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        
+        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd[np.isinf(padd)] = 0
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
@@ -1331,10 +1343,22 @@ class Survey(object):
 
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        
+        if self.iremote is not None:
+            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        
+        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd[np.isinf(padd)] = 0
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
@@ -1531,32 +1555,48 @@ class Survey(object):
         def setSelect(ie, boolVal):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
-        spacing = np.mean(np.diff(self.elec[:,0]))
+        if self.iremote is not None:
+            spacing = np.mean(np.diff(self.elec[~self.iremote,0]))
+        else:
+            spacing = np.mean(np.diff(self.elec[:,0]))
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
         
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
         if geom: # compute and applied geometric factor
-            apos = elecpos[array[:,0]-1]
-            bpos = elecpos[array[:,1]-1]
-            mpos = elecpos[array[:,2]-1]
-            npos = elecpos[array[:,3]-1]
-            AM = np.abs(apos-mpos)
-            BM = np.abs(bpos-mpos)
-            AN = np.abs(apos-npos)
-            BN = np.abs(bpos-npos)
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-            resist = resist*K
+            # apos = elecpos[array[:,0]-1]
+            # bpos = elecpos[array[:,1]-1]
+            # mpos = elecpos[array[:,2]-1]
+            # npos = elecpos[array[:,3]-1]
+            # AM = np.abs(apos-mpos)
+            # BM = np.abs(bpos-mpos)
+            # AN = np.abs(apos-npos)
+            # BN = np.abs(bpos-npos)
+            # K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            self.computeK()
+            resist = resist*self.df['K']
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
 
         array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        
+        if self.iremote is not None:
+            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        
+        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd[np.isinf(padd)] = 0
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
