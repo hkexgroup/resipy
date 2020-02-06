@@ -184,19 +184,18 @@ def interp2d_new(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='sp
     indexed_pairs = []
     count = 0
     vert = [] # quadrangle matrix >>> vertices of polygons, referenced later 
-    nvverts = np.array((vorx[nieghbours].flatten(),vory[nieghbours].flatten())).T # nieghboring veronoi vertices  
-    tree = cKDTree(np.array((vorx,vory)).T)#nearest look up 
-    dist, idv= tree.query(nvverts,2)#distances, veronoi index 
-    dist = dist[:,1].reshape(nieghbours.shape)# distances to closest neighbours 
-    idv = idv[:,1].reshape(nieghbours.shape)#indexes of closest neighbours 
-    best_idv = np.argmin(dist,axis=1)#best neighbours 
     
     #go through triangles and pair them up to form quads (an irregular grid)
     for i in range(len(tindex)):
         if inside[i]:
-            best_match = idv[i][best_idv[i]]
+            nvorx = vorx[nieghbours[i]]
+            nvory = vory[nieghbours[i]]
+            dx = vorx[i] - nvorx
+            dy = vory[i] - nvory
+            dist = np.sqrt(dx**2 + dy**2)
+            best_match = nieghbours[i,np.argmin(dist)]
             idx = np.append(tindex[i],tindex[best_match])
-    
+            
             if i in indexed_pairs or best_match in indexed_pairs:
                 #then the triangles have already been paired skip ahead 
                 count += 1
@@ -214,7 +213,7 @@ def interp2d_new(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='sp
                 zuf = zu[order]
                 #theta = angles_in_quad(xuf,yuf)
                 #if min(abs(theta)) > 2: 
-                vert.append(list(zip(xuf, yuf,zuf)))
+                vert.append(list(zip(xuf, yuf, zuf)))
                 
     #preallocate array for new z coordinates / interpolated values  
     znew = np.zeros_like(xnew)

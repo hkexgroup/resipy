@@ -1145,7 +1145,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             ax.plot(self.df['resist'].values, '.')
             ax.set_xlabel('Measurements')
-            ax.set_ylabel('Transfert Resistance [Ohm]')
+            ax.set_ylabel('Transfer Resistance [Ohm]')
 
 
     def showPseudoIP(self, ax=None, bx=None, **kwargs):
@@ -1215,7 +1215,7 @@ class Survey(object):
         
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
-                           vmin=None, vmax=None):
+                           vmin=None, vmax=None, column='resist'):
         """Create a pseudo-section for 2D given electrode positions.
         
         Parameters
@@ -1237,7 +1237,7 @@ class Survey(object):
         """
         array = self.df[['a','b','m','n']].values.astype(int)
         elecpos = self.elec[:,0]
-        resist = self.df['resist'].values
+        resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
 #            apos = elecpos[array[:,0]-1]

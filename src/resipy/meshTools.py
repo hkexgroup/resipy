@@ -2837,7 +2837,8 @@ def tetgen_import(file_path):
     #meshes so its always going to be 4. 
     
     
-    node_map = np.array([[0]*numel]*npere,dtype=int) # connection matrix mapping elements onto nodes 
+    node_map = ([0]*numel,[0]*numel,[0]*numel,[0]*numel)
+    #np.array([[0]*numel]*npere,dtype=int) # connection matrix mapping elements onto nodes 
     elm_no = [0]*numel # element number / index 
     zone = [0]*numel # mesh zone 
     
@@ -3421,7 +3422,6 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     
     rem_elec_idx = []
     if elec_type is not None:
-#        warnings.warn("Borehole electrode meshes still in development!")
         if not isinstance(elec_type,list):
             raise TypeError("'elec_type' argument should be of type 'list', got type %s"%str(type(elec_type)))
         elif len(elec_type) != len(elec_x):
