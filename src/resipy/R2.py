@@ -124,6 +124,7 @@ def cdist(a):
 
 def pseudo(array, resist, spacing, label='', ax=None, contour=False, log=True,
            geom=True, vmin=None, vmax=None):
+    print('=======Hey I am usefull you know !')
     array = np.sort(array, axis=1) # for better presentation, especially Wenner arrays
     nelec = np.max(array)
     elecpos = np.arange(0, spacing*nelec, spacing)
@@ -292,6 +293,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.iremote = np.in1d(self.elec[:,0], remote_flags)
         if np.sum(self.iremote) > 0:
             print('Detected {:d} remote electrode.'.format(np.sum(self.iremote)))
+            for s in self.surveys:
+                s.iremote = self.iremote
     
         if len(self.surveys) > 0:
             self.computeDOI()
