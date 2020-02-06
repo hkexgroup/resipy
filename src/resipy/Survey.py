@@ -1237,7 +1237,7 @@ class Survey(object):
             Maximum value for the colorbar.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
+        elecpos = self.elec[:,0].copy()
         resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
@@ -1328,7 +1328,7 @@ class Survey(object):
             If `ax` is not specified, the method returns a figure.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
+        elecpos = self.elec[:,0].copy()
         
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
