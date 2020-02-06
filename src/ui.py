@@ -1030,7 +1030,7 @@ class App(QMainWindow):
                 btnInvNow.setEnabled(True)
                 activateTabs(True)
                 nbElecEdit.setText(str(len(self.r2.elec)))
-                elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
+                elecDx.setText('%s' %(self.r2.elec[~self.r2.iremote,:][1,0]-self.r2.elec[~self.r2.iremote,:][0,0]))
     #                fnamesCombo.setEnabled(False)
                 fnamesCombo.hide()
                 fnamesComboLabel.hide()
@@ -1118,7 +1118,7 @@ class App(QMainWindow):
                     btnInvNow.setEnabled(True)
                     activateTabs(True)
                     nbElecEdit.setText(str(len(self.r2.elec)))
-                    elecDx.setText('%s' %(self.r2.elec[1,0]-self.r2.elec[0,0]))
+                    elecDx.setText('%s' %(self.r2.elec[~self.r2.iremote,:][1,0]-self.r2.elec[~self.r2.iremote,:][0,0]))
                     fnamesCombo.hide()
                     fnamesComboLabel.hide()
                 except Exception as e:
@@ -1178,6 +1178,8 @@ class App(QMainWindow):
                     self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                     heatFilter()
                 regionTable.setColumnHidden(1, False)
+                reg_modeLabel.setEnabled(False)
+                reg_mode.setEnabled(False)
 
             else:
                 self.r2.typ = self.r2.typ[1:]
@@ -1193,6 +1195,8 @@ class App(QMainWindow):
                     forwardPseudoIP.setVisible(False)
                     noiseLabelIP.hide()
                     noiseEditIP.hide()
+                reg_modeLabel.setEnabled(True)
+                reg_mode.setEnabled(True)
             print('mode', self.r2.typ)
 
         ipCheck = QCheckBox('Induced Polarization')
@@ -2965,8 +2969,8 @@ class App(QMainWindow):
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             meshLogText.clear()
-            elecSpacing = np.sqrt((self.r2.elec[0,0]-self.r2.elec[1,0])**2+
-                                  (self.r2.elec[0,2]-self.r2.elec[1,2])**2)
+            elecSpacing = np.sqrt((self.r2.elec[~self.r2.iremote,:][0,0]-self.r2.elec[~self.r2.iremote,:][1,0])**2+
+                                  (self.r2.elec[~self.r2.iremote,:][0,2]-self.r2.elec[~self.r2.iremote,:][1,2])**2)
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
             cl_factor = clFactorSld.value()
 #            cl = float(clEdit.text())
