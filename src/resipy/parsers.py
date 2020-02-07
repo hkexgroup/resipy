@@ -310,17 +310,18 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
     elec[:,0] = xElec
     return elec, df
 
-# test code
-#elec1, df1 = protocol3DParser('api/test/protocol3Df.dat')
-#elec2, df2 = protocol3DParser('api/test/protocol3Di.dat')
-#elec3, df3 = protocol3DParser('api/test/protocol.dat')
-
 
 #%% forwardProtocolDC/IP parser
     
 def forwardProtocolDC(fname): # need specific as there is a appRes column
-    x = np.genfromtxt(fname, skip_header=1)
-    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','appRes'])
+    skip = 1
+    cnames = ['num','a','b','m','n','resist','appRes']
+    if fname.find('.fwd')!=-1:
+        skip=0
+        cnames =['num','sa','a','sb','b','sm','m','sn','n','resist','appRes']
+        print('3d import')
+    x = np.genfromtxt(fname, skip_header=skip)
+    df = pd.DataFrame(x, columns=cnames)
     df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
     elec = np.zeros((len(xElec),3))
@@ -427,8 +428,16 @@ def res2invInputParser(file_path):
         dataframe which holds the electrode numbers for in feild measurements and 
         apparent resistivities (Rho) and transfer resistances 
     
-    ## TODO : add capacity to read Pole-Pole, Pole-Dipole and borehole surveys 
+    ## TODO : add capacity to read Offset Pole-Dipole and borehole surveys 
     """
+    c1 = np.array(())
+    c2 = np.array(())
+    p1 = np.array(())
+    p2 = np.array(())
+    pa = np.array(())
+    ip = np.array(())
+    r1 = np.array(())#For appox geom factor
+    
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
     fh.close()#close file handle, free up resources
@@ -440,7 +449,9 @@ def res2invInputParser(file_path):
     start_0_flag = False
     sur_flag = 0 # survey type
     x_location = 0 # for data points, 0 for first electrode, 1 for mid-point, 2 for surface distance
-    ip_flag = 0 # 0 for none IP data, 1 if present
+    ip_flag = False # 0 for none IP data, 1 if present
+    factor_used = False #Exact Geometric factor used is true 
+
     idx_oi = 0
     line = dump[idx_oi]
     sur_name = line.strip() #name of survey
@@ -450,13 +461,16 @@ def res2invInputParser(file_path):
     idx_oi += 1
     line = dump[idx_oi]
     array_type = int(line)
-    if array_type in [2,6]:
-        raise ImportError("Not supported")  
-    
+    #1:Wenner alfa,2:Pole_pole 3:Dipole-Dipole,4:Wenner beta, 5:Wenner gama,
+    #6:Pole-Dipole 7:Schlumberger, 11:General array, 15:Gradient 
     meas_type_flag = 'appRes' #default  
-    if array_type in [1,3,4,5,7]: 
-        #1:Wenner alfa, 3:DipDip,4:Wenner beta, 5:Wenner gama,
-        #7:Schlumberger, 11:General array, 15:Gradient 
+
+    if array_type in [10,12,13]:
+        raise ImportError("Not supported")  
+        #10: Offset pole-dipole, 12: Cross-borehole survey(apparent resistivity
+        #values), 13: Cross-borehole survey(resistance values)
+   
+    if array_type in [1,2,3,4,5,6,7]: 
         idx_oi = 3
         line = dump[idx_oi]
         
@@ -474,271 +488,274 @@ def res2invInputParser(file_path):
             if dump[4] == 1 or dump[5] == 1:
                 meas_type_flag = 'resistance'
     
+    if array_type in (2, 6):
+        if 'Remote electrodes included' in dump[idx_oi]:
+            line = dump[idx_oi+2]
+            vals = line.strip().split(',')
+            c2_x_pos = float(vals[0])
+            c2_y_pos = float(vals[1])
+            c2_z_pos = float(vals[2])
+            if array_type == 2:
+                line = dump[idx_oi+4]
+                vals = line.strip().split(',')
+                p2_x_pos = float(vals[0])
+                p2_y_pos = float(vals[1])
+                p2_z_pos = float(vals[2])
+            if array_type == 6:
+                idx_oi = 6
+            if array_type == 2:
+                idx_oi = 8
+            if 'Exact Geometric factor used' in dump[idx_oi]:
+                factor_used = True
+            else:
+                factor_used = False
+            idx_oi += 1
+            line = dump[idx_oi]
+            
     num_meas = int(line)
     idx_oi += 1
     line = dump[idx_oi]
     x_location = int(line)
-    idx_oi += 1
+    #x_location = 0 : First electrode location
+    #x_location = 1 : Mid-point location
+    #x_location = 2 : Surface distance
 
-    ip_flag = False
-    for i in range(len(dump)): 
-        if 'Chargeability' in dump[i]:
-            ip_flag = True
-            factor = 1
-        elif 'Phase' in dump[i]:
-            ip_flag = True
-            factor = -1
-            
-    if ip_flag == True:
-        idx_oi += 4
-    else:
+    idx_oi += 1
+    line = dump[idx_oi]
+    if int(line)== 0:
+        ip_flag = False
         idx_oi += 1
-    
-    Pa = []
-    x_dump = []
-    total_x=np.array(())
+    else:
+        ip_flag = True
+        idx_oi += 4
+
+    total_x = np.array(())
     e_idx = []
-    total_x = np.append(total_x,0)
+#    total_x = np.append(total_x,0)
     data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
     
     for k in range(num_meas):
         line = dump[idx_oi + k]
-        vals = line.strip().split()
+        num_sep = line.count(',')
+        if num_sep == 0:
+            vals = line.strip().split()
+        else:
+            vals = line.strip().split(',')
+        a = float(vals[1])
         if array_type == 1:# Wenner alfa
+            pa = np.append(pa, float(vals[2]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[3]))
             if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = c1 + a
-                p2 = p1 + a
-                c2 = p2 + a
+                c1 = np.append(c1, float(vals[0]))
+                p1 = np.append(p1, float(vals[0]) + a)
+                p2 = np.append(p2, float(vals[0]) + 2*a)
+                c2 = np.append(c2, float(vals[0]) + 3*a)
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                mn = (float(vals[1]))
-                p1 = mid_point - mn/2
-                c1 = p1 - mn
-                p2 = p1 + mn
-                c2 = p2 + mn
+                p1 = np.append(p1, mid_point - a/2)
+                c1 = np.append(c1, mid_point - 3*a/2)
+                p2 = np.append(p2, mid_point + a/2)
+                c2 = np.append(c2, mid_point + 3*a/2)
+        elif array_type == 2:
+            pa = np.append(pa, float(vals[2]))
+            r1 = np.append(r1, float(vals[1]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[3]))
+            if x_location == 0:
+                c1 = np.append(c1, float(vals[0]))
+                p1 = np.append(p1, float(vals[0] + a))
+                if factor_used:
+                    c2_x_len = c2_x_pos - float(vals[0])
+                    c2_y_len = c2_y_pos - 0
+                    p2_x_len = p2_x_pos - (float(vals[0]) + a)
+                    p2_y_len = p2_y_pos - 0
+            if x_location == 1:
+                mid_point = float(vals[0])
+                c1 = np.append(c1, mid_point - a/2)
+                p1 = np.append(p1, mid_point + a/2)
+                if factor_used:
+                    c2_x_len = c2_x_pos - (mid_point - a/2)
+                    c2_y_len = c2_y_pos - 0
+                    p2_x_len = p2_x_pos - (mid_point + a/2)
+                    p2_y_len = p2_y_pos - 0
+            if factor_used:
+                c2_dist = np.sqrt(c2_x_len**2 + c2_y_len**2)
+                c2 = np.append(c2, c2_dist)
+                p2_dist = np.sqrt(p2_x_len**2 + p2_y_len**2)
+                p2 = np.append(p2, p2_dist)
+            else:
+                c2 = np.append(c2,-999999)
+                p2 = np.append(p2, 999999)
         elif array_type == 3:#Dipole-Dipole
+            n = (float(vals[2]))
+            pa = np.append(pa, float(vals[3]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[4]))
             if x_location == 0:
-                c2 = (float(vals[0]))
-                a = (float(vals[1]))
-                c1 = c2 + a
-                n = (float(vals[2]))
-                p1 = c1 + a * n
-                p2 = p1 + a
+                c2 = np.append(c2, float(vals[0]))
+                c1 = np.append(c1, float(vals[0]) + a)
+                p1 = np.append(p1, float(vals[0]) + a*(1 + n))
+                p2 = np.append(p2, float(vals[0]) + a*(2 + n))
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                n = (float(vals[2]))
-                c1 = mid_point - n*a/2
-                c2 = c1 - a
-                p1 = c1 + n*a
-                p2 = p1 + a
+                c1 = np.append(c1, mid_point - n*a/2)
+                c2 = np.append(c2, mid_point - a*((n/2) + 1))
+                p1 = np.append(p1, mid_point + n*a/2)
+                p2 = np.append(p2, mid_point + a*((n/2) + 1))
         elif array_type == 4:# Wenner beta
+            pa = np.append(pa, float(vals[2]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[3]))
             if x_location == 0:
-                c2 = (float(vals[0]))
-                a = (float(vals[1]))
-                c1 = c2 + a 
-                p1 = c1 + a
-                p2 = p1 + a
+                c2 = np.append(c2, float(vals[0]))
+                c1 = np.append(c1, float(vals[0]) + a) 
+                p1 = np.append(p1, float(vals[0]) + 2*a)
+                p2 = np.append(p2, float(vals[0]) + 3*a)
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                c1 = mid_point - a/2
-                c2 = c1 - a
-                p1 = c1 + a
-                p2 = p1 + a
+                c1 = np.append(c1, mid_point - a/2)
+                c2 = np.append(c2, mid_point - 3*a/2)
+                p1 = np.append(p1, mid_point + a/2)
+                p2 = np.append(p2, mid_point + 3*a/2)
         elif array_type == 5:# Wenner gamma
+            pa = np.append(pa, float(vals[2]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[3]))
             if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = c1 + a
-                c2 = p1 + a
-                p2 = c2 + a
+                c1 = np.append(c1, float(vals[0]))
+                p1 = np.append(p1, float(vals[0]) + a)
+                c2 = np.append(c2, float(vals[0]) + 2*a)
+                p2 = np.append(p2, float(vals[0]) + 3*a)
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = mid_point - a/2
-                c1 = p1 - a
-                c2 = p1 + a
-                p2 = c2 + a
+                p1 = np.append(p1, mid_point - a/2)
+                c1 = np.append(c1, mid_point - 3*a/2)
+                c2 = np.append(c2, mid_point + a/2)
+                p2 = np.append(p2, mid_point + 3*a/2)
+        elif array_type == 6:# Pole-Dipole
+            pa = np.append(pa, float(vals[3]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[4]))
+            n = (float(vals[2]))
+            if x_location == 0:
+                if n > 0:
+                    c1 = np.append(c1, float(vals[0]))
+                    p1 = np.append(p1, float(vals[0]) + n * a)
+                    p2 = np.append(p2, float(vals[0]) + a*(1 + n))
+                else:
+                    p2 = np.append(p2, float(vals[0]))
+                    p1 = np.append(p1, float(vals[0]) + a)
+                    c1 = np.append(c1, float(vals[0]) + a*(1 + abs(n)))
+                if factor_used:
+                    c2_x_len = c2_x_pos - float(vals[0])
+                    c2_y_len = c2_x_pos - 0
+            if x_location == 1:
+                mid_point = (float(vals[0]))
+                if n > 0:
+                    c1 = np.append(c1, mid_point - n*a/2)
+                    p1 = np.append(p1, mid_point + n*a/2)
+                    p2 = np.append(p2, mid_point + a*((n/2) + 1))
+                else:
+                    p1 = np.append(p1, mid_point - abs(n)*a/2)
+                    p2 = np.append(p2, mid_point - a*(1 + (abs(n)/2)))
+                    c1 = np.append(c1, mid_point + abs(n)*a/2)
+                if factor_used:
+                    c2_x_len = c2_x_pos - (mid_point + abs(n)*a/2)
+                    c2_y_len = c2_y_pos - 0
+            if factor_used:
+                c2_dist = np.sqrt(c2_x_len**2 + c2_y_len**2)
+                c2 = np.append(c2, c2_dist)
+            else:
+                c2 = np.append(c2,-999999)
         elif array_type == 7:#Schlumberger
+            pa = np.append(pa, float(vals[3]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[4]))
+            n = (float(vals[2]))
             if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                n = (float(vals[2]))
-                p1 = c1 + n * a
-                p2 = p1 + a
-                c2 = p2 + n * a
+                c1 = np.append(c1, float(vals[0]))
+                p1 = np.append(p1, float(vals[0]) + n * a)
+                p2 = np.append(p2, float(vals[0]) + a*(1 + n))
+                c2 = np.append(c2, float(vals[0]) + a*(1 + 2*n))
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                a = (float(vals[1]))
-                n = (float(vals[2]))
-                p1 = mid_point - a/2
-                c1 = p1 - n*a
-                p2 = p1 + a
-                c2 = p2 + n*a
+                p1 = np.append(p1, mid_point - a/2)
+                c1 = np.append(c1, mid_point - a*(n + 1/2))
+                p2 = np.append(p2, mid_point + a/2)
+                c2 = np.append(c2, mid_point + a*(n + 1/2))
         elif array_type in (11,15):
-            c1 = (float(vals[1]))
-            c2 = (float(vals[3]))
-            p1 = (float(vals[5]))
-            p2 = (float(vals[7]))
-            
-        x_dump.append(c1)
-        x_dump.append(p1)
-        x_dump.append(p2)
-        x_dump.append(c2)
-        total_x = np.append(total_x, x_dump)
-        #total_x = np.around(total_x, decimals = 1)
-        x_dump.clear()
+            c1 = np.append(c1, float(vals[1]))
+            c2 = np.append(c2, float(vals[3]))
+            p1 = np.append(p1, float(vals[5]))
+            p2 = np.append(p2, float(vals[7]))
+            pa = np.append(pa, float(vals[9]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[10]))
+           
+    #total_x = np.around(total_x, decimals = 1)
+    if array_type == 2 and factor_used == False:
+        K = 2*np.pi*r1
+    else:
+        K = geom_fac(c1, c2, p1, p2)
         
+    if meas_type_flag == 'appRes':
+        data_dict['resist'] = pa/K            
+        data_dict['Rho'] = pa
+    else:
+        data_dict['resist'] = pa            
+        data_dict['Rho'] = pa*K
+        
+    data_dict['dev'] = [0]*num_meas
+#        data_dict['resist'].append(R)
+    if ip_flag == True:
+        data_dict['ip'] = ip
+    else:
+        data_dict['ip'] = [0]*num_meas
+
+    if array_type == 2 and factor_used == True:
+        for k in range(num_meas):
+            if c2[k] > 2.5 * r1[k]:
+                c2[k] = -999999
+            if p2[k] > 2.5 * r1[k]:
+                p2[k]= 999999
+
+    total_x = np.append(total_x, c1)
+    total_x = np.append(total_x, c2)
+    total_x = np.append(total_x, p1)
+    total_x = np.append(total_x, p2)
     #convert the x electrode coordinates into indexes?
     ex_pos = np.unique(total_x)#;print(ex_pos)
-        
-    # now go through and colocate electrode numbers with x coordinates 
-    for k in range(num_meas):
-        line = dump[idx_oi + k]
-        vals = line.strip().split()            
-        if array_type == 1:# Wenner alfa
-            Pa.append(float(vals[2]))
-            if x_location == 0:
-                c1 = (float(vals[0]))
-                a = (float(vals[1]))
-                p1 = c1 + a
-                p2 = p1 + a
-                c2 = p2 + a
-            if x_location == 1:
-                mid_point = (float(vals[0]))
-                mn = (float(vals[1]))
-                p1 = mid_point - mn/2
-                c1 = p1 - mn
-                p2 = p1 + mn
-                c2 = p2 + mn
+    largo = len(c1)
+    e_idx_c1 = []
+    e_idx_c2 = []
+    e_idx_p1 = []
+    e_idx_p2 = []
 
-        elif array_type == 3:#Dipole-Dipole
-                Pa.append(float(vals[3]))
-                if x_location == 0:
-                    c2 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    c1 = c2 + a
-                    n = (float(vals[2]))
-                    p1 = c1 + a * n
-                    p2 = p1 + a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    n = (float(vals[2]))
-                    c1 = mid_point - n*a/2
-                    c2 = c1 - a
-                    p1 = c1 + n*a
-                    p2 = p1 + a
+    e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
+    e_idx_c1 = np.add(e_idx_c1, 1)
+    data_dict['a'] = np.copy(e_idx_c1)
+ 
+    e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
+    e_idx_c2 = np.add(e_idx_c2, 1)
+    data_dict['b'] = np.copy(e_idx_c2)
 
-        elif array_type == 4:# Wenner beta
-                Pa.append(float(vals[2]))
-                if x_location == 0:
-                    c2 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    c1 = c2 + a 
-                    p1 = c1 + a
-                    p2 = p1 + a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    c1 = mid_point - a/2
-                    c2 = c1 - a
-                    p1 = c1 + a
-                    p2 = p1 + a
-                    
-        elif array_type == 5:# Wenner gamma
-                Pa.append(float(vals[2]))
-                if x_location == 0:
-                    c1 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    p1 = c1 + a
-                    c2 = p1 + a
-                    p2 = c2 + a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    p1 = mid_point - a/2
-                    c1 = p1 - a
-                    c2 = p1 + a
-                    p2 = c2 + a
-
-        elif array_type == 7:#Schlumberger
-                Pa.append(float(vals[3]))
-                if x_location == 0:
-                    c1 = (float(vals[0]))
-                    a = (float(vals[1]))
-                    n = (float(vals[2]))
-                    p1 = c1 + n * a
-                    p2 = p1 + a
-                    c2 = p2 + n * a
-                if x_location == 1:
-                    mid_point = (float(vals[0]))
-                    a = (float(vals[1]))
-                    n = (float(vals[2]))
-                    p1 = mid_point - a/2
-                    c1 = p1 - n*a
-                    p2 = p1 + a
-                    c2 = p2 + n*a
-
-        elif array_type in (11,15):
-            c1 = (float(vals[1]))
-            c2 = (float(vals[3]))
-            p1 = (float(vals[5]))
-            p2 = (float(vals[7]))
-            Pa.append(float(vals[9]))
-        if any([c1 == 0,c2 == 0,p1 == 0,p2 == 0]):
-            start_0_flag = True
-
-        x_dump.append(c1)
-        x_dump.append(p1)
-        x_dump.append(p2)
-        x_dump.append(c2)
-        #print(x_dump)
-
-        e_idx = np.array([(ex_pos == x_dump[i]).tolist().index(True) for i in range(4)])
-        if start_0_flag:
-            e_idx += 1
-    
-        data_dict['a'].append(e_idx[0])
-        data_dict['b'].append(e_idx[3])
-        data_dict['m'].append(e_idx[1])
-        data_dict['n'].append(e_idx[2])
+    e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
+    e_idx_p1 = np.add(e_idx_p1, 1)
+    data_dict['m'] = np.copy(e_idx_p1)
+ 
+    e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
+    e_idx_p2 = np.add(e_idx_p2, 1)
+    data_dict['n'] = np.copy(e_idx_p2)
+  
         #convert apparent resistivity back in to transfer resistance
-        if array_type in [1, 7, 11]:
-            K = geom_fac(c1, c2, p1, p2)
-        elif array_type == 3:
-            K = np.pi * n*(n + 1)*(n + 2)*a
-        elif array_type == 4:
-            K = 6 * np.pi * a
-        elif array_type == 5:
-            K = 3 * np.pi * a
-
-        #add apparent and transfer resistances to dictionary
-        if meas_type_flag == 'resistance':
-            R = Pa[k] # transfer resistance
-        else:
-            R = Pa[k]/K
-            
-        data_dict['Rho'].append(Pa[k])
-        data_dict['resist'].append(R)
-        if ip_flag == True:
-            data_dict['ip'].append(factor*float(vals[-1])) # add ip (chargeability) assuming it's last column
-        else:
-            data_dict['ip'].append(0)
-            
-        if err_flag:
-            err_Pa = float(vals[6])
-            err_Pt = err_Pa/K
-            data_dict['dev'].append(abs(err_Pt))
-        else:
-            data_dict['dev'].append(0)
-    
-        x_dump.clear()
                   
+#    if array_type == 6:
+#        ultimo = len(ex_pos) - 1
+#        ex_pos = np.delete(ex_pos, ultimo)
+    
     num_elec = len(ex_pos)
+        
     fmt_flag = True
         
     topo_flag_idx = idx_oi + num_meas
@@ -765,7 +782,7 @@ def res2invInputParser(file_path):
                 if ex_pos[i] == ex_pos_topo[j]:
                     ez_pos[i] = ez_pos_topo[j]
         #print(ex_pos,ez_pos)
-        elec = np.column_stack((ex_pos,ez_pos,ey_pos))
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
               
        
     #add some protection against a dodgey file 
@@ -776,8 +793,15 @@ def res2invInputParser(file_path):
     if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
         ey_pos=[0]*num_elec
         ez_pos=[0]*num_elec  
-        elec = np.column_stack((ex_pos,ez_pos,ey_pos))
-       
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+    
+#    if array_type == 6:
+#        elec = np.delete(elec, 0, 0)
+#    elif array_type == 2:
+#        ultimo = len(elec) - 1
+#        elec = np.delete(elec, ultimo, 0)
+#        elec = np.delete(elec, 0, 0)
+    
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
@@ -861,6 +885,10 @@ def stingParser(fname):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
+    
     return elec,df
 
 #fname = '070708L5_trial1.stg'
@@ -876,33 +904,14 @@ def ericParser(file_path):
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
     fh.close()#close file handle, free up resources
-
-    #first find the general information
-    idx_oi = 0
-    line = dump[idx_oi]
-    sur_name = line.strip() #name of survey
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    x_location = float(vals[0])#First station coordinate
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
-    eric_version = str(vals[2]) + str(': ') + str(vals[3])
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    a_spac = float(vals[0]) #electrode spacing
-    idx_oi += 1
-    line = dump[idx_oi]
-    vals = line.strip().split()
-    no_protocols = int(vals[0])#no. of protocol used
-    idx_proto_file = 1
-    #declaration of variables
-    proto_file = []
-    proto_org = []
+    
+    #declaration of variables    
+    proto_file = []   
     array_type = []
+    proto_org = []
+    num_meas = []
+    mid_st_coord = []
+    idx_meas = []
     c1 = np.array(())
     c2 = np.array(())
     p1 = np.array(())
@@ -913,31 +922,56 @@ def ericParser(file_path):
     n_cycles = np.array(())
     n_tot_cycles = np.array(())
     total_x = np.array(())
+    h_dist = np.array(())
     data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
-
+    tot_num_meas = 0
+    #first find the general information
+    idx_oi = 0
+    line = dump[idx_oi]
+    sur_name = line.strip() #name of survey
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    x_location = float(vals[0])#First midstation coordinate
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
+    eric_version = str(vals[2]) + str(': ') + str(vals[3])
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    a_spac = float(vals[0]) #electrode spacing
+    idx_oi += 1
+    #line = dump[idx_oi]
+    #vals = line.strip().split()
+    #no_protocols = int(vals[0])#no. of protocol used
+    no_protocols = 0
+    idx_proto_file = 1
+    idx_oi += 1
+    line = dump[idx_oi]
+    vals = line.strip().split()
+    proto_file.append(str(vals[0]))
+    array_type.append(int(vals[1]))
+        
+    #First find how many protocol, measurements and mid first location are 
+    #included in the *.OHM file
     
-    while idx_proto_file <= no_protocols:
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        proto_file.append(str(vals[0]))
-        array_type.append(int(vals[1]))
-        #max_I_level.append(float(vals[2]))
-        #min_I_level.append(float(vals[3]))
-        #idx_prot_file += 1
-        n_cable = vals[0]
-        num_cable = int(n_cable[-4])
-        elec_in_cable = int(n_cable[-2:])
-        idx_oi += 1
-        line = dump[idx_oi]
-        proto_org.append(str(line))
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        num_meas = int(vals[0])
-        idx_oi += 3
-        for k in range(num_meas):
-            line = dump[idx_oi + k]
+    for i, line in enumerate(dump):
+        pro_type = line.strip().split('.')
+        if 'ORG' in pro_type or 'UP' in pro_type or 'DWN' in pro_type:
+            proto_org.append(str(line)) 
+            no_protocols = no_protocols + 1
+            linea = dump[i+1]
+            vals = linea.strip().split()
+            num_meas.append(int(vals[0]))
+            mid_st_coord.append(float(dump[i+2]))
+            idx_oi = i + 4
+            idx_meas.append(idx_oi)
+            
+    for i in range(len(num_meas)):
+        for k in range(num_meas[i]):
+            line = dump[idx_meas[i] + k]
             vals = line.strip().split()
             c1 = np.append(c1, float(vals[0]))
             c2 = np.append(c2, float(vals[1]))
@@ -949,19 +983,43 @@ def ericParser(file_path):
             n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
             data_dict['ip'].append(0)
             
-        idx_proto_file += 1
-    #Calculate electrode x locations
-    half_dist = float((a_spac * ((num_cable * elec_in_cable) - 1))/2)
-    half_dist = half_dist - x_location
-    largo = len(c1)
-    h_dist = np.array(())
+    min_dist_c1 = min(c1)
+    min_dist_p1 = min(p1)
+    if min_dist_c1 <= min_dist_p1:
+        min_dist = min_dist_c1
+    else:
+        min_dist = min_dist_p1
+        
+    max_dist_c2 = max(c2)
+    max_dist_p1 = max(p1)
+       
+    if max_dist_c2 >= max_dist_p1:
+        max_dist = max_dist_c2
+    else:
+        max_dist = max_dist_p1
+    
+    if min_dist <= 0.0:
+        half_dist = abs(min_dist)
+    else:
+        half_dist = 0.0
+        
+    max_dist_p2 = max(p2) 
+    largo = len(c1)    
     for k in range(largo):
         h_dist = np.append(h_dist, half_dist)
     
     c1 = np.add(c1, h_dist)
-    c2 = np.add(c2, h_dist)
+    if max_dist_c2 == 1e+38:
+        for k in range(largo):
+            c2[k] = -999999
+    else:
+        c2 = np.add(c2, h_dist)
     p1 = np.add(p1, h_dist)
-    p2 = np.add(p2, h_dist)
+    if max_dist_p2 == 1e+38:
+        for k in range(largo):
+            p2[k] = 999999
+    else:
+        p2 = np.add(p2, h_dist)
     
     total_x = np.append(total_x, c1)
     total_x = np.append(total_x, c2)
@@ -979,11 +1037,10 @@ def ericParser(file_path):
     e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
     e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
     
-    if x_location == 0:
-        e_idx_c1 = np.add(e_idx_c1, 1)
-        e_idx_c2 = np.add(e_idx_c2, 1)
-        e_idx_p1 = np.add(e_idx_p1, 1)
-        e_idx_p2 = np.add(e_idx_p2, 1)
+    e_idx_c1 = np.add(e_idx_c1, 1)
+    e_idx_c2 = np.add(e_idx_c2, 1)
+    e_idx_p1 = np.add(e_idx_p1, 1)
+    e_idx_p2 = np.add(e_idx_p2, 1)
     
     data_dict['a'] = np.copy(e_idx_c1)
     data_dict['b'] = np.copy(e_idx_c2)
@@ -1002,6 +1059,10 @@ def ericParser(file_path):
     ey_pos=[0]*num_elec
     ez_pos=[0]*num_elec  
     elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+    
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
        
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
@@ -1009,6 +1070,8 @@ def ericParser(file_path):
     return elec,df
 #%% 
 def lippmannParser(fname):
+    """Read in *.tx0 file from Lippmann instruments
+    """
     with open(fname, 'r') as fh:
         dump = fh.readlines()
 
@@ -1018,6 +1081,10 @@ def lippmannParser(fname):
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
     elec_raw = pd.read_csv(fname, sep='\s+', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
     elec = np.array(elec_raw.iloc[:,-3:])
+    
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
 
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
@@ -1028,7 +1095,7 @@ def lippmannParser(fname):
                             'M':'m',
                             'N':'n',
                             'I':'i',
-                            'U':'vp',})
+                            'U':'vp'})
     if 'phi' in df.columns:
         df = df.rename(columns={'phi':'ip'})
         df = df[['a','b','m','n','i','vp','ip']]
@@ -1041,4 +1108,59 @@ def lippmannParser(fname):
     #calculations
     df['resist'] = df['vp']/df['i']
 
+    return elec, df
+
+#%%
+def aresParser(fname, spacing=None):
+    """Read in *.2dm file from ARES II
+    """
+    with open(fname, 'r') as fh:
+        dump = fh.readlines()
+    
+    #getting spacing
+    spacing_lineNum = [i for i in range(len(dump)) if 'Electrode distance' in dump[i]]
+    if spacing_lineNum != []:
+        spacing = dump[spacing_lineNum[0]].split()[2]
+
+    #getting data
+    data_linNum_s = [i for i in range(len(dump)) if 'Measured data' in dump[i]]
+    df = pd.read_csv(fname, sep='\s+', skiprows=data_linNum_s[0]+1, index_col=False)
+    df = df.rename(columns={'C1[el]':'a',
+                            'C2[el]':'b',
+                            'P1[el]':'m',
+                            'P2[el]':'n',
+                            'I[mA]':'i',
+                            'U[mV]':'vp'})
+    
+    #Building electrode locations
+    array = df[['a','b','m','n']].values
+    arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    if arrayMin != 0: # all surveys must start from x = 0
+        array -= arrayMin
+    val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+    elecLabel = 1 + np.arange(len(val))
+    newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    df.loc[:,['a','b','m','n']] = newval
+    
+    #calculations
+#    if 'EP[mV]' in df.columns: # TODO: correct this when you figure out how the IP values are calculated 
+#        df['ip'] = df['EP[mV]']/df['vp'] # not sure this is correct way of calculating IP
+#        df = df[['a','b','m','n','i','vp','ip']]
+#    else:
+    df = df[['a','b','m','n','i','vp']] # should be under "else:"
+    df['ip'] = 0 # should be under "else:"
+    df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
+    
+    df['resist'] = df['vp']/df['i']
+    
+    #builting electrode table
+    if spacing is not None:
+        elec = np.c_[val*float(spacing), np.zeros((len(val),2))]
+    else:
+        elec = np.c_[val, np.zeros((len(val),2))]
+    
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
+    
     return elec, df

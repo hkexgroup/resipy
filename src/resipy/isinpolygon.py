@@ -11,7 +11,7 @@ def ccw(p0,p1,q0,q1,r0,r1):#code expects points as p0=x, p1=y, etc...
     val=((q1-p1)*(r0-q0)) - ((q0-p0)*(r1-q1))
     order = np.zeros_like(val, dtype=int)
     #order[val==0] = 0 # lines are colinear
-    order[val>0] = 1 # points are oreintated counter clockwise 
+    order[val>0] = 1 # points are oreintated clockwise 
     order[val<0] = 2 # points are counter clockwise
     return order
     
