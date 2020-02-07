@@ -20,7 +20,7 @@ from scipy.stats.kde import gaussian_kde
 from resipy.parsers import (syscalParser, protocolParser,protocolParserLME,  resInvParser,
                      primeParser, primeParserTab, protocolParserIP,
                      protocol3DParser, forwardProtocolDC, forwardProtocolIP,
-                     stingParser, ericParser, lippmannParser)
+                     stingParser, ericParser, lippmannParser, aresParser)
 from resipy.DCA import DCA
 
 import warnings
@@ -63,9 +63,10 @@ class Survey(object):
         self.errorModel = None # function instanticated after fitting an error model with reciprocal errors
         self.iselect = None # use in filterManual()
         self.eselect = None # idem
+        self.iremote = None # to be set by R2 class when remote detected
         
         avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -93,6 +94,8 @@ class Survey(object):
                 elec, data = ericParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
+            elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
 #            elif ftype == 'forwardProtocolIP':
 #                self.protocolIPFlag = True
 #                elec, data = forwardProtocolIP(fname)
@@ -157,8 +160,9 @@ class Survey(object):
         s_svy : Survey
             An instance of the Survey class.
         """
-        surrogate_file = 'test/protocol.dat'
-        path = os.path.join(os.path.dirname(os.path.realpath(__file__)),surrogate_file) # map to the protocol test file
+        surrogate_file = '\examples\dc-2d\protocol.dat'
+        path2resipy = os.path.realpath(__file__).replace('\\src\resipy\\',surrogate_file)
+        path = path2resipy # map to the protocol test file
         s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
         s_svy.df = df
         s_svy.elec = elec
@@ -306,6 +310,8 @@ class Survey(object):
                 elec, data = ericParser(fname)
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
+            elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
@@ -1140,7 +1146,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             ax.plot(self.df['resist'].values, '.')
             ax.set_xlabel('Measurements')
-            ax.set_ylabel('Transfert Resistance [Ohm]')
+            ax.set_ylabel('Transfer Resistance [Ohm]')
 
 
     def showPseudoIP(self, ax=None, bx=None, **kwargs):
@@ -1158,28 +1164,59 @@ class Survey(object):
             ax.set_ylabel('Chargeability [mV/V]')
     
     
+#    def computeK(self):
+#        """Compute geomatrix factor (assuming flat 2D surface) and store it
+#        in self.df['K'].
+#        """
+#        array = self.df[['a','b','m','n']].values.astype(int)
+#        elecpos = self.elec[:,0]
+#
+#        apos = elecpos[array[:,0]-1]
+#        bpos = elecpos[array[:,1]-1]
+#        mpos = elecpos[array[:,2]-1]
+#        npos = elecpos[array[:,3]-1]
+#        AM = np.abs(apos-mpos)
+#        BM = np.abs(bpos-mpos)
+#        AN = np.abs(apos-npos)
+#        BN = np.abs(bpos-npos)
+#        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+#        
+#        self.df['K'] = K
+        
     def computeK(self):
         """Compute geomatrix factor (assuming flat 2D surface) and store it
         in self.df['K'].
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
-
-        apos = elecpos[array[:,0]-1]
-        bpos = elecpos[array[:,1]-1]
-        mpos = elecpos[array[:,2]-1]
-        npos = elecpos[array[:,3]-1]
-        AM = np.abs(apos-mpos)
-        BM = np.abs(bpos-mpos)
-        AN = np.abs(apos-npos)
-        BN = np.abs(bpos-npos)
+        elec = self.elec
+        aposx = elec[:,0][array[:,0]-1]
+        aposy = elec[:,1][array[:,0]-1]
+        aposz = elec[:,2][array[:,0]-1]
+        
+        bposx = elec[:,0][array[:,1]-1]
+        bposy = elec[:,1][array[:,1]-1]
+        bposz = elec[:,2][array[:,1]-1]
+        
+        mposx = elec[:,0][array[:,2]-1]
+        mposy = elec[:,1][array[:,2]-1]
+        mposz = elec[:,2][array[:,2]-1]
+        
+        nposx = elec[:,0][array[:,3]-1]
+        nposy = elec[:,1][array[:,3]-1]
+        nposz = elec[:,2][array[:,3]-1]
+        
+        AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
+        BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
+        AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
+        BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
+        
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         
         self.df['K'] = K
         
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
-                           vmin=None, vmax=None):
+                           vmin=None, vmax=None, column='resist'):
         """Create a pseudo-section for 2D given electrode positions.
         
         Parameters
@@ -1200,20 +1237,21 @@ class Survey(object):
             Maximum value for the colorbar.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
-        resist = self.df['resist'].values
+        elecpos = self.elec[:,0].copy()
+        resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
-            apos = elecpos[array[:,0]-1]
-            bpos = elecpos[array[:,1]-1]
-            mpos = elecpos[array[:,2]-1]
-            npos = elecpos[array[:,3]-1]
-            AM = np.abs(apos-mpos)
-            BM = np.abs(bpos-mpos)
-            AN = np.abs(apos-npos)
-            BN = np.abs(bpos-npos)
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-            resist = resist*K
+#            apos = elecpos[array[:,0]-1]
+#            bpos = elecpos[array[:,1]-1]
+#            mpos = elecpos[array[:,2]-1]
+#            npos = elecpos[array[:,3]-1]
+#            AM = np.abs(apos-mpos)
+#            BM = np.abs(bpos-mpos)
+#            AN = np.abs(apos-npos)
+#            BN = np.abs(bpos-npos)
+#            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            self.computeK()
+            resist = resist*self.df['K']
 
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
@@ -1224,13 +1262,24 @@ class Survey(object):
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
                 
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         
+        if self.iremote is not None:
+            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        
+        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd[np.isinf(padd)] = 0
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1251,6 +1300,7 @@ class Survey(object):
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
             
+        ax.invert_yaxis() # to remove negative sign in y axis    
         ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1278,7 +1328,7 @@ class Survey(object):
             If `ax` is not specified, the method returns a figure.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0]
+        elecpos = self.elec[:,0].copy()
         
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
@@ -1293,12 +1343,24 @@ class Survey(object):
 
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        
+        if self.iremote is not None:
+            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        
+        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd[np.isinf(padd)] = 0
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1327,6 +1389,7 @@ class Survey(object):
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
 #            cbar.set_label(label)
 #            ax.set_title('Phase Shift\npseudo section')
+        ax.invert_yaxis() # to remove negative sign in y axis
         ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1480,6 +1543,9 @@ class Survey(object):
             Maximum value.
         """
         array = self.df[['a','b','m','n']].values.astype(int)
+        if len(array) == 0:
+            raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
+
         resist = self.df[attr].values
         inan = np.isnan(resist)
         resist = resist.copy()[~inan]
@@ -1489,34 +1555,51 @@ class Survey(object):
         def setSelect(ie, boolVal):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
-        spacing = np.mean(np.diff(self.elec[:,0]))
+        if self.iremote is not None:
+            spacing = np.mean(np.diff(self.elec[~self.iremote,0]))
+        else:
+            spacing = np.mean(np.diff(self.elec[:,0]))
         nelec = np.max(array)
         elecpos = np.arange(0, spacing*nelec, spacing)
         
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
         if geom: # compute and applied geometric factor
-            apos = elecpos[array[:,0]-1]
-            bpos = elecpos[array[:,1]-1]
-            mpos = elecpos[array[:,2]-1]
-            npos = elecpos[array[:,3]-1]
-            AM = np.abs(apos-mpos)
-            BM = np.abs(bpos-mpos)
-            AN = np.abs(apos-npos)
-            BN = np.abs(bpos-npos)
-            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-            resist = resist*K
+            # apos = elecpos[array[:,0]-1]
+            # bpos = elecpos[array[:,1]-1]
+            # mpos = elecpos[array[:,2]-1]
+            # npos = elecpos[array[:,3]-1]
+            # AM = np.abs(apos-mpos)
+            # BM = np.abs(bpos-mpos)
+            # AN = np.abs(apos-npos)
+            # BN = np.abs(bpos-npos)
+            # K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            self.computeK()
+            resist = resist*self.df['K']
             
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
 
         array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-            + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-            + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
+        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        
+        if self.iremote is not None:
+            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        
+        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd[np.isinf(padd)] = 0
+        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = - np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+
         
         def onpick(event):
             if lines[event.artist] == 'data':
@@ -1552,6 +1635,7 @@ class Survey(object):
 #        ax2 = ax
         
         # on the axis
+        ax.invert_yaxis() # to remove negative sign in y axis
         ax2 = ax.twiny()
         ax.set_xlabel('Electrode number')
         ax.set_ylabel('Pseudo depth [m]')
@@ -1612,7 +1696,35 @@ class Survey(object):
             self.filterData(i2keep)
             print(np.sum(~i2keep), '/', len(i2keep), 'quadrupoles removed.')
     
-    
+    def filterAppResist(self, vmin=None, vmax=None, debug=True):
+        """Filter measurements by apparent resistivity for surface surveys 
+        Parameters
+        -----------
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
+        debug : bool, optional
+            Print output to screen. Default is True.
+        """
+        df = self.df.copy()
+        self.computeK()
+        appRes = self.df['K']*self.df['resist']
+        if vmin is None:
+            vmin = np.min(appRes)
+        if vmax is None:
+            vmax = np.max(appRes)
+        ikeep = (appRes >= vmin) & (appRes <= vmax)
+        self.df = df[ikeep]
+        self.df.reset_index()
+        
+        if debug:
+            numRemoved = len(df)-len(self.df)
+            msgDump = "%i measurements outside [%s,%s] removed!" % (numRemoved, vmin, vmax)
+            print(msgDump)
+            return numRemoved
+
+
     def shuntIndexes(self, debug=True): 
         """Normalise the indexes the sequence matrix to start at 1.
         
@@ -1945,7 +2057,7 @@ class Survey(object):
     def pseudo(self, ax=None, bx=None, **kwargs):
         warnings.warn('The function is deprecated, use showPseudo() instead.',
                       DeprecationWarning)
-        self.pseudo(ax=ax, bx=bx, **kwargs)
+        self.showPseudo(ax=ax, bx=bx, **kwargs)
     
     
     def pseudoIP(self, ax=None, bx=None, **kwargs):

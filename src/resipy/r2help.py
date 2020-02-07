@@ -68,6 +68,11 @@ r2help = {
                 "to set <code>max_iterations</code> to at least 20.</p>",
 'min_step' : "<p><code>min_step</code> is the minimum step length for attempting to improve solution. This is "
             "usually set to 0.001 to 0.01.</p>",
-'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.'
-    }
+'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.',
+'modelDOI' : "<p>If checked, two more background constrained inversion will be run with the normal background and a background ten times more resistive."
+            " The ratio of the difference of inverted value divided by the difference in initial resistivity gives"
+            " an estimate of the depth of investigation of the inversion (Oldenburg and Li, 1999)</p>",
+'sensDOI' : "<p>Sensitivity based DOI. If a dashed line will be drawn on the inverted section at 0.001*maxSensitivity."
+            "Note that this is not the DOI based on the Oldenburg and Li method.</p>"
+}
 

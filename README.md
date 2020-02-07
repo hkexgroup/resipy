@@ -1,25 +1,17 @@
-![logo](src/logo.png)
-
-GUI for R2 family code
-======================
+GUI for R2 family of codes
+==========================
 (Note that **ResIPy** was called **pyR2** before 2019-04-16)
 
-This python wrapper around the R2 family code (http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm)
-provides a standalone graphical user interface (GUI) along with a python API (Application Programming Interface)
-for use in jupyter notebook. 
-
-**Complete *help and documentation* can be viewed at: https://hkex.gitlab.io/pyr2**.
-
+ResIPy is a Python wrapper around the [R2 family of codes](http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm) (for 2D/3D DC/IP inversion).
+ResIPy provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
+for use in Jupyter notebook. Have a look at the [**documentation and the examples**](https://hkex.gitlab.io/pyr2) to know more.
 
 ResIPy aims to be 
 - (1) **Simple and intuitive** to use (you can invert your data in one-click with all default settings)
 - (2) But still allowing the user to have **full control** on data filtering, error modelling, mesh parameters and inversion settings
 
-
-ResIPy is an open-source project, everyone is welcome to contribute.
-
-You can download the latest versions using the links below:
-
+Downloads
+---------
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-macOS.dmg "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
@@ -27,8 +19,9 @@ You can download the latest versions using the links below:
 Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
 
-Note for Mac and Linux users:
-- You will need to have *wine* installed as the executables beneath are compiled for Windows. *wine* is still not supported on macOS Catalina!
+Notes for Mac and Linux users:
+- You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
+- *wine* is still not supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 
@@ -36,96 +29,61 @@ What it can do
 --------------
 <img src='src/image/teaser.gif' width="600">
 
-More examples can be found in [examples](./examples/)
-
 
 Project structure
 -----------------
+<img src='src/image/structure.png' width="600">
 
-![project structure](src/image/structure.png)*General overlook of the project structure with the three main parts.*
-Don't hesitate to consult the [api-structure.md](https://gitlab.com/sagitta1618/r2gui/blob/master/api-structure.md) for more detailed information about each file of the project.
-
-
-The full description of the API can be found in the *[documentation](https://hkex.gitlab.io/pyr2/)*.
-
+General overlook of the project structure with the three main parts.   
+Don't hesitate to consult the [CONTRIBUTING.md](./CONTRIBUTING.md) for more informations.   
+The full description of the API can be found in the *[documentation](https://hkex.gitlab.io/pyr2/api.html)*.
 
 
-Download/Clone the project
------
-To clone the project please use git:
-
-```
-git clone https://gitlab.com/hkex/pyr2
-```
-
-You may need to generate a public ssh key to be able to fully use the git command line.
-
-Another option is just to download the git from gitlab itself (see screenshot below):
-![download project](src/image/download.png)*Download a zip of the project*
-
-
-Try the GUI
+Try it from source
 -----------
-
-To test the GUI:
-```
+After downloading or cloning (`git clone https://gitlab.com/hkex/pyr2`) the repository,
+you can run the GUI using:
+```sh
 cd pyr2/src
 python ui.py
 ```
-You can then test the GUI by first setting a working directory (./src/api/test) and specifying a survey file (./src/api/test/syscalFile.csv).
-*Check out the tutorial with examples*: [pyR2-workshop.pdf](./examples/pyR2-workshop.pdf)
-
-
-Try the Jupyter Notebook
-------------------------
-To start the Jupyter notebook:
-```
+You can also try out the API on [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gl/hkex%2Fpyr2/stable?filepath=jupyter-notebook) or using:
+```sh
 cd pyr2/jupyter-notebook
-jupyter notebook # the command is jupyter-notebook (with a dash) on Linux but without on Windows
+python -m notebook # or just 'jupyter notebook'
 ```
 
-You can then execute each cell of the notebook using ```Shift + Enter```. This will work on the same example as for the GUI above.
-To edit a cell, just double click on it.
 
-
-
-
-Linux and Mac users
+Wine installation (Linux and Mac users)
 -------------------
 ResIPy contains executables that are built only for windows. To run them you will need to install *wine*.
 
 ### On Linux
 
-```
+```sh
 sudo apt-get install wine-stable # if using debian/ubuntu based distribution
 sudo pacman -S install wine # if using arch based distribution
 ```
 
 ### On Mac
 
-IMPORTANT NOTE: *wine* is still not supported on macOS Catalina!
-
-ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).
-
-You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X:
-
+IMPORTANT NOTE: *wine* is still not supported on macOS Catalina!   
+ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
+You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
 Open "terminal" and install ```homebrew``` with:
 ```
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 ```
-Follow the instructions. (You may need to install [Command Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/))
-
+Follow the instructions. (You may need to install [Command Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/))   
 Once the ```homebrew``` installation is successfully done, install ```xquartz``` by below command in terminal:
 ```
 brew cask install xquartz
 ```
-
 Then install ```wine```:
 ```
 brew install wine
 ```
-
-If all is done with no errors, you are ready to run the gui by: 
+If all is done with no errors, you are ready to run the GUI by: 
 ```
 cd pyr2/src
 python ui.py
@@ -138,63 +96,40 @@ wine /your example.exe file directory/example.exe
 **NOTE: the first time you're running ```wine``` it will need to be updated and that will take some time.
 
 
-Features implementations/ bug report
+Feature request and bug report
 ----
 If there is a feature you would like to see in the API or the GUI or if there is a bug you want to report,
- please raise an [issue on Gitlab](https://gitlab.com/hkex/pyr2/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide
- example files and error log, related to your issue.
-The issue will then be assigned to someone to be addressed. This will allow to spread the workload and avoid
-multiple people doing the same work in parallel.
+please raise an [issue on Gitlab](https://gitlab.com/hkex/pyr2/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide
+example files and error log, related to your issue.
+
+Contributing
+---------
+If you wish to contribute to the code, please familiarize yourself with the ![guidelines](./CONTRIBUTING.md).
 
 
-Best practices for developers
-------------------------------
+Citing ResIPy
+------------------
+If you use ResIPy for you work, please cite [this paper](https://www.sciencedirect.com/science/article/pii/S0098300419308192?via%3Dihub#appsec4) as:
 
-Here are a set of best coding practices that we need to respect in order to make a
-simple, consistent and as easy to maintain as possible code:
+    Blanchy G., Saneiyan S., Boyd J., McLachlan P. and Binley A. 2020.
+    “ResIPy, an Intuitive Open Source Software for Complex Geoelectrical Inversion/Modeling.”
+    Computers & Geosciences, February, 104423. https://doi.org/10.1016/j.cageo.2020.104423.
 
-- use **classes** to group functions inside the python API (for instance all functions dealing with meshes should be implemented inside a big Mesh class if possible)
-- **document** functions : you can document your function directly in the code using the ReStructuredText convention (<link needed>) or just use comment with #
-- **separation of API and GUI** should allow to use the python API in jupyter notebook as well as in standalone GUI using pyQt5
-
-
-
-Use of git (for developers)
-----------------------------
-
-Below is the usual commands you are likely to go through if you contribute to this project.
-
-First ensure you have cloned the project and are in the main project directory.
-```bash
-git clone https://gitlab.com/hkex/pyr2
-cd pyr2
+BibTex code:
+```latex
+@article{blanchy_resipy_2020,
+	title = {{ResIPy}, an intuitive open source software for complex geoelectrical inversion/modeling},
+	issn = {0098-3004},
+	url = {http://www.sciencedirect.com/science/article/pii/S0098300419308192},
+	doi = {10.1016/j.cageo.2020.104423},
+	pages = {104423},
+	journaltitle = {Computers \& Geosciences},
+	author = {Blanchy, Guillaume and Saneiyan, Sina and Boyd, James and {McLachlan}, Paul and Binley, Andrew},
+	urldate = {2020-02-07},
+	date = {2020-02-04},
+	langid = {english}
+}
 ```
-Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
-If you choose (1) you can create a new branch using:
-```bash
-git checkout -b <name_of_branch>
-```
-
-If you choose (2) make sure `develop` is ahead of `master` before changing anything. You can also use those instructions
-to update your own branch with `master`.
-```bash
-git checkout develop # change to develop branch
-git fetch origin # get all changes from master
-git merge origin/master # merge those change to the develop branch
-git push # push them to the online repository
-```
- 
-Finally the typical workflow is as following:
-1. Change branch: `git checkout <name_of_branch>`. You can see which branch you use by typing:`git branch`
-2. Check you are up to date with the master branch (as shown above): `git fetch origin; git merge origin/master`
-3. Operates your changes in the files
-4. Use `git status` to see which file need to be added to the repository and which files have just been changed.
-5. Use `git add newfile` to add new files.
-6. Use `git commit -a` to add a commit messages to the changes you are about to push.
-7. Use `git push origin <name_of_branch>` to push your changes to the repository.
-8. Go on gitlab and on the project page you will see an invitation to create a merge
-9. request from the branch you have just pushed to. You can also go to Repository > 
-10. Branches and create a merge request from the `<name_of_branch>` branch.
 
 
 Temporary folder issue
@@ -205,14 +140,18 @@ take up space. Navigate to `C:\Users\<username>\AppData\Local\Temp` if you want 
 be automatically deleted by Windows or third party apps (such as CC cleaner) when there is low disk-space.
 
 
-Previous releases
+All releases
 -----------------
-Below are the links to previous releases of ResIPy/pyR2. Note that these releases may contain bugs/issues and it is recommended to always use
+Below are the links to current and previous releases of ResIPy/pyR2. Note that previous releases may contain bugs/issues and it is recommended to always use
 the latest release available.
-- v2.0.0
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.0-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.0/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.0-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.0/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.0-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.0/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
+
+*Current stable release*:
+- v2.0.1
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-macOS.dmg)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-linux)
+
+*Past releases*:
 - v1.1.9
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-macOS.dmg)
