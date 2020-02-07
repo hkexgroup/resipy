@@ -115,6 +115,22 @@ If you use ResIPy for you work, please cite [this paper](https://www.sciencedire
     “ResIPy, an Intuitive Open Source Software for Complex Geoelectrical Inversion/Modeling.”
     Computers & Geosciences, February, 104423. https://doi.org/10.1016/j.cageo.2020.104423.
 
+BibTex code:
+```latex
+@article{blanchy_resipy_2020,
+	title = {{ResIPy}, an intuitive open source software for complex geoelectrical inversion/modeling},
+	issn = {0098-3004},
+	url = {http://www.sciencedirect.com/science/article/pii/S0098300419308192},
+	doi = {10.1016/j.cageo.2020.104423},
+	pages = {104423},
+	journaltitle = {Computers \& Geosciences},
+	author = {Blanchy, Guillaume and Saneiyan, Sina and Boyd, James and {McLachlan}, Paul and Binley, Andrew},
+	urldate = {2020-02-07},
+	date = {2020-02-04},
+	langid = {english}
+}
+```
+
 
 Temporary folder issue
 ----
