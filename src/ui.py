@@ -320,7 +320,7 @@ class App(QMainWindow):
         self.tempElec = None # place holder to compare the new electrode agains
 
         if frozen == 'not':
-            self.datadir = os.path.join(bundle_dir, '../examples')
+            self.datadir = os.path.join(bundle_dir, './examples')
         else:
             self.datadir = os.path.join(bundle_dir, 'resipy', 'examples')
         self.plotAspect = 'equal'
@@ -1006,7 +1006,7 @@ class App(QMainWindow):
                     errHist()
                 if self.r2.iremote is not None:
                     if np.sum(self.r2.iremote) > 0:
-                        boreholeCheck.setChecked(True)
+#                        boreholeCheck.setChecked(True)
                         meshQuadGroup.setEnabled(False)
                     else:
                         meshQuadGroup.setEnabled(True)
@@ -1515,9 +1515,29 @@ class App(QMainWindow):
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
                 df2 = pd.DataFrame(np.zeros((df.shape[0], 4)), columns=columns)
-                for i, l in enumerate(columns):
-                    if l in df.columns:
-                        df2[l] = df[l]
+                if header is not None:
+                    for i, l in enumerate(columns):
+                        if l in df.columns:
+                            df2[l] = df[l]
+                else: # provided for backward compatibility
+                    if df.shape[1] == 2:# assume XZ
+                        df2['x'] = df.values[:,0]
+                        df2['z'] = df.values[:,1]
+                    elif df.shape[1] == 3:
+                        if 'y' in self.headers: # assume XYZ
+                            df2['x'] = df.values[:,0]
+                            df2['y'] = df.values[:,1]
+                            df2['z'] = df.values[:,2]
+                        else: # assume XZ buried
+                            df2['x'] = df.values[:,0]
+                            df2['z'] = df.values[:,1]
+                            df2['buried'] = df.values[:,2]
+                    elif df.shape[1] == 4: # XYZ buried
+                        df2['x'] = df.values[:,0]
+                        df2['y'] = df.values[:,1]
+                        df2['z'] = df.values[:,2]
+                        df2['buried'] = df.values[:,3]
+                            
                 tt = df2.values
                 if nbElec is not None:
                     if tt.shape[0] != nbElec:
@@ -1588,8 +1608,8 @@ class App(QMainWindow):
                 electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
                               np.linspace(0.0, (nbElec-1)*dz, nbElec)]
             elecTable.initTable(electrodes)
-            elec = elecTable.getTable()
-            self.tempElec = elec
+#            elec = elecTable.getTable()
+#            self.tempElec = elec
         elecGenButton = QPushButton('Generate')
         elecGenButton.setAutoDefault(True)
         elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -5130,8 +5150,10 @@ USA: Trelgol Publishing, (2006).
 </ul>
 </p>
 <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-<p>Contributor(s): Pedro Concha, Michael Tso</p>
+<p>Contributors: Pedro Concha, Michael Tso</p>
 <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
+<p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P. and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423. <a href="https://doi.org/10.1016/j.cageo.2020.104423">https://doi.org/10.1016/j.cageo.2020.104423</a>.</p>
+
 '''%ResIPy_version)
 #        aboutText.setText('''<h1>About ResIPy</h1> \
 #                          <p><b>Version: %s</b></p> \

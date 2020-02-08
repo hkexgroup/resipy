@@ -22,7 +22,7 @@ tstart = time.time()
 timings = {}
 
 
-testdir = '../examples/'
+testdir = 'examples/'
 
 
 print('======================= GENERAL METHOD TESTS =====================')
@@ -209,10 +209,10 @@ timings['dc-2d-borehole'] = time.time() - t0
 plt.close('all')
 print('============== Test modelDOI() =================')
 k = R2()
-#k.createSurvey('../examples/dc-2d-topo/syscal.csv')
-#k.importElec('../examples/dc-2d-topo/elec.csv')
+#k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
+#k.importElec(testdir + 'dc-2d-topo/elec.csv')
 #k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
-k.createSurvey('../examples/dc-2d/syscal.csv')
+k.createSurvey(testdir + 'dc-2d/syscal.csv')
 k.createMesh('trian')
 k.invert(modelDOI=True)
 k.showResults(doiSens=True)

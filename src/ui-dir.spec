@@ -30,11 +30,11 @@ def extra_datas(mydir):
     rec_glob("%s/*" % mydir, files)
     extra_datas = []
     for f in files:
-        extra_datas.append((f, os.path.dirname(os.path.join('resipy', 'invdir',f))))
+        extra_datas.append((f, os.path.dirname(os.path.join('resipy',f))))
 
     return extra_datas
 
-datas += extra_datas('../examples')
+datas += extra_datas('examples')
 
 
 a = Analysis(['ui.py'],
