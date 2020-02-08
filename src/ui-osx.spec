@@ -3,29 +3,19 @@
 block_cipher = None
 
 
-a = Analysis(['ui.py'],
-             pathex=[],
-             binaries=[],
-             datas=[('./resipy/exe/R2.exe','./resipy/exe'),
-                    ('./resipy/exe/gmsh.exe','./resipy/exe'),
-                    ('./resipy/exe/cR2.exe', './resipy/exe'),
-                    ('./resipy/exe/R3t.exe', './resipy/exe'),
-                    ('./resipy/exe/cR3t.exe', './resipy/exe'),
-                    ('./logo.png', '.'),
-                    ('./logo.ico', '.'),
-                    ('./loadingLogo.png', '.'),
-                    ('./image/dipdip.png', './image'),
-                    ('./image/schlum.png', './image'),
-                    ('./image/wenner.png', './image'),
-                    ('./image/gradient.png', './image')],
-             hiddenimports=[],
-             hookspath=[],
-             runtime_hooks=[],
-             excludes=[],
-             win_no_prefer_redirects=False,
-             win_private_assemblies=False,
-             cipher=block_cipher,
-             noarchive=False)
+datas=[('./resipy/exe/R2.exe','./resipy/exe'),
+       ('./resipy/exe/gmsh.exe','./resipy/exe'),
+       ('./resipy/exe/cR2.exe', './resipy/exe'),
+       ('./resipy/exe/R3t.exe', './resipy/exe'),
+       ('./resipy/exe/cR3t.exe', './resipy/exe'),
+       ('./logo.png', '.'),
+       ('./logo.ico', '.'),
+       ('./loadingLogo.png', '.'),
+       ('./image/dipdip.png', './image'),
+       ('./image/schlum.png', './image'),
+       ('./image/wenner.png', './image'),
+       ('./image/gradient.png', './image')]
+             
 
 def extra_datas(mydir):
     def rec_glob(p, files):
@@ -39,12 +29,25 @@ def extra_datas(mydir):
     rec_glob("%s/*" % mydir, files)
     extra_datas = []
     for f in files:
-        extra_datas.append((f, os.path.dirname(os.path.join('resipy', 'invdir',f))))
+        extra_datas.append((f, os.path.dirname(os.path.join('resipy',f))))
 
     return extra_datas
 
 datas += extra_datas('examples')
 
+
+a = Analysis(['ui.py'],
+             pathex=[],
+             binaries=[],
+             datas=datas,
+             hiddenimports=[],
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=block_cipher,
+             noarchive=False)
 
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)

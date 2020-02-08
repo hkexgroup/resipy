@@ -1783,6 +1783,12 @@ class Mesh:
         new_elm_centre[2] = elm_z[in_elem]
         self.elm_centre = new_elm_centre
         
+    def computeNeigh(self):
+        """Compute element neighbour matrix
+        """
+        con_mat = self.con_mat
+        pass
+        
         
     def write_dat(self,file_path='mesh.dat', param=None, zone=None):
         """ Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
