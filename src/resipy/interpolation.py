@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 import resipy.isinpolygon as iip
-from scipy.spatial import Delaunay, ConvexHull, cKDTree
+#from scipy.spatial import Delaunay, ConvexHull, cKDTree
 #import concurrent.futures 
 
 #%% compute thin plate spline /bilinear models  for irregular grid
@@ -86,6 +86,47 @@ def angles_in_quad(x,y):
         theta[i] = np.arccos( (dx10*dx20 + dy10*dy20) / (m01 * m02))
     return np.rad2deg(theta)
 
+#check order of 4 points  
+def order_quad(x,y,raycast=100000):
+    """Order 4 points in a quad 
+    Parameters
+    -------------
+    x: np array
+        x coordinates 
+    y: np array
+        y coordinates 
+    Return
+    -----------
+    order: np array of ints 
+        indexes of x y points ordered in counter clockwise fashion
+    """
+    #find starting x coordinate 
+    start_idx = np.argmin(x)
+    counts = np.count_nonzero(x==x[start_idx])
+    
+    #protect against colinear points on left hand side of quad 
+    if counts >1:#take the point with the smallest y value 
+        idx = np.argwhere(x==x[start_idx]) # get all the points with that angle and take clostest
+        ytmp = y[idx]
+        start_idx = idx[np.argmin(ytmp)]
+    
+    #order angle 
+    ry = y[start_idx]-raycast # ray casted coordinate below min y point
+    rx = x[start_idx]
+    dx10 = rx-x[start_idx]
+    dx20 = x-x[start_idx]
+    dy10 = ry-y[start_idx]
+    dy20 = y-y[start_idx]
+    m01 = np.sqrt( dx10*dx10 + dy10*dy10 )
+    m02 = np.sqrt( dx20*dx20 + dy20*dy20 )
+    
+    m02[start_idx] = np.nan # to avoid / by 0 warning 
+    
+    theta = np.arccos( (dx10*dx20 + dy10*dy20) / (m01 * m02)) # find array angle in radians 
+    theta[np.isnan(theta)] = 0
+    order = np.argsort(theta) #order 
+    return order
+
 def nerve_centre(x,y):
     """Compute veronoi nerve cell centre from three points 
     """
@@ -116,155 +157,154 @@ def cdist(x1, y1, x2, y2):
         dist[i,:] = pdist(x, y, x2, y2)
     return dist
 
-#%% interpolation using 4 known points. 
-def interp2d_new(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='spline'):
-    """Compute z values for unstructured data using bilinear or spline interpolation. Coordinates
-    outside the bounds of interpolation can be extrapolated using nearest neighbour
-    algorithm on the interpolated and known z coordinates. Code firstly generates 
-    a system of quadrangles (formed from deluany triangulation) and interpolates 
-    over an irregular grid. 
-    
-    Bilinear /cubic /spline interpolation requires knowledge of 4 points orientated around the 
-    xyz coordinate to be estimated. 
-    
-    Parameters
-    ------------
-    xnew: array like
-        x coordinates for the interpolated values
-    ynew: array like 
-        y coordinates for the interpolated values
-    xknown: array like
-        x coordinates for the known values 
-    yknown: array like
-        y coordinates for the known values 
-    zknown: array like
-        z coordinates for the known values 
-    method: 
-        kind of interpolation done, options are bilinear and spline (more to come)
-    extrapolate: bool, optional
-        Flag for if extrapolation is to be used if new coordinates lie outside 
-        the bounds where it is not possible to interpolate a value. 
-        
-    Returns
-    ------------
-    znew: numpy array
-        z coordinates at xnew and ynew.
-        
-    """
-    #check if inputs are arrays
-    if len(xknown)==0 or len(xnew)==0:
-        raise ValueError('Empty array passed to interp2d!')
-    return_list = False 
-    if type(xnew) != 'numpy.ndarray':
-        xnew = np.array(xnew)
-        #return_list = True
-    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
-    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
-    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
-    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
-        
-    # construct quadrangles / irregular quads 
-    points = np.array([xknown,yknown]).T
-    chull = ConvexHull(points) # convex hull 
-    tri = Delaunay(points) # triangulation
+#%% interpolation using 4 known points over an irregular grid 
+#### New interpolation scheme coming in 2020 ####
+#def interp2d_new(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='spline'):
+#    """Compute z values for unstructured data using bilinear or spline interpolation. Coordinates
+#    outside the bounds of interpolation can be extrapolated using nearest neighbour
+#    algorithm on the interpolated and known z coordinates. Code firstly generates 
+#    a system of quadrangles (formed from deluany triangulation) and interpolates 
+#    over an irregular grid. 
+#    
+#    Bilinear /cubic /spline interpolation requires knowledge of 4 points orientated around the 
+#    xyz coordinate to be estimated. 
+#    
+#    Parameters
+#    ------------
+#    xnew: array like
+#        x coordinates for the interpolated values
+#    ynew: array like 
+#        y coordinates for the interpolated values
+#    xknown: array like
+#        x coordinates for the known values 
+#    yknown: array like
+#        y coordinates for the known values 
+#    zknown: array like
+#        z coordinates for the known values 
+#    method: 
+#        kind of interpolation done, options are bilinear and spline (more to come)
+#    extrapolate: bool, optional
+#        Flag for if extrapolation is to be used if new coordinates lie outside 
+#        the bounds where it is not possible to interpolate a value. 
+#        
+#    Returns
+#    ------------
+#    znew: numpy array
+#        z coordinates at xnew and ynew.
+#        
+#    """
+#    #check if inputs are arrays
+#    if len(xknown)==0 or len(xnew)==0:
+#        raise ValueError('Empty array passed to interp2d!')
+#    return_list = False 
+#    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+#    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+#    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+#    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+#    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+#        
+#    # construct quadrangles / irregular quads 
+#    points = np.array([xknown,yknown]).T
+#    chull = ConvexHull(points) # convex hull 
+#    tri = Delaunay(points) # triangulation
+#
+#    cindex = chull.vertices # get chull indices 
+#    
+#    tindex = tri.simplices.copy()
+#    nieghbours =  tri.neighbors
+#    
+#    vorx = np.zeros(len(tindex))
+#    vory = np.zeros(len(tindex))
+#    
+#    for i in range(len(tindex)):
+#        vorx[i],vory[i] = nerve_centre(xknown[tindex[i,:]],yknown[tindex[i,:]])
+#        
+#    inside = iip.isinpolygon(vorx,vory,(xknown[cindex],yknown[cindex]))# ignore triangles with nerve centres outside the convex hull  
+#    
+#    indexed_pairs = []
+#    count = 0
+#    vert = [] # quadrangle matrix >>> vertices of polygons, referenced later 
+#    
+#    #go through triangles and pair them up to form quads (an irregular grid)
+#    for i in range(len(tindex)):
+#        if inside[i]:
+#            nvorx = vorx[nieghbours[i]]
+#            nvory = vory[nieghbours[i]]
+#            dx = vorx[i] - nvorx
+#            dy = vory[i] - nvory
+#            dist = np.sqrt(dx**2 + dy**2)
+#            best_match = nieghbours[i,np.argmin(dist)]
+#            idx = np.append(tindex[i],tindex[best_match])
+#            
+#            if i in indexed_pairs or best_match in indexed_pairs:
+#                #then the triangles have already been paired skip ahead 
+#                count += 1
+#            else:
+#                indexed_pairs.append(i);indexed_pairs.append(best_match)
+#                unix = np.unique(idx)
+#            
+#                xu = xknown[unix];yu = yknown[unix] # unique x values , unique y values
+#                zu = zknown[unix]
+#                
+#                order = order_quad(xu,yu) # order vertices counter clockwise
+#        
+#                xuf = xu[order] # reorder the vertices counter clockwise
+#                yuf = yu[order] # reorder the vertices counter clockwise
+#                zuf = zu[order]
+#                #theta = angles_in_quad(xuf,yuf)
+#                #if min(abs(theta)) > 2: 
+#                vert.append(list(zip(xuf, yuf, zuf)))
+#                
+#    #preallocate array for new z coordinates / interpolated values  
+#    znew = np.zeros_like(xnew)
+#    znew.fill(np.nan)
+#    
+#    #go through each quad in the quadrangle matrix (vert)
+#    for i in range(len(vert)):
+#        poly = np.array(vert[i])
+#        selection = iip.isinpolygon(xnew,ynew,(poly[:,0],poly[:,1]))# get interpolated values inside quad 
+#        x = poly[:,0] # quad vertices 
+#        y = poly[:,1]
+#        z = poly[:,2]
+#        if len(x.shape)==1:#bug fix to deal with numpy being finicky, arrays need 2 dimensions 
+#            x.shape += (1,)
+#            z.shape += (1,)#append 1 dimension to the numpy array shape (otherwise np.concentrate wont work)
+#            y.shape += (1,)
+#        # generate model    
+#        if method == 'spline':
+#            mod = thin_plate_spline_mod(x,y,z) 
+#        else:
+#            mod = bilinear_mod(x,y,z) 
+#        #compute interpolated points     
+#        znew[selection] = compute(mod,xnew[selection],ynew[selection])
+#
+#    znew = np.array(znew,dtype='float64').flatten()#need to specify data type on unix 
+#    
+#    idx_nan = np.isnan(znew).flatten() # boolian indexes of where nans are
+#    idx_num = np.invert(idx_nan).flatten()
+#    #extrapolate nans using nearest nieghbough interpolation
+#    if extrapolate:
+#        #combine known and interpolated values 
+#        known_x = np.append(xknown,xnew[idx_num])
+#        known_y = np.append(yknown,ynew[idx_num])
+#        known_z = np.append(zknown,znew[idx_num])
+#        extrap_x = xnew[idx_nan] # extrapolate using the gridded and interpolated data
+#        extrap_y = ynew[idx_nan]
+#        extrap_z = znew[idx_nan]
+#        
+#        for i in range(len(extrap_x)):
+#        #for i in tqdm(range(len(extrap_x)),desc='extrapolating unknowns',ncols=100):#go through each extrapolated point and find the closest known coordinate
+#            dist = pdist(extrap_x[i],extrap_y[i],known_x,known_y)
+#            ref = np.argmin(dist)
+#            extrap_z[i] = known_z[ref]
+#        
+#        znew[idx_nan] = extrap_z
+#        
+#    if return_list:
+#        znew = list(znew)
+#        
+#    return znew # return new interpolated values 
 
-    cindex = chull.vertices # get chull indices 
-    
-    tindex = tri.simplices.copy()
-    nieghbours =  tri.neighbors
-    
-    vorx = np.zeros(len(tindex))
-    vory = np.zeros(len(tindex))
-    
-    for i in range(len(tindex)):
-        vorx[i],vory[i] = nerve_centre(xknown[tindex[i,:]],yknown[tindex[i,:]])
-        
-    inside = iip.isinpolygon(vorx,vory,(xknown[cindex],yknown[cindex]))# ignore triangles with nerve centres outside the convex hull  
-    
-    indexed_pairs = []
-    count = 0
-    vert = [] # quadrangle matrix >>> vertices of polygons, referenced later 
-    
-    #go through triangles and pair them up to form quads (an irregular grid)
-    for i in range(len(tindex)):
-        if inside[i]:
-            nvorx = vorx[nieghbours[i]]
-            nvory = vory[nieghbours[i]]
-            dx = vorx[i] - nvorx
-            dy = vory[i] - nvory
-            dist = np.sqrt(dx**2 + dy**2)
-            best_match = nieghbours[i,np.argmin(dist)]
-            idx = np.append(tindex[i],tindex[best_match])
-            
-            if i in indexed_pairs or best_match in indexed_pairs:
-                #then the triangles have already been paired skip ahead 
-                count += 1
-            else:
-                indexed_pairs.append(i);indexed_pairs.append(best_match)
-                unix = np.unique(idx)
-            
-                xu = xknown[unix];yu = yknown[unix] # unique x values , unique y values
-                zu = zknown[unix]
-                con = ConvexHull(np.array((xu,yu)).T) # create patch 
-                order = con.vertices # vertices ordered 
-        
-                xuf = xu[order] # reorder the vertices counter clockwise
-                yuf = yu[order] # reorder the vertices counter clockwise
-                zuf = zu[order]
-                #theta = angles_in_quad(xuf,yuf)
-                #if min(abs(theta)) > 2: 
-                vert.append(list(zip(xuf, yuf, zuf)))
-                
-    #preallocate array for new z coordinates / interpolated values  
-    znew = np.zeros_like(xnew)
-    znew.fill(np.nan)
-    
-    #go through each quad in the quadrangle matrix (vert)
-    for i in range(len(vert)):
-        poly = np.array(vert[i])
-        selection = iip.isinpolygon(xnew,ynew,(poly[:,0],poly[:,1]))# get interpolated values inside quad 
-        x = poly[:,0] # quad vertices 
-        y = poly[:,1]
-        z = poly[:,2]
-        if len(x.shape)==1:#bug fix to deal with numpy being finicky, arrays need 2 dimensions 
-            x.shape += (1,)
-            z.shape += (1,)#append 1 dimension to the numpy array shape (otherwise np.concentrate wont work)
-            y.shape += (1,)
-        # generate model    
-        if method == 'spline':
-            mod = thin_plate_spline_mod(x,y,z) 
-        else:
-            mod = bilinear_mod(x,y,z) 
-        #compute interpolated points     
-        znew[selection] = compute(mod,xnew[selection],ynew[selection])
-
-    znew = np.array(znew,dtype='float64').flatten()#need to specify data type on unix 
-    
-    idx_nan = np.isnan(znew).flatten() # boolian indexes of where nans are
-    idx_num = np.invert(idx_nan).flatten()
-    #extrapolate nans using nearest nieghbough interpolation
-    if extrapolate:
-        #combine known and interpolated values 
-        known_x = np.append(xknown,xnew[idx_num])
-        known_y = np.append(yknown,ynew[idx_num])
-        known_z = np.append(zknown,znew[idx_num])
-        extrap_x = xnew[idx_nan] # extrapolate using the gridded and interpolated data
-        extrap_y = ynew[idx_nan]
-        extrap_z = znew[idx_nan]
-        
-        for i in range(len(extrap_x)):
-        #for i in tqdm(range(len(extrap_x)),desc='extrapolating unknowns',ncols=100):#go through each extrapolated point and find the closest known coordinate
-            dist = pdist(extrap_x[i],extrap_y[i],known_x,known_y)
-            ref = np.argmin(dist)
-            extrap_z[i] = known_z[ref]
-        
-        znew[idx_nan] = extrap_z
-        
-    if return_list:
-        znew = list(znew)
-        
-    return znew # return new interpolated values 
-    
 #%% interpolation using 4 known points - legacy. 
 def interp2d(xnew, ynew, xknown, yknown, zknown, extrapolate=True,method='bilinear'):
     """Compute z values for unstructured data using bilinear or spline interpolation. Coordinates
