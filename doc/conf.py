@@ -21,7 +21,7 @@ import resipy
 # -- Project information -----------------------------------------------------
 
 project = 'ResIPy'
-copyright = '2019, G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
+copyright = '2020, G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
 author = 'G. Blanchy, S. Saneiyan, J. Boyd, P. McLachlan'
 
 # The short X.Y version
