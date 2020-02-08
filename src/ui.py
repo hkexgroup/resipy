@@ -5084,35 +5084,43 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <h1>General help</h1>\
            <p>Below are simple instructions to guide you to through the software.</p>
            <ul>
-           <li>In the "Importing" tab:
+           <p><li>In the "<b>Importing</b>" tab:
            <ul>
            <li>Select if you want a 2D/3D survey, an inverse/forward solution and check if you have borehole/timelapse/batch data.</li>
            <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
            <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</li>
-           <li>Note: Res2DInv files are not fully supported, it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
+           <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
            <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
+           <ul><li><i>Pole-dipole arrays</i>: the remote electrode's X location must be exactly at 99999 or -99999 m.</li>
+           <li><i>Pole-pole arrays</i>: first remote electrode's X location must be exactly at 99999 and second one at exactly -99999 m (or vice versa).</ul></li>
            <li>Then one can choose to directly invert with all the default settings or go through the other tabs on the rights.</li>
-           </ul></li>
-           <li>In the "Pre-processing" tab:
+           </ul></li></p>
+           <p><li>In the "<b>Pre-processing</b>" tab:
            <ul>
            <li>The first tab offers manual filtering option based on reciprocal measurements in the dataset (if any).</li>
            <li>The "Phase Filtering" tab is only enable for IP data and allows precise filtering of IP data (range filtering, removing of nested measuremetns, DCA, ...).</li>
            <li>The "Resistance Error Model" tab allows to fit a power-law or linear error model to resistance data.</li>
            <li>The "Phase Error Model" tab allows to fit a power-law or parabolic error model to phase data.</li>
-           </ul></li>
-           <li>In the "Mesh" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
-           region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li>
-           <li>In the "Forward model" tab (only available in forward mode) you can design your sequence and add noise. The resulting synthetic measurements will be\
-           automatically added to as an actual survey in ResIPy and can be inverted directly.</li>
-           <li>In the "Inversion Settings" tab, you can modify all settings for the inversion. Help is available by clicking on the label of each item. The help\
-           generally refers to the document present in the R2/cR3/R3t/cR3t respective manuals.</li>
-           <li>In the "Inversion" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
+           </ul></li></p>
+           <p><li>In the "<b>Mesh</b>" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
+           region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li></p>
+           <p><li>In the "<b>Forward model</b>" tab (only available in forward mode) you can design your sequence and add noise. The resulting synthetic measurements will be\
+           automatically added to as an actual survey in ResIPy and can be inverted directly.</li></p>
+           <p><li>In the "<b>Inversion Settings</b>" tab, you can modify all settings for the inversion. Help is available by clicking on the label of each item. The help\
+           generally refers to the document present in the R2/cR3/R3t/cR3t respective manuals.</li></p>
+           <p><li>In the "<b>Inversion</b>" tab, you can invert your survey and see the output in real time. if you have selected parallel inversion in "Inversion Settings">"Advanced",\
            then nothing will be printed out until the inversion finished. When the inversion finished you will be able to see the inverted section, open it with Paraview (mainly for 3D)\
            and save the outputed .vtk file and graphs using the "Save Graphs" button.</li>
-           <ul><li>Plot aspect ratio can be changed by dragging  left handle to right or left and top handle (above plot options) up and down.</li></ul>
-           <li>The "Post-processing" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
+           <ul><li>Plot aspect ratio can be changed by dragging  left handle to right or left and top handle (above plot options) up and down.</li></ul></p>
+           <p><li>The "<b>Post-processing</b>" tab displays the errors from the invesrion. It helps to assess the quality of the inversion.</li>
+           </ul></p>
+           <p><b>Figure options</b> (available under each figure, the button next to save icon):</p>
+           <ul>
+           <li>Select the axes to edit (usually "<i>Distance [m] - Elevation [m]</i>):
+           <ul><li>The axes limits/labels and plot title  can be changed in the "Axes" tab.</li>
+           <li>The marker size and line width can be changed in the "Curves" tab.</li></ul>
            </ul>
            <p>More help at: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
         ''')
