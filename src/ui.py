@@ -320,7 +320,7 @@ class App(QMainWindow):
         self.tempElec = None # place holder to compare the new electrode agains
 
         if frozen == 'not':
-            self.datadir = os.path.join(bundle_dir, '../examples')
+            self.datadir = os.path.join(bundle_dir, './examples')
         else:
             self.datadir = os.path.join(bundle_dir, 'resipy', 'examples')
         self.plotAspect = 'equal'
@@ -1515,9 +1515,29 @@ class App(QMainWindow):
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
                 df2 = pd.DataFrame(np.zeros((df.shape[0], 4)), columns=columns)
-                for i, l in enumerate(columns):
-                    if l in df.columns:
-                        df2[l] = df[l]
+                if header is not None:
+                    for i, l in enumerate(columns):
+                        if l in df.columns:
+                            df2[l] = df[l]
+                else: # provided for backward compatibility
+                    if df.shape[1] == 2:# assume XZ
+                        df2['x'] = df.values[:,0]
+                        df2['z'] = df.values[:,1]
+                    elif df.shape[1] == 3:
+                        if 'y' in self.headers: # assume XYZ
+                            df2['x'] = df.values[:,0]
+                            df2['y'] = df.values[:,1]
+                            df2['z'] = df.values[:,2]
+                        else: # assume XZ buried
+                            df2['x'] = df.values[:,0]
+                            df2['z'] = df.values[:,1]
+                            df2['buried'] = df.values[:,2]
+                    elif df.shape[1] == 4: # XYZ buried
+                        df2['x'] = df.values[:,0]
+                        df2['y'] = df.values[:,1]
+                        df2['z'] = df.values[:,2]
+                        df2['buried'] = df.values[:,3]
+                            
                 tt = df2.values
                 if nbElec is not None:
                     if tt.shape[0] != nbElec:
