@@ -699,8 +699,13 @@ def res2invInputParser(file_path):
     else:
         K = geom_fac(c1, c2, p1, p2)
         
-    data_dict['resist'] = pa/K            
-    data_dict['Rho'] = pa
+    if meas_type_flag == 'appRes':
+        data_dict['resist'] = pa/K            
+        data_dict['Rho'] = pa
+    else:
+        data_dict['resist'] = pa            
+        data_dict['Rho'] = pa*K
+        
     data_dict['dev'] = [0]*num_meas
 #        data_dict['resist'].append(R)
     if ip_flag == True:

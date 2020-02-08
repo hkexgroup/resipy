@@ -107,6 +107,31 @@ Contributing
 If you wish to contribute to the code, please familiarize yourself with the ![guidelines](./CONTRIBUTING.md).
 
 
+Citing ResIPy
+------------------
+If you use ResIPy for you work, please cite [this paper](https://www.sciencedirect.com/science/article/pii/S0098300419308192?via%3Dihub#appsec4) as:
+
+    Blanchy G., Saneiyan S., Boyd J., McLachlan P. and Binley A. 2020.
+    “ResIPy, an Intuitive Open Source Software for Complex Geoelectrical Inversion/Modeling.”
+    Computers & Geosciences, February, 104423. https://doi.org/10.1016/j.cageo.2020.104423.
+
+BibTex code:
+```latex
+@article{blanchy_resipy_2020,
+	title = {{ResIPy}, an intuitive open source software for complex geoelectrical inversion/modeling},
+	issn = {0098-3004},
+	url = {http://www.sciencedirect.com/science/article/pii/S0098300419308192},
+	doi = {10.1016/j.cageo.2020.104423},
+	pages = {104423},
+	journaltitle = {Computers \& Geosciences},
+	author = {Blanchy, Guillaume and Saneiyan, Sina and Boyd, James and {McLachlan}, Paul and Binley, Andrew},
+	urldate = {2020-02-07},
+	date = {2020-02-04},
+	langid = {english}
+}
+```
+
+
 Temporary folder issue
 ----
 Before v2.0.0 (included), the Windows version of ResIPy had a bug that causes the temporary folder where ResIPy runs to not

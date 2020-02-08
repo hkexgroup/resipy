@@ -1,3 +1,10 @@
+v2.0.2
+------
+- Fix issues due to remote electrodes
+- Implement a new routine to compute the depth of investigation (DOI) based on
+  Oldenburg and Li (1999) method
+
+
 v2.0.1
 ------
 -Fix bug where _MEIxxxx temporary folder not removed after exiting the app (Windows only)
