@@ -5137,7 +5137,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         aboutText = QLabel() # NOTE: YOU'LL NEED TO SET THE VERSION NUMBER IN HERE TOO
         aboutText.setText('''<h1>About ResIPy </h1> \
                           <p><b>Version: %s</b></p> \
-                          <p><i>ResIPy is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
+                          <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p> \
                           <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
                           <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
                           <p>ResIPy uses R2 and cR2 codes developed by Andrew Binley:</p> \
