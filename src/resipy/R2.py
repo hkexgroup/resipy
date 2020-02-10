@@ -2822,8 +2822,6 @@ class R2(object): # R2 master class instanciated by the GUI
             idx = self.regions == key
             phase0[idx] = ipValues[key]
         self.mesh.attr_cache['phase0'] = phase0
-        print('ipValues:',ipValues)
-
 
 
     def setRefModel(self, res0):
