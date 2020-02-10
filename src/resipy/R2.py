@@ -1588,8 +1588,8 @@ class R2(object): # R2 master class instanciated by the GUI
                           r,
                           phase, # mrad
                           np.log10(r),
-                          np.log10(1/r),
-                          np.log10(-10**np.log10(1/r)*phase/1000)]
+                          np.log10(np.cos(-phase/1000)/np.log10(r)), #log10(real conductivity)
+                          np.log10(np.sin(-phase/1000)/np.log10(r))] #log10(imaginary conductivity)
                 np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
             else:
                 self.mesh.write_attr('r100', 'res0.dat', self.dirname)
@@ -1606,8 +1606,8 @@ class R2(object): # R2 master class instanciated by the GUI
                           r,
                           phase, # mrad
                           np.log10(r),
-                          np.log10(1/r),
-                          np.log10(-10**np.log10(1/r)*phase/1000)]
+                          np.log10(np.cos(-phase/1000)/np.log10(r)), #log10(real conductivity)
+                          np.log10(np.sin(-phase/1000)/np.log10(r))] #log10(imaginary conductivity)
                 np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
             else:
                 self.mesh.write_attr('res0', 'res0.dat', self.dirname)
@@ -2803,6 +2803,7 @@ class R2(object): # R2 master class instanciated by the GUI
             idx = self.regions == key
             res0[idx] = regionValues[key]
         self.mesh.attr_cache['res0'] = res0
+        print('regionValues:',regionValues)
 
         zones = np.array(self.mesh.attr_cache['zones']).copy()
         for key in zoneValues.keys():
@@ -2821,6 +2822,7 @@ class R2(object): # R2 master class instanciated by the GUI
             idx = self.regions == key
             phase0[idx] = ipValues[key]
         self.mesh.attr_cache['phase0'] = phase0
+        print('ipValues:',ipValues)
 
 
 
@@ -3040,8 +3042,8 @@ class R2(object): # R2 master class instanciated by the GUI
                       r,
                       phase, # mrad
                       np.log10(r),
-                      np.log10(1/r),
-                      np.log10(-10**np.log10(1/r)*phase/1000)]
+                      np.log10(np.cos(-phase/1000)/np.log10(r)), #log10(real conductivity)
+                      np.log10(np.sin(-phase/1000)/np.log10(r))] #log10(imaginary conductivity)
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), x)
         else:
             self.mesh.write_attr('res0', 'resistivity.dat', fwdDir)
