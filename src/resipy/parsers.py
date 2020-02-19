@@ -434,6 +434,10 @@ def res2invInputParser(file_path):
     c2 = np.array(())
     p1 = np.array(())
     p2 = np.array(())
+    c1_z = np.array(()) # for general array integrated topography
+    c2_z = np.array(())
+    p1_z = np.array(())
+    p2_z = np.array(())
     pa = np.array(())
     ip = np.array(())
     r1 = np.array(())#For appox geom factor
@@ -445,7 +449,8 @@ def res2invInputParser(file_path):
     #first find loke's General array format information in the file (which is all we need for R2/3)
     fmt_flag = False # format flag 
     err_flag = False # error estimates flag 
-    topo_flag = False # topography flag 
+    topo_flag = False # topography flag
+    topo_flag_GA = False # topography flag for integrated topography in general arrays
     start_0_flag = False
     sur_flag = 0 # survey type
     x_location = 0 # for data points, 0 for first electrode, 1 for mid-point, 2 for surface distance
@@ -686,14 +691,22 @@ def res2invInputParser(file_path):
                 c2 = np.append(c2, mid_point + a*(n + 1/2))
         elif array_type in (11,15):
             c1 = np.append(c1, float(vals[1]))
+            c1_z = np.append(c1_z, float(vals[2]))
             c2 = np.append(c2, float(vals[3]))
+            c2_z = np.append(c2_z, float(vals[4]))
             p1 = np.append(p1, float(vals[5]))
+            p1_z = np.append(p1_z, float(vals[6]))
             p2 = np.append(p2, float(vals[7]))
+            p2_z = np.append(p2_z, float(vals[8]))
             pa = np.append(pa, float(vals[9]))
+            elecs_all_x = np.concatenate((c1,c2,p1,p2))
+            elecs_all_z = np.concatenate((c1_z,c2_z,p1_z,p2_z))
+            elecs_all = np.unique(np.column_stack((elecs_all_x,elecs_all_z)), axis=0)
+            if np.sum(elecs_all[:,1]) != 0: topo_flag_GA = True
             if ip_flag:
                 ip = np.append(ip, float(vals[10]))
            
-    #total_x = np.around(total_x, decimals = 1)
+    #convert apparent resistivity back in to transfer resistance and vice versa
     if array_type == 2 and factor_used == False:
         K = 2*np.pi*r1
     else:
@@ -747,12 +760,6 @@ def res2invInputParser(file_path):
     e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
     e_idx_p2 = np.add(e_idx_p2, 1)
     data_dict['n'] = np.copy(e_idx_p2)
-  
-        #convert apparent resistivity back in to transfer resistance
-                  
-#    if array_type == 6:
-#        ultimo = len(ex_pos) - 1
-#        ex_pos = np.delete(ex_pos, ultimo)
     
     num_elec = len(ex_pos)
         
@@ -765,13 +772,11 @@ def res2invInputParser(file_path):
         topo_flag_idx+=1
     
     if int(dump[topo_flag_idx]) == 2 :#if we have topography then we should read it into the API
-        #print("topography flag activated")
         topo_flag = True
         num_elec_topo =  int(dump[topo_flag_idx+1])
         ex_pos_topo=[0]*num_elec_topo
-        #ey_pos_topo=[0]*num_elec_topo # actaully we can't have a y coordinate for 2d data so these will remain as zero
         ez_pos_topo=[0]*num_elec_topo 
-        ey_pos=[0]*num_elec
+        ey_pos=[0]*num_elec # actaully we can't have a y coordinate for 2d data so these will remain as zero
         ez_pos=[0]*num_elec
         for i in range(num_elec_topo):
             ex_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[0])
@@ -780,27 +785,22 @@ def res2invInputParser(file_path):
         for i in range(num_elec):
             for j in range(num_elec_topo):
                 if ex_pos[i] == ex_pos_topo[j]:
-                    ez_pos[i] = ez_pos_topo[j]
-        #print(ex_pos,ez_pos)
-        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-              
+                    ez_pos[i] = ez_pos_topo[j]             
        
     #add some protection against a dodgey file 
     if fmt_flag is False:
         raise ImportError("Error importing res2dinv input file:"+file_path+"\n the file is either unrecognised or unsupported")        
     
     #now we have indexed electrode coordinates in ex_pos :) 
-    if not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
+    if topo_flag_GA: # if we have integrated topography in the general arrays
+        ey_pos=[0]*num_elec # actaully we can't have a y coordinate for 2d data so these will remain as zero
+        ez_pos=elecs_all[:,1]    
+        
+    elif not topo_flag: # then we dont have any topography and the electrode positions are simply given by thier x coordinates
         ey_pos=[0]*num_elec
-        ez_pos=[0]*num_elec  
-        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-    
-#    if array_type == 6:
-#        elec = np.delete(elec, 0, 0)
-#    elif array_type == 2:
-#        ultimo = len(elec) - 1
-#        elec = np.delete(elec, ultimo, 0)
-#        elec = np.delete(elec, 0, 0)
+        ez_pos=[0]*num_elec
+        
+    elec = np.column_stack((ex_pos,ey_pos,ez_pos))
     
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
