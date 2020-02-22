@@ -24,9 +24,9 @@ sys.path.append(os.path.relpath('..'))
 from resipy.Survey import Survey
 from resipy.r2in import write2in
 import resipy.meshTools as mt
-from resipy.meshTools import cropSurface
+#from resipy.meshTools import cropSurface
 import resipy.isinpolygon as iip
-from resipy.template import parallelScript, startAnmt, endAnmt
+#from resipy.template import parallelScript, startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
@@ -3735,14 +3735,30 @@ class R2(object): # R2 master class instanciated by the GUI
         self._toParaview(os.path.join(self.dirname, fname), paraview_loc=paraview_loc)
 
 
-    def showSlice(self, index=0, ax=None, attr=None, axis='z'):
+    def showSlice(self, index=0, ax=None, attr=None, axis='z', vmin=None, vmax=None):
         """Show slice of 3D mesh interactively.
+        
+        Parameters
+        ----------
+        index : int, optional
+            Index of the survey. Default is first survey (index == 0).
+        ax : matplotlib.Axes, optional
+            Axis on which to plot the graph.
+        attr : str, optional
+            Attribute to plot. Default is 'Resistivity(Ohm-m)'.
+        axis : str, optional
+            Either 'x', 'y', or 'z' (default).
+        vmin : float, optional
+            Minimum value for colorbar.
+        vmax : float, optional
+            Maximum value for colorbar.
         """
         if attr is None:
             attr = list(self.meshResults[index].attr_cache.keys())[0]
         self.meshResults[index].showSlice(
-                attr=attr, axis=axis)
+                attr=attr, axis=axis, ax=ax, vmin=vmin, vmax=vmax)
 
+        
     ## Sorting electrode numbers ##
     def shuntIndexes(self):
         """Shunt electrode indexes to start at 1.
