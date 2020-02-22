@@ -100,7 +100,7 @@ def sliceMesh(nodes, elms, values, label='', dim=2 ,vmin=None, vmax=None, ax=Non
 #        vmax = np.percentile(values,99)
         vmax = np.nanmax(values)
     levels = np.linspace(vmin, vmax, 15)
-    levels = None # the level with change for each slice
+#    levels = None # the level with change for each slice
     
     if ax is None:
         fig, ax = plt.subplots()
