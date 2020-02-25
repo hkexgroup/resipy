@@ -1461,7 +1461,7 @@ class App(QMainWindow):
                     self.headers = np.array(headers)
                 self.ncol = len(self.headers)
                 if tt is not None:
-                    if tt.shape[1] == 3 and len(self.headers) == 3: # 2D array but we have 3D position
+                    if tt.shape[1] == 3 and len(self.headers) <= 3: # 2D array but we have 3D position
                         print('reducing 3D positions to 2D')
                         tt = tt[:,[0,2]]
                 self.setColumnCount(len(self.headers)) # +1 for buried check column
@@ -1551,7 +1551,7 @@ class App(QMainWindow):
                     else:
                         self.initTable(tt)
                 else:
-                    self.initTable(tt)
+                    self.initTable(tt[:,:-1]) # extra surface topo doesn't have "buried" thus last column is not needed 
 #                    if self.selfInit is True:
 #                        self.initTable(tt)
 #                    else:
