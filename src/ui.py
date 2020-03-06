@@ -5251,7 +5251,7 @@ USA: Trelgol Publishing, (2006).
             msg.setIcon(QMessageBox.Information)
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
             msg.setInformativeText('''Please download the latest version of ResIPy at:\
-                                   <p><a href='https://gitlab.com/hkex/pyr2#gui-for-r2-family-code'>https://gitlab.com/hkex/pyr2</a></p>\
+                                   <p><a href='https://gitlab.com/hkex/pyr2#downloads'>https://gitlab.com/hkex/pyr2</a></p>\
                                    New updates:<br>\
                                    %s''' % newChanges)
             msg.setWindowTitle("New version available")
