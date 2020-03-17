@@ -1555,12 +1555,13 @@ class Survey(object):
         def setSelect(ie, boolVal):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
-        if self.iremote is not None:
-            spacing = np.mean(np.diff(self.elec[~self.iremote,0]))
-        else:
-            spacing = np.mean(np.diff(self.elec[:,0]))
-        nelec = np.max(array)
-        elecpos = np.arange(0, spacing*nelec, spacing)
+        # if self.iremote is not None:
+        #     spacing = np.mean(np.diff(self.elec[~self.iremote,0]))
+        # else:
+        #     spacing = np.mean(np.diff(self.elec[:,0]))
+        # nelec = np.max(array)
+        # elecpos = np.arange(0, spacing*nelec, spacing)
+        elecpos = self.elec[:,0].copy()
         
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
