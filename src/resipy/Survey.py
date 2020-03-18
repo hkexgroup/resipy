@@ -160,7 +160,7 @@ class Survey(object):
         s_svy : Survey
             An instance of the Survey class.
         """
-        surrogate_file = '\examples\dc-2d\protocol.dat'
+        surrogate_file = 'examples/dc-2d/protocol.dat'
         path2resipy = os.path.realpath(__file__).replace('\\src\resipy\\',surrogate_file)
         path = path2resipy # map to the protocol test file
         s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
@@ -1015,8 +1015,8 @@ class Survey(object):
             ax.grid()
             ax.legend()
             ax.set_title('Linear Mixed Effect Model Fit')
-            ax.set_xlabel('Reciprocal Error Observed [$\Omega$]')
-            ax.set_ylabel('Reciprocal Error Predicted [$\Omega$]')
+            ax.set_xlabel(r'Reciprocal Error Observed [$\Omega$]')
+            ax.set_ylabel(r'Reciprocal Error Predicted [$\Omega$]')
             ax.set_xscale('log')
             ax.set_yscale('log')
         except Exception as e:
