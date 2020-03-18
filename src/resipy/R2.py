@@ -1734,7 +1734,6 @@ class R2(object): # R2 master class instanciated by the GUI
                                             isubset=indexes[i], threed=threed)
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
-                    print('+++++++++', s.name)
                     if os.path.exists(refdir) == False:
                         os.mkdir(refdir)
                     if 'mesh.dat' in os.listdir(self.dirname):
