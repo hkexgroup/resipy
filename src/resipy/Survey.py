@@ -1518,7 +1518,7 @@ class Survey(object):
         
     
     def filterManual(self, attr='resist', ax=None, log=False, geom=True,
-                     label=r'Apprent Resistivity [$\Omega.m$]',
+                     label=r'Apparent Resistivity [$\Omega.m$]',
                      vmin=None, vmax=None):
         """Manually filters the data visually. The points manually selected are
         flagged in the `Survey.iselect` vector and can subsequently be removed

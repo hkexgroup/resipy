@@ -3601,7 +3601,8 @@ class R2(object): # R2 master class instanciated by the GUI
             Max value.
         """
         self.surveys[index].filterManual(attr='resInvError', vmin=vmin, vmax=vmax,
-                    ax=ax, geom=False, log=False)
+                    ax=ax, geom=False, log=False, label='Normalised Error')
+
 
 
     def showPseudoInvErrorIP(self, index=0, ax=None, vmin=None, vmax=None):
@@ -3619,7 +3620,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Max value.
         """
         self.surveys[index].filterManual(attr='phaseInvMisfit', vmin=vmin, vmax=vmax,
-                    ax=ax, geom=False, log=False)
+                    ax=ax, geom=False, log=False, label='Phase misfit')
         
 
     def showInvError(self, index=0, ax=None):
