@@ -21,7 +21,7 @@ Note for Windows users:
 
 Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
-- *wine* is still not supported on macOS Catalina!
+- *wine* is partially supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 
@@ -67,7 +67,7 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
-IMPORTANT NOTE: *wine* is still not supported on macOS Catalina!   
+IMPORTANT NOTE: *wine* is partially supported on macOS Catalina! Please try installing *wine* v5.x with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
 You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
 Open "terminal" and install ```homebrew``` with:
@@ -94,6 +94,8 @@ wine /your example.exe file directory/example.exe
 ```
 
 **NOTE: the first time you're running ```wine``` it will need to be updated and that will take some time.
+
+If *wine* does not run properly on your Catalina machine, try [these instructions](https://apple.stackexchange.com/questions/373851/how-to-get-wine-working-on-catalina/376427#376427) instead.
 
 
 Feature request and bug report
