@@ -40,7 +40,7 @@ The full description of the API can be found in the *[documentation](https://hke
 
 
 Try it from source
------------
+------------------
 After downloading or cloning (`git clone https://gitlab.com/hkex/pyr2`) the repository,
 you can run the GUI using:
 ```sh
