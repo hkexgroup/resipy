@@ -13,7 +13,11 @@ Notes:
 
     -Code will accept command line options for the filepaths, however they are 
     not needed as file dailogue boxes will be opened to choose/save the relevant
-    files.  
+    files.
+    
+    -If you have made "zones" in the mesh using physical entities, then pass 
+    "--zones True", otherwise they will be ignored. Often it helps to zone the 
+    mesh for construction purposes within gmsh, but not for inversion.
 
 """
 #import modules 
