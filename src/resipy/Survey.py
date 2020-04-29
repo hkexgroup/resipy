@@ -961,8 +961,9 @@ class Survey(object):
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
         coefs = np.polyfit(bins[:,0], bins[:,1], 1)
         if coefs[1] < 0: # we don't want negative error -> doesn't make sense
-            slope,  = np.polyfit(bins[:,0], bins[:,1], 0)
-            coefs = [slope, 0]
+            x = bins[:,0][:,None]
+            slope, _, _, _ = np.linalg.lstsq(x, bins[:,1])
+            coefs = [slope[0], 0]
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
