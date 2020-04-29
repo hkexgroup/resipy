@@ -36,16 +36,11 @@ def write2Din(param, dirname, typ='R2'):
     See `write2in` for detailed documentation.
     """
     
-    
-    # check
-    if 'mesh' not in param:
-        raise Exception('Need mesh to write configuration file')
-    
     # default
     dparam = {
             'lineTitle':'My beautiful survey',
             'job_type':1,
-            'mesh_type':4, # meshx, meshy, topo should be defined
+            'mesh_type':6, # meshx, meshy, topo should be defined
             'flux_type':3,
             'singular_type':0,
             'res_matrix':1,
@@ -53,13 +48,10 @@ def write2Din(param, dirname, typ='R2'):
             'num_regions':1,
             'regions':None, # should be defined by the number of element in the mesh
             'patch_x':1,
-            'patch_y':1,
-#            'nx1':1,
-#            'nz1':1,
-#            'resistst':1, # default in R2.createMesh()
-#            'phasest':-0.1, # default in R2.createMesh()
+            'patch_z':1,
             'inverse_type':1,
-            'target_decrease':0,    
+            'target_decrease':0,
+            'qual_ratio':0,
             'data_type':1,
             'reg_mode':0,
             'tolerance':1,
@@ -70,12 +62,10 @@ def write2Din(param, dirname, typ='R2'):
             'min_error':0.01, # for IP only
             'a_wgt':0.01, # 0.02 for IP
             'b_wgt':0.02, # 2 for IP
-#            'c_wgt':1,
-#            'd_wgt':2,
             'rho_min':-1e10,
             'rho_max':1e10,
-            'num_xy_poly':-1,
-            'xy_poly_table':np.zeros((5,2)),
+            'num_xz_poly':-1,
+            'xz_poly_table':np.zeros((5,2)),
             'num_elec':None, #should be define when importing data
             'elec_node':None # should be define when building the mesh
             }
@@ -105,16 +95,17 @@ def write2Din(param, dirname, typ='R2'):
         print('NOT IMPLEMENTED')
     if param['mesh_type'] == 4: # quadrilateral mesh
         meshx = param['meshx']
-        meshy = param['meshy']
+        meshy = param['meshz']
         topo = param['topo']
-        content = content + '\t{}\t{}\t<< numnp_x, numnp_y\n\n'.format(
+        content = content + '\t{}\t{}\t<< numnp_x, numnp_z\n\n'.format(
                 len(meshx), len(meshy))
         content = content + ' '.join(['{:.4f}']*len(meshx)).format(*meshx) + '\t<< xx \n\n'
         content = content + ' '.join(['{:.4f}']*len(topo)).format(*topo) + '\t<< topo \n\n'        
         content = content + ' '.join(['{:.4f}']*len(meshy)).format(*meshy) + '\t<< yy \n\n'
-    elif param['mesh_type'] == 3:
-#        if typ == 'R2':
+    elif param['mesh_type'] == 3: # triangular mesh
         content = content + '{}  << scale for triangular mesh\n\n'.format(param['scale'])
+    elif param['mesh_type'] == 6: # general quadrilateral mesh (with mesh.dat)
+        pass # no scale for this
     else:
         print('NOT IMPLEMENTED')
     content = content + '{} << num_regions\n'.format(param['num_regions'])
@@ -139,16 +130,16 @@ def write2Din(param, dirname, typ='R2'):
         if param['mesh_type'] == 4|5:
             content = content + '\t{}\t{}\t<< no. patches in x, no. patches in z\n\n'.format(
                     param['patchx'], param['patchy'])
-#        if typ == 'R2':
         content = content + '{}\t{}\t<< inverse_type, target_decrease\n\n'.format(
                 param['inverse_type'],
                 param['target_decrease'])
+        if param['inverse_type'] == 3:
+            content = content + '{}\t<< qualitative ratio'.format(param['qual_ratio'])
+            content = content + '{}\t{}\t<< rho_min, rho_max'.format(param['rho_max'], param['rho_min'])
         if typ == 'R2':
             content = content + '{}\t{}\t<< data type (0=normal;1=log), regularization type\n\n'.format(
                     param['data_type'],
                     param['reg_mode'])
-#        elif typ == 'cR2':
-#            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
         if param['reg_mode'] == 1:
             content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso, alpha_s\n\n'.format(
                     param['tolerance'],
@@ -175,34 +166,24 @@ def write2Din(param, dirname, typ='R2'):
                     param['b_wgt'],
                     param['rho_min'],
                     param['rho_max'])
-#        elif typ == 'cR2':
-#                content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, c_wgt, d_wgt, rho_min, rho_max\n\n'.format(
-#                param['a_wgt'],
-#                param['b_wgt'],
-#                param['c_wgt'],
-#                param['d_wgt'],
-#                param['rho_min'],
-#                param['rho_max'])
-                
-    # define polyline
-#    if typ == 'R2':
-    if param['num_xy_poly'] == -1:
+
+    if param['num_xz_poly'] == -1:
         leftx = param['meshx'][param['node_elec'][0,1]-4]
         rightx = param['meshx'][param['node_elec'][-1,1]+4]
         lefty = np.max(param['topo'])
         righty = lefty
         dist = np.sqrt((rightx-leftx)**2+(righty-lefty)**2)/2
         bottom = np.min(param['topo']) - dist
-        param['xy_poly_table'] = np.array([[leftx, lefty],
+        param['xz_poly_table'] = np.array([[leftx, lefty],
                                           [rightx, righty],
                                           [rightx, bottom],
                                           [leftx, bottom],
                                           [leftx, lefty]])
-        param['num_xy_poly'] = param['xy_poly_table'].shape[0]
-    content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
-    if param['num_xy_poly'] != 0:
-        content = content + ''.join(['{}\t{}\n']*len(param['xy_poly_table'])).format(
-                *param['xy_poly_table'].flatten())
+        param['num_xz_poly'] = param['xz_poly_table'].shape[0]
+    content = content + '{}\t<< num_poly\n'.format(param['num_xz_poly'])
+    if param['num_xz_poly'] != 0:
+        content = content + ''.join(['{}\t{}\n']*len(param['xz_poly_table'])).format(
+                *param['xz_poly_table'].flatten())
         
     # define nodes for electrodes
     param['num_elec'] = param['node_elec'].shape[0]
@@ -210,7 +191,7 @@ def write2Din(param, dirname, typ='R2'):
     if param['mesh_type'] == 4:
         content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
                 *param['node_elec'].flatten())
-    elif param['mesh_type'] == 3:
+    elif param['mesh_type'] == 3 or param['mesh_type'] == 6:
         content = content + ''.join(['{}\t{}\n']*len(param['node_elec'])).format(
                 *param['node_elec'].flatten())
     content = content + '\n'
@@ -238,27 +219,23 @@ def write3Din(param, dirname, typ='R3t'):
             'num_regions':1,
             'resis':100.0, # default resistivity for regions Ohm.m
             'phase':-2, #default phase for regions mrad
-            'inverse_type':0, # different for 3D (it's more the regularization mode)
+            'inverse_type':1, # not used by R3t but for consistency with R2
+            'target_decrease':0,
             'data_type':1,
+            'reg_mode':0,
             'tolerance':1.0,
-            'no_improve':1.0 , # 3D specific
             'max_iter':10,
             'error_mod':2,
             'alpha_aniso':1,
             'alpha_s':1, # for 3D inversion_type=2 (difference inversion)
-            'cginv_tolerance':0.0001, # 3D specific
-            'cginv_maxits':500, # 3D specific
-            'alpha_max':1.0e10, # 3D specific
-            'num_alpha_steps':10, # 3D specific
-            'min_step':0.001, # 3D specific
             'a_wgt':0.01,
             'b_wgt':0.02,
-            'c_wgt':1, # cR3t specific
             'rho_min': -1e10, # cR3t specific
             'rho_max': 1e10, # cR3t specific
             'zmin':-10, # 3D specific
             'zmax':0, # 3D specific
-            'num_xy_poly':0,
+            'num_xy_poly':0, # 3D specific
+            'xy_poly_table':None,
             'elec_node':None # should be define when building the mesh
             }
     
@@ -273,7 +250,7 @@ def write3Din(param, dirname, typ='R3t'):
             param['job_type'], param['singular_type'])
 
     # parameters specific to inversion
-    if typ=='R3t':
+    if typ == 'R3t':
         content = content + '{}\t<< num_regions\n'.format(param['num_regions'])
         
         if param['num_regions'] == 0:
@@ -282,32 +259,36 @@ def write3Din(param, dirname, typ='R3t'):
             content = content + '{:f}\n\n'.format(param['resis']) # replace by default rho
     
         if param['job_type'] == 1:
-            content = content + '{}\t << data_type\n'.format(param['data_type'])
-            content = content + '{}\t<< inverse_type\n\n'.format(param['inverse_type'])
+            content = content + '{}\t{}\t<< inverse_type, target_decrease\n'.format(
+                param['inverse_type'], param['target_decrease'])
+            content = content + '{}\t{}\t<< data_type, reg_mode\n\n'.format(
+                param['data_type'], param['reg_mode'])
         
             # type of inversion
-            if param['inverse_type'] == 0: # normal regularization
-                content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, no_improve, \
-                    max_iterations, error_mod, alpha_aniso\n\n'.format(
-                    param['tolerance'], param['no_improve'], param['max_iter'],
-                    param['error_mod'], param['alpha_aniso'])
-            else: # background regularization or difference inversion
-                content = content + '{}\t{}\t{}\t{}\t{}\t{}\t<< tolerance, no_improve, \
-                max_iterations, error_mod, alpha_aniso, alpha_s\n\n'.format(
-                param['tolerance'], param['no_improve'], param['max_iter'],
-                param['error_mod'], param['alpha_aniso'], param['alpha_s'])
-                
-            content = content + '{}\t{}\t<< cginv_tolerance, cginv_maxits\n\n'.format(
-                    param['cginv_tolerance'], param['cginv_maxits'])
-            content = content + '{}\t{}\t<< alpha_max, num_alpha_steps\n\n'.format(
-                    param['alpha_max'], param['num_alpha_steps'])
-            content = content + '{}\t<< min_step\n\n'.format(param['min_step'])
-            content = content + '{}\t{}\t<<a_wgt, b_wgt\n\n'.format(param['a_wgt'],
-                                 param['b_wgt'])
+            if param['reg_mode'] == 1: # background regularization
+                content = content + '{}\t{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso, alpha_s\n\n'.format(
+                        param['tolerance'],
+                        param['max_iter'],
+                        param['error_mod'],
+                        param['alpha_aniso'],
+                        param['alpha_s'])
+            else:
+                content = content + '{}\t{}\t{}\t{}\t<< tolerance, max_iterations, error_mod, alpha_aniso\n\n'.format(
+                        param['tolerance'],
+                        param['max_iter'],
+                        param['error_mod'],
+                        param['alpha_aniso'])
+            
+            # error weighting
+            content = content + '{}\t{}\t{}\t{}\t<<  a_wgt, b_wgt, rho_min, rho_max\n\n'.format(
+                    param['a_wgt'],
+                    param['b_wgt'],
+                    param['rho_min'],
+                    param['rho_max'])
+
             content = content + '{}\t{}\t<<zmin, zmax\n'.format(param['zmin'],
                                  param['zmax'])
             
-                        
             # define polyline
             content = content + '{}\t<< num_poly\n'.format(param['num_xy_poly'])
             if param['num_xy_poly'] != 0:
