@@ -5426,6 +5426,6 @@ if __name__ == '__main__':
 
     ex = App()
     ex.show()
-    # splash.hide() # hiding the splash screen when finished
+    splash.hide() # hiding the splash screen when finished
     
     sys.exit(app.exec_())
