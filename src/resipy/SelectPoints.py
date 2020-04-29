@@ -65,7 +65,7 @@ class SelectPoints(object):
 #        self.rectAxes = self.ax.figure.add_axes([0.7, 0.9, 0.1, 0.08])
 #        self.lineAxes = self.ax.figure.add_axes([0.8, 0.9, 0.1, 0.08])
         divider = make_axes_locatable(self.ax)
-        buttons = divider.new_vertical(size='5%') # 5% cushion between buttons and plot below it
+        buttons = divider.new_vertical(size='5%', pad=0) # 5% cushion between buttons and plot below it
         axbutton = self.ax.figure.add_axes(buttons)
         axbutton.axis('off')
         self.polyAxes = axbutton.figure.add_axes([0.35, 0.91, 0.1, 0.08]) # just to put the buttons out of legend's way
@@ -217,8 +217,8 @@ class SelectPoints(object):
         if self.pts is not None:
             path = Path(self.vertices)
             self.iselect = path.contains_points(self.pts)
-            self.caxSelected[0].set_xdata(self.pts[self.iselect, 0])
-            self.caxSelected[0].set_ydata(self.pts[self.iselect, 1])
+            # self.caxSelected[0].set_xdata(self.pts[self.iselect, 0])
+            # self.caxSelected[0].set_ydata(self.pts[self.iselect, 1])
             if self.callback is not None:
                 self.callback(self.iselect)
             else:

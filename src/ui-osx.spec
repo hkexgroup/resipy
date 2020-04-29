@@ -8,6 +8,7 @@ datas=[('./resipy/exe/R2.exe','./resipy/exe'),
        ('./resipy/exe/cR2.exe', './resipy/exe'),
        ('./resipy/exe/R3t.exe', './resipy/exe'),
        ('./resipy/exe/cR3t.exe', './resipy/exe'),
+       ('./resipy/cext/*', './resipy/cext'),
        ('./logo.png', '.'),
        ('./logo.ico', '.'),
        ('./loadingLogo.png', '.'),
@@ -15,7 +16,7 @@ datas=[('./resipy/exe/R2.exe','./resipy/exe'),
        ('./image/schlum.png', './image'),
        ('./image/wenner.png', './image'),
        ('./image/gradient.png', './image')]
-             
+
 
 def extra_datas(mydir):
     def rec_glob(p, files):

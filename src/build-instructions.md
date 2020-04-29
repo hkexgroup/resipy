@@ -83,7 +83,9 @@ Here pyinstaller is initialising using .spec files for different scenarios which
 **notes: 
 - We used pyinstaller version 3.5 and,
 - PyQt 5.9.x
-- For windows there is a bug with pyinstaller and the conda version of pyqt. liklehood is it wont compile. We suggest using winpython to build ResIPy on windows. 
+- For windows there is a bug with pyinstaller and the conda version of pyqt. liklehood is it wont compile. We suggest using winpython to build ResIPy on windows.
+- if latest version of setuptools causes issue on Windows, downgraded it
+- need pyvista==0.23.1
 
 
 

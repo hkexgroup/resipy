@@ -15,7 +15,8 @@ datas=[('./resipy/exe/R2.exe','./resipy/exe'),
         ('./image/dipdip.png', './image'),
         ('./image/schlum.png', './image'),
         ('./image/wenner.png', './image'),
-        ('./image/gradient.png', './image')
+        ('./image/gradient.png', './image'),
+        ('./resipy/cext/meshCalc.cp36-win32.pyd','./resipy/cext')
         ]
 
 def extra_datas(mydir):
@@ -41,7 +42,7 @@ a = Analysis(['ui.py'],
              pathex=[],
              binaries=[],
              datas = datas,
-             hiddenimports=['numpy.core._dtype_ctypes'],
+             hiddenimports=['pkg_resources.py2_warn'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -59,7 +60,9 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=False)
+          console=False,
+          version='Version.details',
+          icon='logo.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
