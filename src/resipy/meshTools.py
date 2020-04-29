@@ -35,7 +35,7 @@ import resipy.interpolation as interp
 try:#meshCalc needs to be compiled 
     import resipy.cext.meshCalc as mc
 except ModuleNotFoundError:
-    warnings.warn('meshCalc not installed, mesh refinement will be unavailble')
+    warnings.warn('meshCalc not installed, meshing options will be limited')
 
 try:#import pyvista if avaiable
     import pyvista as pv

@@ -1,8 +1,11 @@
 # -*- mode: python -*-
 # this file is used by pyinstaller to generate a zip file that would 
 # then be uncompressed by the splashScreen.spec
-
+# nb needs to be a python 3.7 environment
+import platform, os
 block_cipher = None
+
+OS = platform.system()
 
 # https://stackoverflow.com/questions/11322538/including-a-directory-using-pyinstaller  
 datas=[('./resipy/exe/R2.exe','./resipy/exe'),
@@ -16,8 +19,13 @@ datas=[('./resipy/exe/R2.exe','./resipy/exe'),
         ('./image/schlum.png', './image'),
         ('./image/wenner.png', './image'),
         ('./image/gradient.png', './image'),
-        ('./resipy/cext/meshCalc.cp36-win32.pyd','./resipy/cext')
         ]
+
+if OS == 'Linux':
+    datas.append(('./resipy/cext/*gnu.so','./resipy/cext'))
+elif OS == 'Windows':
+    datas.append(('./resipy/cext/*.pyd','./resipy/cext'))
+#raise error if not linux or windows? 
 
 def extra_datas(mydir):
     def rec_glob(p, files):
