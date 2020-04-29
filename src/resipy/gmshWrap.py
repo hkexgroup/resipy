@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# GMSH WRAPPER FUNCTIONS
 """
 Created on Tue Apr 10 14:32:14 2018 in python 3.6.5
 Wrapper for creating 2d triangular meshes with gmsh and converting it 
@@ -6,22 +6,12 @@ into a mesh.dat format for R2. The program tri_mesh () expects a directory "exe"
 to be within the api (or working) directory with a gmsh.exe inside it. 
 
 @author: jimmy Boyd - jamyd91@bgs.ac.uk
-Programs:
-    arange () - creates a list of values like np.arange does
-    ccw() - checks cartesian points are oreintated clockwise 
-    moving_average() - as says on tin, used to smooth surface topography which is repeated at the base of the fine mesh region in the inversion
-    genGeoFile () - generates a .geo file for gmsh
-    msh_parse() - converts a 2d gmsh.msh file to a mesh class readable by R2. 
-
-Dependencies: 
-    numpy (conda library)
-    python3 standard libs
 """
 #python standard libraries 
 import os, warnings
 #general 3rd party libraries
 import numpy as np
-import resipy.isinpolygon as iip
+import resipy.geomTools as iip
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -57,57 +47,6 @@ def moving_average(array,N=3):
             b = i + idx + 1            
         out[i] = sum(array[a:b])/len(array[a:b])
     return out
-
-def ccw(p,q,r):#code expects points as p=(x,y) and so on ... 
-    """
-    checks if points in a triangle are ordered counter clockwise. When using R2,
-    mesh nodes should be given in a counter clockwise order otherwise you'll get negative 
-    apparent resistivities. 
-    
-    Parameters
-    ----------
-    p - tuple, list,
-        The x y coordinates of the point/vertex ie. (x,y) in desired order
-    q - " 
-    r - " 
-    
-    Returns
-    ----------
-    0 if colinear points, 1 if counter clockwise order, 2 if points are ordered clockwise
-    """
-    val=((q[1]-p[1])*(r[0]-q[0]))-((q[0]-p[0])*(r[1]-q[1]))
-    if val==0:
-        return 0 # lines are colinear
-    elif val>0:
-        return 1 # points are oreintated counter clockwise 
-    elif val<0:
-        return 2 # points are counter clockwise
-    
-# triangle centriod 
-def tri_cent(p,q,r):
-    """
-    Compute the centre coordinates for a 2d triangle given the x,y coordinates 
-    of the vertices.
-    program code expects points as p=(x,y) and so on (counter clockwise prefered)
-    
-    Parameters
-    ----------
-    
-    p - tuple, list,
-        The x y coordinates of the point/vertex ie. (x,y) in desired order
-    q - " 
-    r - " 
-    
-    Returns
-    ----------
-    (x,y): tuple    
-    """
-    Xm=(p[0]+q[0])/2
-    Ym=(p[1]+q[1])/2
-    k=2/3
-    Xc=r[0]+(k*(Xm-r[0]))
-    Yc=r[1]+(k*(Ym-r[1]))
-    return(Xc,Yc)
     
 def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
     dist = np.zeros((len(elec_x),len(elec_x)))   
@@ -124,44 +63,46 @@ def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacin
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 # 2D half space problem 
 def genGeoFile(electrodes, electrode_type = None, geom_input = None,
-               file_path='mesh.geo',doi=-1,dp_len=-1,cl=-1,cl_factor=2):
+               file_path='mesh.geo',fmd=-1,dp_len=-1,cl=-1,cl_factor=2,
+               debug=False):
     """Writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
     Parameters
     ----------
-    electrodes: array like
-        first column/list is the x coordinates of electrode positions, second column
+    electrodes : array like
+        First column/list is the x coordinates of electrode positions, second column
         is the elevation
-    electrode_type: list, optional
+    electrode_type : list, optional
         List should be the same length as the electrode coordinate argument. Each entry in
         the list references the type of electrode: 
             'electrode' = surface electrode coordinate, will be used to construct the topography in the mesh
             'buried' = buried electrode, placed the mesh surface
-            'borehole#' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
+            'borehole' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
                         borehole numbering starts at 1 and ascends numerically by 1. 
             'remote' = remote electrode, this will not be actaully meshed, as often remote electrode coordinates
                         are given arbitary values like -999. Instead every remote electrode found will be 
                         randomly added as a node in the background region towards the lower left hand corner of 
                         of the mesh. 
-    geom_input: dict, optional
+    geom_input : dict, optional
         Allows for further customisation of the 2D mesh, its a
         dictionary contianing surface topography, polygons and boundaries 
-    file_path: string, optional 
-        name of the generated gmsh file (can include file path also) (optional)
-    doi: float, optional 
-        depth of investigation (optional) (in meters)
-    cl: float, optional
-        characteristic length (optional), essentially describes how big the nodes 
+    file_path : string, optional 
+        Name of the generated gmsh file (can include file path also) (optional)
+    fmd : float, optional 
+        defines depth of fine mesh region, this should be depth below ground 
+    cl : float, optional
+        Characteristic length (optional), essentially describes how big the nodes 
         assocaited elements will be. Usually no bigger than 5. 
-    cl_factor: float, optional 
+    cl_factor : float, optional 
         Characteristic length factor, this allows for tuning of the incrimental 
         size increase with depth in the mesh, usually set to 2 such that the 
         elements at the DOI are twice as big as those at the surface. The reasoning
         for this is because the sensitivity of ERT drops off with depth. 
-    dp_len: float, optional 
+    dp_len : float, optional 
         Largest dipole length in the 2D array. Default is the largest electrode 
         spacing. Controls the multipier applied to the edges of the coarse mesh region. 
-        
+    debug : bool, optional
+        If `True`, debug messages will be displayed.
     
     Returns
     ----------
@@ -196,10 +137,21 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     The code expects that all polygons, boundaries and electrodes fall within x values 
     of the actaul survey area. So make sure your topography / surface electrode points cover 
     the area you are surveying, otherwise some funky errors will occur in the mesh. 
-
-    #### TODO: search through each set of points and check for repeats 
     """
-    print('Generating gmsh input file...\n')
+    if dp_len != -1 and dp_len<0:
+        raise ValueError('Can not have a negative dipole length')
+    if fmd != -1 and fmd<0:#then set to a default 
+        raise ValueError('Can not have a negative depth of fine mesh')
+    if cl != -1 and cl<0:
+        raise ValueError('Can not have a negative mesh characteristic length')
+        
+    if debug:
+        def dump(x):
+            print(x)
+    else:
+        def dump(x):
+            pass
+    dump('Generating gmsh input file...\n')
     #formalities and error checks
     if geom_input is not None: 
         if not isinstance(geom_input,dict):
@@ -210,7 +162,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         raise ValueError('The length of the electrode x and z arrays does not match')
     bh_flag = False
     bu_flag = False
-
     #determine the relevant node ordering for the surface electrodes? 
     if electrode_type is not None:
         if not isinstance(electrode_type,list):
@@ -227,31 +178,31 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             if key == 'buried': bur_idx.append(i); bu_flag = True
             if key == 'borehole1': bh_flag = True
             if key == 'remote':rem_idx.append(i)
-        
+
         if len(surface_idx)>0:# then surface electrodes are present
             elec_x=np.array(electrodes[0])[surface_idx]
             elec_z=np.array(electrodes[1])[surface_idx]
+            
         elif len(surface_idx)==0 and 'surface' not in geom_input:
+            warnings.warn('All electrodes are buried but no surface topography has been provided, this problem may be better suited as a whole space')
             #fail safe if no surface electrodes are present to generate surface topography 
             if not isinstance(geom_input, dict):
                 geom_input = {}
             max_idx = np.argmax(electrodes[0])
             min_idx = np.argmin(electrodes[0])
             topo_x = [electrodes[0][min_idx],electrodes[0][max_idx]]
-            y_idx = np.argmax(electrodes[1])
-            topo_z = [electrodes[1][y_idx]+1,electrodes[1][y_idx]+1] # add one so we don't cut into the buried in electrodes with the mesh
+            z_idx = np.argmax(electrodes[1])
+            topo_z = [electrodes[1][z_idx]+1,electrodes[1][z_idx]+1] # add one so we don't cut into the buried in electrodes with the mesh
             geom_input['surface'] = [topo_x,topo_z]
             elec_x = np.array([])
             elec_z = np.array([])
-            if dp_len == -1 : 
-                dp_len = max(electrodes[0]) - min(electrodes[0])
-            if doi == -1: 
-                doi = min(electrodes[1]) - dp_len
+
         elif len(surface_idx)==0 and 'surface' in geom_input:
             elec_x = np.array([])
             elec_z = np.array([])
     
     else:
+        rem_idx=[]#remote electrode index
         elec_x = np.array(electrodes[0])
         elec_z = np.array(electrodes[1])
 
@@ -265,36 +216,39 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         topo_x = geom_input['surface'][0]
         topo_z = geom_input['surface'][1]
 
-    #catch where x coordinates dont change
-    if bh_flag or bu_flag:
-        elecspacing = (min(electrodes[0]) - max(electrodes[0]))/len(electrodes)
-        if max(topo_x)-min(topo_x) < 0.2*elecspacing and len(topo_x) != 1: # they have the same x coordinate 
-            topo_x = [min(electrodes[0])-5,max(electrodes[0])+5]
+    #catch buried electrode special cases 
+    if bh_flag or bu_flag: # special case 
+        distances = find_dist(electrodes[0], [0]*len(electrodes[0]), electrodes[1])
+        dist_sort = np.unique(distances)
+        elecspacing = dist_sort[1]
+        if max(topo_x)-min(topo_x) < elecspacing and len(topo_x) != 1: # they have the same x coordinate 
+            topo_x = [min(electrodes[0]) - 5*elecspacing,
+                      max(electrodes[0]) + 5*elecspacing]
+        if dp_len == -1:#there is no change dipole length, maybe due to 1 x coordinate 
+            dp_len = dist_sort[-1]
+        if fmd == -1:
+            fmd = (max(topo_z) - min(electrodes[1]))+(5*elecspacing)
+        if cl == -1:
+            cl = elecspacing/2
                   
     if dp_len == -1 and len(elec_x)>0:#compute maximum dipole length
         dp_len = abs(np.max(elec_x) - np.min(elec_x))
-    elif dp_len == 0 or dp_len==-1:#there is no change dipole length, maybe due to 1 x coordinate 
-        dp_len = abs(np.max(electrodes[1]) - np.min(electrodes[1])) # use z coordinates, 
     if dp_len == 0: #if its still 0 
         dp_len = 5 # insert obligitory value here
-    if doi == -1:#then set to a default 
-        doi = np.max(elec_z) - (np.min(elec_z) - abs(np.max(elec_x) - np.min(elec_x))/2)
-    if doi >= np.min(electrodes[1]):
-        warnings.warn('DOI is shallower than minimum z coordinate, therefore lowering the DOI by 5 units below lowest electrode')
-        doi= np.min(electrodes[1]) - 5 
-    print("doi in gmshWrap.py: %f"%doi)
-    print("dp_len in gmshWrap.py: %f"%dp_len)
+    if fmd == -1:#then set to a default 
+        #fmd = np.max(electrodes[1]) - (np.min(electrodes[1]) - abs(np.max(electrodes[0]) - np.min(electrodes[0]))/2)
+        fmd = dp_len/3
+
+    dump("fmd in gmshWrap.py: %f"%fmd)
+    dump("dp_len in gmshWrap.py: %f"%dp_len)
     
     if cl == -1:
-        if bh_flag or bu_flag:
-            cl = abs(np.mean(np.diff(electrodes[1]))/2)
-        else:
-            cl = abs(np.mean(np.diff(elec_x))/2)
+        cl = abs(np.mean(np.diff(elec_x))/2)
             
     if len(topo_x) != len(topo_z):
-        raise ValueError("topography x and y arrays are not the same length!")
+        raise ValueError("topography x and z arrays are not the same length!")
     if len(elec_x) != len(elec_z):
-        raise ValueError("electrode x and y arrays are not the same length!")
+        raise ValueError("electrode x and z arrays are not the same length!")
     
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
@@ -307,84 +261,51 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("//Define surface points\n")
     #we have surface topograpghy, and electrode positions to make use of here:
     x_pts=np.append(topo_x,elec_x)#append our electrode positions to our topograpghy 
-    y_pts=np.append(topo_z,elec_z)
+    z_pts=np.append(topo_z,elec_z)
     flag=['topography point']*len(topo_x)
     flag=flag+(['electrode']*len(elec_x))   
     
-    # increase the size of the fine mesh region on both side of the survey
-#    e_left = np.min(elec_x) - 4*np.median(np.abs(np.diff(elec_x)))
-#    e_right = np.max(elec_x) + 4
-    
     #deal with end case electrodes, check max topo points are outside survey bounds 
-    try:
-        min_idx = np.argmin(elec_x)
-        max_idx = np.argmax(elec_x)
-        if min(elec_x) == min(x_pts):
-            x_pts = np.append(x_pts,elec_x[min_idx] - 5*np.mean(np.abs(np.diff(elec_x)))) # in this case extend the survey bounds beyond the first electrode 
-            y_pts = np.append(y_pts,elec_z[min_idx])
-            flag.append('topography point')#add a flag
+    min_idx = np.argmin(electrodes[0])
+    max_idx = np.argmax(electrodes[0])
+    if min(electrodes[0]) == min(x_pts):
+        x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*(dp_len/len(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
+        z_pts = np.append(z_pts,max(electrodes[1]))
+        flag.append('topography point')#add a flag
+        
+    if max(electrodes[0]) == max(x_pts):
+        x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*(dp_len/len(electrodes[0])))
+        z_pts = np.append(z_pts,max(electrodes[1]))
+        flag.append('topography point')
             
-        if max(elec_x) == max(x_pts):
-            x_pts = np.append(x_pts,elec_x[max_idx] + 5*np.mean(np.abs(np.diff(elec_x))))
-            y_pts = np.append(y_pts,elec_z[max_idx])
-            flag.append('topography point')
-    
-    except Exception as e: # then there are no surface electrodes, in which case
-        print('Error in assigning additional points on each side of transect: ', e)
-        min_idx = np.argmin(electrodes[0])
-        max_idx = np.argmax(electrodes[0])
-        if min(electrodes[0]) == min(x_pts):
-            x_pts = np.append(x_pts,electrodes[0][min_idx] - 5*np.mean(np.diff(electrodes[0]))) # in this case extend the survey bounds beyond the first electrode 
-            y_pts = np.append(y_pts,max(electrodes[1])+1)
-            flag.append('topography point')#add a flag
-            
-        if max(electrodes[0]) == max(x_pts):
-            x_pts = np.append(x_pts,electrodes[0][max_idx] + 5*np.mean(np.diff(electrodes[0])))
-            y_pts = np.append(y_pts,max(electrodes[1])+1)
-            flag.append('topography point')
-            
-    #catch an error where the fine mesh region will truncate where the electrodes are        
-    if min(elec_x) < min(x_pts):
-        raise ValueError("The minimum X coordinate value for the surface of the mesh must be smaller than the minimum electrode X coordinate")
-    if max(elec_x) > max(x_pts):
-        raise ValueError("The maximum X coordinate value for the surface of the mesh must be greater than the maximum electrode X coordinate") 
-    
     idx=np.argsort(x_pts) # now resort the x positions in ascending order
     x_pts=x_pts[idx] # compute sorted arrays
-    y_pts=y_pts[idx]
-    z_pts=np.zeros((len(x_pts),1))#for now let z = 0
+    z_pts=z_pts[idx]
+
     #add flags which distinguish what each point is 
     flag_sort=[flag[i] for i in idx]
     
     elec_x_cache = x_pts[np.array(flag_sort)=='electrode']
-    elec_z_cache = y_pts[np.array(flag_sort)=='electrode']
+    elec_z_cache = z_pts[np.array(flag_sort)=='electrode']
     
     #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
     cache_idx=[]
-    for i in range(len(x_pts)-1):
-        if x_pts[i]==x_pts[i+1] and y_pts[i]==y_pts[i+1]:
+    rcheck = [z for i,z in enumerate(zip(x_pts,z_pts))]
+    for i in range(len(x_pts)):
+        if rcheck.count((x_pts[i],z_pts[i]))>1:
             cache_idx.append(i)
      
     if len(cache_idx)>0:
         warnings.warn("Duplicated surface and electrode positions were detected, R2 inversion likley to fail due to the presence of elements with 0 area.")
         #if duplicated points were dectected we should remove them?? - now disabled 
-#        x_pts=np.delete(x_pts,cache_idx)#deletes first instance of the duplicate       
-#        y_pts=np.delete(y_pts,cache_idx)
-#        print("%i duplicated coordinate(s) were deleted" %len(cache_idx))
-#        for k in range(len(cache_idx)):#what are we actually deleting?
-#            if flag_sort[cache_idx[k]] == 'electrode':
-#                flag_sort[cache_idx[k]+1] = 'electrode'
-#                #this overwrites the flag string to say that this point is an electrode
-#                #otherwise we'll get a mismatch between the number of electrodes and mesh nodes assigned to the electrodes
-#        flag_sort=np.delete(flag_sort,cache_idx).tolist()
     
     #now add the surface points to the file
-    print('adding surface points and electrodes to input file...')
+    dump('adding surface points and electrodes to input file...')
     tot_pnts=0#setup a rolling total for points numbering
     sur_pnt_cache=[] # surface points cache 
     for i in range(len(x_pts)):
         tot_pnts=tot_pnts+1
-        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],y_pts[i],z_pts[i],flag_sort[i]))
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],0,z_pts[i],flag_sort[i]))
         sur_pnt_cache.append(tot_pnts)
     
     #make the lines between each point
@@ -401,9 +322,13 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         cl_factor = 1   
     
     #reflect surface topography at base of fine mesh area, should be a smoothed version of the topography
-    x_base = x_pts
-#    z_base = moving_average(y_pts - abs(doi),N=5) # compute the depth to the points at the base of the survey
-    z_base = y_pts - abs(doi)
+    extreme_check = np.max(np.diff(z_pts))>3*np.mean(np.diff(x_pts))
+    if extreme_check or len(x_pts)<5: # catched few x points or complicated topography 
+        div = 1
+    else:
+        div = 3
+    x_base = np.linspace(x_pts[0],x_pts[-1],int(len(x_pts)/div))
+    z_base = np.interp(x_base,x_pts,z_pts) - abs(fmd)
     
     # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
     if np.max(z_base) > np.min(electrodes[1]):
@@ -412,7 +337,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     basal_pnt_cache = []
     for i in range(len(x_base)):
         tot_pnts=tot_pnts+1
-        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//%s\n"%(tot_pnts,x_base[i],z_base[i],0,cl_factor,
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//%s\n"%(tot_pnts,x_base[i],0,z_base[i],cl_factor,
                  'base of smoothed mesh region'))
         basal_pnt_cache.append(tot_pnts)
     
@@ -444,18 +369,18 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("cln=%.2f;//characteristic length for background region\n" %cln)
     #Background region propeties, follow rule of thumb that background should be 5*largest dipole 
     flank=5*dp_len
-    b_max_depth=-abs(doi)-(3*dp_len)#background max depth
+    b_max_depth=-abs(fmd)-(3*dp_len)#background max depth
     #add Neumann boundaries on left hand side
     n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
     tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,y_pts[0],z_pts[0]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left upper point\n"%(tot_pnts,x_pts[0]-flank,0,z_pts[0]))
     tot_pnts=tot_pnts+1;n_pnt_cache[1]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,b_max_depth,z_pts[0]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far left lower point\n"%(tot_pnts,x_pts[0]-flank,0,b_max_depth))
     #add Neumann boundary points on right hand side
     tot_pnts=tot_pnts+1;n_pnt_cache[2]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,y_pts[-1],z_pts[-1]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right upper point\n"%(tot_pnts,x_pts[-1]+flank,0,z_pts[-1]))
     tot_pnts=tot_pnts+1;n_pnt_cache[3]=tot_pnts
-    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,b_max_depth,z_pts[-1]))
+    fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//far right lower point\n"%(tot_pnts,x_pts[-1]+flank,0,b_max_depth))
     #make lines encompassing all the points - counter clock wise fashion
     fh.write("//make lines encompassing all the background points - counter clock wise fashion\n")
     
@@ -488,7 +413,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     no_lin=tot_lins#+1
     no_pts=tot_pnts#+1
     #add borehole electrode strings
-    #print('probing for boundaries and other additions to the mesh')
+    #dump('probing for boundaries and other additions to the mesh')
     count = 0
     if bh_flag:
         fh.write("\n//Boreholes \n")
@@ -503,16 +428,16 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 fh.write("//End of borehole electrodes\n")
                 break
                 
-            bhx = electrodes[0][bh_idx]#get borehole coordinate information
-            bhy = electrodes[1][bh_idx]
+            bhx = np.array(electrodes[0])[bh_idx]#get borehole coordinate information
+            bhz = np.array(electrodes[1])[bh_idx]
             #cache the x and y coordinates 
             elec_x_cache = np.append(elec_x_cache,bhx)
-            elec_z_cache = np.append(elec_z_cache,bhy)
+            elec_z_cache = np.append(elec_z_cache,bhz)
             e_pt_idx = [0] *len(bhx)
             fh.write("// string electrodes for borehole %i\n"%count)
             for k in range(len(bhx)):
                 no_pts += 1 
-                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//borehole %i electrode\n"%(no_pts,bhx[k],bhy[k],0,count))
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//borehole %i electrode\n"%(no_pts,bhx[k],0,bhz[k],count))
                 e_pt_idx[k] = no_pts
             
             fh.write("//put lines between each electrode\n")
@@ -534,13 +459,11 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         count += 1
         key = 'polygon'+str(count)
 
-        try:
+        if key in geom_input.keys():
             plyx = geom_input[key][0]
-            plyy = geom_input[key][1]
-            try:
-                plyz = geom_input[key][2]
-            except IndexError:
-                plyz = [0]*len(plyx)
+            plyz = geom_input[key][1]
+            plyy= [0]*len(plyx)
+            
             pt_idx = [0] *len(plyx)
             fh.write("//polygon vertices for polygon %i\n"%count)
             for k in range(len(plyx)):
@@ -560,16 +483,15 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             #make line loop out of polygon
             fh.write("//make lines forming polygons from line loops\n")
             no_lin += 1
-#            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
             fh.write("Line Loop(%i) = {%s};\n"%(no_lin,str(line_idx).strip('[').strip(']')))
             line_loops.append(no_lin)
             no_plane +=1
             fh.write("Plane Surface(%i) = {%i};\n"%(no_plane,no_lin))
             fh.write("Physical Surface (%i) = {%i};\n"%(no_plane,no_plane))
             
-        except KeyError:
+        else: 
             fh.write("//end of polygons.\n")
-            print('%i polygons added to input file'%(count-1))
+            dump('%i polygons added to input file'%(count-1))
             break  
         
     line_loops = np.array(line_loops)
@@ -591,11 +513,11 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         e_pt_idx = [0]*len(buried_x)
         for k in range(len(buried_x)):
             no_pts += 1 
-            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_z[k],buried_y[k],k+1))
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//buried electrode %i\n"%(no_pts,buried_x[k],buried_y[k],buried_z[k],k+1))
             e_pt_idx[k] = no_pts
         
         node_pos = np.append(node_pos,e_pt_idx) #add borehole nodes to electrode node positions 
-        fh.write("Point{%s} In Surface{%i};\n"%(str(e_pt_idx).strip('[').strip(']'), no_plane))
+        fh.write("Point{%s} In Surface{%i};//include node in meshing\n"%(str(e_pt_idx).strip('[').strip(']'), no_plane))
         fh.write("//end of buried electrodes.\n")
         elec_x_cache = np.append(elec_x_cache,buried_x)
         elec_z_cache = np.append(elec_z_cache,buried_z)
@@ -610,7 +532,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             no_pts += 1
             remote_x = x_pts[0]-flank + 10*np.random.rand()
             remote_z = b_max_depth  + 10*np.random.rand()
-            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//remote electrode\n"%(no_pts,remote_x,remote_z,z_pts[0]))
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
             e_pt_idx[k] = no_pts
             elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
             elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])
@@ -625,13 +547,11 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     while True:
         count += 1        
         key = 'boundary'+str(count)
-        try:
+        
+        if key in geom_input.keys():
             bdx = geom_input[key][0]
-            bdy = geom_input[key][1]
-            try:
-                bdz = geom_input[key][2]
-            except IndexError:
-                bdz = [0]*len(bdx)
+            bdz = geom_input[key][1]
+            bdy = [0]*len(bdx)
             pt_idx = [0] *len(bdx)
             fh.write("// vertices for boundary line %i\n"%count)
             for k in range(len(bdx)):
@@ -647,14 +567,14 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 line_idx.append(no_lin)
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
                 
-        except KeyError:
+        else:
             fh.write("//end of boundaries.\n")
-            print('%i boundary(ies) added to input file'%(count-1))
+            dump('%i boundary(ies) added to input file'%(count-1))
             break              
                     
-    fh.write("\n//j'ai fini!\n")
+    fh.write("\n//End gmsh script\n")
     fh.close()
-    print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
+    dump("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
     
     if len(node_pos) != len(elec_x_cache):
         warnings.warn("looks like something has gone wrong with node orderings, total x != total nodes.")
@@ -674,9 +594,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     return ordered_node_pos 
 
 #%% parse a .msh file
-def msh_parse(file_path):
-    """
-    Converts a 2d gmsh mesh file into a mesh class used in pyR2
+def msh_parse(file_path,debug=True):
+    """Converts a gmsh mesh file into 
     
     Parameters
     ----------
@@ -687,166 +606,198 @@ def msh_parse(file_path):
     ----------
     Mesh class
     """
+    if debug: # print outputs? 
+        def stream(s,**kwargs):
+            print(s,**kwargs)
+    else:
+        def stream(s):
+            pass 
+        
     if not isinstance(file_path,str):
         raise Exception("expected a string argument for msh_parser")
-    # open file and read in header lines
-    print("parsing gmsh mesh...\n")
     fid=open(file_path,'r')# Open text file
     #Idea: Read Mesh format lines $MeshFormat until $Nodes
-    line1=fid.readline()
+    dump=fid.readlines()
+    fid.close()
+    if len(dump) <= 1:
+        raise Exception("Target file is empty!!...aborting!")
     #check the file is a mesh format
-    if line1.strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
-        raise ImportError("unrecognised file type...")
-    mesh_format=fid.readline()#reads the next line
-    if mesh_format.strip() != '2.2 0 8':#warn people that the code was developed with this file format in mind
-        print('Warning: the mesh file type version is different to the mesh converter development version ... some errors may occur!\n')   
-    line3=fid.readline()#endofmeshformat
-    line4=fid.readline()#nodes
+    if dump[0].strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
+        raise Exception("Unrecognised file type...aborting!")
+    mesh_format=dump[1].strip() 
+    formats = ['2.2 0 8','4 0 8']
+    if mesh_format not in formats:#warn people that the code was developed with a different mesh format in mind
+        warnings.warn('Mesh file format unrecognised ... some errors may occur!\n')   
     
-    print('importing node coordinates...')
+    stream('Reading %s'%file_path)
+    
+    if mesh_format == '2.2 0 8':
+        stream('Gmsh version == 3.x')
+        gmshV = 3 # assume its gmsh version 3.06
+    else:
+        stream('Gmsh version == 4.x')
+        gmshV = 4 # assume V4 and above 
+    
+    #find where the nodes start 
+    for i, line in enumerate(dump):
+        if line.find("$Nodes") != -1:#node flag 
+            line = dump[i+1].split()
+            no_nodes=int(line[-1])
+            node_start = i+2
+        elif line.find("$EndNodes") != -1:
+            node_end = i
+            break # stop the loop, should find the nodes start before the end 
+    stream('reading node coordinates...')
     #read in number of nodes - at line 5
-    no_nodes=int(fid.readline().strip())
     #allocate lists for node numbers and coordinates
     node_num=[0]*no_nodes
-    x_coord=[0]*no_nodes
-    y_coord=[0]*no_nodes
-    z_coord=[0]*no_nodes
+    nodex=[0]*no_nodes
+    nodey=[0]*no_nodes
+    nodez=[0]*no_nodes
     #read in node information
-    for i in range(no_nodes):
-        line_info=fid.readline().split()
+    node_idx = 1
+    for i in range(node_start, node_end):
+        line_info=dump[i].split()
         #convert string info into floats
-        data_dump=[float(k) for k in line_info]
-        node_num[i]=int(data_dump[0])
-        x_coord[i]=data_dump[1]
-        y_coord[i]=data_dump[2]
-        z_coord[i]=data_dump[3]
+        line=[float(k) for k in line_info]
+        previous_node = node_idx 
+        node_idx = int(line[0])
+        if not node_idx < previous_node: # else then its some weird flag used by gmsh, ignore
+            node_num[node_idx-1]=node_idx
+            nodex[node_idx-1]=line[1]
+            nodey[node_idx-1]=line[2]
+            nodez[node_idx-1]=line[3]
     
-    #### read in elements   
-    print('reading connection matrix')
-    #read in two lines $EndNodes and $Elements
-    Endnodes=fid.readline()
-    Elements=fid.readline()
-    #number of elements
-    no_elements=int(fid.readline().strip())
-    #engage for loop - this time we want to filter out elements which are not triangles
-    #... looking at the gmsh docs its elements of type 2 we are after (R2 only needs this information) 
+    #### read in elements 
+    # find where the elements start 
+    for i, line in enumerate(dump):
+        if line.find("$Elements") != -1:
+            element_start = i+2
+        if line.find("$EndElements") != -1:
+            element_end = i
+            break # stop the loop, should find the nodes start before the end 
+    
+    #engage for loop - this time we want to filter out elements which are not needed 
     nat_elm_num = []#native element number to gmsh
     elm_type = []#element type
-    number_of_tags = []
-    phys_entity = []#defines the physical entity type the element is assocaited with
-    elem_entity = []#which plane surface the element is assocaited with
-    node1 = []#first node of triangle 
-    node2 = []
-    node3 = []#last node of triangle 
+    phys_entity = [] # defines the physical entity type the element is assocaited with
+
     ignored_elements=0#count the number of ignored elements
-    for i in range(no_elements):
-        line_info=fid.readline().split()
-        if line_info[1]=='2':# then its the right element type!
+    
+    #determine element type 
+    stream('Determining element type...',end='') # this depends a bit on the version of gmsh 
+    for i in range(element_start,element_end):
+        line = dump[i].split()
+        if gmshV == 3:
+            elm_type.append(int(line[1]))
+        else:
+            elm_type.append(len(line) - 1)
+    
+    #if using gmsh version 4.x filter out the flag lines 
+    if gmshV == 4:
+        flagline = []
+        flagidx = []
+        flaglines = int(dump[element_start-1].split()[0])
+    
+        line = dump[element_start].split()
+        flagline.append(dump[element_start])
+        flagidx.append(element_start)
+        skip = int(line[-1])
+        for i in range(flaglines-1): 
+            line = dump[element_start+skip+1].split()
+            flagline.append(dump[element_start+skip+1])
+            flagidx.append(element_start+skip+1)
+            skip = int(line[-1])
+    
+    if gmshV == 3:
+        lookin4 = [2,4,6] # number of cell nodes we are looking for 
+    else:
+        lookin4 = [3,4,6]
+    if lookin4[0] in elm_type: # then its triangles 
+        npere = 3 # number of nodes per element
+    if lookin4[1] in elm_type: # forget triangles its tetrahedra
+        npere = 4
+    if lookin4[2] in elm_type: # forget triangles its prisms 
+        npere = 6  
+        
+    if npere == 3: 
+        stream('Triangle')
+        con_matrix = [[],[],[]]
+        cell_type = [5]
+    elif npere == 4: 
+        stream('Tetrahedra')
+        con_matrix = [[],[],[],[]]
+        cell_type = [10]
+    elif npere == 6:
+        stream('Prism')
+        con_matrix = [[],[],[],[],[],[]]
+        cell_type = [13]
+    else:
+        raise ValueError('Cannot parse mesh becuase the relevant cell types cannot be found')
+        
+    stream('Reading connection matrix...')
+        
+    phys = 0
+    for i in range(element_start,element_end):
+        splitted = dump[i].split()
+        line=[int(k) for k in splitted]
+        if gmshV == 3: 
+            elmV = line[1]
+            if npere == 3:
+                elmV+=1 # in this format the flag for triangle elements is 2 so add 1
+            st = 5
+        else:
+            elmV = len(line) - 1
+            st = 1
+            if i in flagidx:
+                phys += 1 # physical entity incriments with flag lines 
+                elmV = -1 # then ignore this line as it's a flag
+        
         #convert string info into floats and cache data
-            data_dump=[int(k) for k in line_info]
-            nat_elm_num.append(data_dump[0])
-            elm_type.append(data_dump[1]) 
-            number_of_tags.append(data_dump[2]) 
-            phys_entity.append(data_dump[3]) 
-            elem_entity.append(data_dump[4]) 
-            node1.append(data_dump[5]) 
-            node2.append(data_dump[6]) 
-            node3.append(data_dump[7])
+        if npere == elmV:
+            nat_elm_num.append(line[0])
+            elm_type.append(line[1]) 
+            if gmshV == 4:
+                phys_entity.append(phys)
+            else:
+                phys_entity.append(line[4]) 
+            
+            for j in range(npere):
+                con_matrix[j].append(line[st+j]-1)
         else:
             ignored_elements += 1
-    print("ignoring %i non-triangle elements in the mesh file, as they are not required for R2"%ignored_elements)
-    real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
-    
-    ##clock wise correction and area / centre computations 
-    #make sure in nodes in triangle are counterclockwise as this is waht r2 expects
-    c_triangles=[]#'corrected' triangles 
-    num_corrected=0#number of elements that needed 'correcting'
-    centriod_x=[]
-    centriod_y=[]
-    areas=[]
-    for i in range(real_no_elements):
-        n1=(x_coord[node1[i]-1],y_coord[node1[i]-1])#define node coordinates
-        n2=(x_coord[node2[i]-1],y_coord[node2[i]-1])#we have to take 1 off here cos of how python indexes lists and tuples
-        n3=(x_coord[node3[i]-1],y_coord[node3[i]-1])
-        #see if triangle is counter-clockwise
-        if ccw(n1,n2,n3) == 1: #points are clockwise and therefore need swapping round
-            #exchange elements in rows 6 and 7 to change direction
-            c_triangles.append((node2[i],node1[i],node3[i]))
-            num_corrected=num_corrected+1
-        else:
-            c_triangles.append((node1[i],node2[i],node3[i]))
-        #compute triangle centre
-        xy_tuple=tri_cent(n1,n2,n3)#actual calculation
-        centriod_x.append(xy_tuple[0])
-        centriod_y.append(xy_tuple[1])
-        #compute area (for a triangle this is 0.5*base*height)
-        base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
-        mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
-        height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-        areas.append(0.5*base*height)
-        
-    #print warning if areas of zero found, this will cuase problems in R2
-    try:
-        if min(areas)==0:
-            warnings.warn("elements with no area have been detected in 'mesh.dat', inversion with R2 unlikey to work!" )
-    except ValueError:#if mesh hasnt been read in this is where the error occurs 
-        raise Exception("It looks like no elements have read into pyR2, its likley gmsh has failed to produced a stable mesh. Consider checking the mesh input (.geo) file.")
             
-    print("%i element node orderings had to be corrected because they were found to be orientated clockwise\n"%num_corrected)
-    fid.close()
+    stream("ignoring %i elements in the mesh file, as they are not required for R2/R3t"%ignored_elements)
     
-    ### return dictionary which can be converted to mesh class ### 
-    no_regions=max(elem_entity)#number of regions in the mesh
-    regions=arange(1,1,no_regions,1)
-    assctns=[]
-    #following for loop finds the element number ranges assocaited with a distinct region in the mesh
-    for k in regions:
-        indx=[m for m in range(len(elem_entity)) if elem_entity[m]==k]
-        if len(indx) > 0:
-            assctns.append((k,min(indx)+1,max(indx)+1))
-    #create a dump of the mesh data incase the user wants to see it later on   
-    dump={'nat_elm_num':nat_elm_num,
-          'elm_type':elm_type,
-          'number_of_tags':number_of_tags,
-          'phys_entity':phys_entity,
-          'elem_entity':elem_entity,
-          'string_data':[line1,mesh_format,line3,line4,Endnodes,Elements]} 
-    #convert c_triangles into mesh object format for later recall
-    node_dump=[[],[],[]]
-    for i in range(real_no_elements):
-        node_dump[0].append(c_triangles[i][0]-1)#node 1
-        node_dump[1].append(c_triangles[i][1]-1)#node 2
-        node_dump[2].append(c_triangles[i][2]-1)#node 3
+    real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
+    if real_no_elements == 0:
+        stream("no elements found... aborting" )
+        raise Exception ("No elements have been imported, please check formatting of .msh file")
+            
+    elm_id = [i+1 for i in range(real_no_elements)]
+            
+    mesh_dict = {'num_elms':real_no_elements,
+                'num_nodes':no_nodes,
+                'dump':dump,      
+                'node_x':nodex,#x coordinates of nodes 
+                'node_y':nodey,#y coordinates of nodes
+                'node_z':nodez,#z coordinates of nodes 
+                'node_id':node_num,#node id number 
+                'elm_id':elm_id,#element id number 
+                'node_data':con_matrix,#nodes of element vertices
+                'cell_type':cell_type,
+                'parameters':phys_entity,#the values of the attributes given to each cell 
+                'parameter_title':'regions',
+                'dict_type':'mesh_info',
+                'original_file_path':file_path} 
     
-    #return a dictionary detailing the mesh 
-    return {'num_elms':real_no_elements,
-            'num_nodes':no_nodes,
-            'num_regions':no_regions,
-            'regions':elem_entity,
-            'element_ranges':assctns,
-            'dump':dump,      
-            'node_x':x_coord,#x coordinates of nodes 
-            'node_y':z_coord,#y coordinates of nodes - nb swapped around as meshTools sees z as elevation
-            'node_z':y_coord,#z coordinates of nodes 
-            'node_id':node_num,#node id number 
-            'elm_id':np.arange(1,real_no_elements+1,1),#element id number 
-            'num_elm_nodes':3,#number of points which make an element
-            'node_data':node_dump,#nodes of element vertices
-            'elm_centre':(centriod_x,[0]*len(centriod_x),centriod_y),#centre of elements (x,y)
-            'elm_area':areas,
-            'cell_type':[5],
-            'parameters':phys_entity,#the values of the attributes given to each cell 
-            'parameter_title':'material',
-            'dict_type':'mesh_info',
-            'original_file_path':file_path} 
+    stream('Finished reading .msh file')
     
-    #we could return a mesh object here, but a dictionary is easier to debug with spyder, 
-    #also we'd need to import the mesh class, and its not a good idea to have modules
-    #importing each other, as meshTools has a dependency on gmshWrap. 
+    return mesh_dict # return a python dictionary 
         
 #%% 2D whole space 
 def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_input = None,
-                       file_path='mesh.geo',cl=-1,cl_factor=50,doi=None,dp_len=None):
+                       file_path='mesh.geo',cl=-1,cl_factor=50,fmd=None,dp_len=None):
     """Writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
     
     Parameters
@@ -867,7 +818,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
         assocaited elements will be. Usually no bigger than 5.
     cl_factor: float, optional
         Describes the growth factor applied to the outer fine mesh region.  
-    doi: N/A
+    fmd: N/A
         Parameter is not used. Needed for keyword argument compatiblity with 
         genGeoFile.
     dp_len: N/A
@@ -925,18 +876,6 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
         
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
-        
-    def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
-        dist = np.zeros((len(elec_x),len(elec_x)))   
-        x1 = np.array(elec_x)
-        y1 = np.array(elec_y)
-        z1 = np.array(elec_z)
-        for i in range(len(elec_x)):
-            x2 = elec_x[i]
-            y2 = elec_y[i]
-            z2 = elec_z[i]
-            dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
-        return dist.flatten() # array of all electrode distances 
     
     if cl==-1:
         dist_sort = np.unique(find_dist(elec_x,[0]*len(elec_x),elec_z))
@@ -963,16 +902,16 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     #add points to file 
     no_pts = 1
     loop_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, max_x, max_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, max_x, 0, max_z))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, max_x, min_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, max_x, 0, min_z))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, min_x, min_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, min_x, 0, min_z))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, min_x, max_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl_pad};\n"%(no_pts, min_x, 0, max_z))
     
     #add line loop
     no_lns = 0 
@@ -991,16 +930,16 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     fh.write("cl2 = %.2f;\n"%cl2)
     no_pts += 1
     nmn_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, max_z+flank_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, 0, max_z+flank_z))
     no_pts += 1
     nmn_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, min_z-flank_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x+flank_x, 0, min_z-flank_z))
     no_pts += 1
     nmn_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, min_z-flank_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, 0, min_z-flank_z))
     no_pts += 1
     nmn_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, max_z+flank_z, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x-flank_x, 0, max_z+flank_z))
     
     for i in range(4):
         no_lns += 1 
@@ -1018,7 +957,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     for i in range(len(elec_x)):
         no_pts += 1
         node_pos[i] = no_pts
-        fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_z[i], 0))
+        fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], 0, elec_z[i]))
         fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
     fh.write("//End electrodes\n")
     
@@ -1030,13 +969,10 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
         count += 1
         key = 'polygon'+str(count)
 
-        try:
+        if key in geom_input.keys():
             plyx = geom_input[key][0]
-            plyy = geom_input[key][1]
-            try:
-                plyz = geom_input[key][2]
-            except IndexError:
-                plyz = [0]*len(plyx)
+            plyz = geom_input[key][1]
+            plyy = [0]*len(plyx)
             pt_idx = [0] *len(plyx)
             fh.write("//polygon vertices for polygon %i\n"%count)
             for k in range(len(plyx)):
@@ -1061,7 +997,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
             fh.write("//Plane Surface(%i) = {%i};\n"%(no_plane,no_lin))
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
             
-        except KeyError:
+        else: 
             fh.write("//end of polygons.\n")
             print('%i polygons added to input file'%(count-1))
             break  
@@ -1072,13 +1008,10 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
         count += 1        
         key = 'boundary'+str(count)
 
-        try:
+        if key in geom_input.keys(): 
             bdx = geom_input[key][0]
-            bdy = geom_input[key][1]
-            try:
-                bdz = geom_input[key][2]
-            except IndexError:
-                bdz = [0]*len(bdx)
+            bdz = geom_input[key][1]
+            bdy = [0]*len(bdx)
             pt_idx = [0] *len(bdx)
             fh.write("// vertices for boundary line %i\n"%count)
             for k in range(len(bdx)):
@@ -1094,7 +1027,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
                 line_idx.append(no_lin)
             fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
                 
-        except KeyError:
+        else:
             fh.write("//end of boundaries.\n")
             print('%i boundary(ies) added to input file'%(count-1))
             break              
@@ -1105,7 +1038,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 
 #%% 3D half space 
 
-def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
+def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
            cl=-1, cl_factor=8, cln_factor=100, dp_len=-1, mesh_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
@@ -1120,7 +1053,7 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
         z is the depth below the surface. 
     padding: float, optional
         Padding in percent on the size the fine mesh region extent. Must be bigger than 0.
-    doi: float, optional 
+    fmd: float, optional 
         Depth of investigation of the survey. 
     file_path: string, optional 
         name of the generated gmsh file (can include file path also) (optional)
@@ -1155,6 +1088,12 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
                 
     #### TODO: search through each set of points and check for repeats ?
     """
+    if dp_len != -1 and dp_len<0:
+        raise ValueError('Can not have a negative dipole length')
+    if fmd != -1 and fmd<0:#then set to a default 
+        raise ValueError('Can not have a negative depth of fine mesh')
+    if cl != -1 and cl<0:
+        raise ValueError('Can not have a negative mesh characteristic length')
     
     elec_x = electrodes[0]
     elec_y = electrodes[1]
@@ -1178,20 +1117,20 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
         
     if dp_len == -1: # compute largest possible dipole length 
         if not triggered:# Avoid recalculating if done already 
+            triggered = True
             dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         dp_len = dist_sort[-1] # maximum possible dipole length
     
-    if doi == -1: # compute depth of investigation
-        try:
-            doi = dist_sort[-1]/3 # maximum possible dipole length / 3
-        except NameError: # putting in try to avoid recalculating if done already 
+    if fmd == -1: # compute depth of investigation
+        if not triggered:
             dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
-            doi = dist_sort[-1]/3
-    if doi >= np.min(elec_z):
-        warnings.warn('depth of investigation is shaller than lowest electrode, adding 5 units below lowest electrode')
-        doi = np.min(elec_z) - 5 
+        fmd = dist_sort[-1]/3 # maximum possible dipole length / 3
+
+    if fmd < abs(np.min(elec_z)):
+        warnings.warn('depth of fine mesh is shaller than lowest electrode, adjusting...')
+        fmd = abs(np.min(elec_z)) + (dp_len*2)
         
-    print('doi in gmshWrap.py: %f'%doi)
+    print('fmd in gmshWrap.py: %f'%fmd)
     ### start to write to file ### 
     fh = open(file_path,'w') #file handle
     
@@ -1233,21 +1172,21 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
         else:
             fh.write("Line(%i) = {%i,%i};\n"%(no_lns,loop_pt_idx[i],loop_pt_idx[i+1]))
     
-    doi = abs(doi)
+    fmd = abs(fmd)
     #add points below surface to make a rectangular volume  
     fh.write("cl2=cl*%.2f;//define characteristic length for base of fine mesh region\n" %cl_factor)       
     no_pts += 1
     loop2_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x, max_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x, max_y, -fmd))
     no_pts += 1
     loop2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x, min_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, max_x, min_y, -fmd))
     no_pts += 1
     loop2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x, min_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x, min_y, -fmd))
     no_pts += 1
     loop2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x, max_y, -doi))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl2};\n"%(no_pts, min_x, max_y, -fmd))
     
     #add line loops to connect the points just made 
     for i in range(4):
@@ -1267,7 +1206,7 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
     #Neumann boundary 
     flank_x = 5 * dp_len
     flank_y = 5 * dp_len
-    flank_z = 3*abs(doi)
+    flank_z = 3*fmd
     fh.write("//Neumannn boundary points\n")
     cln = cl*cln_factor # nuemom boundary characteristic length 
     fh.write("cln = %.2f;//characteristic length for background region\n"%cln)
@@ -1294,16 +1233,16 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
     #base of background region      
     no_pts += 1
     nmn2_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, max_y+flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, max_y+flank_y, -fmd - flank_z))
     no_pts += 1
     nmn2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, min_y-flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, max_x+flank_x, min_y-flank_y, -fmd - flank_z))
     no_pts += 1
     nmn2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, min_y-flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, min_y-flank_y, -fmd - flank_z))
     no_pts += 1
     nmn2_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, max_y+flank_y, -doi - flank_z))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cln};\n"%(no_pts, min_x-flank_x, max_y+flank_y, -fmd - flank_z))
     
     for i in range(4):
         no_lns += 1 
@@ -1355,218 +1294,156 @@ def box_3d(electrodes, padding=20, doi=-1, file_path='mesh3d.geo',
         node_pos[i] = no_pts
         if elec_z[i] == 0:
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
-            fh.write("Point{%i} In Surface{1};\n"%(no_pts))# put the point surface
+            fh.write("Point{%i} In Surface{1};//surface electrode\n"%(no_pts))# put the point on surface
         else:
+            if elec_z[i]>0:
+                raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have buried electrodes above the surface!")
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
-            fh.write("Point{%i} In Volume{1};\n"%(no_pts))# put the point in volume 
+            fh.write("Point{%i} In Volume{1};//buried electrode\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
+    fh.close()
     print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
     return np.array(node_pos) 
     
 #%% parse a .msh file
-def msh_parse_3d(file_path):
-    """
-    Converts a 3d gmsh mesh file into a mesh class used in ResIPy
+# def msh_parse_3d(file_path):
+#     """
+#     Converts a 3d gmsh mesh file into a mesh class used in ResIPy
     
-    Parameters
-    ----------
-    file_path: string
-        file path to mesh file. note that a error will occur if the file format is not as expected
+#     Parameters
+#     ----------
+#     file_path: string
+#         file path to mesh file. note that a error will occur if the file format is not as expected
    
-    Returns
-    ----------
-    Mesh class
-    """
-    if not isinstance(file_path,str):
-        raise Exception("expected a string argument for msh_parser")
-    print("parsing gmsh mesh...\n")
-    fid=open(file_path,'r')# Open text file
-    #Idea: Read Mesh format lines $MeshFormat until $Nodes
-    dump=fid.readlines()
-    fid.close()
-    #check the file is a mesh format
-    if dump[0].strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
-        raise ImportError("unrecognised file type...")
-    mesh_format=dump[1] 
-    if mesh_format.strip() != '2.2 0 8':#warn people that the code was developed with this file format in mind
-        print('Warning: the mesh file type version is different to the mesh converter development version ... some errors may occur!\n')   
+#     Returns
+#     ----------
+#     Mesh class
+#     """
+#     if not isinstance(file_path,str):
+#         raise Exception("expected a string argument for msh_parser")
+#     print("parsing gmsh mesh...\n")
+#     fid=open(file_path,'r')# Open text file
+#     #Idea: Read Mesh format lines $MeshFormat until $Nodes
+#     dump=fid.readlines()
+#     fid.close()
+#     #check the file is a mesh format
+#     if dump[0].strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
+#         raise ImportError("unrecognised file type...")
+#     mesh_format=dump[1] 
+#     if mesh_format.strip() != '2.2 0 8':#warn people that the code was developed with this file format in mind
+#         print('Warning: the mesh file type version is different to the mesh converter development version ... some errors may occur!\n')   
     
-    #find where the nodes start 
-    for i, line in enumerate(dump):
-        if line.find("$Nodes") != -1:#node flag 
-            no_nodes=int(dump[i+1])
-            node_start = i+2
-        if line.find("$EndNodes") != -1:
-            node_end = i
-            break # stop the loop, should find the nodes start before the end 
-    print('importing node coordinates...')
-    #read in number of nodes - at line 5
-    #allocate lists for node numbers and coordinates
-    node_num=[0]*no_nodes
-    x_coord=[0]*no_nodes
-    y_coord=[0]*no_nodes
-    z_coord=[0]*no_nodes
-    #read in node information
-    node_idx = 1
-    for i in range(node_start, node_end):
-        line_info=dump[i].split()
-        #convert string info into floats
-        line_data=[float(k) for k in line_info]
-        previous_node = node_idx 
-        node_idx = int(line_data[0])
-        if not node_idx < previous_node: # else then its some weird flag used by gmsh, ignore
-            node_num[node_idx-1]=node_idx
-            x_coord[node_idx-1]=line_data[1]
-            y_coord[node_idx-1]=line_data[2]
-            z_coord[node_idx-1]=line_data[3]
+#     #find where the nodes start 
+#     for i, line in enumerate(dump):
+#         if line.find("$Nodes") != -1:#node flag 
+#             no_nodes=int(dump[i+1])
+#             node_start = i+2
+#         if line.find("$EndNodes") != -1:
+#             node_end = i
+#             break # stop the loop, should find the nodes start before the end 
+#     print('importing node coordinates...')
+#     #read in number of nodes - at line 5
+#     #allocate lists for node numbers and coordinates
+#     node_num=[0]*no_nodes
+#     x_coord=[0]*no_nodes
+#     y_coord=[0]*no_nodes
+#     z_coord=[0]*no_nodes
+#     #read in node information
+#     node_idx = 1
+#     for i in range(node_start, node_end):
+#         line_info=dump[i].split()
+#         #convert string info into floats
+#         line_data=[float(k) for k in line_info]
+#         previous_node = node_idx 
+#         node_idx = int(line_data[0])
+#         if not node_idx < previous_node: # else then its some weird flag used by gmsh, ignore
+#             node_num[node_idx-1]=node_idx
+#             x_coord[node_idx-1]=line_data[1]
+#             y_coord[node_idx-1]=line_data[2]
+#             z_coord[node_idx-1]=line_data[3]
     
-    #### read in elements 
-    # find where the elements start 
-    for i, line in enumerate(dump):
-        if line.find("$Elements") != -1:#node flag 
-            no_elements=int(dump[i+1])#number of elements
-            element_start = i+2
-        if line.find("$EndElements") != -1:
-            element_end = i
-            break # stop the loop, should find the nodes start before the end 
-    print('reading connection matrix...')
+#     #### read in elements 
+#     # find where the elements start 
+#     for i, line in enumerate(dump):
+#         if line.find("$Elements") != -1:#node flag 
+#             no_elements=int(dump[i+1])#number of elements
+#             element_start = i+2
+#         if line.find("$EndElements") != -1:
+#             element_end = i
+#             break # stop the loop, should find the nodes start before the end 
+#     print('reading connection matrix...')
     
-    #engage for loop - this time we want to filter out elements which are not tetrahedron
-    #... looking at the gmsh docs its elements of type 2 we are after (R2 only needs this information) 
-    nat_elm_num = []#native element number to gmsh
-    elm_type = []#element type
-    number_of_tags = []
-    phys_entity = []#defines the physical entity type the element is assocaited with
-    elem_entity = []#which plane surface the element is assocaited with
-    node1 = []#first node of triangle 
-    node2 = []
-    node3 = []
-    node4 = []#last node of tetrahedra
-    node5 = []
-    node6 = []
-    npere = 4 
-    ignored_elements=0#count the number of ignored elements
-    for i in range(element_start,element_end):
-        line_data=[int(k) for k in dump[i].split()]
-        if line_data[1]==4:# then its the right element type!
-        #convert string info into floats and cache data
-            prism = False
-            nat_elm_num.append(line_data[0])
-            elm_type.append(line_data[1]) 
-            number_of_tags.append(line_data[2]) 
-            phys_entity.append(line_data[3]) 
-            elem_entity.append(line_data[4]) 
-            node1.append(line_data[5]-1) #we have to take 1 off here cos of how python indexes lists and tuples
-            node2.append(line_data[6]-1) 
-            node3.append(line_data[7]-1)
-            node4.append(line_data[8]-1)
-        elif line_data[1]==6: # prism mesh 
-            prism = True
-            nat_elm_num.append(line_data[0])
-            elm_type.append(line_data[1]) 
-            number_of_tags.append(line_data[2]) 
-            phys_entity.append(line_data[3]) 
-            elem_entity.append(line_data[4]) 
-            node1.append(line_data[5]-1) 
-            node2.append(line_data[6]-1) 
-            node3.append(line_data[7]-1)
-            node4.append(line_data[8]-1)
-            node5.append(line_data[9]-1)
-            node6.append(line_data[10]-1)
-            npere = 6
-        else:
-            ignored_elements += 1
-    print("ignoring %i non-tetrahedra (or prism) elements in the mesh file, as they are not required for R3t"%ignored_elements)
-    real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
+#     #engage for loop - this time we want to filter out elements which are not tetrahedron
+#     #... looking at the gmsh docs its elements of type 2 we are after (R2 only needs this information) 
+#     nat_elm_num = []#native element number to gmsh
+#     elm_type = []#element type
+#     number_of_tags = []
+#     phys_entity = []#defines the physical entity type the element is assocaited with
+#     elem_entity = []#which plane surface the element is assocaited with
+#     node1 = []#first node of triangle 
+#     node2 = []
+#     node3 = []
+#     node4 = []#last node of tetrahedra
+#     node5 = []
+#     node6 = []
+#     ignored_elements=0#count the number of ignored elements
+#     for i in range(element_start,element_end):
+#         line_data=[int(k) for k in dump[i].split()]
+#         if line_data[1]==4:# then its the right element type!
+#         #convert string info into floats and cache data
+#             prism = False
+#             nat_elm_num.append(line_data[0])
+#             elm_type.append(line_data[1]) 
+#             number_of_tags.append(line_data[2]) 
+#             phys_entity.append(line_data[3]) 
+#             elem_entity.append(line_data[4]) 
+#             node1.append(line_data[5]-1) #we have to take 1 off here cos of how python indexes lists and tuples
+#             node2.append(line_data[6]-1) 
+#             node3.append(line_data[7]-1)
+#             node4.append(line_data[8]-1)
+#         elif line_data[1]==6: # prism mesh 
+#             prism = True
+#             nat_elm_num.append(line_data[0])
+#             elm_type.append(line_data[1]) 
+#             number_of_tags.append(line_data[2]) 
+#             phys_entity.append(line_data[3]) 
+#             elem_entity.append(line_data[4]) 
+#             node1.append(line_data[5]-1) 
+#             node2.append(line_data[6]-1) 
+#             node3.append(line_data[7]-1)
+#             node4.append(line_data[8]-1)
+#             node5.append(line_data[9]-1)
+#             node6.append(line_data[10]-1)
+#         else:
+#             ignored_elements += 1
+#     print("ignoring %i non-tetrahedra (or prism) elements in the mesh file, as they are not required for R3t"%ignored_elements)
+#     real_no_elements=len(nat_elm_num) #'real' number of elements that we actaully want
     
-    #compute element centres 
-    centriod_x=[]
-    centriod_y=[]
-    centriod_z=[]
-    areas=[]
-    
-    if not prism:
-        node_dump = [node1,node2,node3,node4]
-        cell_typ = [10]
-        for i in range(real_no_elements):
-            n1=(x_coord[node1[i]],y_coord[node1[i]],z_coord[node1[i]])#define node coordinates
-            n2=(x_coord[node2[i]],y_coord[node2[i]],z_coord[node2[i]])
-            n3=(x_coord[node3[i]],y_coord[node3[i]],z_coord[node3[i]])
-            n4=(x_coord[node4[i]],y_coord[node4[i]],z_coord[node4[i]])
-            centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0]))/npere)
-            centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1]))/npere)
-            centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2]))/npere)
-    else:
-        #make sure in nodes in triangle are counterclockwise as this is what R3t expects
-        c_triangles_bot=[]#'corrected' triangles 
-        c_triangles_top=[]#'corrected' triangles 
-        num_corrected=0#number of elements that needed 'correcting'
-        areas=[]
-        #upside_down = 0 
-        for i in range(real_no_elements):
-            n1=(x_coord[node1[i]],y_coord[node1[i]],z_coord[node1[i]])#define node coordinates
-            n2=(x_coord[node2[i]],y_coord[node2[i]],z_coord[node2[i]])
-            n3=(x_coord[node3[i]],y_coord[node3[i]],z_coord[node3[i]])
-            n4=(x_coord[node4[i]],y_coord[node4[i]],z_coord[node4[i]])
-            n5=(x_coord[node5[i]],y_coord[node5[i]],z_coord[node5[i]])
-            n6=(x_coord[node6[i]],y_coord[node6[i]],z_coord[node6[i]])
-            #see if triangle is counter-clockwise
-            if ccw(n1,n2,n3) == 1: #points are clockwise and therefore need swapping round
-                c_triangles_bot.append((node2[i],node1[i],node3[i]))
-                num_corrected=num_corrected+1
-            else:
-                c_triangles_bot.append((node1[i],node2[i],node3[i]))
-            if ccw(n4,n5,n6) == 1: 
-                c_triangles_top.append((node5[i],node4[i],node6[i]))
-                num_corrected=num_corrected+1
-            else:
-                c_triangles_top.append((node4[i],node5[i],node6[i]))
-            #see if prisms are upside down 
-#            if n4[2] < n1[2]:
-#                print('uppy duppy prism')
+#     if not prism:
+#         node_dump = (node1,node2,node3,node4)
+#         cell_typ = [10]
+#     else:
+#         node_dump = [node1,node2,node3,node4,node5,node6]
+#         cell_typ = [13]
 
-            #compute volume (for a prism this is 0.5*base*height*width)
-            base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
-            mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
-            width=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-            height = abs(n1[2] - n4[2])
-            areas.append(0.5*base*width*height)
-            centriod_x.append(sum((n1[0],n2[0],n3[0],n4[0],n5[0],n6[0]))/npere)
-            centriod_y.append(sum((n1[1],n2[1],n3[1],n4[1],n5[1],n6[1]))/npere)
-            centriod_z.append(sum((n1[2],n2[2],n3[2],n4[2],n5[2],n6[2]))/npere)
-            
-        #node_dump = [node1,node2,node3,node4,node5,node6]
-        cell_typ = [13]
-        node_dump=[[],[],[],[],[],[]]
-        for i in range(real_no_elements):
-            node_dump[0].append(c_triangles_bot[i][0])#node 1
-            node_dump[1].append(c_triangles_bot[i][1])#node 2
-            node_dump[2].append(c_triangles_bot[i][2])#node 3
-            node_dump[3].append(c_triangles_top[i][0])#node 5
-            node_dump[4].append(c_triangles_top[i][1])#node 4
-            node_dump[5].append(c_triangles_top[i][2])#node 6
-            
-        print('%i node orderings had to be corrected into a counterclockwise direction'%num_corrected)
-            
-    mesh_dict = {'num_elms':real_no_elements,
-            'num_nodes':no_nodes,
-            'dump':dump,      
-            'node_x':x_coord,#x coordinates of nodes 
-            'node_y':y_coord,#y coordinates of nodes
-            'node_z':z_coord,#z coordinates of nodes 
-            'node_id':node_num,#node id number 
-            'elm_id':np.arange(1,real_no_elements+1,1),#element id number 
-            'num_elm_nodes':elm_type[0],#number of points which make an element
-            'node_data':node_dump,#nodes of element vertices
-            'elm_centre':[centriod_x,centriod_y,centriod_z],#centre of elements (x,y,z)
-            'elm_area':areas,
-            'cell_type':cell_typ,
-            'parameters':phys_entity,#the values of the attributes given to each cell 
-            'parameter_title':'material',
-            'regions':elem_entity,
-            'dict_type':'mesh_info',
-            'original_file_path':file_path} 
-    return mesh_dict 
+#     mesh_dict = {'num_elms':real_no_elements,
+#             'num_nodes':no_nodes,
+#             'dump':dump,      
+#             'node_x':x_coord,#x coordinates of nodes 
+#             'node_y':y_coord,#y coordinates of nodes
+#             'node_z':z_coord,#z coordinates of nodes 
+#             'node_id':node_num,#node id number 
+#             'elm_id':np.arange(1,real_no_elements+1,1),#element id number 
+#             'num_elm_nodes':elm_type[0],#number of points which make an element
+#             'node_data':node_dump,#nodes of element vertices
+#             'cell_type':cell_typ,
+#             'parameters':phys_entity,#the values of the attributes given to each cell 
+#             'parameter_title':'material',
+#             'regions':elem_entity,
+#             'dict_type':'mesh_info',
+#             'original_file_path':file_path} 
+    
+#     return mesh_dict 
 
 #%% column mesh
 def column_mesh(electrodes, poly=None, z_lim= None, 
@@ -1617,20 +1494,29 @@ def column_mesh(electrodes, poly=None, z_lim= None,
     fh.write('SetFactory("OpenCASCADE");\n')
     fh.write("cl=%f;\n"%cl)
     
+    x = []
+    y = [] # ignore repeated vertices 
+    
     if poly is None:
         fh.write("// Make a circle which is extruded\n")
         fh.write("Point (1) = {0,0,%f,cl};\n"%(z_lim[0]))
+        x.append(0);y.append(0)
         fh.write("Point (2) = {%f,0,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(radius);y.append(0)
         fh.write("Point (3) = {0,%f,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(0);y.append(radius)
         fh.write("Point (4) = {0,-%f,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(0);y.append(-radius)
         fh.write("Point (5) = {-%f,0,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(-radius);y.append(0)
         fh.write("Circle (1) = {2,1,3};\n")
         fh.write("Circle (2) = {3,1,4};\n")
         fh.write("Circle (3) = {4,1,5};\n")
         fh.write("Circle (4) = {5,1,2};\n")
 
         fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
-        fh.write("Plane Surface(1) = {1};\n\n")
+        fh.write("Plane Surface(1) = {1};\n")
+        fh.write("Point {%i} In Surface {1};\n\n"%1)
         edges = 3
         pt_no = 6
         
@@ -1662,14 +1548,13 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         #work out which electrodes are inside or on the end of the column 
         inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
         
-
     
     if all(inside) == False:
         fh.write("//Points inside the column\n")
         x = []
         y = [] # ignore repeated vertices 
         for i in range(num_elec):
-            if inside[i] and elec_x[i] not in x or elec_y[i] not in y:
+            if inside[i] and elec_x[i] not in x and elec_y[i] not in y:
                 pt_no+=1
                 fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],z_lim[0]))
                 fh.write("Point {%i} In Surface {1};\n"%pt_no)

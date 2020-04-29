@@ -82,7 +82,7 @@ def dpdp2(elec_num, a, n):
     elec_id = np.arange(elec_num)+1
     
     if isinstance(a, list) is False:
-        if a[0] < 1:
+        if a < 1:
             raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
         n_ = np.array(range(0,n))+1
         for j in np.array(range(0,len(n_))):
@@ -377,14 +377,14 @@ def multigrad(elec_num, a, n, s):
     return proto_mtrx    
 
 # test code
-#x1 = dpdp1(24, 2, 8)
-#x2 = dpdp2(24, 2, 8)
-#x3 = wenner_alpha(24, 1)
-#x4 = wenner_beta(24, 1)
-#x5 = wenner_gamma(24, 1)
-#x6 = schlum1(24, 1, 10)
-#x7 = schlum2(24, 1, 10)
-#x8 = multigrad(24, 1, 10, 2)
+# x1 = dpdp1(24, 2, 8)
+# x2 = dpdp2(24, 2, 8)
+# x3 = wenner_alpha(24, 1)
+# x4 = wenner_beta(24, 1)
+# x5 = wenner_gamma(24, 1)
+# x6 = schlum1(24, 1, 10)
+# x7 = schlum2(24, 1, 10)
+# x8 = multigrad(24, 1, 10, 2)
 
 
 

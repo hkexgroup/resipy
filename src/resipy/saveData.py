@@ -152,8 +152,57 @@ def write2csv(fname, dfi, elec, typ='R2'):
         topofname = fname[:-4]+'_topography'+fname[-4:]
         topodf.to_csv(topofname, index=False)
         
-    
-    
-    
 
+def writeSrv(fname, df, elec): # pragma: no cover
+    """Export .srv format for which is compatible with E4D. The e4d survey
+    file includes the electrode locations, in addition to the scheduling 
+    matrix. 
+    
+    Paramters
+    ------------
+    fname: string, optional
+        Where the output file will be written to. 
+    """
+    if not isinstance(fname,str):
+        raise ValueError('fname must be a string')
+    
+    if fname is None: # rename output file name to that of the survey name
+        fname = 'protocol' + '.srv'
+    
+    fh = open(fname,'w')
+    numelec = elec.shape[0] # number of electrodes 
+    fh.write('%i number of electrodes\n'%numelec)
+    for i in range(numelec):
+        line = '{:d} {:f} {:f} {:f} {:d}\n'.format(i+1,
+                elec[i,0],#x coordinate
+                elec[i,1],#y coordinate
+                elec[i,2],#z coordinate
+                1)#buried flag 
+        fh.write(line)
+    #now write the scheduling matrix to file 
+    ie = df['irecip'].values >= 0 # reciprocal + non-paired
+    df = df[ie]
+    nomeas = len(df) # number of measurements 
+    df = df.reset_index().copy()
+    fh.write('\n%i number of measurements \n'%nomeas)
+    
+    if not 'resError' in df.columns or all(np.isnan(df['resError'])) is True: # the columns don't exist or are empty 
+        #estimate error if not given 
+        res = np.array(df['resist'])
+        a_wgt = 0.1
+        b_wgt = 0.2
+        var_res = (a_wgt*a_wgt)+(b_wgt*b_wgt) * (res*res)
+        std_res = np.sqrt(var_res)
+        df['resError'] = std_res
+    
+    # format >>> m_indx a b m n V/I stdev_V/I
+    for i in range(nomeas): 
+        line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
+                int(df['a'][i]),
+                int(df['b'][i]),
+                int(df['m'][i]),
+                int(df['n'][i]),
+                df['recipMean'][i],
+                df['resError'][i])
+        fh.write(line)
     

@@ -29,7 +29,7 @@ def linear_coefs (x,y): #linear fit parameteres for decay curve
         coefs = np.array([0,0])
         return
 
-def DCA(data_in, dump=print): 
+def DCA(data_in, dump=None): 
     """Decay Curve Analysis (Only for Syscal files):
         calculating master decay curve based on individual decay curves, 
         then compares individual decay curves with a master decay curve (avg(all good curves)) 
@@ -41,6 +41,9 @@ def DCA(data_in, dump=print):
     Decay curve analysis for data error quantification in time-domain induced polarization imaging., 
     Geophysics, 83(2), 1–48. https://doi.org/10.1190/geo2016-0714.1)
     """
+    if dump is None:
+        def dump(x):
+            pass
     data = data_in.copy()
     decayN = data[['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
                 'M10', 'M11', 'M12', 'M13', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M20']]
@@ -67,7 +70,7 @@ def DCA(data_in, dump=print):
     filtered_R_IP = pd.concat([filtered_R_IP.reset_index(drop=True),fit_DC.reset_index(drop=True)], axis=1) #conatenating fitted decay curve dataframe with measured decaycurve        
     filtered_R_IP['DC_rmsd'] = ((((fit_DC.values-filtered_R_IP[['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
                 'M10', 'M11', 'M12', 'M13', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M20']].values)**2).sum(axis=1))/np.shape(fit_DC)[1])**0.5 #calculating decay curve RMSD with fitted curve
-    ####  Bulding master decay curves for each IP window
+    ####  Building master decay curves for each IP window
     filtered_R_IP['weight'] = 1/filtered_R_IP['DC_rmsd']
     temp_DC_master = pd.concat([filtered_R_IP[['An','Bn']],(pd.DataFrame(fit_DC.values*filtered_R_IP['weight'][:,None]))],axis=1)
     master_DC = pd.DataFrame((temp_DC_master.groupby(['An','Bn']).sum()).values/(filtered_R_IP.groupby(['An','Bn'])['weight']).sum()[:,None])
@@ -93,8 +96,9 @@ def DCA(data_in, dump=print):
         appended_groups.append(group)
         percent_progress = i*100/len(filtered_R_IP.groupby(['An','Bn']))
         dump(percent_progress)
-        print('%s%s -Done' % (int(percent_progress),'%'), end='\r')
-    print('100% -Done - finished!')
+        print('\r%s%s -Done' % (int(percent_progress),'%'), end='')
+    dump(100)
+    print('\r100% -Done - finished!')
     appended_groups = pd.concat(appended_groups)
     K_std = np.std(appended_groups['K'])
     final_data = appended_groups.loc[np.abs(appended_groups['K'])<(2*K_std)]
