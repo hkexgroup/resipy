@@ -2,17 +2,15 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Jun  1 11:23:23 2018
-Handles importing external data files into the R2 api
-@authors: Guillaume, Jimmy, Sina, Pedro Concha 
-
-Currently supports: 
-    syscal files
-    res2dinv input files 
+Parse device-specific format and extract data as pandas.Dataframe 
+and electrode positions as numpy.array
+@authors: Guillaume, Jimmy, Sina, Pedro Concha
 """
 
 import numpy as np
 import pandas as pd
 import os 
+import re
 
 #%% function to compute geometric factor - Jamyd91
 def geom_fac(C1,C2,P1,P2):
@@ -44,7 +42,7 @@ def geom_fac(C1,C2,P1,P2):
     return k 
 
 #%% usual syscal parser
-def syscalParser(fname, spacing=None):
+def syscalParser(fname):#, spacing=None):
         df = pd.read_csv(fname, skipinitialspace=True)
         # delete space at the end and the beginning of columns names
         headers = df.columns
@@ -98,31 +96,31 @@ def syscalParser(fname, spacing=None):
     
         df['resist'] = df['vp']/df['i']
 
-        if spacing is None:    
-            # for unregularly spaced array
-            array = df[['a','b','m','n']].values
-            arrayMin = np.min(np.unique(np.sort(array.flatten())))
-            if arrayMin != 0: # all surveys must start from x = 0
-                array -= arrayMin
-            val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-            elecLabel = 1 + np.arange(len(val))
-            newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-            df.loc[:,['a','b','m','n']] = newval
-            elec = np.c_[val, np.zeros((len(val),2))]
-        else:        
-            # for regularly spaced array (NOTE deprecated ?)
-            array = df[['a','b','m','n']].values
-            arrayMin = np.min(np.unique(np.sort(array.flatten())))
-            if arrayMin != 0:
-                array -= arrayMin
-            espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-            if spacing is None:
-                spacing = espacing
-            array = np.round(array/spacing+1).astype(int)
-            df[['a','b','m','n']] = array
-            imax = int(np.max(array))
-            elec = np.zeros((imax,3))
-            elec[:,0] = np.arange(0,imax)*spacing
+        # if spacing is None:    
+        # for unregularly spaced array
+        array = df[['a','b','m','n']].values
+        arrayMin = np.min(np.unique(np.sort(array.flatten())))
+        if arrayMin != 0: # all surveys must start from x = 0
+            array -= arrayMin
+        val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+        elecLabel = 1 + np.arange(len(val))
+        newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+        df.loc[:,['a','b','m','n']] = newval
+        elec = np.c_[val, np.zeros((len(val),2))]
+        # else:        
+        #     # for regularly spaced array
+        #     array = df[['a','b','m','n']].values
+        #     arrayMin = np.min(np.unique(np.sort(array.flatten())))
+        #     if arrayMin != 0:
+        #         array -= arrayMin
+        #     espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
+        #     if spacing is None:
+        #         spacing = espacing
+        #     array = np.round(array/spacing+1).astype(int)
+        #     df[['a','b','m','n']] = array
+        #     imax = int(np.max(array))
+        #     elec = np.zeros((imax,3))
+        #     elec[:,0] = np.arange(0,imax)*spacing
                 
         return elec, df
     
@@ -132,54 +130,45 @@ def syscalParser(fname, spacing=None):
 
 #%% protocol.dat forward modelling parser
 
-def protocolParser(fname):
-#    x = np.genfromtxt(fname, skip_header=1) # original code doesnt work for badly behaved protocol files
-#    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','appResist'])
+# def protocolParser(fname):
+#     with open(fname,'r') as fh:
+#         num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
+#         dump = fh.readlines()
+#     protocol = {'index':[0]*num_meas,# protocol dictionary 
+#                 'a':[0]*num_meas,
+#                 'b':[0]*num_meas,
+#                 'm':[0]*num_meas,
+#                 'n':[0]*num_meas,
+#                 'resist':[0]*num_meas,
+#                 'magErr':[0]*num_meas}
+
+#     for i, line in enumerate(dump):
+#         data = line.split()
+#         protocol['index'][i] = int(data[0])
+#         protocol['a'][i] = int(data[1])
+#         protocol['b'][i] = int(data[2])
+#         protocol['m'][i] = int(data[3])
+#         protocol['n'][i] = int(data[4])
+#         protocol['resist'][i] = float(data[5])
+#         if len(data) == 7:
+#             protocol['magErr'][i] = float(data[6])
     
-    with open(fname,'r') as fh:
-        num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
-        dump = fh.readlines()
-    protocol = {'index':[0]*num_meas,# protocol dictionary 
-                'a':[0]*num_meas,
-                'b':[0]*num_meas,
-                'm':[0]*num_meas,
-                'n':[0]*num_meas,
-                'resist':[0]*num_meas,
-                'magErr':[0]*num_meas}
-#                'appResist':[0]*num_meas} 
-    #determine if apparent resistivity column is present 
-#    app_resis_flag = False
-#    if len(dump[0])==7:
-#        app_resis_flag=True
-    for i, line in enumerate(dump):
-        data = line.split()
-        protocol['index'][i] = int(data[0])
-        protocol['a'][i] = int(data[1])
-        protocol['b'][i] = int(data[2])
-        protocol['m'][i] = int(data[3])
-        protocol['n'][i] = int(data[4])
-        protocol['resist'][i] = float(data[5])
-#        if app_resis_flag:
-#            protocol['appResist'][i]= float(data[6])
-        if len(data) == 7:
-            protocol['magErr'][i] = float(data[6])
-    
-    if np.mean(protocol['magErr']) !=0: 
-        df = pd.DataFrame(protocol) 
-    else: 
-        df = pd.DataFrame(protocol).drop(['magErr'], axis = 1)
-    df['ip'] = np.nan
-    num_elec = len(np.array((df['a'],df['b'],df['m'],df['n'])).flatten())
-    xElec = np.arange(num_elec)
-    elec = np.zeros((len(xElec),3))
-    elec[:,0] = xElec
-    return elec, df
+#     if np.mean(protocol['magErr']) !=0: 
+#         df = pd.DataFrame(protocol) 
+#     else: 
+#         df = pd.DataFrame(protocol).drop(['magErr'], axis = 1)
+#     df['ip'] = np.nan
+#     num_elec = len(np.array((df['a'],df['b'],df['m'],df['n'])).flatten())
+#     xElec = np.arange(num_elec)
+#     elec = np.zeros((len(xElec),3))
+#     elec[:,0] = xElec
+#     return elec, df
 
 # test code
 #protocolParser('api/test/protocol.dat')
 
 
-def protocolParserLME(fname):
+def protocolParserLME(fname): # pragma: no cover
 # read LME predicted errors passed back from R, only add LME predictions to df
 # Michael Tso @ 190310
 
@@ -211,21 +200,6 @@ def protocolParserLME(fname):
 # test code
 #protocolParserLME('api/test/protocol-lmeOut.dat')
 
-
-
-#def protocolParser2(fname): # with pandas = twice slower but same time if we use np.genfromtxt()
-#    colnames = np.array(['index','a','b','m','n','resist','appResist'])
-##    df = pd.read_csv(fname, header=None, sep='\s+', skiprows=1)
-##    colindex = 1+np.arange(df.shape[0])
-##    df = df.rename(columns=dict(zip(colindex, colnames[:df.shape[0]])))
-#    
-#    x = np.genfromtxt(fname, skip_header=1)
-#    df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
-#    df['ip'] = np.nan
-#    xElec = np.arange(np.max(df[['a','b','m','n']].values))
-#    elec = np.zeros((len(xElec),3))
-#    elec[:,0] = xElec
-#    return df, elec
 
 
 def protocolParserIP(fname): # just for protocol forward output with cR2
@@ -316,8 +290,8 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
 def forwardProtocolDC(fname): # need specific as there is a appRes column
     skip = 1
     cnames = ['num','a','b','m','n','resist','appRes']
-    if fname.find('.fwd')!=-1:
-        skip=0
+    if fname.find('R3t') != -1:
+        skip=1
         cnames =['num','sa','a','sb','b','sm','m','sn','n','resist','appRes']
         print('3d import')
     x = np.genfromtxt(fname, skip_header=skip)
@@ -329,7 +303,8 @@ def forwardProtocolDC(fname): # need specific as there is a appRes column
     return elec, df
     
 
-def forwardProtocolIP(fname): # not needed as the normal parser can do it
+# not needed as the normal parser can do it
+def forwardProtocolIP(fname): # pragma: no cover
     x = np.genfromtxt(fname, skip_header=1)
     df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','ip','appRes'])
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
@@ -340,33 +315,43 @@ def forwardProtocolIP(fname): # not needed as the normal parser can do it
 
 #%% PRIME system parser
 
-def primeParser(fname, espacing=None):
-    """ Returns data and elec from BGS PRIME system.
-    """
-    with open(fname, 'r') as f:
-        x = f.readlines()
-        nrows = int(x[6])
-    df = pd.read_csv(fname, header=11, delimiter='\t', nrows=nrows)
-    df = df.reset_index()
-    df = df.rename(columns={'level_1':'a',
-                            'level_3':'b',
-                            'level_5':'m',
-                            'level_7':'n',
-                            'level_9':'resist'})
-    array = df[['a','b','m','n']].values
-    if espacing is None:
-        espacing = np.unique(np.sort(array.flatten()))[1]
-    array = np.round(array/espacing+1).astype(int)
-    imax = int(np.max(array))
-#                if np.sum(array == 0) > 0:
-#                    print('add 1 as there is electrodes at zeros')
-#                    imax = imax+1
-    elec = np.zeros((imax,3))
-    elec[:,0] = np.arange(0,imax)*espacing
-    df['ip'] = np.nan
-    df[['a','b','m','n']] = array
+# def primeParser(fname, espacing=None):
+#     """ Returns data and elec from BGS PRIME system.
+#     """
+#     with open(fname, 'r') as f:
+#         x = f.readlines()
+#         nrows = int(x[6])
+#     df = pd.read_csv(fname, header=11, delimiter='\t', nrows=nrows)
+#     df = df.reset_index()
+#     df = df.rename(columns={'level_1':'a',
+#                             'level_3':'b',
+#                             'level_5':'m',
+#                             'level_7':'n',
+#                             'level_9':'resist'})
+#     array = df[['a','b','m','n']].values
+#     if espacing is None:
+#         espacing = np.unique(np.sort(array.flatten()))[1]
+#     array = np.round(array/espacing+1).astype(int)
+#     imax = int(np.max(array))
+# #                if np.sum(array == 0) > 0:
+# #                    print('add 1 as there is electrodes at zeros')
+# #                    imax = imax+1
+#     elec = np.zeros((imax,3))
+#     elec[:,0] = np.arange(0,imax)*espacing
+#     df['ip'] = np.nan
+#     df[['a','b','m','n']] = array
     
-    return elec, df
+#     # shift electrodes to have continuous numbering
+#     array = df[['a','b','m','n']].values
+#     arrayMin = np.min(np.unique(np.sort(array.flatten())))
+#     if arrayMin != 0: # all surveys must start from x = 0
+#         array -= arrayMin
+#     val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+#     elecLabel = 1 + np.arange(len(val))
+#     newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+#     df.loc[:,['a','b','m','n']] = newval
+    
+#     return elec, df
 
 # test code
 #elec, df = primeParser('api/test/primeFile.dat')
@@ -405,9 +390,21 @@ def primeParserTab(fname, espacing = 1):
     imax = np.max(np.array((a,b,m,n)))
     elec = np.zeros((imax,3))
     elec[:,0] = np.arange(0,imax)*espacing
+    
+    # shift electrodes to have continuous numbering
+    array = df[['a','b','m','n']].values
+    arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    if arrayMin != 0: # all surveys must start from x = 0
+        array -= arrayMin
+    val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+    elecLabel = 1 + np.arange(len(val))
+    newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    df.loc[:,['a','b','m','n']] = newval
+    
     return elec, df
 ##Test code
 #electrodes, data = primeParserTab("../Data/PRIME/3001_CAN_2017-11-16_005119.tab")
+
 
 #%% parse input for res2inv (.dat file) - Jimmy B.
 def res2invInputParser(file_path):
@@ -764,7 +761,7 @@ def res2invInputParser(file_path):
     num_elec = len(ex_pos)
         
     fmt_flag = True
-        
+            
     topo_flag_idx = idx_oi + num_meas
     try:
         int(dump[topo_flag_idx])#hot fix
@@ -777,15 +774,27 @@ def res2invInputParser(file_path):
         ex_pos_topo=[0]*num_elec_topo
         ez_pos_topo=[0]*num_elec_topo 
         ey_pos=[0]*num_elec # actaully we can't have a y coordinate for 2d data so these will remain as zero
-        ez_pos=[0]*num_elec
+        ez_pos=[0]*num_elec 
+        
         for i in range(num_elec_topo):
-            ex_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[0])
-            ez_pos_topo[i] = float(dump[topo_flag_idx+2+i].strip().split()[1])
+            e_pos_topo_str = dump[topo_flag_idx+2+i].strip()
+            e_pos_topo_vals = re.split(';|,|, | , | |    |\t', e_pos_topo_str)
+            ex_pos_topo[i] = float(e_pos_topo_vals[0])
+            ez_pos_topo[i] = float(e_pos_topo_vals[1])
             
-        for i in range(num_elec):
-            for j in range(num_elec_topo):
-                if ex_pos[i] == ex_pos_topo[j]:
-                    ez_pos[i] = ez_pos_topo[j]             
+        # finding common topography points
+        
+        elecdf = pd.DataFrame()
+        elecdf['x'] = ex_pos
+        elecdf['z_i'] = ez_pos
+        
+        elecdf_topo = pd.DataFrame()
+        elecdf_topo['x'] = ex_pos_topo
+        elecdf_topo['z_topo'] = ez_pos_topo
+        
+        elecdf_merged = pd.merge(elecdf.copy(), elecdf_topo.copy(), how='left', on=['x'])
+        ez_pos = np.array(elecdf_merged['z_topo'])
+                     
        
     #add some protection against a dodgey file 
     if fmt_flag is False:
@@ -1079,7 +1088,7 @@ def lippmannParser(fname):
     elec_lineNum_s = [i for i in range(len(dump)) if '* Electrode positions *' in dump[i]]
     elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Remote electrode positions *' in dump[i]]
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
-    elec_raw = pd.read_csv(fname, sep='\s+', skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
+    elec_raw = pd.read_csv(fname, delim_whitespace=True, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
     elec = np.array(elec_raw.iloc[:,-3:])
     
     #for pole-pole and pole-dipole arrays
@@ -1089,7 +1098,7 @@ def lippmannParser(fname):
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if '* Data *********' in dump[i]]
     data_headers = dump[data_linNum_s[0]+1].split()[1:]
-    df = pd.read_csv(fname, sep='\s+', skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
+    df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+3, names=data_headers).drop('n', axis=1) # don't know what this "n" is!!
     df = df.rename(columns={'A':'a',
                             'B':'b',
                             'M':'m',
@@ -1124,7 +1133,7 @@ def aresParser(fname, spacing=None):
 
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if 'Measured data' in dump[i]]
-    df = pd.read_csv(fname, sep='\s+', skiprows=data_linNum_s[0]+1, index_col=False)
+    df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+1, index_col=False)
     df = df.rename(columns={'C1[el]':'a',
                             'C2[el]':'b',
                             'P1[el]':'m',
@@ -1133,6 +1142,8 @@ def aresParser(fname, spacing=None):
                             'U[mV]':'vp'})
     
     #Building electrode locations
+    df[['a','b','m','n']] = df[['a','b','m','n']].apply(pd.to_numeric, errors='coerce') # there are strange eletrode conbinations sometimes (e.g., 14*1)
+    df = df.dropna()
     array = df[['a','b','m','n']].values
     arrayMin = np.min(np.unique(np.sort(array.flatten())))
     if arrayMin != 0: # all surveys must start from x = 0
@@ -1143,12 +1154,24 @@ def aresParser(fname, spacing=None):
     df.loc[:,['a','b','m','n']] = newval
     
     #calculations
-#    if 'EP[mV]' in df.columns: # TODO: correct this when you figure out how the IP values are calculated 
+#    if 'EP[mV]' in df.columns: # TODO: correct this when you figure out how the IP values are calculated EP may acctualy be SP!!
 #        df['ip'] = df['EP[mV]']/df['vp'] # not sure this is correct way of calculating IP
 #        df = df[['a','b','m','n','i','vp','ip']]
 #    else:
-    df = df[['a','b','m','n','i','vp']] # should be under "else:"
-    df['ip'] = 0 # should be under "else:"
+    
+    
+    # finding IP columns
+    
+    ip_cols = [col for col in df.columns if all(i in col for i in ['IP', '[%]'])] # assuming IP columns are those with IP and [%]
+    if ip_cols!= []:
+        # df[ip_cols] = df[ip_cols]/100 # not sure about this... who reports IP in % anyway?!
+        df['ip'] = df[ip_cols].mean(axis=1) # average of all IP windows
+        df = df[['a','b','m','n','i','vp','ip']]
+        
+    else:
+        df = df[['a','b','m','n','i','vp']] # should be under "else:"
+        df['ip'] = 0 # should be under "else:"
+    
     df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
     
     df['resist'] = df['vp']/df['i']
