@@ -502,23 +502,23 @@ timings['dc-3d-import-mesh'] = time.time() - t0
 
 
 #%% 3D ip testing
-# plt.close('all')
-# print('-------------Testing 3D IP inversion ------------')
-# t0 = time.time()
-# k = R2(typ='cR3t')
-# k.createSurvey(testdir + 'ip-3d/protocol.dat', ftype='Protocol')
-# k.importElec(testdir + 'ip-3d/elec.csv')
-# k.createMesh(cl=3)
-# k.showMesh()
-# k.invert()
-# k.showResults()
-# k.showSlice(index=0)
-# k.showSlice(axis='z')
-# k.showSlice(axis='x')
-# k.showSlice(axis='y')
-# k.showInParaview()
-# print('elapsed: {:.4}s'.format(time.time() - t0))
-# timings['ip-3d'] = time.time() - t0
+plt.close('all')
+print('-------------Testing 3D IP inversion ------------')
+t0 = time.time()
+k = R2(typ='cR3t')
+k.createSurvey(testdir + 'ip-3d/protocol.dat', ftype='Protocol')
+k.importElec(testdir + 'ip-3d/elec.csv')
+k.createMesh(cl=3)
+k.showMesh()
+k.invert()
+k.showResults()
+k.showSlice(index=0)
+k.showSlice(axis='z')
+k.showSlice(axis='x')
+k.showSlice(axis='y')
+k.showInParaview()
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['ip-3d'] = time.time() - t0
 
 #%% 3D column mesh -- forward modelling for 3D too 
 print('----------- Testing 3D Column inversion -----------')
