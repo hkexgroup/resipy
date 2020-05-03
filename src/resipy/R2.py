@@ -2479,15 +2479,15 @@ class R2(object): # R2 master class instanciated by the GUI
             attr = keys[0]
             print('Attribute not found, revert to {:s}'.format(attr))
         if len(self.meshResults) > 0:
-            if zlim is None:
-                zlim = self.zlim
+            mesh = self.meshResults[index]
             if self.typ[-1] == '2': # 2D case
-                mesh = self.meshResults[index]
+                if zlim is None:
+                    zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color,
                             attr=attr, sens=sens, color_map=color_map,
                             zlim=zlim, clabel=clabel, contour=contour, **kwargs)
-                if doi is True:
-                    if self.doiComputed is True: # DOI based on Oldenburg and Li
+                if doi is True: # DOI based on Oldenburg and Li
+                    if self.doiComputed is True: 
                         z = np.array(mesh.attr_cache['doiSens'])
                         levels = [0.2]
                         linestyle = ':'
@@ -2500,35 +2500,22 @@ class R2(object): # R2 master class instanciated by the GUI
                         linestyle = '--'
                     else:
                         doiSens = False
-                
                 if doi is True or doiSens is True:
-                    # plotting of the sensitivity contour (need to cropSurface as well)
                     xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
-#                    if self.mesh.surface is not None:
-#                        zc = z
-#                        xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-#                        zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-#                        xc = np.r_[xc, xf]
-#                        yc = np.r_[yc, yf]
-#                        zc = np.r_[zc, zf]
-#                        triang = tri.Triangulation(xc, yc) # build grid based on centroid
-#                        try:
-#                            triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
-#                        except Exception as e:
-#                            print('Error in cropSurface for contouring: ', e)
-#                    else:
-#                        triang = tri.Triangulation(xc, yc)
-#                        zc = z
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
                     self._clipContour(mesh.ax, cont.collections)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
-                self.meshResults[index].show(ax=ax, edge_color=edge_color,
-                            attr=attr, color_map=color_map, clabel=clabel,
-                            **kwargs)
-
+                if zlim is None:
+                    zlim = [np.min(mesh.node_z), np.max(mesh.node_z)]
+                if cropMaxDepth and self.fmd is not None:
+                    zlim[0] = np.nanmin(self.elec[:,2]) - self.fmd
+                print(zlim)
+                mesh.show(ax=ax, edge_color=edge_color,
+                        attr=attr, color_map=color_map, clabel=clabel,
+                        zlim=zlim, **kwargs)
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
 

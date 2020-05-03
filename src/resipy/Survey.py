@@ -1511,6 +1511,9 @@ class Survey(object):
         protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         
         # write transfer resistance
+        # NOTE for IP, this is the magnitude not the resistance
+        # the magnitude is always positive. This is the case as by the way we
+        # compute 'recipMean' in self.computeReciprocal()
         protocol['res'] = df['recipMean'].values # non-paired will be nan
         
         # write background transfer resistance
