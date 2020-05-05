@@ -2680,7 +2680,7 @@ class Mesh:
                                self.node_z[i]))
 
 
-    def write_vtk(self, file_path="mesh.vtk", title=None):
+    def write_vtk(self, file_path="mesh.vtk", title=None, replace_nan=-9999):
         """Writes a vtk file for the mesh object, everything in the attr_cache
         will be written to file as attributes. We suggest using Paraview 
         to display the mesh outside of ResIPy. It's fast and open source :). 
@@ -2728,7 +2728,9 @@ class Mesh:
         for i,key in enumerate(attr_cache.keys()):
             fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
-            [fh.write("%8.6f "%attr_cache[key][j]) for j in range(self.num_elms)]
+            X = np.array(attr_cache[key])
+            X[np.isnan(X)]=replace_nan
+            [fh.write("%8.6f "%X[j]) for j in range(self.num_elms)]
             fh.write("\n")
         
         #finish writing
@@ -3180,7 +3182,7 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     for i in range(1,no_elms):
         elm_data=fid.readline().strip().split()
         if int(elm_data[0]) != npere:
-            raise ImportError("VTK file contains mixed element types, which are not supported by ResIPym mesh class, aborting...")
+            raise ImportError("VTK file contains mixed element types, which are not supported by ResIPy mesh class, aborting...")
         for j in range(npere):
             con_mat[j][i] = int(elm_data[j+1])
         elm_num[i] = i
@@ -3191,7 +3193,12 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     #find cell types
     for i,line_info in enumerate(cell_attr_dump):
         if line_info.find("CELL_TYPES") == 0:
-            cell_type = [int(k) for k in cell_attr_dump[i+1].strip().split()]
+            #cell_type = [int(k) for k in cell_attr_dump[i+1].strip().split()]
+            line_idx = i+1
+            cell_type = []
+            while len(cell_type) < no_elms:
+                cell_type += [float(x) for x in cell_attr_dump[line_idx].split()]
+                line_idx += 1
             break
     
     fid.close()
@@ -3207,11 +3214,18 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
             #check look up table
             if cell_attr_dump[i+1].split()[1] != "default":
                 warnings.warn("unrecognised lookup table type")
-            values=[float(k) for k in cell_attr_dump[i+2].split()]
-            attr_dict[attr_title] = values
-            if num_attr ==0:# primary attribute defaults to the first attribute found
+            line_idx = i+2
+            #values=[float(k) for k in cell_attr_dump[i+2].split()]
+            array = []
+            #while loop to get all scalar values 
+            while len(array) < no_elms:
+                array += [float(x) for x in cell_attr_dump[line_idx].split()]
+                line_idx += 1
+            attr_dict[attr_title] = array
+            
+            if num_attr == 0:# primary attribute defaults to the first attribute found
                 parameter_title = attr_title
-                values_oi = values    
+                values_oi = array   
             num_attr += 1
     
     #put in fail safe if no attributes are found        
