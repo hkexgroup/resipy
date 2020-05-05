@@ -8,6 +8,7 @@ ResIPy_version = '2.1.0' # ResIPy version (semantic versionning in use)
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
+import requests # used to download the binaries
 import subprocess
 import numpy as np # import default 3rd party libaries (can be downloaded from conda repositry, incl with winpython)
 import pandas as pd
@@ -47,6 +48,20 @@ pre-processing and error models for unique, combined or multiple surveys:
     index > 0 : apply an error model to the selected unique survey
 '''
 
+#%% check executables are here
+def checkExe(dirname):
+    exes = ['R2.exe','cR2.exe','R3t.exe','cR3t.exe','gmsh.exe']
+    for exe in exes:
+        fname = os.path.join(dirname, exe)
+        if os.path.exists(fname) is not True:
+            print('Downloading ' + exe + '...', end='', flush=True)
+            response = requests.get("https://gitlab.com/hkex/pyr2/-/raw/master/src/resipy/exe/" + exe)
+            with open(fname, 'wb') as f:
+                f.write(response.content)
+            print('done')
+                
+checkExe(os.path.join(apiPath, 'exe'))
+            
 #%% wine check
 def wineCheck():
     #check operating system
