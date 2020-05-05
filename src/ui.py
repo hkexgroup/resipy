@@ -337,7 +337,7 @@ class App(QMainWindow):
                 self.boreholeCheck.setChecked(False)
                 self.boreholeCheck.setEnabled(True)
                 self.regular3DCheck.setVisible(False)
-                self.ipCheck.setEnabled(True)
+                # self.ipCheck.setEnabled(True)
                 
                 #Pre-processing tab
                 self.recipErrorBottomTabs.setTabEnabled(0, True)
@@ -387,7 +387,7 @@ class App(QMainWindow):
                 self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
                 self.regular3DCheck.setVisible(True)
-                self.ipCheck.setEnabled(False) # TODO disabling cR3t for now
+                # self.ipCheck.setEnabled(False) # TODO disabling cR3t for now
                 
                 #Pre-processing tab
                 self.recipErrorBottomTabs.setTabEnabled(0, False)
@@ -603,12 +603,12 @@ class App(QMainWindow):
         self.wdBtn.clicked.connect(getwd)
         self.wdBtn.setToolTip('Select the working directory, containing your data\nThe working directory will automatically have all the necessary files for the inversion (e.g. R2.in, R2.exe, protocol.dat, f001_res.vtk, etc.)')
 
-        self.ftype = 'Protocol' # by default
+        self.ftype = 'ProtocolDC' # by default
         self.fformat = 'DAT (Tab delimited) (*.dat)' # default
 
         def ftypeComboFunc(index):
             if index == 0:
-                self.ftype = 'Protocol'
+                self.ftype = 'ProtocolDC'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 1:
                 self.ftype = 'Syscal'
@@ -642,9 +642,9 @@ class App(QMainWindow):
         self.ftypeComboLabel = QLabel('File format:')
         self.ftypeComboLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.ftypeCombo = QComboBox()
-        self.ftypeCombo.addItem('Protocol')
+        self.ftypeCombo.addItem('Protocol DC')
         self.ftypeCombo.addItem('Syscal')
-        self.ftypeCombo.addItem('Protocol w/ IP')
+        self.ftypeCombo.addItem('Protocol IP')
         self.ftypeCombo.addItem('Res2Dinv')
         self.ftypeCombo.addItem('BGS Prime')
         self.ftypeCombo.addItem('Sting')
@@ -839,9 +839,6 @@ class App(QMainWindow):
         self.invNowBtn.clicked.connect(invNowBtnFunc)
         self.invNowBtn.setEnabled(False)
         self.invNowBtn.setToolTip('Invert with default settings. This will redirect you to the inversion tab.')
-        
-        
-        
 
         def ipCheckFunc(state):
             if state  == Qt.Checked:
@@ -867,8 +864,6 @@ class App(QMainWindow):
                     self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
                     heatFilter()
                 self.regionTable.setColumnHidden(1, False)
-                self.reg_modeLabel.setEnabled(False)
-                self.reg_mode.setEnabled(False)
 
             else:
                 self.r2.typ = self.r2.typ[1:]
@@ -884,9 +879,7 @@ class App(QMainWindow):
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
-                self.reg_modeLabel.setEnabled(True)
-                self.reg_mode.setEnabled(True)
-            print('mode', self.r2.typ)
+            pdebug('ipCheckFunc: mode=', self.r2.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
         self.ipCheck.stateChanged.connect(ipCheckFunc)
@@ -2455,21 +2448,11 @@ class App(QMainWindow):
                 a_wgtFunc()
                 self.b_wgt.setText('2')
                 b_wgtFunc()
-#                self.b_wgt.setText('0.02')
-#                b_wgtFunc()
-#                c_wgt.setText('1.0')
-#                c_wgtFunc()
             else:
                 self.a_wgt.setText('0')
                 a_wgtFunc()
                 self.b_wgt.setText('0')
                 b_wgtFunc()
-#                self.a_wgt.setText('0.01')
-#                a_wgtFunc()
-#                self.b_wgt.setText('0.0')
-#                b_wgtFunc()
-#                c_wgt.setText('0.0')
-#                c_wgtFunc()
         self.iperrFitType = QComboBox()
         self.iperrFitType.addItem('Observed discrepancies') 
         self.iperrFitType.addItem('Power law')
@@ -3412,48 +3395,43 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm = QFormLayout()
 
         def showIpOptions(arg):
+            settingsIP = [self.min_error, self.min_errorLabel,
+                          ]
+            settingsDC = [self.data_type, self.data_typeLabel,
+                          self.reg_mode, self.reg_modeLabel,
+                          ]
             if arg == True:
                 self.a_wgt.setText('0.02')
                 self.b_wgt.setText('2')
-                if self.r2.iForward is False:
-                    if 'magErr' in self.r2.surveys[0].df.columns:
-                        self.a_wgt.setText('0.0')
-                        self.b_wgt.setText('0.0')
-                if self.r2.typ == 'cR3t':
-                    c_wgt.setText('1')
-                    c_wgt.setVisible(True)
-                    c_wgtLabel.setVisible(True)
-                self.min_error.setVisible(True)
-                self.min_errorLabel.setVisible(True)
-                self.data_type.setVisible(False)
-                self.data_typeLabel.setVisible(False)
+                self.inv_type.clear()
+                self.inv_type.addItem('Pseudo Marquardt [0]')
+                self.inv_type.addItem('Regularized Inversion with Linear Filtering [1]')
+                self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+                self.inv_type.setCurrentIndex(1)
+                [o.setVisible(True) for o in settingsIP]
+                [o.setVisible(False) for o in settingsDC]
             else:
                 self.a_wgt.setText('0.01')
                 self.b_wgt.setText('0.02')
-                if self.r2.typ == 'cR3t':
-                    c_wgt.setVisible(False)
-                    c_wgtLabel.setVisible(False)
-                self.min_error.setVisible(False)
-                self.min_errorLabel.setVisible(False)
-                self.data_type.setVisible(True)
-                self.data_typeLabel.setVisible(True)
+                self.inv_type.clear()
+                self.inv_type.addItem('Pseudo Marquardt [0]')
+                self.inv_type.addItem('Regularized Inversion with Linear Filtering [1]')
+                self.inv_type.addItem('Regularized Inversion with Quadratic Filtering [2]')
+                self.inv_type.addItem('Qualitative Solution [3]')
+                self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+                self.inv_type.setCurrentIndex(1)
+                [o.setVisible(False) for o in settingsIP]
+                [o.setVisible(True) for o in settingsDC]
+            if self.r2.iForward is False:
+                if 'magErr' in self.r2.surveys[0].df.columns:
+                    self.a_wgt.setText('0.0')
+                    self.b_wgt.setText('0.0')
 
         def show3DOptions(arg):
-            settings3D = [no_improveLabel, no_improve,
-                          self.inv_type3DLabel, self.inv_type3D,
-                          alpha_sLabel, alpha_s,
-                          cginv_toleranceLabel, cginv_tolerance,
-                          cginv_maxitsLabel, cginv_maxits,
-                          alpha_maxLabel, alpha_max,
-                          num_alpha_stepsLabel, num_alpha_steps,
-                          min_stepLabel, min_step]
-            settings2D = [self.flux_typeLabel, self.flux_type,
-                          self.inv_typeLabel, self.inv_type,
-                          self.min_errorLabel, self.min_error,
-                          self.reg_modeLabel, self.reg_mode,
-                          self.rho_minLabel, self.rho_min,
-                          self.rho_maxLabel, self.rho_max,
-                          self.target_decreaseLabel, self.target_decrease]
+            settings3D = []
+            settings2D = [self.flux_type, self.flux_typeLabel,
+                          self.scale, self.scaleLabel,
+                          self.inv_type, self.inv_typeLabel]
             if arg is True:
                 [s.setVisible(True) for s in settings3D]
                 [s.setVisible(False) for s in settings2D]
@@ -3468,35 +3446,22 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 helpSection.setHtml(r2help[arg])
 
-        def showHelp2(arg): # for advanced tab
+        def showHelpAdv(arg): # for advanced tab
             if arg not in r2help:
                 self.helpSection2.setText('SORRY NOT IN HELP')
             else:
                 self.helpSection2.setHtml(r2help[arg])
 
-        self.parallel = False
-        def parallelFunc(state):
-            if state == Qt.Checked:
-                self.parallel = True
-            else:
-                self.parallel = False
-        parallelLabel = QLabel('<a href="parallel">Parallel inversion</a>')
-        parallelLabel.linkActivated.connect(showHelp2)
-        parallelCheck = QCheckBox()
-        parallelCheck.stateChanged.connect(parallelFunc)
-        advForm.addRow(parallelLabel, parallelCheck)
 
-        def modErrFunc(state):
-            if state == Qt.Checked:
-                self.modErr = True
-            else:
-                self.modErr = False
-        modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
-        modErrLabel.linkActivated.connect(showHelp2)
-        modErr = QCheckBox()
-        modErr.stateChanged.connect(modErrFunc)
-        advForm.addRow(modErrLabel, modErr)
-        self.modErr = False
+        self.parallelLabel = QLabel('<a href="parallel">Parallel inversion</a>')
+        self.parallelLabel.linkActivated.connect(showHelpAdv)
+        self.parallelCheck = QCheckBox()
+        advForm.addRow(self.parallelLabel, self.parallelCheck)
+
+        self.modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
+        self.modErrLabel.linkActivated.connect(showHelpAdv)
+        self.modErrCheck = QCheckBox()
+        advForm.addRow(self.modErrLabel, self.modErrCheck)
 
         def notCroppingFunc(state):
             if state == Qt.Checked:
@@ -3507,14 +3472,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iCropping = True # default
                 if ('num_xz_poly' in self.r2.param) and (self.num_xz_poly is not None):
                     self.r2.param['num_xz_poly'] = self.num_xz_poly # restore value
-        notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
-        notCroppingLabel.linkActivated.connect(showHelp2)
-        notCropping = QCheckBox()
-        notCropping.stateChanged.connect(notCroppingFunc)
-        advForm.addRow(notCroppingLabel, notCropping)
+        self.notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
+        self.notCroppingLabel.linkActivated.connect(showHelpAdv)
+        self.notCropping = QCheckBox()
+        self.notCropping.stateChanged.connect(notCroppingFunc)
+        advForm.addRow(self.notCroppingLabel, self.notCropping)
                     
         cropBelowFmdLabel = QLabel('<a href="cropBelowFmd">Crop below mesh fine region</a>')
-        cropBelowFmdLabel.linkActivated.connect(showHelp2)
+        cropBelowFmdLabel.linkActivated.connect(showHelpAdv)
         self.cropBelowFmd = QCheckBox()
         self.cropBelowFmd.setChecked(True)
         self.cropBelowFmd.stateChanged.connect(notCroppingFunc)
@@ -3528,11 +3493,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 self.doiCheck.setVisible(False)
                 self.doiSensCheck.setVisible(True)
-        modelDOILabel = QLabel('<a href="modelDOI">Model DOI</a>')
-        modelDOILabel.linkActivated.connect(showHelp2)
+        self.modelDOILabel = QLabel('<a href="modelDOI">Model DOI</a>')
+        self.modelDOILabel.linkActivated.connect(showHelpAdv)
         self.modelDOICheck = QCheckBox()
         self.modelDOICheck.stateChanged.connect(modelDOIFunc)
-        advForm.addRow(modelDOILabel, self.modelDOICheck)
+        advForm.addRow(self.modelDOILabel, self.modelDOICheck)
 
         def flux_typeFunc(index):
             if index == 0:
@@ -3545,7 +3510,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.flux_type.addItem('3D')
         self.flux_type.addItem('2D')
         self.flux_type.activated.connect(flux_typeFunc)
-        invForm.addRow(self.flux_typeLabel, self.flux_type)
+        advForm.addRow(self.flux_typeLabel, self.flux_type)
 
         def singular_typeFunc(state):
             if state == Qt.Checked:
@@ -3556,12 +3521,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.singular_typeLabel.linkActivated.connect(showHelp)
         self.singular_type = QCheckBox()
         self.singular_type.stateChanged.connect(singular_typeFunc)
-        invForm.addRow(self.singular_typeLabel, self.singular_type)
+        advForm.addRow(self.singular_typeLabel, self.singular_type)
 
         def res_matrixFunc(index):
             self.r2.param['res_matrix'] = index
         self.res_matrixLabel = QLabel('<a href="res_matrix">Value for <code>res_matrix</code><a/>')
-        self.res_matrixLabel.linkActivated.connect(showHelp2)
+        self.res_matrixLabel.linkActivated.connect(showHelpAdv)
         self.res_matrix = QComboBox()
         self.res_matrix.addItem('No sensisitivity/resolution matrix [0]')
         self.res_matrix.addItem('Sensitivity matrix [1]')
@@ -3583,42 +3548,45 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.scale.setVisible(False)
         invForm.addRow(self.scaleLabel, self.scale)
 
-        # put in adv
         def patch_size_xFunc():
             self.r2.param['patch_size_x'] = int(self.patch_size_x.text())
         self.patch_size_xLabel = QLabel('<a href="patch">Patch size x<a/>:')
-        self.patch_size_xLabel.linkActivated.connect(showHelp2)
+        self.patch_size_xLabel.linkActivated.connect(showHelpAdv)
         self.patch_size_x = QLineEdit()
         self.patch_size_x.setValidator(QIntValidator())
         self.patch_size_x.setText('1')
         self.patch_size_x.editingFinished.connect(patch_size_xFunc)
         advForm.addRow(self.patch_size_xLabel, self.patch_size_x)
 
-        # put in adv
         def patch_size_yFunc():
             self.r2.param['patch_size_y'] = int(self.patch_size_y.text())
         self.patch_size_yLabel = QLabel('<a href="patch">Patch size y<a/>:')
-        self.patch_size_yLabel.linkActivated.connect(showHelp2)
+        self.patch_size_yLabel.linkActivated.connect(showHelpAdv)
         self.patch_size_y = QLineEdit()
         self.patch_size_y.setValidator(QIntValidator())
         self.patch_size_y.setText('1')
         self.patch_size_y.editingFinished.connect(patch_size_yFunc)
         advForm.addRow(self.patch_size_yLabel, self.patch_size_y)
 
-        def inv_typeFunc(index):
+        self.inv_typeVisible = []
+        def inv_typeFunc(arg):
+            index = int(self.inv_type.currentText()[-2])
             self.r2.param['inverse_type'] = index
             opts = [self.data_typeLabel, self.data_type,
                     self.reg_modeLabel, self.reg_mode,
-                    toleranceLabel, tolerance,
+                    self.toleranceLabel, self.tolerance,
                     self.max_iterationsLabel, self.max_iterations,
                     self.error_modLabel, self.error_mod,
                     self.alpha_anisoLabel, self.alpha_aniso,
                     self.a_wgtLabel, self.a_wgt,
                     self.b_wgtLabel, self.b_wgt]
             if index == 3: # qualitative solution
+                self.inv_typeVisible = [o.isVisible() for o in opts]
                 [o.setVisible(False) for o in opts]
             else:
-                [o.setVisible(True) for o in opts]
+                if len(self.inv_typeVisible) > 1:
+                    [o.setVisible(a) for o, a in zip(opts, self.inv_typeVisible)]
+                self.inv_typeVisible = []
         self.inv_typeLabel = QLabel('<a href="inverse_type">Inversion Type</a>:')
         self.inv_typeLabel.linkActivated.connect(showHelp)
         self.inv_type = QComboBox()
@@ -3631,24 +3599,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.inv_type.activated.connect(inv_typeFunc)
         invForm.addRow(self.inv_typeLabel, self.inv_type)
 
-        def inv_type3DFunc(index):
-            self.param['inverse_type'] = index
-            if index > 0:
-                alpha_sLabel.setVisible(True)
-                alpha_s.setVisible(True)
-            else:
-                alpha_sLabel.setVisible(False)
-                alpha_s.setVisible(False)
-        self.inv_type3DLabel = QLabel('<a href="inv_type3D">Inversion Type</a>:')
-        self.inv_type3DLabel.linkActivated.connect(showHelp)
-        self.inv_type3D = QComboBox()
-        self.inv_type3D.addItem('Normal Regularisation [0]')
-        self.inv_type3D.addItem('Background Regularisation [1]')
-        self.inv_type3D.addItem('Difference Regularisation [2]')
-        self.inv_type3D.activated.connect(inv_type3DFunc)
-        invForm.addRow(self.inv_type3DLabel, self.inv_type3D)
-        self.inv_type3DLabel.setVisible(False)
-        self.inv_type3D.setVisible(False)
+        def target_decreaseFunc():
+            self.r2.param['target_decrease'] = float(self.target_decrease.text())
+        self.target_decreaseLabel = QLabel('<a href="target_decrease">Target decrease</a>:')
+        self.target_decreaseLabel.linkActivated.connect(showHelp)
+        self.target_decrease = QLineEdit()
+        self.target_decrease.setValidator(QDoubleValidator())
+        self.target_decrease.setText('0')
+        self.target_decrease.editingFinished.connect(target_decreaseFunc)
+        invForm.addRow(self.target_decreaseLabel, self.target_decrease)
+
 
         def data_typeFunc(index):
             self.r2.param['data_type'] = index
@@ -3673,26 +3633,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.reg_modeLabel, self.reg_mode)
 
         def toleranceFunc():
-            self.r2.param['tolerance'] = float(tolerance.text())
-        toleranceLabel = QLabel('<a href="tolerance">Value for tolerance</a>:')
-        toleranceLabel.linkActivated.connect(showHelp)
-        tolerance = QLineEdit()
-        tolerance.setValidator(QDoubleValidator())
-        tolerance.setText('1.0')
-        tolerance.editingFinished.connect(toleranceFunc)
-        invForm.addRow(toleranceLabel, tolerance)
-
-        def no_improveFunc():
-            self.r2.param['no_improve'] = float(no_improve.text())
-        no_improveLabel = QLabel('<a href="no_improve">Stop criteria</a>')
-        no_improveLabel.linkActivated.connect(showHelp)
-        no_improve = QLineEdit()
-        no_improve.setValidator(QDoubleValidator())
-        no_improve.setText('1.0')
-        no_improve.editingFinished.connect(no_improveFunc)
-        invForm.addRow(no_improveLabel, no_improve)
-        no_improveLabel.setVisible(False)
-        no_improve.setVisible(False)
+            self.r2.param['tolerance'] = float(self.tolerance.text())
+        self.toleranceLabel = QLabel('<a href="tolerance">Value for tolerance</a>:')
+        self.toleranceLabel.linkActivated.connect(showHelp)
+        self.tolerance = QLineEdit()
+        self.tolerance.setValidator(QDoubleValidator())
+        self.tolerance.setText('1.0')
+        self.tolerance.editingFinished.connect(toleranceFunc)
+        invForm.addRow(self.toleranceLabel, self.tolerance)
 
         def max_iterationsFunc():
             self.r2.param['max_iter'] = int(self.max_iterations.text())
@@ -3707,7 +3655,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def error_modFunc(index):
             self.r2.param['error_mod'] = index
         self.error_modLabel = QLabel('<a href="error_mod">Update the weights</a>:')
-        self.error_modLabel.linkActivated.connect(showHelp2)
+        self.error_modLabel.linkActivated.connect(showHelpAdv)
         self.error_mod = QComboBox()
         self.error_mod.addItem('Keep the same weights [0]')
         self.error_mod.addItem('Update the weights [1]')
@@ -3719,7 +3667,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def alpha_anisoFunc():
             self.r2.param['alpha_aniso'] = float(self.alpha_aniso.text())
         self.alpha_anisoLabel = QLabel('<a href="alpha_aniso">Value for <code>alpha_aniso</code></a>:')
-        self.alpha_anisoLabel.linkActivated.connect(showHelp2)
+        self.alpha_anisoLabel.linkActivated.connect(showHelpAdv)
         self.alpha_aniso = QLineEdit()
         self.alpha_aniso.setValidator(QDoubleValidator())
         self.alpha_aniso.setText('1.0')
@@ -3729,7 +3677,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def alpha_sFunc():
             self.r2.param['alpha_s'] = float(alpha_s.text())
         alpha_sLabel = QLabel('<a href="alpha_s"><code>alpha_s</code></a>:')
-        alpha_sLabel.linkActivated.connect(showHelp2)
+        alpha_sLabel.linkActivated.connect(showHelpAdv)
         alpha_s = QLineEdit()
         alpha_s.setValidator(QDoubleValidator())
         alpha_s.setText('1.0')
@@ -3737,66 +3685,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm.addRow(alpha_sLabel, alpha_s)
         alpha_sLabel.setVisible(False)
         alpha_s.setVisible(False)
-
-        def cginv_toleranceFunc():
-            self.r2.param['cginv_tolerance'] = float(cginv_tolerance.text())
-        cginv_toleranceLabel = QLabel('<a href="cginv_tolerance"><code>cginv_tolerance</code></a>:')
-        cginv_toleranceLabel.linkActivated.connect(showHelp2)
-        cginv_tolerance = QLineEdit()
-        cginv_tolerance.setValidator(QDoubleValidator())
-        cginv_tolerance.setText('0.0001')
-        cginv_tolerance.editingFinished.connect(cginv_toleranceFunc)
-        advForm.addRow(cginv_toleranceLabel, cginv_tolerance)
-        cginv_toleranceLabel.setVisible(False)
-        cginv_tolerance.setVisible(False)
-
-        def cginv_maxitsFunc():
-            self.r2.param['cginv_maxits'] = int(cginv_maxits.text())
-        cginv_maxitsLabel = QLabel('<a href="cginv_maxits"><code>cginv_maxits</code></a>:')
-        cginv_maxitsLabel.linkActivated.connect(showHelp2)
-        cginv_maxits = QLineEdit()
-        cginv_maxits.setValidator(QDoubleValidator())
-        cginv_maxits.setText('500')
-        cginv_maxits.editingFinished.connect(cginv_maxitsFunc)
-        advForm.addRow(cginv_maxitsLabel, cginv_maxits)
-        cginv_maxitsLabel.setVisible(False)
-        cginv_maxits.setVisible(False)
-
-        def alpha_maxFunc():
-            self.r2.param['alpha_max'] = float(alpha_max.text())
-        alpha_maxLabel = QLabel('<a href="alpha_max">Maximum alpha</a>:')
-        alpha_maxLabel.linkActivated.connect(showHelp2)
-        alpha_max = QLineEdit()
-        alpha_max.setValidator(QIntValidator())
-        alpha_max.setText('1.0')
-        alpha_max.editingFinished.connect(alpha_maxFunc)
-        advForm.addRow(alpha_maxLabel, alpha_max)
-        alpha_maxLabel.setVisible(False)
-        alpha_max.setVisible(False)
-
-        def num_alpha_stepsFunc():
-            self.r2.param['num_alpha_steps'] = float(num_alpha_steps.text())
-        num_alpha_stepsLabel = QLabel('<a href="alpha_max">Number of alpha steps</a>:')
-        num_alpha_stepsLabel.linkActivated.connect(showHelp2)
-        num_alpha_steps = QLineEdit()
-        num_alpha_steps.setValidator(QDoubleValidator())
-        num_alpha_steps.setText('10')
-        num_alpha_steps.editingFinished.connect(num_alpha_stepsFunc)
-        advForm.addRow(num_alpha_stepsLabel, num_alpha_steps)
-        num_alpha_stepsLabel.setVisible(False)
-        num_alpha_steps.setVisible(False)
-
-        def min_stepFunc():
-            self.r2.param['min_step'] = float(min_step.text())
-        min_stepLabel = QLabel('<a href="min_step">Minimium Step Length</a>:')
-        min_stepLabel.linkActivated.connect(showHelp2)
-        min_step = QLineEdit()
-        min_step.setValidator(QDoubleValidator())
-        min_step.setText('0.001')
-        min_step.editingFinished.connect(min_stepFunc)
-        advForm.addRow(min_stepLabel, min_step)
-        min_stepLabel.setVisible(False)
-        min_step.setVisible(False)
 
         def min_errorFunc():
             self.r2.param['min_error'] = float(self.min_error.text())
@@ -3829,18 +3717,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.b_wgt.editingFinished.connect(b_wgtFunc)
         invForm.addRow(self.b_wgtLabel, self.b_wgt)
 
-        def c_wgtFunc():
-            self.r2.param['c_wgt'] = float(c_wgt.text())
-        c_wgtLabel = QLabel('<a href="errorParam"><code>c_wgt</code></a>:')
-        c_wgtLabel.linkActivated.connect(showHelp)
-        c_wgtLabel.setVisible(False)
-        c_wgt = QLineEdit()
-        c_wgt.setValidator(QDoubleValidator())
-        c_wgt.setText('1')
-        c_wgt.editingFinished.connect(c_wgtFunc)
-        c_wgt.setVisible(False)
-        invForm.addRow(c_wgtLabel, c_wgt)
-
         def rho_minFunc():
             self.r2.param['rho_min'] = float(self.rho_min.text())
         self.rho_minLabel = QLabel('<a href="rho_max">Minimum apparent resistivity</a>:')
@@ -3860,17 +3736,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.rho_max.setText('1000')
         self.rho_max.editingFinished.connect(rho_maxFunc)
         invForm.addRow(self.rho_maxLabel, self.rho_max)
-
-        def target_decreaseFunc():
-            self.r2.param['target_decrease'] = float(self.target_decrease.text())
-        self.target_decreaseLabel = QLabel('<a href="target_decrease">Target decrease</a>:')
-        self.target_decreaseLabel.linkActivated.connect(showHelp)
-        self.target_decrease = QLineEdit()
-        self.target_decrease.setValidator(QDoubleValidator())
-        self.target_decrease.setText('0')
-        self.target_decrease.editingFinished.connect(target_decreaseFunc)
-        invForm.addRow(self.target_decreaseLabel, self.target_decrease)
-
+        
 
         generalLayout.addLayout(invForm)
 
@@ -3988,8 +3854,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
             # invert
             # TODO run inversion in different thread
-            self.r2.invert(iplot=False, dump=logTextFunc, modErr=self.modErr,
-                           parallel=self.parallel, modelDOI=self.modelDOICheck.isChecked())
+            self.r2.invert(iplot=False, dump=logTextFunc,
+                           modErr=self.modErrCheck.isChecked(),
+                           parallel=self.parallelCheck.isChecked(),
+                           modelDOI=self.modelDOICheck.isChecked())
 
             # replace the log by the R2.out
             with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:

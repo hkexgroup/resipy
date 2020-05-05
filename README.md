@@ -24,6 +24,14 @@ Notes for Mac and Linux users:
 - *wine* is partially supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
+Beta versions:
+
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.1.0%20(exe)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-windows.exe)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.1.0%20(exe)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-linux)
+
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.1.0%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-windows.zip)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.1.0%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-linux.zip)
+
 
 What it can do
 --------------
