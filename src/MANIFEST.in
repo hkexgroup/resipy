@@ -1,4 +1,3 @@
 include image/*.png
-include resipy/exe/R2.exe
-include resipy/exe/gmsh.exe
+include resipy/exe/*
 include resipy/cext/*
