@@ -8,6 +8,11 @@ ResIPy_version = '2.1.0' # ResIPy version (semantic versionning in use)
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
+
+# used to download the binaries
+import requests
+import hashlib
+
 import subprocess
 import numpy as np # import default 3rd party libaries (can be downloaded from conda repositry, incl with winpython)
 import pandas as pd
@@ -47,6 +52,47 @@ pre-processing and error models for unique, combined or multiple surveys:
     index > 0 : apply an error model to the selected unique survey
 '''
 
+#%% check executables are here
+def checkSHA1(fname):
+    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+    sha1 = hashlib.sha1()
+    with open(fname, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha1.update(data)
+    return sha1.hexdigest()
+
+def checkExe(dirname):
+    exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
+    hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
+              'b483d7001b57e148453b33412d614dd95e71db21',
+              '00b65d5655d74b29f8dda76577faf5a046dce6e8',
+              # '577c02cf87bcd2d64cccff14919d607e79ff761a',
+              # '91bd6e5fcb01a11d241456479c203624d0e681ed'
+              ]
+    for i, exe in enumerate(exes):
+        fname = os.path.join(dirname, exe)
+        download = False
+        if os.path.exists(fname) is not True:
+            download = True
+            print('{:s} not found, will download it...'.format(exe), end='', flush=True)
+        else: # check if the file is up to date
+            sha1 = checkSHA1(fname)
+            if sha1 != hashes[i]:
+                download = True
+                print('{:s} needs to be updated...'.format(exe), end='', flush=True)
+        if download:
+            response = requests.get("https://gitlab.com/hkex/pyr2/-/raw/master/src/resipy/exe/" + exe)
+            with open(fname, 'wb') as f:
+                f.write(response.content)
+            print('done')
+        else:
+            print('{:s} found and up to date.'.format(exe))
+                
+checkExe(os.path.join(apiPath, 'exe'))
+            
 #%% wine check
 def wineCheck():
     #check operating system
