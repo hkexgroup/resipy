@@ -383,8 +383,8 @@ k.createSequence([('dpdp1', 1, 8),
                   ('schlum1', 1, 10),
                   ('schlum2', 2, 10),
                   ('multigrad', 1, 10, 2)])
-k.saveSequence('resipy/invdir/seq.csv')
-k.importSequence('resipy/invdir/seq.csv')
+k.saveSequence(k.dirname + '/seq.csv')
+k.importSequence(k.dirname + '/seq.csv')
 k.createSequence()
     
 k.forward(iplot=True, noise=5)
