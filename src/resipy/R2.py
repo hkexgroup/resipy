@@ -8,6 +8,11 @@ ResIPy_version = '2.1.0' # ResIPy version (semantic versionning in use)
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
+
+# used to download the binaries
+import requests
+import hashlib
+
 import subprocess
 import numpy as np # import default 3rd party libaries (can be downloaded from conda repositry, incl with winpython)
 import pandas as pd
@@ -47,6 +52,47 @@ pre-processing and error models for unique, combined or multiple surveys:
     index > 0 : apply an error model to the selected unique survey
 '''
 
+#%% check executables are here
+def checkSHA1(fname):
+    BUF_SIZE = 65536  # lets read stuff in 64kb chunks!
+    sha1 = hashlib.sha1()
+    with open(fname, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            sha1.update(data)
+    return sha1.hexdigest()
+
+def checkExe(dirname):
+    exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
+    hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
+              'b483d7001b57e148453b33412d614dd95e71db21',
+              '00b65d5655d74b29f8dda76577faf5a046dce6e8',
+              # '577c02cf87bcd2d64cccff14919d607e79ff761a',
+              # '91bd6e5fcb01a11d241456479c203624d0e681ed'
+              ]
+    for i, exe in enumerate(exes):
+        fname = os.path.join(dirname, exe)
+        download = False
+        if os.path.exists(fname) is not True:
+            download = True
+            print('{:s} not found, will download it...'.format(exe), end='', flush=True)
+        else: # check if the file is up to date
+            sha1 = checkSHA1(fname)
+            if sha1 != hashes[i]:
+                download = True
+                print('{:s} needs to be updated...'.format(exe), end='', flush=True)
+        if download:
+            response = requests.get("https://gitlab.com/hkex/pyr2/-/raw/master/src/resipy/exe/" + exe)
+            with open(fname, 'wb') as f:
+                f.write(response.content)
+            print('done')
+        else:
+            print('{:s} found and up to date.'.format(exe))
+                
+checkExe(os.path.join(apiPath, 'exe'))
+            
 #%% wine check
 def wineCheck():
     #check operating system
@@ -448,7 +494,8 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Filename to be parsed.
         ftype : str, optional
-            Type of file to be parsed. Either 'Syscal' or 'Protocol'.
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','Res2Dinv',
+            'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         info : dict, optional
             Dictionnary of info about the survey.
         spacing : float, optional
@@ -1664,12 +1711,12 @@ class R2(object): # R2 master class instanciated by the GUI
         if (self.err is True) and ('a_wgt' not in self.param):
             self.param['a_wgt'] = 0
             self.param['b_wgt'] = 0
-        elif typ[0] != 'c': # DC case
+        elif (typ == 'R2') or (typ == 'R3t'): # DC case
             if 'a_wgt' not in self.param:
                 self.param['a_wgt'] = 0.01
             if 'b_wgt' not in self.param:
                 self.param['b_wgt'] = 0.02
-        elif typ == 'cR2': # TODO what about cR3 ?
+        elif (typ == 'cR2') | (typ == 'cR3t'): # IP case
             if 'a_wgt' not in self.param:
                 self.param['a_wgt'] = 0.02 # variance for magnitude (no more offset)
             if 'b_wgt' not in self.param:
@@ -1689,7 +1736,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if self.err:
                 param['a_wgt'] = 0
                 param['b_wgt'] = 0
-            else:
+            else: # default DC case as timelapse not supported for IP yet
                 if 'a_wgt' not in param:#this allows previously assigned values to be
                     param['a_wgt'] = 0.01 # written to the reference.in config file
                 if 'b_wgt' not in param:
@@ -1719,7 +1766,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if np.sum(ifixed) > 0: # fixed element need to be at the end
             self.mesh.orderElem()
         name = 'mesh.dat'
-        if self.typ == 'R3t' or self.typ == 'cR3t':
+        if (typ == 'R3t') | (typ == 'cR3t'):
             name = 'mesh3d.dat'
         self.mesh.write_dat(os.path.join(self.dirname, name))
         
@@ -2376,8 +2423,10 @@ class R2(object): # R2 master class instanciated by the GUI
         os.remove(os.path.join(self.dirname, 'R2.in'))
         
         # sensitivity = difference between final inversion / difference init values
-        invValues1 = np.array(mesh1.attr_cache['Resistivity(Ohm-m)'])
-        invValues2 = np.array(mesh2.attr_cache['Resistivity(Ohm-m)'])
+        res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
+        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].attr_cache.keys()))][0]
+        invValues1 = np.array(mesh1.attr_cache[res_name])
+        invValues2 = np.array(mesh2.attr_cache[res_name])
         sens = (invValues1 - invValues2)/(res1[iselect]-res2[iselect])
         sensScaled = np.abs(sens)
 #        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
@@ -2479,15 +2528,15 @@ class R2(object): # R2 master class instanciated by the GUI
             attr = keys[0]
             print('Attribute not found, revert to {:s}'.format(attr))
         if len(self.meshResults) > 0:
-            if zlim is None:
-                zlim = self.zlim
+            mesh = self.meshResults[index]
             if self.typ[-1] == '2': # 2D case
-                mesh = self.meshResults[index]
+                if zlim is None:
+                    zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color,
                             attr=attr, sens=sens, color_map=color_map,
                             zlim=zlim, clabel=clabel, contour=contour, **kwargs)
-                if doi is True:
-                    if self.doiComputed is True: # DOI based on Oldenburg and Li
+                if doi is True: # DOI based on Oldenburg and Li
+                    if self.doiComputed is True: 
                         z = np.array(mesh.attr_cache['doiSens'])
                         levels = [0.2]
                         linestyle = ':'
@@ -2500,35 +2549,21 @@ class R2(object): # R2 master class instanciated by the GUI
                         linestyle = '--'
                     else:
                         doiSens = False
-                
                 if doi is True or doiSens is True:
-                    # plotting of the sensitivity contour (need to cropSurface as well)
                     xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
-#                    if self.mesh.surface is not None:
-#                        zc = z
-#                        xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-#                        zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-#                        xc = np.r_[xc, xf]
-#                        yc = np.r_[yc, yf]
-#                        zc = np.r_[zc, zf]
-#                        triang = tri.Triangulation(xc, yc) # build grid based on centroid
-#                        try:
-#                            triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
-#                        except Exception as e:
-#                            print('Error in cropSurface for contouring: ', e)
-#                    else:
-#                        triang = tri.Triangulation(xc, yc)
-#                        zc = z
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
                     self._clipContour(mesh.ax, cont.collections)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
-                self.meshResults[index].show(ax=ax, edge_color=edge_color,
-                            attr=attr, color_map=color_map, clabel=clabel,
-                            **kwargs)
-
+                if zlim is None:
+                    zlim = [np.min(mesh.node_z), np.max(mesh.node_z)]
+                if cropMaxDepth and self.fmd is not None:
+                    zlim[0] = np.nanmin(self.elec[:,2]) - self.fmd
+                mesh.show(ax=ax, edge_color=edge_color,
+                        attr=attr, color_map=color_map, clabel=clabel,
+                        zlim=zlim, **kwargs)
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
 
@@ -2594,9 +2629,10 @@ class R2(object): # R2 master class instanciated by the GUI
         print('')
 
         # compute conductivity in mS/m
+        res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
         for mesh in self.meshResults:
-            if 'Resistivity(Ohm-m)' in mesh.attr_cache.keys():
-                mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache['Resistivity(Ohm-m)'])
+            res_name = res_names[np.in1d(res_names, list(mesh.attr_cache.keys()))][0]
+            mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache[res_name])
 
         # compute difference in percent in case of reg_mode == 1
         if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
@@ -3297,7 +3333,7 @@ class R2(object): # R2 master class instanciated by the GUI
         elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
-            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='ProtocolIP')
+            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolIP')
         else:
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
         # NOTE the 'ip' columns here is in PHASE not in chargeability
@@ -3910,7 +3946,7 @@ class R2(object): # R2 master class instanciated by the GUI
         ax : matplotlib.Axes, optional
             Axis on which to plot the graph.
         attr : str, optional
-            Attribute to plot. Default is 'Resistivity(Ohm-m)'.
+            Attribute to plot. Default is 'Resistivity(ohm.m)'.
         axis : str, optional
             Either 'x', 'y', or 'z' (default).
         vmin : float, optional
@@ -4090,14 +4126,12 @@ class R2(object): # R2 master class instanciated by the GUI
                 inside = path.contains_points(np.c_[meshx, meshz])
                 
         # compute absolute and relative difference in resistivity
-        if self.typ=='R3t' or self.typ=='cR3t':
-            res_name = 'Resistivity'
-        else:
-            res_name = 'Resistivity(Ohm-m)'
+        res_names = ['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)']
+        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].attr_cache.keys()))][0]
         res0 = np.array(self.meshResults[0].attr_cache[res_name])[inside]
         for i in range(1, len(self.meshResults)):
             try:
-                res = np.array(self.meshResults[i].attr_cache['Resistivity(Ohm-m)'])
+                res = np.array(self.meshResults[i].attr_cache[res_name])
                 self.meshResults[i].add_attribute(res - res0, 'diff(Resistivity)')
                 self.meshResults[i].add_attribute((res-res0)/res0*100, 'difference(percent)')
             except Exception as e:

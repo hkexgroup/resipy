@@ -128,46 +128,7 @@ def syscalParser(fname):#, spacing=None):
 #elec, df = syscalParser('test/syscalFile.csv')
 #elec, df = syscalParser('test/pole-dipole-survey/Long_south_PDF_63_10_1_filt_5.csv')
 
-#%% protocol.dat forward modelling parser
-
-# def protocolParser(fname):
-#     with open(fname,'r') as fh:
-#         num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
-#         dump = fh.readlines()
-#     protocol = {'index':[0]*num_meas,# protocol dictionary 
-#                 'a':[0]*num_meas,
-#                 'b':[0]*num_meas,
-#                 'm':[0]*num_meas,
-#                 'n':[0]*num_meas,
-#                 'resist':[0]*num_meas,
-#                 'magErr':[0]*num_meas}
-
-#     for i, line in enumerate(dump):
-#         data = line.split()
-#         protocol['index'][i] = int(data[0])
-#         protocol['a'][i] = int(data[1])
-#         protocol['b'][i] = int(data[2])
-#         protocol['m'][i] = int(data[3])
-#         protocol['n'][i] = int(data[4])
-#         protocol['resist'][i] = float(data[5])
-#         if len(data) == 7:
-#             protocol['magErr'][i] = float(data[6])
-    
-#     if np.mean(protocol['magErr']) !=0: 
-#         df = pd.DataFrame(protocol) 
-#     else: 
-#         df = pd.DataFrame(protocol).drop(['magErr'], axis = 1)
-#     df['ip'] = np.nan
-#     num_elec = len(np.array((df['a'],df['b'],df['m'],df['n'])).flatten())
-#     xElec = np.arange(num_elec)
-#     elec = np.zeros((len(xElec),3))
-#     elec[:,0] = xElec
-#     return elec, df
-
-# test code
-#protocolParser('api/test/protocol.dat')
-
-
+#%%
 def protocolParserLME(fname): # pragma: no cover
 # read LME predicted errors passed back from R, only add LME predictions to df
 # Michael Tso @ 190310
@@ -202,66 +163,39 @@ def protocolParserLME(fname): # pragma: no cover
 
 
 
-def protocolParserIP(fname): # just for protocol forward output with cR2
-#    x = np.genfromtxt(fname, skip_header=1)
-#    df = pd.DataFrame(x, columns=['index','a','b','m','n','resist','ip','appResist'])
-    with open(fname,'r') as fh:
-        num_meas = int(fh.readline().strip()) # read in first line - number of measurements 
-        dump = fh.readlines()
-    protocol = {'index':[0]*num_meas,# protocol dictionary 
-                'a':[0]*num_meas,
-                'b':[0]*num_meas,
-                'm':[0]*num_meas,
-                'n':[0]*num_meas,
-                'resist':[0]*num_meas,
-                'ip':[0]*num_meas,
-                'magErr':[0]*num_meas,
-                'phiErr':[0]*num_meas}
-#                'appResist':[0]*num_meas} 
-    #determine if apparent resistivity column is present 
-#    app_resis_flag = False
-#    if len(dump[0])==8:
-#        app_resis_flag=True
-    for i, line in enumerate(dump):
-        data = line.split()
-        protocol['index'][i] = int(data[0])
-        protocol['a'][i] = int(data[1])
-        protocol['b'][i] = int(data[2])
-        protocol['m'][i] = int(data[3])
-        protocol['n'][i] = int(data[4])
-        protocol['resist'][i] = float(data[5])
-        protocol['ip'][i] = float(data[6])
-#        if app_resis_flag:
-#            protocol['appResist'][i]= float(data[7])
-        if len(data) == 9:
-            protocol['magErr'][i] = float(data[7])
-            protocol['phiErr'][i] = float(data[8])
-    
-    if np.mean(protocol['phiErr']) and np.mean(protocol['magErr']) !=0: 
-        df = pd.DataFrame(protocol) 
-    else: 
-        df = pd.DataFrame(protocol).drop(['magErr','phiErr'], axis = 1)
-    xElec = np.arange(np.max(df[['a','b','m','n']].values))
-    elec = np.zeros((len(xElec),3))
-    elec[:,0] = xElec
-    return elec, df    
-
-
-#%% 3D protocol parser
-def protocol3DParser(fname): # works for 2D and 3D (no IP)
-    colnames3d = np.array(['index','sa', 'a','sb','b','sm', 'm','sn', 'n','resist'])
-    colnames = np.array(['index','a','b','m','n','resist','magErr'])
+#%% protocol parser for 2D/3D and DC/IP
+def protocolParser(fname, ip=False, fwd=False):
+    """
+    <type>     <ncol>
+    DC 2D         6
+    DC 2D + err   7
+    DC 2D + fwd   7
+    IP 2D         7
+    IP 2D + err   9
+    IP 2D + fwd   8
+    DC 3D         10
+    DC 3D + err   11
+    DC 3D + fwd   11
+    IP 3D         11
+    IP 3D + err   13
+    IP 3D + fwd   12
+    """
     x = np.genfromtxt(fname, skip_header=1)
-    if x.shape[1] > 8: # max for non 3D cases
-        colnames = colnames3d
-        if x.shape[1] > len(colnames3d): # we have IP in the file (or error)
-            colnames = np.r_[colnames, ['ip']]
-        # remove string effect (faster option but might lead to non-consecutive elec number)
-#        maxElec = np.max(x[:,[2,4,6,8]])
-#        x[:,[2,4,6,8]] = x[:,[1,3,5,7]]*maxElec + x[:,[2,4,6,8]]
-#        x[:,[1,3,5,7]] = 1
-#        
-        # slower option (but consecutive electrode numbers)
+    if fwd:
+        x = x[:,:-1] # discard last column as it is appRes
+    if ip:
+        colnames3d = np.array(['index','sa','a','sb','b','sm', 'm','sn','n','resist','ip','magErr','phiErr'])
+        colnames2d = np.array(['index','a','b','m','n','resist','ip','magErr','phiErr'])
+    else:
+        colnames3d = np.array(['index','sa','a','sb','b','sm', 'm','sn','n','resist','magErr'])
+        colnames2d = np.array(['index','a','b','m','n','resist','magErr'])
+    ncol = x.shape[1]
+    if ncol <= len(colnames2d): # it's a 2D survey
+        colnames = colnames2d[:ncol]
+    else: # it's a 3D survey
+        colnames = colnames3d[:ncol]
+
+        # putting all electrodes on the same string
         elecs = x[:,1:9].reshape((-1,2))
         c = 0
         for line in np.unique(elecs[:,0]):
@@ -276,7 +210,7 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
                 c = c + len(uelec)
         x[:,1:9] = elecs.reshape((-1,8))
         
-    df = pd.DataFrame(x, columns=colnames[:x.shape[1]])
+    df = pd.DataFrame(x, columns=colnames)
     if 'ip' not in df.columns:
         df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
@@ -284,33 +218,39 @@ def protocol3DParser(fname): # works for 2D and 3D (no IP)
     elec[:,0] = xElec
     return elec, df
 
+# test code
+# elec, df = protocolParser('examples/dc-2d/protocol.dat')
+# elec, df = protocolParser('examples/dc-3d/protocol.dat')
+# elec, df = protocolParser('examples/ip-2d/protocol.dat', ip=True)
+# elec, df = protocolParser('examples/ip-3d/protocol2.dat', ip=True)
+
 
 #%% forwardProtocolDC/IP parser
     
-def forwardProtocolDC(fname): # need specific as there is a appRes column
-    skip = 1
-    cnames = ['num','a','b','m','n','resist','appRes']
-    if fname.find('R3t') != -1:
-        skip=1
-        cnames =['num','sa','a','sb','b','sm','m','sn','n','resist','appRes']
-        print('3d import')
-    x = np.genfromtxt(fname, skip_header=skip)
-    df = pd.DataFrame(x, columns=cnames)
-    df['ip'] = np.nan
-    xElec = np.arange(np.max(df[['a','b','m','n']].values))
-    elec = np.zeros((len(xElec),3))
-    elec[:,0] = xElec
-    return elec, df
+# def forwardProtocolDC(fname): # need specific as there is a appRes column
+#     skip = 1
+#     cnames = ['num','a','b','m','n','resist','appRes']
+#     if fname.find('R3t') != -1:
+#         skip=1
+#         cnames =['num','sa','a','sb','b','sm','m','sn','n','resist','appRes']
+#         print('3d import')
+#     x = np.genfromtxt(fname, skip_header=skip)
+#     df = pd.DataFrame(x, columns=cnames)
+#     df['ip'] = np.nan
+#     xElec = np.arange(np.max(df[['a','b','m','n']].values))
+#     elec = np.zeros((len(xElec),3))
+#     elec[:,0] = xElec
+#     return elec, df
     
 
-# not needed as the normal parser can do it
-def forwardProtocolIP(fname): # pragma: no cover
-    x = np.genfromtxt(fname, skip_header=1)
-    df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','ip','appRes'])
-    xElec = np.arange(np.max(df[['a','b','m','n']].values))
-    elec = np.zeros((len(xElec),3))
-    elec[:,0] = xElec
-    return elec, df
+# # not needed as the normal parser can do it
+# def forwardProtocolIP(fname): # pragma: no cover
+#     x = np.genfromtxt(fname, skip_header=1)
+#     df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','ip','appRes'])
+#     xElec = np.arange(np.max(df[['a','b','m','n']].values))
+#     elec = np.zeros((len(xElec),3))
+#     elec[:,0] = xElec
+#     return elec, df
 
 
 #%% PRIME system parser

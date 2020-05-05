@@ -1817,7 +1817,7 @@ class Mesh:
                 background_color=(0.8,0.8,0.8),
                 pvslices=([],[],[]),
                 pvthreshold=None,
-                pvgrid=False,
+                pvgrid=True,
                 pvcontour=[]):
         """
         Shows a 3D tetrahedral mesh. 

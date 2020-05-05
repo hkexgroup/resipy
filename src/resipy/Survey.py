@@ -17,8 +17,7 @@ from scipy.stats import norm
 from scipy.stats.kde import gaussian_kde
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
-                     primeParserTab, protocolParserIP,
-                     protocol3DParser, forwardProtocolDC, forwardProtocolIP,
+                     primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser)
 from resipy.DCA import DCA
 
@@ -71,7 +70,7 @@ class Survey(object):
             warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
                       DeprecationWarning)
             
-        avail_ftypes = ['Syscal','Protocol','Res2Dinv', 'BGS Prime', 'ProtocolIP',
+        avail_ftypes = ['Syscal','ProtocolDC','Res2Dinv', 'BGS Prime', 'ProtocolIP',
                         'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
         
         if parser is not None:
@@ -80,8 +79,8 @@ class Survey(object):
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname)
                 self.kFactor = 1.2
-            elif ftype =='Protocol':
-                elec, data = protocol3DParser(fname) # 2D and 3D
+            elif ftype =='ProtocolDC':
+                elec, data = protocolParser(fname, ip=False)
             elif ftype == 'Res2Dinv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
@@ -90,10 +89,12 @@ class Survey(object):
 #                except:
                 elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
-                elec, data = protocolParserIP(fname)
+                elec, data = protocolParser(fname, ip=True)
                 self.protocolIPFlag = True
             elif ftype == 'forwardProtocolDC':
-                elec, data = forwardProtocolDC(fname)
+                elec, data = protocolParser(fname, fwd=True)
+            elif ftype == 'forwardProtocolIP':
+                elec, data = protocolParser(fname, ip=True, fwd=True)
             elif ftype == 'Sting':
                 elec, data = stingParser(fname)
             elif ftype == 'ABEM-Lund':
@@ -102,9 +103,6 @@ class Survey(object):
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':
                 elec ,data = aresParser(fname)
-#            elif ftype == 'forwardProtocolIP':
-#                self.protocolIPFlag = True
-#                elec, data = forwardProtocolIP(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -271,17 +269,14 @@ class Survey(object):
             if ftype == 'Syscal':
                 elec, data = syscalParser(fname)
                 self.kFactor = 1.2
-            elif ftype =='Protocol':
-                elec, data = protocol3DParser(fname)
+            elif ftype =='ProtocolDC':
+                elec, data = protocolParser(fname, ip=False)
             elif ftype == 'Res2Dinv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
-                # try:
-                    # elec, data = primeParser(fname)
-                # except:
                 elec, data = primeParserTab(fname)
             elif ftype == 'ProtocolIP':
-                elec, data = protocolParserIP(fname)
+                elec, data = protocolParser(fname, ip=True)
                 self.protocolIPFlag = True
             elif ftype == 'Sting':
                 elec, data = stingParser(fname)
@@ -1511,6 +1506,9 @@ class Survey(object):
         protocol = pd.DataFrame(xx, columns=['num','a','b','m','n'])
         
         # write transfer resistance
+        # NOTE for IP, this is the magnitude not the resistance
+        # the magnitude is always positive. This is the case as by the way we
+        # compute 'recipMean' in self.computeReciprocal()
         protocol['res'] = df['recipMean'].values # non-paired will be nan
         
         # write background transfer resistance
