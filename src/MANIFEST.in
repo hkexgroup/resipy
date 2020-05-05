@@ -1,4 +1,3 @@
 include image/*.png
-include resipy/exe/*.exe
-recursive-include resipy/test/*
+include resipy/exe/*
 include resipy/cext/*

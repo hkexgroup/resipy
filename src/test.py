@@ -14,7 +14,7 @@ import time
 import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy.Survey import Survey
-from resipy.R2 import R2
+from resipy.R2 import R2, apiPath
 
 tstart = time.time()
 timings = {}
@@ -206,7 +206,7 @@ print('=================================== cases test =======================')
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
 t0 = time.time()
-k = R2('resipy/invdir/test2d/', typ='R2')
+k = R2(apiPath + '/invdir/test2d/', typ='R2')
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv', ftype='Syscal')
 k.setTitle('Test 2D')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
