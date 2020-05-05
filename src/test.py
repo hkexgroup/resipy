@@ -228,6 +228,7 @@ k.saveFilteredData(os.path.join(k.dirname, 'dfdata2'), k.elec, savetyp='Comma Se
 k.err = True
 
 k.write2in()
+k.write2protocol(err=True)
 k.invert(modErr=True, modelDOI=True)
 k.showResults(attr='Conductivity(mS/m)', doiSens=True)
 k.showResults(doi=True)
