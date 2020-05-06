@@ -3340,6 +3340,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
+        self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
 
         # recompute doi
