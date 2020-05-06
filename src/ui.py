@@ -5152,9 +5152,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
         return [version, newChanges]
     
     def updateCheckerShow(self, msgInput):
-        version = msgInput[0]
-        newChanges = msgInput[1]
-        if ResIPy_version != version:
+        version = msgInput[0] # online version 
+        newChanges = msgInput[1] # documented changes 
+        ResIPy_version_int = int(ResIPy_version.replace('.',''))
+        version_int = int(version.replace('.',''))
+        if ResIPy_version_int < version_int: # check if version is older than online version 
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
