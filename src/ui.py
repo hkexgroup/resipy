@@ -3468,10 +3468,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iCropping = False
                 if 'num_xz_poly' in self.r2.param:
                     self.num_xz_poly = self.r2.param['num_xz_poly'] # store value
+                elif 'num_xy_poly' in self.r2.param:
+                    self.num_xz_poly = self.r2.param['num_xy_poly'] # store value
             else:
                 self.iCropping = True # default
                 if ('num_xz_poly' in self.r2.param) and (self.num_xz_poly is not None):
                     self.r2.param['num_xz_poly'] = self.num_xz_poly # restore value
+                elif ('num_xy_poly' in self.r2.param) and (self.num_xz_poly is not None):
+                    self.r2.param['num_xy_poly'] = self.num_xz_poly # restore value
         self.notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
         self.notCroppingLabel.linkActivated.connect(showHelpAdv)
         self.notCropping = QCheckBox()
@@ -3841,8 +3845,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.iCropping is True:
                 if self.num_xz_poly is not None:
                     self.r2.param['num_xz_poly'] = self.num_xz_poly
+                    self.r2.param['num_xy_poly'] = self.num_xz_poly
             else:
                 self.r2.param['num_xz_poly'] = 0
+                self.r2.param['num_xy_poly'] = 0
             
             # set initial model
             x, phase0, zones, fixed = self.regionTable.getTable()
@@ -4616,8 +4622,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                           <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
                           <p>ResIPy uses 
                               <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">R2</a>,
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR2/cR2.htm">cR2</a> and
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R3t/R3t.htm">R3t</a> developed by Andrew Binley</p> \
+                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR2/cR2.htm">cR2</a>,
+                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R3t/R3t.htm">R3t</a> and 
+                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR3t/cR3t.htm">cR3t</a> developed by Andrew Binley</p> \
                           <p>For generation of triangular mesh, ResIPy uses software 
                               <a href="http://gmsh.info/">Gmsh</a></p>\
                           <p>Python packages used: 
