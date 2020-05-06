@@ -2391,7 +2391,7 @@ class Mesh:
             self.cbar = plt.colorbar(self.cax, ax=ax, format='%.1f')
             self.cbar.set_label(color_bar_title) #set colorbar title
             
-        ax.set_aspect(aspect)#set aspect ratio equal (stops a funny looking mesh)
+        # ax.set_aspect(aspect)#set aspect ratio equal (stops a funny looking mesh)
         
         if sens: #add sensitivity to plot if available
             weights = np.array(sensi) #values assigned to alpha channels 
