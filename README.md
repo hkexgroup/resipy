@@ -13,11 +13,13 @@ ResIPy aims to be
 Downloads
 ---------
 Version 2.1.0 (beta):
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.1.0%20(exe)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.1.0%20(exe)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-macOS.dmg)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.1.0%20(exe)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-linux)
+
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.1.0%20-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.1.0%20-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-macOS.dmg)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.1.0%20-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.1.0/ResIPy-linux)
 
 Version 2.0.2:
+
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-macOS.dmg "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
