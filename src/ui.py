@@ -777,6 +777,7 @@ class App(QMainWindow):
         self.lineSpacing.setFixedWidth(120)
         self.lineSpacing.setVisible(False)
         self.lineSpacingLabel = QLabel('Line spacing [m]:')
+        self.lineSpacingLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.lineSpacingLabel.setVisible(False)
         self.lineSpacingLabel.setFixedWidth(120)
 
