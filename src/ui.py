@@ -746,11 +746,11 @@ class App(QMainWindow):
             fnameRecip, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
                 self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
-                if float(self.spacingEdit.text()) == -1:
-                    spacing = None
-                else:
-                    spacing = float(self.spacingEdit.text())
-                self.r2.addData(fname=fnameRecip, ftype=self.ftype, spacing=spacing, parser=self.parser)
+                # if float(self.spacingEdit.text()) == -1:
+                #     spacing = None
+                # else:
+                #     spacing = float(self.spacingEdit.text())
+                self.r2.addData(fname=fnameRecip, ftype=self.ftype, parser=self.parser)
                 if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                     self.recipOrNoRecipShow(recipPresence = True)
                     self.filterAttrCombo.addItem('Reciprocal Error')
