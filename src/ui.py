@@ -3423,7 +3423,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.inv_type.setCurrentIndex(1)
                 [o.setVisible(False) for o in settingsIP]
                 [o.setVisible(True) for o in settingsDC]
-            if self.r2.iForward is False:
+            if self.r2.iForward is False and len(self.r2.surveys) >= 1:
                 if 'magErr' in self.r2.surveys[0].df.columns:
                     self.a_wgt.setText('0.0')
                     self.b_wgt.setText('0.0')
