@@ -489,16 +489,16 @@ def res2invInputParser(file_path):
             if ip_flag:
                 ip = np.append(ip, float(vals[3]))
             if x_location == 0:
-                c1 = np.append(c1, float(vals[0]))
-                p1 = np.append(p1, float(vals[0]) + a)
-                p2 = np.append(p2, float(vals[0]) + 2*a)
-                c2 = np.append(c2, float(vals[0]) + 3*a)
+                c1 = np.append(c1, np.around((float(vals[0])), 2))
+                p1 = np.append(p1, np.around((float(vals[0]) + a), 2))
+                p2 = np.append(p2, np.around((float(vals[0]) + 2*a), 2))
+                c2 = np.append(c2, np.around((float(vals[0]) + 3*a), 2))
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                p1 = np.append(p1, mid_point - a/2)
-                c1 = np.append(c1, mid_point - 3*a/2)
-                p2 = np.append(p2, mid_point + a/2)
-                c2 = np.append(c2, mid_point + 3*a/2)
+                p1 = np.append(p1, np.around((mid_point - a/2), 2))
+                c1 = np.append(c1, np.around((mid_point - 3*a/2), 2))
+                p2 = np.append(p2, np.around((mid_point + a/2), 2))
+                c2 = np.append(c2, np.around((mid_point + 3*a/2), 2))
         elif array_type == 2:
             pa = np.append(pa, float(vals[2]))
             r1 = np.append(r1, float(vals[1]))
@@ -535,10 +535,10 @@ def res2invInputParser(file_path):
             if ip_flag:
                 ip = np.append(ip, float(vals[4]))
             if x_location == 0:
-                c2 = np.append(c2, float(vals[0]))
-                c1 = np.append(c1, float(vals[0]) + a)
-                p1 = np.append(p1, float(vals[0]) + a*(1 + n))
-                p2 = np.append(p2, float(vals[0]) + a*(2 + n))
+                c2 = np.append(c2, np.around((float(vals[0])), 2))
+                c1 = np.append(c1, np.around((float(vals[0]) + a), 2))
+                p1 = np.append(p1, np.around((float(vals[0]) + a*(1 + n)), 2))
+                p2 = np.append(p2, np.around((float(vals[0]) + a*(2 + n)), 2))
             if x_location == 1:
                 mid_point = (float(vals[0]))
                 c1 = np.append(c1, mid_point - n*a/2)
@@ -550,31 +550,31 @@ def res2invInputParser(file_path):
             if ip_flag:
                 ip = np.append(ip, float(vals[3]))
             if x_location == 0:
-                c2 = np.append(c2, float(vals[0]))
-                c1 = np.append(c1, float(vals[0]) + a) 
-                p1 = np.append(p1, float(vals[0]) + 2*a)
-                p2 = np.append(p2, float(vals[0]) + 3*a)
+                c2 = np.append(c2, np.around((float(vals[0])), 2))
+                c1 = np.append(c1, np.around((float(vals[0]) + a), 2)) 
+                p1 = np.append(p1, np.around((float(vals[0]) + 2*a), 2))
+                p2 = np.append(p2, np.around((float(vals[0]) + 3*a), 2))
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                c1 = np.append(c1, mid_point - a/2)
-                c2 = np.append(c2, mid_point - 3*a/2)
-                p1 = np.append(p1, mid_point + a/2)
-                p2 = np.append(p2, mid_point + 3*a/2)
+                c1 = np.append(c1, np.around((mid_point - a/2), 2))
+                c2 = np.append(c2, np.around((mid_point - 3*a/2), 2))
+                p1 = np.append(p1, np.around((mid_point + a/2), 2))
+                p2 = np.append(p2, np.around((mid_point + 3*a/2), 2))
         elif array_type == 5:# Wenner gamma
             pa = np.append(pa, float(vals[2]))
             if ip_flag:
                 ip = np.append(ip, float(vals[3]))
             if x_location == 0:
-                c1 = np.append(c1, float(vals[0]))
-                p1 = np.append(p1, float(vals[0]) + a)
-                c2 = np.append(c2, float(vals[0]) + 2*a)
-                p2 = np.append(p2, float(vals[0]) + 3*a)
+                c1 = np.append(c1, np.around((float(vals[0])), 2))
+                p1 = np.append(p1, np.around((float(vals[0]) + a), 2))
+                c2 = np.append(c2, np.around((float(vals[0]) + 2*a), 2))
+                p2 = np.append(p2, np.around((float(vals[0]) + 3*a), 2))
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                p1 = np.append(p1, mid_point - a/2)
-                c1 = np.append(c1, mid_point - 3*a/2)
-                c2 = np.append(c2, mid_point + a/2)
-                p2 = np.append(p2, mid_point + 3*a/2)
+                p1 = np.append(p1, np.around((mid_point - a/2), 2))
+                c1 = np.append(c1, np.around((mid_point - 3*a/2), 2))
+                c2 = np.append(c2, np.around((mid_point + a/2), 2))
+                p2 = np.append(p2, np.around((mid_point + 3*a/2), 2))
         elif array_type == 6:# Pole-Dipole
             pa = np.append(pa, float(vals[3]))
             if ip_flag:
@@ -582,28 +582,28 @@ def res2invInputParser(file_path):
             n = (float(vals[2]))
             if x_location == 0:
                 if n > 0:
-                    c1 = np.append(c1, float(vals[0]))
-                    p1 = np.append(p1, float(vals[0]) + n * a)
-                    p2 = np.append(p2, float(vals[0]) + a*(1 + n))
+                    c1 = np.append(c1, np.around((float(vals[0])), 2))
+                    p1 = np.append(p1, np.around((float(vals[0]) + n * a), 2))
+                    p2 = np.append(p2, np.around((float(vals[0]) + a*(1 + n)), 2))
                 else:
-                    p2 = np.append(p2, float(vals[0]))
-                    p1 = np.append(p1, float(vals[0]) + a)
-                    c1 = np.append(c1, float(vals[0]) + a*(1 + abs(n)))
+                    p2 = np.append(p2, np.around((float(vals[0])), 2))
+                    p1 = np.append(p1, np.around((float(vals[0]) + a), 2))
+                    c1 = np.append(c1, np.around((float(vals[0]) + a*(1 + abs(n))), 2))
                 if factor_used:
                     c2_x_len = c2_x_pos - float(vals[0])
                     c2_y_len = c2_x_pos - 0
             if x_location == 1:
                 mid_point = (float(vals[0]))
                 if n > 0:
-                    c1 = np.append(c1, mid_point - n*a/2)
-                    p1 = np.append(p1, mid_point + n*a/2)
-                    p2 = np.append(p2, mid_point + a*((n/2) + 1))
+                    c1 = np.append(c1, np.around((mid_point - n*a/2), 2))
+                    p1 = np.append(p1, np.around((mid_point + n*a/2), 2))
+                    p2 = np.append(p2, np.around((mid_point + a*((n/2) + 1)), 2))
                 else:
-                    p1 = np.append(p1, mid_point - abs(n)*a/2)
-                    p2 = np.append(p2, mid_point - a*(1 + (abs(n)/2)))
-                    c1 = np.append(c1, mid_point + abs(n)*a/2)
+                    p1 = np.append(p1, np.around((mid_point - abs(n)*a/2), 2))
+                    p2 = np.append(p2, np.around((mid_point - a*(1 + (abs(n)/2))), 2))
+                    c1 = np.append(c1, np.around((mid_point + abs(n)*a/2), 2))
                 if factor_used:
-                    c2_x_len = c2_x_pos - (mid_point + abs(n)*a/2)
+                    c2_x_len = c2_x_pos - (np.around((mid_point + abs(n)*a/2), 2))
                     c2_y_len = c2_y_pos - 0
             if factor_used:
                 c2_dist = np.sqrt(c2_x_len**2 + c2_y_len**2)
@@ -616,16 +616,16 @@ def res2invInputParser(file_path):
                 ip = np.append(ip, float(vals[4]))
             n = (float(vals[2]))
             if x_location == 0:
-                c1 = np.append(c1, float(vals[0]))
-                p1 = np.append(p1, float(vals[0]) + n * a)
-                p2 = np.append(p2, float(vals[0]) + a*(1 + n))
-                c2 = np.append(c2, float(vals[0]) + a*(1 + 2*n))
+                c1 = np.append(c1, np.around(float(vals[0]), 2))
+                p1 = np.append(p1, np.around((float(vals[0]) + (n * a)), 2))
+                p2 = np.append(p2, np.around((float(vals[0]) + (a*(1 + n))), 2))
+                c2 = np.append(c2, np.around((float(vals[0]) + (a*(1 + 2*n))), 2))
             if x_location == 1:
                 mid_point = (float(vals[0]))
-                p1 = np.append(p1, mid_point - a/2)
-                c1 = np.append(c1, mid_point - a*(n + 1/2))
-                p2 = np.append(p2, mid_point + a/2)
-                c2 = np.append(c2, mid_point + a*(n + 1/2))
+                p1 = np.append(p1, np.around((mid_point - (a/2)), 2))
+                c1 = np.append(c1, np.around((mid_point - (a*(n + 1/2))), 2))
+                p2 = np.append(p2, np.around((mid_point + (a/2)), 2))
+                c2 = np.append(c2, np.around((mid_point + (a*(n + 1/2))), 2))
         elif array_type in (11,15):
             c1 = np.append(c1, float(vals[1]))
             c1_z = np.append(c1_z, float(vals[2]))
