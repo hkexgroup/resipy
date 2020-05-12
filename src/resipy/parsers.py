@@ -478,11 +478,6 @@ def res2invInputParser(file_path):
     
     for k in range(num_meas):
         line = dump[idx_oi + k]
-#        num_sep = line.count(',')
-#        if num_sep == 0:
-#            vals = line.strip().split()
-#        else:
-#            vals = line.strip().split(',')
         vals = re.findall(r'[-+]?\d*\.\d+|\d+', line)
         a = float(vals[1])
         if array_type == 1:# Wenner alfa
