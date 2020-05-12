@@ -478,11 +478,12 @@ def res2invInputParser(file_path):
     
     for k in range(num_meas):
         line = dump[idx_oi + k]
-        num_sep = line.count(',')
-        if num_sep == 0:
-            vals = line.strip().split()
-        else:
-            vals = line.strip().split(',')
+#        num_sep = line.count(',')
+#        if num_sep == 0:
+#            vals = line.strip().split()
+#        else:
+#            vals = line.strip().split(',')
+        vals = re.findall(r'[-+]?\d*\.\d+|\d+', line)
         a = float(vals[1])
         if array_type == 1:# Wenner alfa
             pa = np.append(pa, float(vals[2]))
@@ -718,12 +719,12 @@ def res2invInputParser(file_path):
         
         for i in range(num_elec_topo):
             e_pos_topo_str = dump[topo_flag_idx+2+i].strip()
-            e_pos_topo_vals = re.split(';|,|, | , | |    |\t', e_pos_topo_str)
+            e_pos_topo_vals = re.findall(r'[-+]?\d*\.\d+|\d+', e_pos_topo_str)
+#            e_pos_topo_vals = re.split(';|,|, | , | |    |\t', e_pos_topo_str)
             ex_pos_topo[i] = float(e_pos_topo_vals[0])
             ez_pos_topo[i] = float(e_pos_topo_vals[1])
             
         # finding common topography points
-        
         elecdf = pd.DataFrame()
         elecdf['x'] = ex_pos
         elecdf['z_i'] = ez_pos
@@ -732,9 +733,12 @@ def res2invInputParser(file_path):
         elecdf_topo['x'] = ex_pos_topo
         elecdf_topo['z_topo'] = ez_pos_topo
         
-        elecdf_merged = pd.merge(elecdf.copy(), elecdf_topo.copy(), how='left', on=['x'])
-        ez_pos = np.array(elecdf_merged['z_topo'])
-                     
+        if len(elecdf) != len(elecdf_topo):
+            elecdf_merged = pd.merge(elecdf.copy(), elecdf_topo.copy(), how='left', on=['x'])
+            ez_pos = np.array(elecdf_merged['z_topo'])
+        else:
+            ex_pos = ex_pos_topo.copy()
+            ez_pos = ez_pos_topo.copy()        
        
     #add some protection against a dodgey file 
     if fmt_flag is False:
