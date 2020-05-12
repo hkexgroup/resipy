@@ -3904,12 +3904,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.attrCombo.clear()
                 attrs = self.r2.meshResults[index].attr_cache.keys()
                 c = 0
+                ci = 0
                 for i, attr in enumerate(attrs):
                     if attr not in ['param', 'region', 'zone']:
                         self.attrCombo.addItem(attr)
                         if attr == self.displayParams['attr']:
-                            c += 1
-                self.attrCombo.setCurrentIndex(c)
+                            ci = c
+                        c += 1
+                self.attrCombo.setCurrentIndex(ci)
                 self.vminEdit.setText('')
                 self.vmaxEdit.setText('')
                 self.doiCheck.setChecked(self.modelDOICheck.isChecked())
