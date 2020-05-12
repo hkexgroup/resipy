@@ -239,7 +239,7 @@ class Mesh:
                  compute_centre=True): # compute cell centres if true, also expensive for big meshes  
         
 
-        #assign varaibles to the mesh object 
+        #assign variables to the mesh object 
         self.num_nodes = len(node_x)
         self.num_elms = len(node_data[0])
         self.node_x = node_x
@@ -3716,7 +3716,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
     return mesh, meshx, meshz, topo, elec_node
 
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None,keep_files=True, 
+def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
              **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
