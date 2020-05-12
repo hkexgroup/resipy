@@ -371,13 +371,19 @@ def res2invInputParser(file_path):
     c2 = np.array(())
     p1 = np.array(())
     p2 = np.array(())
+    c1_y = np.array(())
+    c2_y = np.array(())
+    p1_y = np.array(())
+    p2_y = np.array(())
     c1_z = np.array(()) # for general array integrated topography
     c2_z = np.array(())
     p1_z = np.array(())
     p2_z = np.array(())
     pa = np.array(())
     ip = np.array(())
-    r1 = np.array(())#For appox geom factor
+    r1 = np.array(()) # For approx geom factor
+    r2 = np.array(())
+
     
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
@@ -407,12 +413,13 @@ def res2invInputParser(file_path):
     #6:Pole-Dipole 7:Schlumberger, 11:General array, 15:Gradient 
     meas_type_flag = 'appRes' #default  
 
-    if array_type in [10,12,13]:
-        raise ImportError("Not supported")  
-        #10: Offset pole-dipole, 12: Cross-borehole survey(apparent resistivity
-        #values), 13: Cross-borehole survey(resistance values)
+    if array_type in [8,12,13]:
+        raise ImportError("Not supported")
+        # 8: Equatorial Dipole Dipole
+        #12: Cross-borehole survey(apparent resistivity values)
+        #13: Cross-borehole survey(resistance values)
    
-    if array_type in [1,2,3,4,5,6,7]: 
+    if array_type in [1,2,3,4,5,6,7,10]: 
         idx_oi = 3
         line = dump[idx_oi]
         
@@ -453,6 +460,11 @@ def res2invInputParser(file_path):
                 factor_used = False
             idx_oi += 1
             line = dump[idx_oi]
+            
+    if array_type == 8 or array_type == 10:
+        b_dist = float(line)
+        idx_oi += 1
+        line = dump[idx_oi]
             
     num_meas = int(line)
     idx_oi += 1
@@ -622,6 +634,58 @@ def res2invInputParser(file_path):
                 c1 = np.append(c1, np.around((mid_point - (a*(n + 1/2))), 2))
                 p2 = np.append(p2, np.around((mid_point + (a/2)), 2))
                 c2 = np.append(c2, np.around((mid_point + (a*(n + 1/2))), 2))
+        elif array_type == 8:#Equatorial dipole-dipole >> weird!
+            pa = np.append(pa, float(vals[2]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[3]))
+            if x_location == 0:
+                c1 = np.append(c1, np.around((float(vals[0])), 2))
+                c1_y = np.append(c1_y, 0)
+                p1 = np.append(p1, np.around((float(vals[0]) + a), 2))
+                p1_y = np.append(p1_y, 0)
+                p2 = np.append(p2, np.around((float(vals[0]) + a), 2))
+                p2_y = np.append(p2_y, b_dist)
+                c2 = np.append(c2, np.around((float(vals[0])), 2))
+                c2_y = np.append(c2_y, b_dist)
+            if x_location == 1:
+                mid_point = (float(vals[0]))
+                c1 = np.append(c1, np.around((mid_point - a/2), 2))
+                c1_y = np.append(c1_y, 0)
+                c2 = np.append(c2, np.around((mid_point - a/2), 2))
+                c2_y = np.append(c2_y, b_dist)
+                p1 = np.append(p1, np.around((mid_point + a/2), 2))
+                p1_y = np.append(p1_y, 0)
+                p2 = np.append(p2, np.around((mid_point + a/2), 2))
+                p2_y = np.append(p2_y, b_dist)
+        elif array_type == 10:#Offset pole-dipole
+            pa = np.append(pa, float(vals[3]))
+            if ip_flag:
+                ip = np.append(ip, float(vals[4]))
+            n = (float(vals[2]))
+            if x_location == 0:
+                if n > 0:
+                    c1 = np.append(c1, np.around((float(vals[0])), 2))
+                    p1 = np.append(p1, np.around((float(vals[0]) + n * a), 2))
+                    p2 = np.append(p2, np.around((float(vals[0]) + a*(1 + n)), 2))
+                else:
+                    p2 = np.append(p2, np.around((float(vals[0])), 2))
+                    p1 = np.append(p1, np.around((float(vals[0]) + a), 2))
+                    c1 = np.append(c1, np.around((float(vals[0]) + a*(1 + abs(n))), 2))
+            if x_location == 1:
+                mid_point = (float(vals[0]))
+                if n > 0:
+                    c1 = np.append(c1, np.around((mid_point - (a*(n + 1)/2)), 2))
+                    p1 = np.append(p1, np.around((mid_point + (a*(n - 1)/2)), 2))
+                    p2 = np.append(p2, np.around((mid_point + (a*(n + 1)/2)), 2))
+                else:
+                    p1 = np.append(p1, np.around((mid_point - (a*(abs(n) - 1)/2)), 2))
+                    p2 = np.append(p2, np.around((mid_point - (a*(abs(n) + 1))/2), 2))
+                    c1 = np.append(c1, np.around((mid_point + (a*(abs(n) + 1)/2)), 2))
+            c1_p1 = np.sqrt(b_dist*b_dist + n*n*a*a)
+            r1 = np.append(r1, c1_p1)
+            c1_p2 = np.sqrt(b_dist*b_dist + (a*a*(n + 1)*(n + 1)))
+            r2 = np.append(r2, c1_p2)
+            c2 = np.append(c2,-999999)
         elif array_type in (11,15):
             c1 = np.append(c1, float(vals[1]))
             c1_z = np.append(c1_z, float(vals[2]))
@@ -666,12 +730,23 @@ def res2invInputParser(file_path):
             if p2[k] > 2.5 * r1[k]:
                 p2[k]= 999999
 
-    total_x = np.append(total_x, c1)
-    total_x = np.append(total_x, c2)
-    total_x = np.append(total_x, p1)
-    total_x = np.append(total_x, p2)
-    #convert the x electrode coordinates into indexes?
-    ex_pos = np.unique(total_x)#;print(ex_pos)
+    if array_type == 8:
+        total_x = np.append(total_x, c1)
+        total_x = np.append(total_x, p1)
+        ex_pos = np.unique(total_x)
+        ey_pos = []
+        for i in range(len(ex_pos)):
+            ey_pos = np.append(ey_pos, b_dist)
+        elec = np.column_stack((ex_pos, ey_pos))
+        ex_pos = np.copy(elec)
+    else:
+        total_x = np.append(total_x, c1)
+        total_x = np.append(total_x, c2)
+        total_x = np.append(total_x, p1)
+        total_x = np.append(total_x, p2)
+        #convert the x electrode coordinates into indexes?
+        ex_pos = np.unique(total_x)#;print(ex_pos)
+    
     largo = len(c1)
     e_idx_c1 = []
     e_idx_c2 = []
@@ -693,6 +768,21 @@ def res2invInputParser(file_path):
     e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
     e_idx_p2 = np.add(e_idx_p2, 1)
     data_dict['n'] = np.copy(e_idx_p2)
+    
+    if array_type == 8:
+        e_idx_c2_1 = [ex_pos[:,0] == c2[x] for x in range(largo)]            
+        e_idx_c2_2 = [ex_pos[:, 1] == c2_y[y] for y in range(largo)]
+        e_idx_c2_3 = [e_idx_c2_1[i] & e_idx_c2_2[i] for i in range(largo)]
+        e_idx_c2 = [np.where(e_idx_c2_3[i])[0][0] for i in range(largo)]
+        e_idx_c2 = np.add(e_idx_c2, 1)
+        data_dict['b'] = np.copy(e_idx_c2)
+    
+        e_idx_p2_1 = [ex_pos[:,0] == p2[x] for x in range(largo)]            
+        e_idx_p2_2 = [ex_pos[:, 1] == p2_y[y] for y in range(largo)]
+        e_idx_p2_3 = [e_idx_p2_1[i] & e_idx_p2_2[i] for i in range(largo)]
+        e_idx_p2 = [np.where(e_idx_p2_3[i])[0][0] for i in range(largo)]
+        e_idx_p2 = np.add(e_idx_p2, 1)
+        data_dict['n'] = np.copy(e_idx_p2)
     
     num_elec = len(ex_pos)
         
