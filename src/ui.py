@@ -3805,7 +3805,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 print('killing...', end='')
                 # self.loadingWidget('Killing in progress...')
-                self.r2.proc.kill()
+                if self.r2.proc is not None:
+                    self.r2.proc.kill()
                 print('done')
                 self.invertBtn.setStyleSheet('background-color: green')
                 self.invertBtn.setText('Invert')
