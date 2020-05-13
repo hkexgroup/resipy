@@ -4091,23 +4091,29 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # change survey
         def surveyComboFunc(index):
             self.displayParams['index'] = index
-            attrs = self.r2.meshResults[index].attr_cache.keys()
-            attr = str(self.attrCombo.currentText())
-            ci = 1 # 0 is 'param'
+            attrs = list(self.r2.meshResults[index].attr_cache.keys())
+            attr0 = str(self.attrCombo.currentText())
+            ci = 0
+            c = -1
             found = False
             for i, a in enumerate(attrs): # find same attribute or plot first one
-                if a == attr:
-                    ci = i
-                    found = True
-                    break
+                if a not in ['param', 'region', 'zone']:
+                    c = c + 1
+                    if a == attr0:
+                        ci = c
+                        attr = attr0
+                        found = True
+                        break
             if found is False: # we change attr so let's reset some parameters
                 resetAttributeSpecificSettings()
-            self.displayParams['attr'] = list(attrs)[ci]
+                attr = attrs[4] # by default, first attribute
+                ci = 0
+            self.displayParams['attr'] = attr
             self.attrCombo.clear()
             for attr in attrs:
                 if attr not in ['param', 'region', 'zone']:
                     self.attrCombo.addItem(attr)
-            self.attrCombo.setCurrentIndex(ci-1) # -1 because 'param' is always first
+            self.attrCombo.setCurrentIndex(ci)
             replotSection()
         self.surveyCombo = QComboBox()
         self.surveyCombo.activated.connect(surveyComboFunc)
