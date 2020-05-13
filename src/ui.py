@@ -3053,7 +3053,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                    ('custSeq', 'Custom Sequence', [])]
         
         wd = self.datadir
-        
+        tabImportingCustSeq = self.tabImportingData
         class RowOpt(QHBoxLayout):
             def __init__(self):
                 super(QHBoxLayout, self).__init__()
@@ -3091,7 +3091,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.addWidget(self.rmBtn)
             
             def importFile(self):
-                fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', wd)
+                fname, _ = QFileDialog.getOpenFileName(tabImportingCustSeq,'Open File', wd)
                 if fname != '':
                     self.fname = fname
                     self.importBtn.setText(os.path.basename(fname))
