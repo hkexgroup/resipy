@@ -1671,13 +1671,41 @@ class R2(object): # R2 master class instanciated by the GUI
         file_path = os.path.join(self.dirname, name)
         self.mesh.write_dat(file_path)
 
-
         # define zlim
         if self.fmd == None:
             self.computeFineMeshDepth()
         zlimMax = np.max(self.elec[:,2])
         zlimMin = np.min(self.elec[:,2]) - self.fmd
         self.zlim = [zlimMin, zlimMax]
+        
+        # define num_xz_poly or num_xy_poly
+        elec = self.elec.copy()
+        if (self.typ == 'R2') | (self.typ == 'cR2'):
+            self.param['num_xz_poly'] = 5
+            ymax = np.max(elec[:,2])
+            ymin = np.min(elec[:,2]) - self.fmd 
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            xz_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['xz_poly_table'] = xz_poly_table
+        else:
+            self.param['num_xy_poly'] = 5
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            ymin, ymax = np.min(elec[:,1]), np.max(elec[:,1])
+            zmin, zmax = np.min(elec[:,2])-self.fmd, np.max(elec[:,2])
+            xz_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['zmin'] = zmin
+            self.param['zmax'] = zmax
+            self.param['xy_poly_table'] = xz_poly_table
 
 
     def showMesh(self, ax=None, **kwargs):
