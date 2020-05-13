@@ -2544,6 +2544,7 @@ class App(QMainWindow):
                 self.iDesign is False
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=self.regionTable.addRow)
+            self.calcAspectRatio()
             self.mwMesh.plot(func, aspect = self.plotAspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             self.mwMesh.canvas.setFocus() # set focus on the canvas
@@ -4946,7 +4947,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                      parser=self.parser)
-                self.calcAspectRatio()
+                # self.calcAspectRatio()
                 if 'magErr' in self.r2.surveys[0].df.columns:
                     self.a_wgt.setText('0.0')
                     self.b_wgt.setText('0.0')
