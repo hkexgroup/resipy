@@ -3053,10 +3053,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                    ('multigrad', 'Multi-Gradient', ['a','m','n']),
                    ('custSeq', 'Custom Sequence', [])]
         
-        wd = self.datadir
-        tabImportingCustSeq = self.tabImportingData
+        
         class RowOpt(QHBoxLayout):
-            def __init__(self):
+            def __init__(self, parent=None):
                 super(QHBoxLayout, self).__init__()
                 self.combo = None
                 self.rmBtn = None
@@ -3066,6 +3065,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iseq = 0
                 self.importBtn = None
                 self.fname = ''
+                self.parent = parent
 #                self.createRow() # this create floating windows
 #                self.showArg()
                 
@@ -3092,7 +3092,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.addWidget(self.rmBtn)
             
             def importFile(self):
-                fname, _ = QFileDialog.getOpenFileName(tabImportingCustSeq,'Open File', wd)
+                fname, _ = QFileDialog.getOpenFileName(self.parent.tabImportingData,'Open File', self.parent.datadir)
                 if fname != '':
                     self.fname = fname
                     self.importBtn.setText(os.path.basename(fname))
@@ -3146,7 +3146,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         seqRowLayout = QVBoxLayout()
         seqRowLayout.setAlignment(Qt.AlignTop)
         seqRows = []
-        seqRow = RowOpt()
+        seqRow = RowOpt(parent=self)
         seqRowLayout.addLayout(seqRow)
         seqRows.append(seqRow)
         
@@ -3172,7 +3172,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         showArray('dpdp1') # default
         
         def addRowBtnFunc():
-            a = RowOpt()
+            a = RowOpt(parent=self)
             seqRows.append(a)
             seqRowLayout.addLayout(a)
             a.createRow()
