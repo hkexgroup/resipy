@@ -315,10 +315,10 @@ class App(QMainWindow):
         tabImportingDataLayout = QVBoxLayout()
 
         
-#        restartBtn = QPushButton('Reset UI')
-#        restartBtn.setAutoDefault(True)
-#        restartBtn.clicked.connect(self.restartFunc)
-#        restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
+        self.restartBtn = QPushButton('Restart')
+        self.restartBtn.setAutoDefault(True)
+        self.restartBtn.clicked.connect(self.restartFunc)
+        self.restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
 
         def dimSurvey():
             if self.m2DRadio.isChecked():
@@ -988,6 +988,7 @@ class App(QMainWindow):
         hbox1.addWidget(self.titleEdit)
         hbox1.addWidget(self.dateLabel)
         hbox1.addWidget(self.dateEdit)
+        hbox1.addWidget(self.restartBtn)
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(dimInvGroup)
@@ -1200,7 +1201,7 @@ class App(QMainWindow):
                 tt = df2.values
                 if nbElec is not None:
                     if tt.shape[0] != nbElec:
-                        self.errorDump('The file must have exactly ' + \
+                        self.parent.errorDump('The file must have exactly ' + \
                                   str(nbElec) + ' lines (same number as number of electrodes).')
                         return
                 if 'Buried' in self.headers:
@@ -1208,7 +1209,7 @@ class App(QMainWindow):
                         self.initTable(tt[:,:-1])
                         self.setBuried(tt[:,-1])
                     else:
-                        self.errorDump('the "buried" column should contains only 0 or 1')
+                        self.parent.errorDump('the "buried" column should contains only 0 or 1')
                 else:
                     self.initTable(tt) # topoTable doesn't have "buried" thus last column is not needed 
 
@@ -2565,9 +2566,9 @@ class App(QMainWindow):
             self.mwMesh.plot(func, aspect = self.plotAspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             self.mwMesh.canvas.setFocus() # set focus on the canvas
-            if self.iForward is False:
-                self.regionTable.setColumnHidden(2, False) # show zone column
-                self.regionTable.setColumnHidden(3, False) # show fixed column
+            # if self.iForward is False:
+            #     self.regionTable.setColumnHidden(2, False) # show zone column
+            #     self.regionTable.setColumnHidden(3, False) # show fixed column
             meshOutputStack.setCurrentIndex(1)
 
         self.designModelBtn = QPushButton('Design Model before meshing')
@@ -2611,9 +2612,9 @@ class App(QMainWindow):
                 self.scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
                 replotMesh()
-                if self.iForward is False:
-                    self.regionTable.setColumnHidden(2, True) # hide zone column
-                    self.regionTable.setColumnHidden(3, True) # hide fixed column
+                # if self.iForward is False:
+                #     self.regionTable.setColumnHidden(2, False) # hide zone column
+                #     self.regionTable.setColumnHidden(3, False) # hide fixed column
             except Exception as e:
                 self.errorDump('Error creating the mesh: ' + str(e))
         self.meshQuad = QPushButton('Quadrilateral Mesh')
@@ -2649,9 +2650,9 @@ class App(QMainWindow):
             self.r2.createModelMesh(buried=buried, surface=surface,
                                     cl=cl, cl_factor=cl_factor, show_output=True,
                                     dump=meshLogTextFunc, refine=refine, fmd=fmd)
-            if self.iForward is False:
-                self.regionTable.setColumnHidden(2, False) # show zone column
-                self.regionTable.setColumnHidden(3, False) # show fixed column
+            # if self.iForward is False:
+            #     self.regionTable.setColumnHidden(2, False) # show zone column
+            #     self.regionTable.setColumnHidden(3, False) # show fixed column
             self.scale.setVisible(True)
             self.scaleLabel.setVisible(True)
             meshOutputStack.setCurrentIndex(1)
@@ -2817,7 +2818,7 @@ class App(QMainWindow):
                     if (self.r2.typ == 'R3t') or (self.r2.typ == 'cR3t'):
                         self.mwMesh.plot(self.r2.showMesh, threed=True)
                         meshOutputStack.setCurrentIndex(2)
-                        print('NO WAY THIS CAN HAPPEND!')
+                        print('NO WAY THIS CAN HAPPEN!')
                     else:
                         replotMesh()
                         meshOutputStack.setCurrentIndex(1)
@@ -3804,7 +3805,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 print('killing...', end='')
                 # self.loadingWidget('Killing in progress...')
-                self.r2.proc.kill()
+                if self.r2.proc is not None:
+                    self.r2.proc.kill()
                 print('done')
                 self.invertBtn.setStyleSheet('background-color: green')
                 self.invertBtn.setText('Invert')
@@ -3903,12 +3905,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.attrCombo.clear()
                 attrs = self.r2.meshResults[index].attr_cache.keys()
                 c = 0
+                ci = 0
                 for i, attr in enumerate(attrs):
                     if attr not in ['param', 'region', 'zone']:
                         self.attrCombo.addItem(attr)
                         if attr == self.displayParams['attr']:
-                            c += 1
-                self.attrCombo.setCurrentIndex(c)
+                            ci = c
+                        c += 1
+                self.attrCombo.setCurrentIndex(ci)
                 self.vminEdit.setText('')
                 self.vmaxEdit.setText('')
                 self.doiCheck.setChecked(self.modelDOICheck.isChecked())
@@ -4851,9 +4855,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
     def updateElec(self):
         try:
             elec = self.elecTable.getTable()
+            buried = self.elecTable.getBuried()
             if self.tempElec is None or np.sum(elec-self.tempElec) != 0:
                 self.tempElec = elec
                 self.r2.setElec(elec)
+                self.r2.buried = buried
                 self.r2.mesh = None
                 self.mwMesh.clear()
                 if len(self.r2.surveys) > 0:

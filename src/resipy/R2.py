@@ -1339,8 +1339,10 @@ class R2(object): # R2 master class instanciated by the GUI
 
 
     def computeFineMeshDepth(self):
-        """Compute the Depth Of Investigation (DOI) based on electrode
-        positions and the larger dipole spacing.
+        """Compute the Fine Mesh Depth (FMD) based on electrode
+        positions and the larger dipole spacing. Express as a positive number,
+        it represents the relative vertical distance to extend the fine mesh
+        region below the surface.
         """
         elec = self.elec.copy()[~self.iremote,:]
         if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D survey:
@@ -1351,43 +1353,14 @@ class R2(object): # R2 master class instanciated by the GUI
             else: # if it's a forward model for instance
                 self.fmd = (2/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
 
-            # set num_xz_poly
-            self.param['num_xz_poly'] = 5
-            ymax = np.max(elec[:,2])
-            ymin = np.min(elec[:,2]) - self.fmd 
-            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
-            xz_poly_table = np.array([
-            [xmin, ymax],
-            [xmax, ymax],
-            [xmax, ymin],
-            [xmin, ymin],
-            [xmin, ymax]])
-            self.param['xz_poly_table'] = xz_poly_table
-
         else: # for 3D survey
             dist = np.zeros((len(elec), len(elec)))
             for i, el1 in enumerate(elec):
                 dist[:,i] = np.sqrt(np.sum((el1[None,:] - elec)**2, axis=1))
             self.fmd = (2/3)*np.max(dist)
 
-            # set num_xz_poly
-            self.param['num_xy_poly'] = 5
-            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
-            ymin, ymax = np.min(elec[:,1]), np.max(elec[:,1])
-            zmin, zmax = np.min(elec[:,2])-self.fmd, np.max(elec[:,2])
-            xz_poly_table = np.array([
-            [xmin, ymax],
-            [xmax, ymax],
-            [xmax, ymin],
-            [xmin, ymin],
-            [xmin, ymax]])
-            self.param['zmin'] = zmin
-            self.param['zmax'] = zmax
-            self.param['xy_poly_table'] = xz_poly_table
-        # print('computed DOI : {:.2f}'.format(self.fmd))
-
-        if self.iburied is not None: 
-            #catch where buried electrodes are present as the fmd needs adjusting in this case 
+        if self.iburied is not None:
+            # catch where buried electrodes are present as the fmd needs adjusting in this case 
             for check in self.iburied:
                 if check == True:
                     self.fmd = (np.max(elec[:,2])  - np.min(elec[:,2]) )+(0.5*self.fmd)
@@ -1451,11 +1424,6 @@ class R2(object): # R2 master class instanciated by the GUI
         if kwargs is not None:
             self.meshParams.update(kwargs)
 
-        if fmd is None:# estimate depth of investigation if it is not given
-            self.computeFineMeshDepth()
-        else:
-            self.fmd = fmd
-
         if typ == 'default':
             if self.typ == 'R2' or self.typ == 'cR2': # it's a 2D mesh
                 typ = 'trian'
@@ -1470,54 +1438,48 @@ class R2(object): # R2 master class instanciated by the GUI
                     dump('remote electrode is not supported in quadrilateral mesh for now, please use triangular mesh instead.')
                     return
 
+        # define electrode types
+        elec = self.elec.copy()
+        geom_input = {}
+        elec_x = self.elec[:,0]
+        elec_y = self.elec[:,1]
+        elec_z = self.elec[:,2]
+        elec_type = np.repeat('electrode',len(elec_x))
+        if buried is None and self.iburied is not None:
+            buried = self.iburied
+        if buried is not None:
+            if len(buried) == len(elec_x):
+                self.iburied = buried # we assign it so that computeFineMeshDepth can take it into account
+        if (buried is not None
+                and elec.shape[0] == len(buried)
+                and np.sum(buried) != 0):
+            elec_type[buried] = 'buried'
+        if remote is not None:
+            elec_type[remote] = 'remote'
+            
+        # estimate depth of fine mesh
+        if fmd is None:
+            self.computeFineMeshDepth()
+        else:
+            self.fmd = fmd
+
         if typ == 'quad':
             print('Creating quadrilateral mesh...', end='')
-            elec = self.elec.copy()
-            elec_x = self.elec[:,0]
-            elec_z = self.elec[:,2]
-            #add buried electrodes?
-            elec_type = np.repeat('electrode',len(elec_x))
-            if buried is None and self.iburied is not None:
-                buried = self.iburied
-            if (buried is not None
-                    and elec.shape[0] == len(buried)
-                    and np.sum(buried) != 0):
-                elec_type[buried]='buried'
-            elec_type = elec_type.tolist()
             surface_x = surface[:,0] if surface is not None else None
             surface_z = surface[:,2] if surface is not None else None
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,elec_type,
+            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,list(elec_type),
                                                          surface_x=surface_x, surface_z=surface_z,
                                                          **kwargs)   #generate quad mesh
-            #update parameters accordingly
-#            self.param['meshx'] = meshx
-#            self.param['meshy'] = meshy
-#            self.param['topo'] = topo
             self.param['mesh_type'] = 6
-#            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes[0])), e_nodes[0], e_nodes[1]].astype(int)
             e_nodes = np.array(mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
             self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
 
-            
             if 'regions' in self.param: # allow to create a new mesh then rerun inversion
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
         elif typ == 'trian' or typ == 'tetra' or typ=='prism':
-            elec = self.elec.copy()
             geom_input = {}
-            elec_x = self.elec[:,0]
-            elec_y = self.elec[:,1]
-            elec_z = self.elec[:,2]
-            elec_type = np.repeat('electrode',len(elec_x))
-            if buried is None and self.iburied is not None:
-                buried = self.iburied
-            if (buried is not None
-                    and elec.shape[0] == len(buried)
-                    and np.sum(buried) != 0):
-                elec_type[buried] = 'buried'
-            if remote is not None:
-                elec_type[remote] = 'remote'
 
             if surface is not None:
                 if surface.shape[1] == 2:
@@ -1593,12 +1555,40 @@ class R2(object): # R2 master class instanciated by the GUI
             zlimMax = np.max([np.max(elec[:,2]), np.max(surface[:,1])])
         else:
             zlimMax = np.max(elec[:,2])
-        zlimMin = np.min(elec[:,2]) - self.fmd
+        zlimMin = np.max(elec[:,2]) - self.fmd
         self.zlim = [zlimMin, zlimMax]
+        
+        # define num_xz_poly or num_xy_poly
+        if (self.typ == 'R2') | (self.typ == 'cR2'):
+            self.param['num_xz_poly'] = 5
+            ymax = np.max(elec[:,2])
+            ymin = np.min(elec[:,2]) - self.fmd 
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            xz_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['xz_poly_table'] = xz_poly_table
+        else:
+            self.param['num_xy_poly'] = 5
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            ymin, ymax = np.min(elec[:,1]), np.max(elec[:,1])
+            zmin, zmax = np.min(elec[:,2])-self.fmd, np.max(elec[:,2])
+            xz_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['zmin'] = zmin
+            self.param['zmax'] = zmax
+            self.param['xy_poly_table'] = xz_poly_table
         print('done')
         
 
-    def importMesh(self, file_path, mesh_type='tetra', node_pos=None, elec=None,
+    def importMesh(self, file_path, mesh_type=None, node_pos=None, elec=None,
                    flag_3D=False, res0=100):
         """Import mesh from .vtk / .msh / .dat, rather than having ResIPy
         create one for you.
@@ -1642,18 +1632,30 @@ class R2(object): # R2 master class instanciated by the GUI
         #R2 class mesh handling
         e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
         self.param['mesh'] = self.mesh
-        if mesh_type == 'quad':
-            self.param['mesh_type'] = 4
-            colx = self.mesh.quadMeshNp() # convert nodes into column indexes
-            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), np.array(colx), np.ones((len(e_nodes,1)))].astype(int)
+        # if mesh_type == 'quad':
+        #     self.param['mesh_type'] = 6
+        #     colx = self.mesh.quadMeshNp() # convert nodes into column indexes
+        #     self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), np.array(colx), np.ones((len(e_nodes,1)))].astype(int)
             #will only work for assuming electrodes are a surface array
+        if self.mesh.type2VertsNo() == 4:
+            if flag_3D:
+                self.param['mesh_type'] = 4 # tetra mesh
+            else:
+                self.param['mesh_type'] = 6 # general quad mesh
         else:
-            self.param['mesh_type'] = 3
-            self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
+            self.param['mesh_type'] = 3 # triangular mesh
+        self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
 
         # checking
         if len(np.unique(e_nodes)) < len(e_nodes):
             raise ValueError('Some electrodes are positionned on the same nodes !')
+        
+        # make regions continuous
+        regions = self.mesh.attr_cache['region']
+        uregions = np.unique(regions)
+        iregions = np.arange(len(uregions)) + 1
+        dico = dict(zip(uregions, iregions))
+        self.mesh.attr_cache['region'] = [dico[a] for a in regions]
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
@@ -1669,13 +1671,41 @@ class R2(object): # R2 master class instanciated by the GUI
         file_path = os.path.join(self.dirname, name)
         self.mesh.write_dat(file_path)
 
-
         # define zlim
         if self.fmd == None:
             self.computeFineMeshDepth()
         zlimMax = np.max(self.elec[:,2])
         zlimMin = np.min(self.elec[:,2]) - self.fmd
         self.zlim = [zlimMin, zlimMax]
+        
+        # define num_xz_poly or num_xy_poly
+        elec = self.elec.copy()
+        if (self.typ == 'R2') | (self.typ == 'cR2'):
+            self.param['num_xz_poly'] = 5
+            ymax = np.max(elec[:,2])
+            ymin = np.min(elec[:,2]) - self.fmd 
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            xz_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['xz_poly_table'] = xz_poly_table
+        else:
+            self.param['num_xy_poly'] = 5
+            xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
+            ymin, ymax = np.min(elec[:,1]), np.max(elec[:,1])
+            zmin, zmax = np.min(elec[:,2])-self.fmd, np.max(elec[:,2])
+            xz_poly_table = np.array([
+            [xmin, ymax],
+            [xmax, ymax],
+            [xmax, ymin],
+            [xmin, ymin],
+            [xmin, ymax]])
+            self.param['zmin'] = zmin
+            self.param['zmax'] = zmax
+            self.param['xy_poly_table'] = xz_poly_table
 
 
     def showMesh(self, ax=None, **kwargs):
@@ -2360,7 +2390,11 @@ class R2(object): # R2 master class instanciated by the GUI
             return
 
         if iplot is True:
-            self.showResults()
+            if self.iForward:
+                self.showResults(index=1)
+            else:
+                self.showResults()
+                
 
 
     def modelDOI(self, dump=None):
@@ -3518,7 +3552,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fparam = self.param.copy()
         fparam['job_type'] = 0
         centroids = np.array(mesh.elm_centre).T
-        if self.param['mesh_type'] == 4:
+        if self.param['mesh_type'] == 6:
             fparam['num_regions'] = 1
             maxElem = centroids.shape[0]
             fparam['regions'] = np.array([[1, maxElem, 100]])
