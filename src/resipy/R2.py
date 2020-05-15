@@ -1589,7 +1589,7 @@ class R2(object): # R2 master class instanciated by the GUI
         
 
     def importMesh(self, file_path, mesh_type=None, node_pos=None, elec=None,
-                   flag_3D=False, res0=100):
+                   order_nodes=True, res0=100):
         """Import mesh from .vtk / .msh / .dat, rather than having ResIPy
         create one for you.
 
@@ -1606,8 +1606,6 @@ class R2(object): # R2 master class instanciated by the GUI
         elec : array, optional
             N*3 numpy array of electrode x,y,z coordinates. Electrode node positions
             will be computed by finding the nearest nodes to the relevant coordinates.
-        flag_3D : bool, optional
-            Make this true for 3D meshes if importing .msh type.
         res0 : float, optional
             Starting resistivity for mesh elements.
         """
@@ -1615,7 +1613,8 @@ class R2(object): # R2 master class instanciated by the GUI
             flag_3D = True
         else:
             flag_3D = False
-        self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, flag_3D=flag_3D)
+        self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, 
+                                          order_nodes=order_nodes)
         if elec is not None:
             self.mesh.moveElecNodes(elec[:,0], elec[:,1], elec[:,2])
 

@@ -1216,3 +1216,17 @@ def aresParser(fname, spacing=None):
     elec[elec < -9999] = -999999
     
     return elec, df
+
+#%% BERT format parser  
+def bert_parser(fname):
+    f = open(fname, "r")
+    x = np.array([np.array([l.split('\n')[0] for l in L.split('\t')]) for L in f.readlines()])
+    elec = x[2:int(x[0])+2]
+    elec = np.array([e.astype(float) for e in elec])
+    data = x[int(x[0])+4:int(x[0])+4+int(x[int(x[0])+2])]
+    data = np.array([d.astype(float) for d in data])
+    df = pd.DataFrame(data,columns=x[int(x[0])+3][0].split(' ')[1:-1])
+    df = df.rename(columns={'r':'resist','u':'vp','err':'dev','rhoa':'Rho'})
+    df.drop(['valid','iperr'],axis=1,inplace=True)
+    
+    return elec,df

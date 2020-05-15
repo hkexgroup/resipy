@@ -2665,7 +2665,7 @@ class Mesh:
             if self.ndims == 3:
                 for i in range(self.num_nodes):
                     ni_no=i+1
-                    fid.write("%i %6.3f %6.3f %6.3f\n"%#node number, x coordinate, y coordinate, z coordinate
+                    fid.write("%i %16.8f %16.8f %16.8f\n"%#node number, x coordinate, y coordinate, z coordinate
                               (ni_no,
                                self.node_x[i],
                                self.node_y[i],
@@ -2674,7 +2674,7 @@ class Mesh:
             else:
                 for i in range(self.num_nodes):
                     ni_no=i+1
-                    fid.write("%i %6.3f %6.3f\n"%#node number, x coordinate, y coordinate
+                    fid.write("%i %16.8f %16.8f\n"%#node number, x coordinate, y coordinate
                               (ni_no,
                                self.node_x[i],
                                self.node_z[i]))
@@ -3275,7 +3275,7 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     return mesh
 
 #%% import mesh from native .dat format
-def dat_import(file_path='mesh.dat'):
+def dat_import(file_path='mesh.dat', order_nodes=True):
     """ Import R2/cR2/R3t/cR3t .dat kind of mesh. 
     
     Parameters
@@ -3361,7 +3361,8 @@ def dat_import(file_path='mesh.dat'):
                 node_data=node_map,#nodes of element vertices
                 cell_type = [cell_type],#according to vtk format
                 cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
-                atribute_title='zone')#what is the attribute? we may use conductivity instead of resistivity for example
+                atribute_title='zone', #what is the attribute? we may use conductivity instead of resistivity for example
+                order_nodes = order_nodes)
     
     mesh.add_attribute(zone,'zone')
     
@@ -3369,7 +3370,7 @@ def dat_import(file_path='mesh.dat'):
         
            
 #%% Read in E4D / tetgen mesh
-def tetgen_import(file_path):
+def tetgen_import(file_path, order_nodes=True):
     """Import Tetgen mesh into ResIPy. This isa little different from other 
     imports as the mesh is described by several files. From meshTools' perspective
     What is needed is the node(.node) file and element (.ele) files, which 
@@ -3455,7 +3456,8 @@ def tetgen_import(file_path):
                 cell_type = [10],#according to vtk format
                 cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
                 original_file_path = file_path,
-                atribute_title='zone')#what is the attribute? 
+                atribute_title='zone',#what is the attribute? 
+                order_nodes = order_nodes)
     
     mesh.add_attribute(zone,'zone')
     
@@ -4293,7 +4295,7 @@ def prism_mesh(elec_x,elec_y,elec_z,
     return mesh 
     
 #%% import a custom mesh, you must know the node positions 
-def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
+def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
     """ 
     Import user defined mesh, currently supports .msh, .vtk and .dat (native to R2/3t)
     format for quad, triangular and tetrahedral meshes. The type of file is guessed from the 
@@ -4307,8 +4309,8 @@ def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
         Array of ints referencing the electrode nodes. If left as none no electrodes 
         will be added to the mesh class. Consider using mesh.move_elec_nodes()
         to add nodes to mesh using their xyz coordinates.
-    flag_3D : bool, optional
-        Legacy argument, no longer used. 
+    order_nodes : bool, optional
+        Order nodes when importing a mesh  
         
     Returns
     -------
@@ -4321,9 +4323,9 @@ def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
     
     path,ext = os.path.splitext(file_path)
     if ext == '.vtk':
-        mesh = vtk_import(file_path)
+        mesh = vtk_import(file_path, order_nodes=order_nodes)
     elif ext == '.msh':
-        mesh_dict = gw.msh_parse(file_path)
+        mesh_dict = gw.msh_parse(file_path, order_nodes=order_nodes)
 
         mesh = Mesh(node_x = mesh_dict['node_x'],
                     node_y = mesh_dict['node_y'],
@@ -4333,11 +4335,13 @@ def custom_mesh_import(file_path, node_pos=None, flag_3D=False):
                     node_data = mesh_dict['node_data'],
                     cell_type = mesh_dict['cell_type'],
                     cell_attributes = mesh_dict['parameters'],
-                    atribute_title = mesh_dict['parameter_title'])
+                    atribute_title = mesh_dict['parameter_title'],
+                    order_nodes = order_nodes)
+        
     elif ext == '.dat':
-        mesh = dat_import(file_path)   
+        mesh = dat_import(file_path, order_nodes=order_nodes)   
     elif ext == '.node':
-        mesh = tetgen_import(file_path)
+        mesh = tetgen_import(file_path, order_nodes=order_nodes)
     else:
         avail_ext = ['.vtk','.msh','.dat','.node']
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
