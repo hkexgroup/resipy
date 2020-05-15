@@ -192,6 +192,12 @@ class Survey(object):
         K = self.df['K'].values
         ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
         self.df.loc[ie, 'resist'] = resist[ie]*-1
+        if 'recipMean' in self.df.columns: # in case this method is called after importation
+            recipMean = self.df['recipMean'].values.copy()
+            self.df.loc[ie, 'recipMean'] = recipMean[ie]*-1
+        if 'recipMean0' in self.df.columns: # time-lapse: in case this method is called after importation
+            recipMean0 = self.df['recipMean0'].values.copy()
+            self.df.loc[ie, 'recipMean0'] = recipMean0[ie]*-1
         print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
         
 

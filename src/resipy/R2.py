@@ -1098,6 +1098,12 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         self.surveys[index].showHeatmap(ax=ax)
 
+    
+    def checkTxSign(self):
+        """Checking and correcting the polarity of the transfer resistances (flat 2D surveys only !)."""
+        for s in self.surveys:
+            if np.all(s.df['resist'].values > 0):
+                s.checkTxSign()
 
 
     def _filterSimilarQuad(self, quads):
@@ -1879,7 +1885,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 # and we are dealing with a magnitude here, not a resistivity
                 s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
                 s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
-
+        
+        # check transfer resistance sign
+        if 'checkTxSign' in self.param.keys() and self.param['checkTxSign'] is True:
+            self.checkTxSign()
+            
         # for time-lapse inversion ------------------------------
         if self.iTimeLapse is True:
             if 'reg_mode' not in self.param.keys():
