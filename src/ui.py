@@ -2792,8 +2792,13 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
-                    self.r2.importMesh(fname, mesh_type='tetra')
-                    self.mwMesh3D.plot(self.r2.showMesh, threed=True)
+                    self.r2.importMesh(fname)
+                    print('mesh imported ... now displaying ... ')
+                    if pvfound:
+                        mesh3Dplotter.clear() # clear all actors 
+                        self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                    else:
+                        self.mwMesh3D.plot(self.r2.showMesh, threed=True)
                     meshOutputStack.setCurrentIndex(2)
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
@@ -2806,6 +2811,7 @@ class App(QMainWindow):
         importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         importCustomMeshLabel2.setWordWrap(True)
         def importCustomMeshFunc2():
+            print('using importCustomMeshFunc2')
             elec = self.elecTable.getTable()
             if np.sum(~np.isnan(elec[:,0])) == 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
@@ -3965,8 +3971,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if a[0] == 'End':
                     self.end = True
                 if a[0] == 'Iteration':
+                    if self.typ[-1]=='t':
+                        cropMaxDepth=False # this parameter doesnt make sense for 3D surveys 
+                    else:
+                        cropMaxDepth=self.cropBelowFmd.isChecked()
                     self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
-                                             cropMaxDepth=self.cropBelowFmd.isChecked()), aspect=self.plotAspect)
+                                             cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
             return newFlag
 
         def plotRMS(ax):
