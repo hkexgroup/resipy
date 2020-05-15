@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = False # set to false to not display message in the console
+DEBUG = True # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -1417,6 +1417,11 @@ class App(QMainWindow):
 #        ipEndBoxLabel = QLabel('IP end column')
         self.chargeabilityBoxLabel = QLabel('Chargeability:')
         self.phaseBoxLabel = QLabel('Phase shift:')
+        self.devErrLabel = QLabel('Stacking Error (dev):')
+        self.resErrLabel = QLabel('Resistance Error:')
+        self.phaseLabel = QLabel('Phase/Chargeability Error:')
+        
+        
 #        elecSpacingLabel = QLabel('Electrode spacing')
 
 #        boxesLabels = [self.aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
@@ -1424,7 +1429,8 @@ class App(QMainWindow):
         boxesLabels = [self.aBoxLabel, self.bBoxLabel, self.mBoxLabel, 
                        self.nBoxLabel, self.vpBoxLabel, self.InBoxLabel,
                        self.resistBoxLabel, self.chargeabilityBoxLabel,
-                       self.phaseBoxLabel]#, elecSpacingLabel]
+                       self.phaseBoxLabel, self.devErrLabel, self.resErrLabel, 
+                       self.phaseLabel]
 
         self.aBox = QComboBox()
         self.bBox = QComboBox()
@@ -1439,6 +1445,9 @@ class App(QMainWindow):
         self.chargeabilityBox.setToolTip('input the column containing chargeability (mV/V) values')
         self.phaseBox = QComboBox()
         self.phaseBox.setToolTip('input the column containing phase shift (mRad) values')
+        self.devErrBox = QComboBox()
+        self.resErrBox = QComboBox()
+        self.phaseErrBox = QComboBox()
 #        elecSpacingEdit = QLineEdit('')
 #        elecSpacingEdit.setEnabled(False)
 #        elecSpacingEdit.setValidator(QDoubleValidator())
@@ -1449,7 +1458,7 @@ class App(QMainWindow):
 #                 ipEndBox, chargeabilityBox, phaseBox]#, elecSpacingEdit]
         boxes = [self.aBox, self.bBox, self.mBox, self.nBox, self.vpBox,
                  self.InBox, self.resistBox, self.chargeabilityBox, 
-                 self.phaseBox]#, elecSpacingEdit]
+                 self.phaseBox, self.devErrBox, self.resErrBox, self.phaseErrBox]#, elecSpacingEdit]
 
         def fillBoxes(bs):
             for b in bs:
@@ -1539,7 +1548,19 @@ class App(QMainWindow):
                     self.inputPhaseFlag = True
                 else:
                     self.ipCheck.setChecked(False)
-            
+            vals = getBoxes([self.devErrBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['dev'])
+            vals = getBoxes([self.resErrBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['magErr'])
+            vals = getBoxes([self.phaseErrBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['phiErr'])
+                
             # currently not importing each IP columns (M1 -> M..) so no
             # decay curve analysis can be performed
 
