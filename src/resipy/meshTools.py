@@ -1952,11 +1952,11 @@ class Mesh:
                 ax = pv.BackgroundPlotter()
                 ax.background_color = background_color
             else: # check the ax argument is for pyvista not matplotlib 
-                ax.set_background(background_color)
                 typ_str = str(type(ax))
                 if typ_str.find('pyvista') == -1:
                     raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
-            
+                ax.set_background(background_color)
+                
             if pvthreshold is not None:
                 if isinstance(pvthreshold, list):
                     if pvthreshold[0] is None:

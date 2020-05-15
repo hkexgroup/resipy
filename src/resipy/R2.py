@@ -1598,7 +1598,7 @@ class R2(object): # R2 master class instanciated by the GUI
         file_path : str
             File path mapping to the mesh file
         mesh_type : str
-            Type of mesh, 'quad', 'trian', 'tetra'
+            Not used anymore. 
         node_pos : array like, optional
             Array of ints referencing the electrode nodes. If left as none no electrodes
             will be added to the mesh class. Consider using mesh.moveElecNodes()
@@ -1642,7 +1642,10 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 self.param['mesh_type'] = 6 # general quad mesh
         else:
-            self.param['mesh_type'] = 3 # triangular mesh
+            if flag_3D:
+                self.param['mesh_type'] = 6 # prism mesh 
+            else:
+                self.param['mesh_type'] = 3 # triangular mesh
         self.param['node_elec'] = np.c_[1+np.arange(len(e_nodes)), e_nodes].astype(int)
 
         # checking
