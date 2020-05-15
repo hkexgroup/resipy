@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = True # set to false to not display message in the console
+DEBUG = False # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -3511,13 +3511,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.modelDOICheck = QCheckBox()
         self.modelDOICheck.stateChanged.connect(modelDOIFunc)
         advForm.addRow(self.modelDOILabel, self.modelDOICheck)
+        
+        def checkTxSignFunc(state):
+            if state == Qt.Checked:
+                self.r2.param['checkTxSign'] = True
+            else:
+                self.r2.param['checkTxSign'] = False
+        self.checkTxSignLabel = QLabel('<a href="txSign">Resistance polarity check</a>')
+        self.checkTxSignLabel.linkActivated.connect(showHelpAdv)
+        self.checkTxSign = QCheckBox()
+        self.checkTxSign.stateChanged.connect(checkTxSignFunc)
+        advForm.addRow(self.checkTxSignLabel, self.checkTxSign)
 
         def flux_typeFunc(index):
             if index == 0:
                 self.r2.param['flux_type'] = 3
             else:
                 self.r2.param['flux_type'] = 2
-        self.flux_typeLabel = QLabel('<a href="flux_type">Flux Type</a>:')
+        self.flux_typeLabel = QLabel('<a href="flux_type">Flux Type</a>')
         self.flux_typeLabel.linkActivated.connect(showHelp)
         self.flux_type = QComboBox()
         self.flux_type.addItem('3D')
@@ -3551,7 +3562,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def scaleFunc():
             self.r2.param['scale'] = float(self.scale.text())
-        self.scaleLabel = QLabel('<a href="scale"> Scale for triangular mesh</a>:')
+        self.scaleLabel = QLabel('<a href="scale"> Scale for triangular mesh</a>')
         self.scaleLabel.linkActivated.connect(showHelp)
         self.scaleLabel.setVisible(False)
         self.scale = QLineEdit()
