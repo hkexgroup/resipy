@@ -17,7 +17,7 @@ from scipy.stats import norm
 from scipy.stats.kde import gaussian_kde
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
-                     primeParserTab, protocolParser,
+                     primeParserTab, protocolParser, bertParser,
                      stingParser, ericParser, lippmannParser, aresParser)
 from resipy.DCA import DCA
 
@@ -102,7 +102,9 @@ class Survey(object):
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':
-                elec ,data = aresParser(fname)
+                elec, data = aresParser(fname)
+            elif ftype == 'BERT':
+                elec, data = bertParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -140,9 +142,12 @@ class Survey(object):
             if np.all(self.df['vp'] >= 0):
                 self.checkTxSign()
 
-        # compute apparent resistivity
+        # convert apparent resistivity to resistance and vice versa
         self.computeK()
-        self.df['app'] = self.df['K']*self.df['resist']
+        if 'resist' in self.df.columns:
+            self.df['app'] = self.df['K']*self.df['resist']
+        elif 'app' in self.df.columns:
+            self.df['resist'] = self.df['app']/self.df['K']
         
         # apply basic filtering
         self.filterDefault()
@@ -292,6 +297,8 @@ class Survey(object):
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':
                 elec ,data = aresParser(fname)
+            elif ftype == 'BERT':
+                elec, data = bertParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)

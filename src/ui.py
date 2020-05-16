@@ -635,6 +635,9 @@ class App(QMainWindow):
                 self.ftype = 'ARES'
                 self.fformat = 'ARES (*.2dm *.2DM)'
             elif index == 9:
+                self.ftype = 'BERT'
+                self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
+            elif index == 10:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -651,6 +654,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
         self.ftypeCombo.addItem('ARES (beta)')
+        self.ftypeCombo.addItem('BERT')
         self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
@@ -1615,7 +1619,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(9)
+            self.ftypeCombo.setCurrentIndex(10)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
