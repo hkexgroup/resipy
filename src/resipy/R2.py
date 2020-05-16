@@ -1680,7 +1680,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.write_dat(file_path)
 
         # define zlim
-        if self.fmd == None:
+        if self.fmd is None:
             self.computeFineMeshDepth()
         zlimMax = np.max(self.elec[:,2])
         zlimMin = np.min(self.elec[:,2]) - self.fmd
