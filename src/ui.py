@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = True # set to false to not display message in the console
+DEBUG = False # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -4806,7 +4806,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.loadingDialog.accept()  
             
     def calcAspectRatio(self): # for calculating aspect ratio of long surveys
-        self.r2.computeFineMeshDepth()
+        if self.r2.fmd is None:
+            self.r2.computeFineMeshDepth()
         surLength = np.abs(self.r2.param['xz_poly_table'][0,0] - self.r2.param['xz_poly_table'][1,0])
         surDepth = np.abs(self.r2.param['xz_poly_table'][-1,1] - self.r2.param['xz_poly_table'][-2,1])
         aspectRatio = surLength/surDepth
