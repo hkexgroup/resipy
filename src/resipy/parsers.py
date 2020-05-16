@@ -709,7 +709,7 @@ def res2invInputParser(file_path):
     else:
         K = geom_fac(c1, c2, p1, p2)
         
-    if meas_type_flag == 'appRes':
+    if meas_type_flag == 'appRes': # TODO: let Survey() take care of K
         data_dict['resist'] = pa/K            
         data_dict['Rho'] = pa
     else:
@@ -1218,15 +1218,93 @@ def aresParser(fname, spacing=None):
     return elec, df
 
 #%% BERT format parser  
-def bert_parser(fname):
+def bertParser(fname):
     f = open(fname, "r")
-    x = np.array([np.array([l.split('\n')[0] for l in L.split('\t')]) for L in f.readlines()])
-    elec = x[2:int(x[0])+2]
-    elec = np.array([e.astype(float) for e in elec])
-    data = x[int(x[0])+4:int(x[0])+4+int(x[int(x[0])+2])]
-    data = np.array([d.astype(float) for d in data])
-    df = pd.DataFrame(data,columns=x[int(x[0])+3][0].split(' ')[1:-1])
-    df = df.rename(columns={'r':'resist','u':'vp','err':'dev','rhoa':'Rho'})
-    df.drop(['valid','iperr'],axis=1,inplace=True)
+    
+    dump = f.readlines()
+    line = 0
+    
+    # skip comment lines
+    while dump[line][0] == '#':
+        line += 1
+
+    numElec = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    if len(numElec) == 1: # we have number of elecs
+        line += 1
+    
+    elecHeaders = re.findall(r'#|x|y|z', dump[line])
+    if len(elecHeaders) != 0: # we have elec location headers (x, y, z)
+        line += 1
+    
+    elec_list = []
+    elecLocs0 = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    elecLocs_line = elecLocs0.copy()
+    while len(elecLocs_line) == len(elecLocs0):
+        elecLocs_line = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+        elec_list.append(elecLocs_line)
+        line += 1
+    
+    elec = np.array(elec_list[:-1]).astype(float)
+    
+    if elec.shape[1] != 3: # we have xz format so conver into xyz
+        elec = np.c_[elec[:,0], np.zeros(len(elec)), elec[:,1]]
+    
+    vals = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    while len(vals) < 4: # finding the data line
+        line += 1
+        vals = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    
+    headers = re.findall(r'[A-Za-z]+', dump[line-1]) # for finding data types
+
+    topo_check_vals = len(re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])) # TODO: is topography included without any flags?
+    df_list = []
+    for val in dump[line:]: # reding data
+        df_list.append(re.findall(r'[-+]?\d*\.\d+|\d+', val))
+    
+    df = pd.DataFrame(np.array(df_list).astype(float)) # getting the electrode array
+    df.columns = headers
+    
+    resristance_list = ['r', 'R', 'rho', 'Rho', 'RHO']    
+    resistivity_list = ['rhoa', 'Rhoa', 'Ra', 'ra', 'RA', 'RHOA']    
+    ip_list = ['ip', 'IP']    
+    iv_list = ['i', 'I', 'u', 'U', 'i/mA', 'u/mV']    
+    resErr_list = ['err', 'ERR', 'Err', 'err/%']    
+    ipErr_list = ['ipErr', 'IPERR', 'IPerr', 'iperr']
+    
+    #check whether resistance is given or app. res or (I and V)
+    if any(header in headers for header in resristance_list):
+        header = [col for col in resristance_list if col in headers][0]
+        df = df.rename(columns = {header:'resist'})
+
+    elif any(header in headers for header in resistivity_list):
+        header = [col for col in resistivity_list if col in headers][0]
+        df = df.rename(columns = {header:'app'}) # no resistance calc required here, Survey() takes care of it
+
+    elif any(header in headers for header in iv_list):
+        i = [col for col in ['i', 'I', 'i/mA'] if col in headers][0]
+        v = [col for col in ['u', 'U', 'u/mV'] if col in headers][0]
+        df = df.rename(columns = {i:'i', v:'vp'})
+        df['resist'] = df['vp']/df['i']
+
+    else:
+        raise ValueError('Data does not contain enough columns for obtaining resistance/resistivity')
+        
+    if any(header in headers for header in ip_list): # IP check
+        header = [col for col in ip_list if col in headers][0]
+        df = df.rename(columns = {header:'ip'})
+        
+    if any(header in headers for header in resErr_list): # R_err check (is it stacking error or magnitude error?)
+        header = [col for col in resErr_list if col in headers][0]
+        if '%' in header: # error should be in fractions
+            df[header].values /= 100
+        df = df.rename(columns = {header:'magErr'})
+        
+    if any(header in headers for header in ipErr_list): # IP_err check
+        header = [col for col in ipErr_list if col in headers][0]
+        df = df.rename(columns = {header:'phiErr'})
+    
+    if 'ip' not in df.columns:
+        df['ip'] = np.nan
+    df = df.rename(columns = dict(zip(df.columns[:4], ['a', 'b', 'm', 'n']))) # make sure headers are a b m n
     
     return elec,df
