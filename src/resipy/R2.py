@@ -3411,7 +3411,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # recompute doi
         self.computeFineMeshDepth()
-        self.zlim[0] = -self.fmd
+        self.zlim[0] = np.min(elec[:,2]) - self.fmd
 
         if iplot is True:
             self.showPseudo()
