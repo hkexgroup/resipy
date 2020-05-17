@@ -270,7 +270,7 @@ class App(QMainWindow):
         
         self.setWindowTitle('ResIPy v' + ResIPy_version)
         self.setGeometry(100,100,1100,600)
-        self.newwd = os.path.join(bundle_dir, 'resipy', 'invdir')
+        self.newwd = os.path.join(bundle_dir, 'resipy')
 
         # UI attributes (sync with self.r2 attributes when instantiated)
         self.r2 = None
@@ -357,6 +357,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(False)
                 meshCustomGroup.setVisible(True)
                 instructionLabel.setVisible(True)
+                self.aspectMeshBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
 
                 # inversion settings
@@ -410,6 +411,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(True)
                 meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
+                self.aspectMeshBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
 
                 # inversion settings
@@ -2563,14 +2565,14 @@ class App(QMainWindow):
         fmdBox.setValidator(QDoubleValidator())
         
         
-        def replotMesh():
+        def replotMesh(aspect='equal'):
             if self.iDesign is False:
                 self.regionTable.reset()
                 self.iDesign is False
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=self.regionTable.addRow)
-            self.calcAspectRatio()
-            self.mwMesh.plot(func, aspect = self.plotAspect)
+            # self.calcAspectRatio()
+            self.mwMesh.plot(func, aspect=aspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             self.mwMesh.canvas.setFocus() # set focus on the canvas
 
@@ -2864,6 +2866,16 @@ class App(QMainWindow):
         self.importCustomMeshBtn2.clicked.connect(importCustomMeshFunc2)
         self.importCustomMeshBtn2.setToolTip('Import .msh or .vtk file. The electrodes will be snapped to the closest node.')
 
+        def meshAspectBtnFunc(state):
+            if state == Qt.Checked:
+                replotMesh(aspect='equal')
+            else:
+                replotMesh(aspect='auto')
+        self.meshAspectBtn = QCheckBox('Equal aspect')
+        self.meshAspectBtn.setToolTip('Check for equal aspect of axis.')
+        self.meshAspectBtn.setChecked(True)
+        self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
+
         def resetMeshBtnFunc():
             self.regionTable.reset()
             self.mwMesh.clear()
@@ -3034,8 +3046,9 @@ class App(QMainWindow):
         meshLayout.addLayout(meshChoiceLayout, 0)
 
         instructionLayout = QHBoxLayout()
-        instructionLayout.addWidget(instructionLabel, 92)
-        instructionLayout.addWidget(self.resetMeshBtn, 8)
+        instructionLayout.addWidget(instructionLabel, 86)
+        instructionLayout.addWidget(self.meshAspectBtn, 7)
+        instructionLayout.addWidget(self.resetMeshBtn, 7)
         meshLayout.addLayout(instructionLayout)
 
         regionLayout = QVBoxLayout()
