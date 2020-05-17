@@ -1362,15 +1362,15 @@ class R2(object): # R2 master class instanciated by the GUI
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
-                self.fmd = (2/3)*maxDist
+                self.fmd = (1/3)*maxDist
             else: # if it's a forward model for instance
-                self.fmd = (2/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
+                self.fmd = (1/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
 
         else: # for 3D survey
             dist = np.zeros((len(elec), len(elec)))
             for i, el1 in enumerate(elec):
                 dist[:,i] = np.sqrt(np.sum((el1[None,:] - elec)**2, axis=1))
-            self.fmd = (2/3)*np.max(dist)
+            self.fmd = (1/3)*np.max(dist)
 
         if self.iburied is not None:
             # catch where buried electrodes are present as the fmd needs adjusting in this case 
@@ -2539,7 +2539,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
-                    doi=False, doiSens=False, contour=False, cropMaxDepth=True, **kwargs):
+                    doi=False, doiSens=False, contour=False, cropMaxDepth=True,
+                    **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -3058,7 +3059,8 @@ class R2(object): # R2 master class instanciated by the GUI
             zones[idx] = zoneValues[key]
         self.mesh.attr_cache['zones'] = zones
 
-        fixed = np.array(self.mesh.attr_cache['param']).copy()
+        # fixed = np.array(self.mesh.attr_cache['param']).copy()
+        fixed = np.arange(self.mesh.num_elms)+1
         for key in fixedValues.keys():
             idx = regions == key
             if fixedValues[key] == True:
