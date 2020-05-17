@@ -71,7 +71,7 @@ class Survey(object):
                       DeprecationWarning)
             
         avail_ftypes = ['Syscal','ProtocolDC','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'BERT']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -1233,7 +1233,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             ax.plot(self.df['ip'].values, '.')
             ax.set_xlabel('Measurements')
-            ax.set_ylabel('Chargeability [mV/V]')
+            ax.set_ylabel('Phase [mrad]')
     
     
 #    def computeK(self):
