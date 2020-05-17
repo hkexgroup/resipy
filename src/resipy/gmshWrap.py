@@ -369,7 +369,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("cln=%.2f;//characteristic length for background region\n" %cln)
     #Background region propeties, follow rule of thumb that background should be 5*largest dipole 
     flank=5*dp_len
-    b_max_depth=abs(fmd)-(3*dp_len)#background max depth
+    b_max_depth=-abs(fmd)-(3*dp_len)#background max depth
     #add Neumann boundaries on left hand side
     n_pnt_cache=[0,0,0,0]#cache for the indexes of the neumon boundary points 
     tot_pnts=tot_pnts+1;n_pnt_cache[0]=tot_pnts
