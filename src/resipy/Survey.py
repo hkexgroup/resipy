@@ -71,7 +71,7 @@ class Survey(object):
                       DeprecationWarning)
             
         avail_ftypes = ['Syscal','ProtocolDC','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'BERT']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
