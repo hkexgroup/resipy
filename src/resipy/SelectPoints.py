@@ -54,7 +54,7 @@ class SelectPoints(object):
         if self.pts is not None:
             self.xmin = np.nanmin(pts[:,0]) - 10 # padding to get extreme points in the zone
             self.xmax = np.nanmax(pts[:,0]) + 10
-        self.drawable = True # can draw on canvas
+        self.drawable = False # can draw on canvas
         
         self.addButtons()
         self.connect()

@@ -3863,6 +3863,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwIter.clear()
             self.mwInv.clear()
             
+            # reset variables for RMS graph
+            self.pindex = 0
+            self.rms = []
+            self.rmsIndex = []
+            self.rmsIP = []
+            self.rmsIndexIP = []
+            self.inversionOutput = ''
+            
             # create default mesh is not specified
             if self.r2.mesh is None:
                 logTextFunc('Creating the mesh... ')
@@ -4074,7 +4082,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
-                            'pvgrid':False, 'pvcontour':[]}
+                            'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         
 
         def replotSection(): # main plotting function
@@ -4094,8 +4102,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             pvthreshold = self.displayParams['pvthreshold']
             pvgrid = self.displayParams['pvgrid']
             pvcontour = self.displayParams['pvcontour']
+            aspect = self.displayParams['aspect']
             if self.r2.typ[-1] == '2':
-                self.mwInv.replot(threed=False, aspect=self.plotAspect,
+                self.mwInv.replot(threed=False, aspect=aspect,
                                   index=index, edge_color=edge_color,
                                   contour=contour, sens=sens, attr=attr,
                                   vmin=vmin, vmax=vmax, color_map=cmap, 
@@ -4292,6 +4301,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.edgeCheck.setChecked(False)
         self.edgeCheck.setToolTip('Show edges of each mesh cell.')
         self.edgeCheck.stateChanged.connect(showEdges)
+        
+        def aspectCheckFunc(state):
+            if state == Qt.Checked:
+                self.displayParams['aspect'] = 'equal'
+            else:
+                self.displayParams['aspect'] = 'auto'
+            replotSection()
+        self.aspectCheck = QCheckBox('Equal')
+        self.aspectCheck.setChecked(True)
+        self.aspectCheck.stateChanged.connect(aspectCheckFunc)
+        self.aspectCheck.setToolTip('Check for equal aspect of the axis'
+                                    'Uncheck for auto aspect.')
 
         def saveBtnFunc():
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
@@ -4440,9 +4461,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.surveyCombo, 15)
         optsLayout.addWidget(self.attrCombo, 20)
         optsLayout.addWidget(self.vminLabel)
-        optsLayout.addWidget(self.vminEdit, 10)
+        optsLayout.addWidget(self.vminEdit, 5)
         optsLayout.addWidget(self.vmaxLabel)
-        optsLayout.addWidget(self.vmaxEdit, 10)
+        optsLayout.addWidget(self.vmaxEdit, 5)
         optsLayout.addWidget(self.vMinMaxBtn)
         optsLayout.addWidget(self.doiCheck)
         optsLayout.addWidget(self.doiSensCheck)
@@ -4450,6 +4471,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.contourCheck)
         optsLayout.addWidget(self.sensWidget)
         optsLayout.addWidget(self.edgeCheck)
+        optsLayout.addWidget(self.aspectCheck)
         optsLayout.addWidget(self.saveBtn)
         
         opt3dLayout = QHBoxLayout()
@@ -4983,7 +5005,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.phasefiltfnamesComboLabel.show()
             self.phasefiltfnamesCombo.show()
             
-    def importFile(self, fname): # TODO to test the UI automatically this needs to be a methods
+    def importFile(self, fname):
         pdebug('importFile:', fname)
         if len(self.r2.surveys) > 0:
             self.r2.surveys = []
@@ -5008,7 +5030,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.errorDump('File is not recognized.')
                 pass
             pdebug('importFile: setting up UI')
-            if all(self.r2.surveys[0].df['irecip'].values == 0):
+            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
+                # we need more than a single reciprocal to fit error model and so
                 self.importDataRecipBtn.show()
                 self.recipOrNoRecipShow(recipPresence = False)
             else:
@@ -5175,6 +5198,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # inversion
         self.logText.setText('')
         self.mwRMS.clear()
+        self.mwIter.clear()
         self.surveyCombo.clear()
         self.attrCombo.clear()
         self.vminEdit.setText('')
@@ -5195,7 +5219,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
-                            'pvgrid':False, 'pvcontour':[]}
+                            'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         self.mwInv.clear()
         self.mwInvError.clear()
         self.mwInvError2.clear()
