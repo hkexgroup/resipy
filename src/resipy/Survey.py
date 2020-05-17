@@ -1233,7 +1233,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             ax.plot(self.df['ip'].values, '.')
             ax.set_xlabel('Measurements')
-            ax.set_ylabel('Chargeability [mV/V]')
+            ax.set_ylabel('Phase [mrad]')
     
     
 #    def computeK(self):

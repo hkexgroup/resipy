@@ -4991,7 +4991,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.phasefiltfnamesComboLabel.show()
             self.phasefiltfnamesCombo.show()
             
-    def importFile(self, fname): # TODO to test the UI automatically this needs to be a methods
+    def importFile(self, fname):
         pdebug('importFile:', fname)
         if len(self.r2.surveys) > 0:
             self.r2.surveys = []
@@ -5016,7 +5016,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.errorDump('File is not recognized.')
                 pass
             pdebug('importFile: setting up UI')
-            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) > 1:
+            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
                 # we need more than a single reciprocal to fit error model and so
                 self.importDataRecipBtn.show()
                 self.recipOrNoRecipShow(recipPresence = False)
