@@ -368,46 +368,53 @@ class R2(object): # R2 master class instanciated by the GUI
             Path of the working directory.
         """
         # first check if directory exists
-        if os.path.exists(dirname): # ok it exists, let's clear it
-            print('clearing the dirname')
-            # get rid of some stuff
-            files = os.listdir(dirname)
-            if 'ref' in files: # only for timelapse survey
-                try:
-                    shutil.rmtree(os.path.join(dirname, 'ref'))
-                except PermissionError:
-                    warnings.warn("OS reports reference inversion directory already in use, try changing the working directory")
-            if 'err' in files: # only for error modelling
-                try:
-                    shutil.rmtree(os.path.join(dirname, 'err'))
-                except PermissionError:
-                    warnings.warn("OS reports forward modelling directory already in use, try changing the working directory")
-            for f in files:
-                if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
-                    os.remove(os.path.join(dirname , f))
-            files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
-                            'R2.out','cR2.out','R3t.out','cR3t.out',
-                            'mesh.dat','r100.dat','res0.dat','Start_res.dat',
-                            'protocol.dat']
-            for f in files2remove:
-                if f in files:
-                    try:
-                        os.remove(os.path.join(dirname, f))
-                    except Exception as e:
-                        raise Exception("Error setting up working directories:"+ str(e) + "\n...try changing the working inversion directory")
-            def isNumber(x):
-                try:
-                    float(x)
-                    return True
-                except:
-                    return False
-            for f in files:
-                if (f[0] == 'f') & (isNumber(f[1:3]) is True):
-                    os.remove(os.path.join(dirname, f))
-        else:
-            print('creating the dirname')
+        # if os.path.exists(dirname): # ok it exists, let's clear it
+        #     print('clearing the dirname')
+        #     # get rid of some stuff
+        #     files = os.listdir(dirname)
+        #     if 'ref' in files: # only for timelapse survey
+        #         try:
+        #             shutil.rmtree(os.path.join(dirname, 'ref'))
+        #         except PermissionError:
+        #             warnings.warn("OS reports reference inversion directory already in use, try changing the working directory")
+        #     if 'err' in files: # only for error modelling
+        #         try:
+        #             shutil.rmtree(os.path.join(dirname, 'err'))
+        #         except PermissionError:
+        #             warnings.warn("OS reports forward modelling directory already in use, try changing the working directory")
+        #     for f in files:
+        #         if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
+        #             os.remove(os.path.join(dirname , f))
+        #     files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
+        #                     'R2.out','cR2.out','R3t.out','cR3t.out',
+        #                     'mesh.dat','r100.dat','res0.dat','Start_res.dat',
+        #                     'protocol.dat']
+        #     for f in files2remove:
+        #         if f in files:
+        #             try:
+        #                 os.remove(os.path.join(dirname, f))
+        #             except Exception as e:
+        #                 raise Exception("Error setting up working directories:"+ str(e) + "\n...try changing the working inversion directory")
+        #     def isNumber(x):
+        #         try:
+        #             float(x)
+        #             return True
+        #         except:
+        #             return False
+        #     for f in files:
+        #         if (f[0] == 'f') & (isNumber(f[1:3]) is True):
+        #             os.remove(os.path.join(dirname, f))
+        # else:
+        #     print('creating the dirname')
+        #     os.mkdir(dirname)
+        wd = os.path.abspath(os.path.join(dirname, 'invdir'))
+        if os.path.exists(dirname) is False:
             os.mkdir(dirname)
-        self.dirname = os.path.abspath(dirname)
+        if os.path.exists(wd):
+            shutil.rmtree(wd)
+            print('clearing dirname')
+        os.mkdir(wd)
+        self.dirname = wd
 
 
 
@@ -1355,15 +1362,15 @@ class R2(object): # R2 master class instanciated by the GUI
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
-                self.fmd = (2/3)*maxDist
+                self.fmd = (1/3)*maxDist
             else: # if it's a forward model for instance
-                self.fmd = (2/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
+                self.fmd = (1/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
 
         else: # for 3D survey
             dist = np.zeros((len(elec), len(elec)))
             for i, el1 in enumerate(elec):
                 dist[:,i] = np.sqrt(np.sum((el1[None,:] - elec)**2, axis=1))
-            self.fmd = (2/3)*np.max(dist)
+            self.fmd = (1/3)*np.max(dist)
 
         if self.iburied is not None:
             # catch where buried electrodes are present as the fmd needs adjusting in this case 
@@ -2532,7 +2539,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
-                    doi=False, doiSens=False, contour=False, cropMaxDepth=True, **kwargs):
+                    doi=False, doiSens=False, contour=False, cropMaxDepth=True,
+                    **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -3051,7 +3059,8 @@ class R2(object): # R2 master class instanciated by the GUI
             zones[idx] = zoneValues[key]
         self.mesh.attr_cache['zones'] = zones
 
-        fixed = np.array(self.mesh.attr_cache['param']).copy()
+        # fixed = np.array(self.mesh.attr_cache['param']).copy()
+        fixed = np.arange(self.mesh.num_elms)+1
         for key in fixedValues.keys():
             idx = regions == key
             if fixedValues[key] == True:
@@ -3802,7 +3811,6 @@ class R2(object): # R2 master class instanciated by the GUI
                         df = pd.DataFrame(err[:,[1,3,5,7,8]],
                                           columns=['P+','P-','C+','C-', 'Normalised_Error'])
                         dfs.append(df)
-            #TODO not implemented for cR3t and phase misfit
         except Exception as e:
             return # this code is error prone (mainly to empty dataframe error)
         
