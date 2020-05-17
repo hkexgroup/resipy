@@ -2697,7 +2697,9 @@ class R2(object): # R2 master class instanciated by the GUI
         for mesh in self.meshResults:
             res_name = res_names[np.in1d(res_names, list(mesh.attr_cache.keys()))][0]
             mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache[res_name])
-
+        if self.typ[0] == 'c' and self.surveys[0].kFactor != 1: # if kFactor is 1 then probably phase is provided and we shouldn't estimate chargeability
+            for mesh in self.meshResults:
+                mesh.attr_cache['Chargeability(mV/V)'] = np.array(mesh.attr_cache['Phase(mrad)'])/-self.surveys[0].kFactor
         # compute difference in percent in case of reg_mode == 1
         if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
             try:
