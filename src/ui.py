@@ -3863,6 +3863,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwIter.clear()
             self.mwInv.clear()
             
+            # reset variables for RMS graph
+            self.pindex = 0
+            self.rms = []
+            self.rmsIndex = []
+            self.rmsIP = []
+            self.rmsIndexIP = []
+            self.inversionOutput = ''
+            
             # create default mesh is not specified
             if self.r2.mesh is None:
                 logTextFunc('Creating the mesh... ')
@@ -5176,6 +5184,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # inversion
         self.logText.setText('')
         self.mwRMS.clear()
+        self.mwIter.clear()
         self.surveyCombo.clear()
         self.attrCombo.clear()
         self.vminEdit.setText('')
