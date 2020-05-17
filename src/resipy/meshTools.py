@@ -4325,7 +4325,7 @@ def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
     if ext == '.vtk':
         mesh = vtk_import(file_path, order_nodes=order_nodes)
     elif ext == '.msh':
-        mesh_dict = gw.msh_parse(file_path, order_nodes=order_nodes)
+        mesh_dict = gw.msh_parse(file_path)
 
         mesh = Mesh(node_x = mesh_dict['node_x'],
                     node_y = mesh_dict['node_y'],
