@@ -5008,7 +5008,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.errorDump('File is not recognized.')
                 pass
             pdebug('importFile: setting up UI')
-            if all(self.r2.surveys[0].df['irecip'].values == 0):
+            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) > 1:
+                # we need more than a single reciprocal to fit error model and so
                 self.importDataRecipBtn.show()
                 self.recipOrNoRecipShow(recipPresence = False)
             else:
