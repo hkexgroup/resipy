@@ -1574,7 +1574,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 zlimTop = 0
             else:
                 zlimTop = np.max(elec[:,2])
-        zlimBot = -self.fmd # if fmd is correct (defined as positive number
+        zlimBot = np.min(elec[:,2]) - self.fmd # if fmd is correct (defined as positive number
         # from surface then it is as well the zlimMin)
         self.zlim = [zlimBot, zlimTop]
         
