@@ -1561,7 +1561,7 @@ class R2(object): # R2 master class instanciated by the GUI
             zlimMax = np.max([np.max(elec[:,2]), np.max(surface[:,1])])
         else:
             zlimMax = np.max(elec[:,2])
-        zlimMin = np.max(elec[:,2]) - self.fmd
+        zlimMin = np.min(elec[:,2]) - self.fmd
         self.zlim = [zlimMin, zlimMax]
         
         # define num_xz_poly or num_xy_poly
@@ -1680,7 +1680,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.write_dat(file_path)
 
         # define zlim
-        if self.fmd == None:
+        if self.fmd is None:
             self.computeFineMeshDepth()
         zlimMax = np.max(self.elec[:,2])
         zlimMin = np.min(self.elec[:,2]) - self.fmd

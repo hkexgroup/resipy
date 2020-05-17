@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = True # set to false to not display message in the console
+DEBUG = False # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -635,6 +635,9 @@ class App(QMainWindow):
                 self.ftype = 'ARES'
                 self.fformat = 'ARES (*.2dm *.2DM)'
             elif index == 9:
+                self.ftype = 'BERT'
+                self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
+            elif index == 10:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -651,6 +654,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
         self.ftypeCombo.addItem('ARES (beta)')
+        self.ftypeCombo.addItem('BERT')
         self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
@@ -1615,7 +1619,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(9)
+            self.ftypeCombo.setCurrentIndex(10)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
@@ -4802,7 +4806,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.loadingDialog.accept()  
             
     def calcAspectRatio(self): # for calculating aspect ratio of long surveys
-        self.r2.computeFineMeshDepth()
+        if self.r2.fmd is None:
+            self.r2.computeFineMeshDepth()
         surLength = np.abs(self.r2.param['xz_poly_table'][0,0] - self.r2.param['xz_poly_table'][1,0])
         surDepth = np.abs(self.r2.param['xz_poly_table'][-1,1] - self.r2.param['xz_poly_table'][-2,1])
         aspectRatio = surLength/surDepth
