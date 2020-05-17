@@ -4648,7 +4648,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         helpLayout = QVBoxLayout()
         helpLayout.setAlignment(Qt.AlignTop)
         helpText = QTextBrowser()
-        helpText.setReadOnly(True)
         helpText.setOpenExternalLinks(True)
         helpText.setText('''
            <h1>General help</h1>\
@@ -4692,12 +4691,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <ul><li>The axes limits/labels and plot title  can be changed in the "Axes" tab.</li>
            <li>The marker size and line width can be changed in the "Curves" tab.</li></ul>
            </ul>
-           <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
-           <p>Read more on 2D resistivity inversion: <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2_readme.pdf">R2_readme.pdf</a></p>
-           <p>Read more on 3D resistivity inversion: <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R3t/R3t_readme.pdf">R3t_readme.pdf</a></p>
-           <p>Read more on 2D complex resistivity (IP) inversion: <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR2/cR2_readme.pdf">cR2_readme.pdf</a></p>
+           ''')
+        helpLabel = QLabel( # added this as the QTextBrowser open pdf inside the UI (so unreadeble)
+        '''
+        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
+        <p>Read more on 2D resistivity inversion: <a href="./resipy/exe/R2_manual.pdf">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="./resipy/exe/R3t_manual.pdf">R3t_readme.pdf</a></p>
+        <p>Read more on 2D complex resistivity (IP) inversion: <a href="./resipy/exe/cR2_manual.pdf">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="./resipy/exe/cR3t_manual.pdf">cR2_readme.pdf</a></p>
         ''')
+        helpLabel.setOpenExternalLinks(True)
         helpLayout.addWidget(helpText)
+        helpLayout.addWidget(helpLabel)
         tabHelp.setLayout(helpLayout)
 
 
@@ -4708,63 +4711,35 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         infoLayout = QVBoxLayout()
         aboutText = QLabel()
-        aboutText.setText('''<h1>About ResIPy </h1> \
-                          <p><b>Version: %s</b></p> \
-                          <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p> \
-                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
-                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
-                          <p>ResIPy uses 
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">R2</a>,
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR2/cR2.htm">cR2</a>,
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R3t/R3t.htm">R3t</a> and 
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR3t/cR3t.htm">cR3t</a> developed by Andrew Binley</p> \
-                          <p>For generation of triangular mesh, ResIPy uses software 
-                              <a href="http://gmsh.info/">Gmsh</a></p>\
-                          <p>Python packages used: 
-                              <a href="https://numpy.org/">numpy</a>, 
-                              <a href="https://pandas.pydata.org/">pandas</a>,
-                              <a href="https://matplotlib.org/">matplotlib</a>,
-                              <a href="https://scipy.org/index.html">scipy</a>,
-                              <a href="https://pypi.org/project/PyQt5/">PyQt5</a>.
-                          </p>
-<p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-<p>Contributors: Pedro Concha, Michael Tso</p>
-<p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
-<p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P. and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423. <a href="https://doi.org/10.1016/j.cageo.2020.104423">https://doi.org/10.1016/j.cageo.2020.104423</a>.</p>
-
-'''%ResIPy_version)
-#        aboutText.setText('''<h1>About ResIPy</h1> \
-#                          <p><b>Version: %s</b></p> \
-#                          <p><i>ResIPy is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
-#                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
-#                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
-#                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
-#                          <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
-#                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
-#                          <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-#                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
-#<ul>
-#<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
-#<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
-#<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
-#</li>
-#<li>
-# Wes McKinney.
-#<strong>Data Structures for Statistical Computing in Python</strong>,
-#Proceedings of the 9th Python in Science Conference, 51-56 (2010)
-#(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
-#</li>
-#<li>
-#John D. Hunter.
-#<strong>Matplotlib: A 2D Graphics Environment</strong>,
-#Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
-#<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a>
-#</li>
-#<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
-#USA: Trelgol Publishing, (2006).
-#</li>
-#</ul>
-#</p>
+        aboutText.setText(
+            '''
+            <h1>About ResIPy </h1>
+            <p><b>Version: {:s}</b></p>
+            <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p>
+            <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p>
+            <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p>
+            <p>ResIPy uses 
+                <a href="./resipy/exe/R2_manual.pdf">R2</a>,
+                <a href="./resipy/exe/cR2_manual.pdf">cR2</a>,
+                <a href="./resipy/exe/R3t_manual.pdf">R3t</a> and 
+                <a href="./resipy/exe/cR3t_manual.pdf">cR3t</a> developed by Andrew Binley</p>
+            <p>For generation of triangular mesh, ResIPy uses software 
+                <a href="http://gmsh.info/">Gmsh</a></p>
+            <p>Python packages used: 
+                <a href="https://numpy.org/">numpy</a>, 
+                <a href="https://pandas.pydata.org/">pandas</a>,
+                <a href="https://matplotlib.org/">matplotlib</a>,
+                <a href="https://scipy.org/index.html">scipy</a>,
+                <a href="https://pypi.org/project/PyQt5/">PyQt5</a>.
+            </p>
+            <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+            <p>Contributors: Pedro Concha, Michael Tso</p>
+            <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
+            <p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P.
+            and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for 
+            Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423.
+            <a href="https://doi.org/10.1016/j.cageo.2020.104423">https://doi.org/10.1016/j.cageo.2020.104423</a>.</p>
+            '''.format(ResIPy_version))
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
