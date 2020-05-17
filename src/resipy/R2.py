@@ -3802,7 +3802,6 @@ class R2(object): # R2 master class instanciated by the GUI
                         df = pd.DataFrame(err[:,[1,3,5,7,8]],
                                           columns=['P+','P-','C+','C-', 'Normalised_Error'])
                         dfs.append(df)
-            #TODO not implemented for cR3t and phase misfit
         except Exception as e:
             return # this code is error prone (mainly to empty dataframe error)
         
