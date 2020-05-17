@@ -44,6 +44,8 @@ k.createSurvey(testdir + 'parser/Lippmann_1.tx0', ftype='Lippmann')
 k.createSurvey(testdir + 'parser/Lippmann_2.tx0', ftype='Lippmann')
 k.createSurvey(testdir + 'parser/Lippmann_3.tx0', ftype='Lippmann')
 k.createSurvey(testdir + 'parser/syscal-new-format.csv', ftype='Syscal')
+k.createSurvey(testdir + 'parser/BERT_2D_topo.ohm', ftype='BERT')
+k.createSurvey(testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
 
 # electrode import
 k = R2()
