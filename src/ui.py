@@ -4325,7 +4325,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.aspectCheck.setChecked(True)
         self.aspectCheck.stateChanged.connect(aspectCheckFunc)
         self.aspectCheck.setToolTip('Check for equal aspect of the axis'
-                                    'Uncheck for auto aspect.')
+                                    '\nUncheck for auto aspect.')
 
         def saveBtnFunc():
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
