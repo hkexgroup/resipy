@@ -74,6 +74,8 @@ r2help = {
             " The ratio of the difference of inverted value divided by the difference in initial resistivity gives"
             " an estimate of the depth of investigation of the inversion (Oldenburg and Li, 1999)</p>",
 'sensDOI' : "<p>Sensitivity based DOI. If a dashed line will be drawn on the inverted section at 0.001*maxSensitivity."
-            "Note that this is not the DOI based on the Oldenburg and Li method.</p>"
+            "Note that this is not the DOI based on the Oldenburg and Li method.</p>",
+'txSign' : "<p>Check if the polarity of provided transfer resistanses is correct in each survey and if not, automatically corrects them."
+            "<br><i>Note: this assumes a provided survey is on a flat 2D profile.</i></p>"
 }
 

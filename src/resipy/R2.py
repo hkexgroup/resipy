@@ -68,7 +68,7 @@ def checkExe(dirname):
     exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
     hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
               'b483d7001b57e148453b33412d614dd95e71db21',
-              '00b65d5655d74b29f8dda76577faf5a046dce6e8',
+              '3fda8d15377974b10cafa5b32398d6e2d2e40345',
               # '577c02cf87bcd2d64cccff14919d607e79ff761a',
               # '91bd6e5fcb01a11d241456479c203624d0e681ed'
               ]
@@ -249,7 +249,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def __init__(self, dirname='', typ='R2'): # initiate R2 class
         self.apiPath = os.path.dirname(os.path.abspath(__file__)) # directory of the code
         if dirname == '':
-            dirname = os.path.join(self.apiPath, 'invdir')
+            dirname = os.path.join(self.apiPath)
         else:
             dirname = os.path.abspath(dirname)
 
@@ -368,46 +368,53 @@ class R2(object): # R2 master class instanciated by the GUI
             Path of the working directory.
         """
         # first check if directory exists
-        if os.path.exists(dirname): # ok it exists, let's clear it
-            print('clearing the dirname')
-            # get rid of some stuff
-            files = os.listdir(dirname)
-            if 'ref' in files: # only for timelapse survey
-                try:
-                    shutil.rmtree(os.path.join(dirname, 'ref'))
-                except PermissionError:
-                    warnings.warn("OS reports reference inversion directory already in use, try changing the working directory")
-            if 'err' in files: # only for error modelling
-                try:
-                    shutil.rmtree(os.path.join(dirname, 'err'))
-                except PermissionError:
-                    warnings.warn("OS reports forward modelling directory already in use, try changing the working directory")
-            for f in files:
-                if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
-                    os.remove(os.path.join(dirname , f))
-            files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
-                            'R2.out','cR2.out','R3t.out','cR3t.out',
-                            'mesh.dat','r100.dat','res0.dat','Start_res.dat',
-                            'protocol.dat']
-            for f in files2remove:
-                if f in files:
-                    try:
-                        os.remove(os.path.join(dirname, f))
-                    except Exception as e:
-                        raise Exception("Error setting up working directories:"+ str(e) + "\n...try changing the working inversion directory")
-            def isNumber(x):
-                try:
-                    float(x)
-                    return True
-                except:
-                    return False
-            for f in files:
-                if (f[0] == 'f') & (isNumber(f[1:3]) is True):
-                    os.remove(os.path.join(dirname, f))
-        else:
-            print('creating the dirname')
+        # if os.path.exists(dirname): # ok it exists, let's clear it
+        #     print('clearing the dirname')
+        #     # get rid of some stuff
+        #     files = os.listdir(dirname)
+        #     if 'ref' in files: # only for timelapse survey
+        #         try:
+        #             shutil.rmtree(os.path.join(dirname, 'ref'))
+        #         except PermissionError:
+        #             warnings.warn("OS reports reference inversion directory already in use, try changing the working directory")
+        #     if 'err' in files: # only for error modelling
+        #         try:
+        #             shutil.rmtree(os.path.join(dirname, 'err'))
+        #         except PermissionError:
+        #             warnings.warn("OS reports forward modelling directory already in use, try changing the working directory")
+        #     for f in files:
+        #         if (f[:9] == 'protocol_') or (f[:11] == 'electrodes_'):
+        #             os.remove(os.path.join(dirname , f))
+        #     files2remove = ['R2.in','cR2.in','R3t.in', 'cR3t.in',
+        #                     'R2.out','cR2.out','R3t.out','cR3t.out',
+        #                     'mesh.dat','r100.dat','res0.dat','Start_res.dat',
+        #                     'protocol.dat']
+        #     for f in files2remove:
+        #         if f in files:
+        #             try:
+        #                 os.remove(os.path.join(dirname, f))
+        #             except Exception as e:
+        #                 raise Exception("Error setting up working directories:"+ str(e) + "\n...try changing the working inversion directory")
+        #     def isNumber(x):
+        #         try:
+        #             float(x)
+        #             return True
+        #         except:
+        #             return False
+        #     for f in files:
+        #         if (f[0] == 'f') & (isNumber(f[1:3]) is True):
+        #             os.remove(os.path.join(dirname, f))
+        # else:
+        #     print('creating the dirname')
+        #     os.mkdir(dirname)
+        wd = os.path.abspath(os.path.join(dirname, 'invdir'))
+        if os.path.exists(dirname) is False:
             os.mkdir(dirname)
-        self.dirname = os.path.abspath(dirname)
+        if os.path.exists(wd):
+            shutil.rmtree(wd)
+            print('clearing dirname')
+        os.mkdir(wd)
+        self.dirname = wd
 
 
 
@@ -1098,6 +1105,12 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         self.surveys[index].showHeatmap(ax=ax)
 
+    
+    def checkTxSign(self):
+        """Checking and correcting the polarity of the transfer resistances (flat 2D surveys only !)."""
+        for s in self.surveys:
+            if np.all(s.df['resist'].values > 0):
+                s.checkTxSign()
 
 
     def _filterSimilarQuad(self, quads):
@@ -1349,22 +1362,23 @@ class R2(object): # R2 master class instanciated by the GUI
             if len(self.surveys) > 0:
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int)
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
-                self.fmd = (2/3)*maxDist
+                self.fmd = (1/3)*maxDist
             else: # if it's a forward model for instance
-                self.fmd = (2/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
+                self.fmd = (1/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
 
         else: # for 3D survey
             dist = np.zeros((len(elec), len(elec)))
             for i, el1 in enumerate(elec):
                 dist[:,i] = np.sqrt(np.sum((el1[None,:] - elec)**2, axis=1))
-            self.fmd = (2/3)*np.max(dist)
+            self.fmd = (1/3)*np.max(dist)
 
         if self.iburied is not None:
             # catch where buried electrodes are present as the fmd needs adjusting in this case 
-            for check in self.iburied:
-                if check == True:
-                    self.fmd = (np.max(elec[:,2])  - np.min(elec[:,2]) )+(0.5*self.fmd)
-                    break
+            if np.sum(self.iburied) > 0:
+                if all(self.iburied): # if all buried, we assume surface at 0 m
+                    self.fmd = np.abs(0 - np.min(elec[:,2])) + 1
+                else: # surface given by max z elec
+                    self.fmd = np.abs(np.max(elec[:,2])  - np.min(elec[:,2])) + (0.5*self.fmd)
 
 
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
@@ -1410,7 +1424,7 @@ class R2(object): # R2 master class instanciated by the GUI
             triangles or tetrahedral mesh.
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
-        """
+        """        
         if dump is None:
             if show_output:
                 def dump(x):
@@ -1445,6 +1459,8 @@ class R2(object): # R2 master class instanciated by the GUI
         elec_y = self.elec[:,1]
         elec_z = self.elec[:,2]
         elec_type = np.repeat('electrode',len(elec_x))
+        if (buried is None) & (self.iburied is None):
+            self.iburied = np.zeros(len(elec_x), dtype=bool)
         if buried is None and self.iburied is not None:
             buried = self.iburied
         if buried is not None:
@@ -1552,24 +1568,31 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # define zlim
         if surface is not None:
-            zlimMax = np.max([np.max(elec[:,2]), np.max(surface[:,1])])
+            zlimTop = np.max([np.max(elec[:,2]), np.max(surface[:,-1])])
         else:
-            zlimMax = np.max(elec[:,2])
-        zlimMin = np.max(elec[:,2]) - self.fmd
-        self.zlim = [zlimMin, zlimMax]
+            if all(self.iburied): # if all buried we assume surface at 0 m
+                zlimTop = 0
+            else:
+                zlimTop = np.max(elec[:,2])
+        zlimBot = -self.fmd # if fmd is correct (defined as positive number
+        # from surface then it is as well the zlimMin)
+        self.zlim = [zlimBot, zlimTop]
         
         # define num_xz_poly or num_xy_poly
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.param['num_xz_poly'] = 5
-            ymax = np.max(elec[:,2])
-            ymin = np.min(elec[:,2]) - self.fmd 
+            if all(self.iburied):
+                zmax = 0
+            else:
+                zmax = np.max(elec[:,2])
+            zmin = np.min(elec[:,2]) - self.fmd 
             xmin, xmax = np.min(elec[:,0]), np.max(elec[:,0])
             xz_poly_table = np.array([
-            [xmin, ymax],
-            [xmax, ymax],
-            [xmax, ymin],
-            [xmin, ymin],
-            [xmin, ymax]])
+            [xmin, zmax],
+            [xmax, zmax],
+            [xmax, zmin],
+            [xmin, zmin],
+            [xmin, zmax]])
             self.param['xz_poly_table'] = xz_poly_table
         else:
             self.param['num_xy_poly'] = 5
@@ -1674,7 +1697,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.write_dat(file_path)
 
         # define zlim
-        if self.fmd == None:
+        if self.fmd is None:
             self.computeFineMeshDepth()
         zlimMax = np.max(self.elec[:,2])
         zlimMin = np.min(self.elec[:,2]) - self.fmd
@@ -1879,7 +1902,11 @@ class R2(object): # R2 master class instanciated by the GUI
                 # and we are dealing with a magnitude here, not a resistivity
                 s.df.loc[ie, 'resist'] = s.df.loc[ie, 'resist'].values*-1
                 s.df.loc[ie, 'recipMean'] = s.df.loc[ie, 'recipMean'].values*-1
-
+        
+        # check transfer resistance sign
+        if 'checkTxSign' in self.param.keys() and self.param['checkTxSign'] is True:
+            self.checkTxSign()
+            
         # for time-lapse inversion ------------------------------
         if self.iTimeLapse is True:
             if 'reg_mode' not in self.param.keys():
@@ -2522,7 +2549,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
-                    doi=False, doiSens=False, contour=False, cropMaxDepth=True, **kwargs):
+                    doi=False, doiSens=False, contour=False, cropMaxDepth=True,
+                    **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -2665,11 +2693,13 @@ class R2(object): # R2 master class instanciated by the GUI
         print('')
 
         # compute conductivity in mS/m
-        res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
+        res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)', 'Magnitude(ohm.m)'])
         for mesh in self.meshResults:
             res_name = res_names[np.in1d(res_names, list(mesh.attr_cache.keys()))][0]
             mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache[res_name])
-
+        if self.typ[0] == 'c' and self.surveys[0].kFactor != 1: # if kFactor is 1 then probably phase is provided and we shouldn't estimate chargeability
+            for mesh in self.meshResults:
+                mesh.attr_cache['Chargeability(mV/V)'] = np.array(mesh.attr_cache['Phase(mrad)'])/-self.surveys[0].kFactor
         # compute difference in percent in case of reg_mode == 1
         if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
             try:
@@ -3041,7 +3071,8 @@ class R2(object): # R2 master class instanciated by the GUI
             zones[idx] = zoneValues[key]
         self.mesh.attr_cache['zones'] = zones
 
-        fixed = np.array(self.mesh.attr_cache['param']).copy()
+        # fixed = np.array(self.mesh.attr_cache['param']).copy()
+        fixed = np.arange(self.mesh.num_elms)+1
         for key in fixedValues.keys():
             idx = regions == key
             if fixedValues[key] == True:
@@ -3168,10 +3199,11 @@ class R2(object): # R2 master class instanciated by the GUI
         if df.shape[1] > 4:
             raise ValueError('The file should have no more than 4 columns')
         else:
-            if header is not None:
-                elec = df[['x','y','z']].values
-            else:
-                elec = df.values
+            cols = np.array(['x','y','z','buried'])
+            n = df.shape[1]
+            if header is None:
+                df = df.rename(columns=dict(zip(np.arange(n), cols[:n])))
+            elec = df[['x','y','z']].values
             self.setElec(elec)
             if 'buried' in df.columns:
                 self.iburied = df['buried'].values.astype(bool)
@@ -3381,7 +3413,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # recompute doi
         self.computeFineMeshDepth()
-        self.zlim[0] = -self.fmd
+        self.zlim[0] = np.min(elec[:,2]) - self.fmd
 
         if iplot is True:
             self.showPseudo()
@@ -3776,7 +3808,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if os.path.exists(fname):
                         df = pd.read_csv(fname, delim_whitespace=True)
                         dfs.append(df)
-            elif self.typ == 'cR3t' or self.typ == 'R3t':
+            elif self.typ == 'R3t':
                 dfs = []
                 if self.iTimeLapse:
                     fname = os.path.join(self.dirname, 'ref/f001_err.dat')
@@ -3792,25 +3824,38 @@ class R2(object): # R2 master class instanciated by the GUI
                         df = pd.DataFrame(err[:,[1,3,5,7,8]],
                                           columns=['P+','P-','C+','C-', 'Normalised_Error'])
                         dfs.append(df)
-            #TODO not implemented for cR3t and phase misfit
+            else: # TODO cR3t header needs to be standardized
+                dfs = []
+                if self.iTimeLapse:
+                    fname = os.path.join(self.dirname, 'ref/f001_err.dat')
+                    if os.path.exists(fname):
+                        err = np.genfromtxt(fname, skip_header=1)
+                        df = pd.DataFrame(err[:,[1,3,5,7,8,11,12]],
+                                          columns=['P+','P-','C+','C-', 'Normalised_Error', 'Observed_Phase', 'Calculated_Phase'])
+                        dfs.append(df)
+                for i in range(len(self.surveys)-a):
+                    fname = os.path.join(self.dirname, 'f{:03.0f}_err.dat'.format(i+1))
+                    if os.path.exists(fname):
+                        err = np.genfromtxt(fname, skip_header=1)
+                        df = pd.DataFrame(err[:,[1,3,5,7,8,11,12]],
+                                          columns=['P+','P-','C+','C-', 'Normalised_Error', 'Observed_Phase', 'Calculated_Phase'])
+                        dfs.append(df)
         except Exception as e:
             return # this code is error prone (mainly to empty dataframe error)
-        
         # merge the columns to each survey dataframe
         if  np.sum([df.shape[0] > 0 for df in dfs]) != len(self.surveys):
             print('error in reading error files (do not exists or empty')
             return # this check the number of dfs AND the fact that they are not empty
         for s, df in zip(self.surveys, dfs):
-            if self.typ == 'cR2': #TODO figure out why Andy's code produce different f001_err.dat files
-                df = df.rename(columns=dict(zip(['C+','C-','P+','P-', 'Normalised_Error'], ['a','b','m','n', 'resInvError']))) #there is something wrong here. R2 and cR2 produce different f001_err.dat! 'P+','P-','C+','C-' are different!!
-            elif self.typ == 'R2':
-                df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
-            else: # for 3D ones
-                df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
+            df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
             cols = ['a','b','m','n','resInvError']
-            if self.typ == 'cR2':
+            if (self.typ == 'cR2') | (self.typ == 'cR3t'):
                 df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
                 cols += ['phaseInvMisfit']
+            # TODO not ready yet
+            # if self.typ == 'cR3t':
+                # df['phaseInvMisfit'] = np.abs(df['Observed phi'] - df['Calculated phi'])
+                # cols += ['phaseInvMisfit']
             if 'resInvError' in s.df.columns:
                 s.df = s.df.drop('resInvError', axis=1)
             if 'phaseInvMisfit' in s.df.columns:
