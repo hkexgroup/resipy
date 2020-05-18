@@ -18,7 +18,8 @@ from scipy.stats.kde import gaussian_kde
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
-                     stingParser, ericParser, lippmannParser, aresParser)
+                     stingParser, ericParser, lippmannParser, aresParser,
+                     srvParser)
 from resipy.DCA import DCA
 
 # show the deprecation warnings
@@ -71,7 +72,7 @@ class Survey(object):
                       DeprecationWarning)
             
         avail_ftypes = ['Syscal','ProtocolDC','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D']# add parser types here! 
         
         if parser is not None:
             elec, data = parser(fname)
@@ -103,6 +104,8 @@ class Survey(object):
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':
                 elec ,data = aresParser(fname)
+            elif ftype == 'E4D':
+                elec ,data = srvParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -119,6 +122,7 @@ class Survey(object):
         if 'magErr' in self.df.columns:
             self.df['resError'] = self.df['magErr'].copy()
         else:
+            #pass
             self.df['resError'] = np.nan
         if 'phiErr' in self.df.columns:
             self.df['phaseError'] = self.df['phiErr'].copy()
@@ -285,6 +289,8 @@ class Survey(object):
             elif ftype == 'Lippmann':
                 elec, data = lippmannParser(fname)
             elif ftype == 'ARES':
+                elec ,data = aresParser(fname)
+            elif ftype == 'E4D':
                 elec ,data = aresParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
