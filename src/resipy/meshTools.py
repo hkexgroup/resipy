@@ -1941,6 +1941,12 @@ class Mesh:
             nmesh.write_vtk(fname)
             self.pvmesh = pv.read(fname)
             folder.cleanup()
+            #### possible to iniate pyvista mesh directly with vertices and connection matrix #### 
+            #### however the below code is apparently unstable on pyvista 0.24.0 #### 
+            # self.pvmesh = pv.PolyData(np.array([self.node_x,self.node_y,self.node_z]).T, 
+            #                           np.array(self.con_matrix).T)
+            # self.pvmesh[color_bar_title] = X
+            
             #crop down to the bounding box 
             self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         

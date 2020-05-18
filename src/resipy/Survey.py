@@ -26,6 +26,13 @@ from resipy.DCA import DCA
 import warnings
 warnings.simplefilter('default', category=DeprecationWarning)
 
+try:#import pyvista if avaiable
+    import pyvista as pv
+    pyvista_installed = True
+except ModuleNotFoundError:
+    pyvista_installed = False
+    # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
+
 
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 
@@ -1212,14 +1219,16 @@ class Survey(object):
         self.filterData(keep_idx)
 
     
-    def showPseudo(self, ax=None, bx=None, **kwargs):
+    def showPseudo(self, ax=None, bx=None, threed=False, **kwargs):
         """Plot pseudo section if 2D survey or just quadrupoles transfer
         resistance otherwise.
         """
         if bx is None:
             bx = self.iBorehole
-        if bx is False:
+        if bx is False and threed is False:
             self._showPseudoSection(ax=ax, **kwargs)
+        elif bx is False and threed is True:
+            self.showPseudoSection3D(ax=ax, **kwargs)
         else:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1385,6 +1394,133 @@ class Survey(object):
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
             return fig
+        
+    def showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
+                           vmin=None, vmax=None, column='resist', 
+                           background_color=(0.8,0.8,0.8), elec_color='k'):
+        """Create a pseudo-section for 3D surface array.
+        
+        Parameters
+        ----------
+        ax : matplotlib.Axes, optional
+            If specified, the plot will be plotted agains this axis.
+        contour : bool, optional
+            If `True`, contour will be plotted. Otherwise, only dots. Warning
+            this is unstable. 
+        log : bool, optional
+            If `True`, the log of the resistivity will be taken.
+        geom : bool, optional
+            If `True`, the geometric factor will be computed and applied
+            to the transfer resisttance to obtain apparent resistiivty. If 
+            `False`, only the Tx resistance will be plotted.
+        vmin : float, optional
+            Minimum value for the colorbar.
+        vmax : float, optional
+            Maximum value for the colorbar.
+        """
+        if not pyvista_installed:
+            print('pyvista not installed, cannot show 3D psuedo section')
+            return 
+            
+        if ax is None: # make a plotter object if not already given 
+            ax = pv.BackgroundPlotter()
+            ax.background_color = background_color
+        else: # check the ax argument is for pyvista not matplotlib 
+            typ_str = str(type(ax))
+            if typ_str.find('pyvista') == -1:
+                raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
+            ax.set_background(background_color)
+            
+        array = self.df[['a','b','m','n']].values.astype(int)
+        elec = self.elec.copy()
+        resist = self.df[column].values
+        
+        if geom: # compute and applied geometric factor
+            self.computeK()
+            resist = resist*self.df['K']
+
+        # sorting the array in case of Wenner measurements (just for plotting)
+        array = np.sort(array, axis=1) # for better presentation
+            
+        if log:
+            resist = np.sign(resist)*np.log10(np.abs(resist))
+            label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+        else:
+            label = r'$\rho_a$ [$\Omega.m$]'
+
+        if vmin is None:
+            vmin = np.min(resist)
+        if vmax is None:
+            vmax = np.max(resist)
+        
+        if self.iremote is not None: # how to deal with remote electrodes?!! 
+            raise Exception('Remote electrodes not currently supported for 3D pseudo sections')
+        #     elec = elec[self.iremote!=True,:] # ignore the 
+            
+        #might be a better way to do this than looping, for example caculating the euclidian matrix (can be RAM limiting)
+        #or use SciPy's KDTree
+        def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
+            dist = np.zeros((len(elec_x),len(elec_x)))   
+            x1 = np.array(elec_x)
+            y1 = np.array(elec_y)
+            z1 = np.array(elec_z)
+            for i in range(len(elec_x)):
+                x2 = elec_x[i]
+                y2 = elec_y[i]
+                z2 = elec_z[i]
+                dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+            return dist.flatten() # array of all electrode distances 
+        
+        #loop to work out the 3D setup of the apparent resistivity measurements 
+        nmeas = array.shape[0]
+        dp_x = np.zeros(nmeas)
+        dp_y = np.zeros(nmeas)
+        dp_z = np.zeros(nmeas)
+        for i in range(nmeas):
+            dp_elec = elec[array[i]-1,:]
+            dp_dist = np.max(find_dist(dp_elec[:,0], dp_elec[:,1], dp_elec[:,2]))
+            dp_x[i] = np.mean(dp_elec[:,0])
+            dp_y[i] = np.mean(dp_elec[:,1])
+            dp_z[i] = np.mean(dp_elec[:,2]) - dp_dist/2
+        
+        points = np.array([dp_x,dp_y,dp_z]).T
+        pvpont = pv.PolyData(points)
+        pvpont[label] = resist
+        
+        if not contour:
+            ax.add_mesh(pvpont, point_size=10.,
+                        #render_points_as_spheres=True,
+                        #cmap=color_map, #matplotlib colormap 
+                        clim=[vmin,vmax], #color bar limits 
+                        #show_scalar_bar=color_bar,#plot the color bar? 
+                        #opacity=alpha,
+                        scalar_bar_args={'color':'k',# 'interactive':True,
+                                         'vertical':False,
+                                         'title_font_size':16,
+                                         'label_font_size':14})
+        else:
+            warnings.warn('3D contours are currently not stable!')
+            ax.add_mesh(pvpont.outline())
+            levels = np.linspace(vmin, vmax, 13)
+            contrmesh = pvpont.contour(levels,scaler=resist)
+            ax.add_mesh(contrmesh,
+                        #cmap=color_map, #matplotlib colormap 
+                        clim=[vmin,vmax], #color bar limits 
+                        #show_scalar_bar=color_bar,#plot the color bar? 
+                        #opacity=alpha,
+                        scalar_bar_args={'color':'k',# 'interactive':True,
+                                         'vertical':False,
+                                         'title_font_size':16,
+                                         'label_font_size':14})
+                                 
+        try:
+            pvelec = pv.PolyData(elec)
+            ax.add_mesh(pvelec, color=elec_color, point_size=10.,
+                        render_points_as_spheres=True)
+        except AttributeError as e:
+            print("Could not plot 3d electrodes, error = "+str(e))
+        
+        ax.show()
 
     
     def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
