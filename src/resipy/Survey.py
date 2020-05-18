@@ -19,7 +19,7 @@ from scipy.stats.kde import gaussian_kde
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser)
+                     srvParser, bertParser)
 from resipy.DCA import DCA
 
 # show the deprecation warnings
@@ -72,7 +72,8 @@ class Survey(object):
                       DeprecationWarning)
             
         avail_ftypes = ['Syscal','ProtocolDC','Res2Dinv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT']# add parser types here! 
+
         
         if parser is not None:
             elec, data = parser(fname)
@@ -106,6 +107,8 @@ class Survey(object):
                 elec ,data = aresParser(fname)
             elif ftype == 'E4D':
                 elec ,data = srvParser(fname)
+            elif ftype == 'BERT':
+                elec, data = bertParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -144,9 +147,12 @@ class Survey(object):
             if np.all(self.df['vp'] >= 0):
                 self.checkTxSign()
 
-        # compute apparent resistivity
+        # convert apparent resistivity to resistance and vice versa
         self.computeK()
-        self.df['app'] = self.df['K']*self.df['resist']
+        if 'resist' in self.df.columns:
+            self.df['app'] = self.df['K']*self.df['resist']
+        elif 'app' in self.df.columns:
+            self.df['resist'] = self.df['app']/self.df['K']
         
         # apply basic filtering
         self.filterDefault()
@@ -196,6 +202,12 @@ class Survey(object):
         K = self.df['K'].values
         ie = ((K < 0) & (resist > 0)) | ((K > 0) & (resist < 0))
         self.df.loc[ie, 'resist'] = resist[ie]*-1
+        if 'recipMean' in self.df.columns: # in case this method is called after importation
+            recipMean = self.df['recipMean'].values.copy()
+            self.df.loc[ie, 'recipMean'] = recipMean[ie]*-1
+        if 'recipMean0' in self.df.columns: # time-lapse: in case this method is called after importation
+            recipMean0 = self.df['recipMean0'].values.copy()
+            self.df.loc[ie, 'recipMean0'] = recipMean0[ie]*-1
         print('WARNING: change sign of ', np.sum(ie), ' Tx resistance.')
         
 
@@ -291,7 +303,9 @@ class Survey(object):
             elif ftype == 'ARES':
                 elec ,data = aresParser(fname)
             elif ftype == 'E4D':
-                elec ,data = aresParser(fname)
+                elec ,data = srvParser(fname)
+            elif ftype == 'BERT':
+                elec, data = bertParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         self.df = self.df.append(data)
@@ -1226,7 +1240,7 @@ class Survey(object):
                 fig, ax = plt.subplots()
             ax.plot(self.df['ip'].values, '.')
             ax.set_xlabel('Measurements')
-            ax.set_ylabel('Chargeability [mV/V]')
+            ax.set_ylabel('Phase [mrad]')
     
     
 #    def computeK(self):

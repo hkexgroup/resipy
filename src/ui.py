@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = True # set to false to not display message in the console
+DEBUG = False # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -270,7 +270,7 @@ class App(QMainWindow):
         
         self.setWindowTitle('ResIPy v' + ResIPy_version)
         self.setGeometry(100,100,1100,600)
-        self.newwd = os.path.join(bundle_dir, 'resipy', 'invdir')
+        self.newwd = os.path.join(bundle_dir, 'resipy')
 
         # UI attributes (sync with self.r2 attributes when instantiated)
         self.r2 = None
@@ -357,6 +357,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(False)
                 meshCustomGroup.setVisible(True)
                 instructionLabel.setVisible(True)
+                self.aspectMeshBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
 
                 # inversion settings
@@ -410,6 +411,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(True)
                 meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
+                self.aspectMeshBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
 
                 # inversion settings
@@ -635,6 +637,9 @@ class App(QMainWindow):
                 self.ftype = 'ARES'
                 self.fformat = 'ARES (*.2dm *.2DM)'
             elif index == 9:
+                self.ftype = 'BERT'
+                self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
+            elif index == 10:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -651,6 +656,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
         self.ftypeCombo.addItem('ARES (beta)')
+        self.ftypeCombo.addItem('BERT')
         self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
@@ -1417,6 +1423,11 @@ class App(QMainWindow):
 #        ipEndBoxLabel = QLabel('IP end column')
         self.chargeabilityBoxLabel = QLabel('Chargeability:')
         self.phaseBoxLabel = QLabel('Phase shift:')
+        self.devErrLabel = QLabel('Stacking Error (dev):')
+        self.resErrLabel = QLabel('Resistance Error:')
+        self.phaseLabel = QLabel('Phase/Chargeability Error:')
+        
+        
 #        elecSpacingLabel = QLabel('Electrode spacing')
 
 #        boxesLabels = [self.aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
@@ -1424,7 +1435,8 @@ class App(QMainWindow):
         boxesLabels = [self.aBoxLabel, self.bBoxLabel, self.mBoxLabel, 
                        self.nBoxLabel, self.vpBoxLabel, self.InBoxLabel,
                        self.resistBoxLabel, self.chargeabilityBoxLabel,
-                       self.phaseBoxLabel]#, elecSpacingLabel]
+                       self.phaseBoxLabel, self.devErrLabel, self.resErrLabel, 
+                       self.phaseLabel]
 
         self.aBox = QComboBox()
         self.bBox = QComboBox()
@@ -1439,6 +1451,9 @@ class App(QMainWindow):
         self.chargeabilityBox.setToolTip('input the column containing chargeability (mV/V) values')
         self.phaseBox = QComboBox()
         self.phaseBox.setToolTip('input the column containing phase shift (mRad) values')
+        self.devErrBox = QComboBox()
+        self.resErrBox = QComboBox()
+        self.phaseErrBox = QComboBox()
 #        elecSpacingEdit = QLineEdit('')
 #        elecSpacingEdit.setEnabled(False)
 #        elecSpacingEdit.setValidator(QDoubleValidator())
@@ -1449,7 +1464,7 @@ class App(QMainWindow):
 #                 ipEndBox, chargeabilityBox, phaseBox]#, elecSpacingEdit]
         boxes = [self.aBox, self.bBox, self.mBox, self.nBox, self.vpBox,
                  self.InBox, self.resistBox, self.chargeabilityBox, 
-                 self.phaseBox]#, elecSpacingEdit]
+                 self.phaseBox, self.devErrBox, self.resErrBox, self.phaseErrBox]#, elecSpacingEdit]
 
         def fillBoxes(bs):
             for b in bs:
@@ -1539,7 +1554,19 @@ class App(QMainWindow):
                     self.inputPhaseFlag = True
                 else:
                     self.ipCheck.setChecked(False)
-            
+            vals = getBoxes([self.devErrBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['dev'])
+            vals = getBoxes([self.resErrBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['magErr'])
+            vals = getBoxes([self.phaseErrBox])
+            if vals[0] > 0:
+                colIndex.append(vals)
+                newHeaders.append(['phiErr'])
+                
             # currently not importing each IP columns (M1 -> M..) so no
             # decay curve analysis can be performed
 
@@ -1594,7 +1621,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(9)
+            self.ftypeCombo.setCurrentIndex(10)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
@@ -2538,14 +2565,14 @@ class App(QMainWindow):
         fmdBox.setValidator(QDoubleValidator())
         
         
-        def replotMesh():
+        def replotMesh(aspect='equal'):
             if self.iDesign is False:
                 self.regionTable.reset()
                 self.iDesign is False
             def func(ax):
                 self.r2.createModel(ax=ax, addAction=self.regionTable.addRow)
-            self.calcAspectRatio()
-            self.mwMesh.plot(func, aspect = self.plotAspect)
+            # self.calcAspectRatio()
+            self.mwMesh.plot(func, aspect=aspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             self.mwMesh.canvas.setFocus() # set focus on the canvas
 
@@ -2839,6 +2866,16 @@ class App(QMainWindow):
         self.importCustomMeshBtn2.clicked.connect(importCustomMeshFunc2)
         self.importCustomMeshBtn2.setToolTip('Import .msh or .vtk file. The electrodes will be snapped to the closest node.')
 
+        def meshAspectBtnFunc(state):
+            if state == Qt.Checked:
+                replotMesh(aspect='equal')
+            else:
+                replotMesh(aspect='auto')
+        self.meshAspectBtn = QCheckBox('Equal aspect')
+        self.meshAspectBtn.setToolTip('Check for equal aspect of axis.')
+        self.meshAspectBtn.setChecked(True)
+        self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
+
         def resetMeshBtnFunc():
             self.regionTable.reset()
             self.mwMesh.clear()
@@ -3009,8 +3046,9 @@ class App(QMainWindow):
         meshLayout.addLayout(meshChoiceLayout, 0)
 
         instructionLayout = QHBoxLayout()
-        instructionLayout.addWidget(instructionLabel, 92)
-        instructionLayout.addWidget(self.resetMeshBtn, 8)
+        instructionLayout.addWidget(instructionLabel, 86)
+        instructionLayout.addWidget(self.meshAspectBtn, 7)
+        instructionLayout.addWidget(self.resetMeshBtn, 7)
         meshLayout.addLayout(instructionLayout)
 
         regionLayout = QVBoxLayout()
@@ -3511,13 +3549,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.modelDOICheck = QCheckBox()
         self.modelDOICheck.stateChanged.connect(modelDOIFunc)
         advForm.addRow(self.modelDOILabel, self.modelDOICheck)
+        
+        def checkTxSignFunc(state):
+            if state == Qt.Checked:
+                self.r2.param['checkTxSign'] = True
+            else:
+                self.r2.param['checkTxSign'] = False
+        self.checkTxSignLabel = QLabel('<a href="txSign">Resistance polarity check</a>')
+        self.checkTxSignLabel.linkActivated.connect(showHelpAdv)
+        self.checkTxSign = QCheckBox()
+        self.checkTxSign.stateChanged.connect(checkTxSignFunc)
+        advForm.addRow(self.checkTxSignLabel, self.checkTxSign)
 
         def flux_typeFunc(index):
             if index == 0:
                 self.r2.param['flux_type'] = 3
             else:
                 self.r2.param['flux_type'] = 2
-        self.flux_typeLabel = QLabel('<a href="flux_type">Flux Type</a>:')
+        self.flux_typeLabel = QLabel('<a href="flux_type">Flux Type</a>')
         self.flux_typeLabel.linkActivated.connect(showHelp)
         self.flux_type = QComboBox()
         self.flux_type.addItem('3D')
@@ -3551,7 +3600,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def scaleFunc():
             self.r2.param['scale'] = float(self.scale.text())
-        self.scaleLabel = QLabel('<a href="scale"> Scale for triangular mesh</a>:')
+        self.scaleLabel = QLabel('<a href="scale"> Scale for triangular mesh</a>')
         self.scaleLabel.linkActivated.connect(showHelp)
         self.scaleLabel.setVisible(False)
         self.scale = QLineEdit()
@@ -3827,6 +3876,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwIter.clear()
             self.mwInv.clear()
             
+            # reset variables for RMS graph
+            self.pindex = 0
+            self.rms = []
+            self.rmsIndex = []
+            self.rmsIP = []
+            self.rmsIndexIP = []
+            self.inversionOutput = ''
+            
             # create default mesh is not specified
             if self.r2.mesh is None:
                 logTextFunc('Creating the mesh... ')
@@ -4038,7 +4095,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
-                            'pvgrid':False, 'pvcontour':[]}
+                            'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         
 
         def replotSection(): # main plotting function
@@ -4058,8 +4115,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             pvthreshold = self.displayParams['pvthreshold']
             pvgrid = self.displayParams['pvgrid']
             pvcontour = self.displayParams['pvcontour']
+            aspect = self.displayParams['aspect']
             if self.r2.typ[-1] == '2':
-                self.mwInv.replot(threed=False, aspect=self.plotAspect,
+                self.mwInv.replot(threed=False, aspect=aspect,
                                   index=index, edge_color=edge_color,
                                   contour=contour, sens=sens, attr=attr,
                                   vmin=vmin, vmax=vmax, color_map=cmap, 
@@ -4256,6 +4314,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.edgeCheck.setChecked(False)
         self.edgeCheck.setToolTip('Show edges of each mesh cell.')
         self.edgeCheck.stateChanged.connect(showEdges)
+        
+        def aspectCheckFunc(state):
+            if state == Qt.Checked:
+                self.displayParams['aspect'] = 'equal'
+            else:
+                self.displayParams['aspect'] = 'auto'
+            replotSection()
+        self.aspectCheck = QCheckBox('Equal')
+        self.aspectCheck.setChecked(True)
+        self.aspectCheck.stateChanged.connect(aspectCheckFunc)
+        self.aspectCheck.setToolTip('Check for equal aspect of the axis'
+                                    '\nUncheck for auto aspect.')
 
         def saveBtnFunc():
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
@@ -4404,9 +4474,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.surveyCombo, 15)
         optsLayout.addWidget(self.attrCombo, 20)
         optsLayout.addWidget(self.vminLabel)
-        optsLayout.addWidget(self.vminEdit, 10)
+        optsLayout.addWidget(self.vminEdit, 5)
         optsLayout.addWidget(self.vmaxLabel)
-        optsLayout.addWidget(self.vmaxEdit, 10)
+        optsLayout.addWidget(self.vmaxEdit, 5)
         optsLayout.addWidget(self.vMinMaxBtn)
         optsLayout.addWidget(self.doiCheck)
         optsLayout.addWidget(self.doiSensCheck)
@@ -4414,6 +4484,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.contourCheck)
         optsLayout.addWidget(self.sensWidget)
         optsLayout.addWidget(self.edgeCheck)
+        optsLayout.addWidget(self.aspectCheck)
         optsLayout.addWidget(self.saveBtn)
         
         opt3dLayout = QHBoxLayout()
@@ -4577,7 +4648,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         helpLayout = QVBoxLayout()
         helpLayout.setAlignment(Qt.AlignTop)
         helpText = QTextBrowser()
-        helpText.setReadOnly(True)
         helpText.setOpenExternalLinks(True)
         helpText.setText('''
            <h1>General help</h1>\
@@ -4621,12 +4691,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <ul><li>The axes limits/labels and plot title  can be changed in the "Axes" tab.</li>
            <li>The marker size and line width can be changed in the "Curves" tab.</li></ul>
            </ul>
-           <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
-           <p>Read more on 2D resistivity inversion: <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2_readme.pdf">R2_readme.pdf</a></p>
-           <p>Read more on 3D resistivity inversion: <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R3t/R3t_readme.pdf">R3t_readme.pdf</a></p>
-           <p>Read more on 2D complex resistivity (IP) inversion: <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR2/cR2_readme.pdf">cR2_readme.pdf</a></p>
+           ''')
+        helpLabel = QLabel( # added this as the QTextBrowser open pdf inside the UI (so unreadeble)
+        '''
+        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
+        <p>Read more on 2D resistivity inversion: <a href="./resipy/exe/R2_manual.pdf">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="./resipy/exe/R3t_manual.pdf">R3t_readme.pdf</a></p>
+        <p>Read more on 2D complex resistivity (IP) inversion: <a href="./resipy/exe/cR2_manual.pdf">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="./resipy/exe/cR3t_manual.pdf">cR2_readme.pdf</a></p>
         ''')
+        helpLabel.setOpenExternalLinks(True)
         helpLayout.addWidget(helpText)
+        helpLayout.addWidget(helpLabel)
         tabHelp.setLayout(helpLayout)
 
 
@@ -4637,63 +4711,35 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         infoLayout = QVBoxLayout()
         aboutText = QLabel()
-        aboutText.setText('''<h1>About ResIPy </h1> \
-                          <p><b>Version: %s</b></p> \
-                          <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p> \
-                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
-                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
-                          <p>ResIPy uses 
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">R2</a>,
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR2/cR2.htm">cR2</a>,
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R3t/R3t.htm">R3t</a> and 
-                              <a href="http://www.es.lancs.ac.uk/people/amb/Freeware/cR3t/cR3t.htm">cR3t</a> developed by Andrew Binley</p> \
-                          <p>For generation of triangular mesh, ResIPy uses software 
-                              <a href="http://gmsh.info/">Gmsh</a></p>\
-                          <p>Python packages used: 
-                              <a href="https://numpy.org/">numpy</a>, 
-                              <a href="https://pandas.pydata.org/">pandas</a>,
-                              <a href="https://matplotlib.org/">matplotlib</a>,
-                              <a href="https://scipy.org/index.html">scipy</a>,
-                              <a href="https://pypi.org/project/PyQt5/">PyQt5</a>.
-                          </p>
-<p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-<p>Contributors: Pedro Concha, Michael Tso</p>
-<p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
-<p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P. and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423. <a href="https://doi.org/10.1016/j.cageo.2020.104423">https://doi.org/10.1016/j.cageo.2020.104423</a>.</p>
-
-'''%ResIPy_version)
-#        aboutText.setText('''<h1>About ResIPy</h1> \
-#                          <p><b>Version: %s</b></p> \
-#                          <p><i>ResIPy is a free and open source software for inversion of geoelectrical data (Resistivity and IP)</i></p> \
-#                          <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p> \
-#                          <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p> \
-#                          <p>pyR2 uses R2 and cR2 codes developed by Andrew Binley:</p> \
-#                          <p><a href="http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm">http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm</a></p> \
-#                          <p>For generation of triangular mesh, pyR2 uses "Gmsh" software:</p> \
-#                          <p><a href="http://gmsh.info/">http://gmsh.info/</a></p>\
-#                          <p>Python packages used: scipy, numpy, pandas, matplotlib.
-#<ul>
-#<li>Jones E, Oliphant E, Peterson P, <em>et al.</em>
-#<strong>SciPy: Open Source Scientific Tools for Python</strong>, 2001-,
-#<a class="reference external" href="http://www.scipy.org/">http://www.scipy.org/</a> [Online; accessed 2018-10-02].
-#</li>
-#<li>
-# Wes McKinney.
-#<strong>Data Structures for Statistical Computing in Python</strong>,
-#Proceedings of the 9th Python in Science Conference, 51-56 (2010)
-#(<a class="reference external" href="http://conference.scipy.org/proceedings/scipy2010/mckinney.html">publisher link</a>)
-#</li>
-#<li>
-#John D. Hunter.
-#<strong>Matplotlib: A 2D Graphics Environment</strong>,
-#Computing in Science &amp; Engineering, <strong>9</strong>, 90-95 (2007),
-#<a class="reference external" href="https://doi.org/10.1109/MCSE.2007.55">DOI:10.1109/MCSE.2007.55</a>
-#</li>
-#<li>Travis E, Oliphant. <strong>A guide to NumPy</strong>,
-#USA: Trelgol Publishing, (2006).
-#</li>
-#</ul>
-#</p>
+        aboutText.setText(
+            '''
+            <h1>About ResIPy </h1>
+            <p><b>Version: {:s}</b></p>
+            <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p>
+            <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p>
+            <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p>
+            <p>ResIPy uses 
+                <a href="./resipy/exe/R2_manual.pdf">R2</a>,
+                <a href="./resipy/exe/cR2_manual.pdf">cR2</a>,
+                <a href="./resipy/exe/R3t_manual.pdf">R3t</a> and 
+                <a href="./resipy/exe/cR3t_manual.pdf">cR3t</a> developed by Andrew Binley</p>
+            <p>For generation of triangular mesh, ResIPy uses software 
+                <a href="http://gmsh.info/">Gmsh</a></p>
+            <p>Python packages used: 
+                <a href="https://numpy.org/">numpy</a>, 
+                <a href="https://pandas.pydata.org/">pandas</a>,
+                <a href="https://matplotlib.org/">matplotlib</a>,
+                <a href="https://scipy.org/index.html">scipy</a>,
+                <a href="https://pypi.org/project/PyQt5/">PyQt5</a>.
+            </p>
+            <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
+            <p>Contributors: Pedro Concha, Michael Tso</p>
+            <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
+            <p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P.
+            and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for 
+            Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423.
+            <a href="https://doi.org/10.1016/j.cageo.2020.104423">https://doi.org/10.1016/j.cageo.2020.104423</a>.</p>
+            '''.format(ResIPy_version))
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
@@ -4770,7 +4816,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.loadingDialog.accept()  
             
     def calcAspectRatio(self): # for calculating aspect ratio of long surveys
-        self.r2.computeFineMeshDepth()
+        if self.r2.fmd is None:
+            self.r2.computeFineMeshDepth()
         surLength = np.abs(self.r2.param['xz_poly_table'][0,0] - self.r2.param['xz_poly_table'][1,0])
         surDepth = np.abs(self.r2.param['xz_poly_table'][-1,1] - self.r2.param['xz_poly_table'][-2,1])
         aspectRatio = surLength/surDepth
@@ -4946,7 +4993,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.phasefiltfnamesComboLabel.show()
             self.phasefiltfnamesCombo.show()
             
-    def importFile(self, fname): # TODO to test the UI automatically this needs to be a methods
+    def importFile(self, fname):
         pdebug('importFile:', fname)
         if len(self.r2.surveys) > 0:
             self.r2.surveys = []
@@ -4971,7 +5018,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.errorDump('File is not recognized.')
                 pass
             pdebug('importFile: setting up UI')
-            if all(self.r2.surveys[0].df['irecip'].values == 0):
+            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
+                # we need more than a single reciprocal to fit error model and so
                 self.importDataRecipBtn.show()
                 self.recipOrNoRecipShow(recipPresence = False)
             else:
@@ -5138,6 +5186,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # inversion
         self.logText.setText('')
         self.mwRMS.clear()
+        self.mwIter.clear()
         self.surveyCombo.clear()
         self.attrCombo.clear()
         self.vminEdit.setText('')
@@ -5158,7 +5207,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
-                            'pvgrid':False, 'pvcontour':[]}
+                            'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         self.mwInv.clear()
         self.mwInvError.clear()
         self.mwInvError2.clear()
