@@ -68,7 +68,7 @@ def checkExe(dirname):
     exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
     hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
               'b483d7001b57e148453b33412d614dd95e71db21',
-              '00b65d5655d74b29f8dda76577faf5a046dce6e8',
+              '3fda8d15377974b10cafa5b32398d6e2d2e40345',
               # '577c02cf87bcd2d64cccff14919d607e79ff761a',
               # '91bd6e5fcb01a11d241456479c203624d0e681ed'
               ]
@@ -1574,7 +1574,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 zlimTop = 0
             else:
                 zlimTop = np.max(elec[:,2])
-        zlimBot = np.min(elec[:,2]) - self.fmd # if fmd is correct (defined as positive number
+        zlimBot = -self.fmd # if fmd is correct (defined as positive number
         # from surface then it is as well the zlimMin)
         self.zlim = [zlimBot, zlimTop]
         
@@ -3842,7 +3842,6 @@ class R2(object): # R2 master class instanciated by the GUI
                         dfs.append(df)
         except Exception as e:
             return # this code is error prone (mainly to empty dataframe error)
-        print('=====', dfs[0]['Normalised_Error'])
         # merge the columns to each survey dataframe
         if  np.sum([df.shape[0] > 0 for df in dfs]) != len(self.surveys):
             print('error in reading error files (do not exists or empty')
@@ -3850,7 +3849,7 @@ class R2(object): # R2 master class instanciated by the GUI
         for s, df in zip(self.surveys, dfs):
             df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
             cols = ['a','b','m','n','resInvError']
-            if self.typ == 'cR2':
+            if (self.typ == 'cR2') | (self.typ == 'cR3t'):
                 df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
                 cols += ['phaseInvMisfit']
             # TODO not ready yet
