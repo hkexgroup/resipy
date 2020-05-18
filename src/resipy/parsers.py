@@ -1230,3 +1230,58 @@ def bert_parser(fname):
     df.drop(['valid','iperr'],axis=1,inplace=True)
     
     return elec,df
+
+#%% E4D .srv format 
+def srvParser(fname):
+    fh = open(fname,'r')
+    # electrodes come first in the file 
+    nelec = int(fh.readline().split()[0]) # number of electrode coordinates 
+    # now read in electrode coords
+    elec = np.zeros((nelec,3))
+    for i in range(nelec):
+        line = fh.readline().split()
+        elec[i,0] = float(line[1])
+        elec[i,1] = float(line[2])
+        elec[i,2] = float(line[3])
+    #read in measurements 
+    line = fh.readline()
+    while len(line.split())==0:
+        line = fh.readline()
+        
+    nmeas = int(line.split()[0])
+    a = [0]*nmeas
+    b = [0]*nmeas
+    n = [0]*nmeas
+    m = [0]*nmeas
+    Tr = [0]*nmeas
+    err = [0]*nmeas
+    for i in range(nmeas):
+        line = fh.readline().split()
+        a[i] = int(line[1])
+        b[i] = int(line[2])
+        m[i] = int(line[3])
+        n[i] = int(line[4])
+        Tr[i] = float(line[5])
+        if len(line) == 7:
+            err[i] = float(line[6]) # grab the error model from the file? 
+            
+    if any(err) != 0:
+        print('E4D error column found')
+    else:
+        err = [np.nan]*nmeas
+        
+    #put data into correct format
+    data_dict = {}
+    data_dict['a']=a
+    data_dict['b']=b
+    data_dict['n']=n
+    data_dict['m']=m
+    data_dict['resist']=Tr
+    data_dict['magErr']=err
+    data_dict['Rho']=[0]*nmeas
+    data_dict['dev']=[0]*nmeas
+    data_dict['ip']=[0]*nmeas
+    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    df = df[['a','b','m','n','Rho','dev','ip','resist','magErr']] # reorder columns to be consistent with the syscal parser
+    
+    return elec, df 
