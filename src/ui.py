@@ -357,7 +357,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(False)
                 meshCustomGroup.setVisible(True)
                 instructionLabel.setVisible(True)
-                self.aspectMeshBtn.setVisible(True)
+                self.meshAspectBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
 
                 # inversion settings
@@ -411,7 +411,7 @@ class App(QMainWindow):
                 meshTetraGroup.setVisible(True)
                 meshCustomGroup.setVisible(False)
                 instructionLabel.setVisible(False)
-                self.aspectMeshBtn.setVisible(False)
+                self.meshAspectBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
 
                 # inversion settings
