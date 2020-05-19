@@ -4208,7 +4208,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 inside = path.contains_points(np.c_[meshx, meshz])
                 
         # compute absolute and relative difference in resistivity
-        res_names = ['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)']
+        res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
         res_name = res_names[np.in1d(res_names, list(self.meshResults[0].attr_cache.keys()))][0]
         res0 = np.array(self.meshResults[0].attr_cache[res_name])[inside]
         for i in range(1, len(self.meshResults)):
