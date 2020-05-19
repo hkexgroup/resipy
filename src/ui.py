@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
     QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor#, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer#, QProcess, QSize
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
@@ -4692,12 +4692,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>The marker size and line width can be changed in the "Curves" tab.</li></ul>
            </ul>
            ''')
-        helpLabel = QLabel( # added this as the QTextBrowser open pdf inside the UI (so unreadeble)
+        # local manuals
+        R2_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/R2_manual.pdf')).toEncoded()).decode()
+        R3t_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/R3t_manual.pdf')).toEncoded()).decode()
+        cR2_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/cR2_manual.pdf')).toEncoded()).decode()
+        cR3t_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/cR3t_manual.pdf')).toEncoded()).decode()
+        helpLabel = QLabel( 
         '''
         <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
-        <p>Read more on 2D resistivity inversion: <a href="./resipy/exe/R2_manual.pdf">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="./resipy/exe/R3t_manual.pdf">R3t_readme.pdf</a></p>
-        <p>Read more on 2D complex resistivity (IP) inversion: <a href="./resipy/exe/cR2_manual.pdf">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="./resipy/exe/cR3t_manual.pdf">cR2_readme.pdf</a></p>
-        ''')
+        <p>Read more on 2D resistivity inversion: <a href="%s">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="%s">R3t_readme.pdf</a></p>
+        <p>Read more on 2D complex resistivity (IP) inversion: <a href="%s">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="%s">cR3t_readme.pdf</a></p>
+        '''% (R2_help,R3t_help, cR2_help, cR3t_help))
         helpLabel.setOpenExternalLinks(True)
         helpLayout.addWidget(helpText)
         helpLayout.addWidget(helpLabel)
