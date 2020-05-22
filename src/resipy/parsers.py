@@ -340,11 +340,6 @@ def primeParserTab(fname, espacing = 1):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    #compute default electrode positions 
-    imax = np.max(np.array((a,b,m,n)))
-    elec = np.zeros((imax,3))
-    elec[:,0] = np.arange(0,imax)*espacing
-    
     # shift electrodes to have continuous numbering
     array = df[['a','b','m','n']].values
     arrayMin = np.min(np.unique(np.sort(array.flatten())))
@@ -354,6 +349,11 @@ def primeParserTab(fname, espacing = 1):
     elecLabel = 1 + np.arange(len(val))
     newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
     df.loc[:,['a','b','m','n']] = newval
+    
+    #compute default electrode positions 
+    imax = np.max(newval)
+    elec = np.zeros((imax,3))
+    elec[:,0] = np.arange(0,imax)*espacing
     
     return elec, df
 ##Test code
