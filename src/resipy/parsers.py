@@ -219,7 +219,7 @@ def protocolParser(fname, ip=False, fwd=False):
         for line in np.unique(lineNumF):
             ie = lineNumF == line # electrode indexes 
             elecNumF[ie] += c # add maximum electrode index found so far 
-            c = max(elecNumF[ie]) + c
+            c = max(elecNumF[ie])
         measNum = x.shape[0] # number of measurements 
         x[:,1:9:2] = np.ones((measNum,4)) # make line numbers all 1
         x[:,2:9:2] = elecNumF.reshape(elecNum.shape)
