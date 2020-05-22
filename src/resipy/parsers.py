@@ -194,21 +194,35 @@ def protocolParser(fname, ip=False, fwd=False):
         colnames = colnames2d[:ncol]
     else: # it's a 3D survey
         colnames = colnames3d[:ncol]
-
-        # putting all electrodes on the same string
-        elecs = x[:,1:9].reshape((-1,2))
+        # putting all electrodes on the same string    
+        #### broken code? #### 
+        # elecs = x[:,1:9].reshape((-1,2))
+        # c = 0
+        # for line in np.unique(elecs[:,0]):
+        #     ie = elecs[:,0] == line
+        #     uelec = np.unique(elecs[ie,1])
+        #     if len(uelec) != np.max(elecs[ie,1]):
+        #         raise Exception('More electrodes per line ({}) then electrode '
+        #                         'number ({}).'.format(np.max(elecs[ie,1]), len(uelec)))
+        #     else:
+        #         elecs[ie,0] = 0
+        #         elecs[ie,1] = c + elecs[ie,1]
+        #         c = c + len(uelec)
+        # x[:,1:9] = elecs.reshape((-1,8))
+        #### broken end #### 
+        
+        lineNum = x[:,1:9:2] # line numbers 
+        elecNum = x[:,2:9:2] # electrode numbers 
+        lineNumF = lineNum.flatten() # flattened arrays 
+        elecNumF = elecNum.flatten()
         c = 0
-        for line in np.unique(elecs[:,0]):
-            ie = elecs[:,0] == line
-            uelec = np.unique(elecs[ie,1])
-            if len(uelec) != np.max(elecs[ie,1]):
-                raise Exception('More electrodes per line ({}) then electrode '
-                                'number ({}).'.format(np.max(elecs[ie,1]), len(uelec)))
-            else:
-                elecs[ie,0] = 0
-                elecs[ie,1] = c + elecs[ie,1]
-                c = c + len(uelec)
-        x[:,1:9] = elecs.reshape((-1,8))
+        for line in np.unique(lineNumF):
+            ie = lineNumF == line # electrode indexes 
+            elecNumF[ie] += c # add maximum electrode index found so far 
+            c = max(elecNumF[ie]) + c
+        measNum = x.shape[0] # number of measurements 
+        x[:,1:9:2] = np.ones((measNum,4)) # make line numbers all 1
+        x[:,2:9:2] = elecNumF.reshape(elecNum.shape)
         
     df = pd.DataFrame(x, columns=colnames)
     if 'ip' not in df.columns:
