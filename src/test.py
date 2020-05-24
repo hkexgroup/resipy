@@ -150,6 +150,7 @@ k.createMesh('trian', refine=1)
 # 2D topo
 k = R2()
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
+k.importElec(testdir + 'dc-2d-topo/elec.csv')
 k.createMesh('quad')
 k.createMesh('trian')
 
@@ -230,8 +231,6 @@ k.saveFilteredData(os.path.join(k.dirname, 'dfdata1'), k.elec, savetyp='Res2DInv
 k.saveFilteredData(os.path.join(k.dirname, 'dfdata2'), k.elec, savetyp='Comma Separated Values (*.csv)')
 k.err = True
 
-k.write2in()
-k.write2protocol(err=True)
 k.invert(modErr=True, modelDOI=True)
 k.showResults(attr='Conductivity(mS/m)', doiSens=True)
 k.showResults(doi=True)
