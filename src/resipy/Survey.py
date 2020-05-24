@@ -73,6 +73,7 @@ class Survey(object):
         self.iselect = None # use in filterManual()
         self.eselect = None # idem
         self.iremote = None # to be set by R2 class when remote detected
+        self.iused = None # to be set by R2 class when electrode are used
         self.debug = debug # plotting all information message by default
         if spacing is not None:
             warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
@@ -1329,15 +1330,6 @@ class Survey(object):
         resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
-#            apos = elecpos[array[:,0]-1]
-#            bpos = elecpos[array[:,1]-1]
-#            mpos = elecpos[array[:,2]-1]
-#            npos = elecpos[array[:,3]-1]
-#            AM = np.abs(apos-mpos)
-#            BM = np.abs(bpos-mpos)
-#            AN = np.abs(apos-npos)
-#            BN = np.abs(bpos-npos)
-#            K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
             self.computeK()
             resist = resist*self.df['K']
 
@@ -1349,14 +1341,12 @@ class Survey(object):
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
-                
-        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
-        
+                       
         if self.iremote is not None:
             elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        
+        if self.iused is not None:
+            elecpos[~self.iused] = np.inf # idem, unused electrode should be taken as minimium
         
         cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
@@ -1566,6 +1556,9 @@ class Survey(object):
         if self.iremote is not None:
             elecpos[self.iremote] = np.inf # so it will never be taken as minimium
         
+        if self.iused is not None:
+            elecpos[~self.iused] = np.inf
+            
         cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
         cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
@@ -1778,11 +1771,11 @@ class Survey(object):
             else:
                 label = attr
                 
-        resist = percFact*self.df[attr].values
+        val = percFact*self.df[attr].values
 
-        # inan = np.isnan(resist)
-        inan = np.zeros(len(resist), dtype=bool)
-        resist = resist.copy()[~inan]
+        # inan = np.isnan(val)
+        inan = np.zeros(len(val), dtype=bool)
+        val = val.copy()[~inan]
         array = array.copy()[~inan]
         self.iselect = np.zeros(len(inan), dtype=bool)
         
@@ -1793,32 +1786,15 @@ class Survey(object):
         elecpos = self.elec[:,0].copy()
         if self.iremote is not None:
             elecpos[self.iremote] = np.inf # so it will never be taken as minimium
-        
-        
+        if self.iused is not None:
+            elecpos[~self.iused] = np.inf # idem
+
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
-        # if geom: # compute and applied geometric factor
-            # apos = elecpos[array[:,0]-1]
-            # bpos = elecpos[array[:,1]-1]
-            # mpos = elecpos[array[:,2]-1]
-            # npos = elecpos[array[:,3]-1]
-            # AM = np.abs(apos-mpos)
-            # BM = np.abs(bpos-mpos)
-            # AN = np.abs(apos-npos)
-            # BN = np.abs(bpos-npos)
-            # K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-            # self.computeK()
-            # resist = resist*self.df['K']
-            
         if log:
-            resist = np.sign(resist)*np.log10(np.abs(resist))
+            val = np.sign(val)*np.log10(np.abs(val))
 
         array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
-        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
-        
         
         cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
         cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
@@ -1830,7 +1806,6 @@ class Survey(object):
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-
         
         def onpick(event):
             if lines[event.artist] == 'data':
@@ -1881,7 +1856,7 @@ class Survey(object):
         else:
             caxElec, = ax2.plot([],[],'ko')
         
-        cax = ax2.scatter(xpos, ypos, c=resist, marker='o', picker=5, vmin=vmin,
+        cax = ax2.scatter(xpos, ypos, c=val, marker='o', picker=5, vmin=vmin,
                          vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax2, fraction=0.046, pad=0.04)
         cbar.set_label(label)
