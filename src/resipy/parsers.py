@@ -99,15 +99,38 @@ def syscalParser(fname):#, spacing=None):
         # if spacing is None:    
         # for unregularly spaced array
         array = df[['a','b','m','n']].values
-        arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        if arrayMin != 0: # all surveys must start from x = 0
-            array -= arrayMin
-        val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-        elecLabel = 1 + np.arange(len(val))
-        newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-        df.loc[:,['a','b','m','n']] = newval
-        elec = np.c_[val, np.zeros((len(val),2))]
-        # else:        
+        # arrayMin = np.min(np.unique(np.sort(array.flatten())))
+        # if arrayMin != 0: # all surveys must start from x = 0
+        #     array -= arrayMin
+        # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+        # elecLabel = 1 + np.arange(len(val))
+        # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+        # df.loc[:,['a','b','m','n']] = newval
+        # elec = np.c_[val, np.zeros((len(val),2))]
+        remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
+                                9999999, 999999, 99999, 9999, 999])
+        iremote = np.in1d(array.flatten(), remoteFlags)
+        remoteFreeArray = array.flatten()[~iremote]
+        arraySorted = np.sort(np.unique(remoteFreeArray))
+        elecSpacing = arraySorted[1] - arraySorted[0]
+        print('elecSpacing=', elecSpacing)
+        n = np.max(remoteFreeArray/elecSpacing).astype(int)
+        a = 0
+        if arraySorted[0] == 0:
+            n = n + 1
+            a = 1
+        if np.sum(iremote) > 0:
+            n = n + 1
+        for i in range(4):
+            ie = ~np.in1d(array[:,i], remoteFlags)
+            array[ie, i] = array[ie, i]/elecSpacing + a
+            array[~ie, i] = n
+        df.loc[:,['a','b','m','n']] = array.astype(int)
+        elec = np.zeros((n, 3))
+        elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
+        if np.sum(iremote) > 0:
+            elec[-1, 0] = -99999
+        # else:
         #     # for regularly spaced array
         #     array = df[['a','b','m','n']].values
         #     arrayMin = np.min(np.unique(np.sort(array.flatten())))
@@ -125,8 +148,8 @@ def syscalParser(fname):#, spacing=None):
         return elec, df
     
 #test code
-#elec, df = syscalParser('test/syscalFile.csv')
-#elec, df = syscalParser('test/pole-dipole-survey/Long_south_PDF_63_10_1_filt_5.csv')
+# elec, df = syscalParser('examples/dc-2d/syscal.csv')
+# elec, df = syscalParser('examples/dc-2d-pole-dipole/syscal.csv')
 
 #%%
 def protocolParserLME(fname): # pragma: no cover
@@ -194,23 +217,7 @@ def protocolParser(fname, ip=False, fwd=False):
         colnames = colnames2d[:ncol]
     else: # it's a 3D survey
         colnames = colnames3d[:ncol]
-        # putting all electrodes on the same string    
-        #### broken code? #### 
-        # elecs = x[:,1:9].reshape((-1,2))
-        # c = 0
-        # for line in np.unique(elecs[:,0]):
-        #     ie = elecs[:,0] == line
-        #     uelec = np.unique(elecs[ie,1])
-        #     if len(uelec) != np.max(elecs[ie,1]):
-        #         raise Exception('More electrodes per line ({}) then electrode '
-        #                         'number ({}).'.format(np.max(elecs[ie,1]), len(uelec)))
-        #     else:
-        #         elecs[ie,0] = 0
-        #         elecs[ie,1] = c + elecs[ie,1]
-        #         c = c + len(uelec)
-        # x[:,1:9] = elecs.reshape((-1,8))
-        #### broken end #### 
-        
+        # putting all electrodes on the same string            
         lineNum = x[:,1:9:2] # line numbers 
         elecNum = x[:,2:9:2] # electrode numbers 
         lineNumF = lineNum.flatten() # flattened arrays 
@@ -219,7 +226,7 @@ def protocolParser(fname, ip=False, fwd=False):
         for line in np.unique(lineNumF):
             ie = lineNumF == line # electrode indexes 
             elecNumF[ie] += c # add maximum electrode index found so far 
-            c = max(elecNumF[ie])
+            c = np.max(elecNumF[ie])
         measNum = x.shape[0] # number of measurements 
         x[:,1:9:2] = np.ones((measNum,4)) # make line numbers all 1
         x[:,2:9:2] = elecNumF.reshape(elecNum.shape)
@@ -239,78 +246,9 @@ def protocolParser(fname, ip=False, fwd=False):
 # elec, df = protocolParser('examples/ip-3d/protocol2.dat', ip=True)
 
 
-#%% forwardProtocolDC/IP parser
-    
-# def forwardProtocolDC(fname): # need specific as there is a appRes column
-#     skip = 1
-#     cnames = ['num','a','b','m','n','resist','appRes']
-#     if fname.find('R3t') != -1:
-#         skip=1
-#         cnames =['num','sa','a','sb','b','sm','m','sn','n','resist','appRes']
-#         print('3d import')
-#     x = np.genfromtxt(fname, skip_header=skip)
-#     df = pd.DataFrame(x, columns=cnames)
-#     df['ip'] = np.nan
-#     xElec = np.arange(np.max(df[['a','b','m','n']].values))
-#     elec = np.zeros((len(xElec),3))
-#     elec[:,0] = xElec
-#     return elec, df
-    
-
-# # not needed as the normal parser can do it
-# def forwardProtocolIP(fname): # pragma: no cover
-#     x = np.genfromtxt(fname, skip_header=1)
-#     df = pd.DataFrame(x, columns=['num','a','b','m','n','resist','ip','appRes'])
-#     xElec = np.arange(np.max(df[['a','b','m','n']].values))
-#     elec = np.zeros((len(xElec),3))
-#     elec[:,0] = xElec
-#     return elec, df
-
-
 #%% PRIME system parser
 
-# def primeParser(fname, espacing=None):
-#     """ Returns data and elec from BGS PRIME system.
-#     """
-#     with open(fname, 'r') as f:
-#         x = f.readlines()
-#         nrows = int(x[6])
-#     df = pd.read_csv(fname, header=11, delimiter='\t', nrows=nrows)
-#     df = df.reset_index()
-#     df = df.rename(columns={'level_1':'a',
-#                             'level_3':'b',
-#                             'level_5':'m',
-#                             'level_7':'n',
-#                             'level_9':'resist'})
-#     array = df[['a','b','m','n']].values
-#     if espacing is None:
-#         espacing = np.unique(np.sort(array.flatten()))[1]
-#     array = np.round(array/espacing+1).astype(int)
-#     imax = int(np.max(array))
-# #                if np.sum(array == 0) > 0:
-# #                    print('add 1 as there is electrodes at zeros')
-# #                    imax = imax+1
-#     elec = np.zeros((imax,3))
-#     elec[:,0] = np.arange(0,imax)*espacing
-#     df['ip'] = np.nan
-#     df[['a','b','m','n']] = array
-    
-#     # shift electrodes to have continuous numbering
-#     array = df[['a','b','m','n']].values
-#     arrayMin = np.min(np.unique(np.sort(array.flatten())))
-#     if arrayMin != 0: # all surveys must start from x = 0
-#         array -= arrayMin
-#     val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-#     elecLabel = 1 + np.arange(len(val))
-#     newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-#     df.loc[:,['a','b','m','n']] = newval
-    
-#     return elec, df
-
-# test code
-#elec, df = primeParser('api/test/primeFile.dat')
-    
-def primeParserTab(fname, espacing = 1):
+def primeParserTab(fname, espacing=1):
     """
     Parses data from a prime file with the .tab extension - jamyd91
     """
@@ -341,19 +279,23 @@ def primeParserTab(fname, espacing = 1):
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     # shift electrodes to have continuous numbering
-    array = df[['a','b','m','n']].values
-    arrayMin = np.min(np.unique(np.sort(array.flatten())))
-    if arrayMin != 0: # all surveys must start from x = 0
-        array -= arrayMin
-    val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-    elecLabel = 1 + np.arange(len(val))
-    newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-    df.loc[:,['a','b','m','n']] = newval
+    # array = df[['a','b','m','n']].values
+    # arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    # if arrayMin != 0: # all surveys must start from x = 0
+    #     array -= arrayMin
+    # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+    # elecLabel = 1 + np.arange(len(val))
+    # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    # df.loc[:,['a','b','m','n']] = newval
     
-    #compute default electrode positions 
-    imax = np.max(newval)
-    elec = np.zeros((imax,3))
-    elec[:,0] = np.arange(0,imax)*espacing
+    #compute default electrode positions
+    array = df[['a','b','m','n']].values
+    arraySorted = np.sort(np.unique(array.flatten()))
+    n = np.max(arraySorted)
+    if arraySorted[0] == 0:
+        n = n + 1
+    elec = np.zeros((n, 3))
+    elec[:,0] = np.arange(n) * espacing
     
     return elec, df
 ##Test code
@@ -1119,7 +1061,9 @@ def ericParser(file_path):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    return elec,df
+    return elec, df
+
+
 #%% 
 def lippmannParser(fname):
     """Read in *.tx0 file from Lippmann instruments
@@ -1188,13 +1132,14 @@ def aresParser(fname, spacing=None):
     df[['a','b','m','n']] = df[['a','b','m','n']].apply(pd.to_numeric, errors='coerce') # there are strange eletrode conbinations sometimes (e.g., 14*1)
     df = df.dropna()
     array = df[['a','b','m','n']].values
-    arrayMin = np.min(np.unique(np.sort(array.flatten())))
-    if arrayMin != 0: # all surveys must start from x = 0
-        array -= arrayMin
-    val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-    elecLabel = 1 + np.arange(len(val))
-    newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-    df.loc[:,['a','b','m','n']] = newval
+    
+    # arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    # if arrayMin != 0: # all surveys must start from x = 0
+    #     array -= arrayMin
+    # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
+    # elecLabel = 1 + np.arange(len(val))
+    # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    # df.loc[:,['a','b','m','n']] = newval
     
     #calculations
 #    if 'EP[mV]' in df.columns: # TODO: correct this when you figure out how the IP values are calculated EP may acctualy be SP!!
@@ -1230,6 +1175,7 @@ def aresParser(fname, spacing=None):
     elec[elec < -9999] = -999999
     
     return elec, df
+
 
 #%% BERT format parser  
 def bertParser(fname):
