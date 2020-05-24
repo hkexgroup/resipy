@@ -2610,7 +2610,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh = mt.vtk_import(fname, order_nodes=False)
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
-                    ie = ~self.iremote & self.iused
+                    ie = (~self.iremote) & self.iused
                     mesh.elec_x = elec[ie,0]
                     mesh.elec_y = elec[ie,1]
                     mesh.elec_z = elec[ie,2]
@@ -2622,7 +2622,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     # if inversion fails in time-lapse it's that the initial
                     # model is good enough to explain the data (a_wgt/b_wgt
                     # error too low) so we can replace it by the initial model
-                    self.meshResults.append(mesh0) # TODO not sure
+                    if self.iTimeLapse:
+                        self.meshResults.append(mesh0) # TODO not sure
                 print('\r{:d}/{:d} results parsed ({:d} ok; {:d} failed)'.format(
                     j+1, len(self.surveys), idone, ifailed), end='')
             else:
