@@ -113,7 +113,7 @@ def syscalParser(fname):#, spacing=None):
         remoteFreeArray = array.flatten()[~iremote]
         arraySorted = np.sort(np.unique(remoteFreeArray))
         elecSpacing = arraySorted[1] - arraySorted[0]
-        print('elecSpacing=', elecSpacing)
+        # print('elecSpacing=', elecSpacing)
         n = np.max(remoteFreeArray/elecSpacing).astype(int)
         a = 0
         if arraySorted[0] == 0:
