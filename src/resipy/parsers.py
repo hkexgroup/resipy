@@ -876,64 +876,76 @@ def resInvParser(filename): # keeping it for now, in case of Res3DInv files
 #%% parse 3D sting data
 
 def stingParser(fname):
-    """Read in .stg file from sting
+    """Read in .stg file from sting (2D and 3D)
     """
-    fh = open(fname,'r')
-    dump = fh.readlines()
-    fh.close()    
+    df_raw = pd.read_csv(fname, skipinitialspace=True, skiprows=3, header=None)
+    elec_x =  np.concatenate(df_raw.iloc[:,[9,12,15,18]].values)
+    elec_y =  np.concatenate(df_raw.iloc[:,[10,13,16,19]].values)
+    elec_z =  np.concatenate(df_raw.iloc[:,[11,14,17,20]].values)
+    elec = np.unique(np.column_stack((elec_x,elec_y,elec_z)), axis=0)
     
-    num_meas = int(dump[1].split()[-1]) # number of measurements 
-    Tr = [0]*num_meas # transfer resistance - pre allocate arrays to populate after read in 
-    pa = [0]*num_meas # apparent resistivity 
-    meas_id = [0]*num_meas # measurement id number
-    c1_loc = [0]*num_meas
-    c2_loc = [0]*num_meas
-    p1_loc = [0]*num_meas
-    p2_loc = [0]*num_meas
+    # subset = list(np.arange(9,21,1))
+    # array = df.iloc[:,9:21].drop_duplicates(subset=subset, keep = 'first')
     
-    for i in range(num_meas):
-        line = dump[i+3].split(',')
-        Tr[i] = float(line[4])
-        c1_loc[i] = float(line[12])#C+
-        c2_loc[i] = float(line[9])#C-
-        p1_loc[i] = float(line[15])#P+
-        p2_loc[i] = float(line[18])#P-
-        meas_id[i] = int(line[0])
-        pa[i] = float(line[7])
-    # sting array format is in the form:
-    #no.electrodes | C- | C+ | P+ | P- | apparent.resistivity. 
-    #Note R2 expects the electrode format in the form:
-    #meas.no | P+ | P- | C+ | C- | transfer resistance
+    # arr_A = df.iloc[:,9:12].drop_duplicates(subset=list(np.arange(9,12,1)), keep = 'first')
+    # uniq = np.unique(array)
+    
+    # fh = open(fname,'r')
+    # dump = fh.readlines()
+    # fh.close()    
+    
+    # num_meas = int(dump[1].split()[-1]) # number of measurements 
+    # Tr = [0]*num_meas # transfer resistance - pre allocate arrays to populate after read in 
+    # pa = [0]*num_meas # apparent resistivity 
+    # meas_id = [0]*num_meas # measurement id number
+    # c1_loc = [0]*num_meas
+    # c2_loc = [0]*num_meas
+    # p1_loc = [0]*num_meas
+    # p2_loc = [0]*num_meas
+    
+    # for i in range(num_meas):
+    #     line = dump[i+3].split(',')
+    #     Tr[i] = float(line[4])
+    #     c1_loc[i] = float(line[12])#C+
+    #     c2_loc[i] = float(line[9])#C-
+    #     p1_loc[i] = float(line[15])#P+
+    #     p2_loc[i] = float(line[18])#P-
+    #     meas_id[i] = int(line[0])
+    #     pa[i] = float(line[7])
+    # # sting array format is in the form:
+    # #no.electrodes | C- | C+ | P+ | P- | apparent.resistivity. 
+    # #Note R2 expects the electrode format in the form:
+    # #meas.no | P+ | P- | C+ | C- | transfer resistance
         
-    loc_array=np.array([c1_loc,c2_loc,p1_loc,p2_loc]).T
-    elec_x=list(np.unique(loc_array.flatten()))
+    # loc_array=np.array([c1_loc,c2_loc,p1_loc,p2_loc]).T
+    # elec_x=list(np.unique(loc_array.flatten()))
     
-    elec =np.array([elec_x,np.zeros_like(elec_x),np.zeros_like(elec_x)]).T # electrode array
+    # elec =np.array([elec_x,np.zeros_like(elec_x),np.zeros_like(elec_x)]).T # electrode array
     #TODO: return true positions? 
     
-    a = [0]*num_meas
-    b = [0]*num_meas
-    n = [0]*num_meas
-    m = [0]*num_meas
+    a = [0]*len(df_raw)
+    b = [0]*len(df_raw)
+    n = [0]*len(df_raw)
+    m = [0]*len(df_raw)
     
-    for i in range(num_meas):
-        a[i] = elec_x.index(p1_loc[i])+1
-        b[i] = elec_x.index(p2_loc[i])+1
-        m[i] = elec_x.index(c2_loc[i])+1
-        n[i] = elec_x.index(c1_loc[i])+1
+    for i in range(len(df_raw)):
+        a[i] = list(elec[:,0]).index(df_raw.iloc[i,[9]].values)+1
+        b[i] = list(elec[:,0]).index(df_raw.iloc[i,[12]].values)+1
+        m[i] = list(elec[:,0]).index(df_raw.iloc[i,[15]].values)+1
+        n[i] = list(elec[:,0]).index(df_raw.iloc[i,[18]].values)+1
     
     #put data into correct format
-    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    data_dict = {'a':[],'b':[],'m':[],'n':[],'ip':[],'resist':[]}
     data_dict['a']=a
     data_dict['b']=b
     data_dict['n']=n
     data_dict['m']=m
-    data_dict['resist']=Tr
-    data_dict['Rho']=pa
-    data_dict['dev']=[0]*num_meas
-    data_dict['ip']=[0]*num_meas
+    data_dict['resist']=df_raw.iloc[:,4]
+    # data_dict['Rho']=pa
+    # data_dict['dev']=[0]*num_meas
+    data_dict['ip']=[0]*len(df_raw)
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
-    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    df = df[['a','b','m','n','ip','resist']] # reorder columns to be consistent with the syscal parser
     
     #for pole-pole and pole-dipole arrays
     elec[elec > 9999] = 999999
