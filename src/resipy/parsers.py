@@ -358,7 +358,7 @@ def primeParserTab(fname, espacing=1):
 #electrodes, data = primeParserTab("../Data/PRIME/3001_CAN_2017-11-16_005119.tab")
 
 
-#%% parse input for res2inv (.dat file) - Jimmy B.
+#%% parse input for res2inv (.dat file)
 def res2invInputParser(file_path):
     """
     Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
@@ -882,74 +882,114 @@ def stingParser(fname):
     elec_x =  np.concatenate(df_raw.iloc[:,[9,12,15,18]].values)
     elec_y =  np.concatenate(df_raw.iloc[:,[10,13,16,19]].values)
     elec_z =  np.concatenate(df_raw.iloc[:,[11,14,17,20]].values)
-    elec = np.unique(np.column_stack((elec_x,elec_y,elec_z)), axis=0)
+    elec_raw = np.unique(np.column_stack((elec_x,elec_y,elec_z)), axis=0)
+#    elec_raw = elec_raw[elec_raw[:,1].argsort(kind='mergesort')] # to make an stable mesh, but its not working with the 3D example
     
-    # subset = list(np.arange(9,21,1))
-    # array = df.iloc[:,9:21].drop_duplicates(subset=subset, keep = 'first')
+    #detect 2D or 3D
+    survey_type = '2D' if len(np.unique(elec_raw[:,1])) == 1 else '3D'
     
-    # arr_A = df.iloc[:,9:12].drop_duplicates(subset=list(np.arange(9,12,1)), keep = 'first')
-    # uniq = np.unique(array)
-    
-    # fh = open(fname,'r')
-    # dump = fh.readlines()
-    # fh.close()    
-    
-    # num_meas = int(dump[1].split()[-1]) # number of measurements 
-    # Tr = [0]*num_meas # transfer resistance - pre allocate arrays to populate after read in 
-    # pa = [0]*num_meas # apparent resistivity 
-    # meas_id = [0]*num_meas # measurement id number
-    # c1_loc = [0]*num_meas
-    # c2_loc = [0]*num_meas
-    # p1_loc = [0]*num_meas
-    # p2_loc = [0]*num_meas
-    
-    # for i in range(num_meas):
-    #     line = dump[i+3].split(',')
-    #     Tr[i] = float(line[4])
-    #     c1_loc[i] = float(line[12])#C+
-    #     c2_loc[i] = float(line[9])#C-
-    #     p1_loc[i] = float(line[15])#P+
-    #     p2_loc[i] = float(line[18])#P-
-    #     meas_id[i] = int(line[0])
-    #     pa[i] = float(line[7])
-    # # sting array format is in the form:
-    # #no.electrodes | C- | C+ | P+ | P- | apparent.resistivity. 
-    # #Note R2 expects the electrode format in the form:
-    # #meas.no | P+ | P- | C+ | C- | transfer resistance
+    if survey_type == '2D':
+        elec = elec_raw[elec_raw[:,0].argsort(kind='mergesort')]# final electrode array
+        a_f = [0]*len(df_raw)
+        b_f = [0]*len(df_raw)
+        n_f = [0]*len(df_raw)
+        m_f = [0]*len(df_raw)
         
-    # loc_array=np.array([c1_loc,c2_loc,p1_loc,p2_loc]).T
-    # elec_x=list(np.unique(loc_array.flatten()))
+        for i in range(len(df_raw)):
+            a_f[i] = list(elec[:,0]).index(df_raw.iloc[i,[9]].values)+1
+            b_f[i] = list(elec[:,0]).index(df_raw.iloc[i,[12]].values)+1
+            m_f[i] = list(elec[:,0]).index(df_raw.iloc[i,[15]].values)+1
+            n_f[i] = list(elec[:,0]).index(df_raw.iloc[i,[18]].values)+1
     
-    # elec =np.array([elec_x,np.zeros_like(elec_x),np.zeros_like(elec_x)]).T # electrode array
-    #TODO: return true positions? 
+    else: # below assumes the array is organized in a grid and not rangom XYZ values
+        elecdf = pd.DataFrame(elec_raw[elec_raw[:,1].argsort(kind='mergesort')]).rename(columns={0:'x',1:'y',2:'z'})
+        # organize 3D electrodes
+        elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
+        elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
+        i = 1 # index of odd lines
+        while i <= len(elecdf_lines): # electrodes are laied out like a snake - although not sure if this is correct
+            elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1]
+            i = 2*i + 1
+        
+        elec = np.concatenate(elecdf_lines) # final electrode array
+        
+        lines = np.unique(elecdf.y) # basically saying what is the y val of each line    
+        
+        # for final array
+        a_f = []
+        b_f = []
+        m_f = []
+        n_f = []
+        
+        # positions of ABMN
+        array_A = df_raw.iloc[:,9:12].rename(columns={9:'x',10:'y',11:'z'})
+        array_B = df_raw.iloc[:,12:15].rename(columns={12:'x',13:'y',14:'z'})
+        array_M = df_raw.iloc[:,15:18].rename(columns={15:'x',16:'y',17:'z'})
+        array_N = df_raw.iloc[:,18:21].rename(columns={18:'x',19:'y',20:'z'})
+        
+        # building A locs/labels
+        array_A_groups = array_A.groupby('y', sort=False, as_index=False)
+        array_A_lines = [array_A_groups.get_group(x) for x in array_A_groups.groups]
+        # which lines
+        for line in array_A_lines:
+            line_num = np.where(lines == line['y'].iloc[0])[0][0]
+            a = [0]*len(line)
+            for i in range(len(line)):
+                a[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
+            a_f.extend(a)
+        
+        # building B locs/labels
+        array_B_groups = array_B.groupby('y', sort=False, as_index=False)
+        array_B_lines = [array_B_groups.get_group(x) for x in array_B_groups.groups]
+        # which lines
+        for line in array_B_lines:
+            line_num = np.where(lines == line['y'].iloc[0])[0][0]
+            b = [0]*len(line)
+            for i in range(len(line)):
+                b[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
+            b_f.extend(b)
+        
+        # building M locs/labels
+        array_M_groups = array_M.groupby('y', sort=False, as_index=False)
+        array_M_lines = [array_M_groups.get_group(x) for x in array_M_groups.groups]
+        # which lines
+        for line in array_M_lines:
+            line_num = np.where(lines == line['y'].iloc[0])[0][0]
+            m = [0]*len(line)
+            for i in range(len(line)):
+                m[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
+            m_f.extend(m)
+        
+        # building N locs/labels
+        array_N_groups = array_N.groupby('y', sort=False, as_index=False)
+        array_N_lines = [array_N_groups.get_group(x) for x in array_N_groups.groups]
+        # which lines
+        for line in array_N_lines:
+            line_num = np.where(lines == line['y'].iloc[0])[0][0]
+            n = [0]*len(line)
+            for i in range(len(line)):
+                n[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
+            n_f.extend(n)
     
-    a = [0]*len(df_raw)
-    b = [0]*len(df_raw)
-    n = [0]*len(df_raw)
-    m = [0]*len(df_raw)
-    
-    for i in range(len(df_raw)):
-        a[i] = list(elec[:,0]).index(df_raw.iloc[i,[9]].values)+1
-        b[i] = list(elec[:,0]).index(df_raw.iloc[i,[12]].values)+1
-        m[i] = list(elec[:,0]).index(df_raw.iloc[i,[15]].values)+1
-        n[i] = list(elec[:,0]).index(df_raw.iloc[i,[18]].values)+1
-    
-    #put data into correct format
-    data_dict = {'a':[],'b':[],'m':[],'n':[],'ip':[],'resist':[]}
-    data_dict['a']=a
-    data_dict['b']=b
-    data_dict['n']=n
-    data_dict['m']=m
-    data_dict['resist']=df_raw.iloc[:,4]
-    # data_dict['Rho']=pa
-    # data_dict['dev']=[0]*num_meas
-    data_dict['ip']=[0]*len(df_raw)
-    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
-    df = df[['a','b','m','n','ip','resist']] # reorder columns to be consistent with the syscal parser
+    #build df
+    df = pd.DataFrame()
+    df['a'] = np.array(a_f)
+    df['b'] = np.array(b_f)
+    df['n'] = np.array(n_f)
+    df['m'] = np.array(m_f)
+    df['resist']=df_raw.iloc[:,4]
+
+    #detecting IP (col 21 would be floats of IP vals)
+    try:
+        float(df_raw.iloc[0,21])
+        df['ip']=df_raw.iloc[0,21]
+    except:
+        df['ip']=[0]*len(df_raw)
     
     #for pole-pole and pole-dipole arrays
     elec[elec > 9999] = 999999
     elec[elec < -9999] = -999999
+    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
     
     return elec,df
 
