@@ -1290,10 +1290,12 @@ class R2(object): # R2 master class instanciated by the GUI
                 array = self.surveys[0].df[['a','b','m','n']].values.copy().astype(int) - 1
                 if np.sum(self.iremote) > 0:
                     el = np.where(self.iremote)[0][0] # assuming only ONE remote electrode
-                    iout = (array == el).any(1)
+                    iout = (array == el+1).any(1) # electrode indices are one behind array locations  
                     array = array[~iout, :] # we remote the remote before doing the max dipole distance
+                    elec = elec[~self.iremote,:]
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
                 self.fmd = (1/3)*maxDist
+                print('fmd:',self.fmd)
             else: # if it's a forward model for instance
                 self.fmd = (1/3)*(np.max(elec[:,0]) - np.min(elec[:,0]))
 
