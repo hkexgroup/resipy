@@ -2,7 +2,7 @@
 Dated: 2019-08-05
 
 # 1. Virtual Environments
-You should work inside a python virtual environment in order to get ResIPy to compile.
+You should work inside a python virtual environment in order to build ResIPy into a frozen executable.
 There are a few options for initialising a virtual environment, the first is to 
 use a the `virtualenv` package, or through the vanilla python `venv` command. 
 We don't reccomend using conda to create a virtual environment or manage packages 
@@ -83,7 +83,7 @@ Here pyinstaller is initialising using .spec files for different scenarios which
 **notes: 
 - We used pyinstaller version 3.5 and,
 - PyQt 5.9.x
-- For windows there is a bug with pyinstaller and the conda version of pyqt. liklehood is it wont compile. We suggest using winpython to build ResIPy on windows.
+- For windows there is a bug with pyinstaller and the conda version of pyqt. liklehood is it wont work. We suggest using winpython to build ResIPy on windows.
 - if latest version of setuptools causes issue on Windows, downgraded it
 - need pyvista==0.23.1
 
