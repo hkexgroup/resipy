@@ -92,7 +92,7 @@ def DCA(data_in, dump=None):
             errors = np.array([np.mean((master_DC_indexed.iloc[i,:-1][:,None] - group[['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
                                         'M10', 'M11', 'M12', 'M13', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M20']].iloc[j,:][:,None] + m)) for m in shift])
             temp_K[j] = np.polyfit(shift, errors, 2)[2]
-        group['K'] = temp_K
+        group.loc[:, 'K'] = temp_K
         appended_groups.append(group)
         percent_progress = i*100/len(filtered_R_IP.groupby(['An','Bn']))
         dump(percent_progress)

@@ -228,8 +228,8 @@ k.showMesh()
 #k.fitErrorLME(iplot=True)
 k.fitErrorPwl()
 k.saveErrorData(os.path.join(k.dirname, 'dferrors.csv'))
-k.saveFilteredData(os.path.join(k.dirname, 'dfdata1'), k.elec, savetyp='Res2DInv (*.dat)')
-k.saveFilteredData(os.path.join(k.dirname, 'dfdata2'), k.elec, savetyp='Comma Separated Values (*.csv)')
+k.saveFilteredData(os.path.join(k.dirname, 'dfdata1'), savetyp='Res2DInv (*.dat)')
+k.saveFilteredData(os.path.join(k.dirname, 'dfdata2'), savetyp='Comma Separated Values (*.csv)')
 k.err = True
 
 k.invert(modErr=True, modelDOI=True)
@@ -256,7 +256,7 @@ k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='ProtocolDC')
 k.setBorehole(True)
 k.showPseudo()
 k.importElec(testdir + 'dc-2d-borehole/elec.csv')
-k.createMesh('trian', cl=0.5, cl_factor=10, fmd=20)
+k.createMesh('trian', cl=0.5, cl_factor=10, fmd=20)#, surface=np.array([[-5, 0],[5,0]]))
 k.showMesh()
 k.invert()
 k.showIter(index=0)
@@ -264,7 +264,6 @@ k.showIter(index=1)
 k.showResults(sens=False, contour=True)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-borehole'] = time.time() - t0
-
 
 
 #%% test for IP
@@ -275,13 +274,15 @@ k = R2(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
 k.showHeatmap()
 k.showErrorIP()
-k.dca()
+k.filterDCA()
 k.filterManual()
 k = R2(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
 k.showPseudoIP()
+print('k')
 k.err=True # there is already error inside the protocol.dat imported
 k.invert()
+print('l')
 k.showResults(attr='Magnitude(ohm.m)', sens=False)
 k.showResults(attr='Phase(mrad)', sens=False)
 k.showPseudoInvError()
@@ -295,7 +296,7 @@ timings['ip-2d-topo'] = time.time() - t0
 plt.close('all')
 print('-------------Testing Time-lapse in // ------------')
 t0 = time.time()
-k = R2()
+k = R2(apiPath + '/invdir/test2d-timelapse/')
 k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
                          testdir + 'dc-2d-timelapse/data/17051601.csv',
                          testdir + 'dc-2d-timelapse/data/17040301.csv'])
@@ -321,6 +322,10 @@ k.showResults(index=2)
 k.showInvError()
 k.showPseudoInvError()
 k.saveInvPlots(attr='difference(percent)')
+
+k2 = R2(apiPath + '/invdir/t/')
+k2.loadResults(k.dirname)
+k2.showResults()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-timelapse'] = time.time() - t0
 
@@ -336,7 +341,7 @@ for s in k.surveys:
 k.param['reg_mode'] = 1 # background constrained
 k.param['num_xz_poly'] = 0 # need full mesh for R2.computeDiff()
 for s in k.surveys:
-    s.elec[3,0] = np.random.normal(s.elec[3,0], s.elec[3,0]*0.05)
+    s.elec.loc[3, 'x'] = np.random.normal(s.elec.loc[3,'x'], s.elec.loc[3,'x']*0.05)
 k.filterUnpaired()
 k.createMesh()
 k.fitErrorPwl()
@@ -483,17 +488,17 @@ timings['dc-3d'] = time.time() - t0
 
 
 
-#%% 3D testing importing a mesh
+#%% 3D testing importing a mesh (takes a while)
 plt.close('all')
-print('-------------Testing 3D inversion ------------')
+print('-------------Testing 3D inversion with custom mesh ------------')
 t0 = time.time()
 k = R2(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-k.importMesh(testdir + 'mesh/mesh3D.vtk')
+k.importMesh(testdir + 'mesh/coarse3D.vtk')
 k.mesh.refine() # test refining mesh 
 k.addFlatError()
-k.invert(modErr=False)
+k.invert()
 k.showResults() 
 k.showSlice(axis='z')
 k.showSlice(axis='x')
@@ -524,6 +529,7 @@ k.showSlice(axis='y')
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['ip-3d'] = time.time() - t0
 
+
 #%% 3D column mesh -- forward modelling for 3D too 
 print('----------- Testing 3D Column inversion -----------')
 t0 = time.time()
@@ -546,6 +552,7 @@ k.showResults(index=1) #show result
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
+
 
 #%% print final summary information 
 for key in timings.keys():
