@@ -7,8 +7,8 @@ Created on Wed Jun 13 09:17:45 2018
 
 import numpy as np
 import pandas as pd
-import warnings
-warnings.filterwarnings("ignore")
+# import warnings
+# warnings.filterwarnings("ignore")
 #%%
 def positive_test (Dcurve,DecayTime): 
     """Calculating TDIP chargeability decay curve trend: 
@@ -93,19 +93,21 @@ def DCA(data_in, dump=None):
             errors = np.array([np.mean((master_DC_indexed.iloc[i,:-1][:,None] - group[['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
                                         'M10', 'M11', 'M12', 'M13', 'M14', 'M15', 'M16', 'M17', 'M18', 'M19', 'M20']].iloc[j,:][:,None] + m)) for m in shift])
             temp_K[j] = np.polyfit(shift, errors, 2)[2]
-        group.loc[:, 'K'] = temp_K
-        appended_groups.append(group)
+        # group.loc[:, 'K_std'] = temp_K
+        # appended_groups.append(group)
+        dfK = pd.DataFrame(temp_K).rename(columns={0:'K_std'})
+        appended_groups.append(pd.concat([group.reset_index(drop=True),dfK.reset_index(drop=True)], axis=1))
         percent_progress = i*100/len(filtered_R_IP.groupby(['An','Bn']))
         dump(percent_progress)
         print('\r%s%s -Done' % (int(percent_progress),'%'), end='')
     dump(100)
     print('\r100% -Done - finished!')
     appended_groups = pd.concat(appended_groups)
-    K_std = np.std(appended_groups['K'])
-    final_data = appended_groups.loc[np.abs(appended_groups['K'])<(2*K_std)]
+    K_std = np.std(appended_groups['K_std'])
+    final_data = appended_groups.loc[np.abs(appended_groups['K_std'])<(2*K_std)]
     final_data_dropped = final_data.drop(['DC_slope', 'DC_fit_a', 'DC_fit_b', 'Fit_DC_1', 
                                    'Fit_DC_2', 'Fit_DC_3', 'Fit_DC_4', 'Fit_DC_5', 'Fit_DC_6', 'Fit_DC_7',
                                    'Fit_DC_8', 'Fit_DC_9', 'Fit_DC_10', 'Fit_DC_11', 'Fit_DC_12',
                                    'Fit_DC_13', 'Fit_DC_14', 'Fit_DC_15', 'Fit_DC_16', 'Fit_DC_17',
-                                   'Fit_DC_18', 'Fit_DC_19', 'Fit_DC_20', 'DC_rmsd', 'weight', 'K'], axis = 1).rename(columns = {'An':'a','Bn':'b'})
+                                   'Fit_DC_18', 'Fit_DC_19', 'Fit_DC_20', 'DC_rmsd', 'weight', 'K_std'], axis = 1).rename(columns = {'An':'a','Bn':'b'})
     return (final_data_dropped)
