@@ -7,7 +7,8 @@ Created on Wed Jun 13 09:17:45 2018
 
 import numpy as np
 import pandas as pd
-
+import warnings
+warnings.filterwarnings("ignore")
 #%%
 def positive_test (Dcurve,DecayTime): 
     """Calculating TDIP chargeability decay curve trend: 
