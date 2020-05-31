@@ -194,14 +194,17 @@ def write2Din(param, dirname, typ='R2'):
                 *param['xz_poly_table'].flatten())
         
     # define nodes for electrodes
-    param['num_elec'] = param['node_elec'].shape[0]
+    param['num_elec'] = len(param['node_elec'][0])
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
-    if param['mesh_type'] == 4:
-        content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
-                *param['node_elec'].flatten())
-    elif param['mesh_type'] == 3 or param['mesh_type'] == 6:
-        content = content + ''.join(['{}\t{}\n']*len(param['node_elec'])).format(
-                *param['node_elec'].flatten())
+    # if param['mesh_type'] == 4:
+        # content = content + ''.join(['{}\t{}\t{}\n']*len(param['node_elec'])).format(
+                # *param['node_elec'].flatten())
+    if param['mesh_type'] == 3 or param['mesh_type'] == 6:
+        for i in range(param['num_elec']):
+            content = content + '{}\t{}\n'.format(param['node_elec'][0][i],
+                                                  param['node_elec'][1][i])
+    else:
+        print('Quadrilateral mesh not supported')
     content = content + '\n'
     
     # write configuration file
@@ -323,10 +326,13 @@ def write3Din(param, dirname, typ='R3t'):
                     *param['xy_poly_table'].flatten())
 
     # define nodes for electrodes
-    param['num_elec'] = param['node_elec'].shape[0]
+    param['num_elec'] = len(param['node_elec'][0])
     content = content + '\n{}\t<< num_electrodes\n'.format(param['num_elec'])
-    content = content + ''.join(['1\t{}\t{}\n']*len(param['node_elec'])).format(
-            *param['node_elec'].flatten())
+    if len(param['node_elec'][0][0].split(' ')) == 1: # the string number is not part of the label so let's add it
+        param['node_elec'][0] = ['1 ' + a for a in param['node_elec'][0]]
+    for i in range(param['num_elec']):
+        content = content + '{}\t{}\n'.format(param['node_elec'][0][i],
+                                              param['node_elec'][1][i])
     content = content + '\n'
     # write configuration file
     fname = typ + '.in'
