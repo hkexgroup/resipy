@@ -60,7 +60,7 @@ class Survey(object):
         they will all be kept anyway.
     """
     def __init__(self, fname, ftype='', name='', spacing=None, parser=None, keepAll=True, debug=True):
-        self.elec = []
+        self.elec = pd.DataFrame()
         self.df = pd.DataFrame()
         if name == '':
             name = os.path.basename(os.path.splitext(fname)[0])
@@ -72,8 +72,6 @@ class Survey(object):
         self.phaseErrorModel = None # idem for IP
         self.iselect = None # use in filterManual()
         self.eselect = None # idem
-        self.iremote = None # to be set by R2 class when remote detected
-        self.iused = None # to be set by R2 class when electrode are used
         self.debug = debug # plotting all information message by default
         if spacing is not None:
             warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
@@ -125,9 +123,7 @@ class Survey(object):
                 raise Exception('Sorry this file type is not implemented yet')
 
         
-        self.df = data
-        for c in ['a','b','m','n']:
-            self.df.loc[:,c] = self.df[c].astype(int)
+        self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
         
         # add error measured to the error columns (so they can be used if no error model are fitted)
         if 'magErr' in self.df.columns:
@@ -140,9 +136,15 @@ class Survey(object):
         else:
             self.df['phaseError'] = np.nan
             
-        self.dfOrigin = data.copy() # unmodified
-        self.elec = elec
-        self.ndata = len(data)
+        self.dfOrigin = self.df.copy() # unmodified
+        if type(elec) == np.ndarray: # TODO for temporary stability
+            dfelec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
+            dfelec['remote'] = False
+            dfelec['buried'] = False
+            dfelec['label'] = (1 + np.arange(dfelec.shape[0])).astype(str)
+        self.elec = dfelec
+        
+        self.ndata = self.df.shape[0]
         self.phiCbarmin = 0
         self.phiCbarMax = 25
         self.filt_typ = 'Raw'
@@ -190,7 +192,11 @@ class Survey(object):
         path = path2resipy # map to the protocol test file
         s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
         s_svy.df = df
-        s_svy.elec = elec
+        dfelec = pd.DataFrame(elec, columns=['x','y','z'])
+        dfelec['remote'] = False
+        dfelec['buried'] = False
+        dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
+        s_svy.elec = dfelec
         s_svy.ndata = 1#len(data)
         s_svy.computeReciprocal()
         s_svy.filterDefault()
@@ -198,7 +204,8 @@ class Survey(object):
     
     
     def __str__(self):
-        out = "Survey class with %i measurements and %i electrodes"%(len(self.df),len(self.elec[:,0]))
+        out = "Survey class with {:d} measurements and {:d} electrodes".format(
+            self.df.shape[0], self.elec.shape[0])
         return out
         
     
@@ -476,7 +483,8 @@ class Survey(object):
         resist = self.df['resist'].values
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
-        array = self.df[['a','b','m','n']].values
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
         
         R = np.copy(resist)
         M = np.copy(phase)
@@ -503,7 +511,6 @@ class Survey(object):
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
         
-        # TODO check consistency here (now it's same as previous)
         reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
         reci_IP_err[inormal] = M[irecip] - M[inormal]
         reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
@@ -525,18 +532,15 @@ class Survey(object):
         
         reciprocalErrRel = reciprocalErr / reciprocalMean
         
-        notfound = np.sum(inotfound)
-        
-        if self.debug:
-            print(str(notfound)+'/'+str(ndata)+' reciprocal measurements NOT found.')
         reciprocalMean = np.sign(resist)*reciprocalMean # add sign
+        
         ibad = np.array([np.abs(a) > 0.2 if ~np.isnan(a) else False for a in reciprocalErrRel])
         if self.debug:
-            print(str(np.sum(ibad)) + ' measurements error > 20 %')
-        
-        irecip = Ri        
-        
-        self.df['irecip'] = irecip
+            print('{:d}/{:d} reciprocal measurements found.'.format(np.sum(Ri != 0), len(Ri)))
+            if np.sum(Ri != 0) > 0: # no need to display that if there is no reciprocal
+                print('{:d} measurements error > 20 %'.format(np.sum(ibad)))        
+                
+        self.df['irecip'] = Ri
         self.df['reciprocalErrRel'] = reciprocalErrRel
         self.df['recipError'] = reciprocalErr
         self.df['recipMean'] = reciprocalMean
@@ -544,7 +548,7 @@ class Survey(object):
         # in order to compute error model based on a few reciprocal measurements
         # we fill 'recipMean' column with simple resist measurements for lonely
         # quadrupoles (which do not have reciprocals)
-        inotRecip = irecip == 0
+        inotRecip = Ri == 0
         self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
         
         return Ri
@@ -588,8 +592,12 @@ class Survey(object):
         """Remove measurements where abs(a-b) != abs(m-n) (likely to be dummy
         measurements added for speed).
         """
-        i2keep = np.abs(self.df['a'] - self.df['b']) == np.abs(self.df['m'] - self.df['n'])
-        self.filterData(i2keep)
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        elecpos = self.elec['x'].values
+        AB = np.abs(elecpos[array[:,0]]- elecpos[array[:,1]])
+        MN = np.abs(elecpos[array[:,2]] - elecpos[array[:,3]])
+        self.filterData(AB == MN)
         
     
     def filterRecip(self, percent=20, debug=True):
@@ -716,9 +724,9 @@ class Survey(object):
         """
         if ax is None:
             fig, ax = plt.subplots()
-        reciprocalMean = self.df['recipMean'].values
-        reciprocalErr = self.df['recipError'].values
-        ax.loglog(np.abs(reciprocalMean), reciprocalErr, 'o')
+        reciprocalMean = self.df['recipMean'].abs().values
+        reciprocalErr = self.df['recipError'].abs().values
+        ax.loglog(reciprocalMean, reciprocalErr, 'o')
         ax.set_ylabel(r'$R_{error} [\Omega]$')
         ax.set_xlabel(r'$R_{avg} [\Omega]$')  
         ax.set_title('Observed Errors\n')
@@ -1141,14 +1149,23 @@ class Survey(object):
             temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*-1
         else:
             temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
-        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)     
+        # because 'a' and 'm' are now string, we need to convert them back to int so that
+        # the indexes are sorted properly (string sorting gives: '1', '10', '11', '2', ...)
+        temp_heatmap_recip_filterN['A'] = temp_heatmap_recip_filterN['a'].astype(int)
+        temp_heatmap_recip_filterN['M'] = temp_heatmap_recip_filterN['m'].astype(int)
+        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['M','A']).Phase.unstack(0)     
         if ax is None:
             fig, ax = plt.subplots()  
         else:
             fig = ax.get_figure()             
         m = ax.imshow(heat_recip_Filter, origin='lower',cmap='jet',vmin=self.phiCbarmin, vmax=self.phiCbarMax)
-        ax.xaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['a'].max()+1,4))
-        ax.yaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['m'].max(),4))
+        # ax.xaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['a'].max()+1,4))
+        # ax.yaxis.set_ticks(np.arange(0,filterDataIP_plotOrig['m'].max(),4))
+        # ax.xaxis.set_ticks(np.arange(filterDataIP_plotOrig['a']))
+        ax.set_yticks(np.arange(0, len(heat_recip_Filter.index), 4))
+        ax.set_yticklabels(heat_recip_Filter.index[::4])
+        ax.set_xticks(np.arange(0, len(heat_recip_Filter.columns), 4))
+        ax.set_xticklabels(heat_recip_Filter.columns[::4])
         ax.set_ylabel('A')#,fontsize = 22)
         ax.set_xlabel('M')#,fontsize = 22)
 #        ax.tick_params(labelsize=18)
@@ -1252,47 +1269,30 @@ class Survey(object):
             ax.set_xlabel('Measurements')
             ax.set_ylabel('Phase [mrad]')
     
-    
-#    def computeK(self):
-#        """Compute geomatrix factor (assuming flat 2D surface) and store it
-#        in self.df['K'].
-#        """
-#        array = self.df[['a','b','m','n']].values.astype(int)
-#        elecpos = self.elec[:,0]
-#
-#        apos = elecpos[array[:,0]-1]
-#        bpos = elecpos[array[:,1]-1]
-#        mpos = elecpos[array[:,2]-1]
-#        npos = elecpos[array[:,3]-1]
-#        AM = np.abs(apos-mpos)
-#        BM = np.abs(bpos-mpos)
-#        AN = np.abs(apos-npos)
-#        BN = np.abs(bpos-npos)
-#        K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
-#        
-#        self.df['K'] = K
         
     def computeK(self):
         """Compute geomatrix factor (assuming flat 2D surface) and store it
         in self.df['K'].
         """
-        array = self.df[['a','b','m','n']].values.astype(int)
-        elec = self.elec
-        aposx = elec[:,0][array[:,0]-1]
-        aposy = elec[:,1][array[:,0]-1]
-        aposz = elec[:,2][array[:,0]-1]
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        elec = self.elec[['x','y','z']].values
         
-        bposx = elec[:,0][array[:,1]-1]
-        bposy = elec[:,1][array[:,1]-1]
-        bposz = elec[:,2][array[:,1]-1]
+        aposx = elec[:,0][array[:,0]]
+        aposy = elec[:,1][array[:,0]]
+        aposz = elec[:,2][array[:,0]]
         
-        mposx = elec[:,0][array[:,2]-1]
-        mposy = elec[:,1][array[:,2]-1]
-        mposz = elec[:,2][array[:,2]-1]
+        bposx = elec[:,0][array[:,1]]
+        bposy = elec[:,1][array[:,1]]
+        bposz = elec[:,2][array[:,1]]
         
-        nposx = elec[:,0][array[:,3]-1]
-        nposy = elec[:,1][array[:,3]-1]
-        nposz = elec[:,2][array[:,3]-1]
+        mposx = elec[:,0][array[:,2]]
+        mposy = elec[:,1][array[:,2]]
+        mposz = elec[:,2][array[:,2]]
+        
+        nposx = elec[:,0][array[:,3]]
+        nposy = elec[:,1][array[:,3]]
+        nposz = elec[:,2][array[:,3]]
         
         AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
         BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
@@ -1325,9 +1325,10 @@ class Survey(object):
         vmax : float, optional
             Maximum value for the colorbar.
         """
-        array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0].copy()
-        resist = self.df[column].values
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        elecpos = self.elec['x'].values.copy() # we don't want the x values become np.inf in remote situation as it'll mess up future computeK()
+        resist = self.df[column].values.copy()
         
         if geom: # compute and applied geometric factor
             self.computeK()
@@ -1342,19 +1343,15 @@ class Survey(object):
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
                        
-        if self.iremote is not None:
-            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
+        elecpos[self.elec['remote'].values] = np.inf # so it will never be taken as minimium
         
-        if self.iused is not None:
-            elecpos[~self.iused] = np.inf # idem, unused electrode should be taken as minimium
-        
-        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
         cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
         
-        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
         padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
 
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
@@ -1377,13 +1374,14 @@ class Survey(object):
             levels = np.linspace(vmin, vmax, 13)
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
-            
+        
         ax.invert_yaxis() # to remove negative sign in y axis    
         ax.set_title('Apparent Resistivity\npseudo section')
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
             return fig
+        
         
     def showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
@@ -1421,8 +1419,9 @@ class Survey(object):
                 raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
             ax.set_background(background_color)
             
-        array = self.df[['a','b','m','n']].values.astype(int)
-        elec = self.elec.copy()
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
@@ -1443,7 +1442,7 @@ class Survey(object):
         if vmax is None:
             vmax = np.max(resist)
         
-        if self.iremote is not None: # how to deal with remote electrodes?!! 
+        if self.elec['remote'].sum() > 0: # how to deal with remote electrodes?!! 
             raise Exception('Remote electrodes not currently supported for 3D pseudo sections')
         #     elec = elec[self.iremote!=True,:] # ignore the 
             
@@ -1532,8 +1531,9 @@ class Survey(object):
         fig : matplotlib figure
             If `ax` is not specified, the method returns a figure.
         """
-        array = self.df[['a','b','m','n']].values.astype(int)
-        elecpos = self.elec[:,0].copy()
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        elecpos = self.elec['x'].values.copy()
         
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
@@ -1548,24 +1548,16 @@ class Survey(object):
 
         # sorting the array in case of Wenner measurements (just for plotting)
         array = np.sort(array, axis=1) # for better presentation
-        # cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) \
-        #     + np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        # pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) \
-        #     + np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
         
-        if self.iremote is not None:
-            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
-        
-        if self.iused is not None:
-            elecpos[~self.iused] = np.inf
+        elecpos[self.elec['remote']] = np.inf
             
-        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
+        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
         cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
         
-        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
         padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
@@ -1574,12 +1566,8 @@ class Survey(object):
             fig, ax = plt.subplots()
         else:
             fig = ax.get_figure()
-
+        
         if contour is False:
-#            if ax is None:
-#                fig, ax = plt.subplots()
-#            else:
-#                fig = ax.get_figure()
             plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
 #            divider = make_axes_locatable(ax)
 #            cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -1694,10 +1682,13 @@ class Survey(object):
                     
         # if it's 3D, we add the line number (all electrode on line 1)
         if threed:
-            protocol.insert(1, 'sa', 1)
-            protocol.insert(3, 'sb', 1)
-            protocol.insert(5, 'sm', 1)
-            protocol.insert(7, 'sn', 1)
+            if len(protocol['a'].values[0].split()) == 1: # we don't have string number
+                for c in ['a','b','m','n']: 
+                    protocol.loc[:, c] = '1 ' + protocol[c]
+            # protocol.insert(1, 'sa', 1)
+            # protocol.insert(3, 'sb', 1)
+            # protocol.insert(5, 'sm', 1)
+            # protocol.insert(7, 'sn', 1)
         
         # write protocol.dat
         if outputname != '':
@@ -1751,7 +1742,8 @@ class Survey(object):
         elec : bool, optional
             If `True`, the electrodes are shown and can be used for filtering.
         """
-        array = self.df[['a','b','m','n']].values.astype(int)
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values
         if len(array) == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
@@ -1760,9 +1752,9 @@ class Survey(object):
             if attr == 'app':
                 self.computeK()
                 self.df['app'] = self.df['K']*self.df['resist']
-                label = 'Apparent Resistivity [$\Omega.m$]'
+                label = r'Apparent Resistivity [$\Omega.m$]'
             elif attr == 'resist':
-                label = 'Transfer Reistance [$\Omega$]'
+                label = r'Transfer Resistance [$\Omega$]'
             elif attr == 'reciprocalErrRel':
                 label = 'Reciprocal Error [%]'
                 percFact = 100
@@ -1773,7 +1765,6 @@ class Survey(object):
                 
         val = percFact*self.df[attr].values
 
-        # inan = np.isnan(val)
         inan = np.zeros(len(val), dtype=bool)
         val = val.copy()[~inan]
         array = array.copy()[~inan]
@@ -1783,11 +1774,8 @@ class Survey(object):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
         
-        elecpos = self.elec[:,0].copy()
-        if self.iremote is not None:
-            elecpos[self.iremote] = np.inf # so it will never be taken as minimium
-        if self.iused is not None:
-            elecpos[~self.iused] = np.inf # idem
+        elecpos = self.elec['x'].values.copy()
+        elecpos[self.elec['remote']] = np.inf # so it will never be taken as minimium
 
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
@@ -1796,13 +1784,13 @@ class Survey(object):
 
         array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         
-        cadd = np.abs(elecpos[array[:,0]-1]-elecpos[array[:,1]-1])/2
-        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]-1], elecpos[array[:,1]-1]], axis=0) + cadd
+        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
+        cadd[np.isinf(cadd)] = 0 # they are nan because of our remote
+        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
         
-        padd = np.abs(elecpos[array[:,2]-1]-elecpos[array[:,3]-1])/2
+        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
         padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]-1], elecpos[array[:,3]-1]], axis=0) + padd
+        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
         
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
@@ -1854,7 +1842,7 @@ class Survey(object):
         if elec:
             caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
         else:
-            caxElec, = ax2.plot([],[],'ko')
+            caxElec, = ax2.plot([], [], 'ko')
         
         cax = ax2.scatter(xpos, ypos, c=val, marker='o', picker=5, vmin=vmin,
                          vmax=vmax)
@@ -1864,12 +1852,12 @@ class Survey(object):
         ax2.xaxis.set_label_position('bottom')
         ax2.xaxis.set_ticks_position('bottom')
         cax.figure.canvas.mpl_connect('pick_event', onpick)        
-        killed, = cax.axes.plot([],[],'rx')
-        elecKilled, = cax.axes.plot([],[],'rx')
+        killed, = cax.axes.plot([], [], 'rx')
+        elecKilled, = cax.axes.plot([], [], 'rx')
         x = cax.get_offsets()[:,0]
         y = cax.get_offsets()[:,1]        
         ipoints = np.zeros(len(y),dtype=bool)
-        lines = {cax:'data',caxElec:'elec',killed:'killed'}
+        lines = {cax:'data', caxElec:'elec', killed:'killed'}
         
         ax.set_xlim(ax2.get_xlim()) # here to get correct limits form ax2
         
@@ -2156,7 +2144,7 @@ class Survey(object):
         """Convert 3d xy data in pure x lateral distance.
         Use for 2D data only!
         """
-        elec = self.elec.copy()
+        elec = self.elec[['x','y','z']].values
         x = elec[:,0]
         y = elec[:,1]
         z = elec[:,2]
@@ -2181,7 +2169,8 @@ class Survey(object):
             new_elec[put_back,0] = x_abs[i]
             new_elec[put_back,2] =  z_sorted[i]
     
-        self.elec = new_elec
+        self.elec.loc[:, ['x','y','z']] = new_elec
+        
         
     def addPerError(self,pnct=2.5): # pragma: no cover
         """Add a flat percentage error to resistivity data.
@@ -2213,6 +2202,7 @@ class Survey(object):
         std_res = np.sqrt(var_res)
         self.df['resError'] = std_res
 
+
     def exportSrv(self, fname=None): # pragma: no cover
         """Export .srv format for which is compatible with E4D. The e4d survey
         file includes the electrode locations, in addition to the scheduling 
@@ -2229,12 +2219,13 @@ class Survey(object):
             fname = self.name + '.srv'
         fh = open(fname,'w')
         numelec = self.elec.shape[0] # number of electrodes 
+        elec = self.elec[['x','y','z']].values
         fh.write('%i number of electrodes\n'%numelec)
         for i in range(numelec):
             line = '{:d} {:f} {:f} {:f} {:d}\n'.format(i+1,
-                    self.elec[i,0],#x coordinate
-                    self.elec[i,1],#y coordinate
-                    self.elec[i,2],#z coordinate
+                    elec[i,0],#x coordinate
+                    elec[i,1],#y coordinate
+                    elec[i,2],#z coordinate
                     1)#buried flag 
             fh.write(line)
         #now write the scheduling matrix to file 
