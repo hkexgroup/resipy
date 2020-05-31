@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = False # set to false to not display message in the console
+DEBUG = True # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -326,8 +326,8 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     self.r2.typ = self.r2.typ.replace('3t','2')
                 # importing tab
-                self.elecTable.setColumnHidden(1, True)
-                self.topoTable.setColumnHidden(1, True)
+                self.elecTable.setColumnHidden(2, True)
+                self.topoTable.setColumnHidden(2, True)
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
@@ -378,8 +378,8 @@ class App(QMainWindow):
                 # importing tab
                 self.fwdRadio.setChecked(False)
                 self.fwdRadio.setEnabled(False)
-                self.elecTable.setColumnHidden(1, False)
-                self.topoTable.setColumnHidden(1, False)
+                self.elecTable.setColumnHidden(2, False)
+                self.topoTable.setColumnHidden(2, False)
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
@@ -704,7 +704,7 @@ class App(QMainWindow):
                     self.elecTable.initTable(self.r2.elec)
                     self.tabImporting.setTabEnabled(1,True)
                     self.invNowBtn.setEnabled(True)
-                    self.nbElecEdit.setText(str(len(self.r2.elec)))
+                    self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
                     if all(self.r2.surveys[0].df['irecip'].values == 0):
                         self.recipOrNoRecipShow(recipPresence=False)
                     else:
@@ -800,7 +800,7 @@ class App(QMainWindow):
                     self.ipCheck.setEnabled(True)
                     self.psContourCheck.setEnabled(True)
                     self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
-                    self.calcAspectRatio()
+                    # self.calcAspectRatio()
                     if 'magErr' in self.r2.surveys[0].df.columns:
                         self.a_wgt.setText('0.0')
                         self.b_wgt.setText('0.0')
@@ -821,11 +821,11 @@ class App(QMainWindow):
                     self.plotPseudo()
                     self.invNowBtn.setEnabled(True)
                     self.activateTabs(True)
-                    self.nbElecEdit.setText(str(len(self.r2.elec)))
-                    self.elecDxEdit.setText('%s' %(self.r2.elec[~self.r2.iremote,:][1,0]-self.r2.elec[~self.r2.iremote,:][0,0]))
+                    self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
+                    self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2])[0]))
                     self.fnamesCombo.hide()
                     self.fnamesComboLabel.hide()
-                    if np.isnan(self.r2.elec).any():
+                    if np.isnan(self.r2.elec[['x','y','z']].values).any():
                         self.topoInterpBtnFunc()
                 except Exception as e:
                     print('Error in create3DFunc(): ', e)
@@ -1051,19 +1051,18 @@ class App(QMainWindow):
 
         # electrode table
         class ElecTable(QTableWidget):
-            def __init__(self, nrow=2, headers=['x','y','z','Buried'],
-                         selfInit=False, parent=None):
+            def __init__(self, nrow=2, selfInit=False, parent=None):
                 """ if selfInit is true, it will automatically add rows if tt
                 is bigger than the actual rows
                 """
-                ncol = len(headers)
+                ncol = 5
                 super(ElecTable, self).__init__(nrow, ncol)
                 self.nrow = nrow
                 self.ncol = ncol
                 self.parent = parent
-                self.headers = headers
-                self.selfInit = selfInit
-                self.initTable(np.array([['',''],['',''],['','']]))
+                self.headers = headers=['Label','X','Y','Z','Buried']
+                self.selfInit = selfInit # if True, table is auto-expanded
+                self.initTable(np.array([['1','2'],['',''],['',''],['','']]))
                 self.horizontalHeader().sortIndicatorChanged.connect(self.setAllBuried)
                 self.setHorizontalHeaderLabels(headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -1084,24 +1083,17 @@ class App(QMainWindow):
                     buriedCheck.setChecked(bool(vals[i]))
                     checkBoxLayout.addWidget(buriedCheck)
                     checkBoxWidget.setLayout(checkBoxLayout)
-                    self.setCellWidget(i, 3, checkBoxWidget) # column 3 == Buried
+                    self.setCellWidget(i, 4, checkBoxWidget) # column 4 == Buried
 
             def setAllBuried(self, colIndex):
-                if self.headers[colIndex] == 'Buried':
+                if colIndex == 4:
                     for i in range(self.nrow):
-                        buriedCheck = self.cellWidget(i, 3).findChildren(QCheckBox)[0]
+                        buriedCheck = self.cellWidget(i, 4).findChildren(QCheckBox)[0]
                         if buriedCheck.isChecked() is True:
                             buriedCheck.setChecked(False)
                         else:
                             buriedCheck.setChecked(True)
                             
-            def getBuried(self):
-                buried = np.zeros(self.nrow, dtype=bool)
-                for i in range(self.nrow):
-                    buriedCheck = self.cellWidget(i, 3).findChildren(QCheckBox)[0]
-                    if buriedCheck.isChecked() is True:
-                        buried[i] = True
-                return buried
 
             def keyPressEvent(self, e):
                 if (e.modifiers() == Qt.ControlModifier) & (e.key() == Qt.Key_V):
@@ -1121,8 +1113,10 @@ class App(QMainWindow):
                     if len(trow) > 0:
                         tt.append(trow)
                 tt = np.array(tt)
-                if self.isColumnHidden(1) == True: # 'y' is hidden
+                if self.isColumnHidden(2) == True: # 'y' is hidden
                     tt = np.c_[tt[:,0], np.zeros(tt.shape[0]), tt[:,1:]]
+                if self.isColumnHidden(0) == True: # label hidden
+                    tt = np.c_[(1 + np.arange(tt.shape[0])).astype(str), tt]
                 pdebug('elecTable.paste():', tt)
                 if np.sum(tt.shape) > 0:
                     if self.selfInit is True:
@@ -1132,15 +1126,16 @@ class App(QMainWindow):
 
             def initTable(self, tt):
                 pdebug('elecTable.initTable():', tt)
-                self.clear() # this clear out the labels as well
+                self.clear() # this clears out the headers as well
                 self.setRowCount(tt.shape[0])
                 self.setHorizontalHeaderLabels(self.headers)
                 self.nrow = tt.shape[0]
                 self.setTable(tt)
-                if 'Buried' in self.headers:
-                    self.setBuried()
+                self.setBuried()
             
             def setTable(self, tt, c0=0, r0=0):
+                if type(tt) == type(pd.DataFrame()):
+                    tt = tt[['label','x','y','z']].values
                 pdebug('elecTable.setTable():', self.nrow, self.ncol, tt.shape)
                 nanFlag = False # to inform the user that their topography is messed up!
                 for i in range(c0, min([self.ncol, c0+tt.shape[1]])):
@@ -1154,15 +1149,31 @@ class App(QMainWindow):
 
 
             def getTable(self):
-                ncol = self.ncol if 'Buried' not in self.headers else self.ncol - 1
-                table = np.zeros((self.nrow, ncol))*np.nan
-                for i in range(ncol):
-                    for j in range(self.nrow):
-                        if self.item(j,i) is not None:
-                            item = self.item(j,i).text()
-                            if item != '':
-                                table[j,i] = float(item)
-                return table
+                """Return dataframe.
+                """
+                cols = ['label','x','y','z','buried']
+                df = pd.DataFrame(np.zeros((self.nrow, self.ncol)), columns=cols)
+                print('++', self.nrow, self.ncol)
+                for i in range(self.nrow):
+                    for j in range(self.ncol):
+                        col = cols[j]
+                        if j == 0:
+                            df.loc[i,col] = self.item(i,j).text()
+                        elif j < 4:
+                            if self.item(i,j) is None:
+                                df.loc[i, col] = np.nan
+                            else:
+                                t = self.item(i,j).text()
+                                df.loc[i, col] = float(t) if t != '' else np.nan
+                        elif j == 4:
+                            buriedCheck = self.cellWidget(i, 4).findChildren(QCheckBox)[0]
+                            if buriedCheck.isChecked() is True:
+                                df.loc[i, 'buried'] = True
+                            else:
+                                df.loc[i, 'buried'] = False
+                print('=++++', df.shape)
+                return df.astype({'label':str, 'x':float, 'y':float, 'z':float, 'buried':bool}).reset_index(drop=True)
+            
 
             def readTable(self, fname, nbElec=None):
                 # identify if we have header (recommended) or not
@@ -1202,11 +1213,15 @@ class App(QMainWindow):
                         df2['y'] = df.values[:,1]
                         df2['z'] = df.values[:,2]
                         df2['buried'] = df.values[:,3]
+                if 'label' not in df.columns:
+                    df2.insert(0, 'label', (1 + np.arange(df.shape[0])).astype(str))
+                else:
+                    df2.insert(0, 'label', df['label'].values)
                 
                 pdebug('elecTable.readTable():\n', df2.head())
                 tt = df2.values
                 if nbElec is not None:
-                    if tt.shape[0] != nbElec:
+                    if tt.shape[0] < nbElec:
                         self.parent.errorDump('The file must have exactly ' + \
                                   str(nbElec) + ' lines (same number as number of electrodes).')
                         return
@@ -1220,8 +1235,8 @@ class App(QMainWindow):
                     self.initTable(tt) # topoTable doesn't have "buried" thus last column is not needed 
 
 
-        self.elecTable = ElecTable(headers=['x','y','z','Buried'], parent=self)
-        self.elecTable.setColumnHidden(1, True)
+        self.elecTable = ElecTable(parent=self)
+        self.elecTable.setColumnHidden(2, True)
         self.elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (x,y,z header).\
                            The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
                            You can also use the form below to generate \
@@ -1263,20 +1278,20 @@ class App(QMainWindow):
             dx = float(self.elecDxEdit.text())
             dy = float(self.elecDyEdit.text())
             dz = float(self.elecDzEdit.text())
-            if 'y' in self.elecTable.headers: # 3D case
-                electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
-                              np.linspace(0.0, (nbElec-1)*dy, nbElec),
-                              np.linspace(0.0, (nbElec-1)*dz, nbElec)]
-            else:
-                electrodes = np.c_[np.linspace(0.0, (nbElec-1)*dx, nbElec),
-                              np.linspace(0.0, (nbElec-1)*dz, nbElec)]
+            electrodes = np.zeros((nbElec, 4))
+            electrodes[:,0] = 1 + np.arange(nbElec) # label
+            electrodes[:,1] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
+            electrodes[:,2] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
+            electrodes[:,3] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
             self.elecTable.initTable(electrodes)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
 
-        self.topoTable = ElecTable(headers=['x','y','z'], selfInit=True, parent=self)
-        self.topoTable.setColumnHidden(1, True)
+        self.topoTable = ElecTable(selfInit=True, parent=self)
+        self.topoTable.setColumnHidden(2, True) # Y
+        self.topoTable.setColumnHidden(0, True) # elec label
+        self.topoTable.setColumnHidden(4, True) # buried
         topoLabel = QLabel('<i>Add additional surface points. \
                            You can use <code>Ctrl+V</code> to paste directly \
                            into a cell.</i>')
@@ -1891,14 +1906,15 @@ class App(QMainWindow):
                                                          self.datadir, 'Res2DInv (*.dat);;Comma Separated Values (*.csv);;'
                                                          'E4D survey file (*.srv)') # can add Protocol (*.dat) and so on
             if fname != '':
-                elec = self.elecTable.getTable() # getting the topography info
+                # elec = self.elecTable.getTable() # getting the topography info
                 self.r2.param['lineTitle'] = self.titleEdit.text()
-                if not (self.r2.iBatch or self.r2.iTimeLapse):
-                    spacing = float(self.elecDxEdit.text())
-                else:
-                    spacing = None
-                self.r2.saveFilteredData(fname, elec, savetyp, spacing=spacing)
-                
+                # if not (self.r2.iBatch or self.r2.iTimeLapse):
+                    # spacing = float(self.elecDxEdit.text())
+                # else:
+                    # spacing = None
+                # self.r2.saveFilteredData(fname, elec, savetyp, spacing=spacing)
+                self.r2.saveFilteredData(fname, savetyp) # elec is already known to self.r2 because of self.updateElec()
+
         self.recipErrorSaveBtn = QPushButton('Save data')
         self.recipErrorSaveBtn.setStyleSheet("color: green")
         self.recipErrorSaveBtn.setToolTip('This will save the data in available formats (e.g., Res2DInv.dat)')
@@ -2581,7 +2597,7 @@ class App(QMainWindow):
             self.iDesign = True
             # read electrodes locations
             elec = self.elecTable.getTable()
-            if np.sum(~np.isnan(elec[:,0])) == 0:
+            if elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
@@ -2607,13 +2623,12 @@ class App(QMainWindow):
             self.cropBelowFmd.setEnabled(True)
             self.regionTable.reset()
             elec = self.elecTable.getTable()
-            if np.sum(~np.isnan(elec[:,0])) == 0:
+            if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
                 self.r2.setElec(elec)
-            buried = self.elecTable.getBuried()
-            surface = self.topoTable.getTable()
+            surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             if not np.isnan(surface[0,0]):
                 surface_flag = True
@@ -2632,10 +2647,10 @@ class App(QMainWindow):
                 fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
                 if surface_flag:
                     print("quad mesh + topo")
-                    self.r2.createMesh(typ='quad', buried=buried, elemx=nnodes, surface=surface, fmd=fmd)
+                    self.r2.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
                 else:
                     print("quad mesh no topo")
-                    self.r2.createMesh(typ='quad', buried=buried, elemx=nnodes, fmd=fmd)
+                    self.r2.createMesh(typ='quad', elemx=nnodes, fmd=fmd)
                 self.scale.setVisible(False)
                 self.scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
@@ -2654,7 +2669,7 @@ class App(QMainWindow):
 #            self.cropBelowFmd.setChecked(True)
             self.cropBelowFmd.setEnabled(True)
             elec = self.elecTable.getTable()
-            if np.sum(~np.isnan(elec[:,0])) == 0:
+            if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
@@ -2662,12 +2677,11 @@ class App(QMainWindow):
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
-            elecSpacing = np.sqrt((self.r2.elec[~self.r2.iremote,:][0,0]-self.r2.elec[~self.r2.iremote,:][1,0])**2+
-                                  (self.r2.elec[~self.r2.iremote,:][0,2]-self.r2.elec[~self.r2.iremote,:][1,2])**2)
+            elecSpacing = np.sqrt(np.sum(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2])**2 +
+                                         np.diff(self.r2.elec[~self.r2.elec['remote']]['y'].values[:2])**2))
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
             cl_factor = clFactorSld.value()
-            buried = self.elecTable.getBuried()
-            surface = self.topoTable.getTable()
+            surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             refine = 1 if refineTrianCheck.isChecked() else 0
             if np.sum(~inan) == surface.shape[0]:
@@ -2675,7 +2689,10 @@ class App(QMainWindow):
             else:
                 surface = surface[inan,:]
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-            self.r2.createModelMesh(buried=buried, surface=surface,
+            pdebug('meshTrian(): fmd', fmd)
+            pdebug('meshTrian(): elec:', self.r2.elec)
+            pdebug('meshTrian(): surface:', surface)
+            self.r2.createModelMesh(surface=surface,
                                     cl=cl, cl_factor=cl_factor, show_output=True,
                                     dump=meshLogTextFunc, refine=refine, fmd=fmd)
             # if self.iForward is False:
@@ -2696,12 +2713,12 @@ class App(QMainWindow):
             self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
             self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
-            topo = self.topoTable.getTable()
+            topo = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(topo[:,0])
-            if np.sum(~np.isnan(elec[:,0])) == 0:
+            if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            elif all(elec[:,1] == 0) & all(topo[inan,1] == 0):
+            elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
                 self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
                 return
             else:
@@ -2712,7 +2729,6 @@ class App(QMainWindow):
             cl = float(cl3Edit.text())
             cl_factor = float(cl3FactorEdit.text())
             cln_factor = float(clnFactorEdit.text()) if clnFactorEdit.text() != '' else 100
-            buried = self.elecTable.getBuried()
             refine = 1 if refineTetraCheck.isChecked() else 0
             if np.sum(~inan) == topo.shape[0]:
                 topo = None
@@ -2720,7 +2736,7 @@ class App(QMainWindow):
                 topo = topo[inan,:]
             
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-            self.r2.createMesh(typ='tetra', buried=buried, surface=topo, fmd=fmd,
+            self.r2.createMesh(typ='tetra', surface=topo, fmd=fmd,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
                                cln_factor=cln_factor, refine=refine, show_output=True)
             if pvfound:
@@ -2811,7 +2827,7 @@ class App(QMainWindow):
 
         def importCustomMeshFunc():
             elec = self.elecTable.getTable()
-            if np.sum(~np.isnan(elec[:,0])) == 0:
+            if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
@@ -2840,7 +2856,7 @@ class App(QMainWindow):
         def importCustomMeshFunc2():
             print('using importCustomMeshFunc2')
             elec = self.elecTable.getTable()
-            if np.sum(~np.isnan(elec[:,0])) == 0:
+            if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             else:
@@ -3891,15 +3907,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     meshTrianFunc()
                 else:
                     elec = self.elecTable.getTable()
-                    topo = self.topoTable.getTable()
+                    topo = self.topoTable.getTable()[['x','y','z']].values
                     inan = ~np.isnan(topo[:,0])
-                    if np.sum(~np.isnan(elec[:,0])) == 0:
+                    if self.r2.elec['x'].isna().sum() > 0:
                         self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                         self.invertBtn.setStyleSheet('background-color: green')
                         self.invertBtn.setText('Invert')
                         frozeUI(False)
                         return
-                    elif all(elec[:,1] == 0) & all(topo[inan,1] == 0):
+                    elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
                         self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
                         self.invertBtn.setStyleSheet('background-color: green')
                         self.invertBtn.setText('Invert')
@@ -4897,8 +4913,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.r2.err = False
         
     def topoInterpBtnFunc(self):
-        elec = self.elecTable.getTable()
-        topo = self.topoTable.getTable()
+        dfelec = self.elecTable.getTable()
+        elec = dfelec[['x','y','z']].values
+        topo = self.topoTable.getTable()[['x','y','z']].values
         inan = ~np.isnan(elec[:,2])
         inan2 = ~np.isnan(topo[:,2])
         points = np.r_[elec[inan,:2], topo[inan2,:2]]
@@ -4918,17 +4935,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 return
             zi = griddata(points, values, xi, method='linear', fill_value=0)
         elec[~inan,2] = zi
-        self.elecTable.setTable(elec)
+        dfelec.loc[:, ['x','y','z']] = elec
+        self.elecTable.setTable(dfelec)
         self.infoDump('Interpolation successful.')
         
     def updateElec(self):
         try:
             elec = self.elecTable.getTable()
-            buried = self.elecTable.getBuried()
-            if self.tempElec is None or np.sum(elec-self.tempElec) != 0:
+            if self.tempElec is None or np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
                 self.tempElec = elec
                 self.r2.setElec(elec)
-                self.r2.buried = buried
                 self.r2.mesh = None
                 self.mwMesh.clear()
                 if len(self.r2.surveys) > 0:
@@ -5037,11 +5053,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if 'dev' in self.r2.surveys[0].df.columns:
                 self.filterAttrCombo.addItem('Stacking Error (Dev.)')
                 
-            if self.r2.iremote is not None:
-                if np.sum(self.r2.iremote) > 0:
-                    self.meshQuadGroup.setEnabled(False)
-                else:
-                    self.meshQuadGroup.setEnabled(True)
+            if self.r2.elec['remote'].sum() > 0:
+                self.meshQuadGroup.setEnabled(False)
+            else:
+                self.meshQuadGroup.setEnabled(True)
             if self.boreholeCheck.isChecked() is True:
                 self.r2.setBorehole(True)
             else:
@@ -5055,7 +5070,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if self.ftype == 'Syscal':
                     self.dcaButton.setEnabled(True)
                     self.dcaProgress.setEnabled(True)
-            if np.isnan(self.r2.elec).any(): # for users who import messed up topography files (res2dinv mostly)
+            if np.isnan(self.r2.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
                 self.topoInterpBtnFunc()
                 self.updateElec()
             self.plotPseudo()
@@ -5063,11 +5078,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.infoDump(fname + ' imported successfully')
             self.invNowBtn.setEnabled(True)
             self.activateTabs(True)
-            self.nbElecEdit.setText(str(len(self.r2.elec)))
-            self.elecDxEdit.setText('%s' %(self.r2.elec[~self.r2.iremote,:][1,0]-self.r2.elec[~self.r2.iremote,:][0,0]))
+            self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
+            self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2]))[0]))
             self.fnamesCombo.hide()
             self.fnamesComboLabel.hide()
-            
         except Exception as e:
             self.loadingWidget(exitflag=True)
             pdebug('importFile: ERROR:', e)
@@ -5162,6 +5176,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         # mesh
         self.mwMesh.clear()
+        self.meshLogText.clear()
         self.regionTable.reset()
         
         #forward model

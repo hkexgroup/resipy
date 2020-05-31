@@ -719,7 +719,7 @@ def msh_parse(file_path,debug=True):
         npere = 4
     if lookin4[2] in elm_type: # forget triangles its prisms 
         npere = 6  
-        
+    
     if npere == 3: 
         stream('Triangle')
         con_matrix = [[],[],[]]

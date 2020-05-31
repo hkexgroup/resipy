@@ -288,6 +288,7 @@ def protocolParser(fname, ip=False, fwd=False):
         x[:,2:9:2] = elecNumF.reshape(elecNum.shape)
         
     df = pd.DataFrame(x, columns=colnames)
+    df = df.astype({'a':int, 'b':int, 'm':int, 'n':int})
     if 'ip' not in df.columns:
         df['ip'] = np.nan
     xElec = np.arange(np.max(df[['a','b','m','n']].values))
@@ -1421,8 +1422,11 @@ def lippmannParser(fname):
     
     #calculations
     df['resist'] = df['vp']/df['i']
-
+    df = df.astype({'a':int, 'b':int, 'm':int, 'n':int})
+    
     return elec, df
+
+# elec, df = lippmannParser(testdir + 'parser/Lippmann_1.tx0')
 
 #%%
 def aresParser(fname, spacing=None):
@@ -1584,6 +1588,7 @@ def bertParser(fname):
     if 'ip' not in df.columns:
         df['ip'] = np.nan
     df = df.rename(columns = dict(zip(df.columns[:4], ['a', 'b', 'm', 'n']))) # make sure headers are a b m n
+    df = df.astype({'a':int, 'b':int, 'm':int, 'n':int})
     
     return elec,df
 
