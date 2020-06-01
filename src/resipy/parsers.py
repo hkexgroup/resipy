@@ -259,7 +259,7 @@ def protocolParser(fname, ip=False, fwd=False):
     IP 3D + err   13
     IP 3D + fwd   12
     """
-    x = np.genfromtxt(fname, skip_header=1)
+    x = np.genfromtxt(fname, skip_header=1) # we don't know if it's tab or white-space
     if fwd:
         x = x[:,:-1] # discard last column as it is appRes
     if ip:
@@ -274,27 +274,42 @@ def protocolParser(fname, ip=False, fwd=False):
     else: # it's a 3D survey
         colnames = colnames3d[:ncol]
         # putting all electrodes on the same string            
-        lineNum = x[:,1:9:2] # line numbers 
-        elecNum = x[:,2:9:2] # electrode numbers 
-        lineNumF = lineNum.flatten() # flattened arrays 
-        elecNumF = elecNum.flatten()
-        c = 0
-        for line in np.unique(lineNumF):
-            ie = lineNumF == line # electrode indexes 
-            elecNumF[ie] += c # add maximum electrode index found so far 
-            c = np.max(elecNumF[ie])
-        measNum = x.shape[0] # number of measurements 
-        x[:,1:9:2] = np.ones((measNum,4)) # make line numbers all 1
-        x[:,2:9:2] = elecNumF.reshape(elecNum.shape)
+        # lineNum = x[:,1:9:2] # line numbers 
+        # elecNum = x[:,2:9:2] # electrode numbers 
+        # lineNumF = lineNum.flatten() # flattened arrays 
+        # elecNumF = elecNum.flatten()
+        # c = 0
+        # for line in np.unique(lineNumF):
+        #     ie = lineNumF == line # electrode indexes 
+        #     elecNumF[ie] += c # add maximum electrode index found so far 
+        #     c = np.max(elecNumF[ie])
+        # measNum = x.shape[0] # number of measurements 
+        # x[:,1:9:2] = np.ones((measNum,4)) # make line numbers all 1
+        # x[:,2:9:2] = elecNumF.reshape(elecNum.shape)
         
     df = pd.DataFrame(x, columns=colnames)
     df = df.astype({'a':int, 'b':int, 'm':int, 'n':int})
+    if 'sa' in df.columns:
+        df = df.astype({'sa':int, 'sb':int, 'sm':int, 'sn':int})
+        elec = np.vstack([df[['sa','a']].values, df[['sb','b']].values,
+                          df[['sm','m']].values, df[['sn','n']].values])
+        uelec = np.unique(elec, axis=0)
+        dfelec = pd.DataFrame(uelec, columns=['string', 'elec'])
+        dfelec = dfelec.sort_values(by=['string','elec']).reset_index(drop=True)
+        dfelec['label'] = dfelec['string'].astype(str) + ' ' + dfelec['elec'].astype(str)
+        dfelec = dfelec.drop(['string', 'elec'], axis=1)
+    else:
+        uelec = np.unique(df[['a','b','m','n']].values.flatten()).astype(int)
+        dfelec = pd.DataFrame(uelec, columns=['label'])
+        dfelec = dfelec.astype({'label': str})
+    dfelec['x'] = np.arange(dfelec.shape[0])
+    dfelec['y'] = 0
+    dfelec['z'] = 0
+    dfelec['buried'] = False
+    dfelec['remote'] = False
     if 'ip' not in df.columns:
         df['ip'] = np.nan
-    xElec = np.arange(np.max(df[['a','b','m','n']].values))
-    elec = np.zeros((len(xElec),3))
-    elec[:,0] = xElec
-    return elec, df
+    return dfelec, df
 
 # test code
 # elec, df = protocolParser('examples/dc-2d/protocol.dat')
