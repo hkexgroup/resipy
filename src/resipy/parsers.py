@@ -298,6 +298,12 @@ def protocolParser(fname, ip=False, fwd=False):
         dfelec = dfelec.sort_values(by=['string','elec']).reset_index(drop=True)
         dfelec['label'] = dfelec['string'].astype(str) + ' ' + dfelec['elec'].astype(str)
         dfelec = dfelec.drop(['string', 'elec'], axis=1)
+        df['a2'] = df['sa'].astype(str) + ' ' + df['a'].astype(str)
+        df['b2'] = df['sb'].astype(str) + ' ' + df['b'].astype(str)
+        df['m2'] = df['sm'].astype(str) + ' ' + df['n'].astype(str)
+        df['n2'] = df['sn'].astype(str) + ' ' + df['m'].astype(str)
+        df = df.drop(['a','b','m','n','sa','sb','sm','sn'], axis=1)
+        df = df.rename(columns={'a2':'a','b2':'b','m2':'m','n2':'n'})
     else:
         uelec = np.unique(df[['a','b','m','n']].values.flatten()).astype(int)
         dfelec = pd.DataFrame(uelec, columns=['label'])
@@ -307,6 +313,7 @@ def protocolParser(fname, ip=False, fwd=False):
     dfelec['z'] = 0
     dfelec['buried'] = False
     dfelec['remote'] = False
+    df = df.astype({'a':str, 'b':str, 'm':str, 'n':str})
     if 'ip' not in df.columns:
         df['ip'] = np.nan
     return dfelec, df
@@ -316,6 +323,14 @@ def protocolParser(fname, ip=False, fwd=False):
 # elec, df = protocolParser('examples/dc-3d/protocol.dat')
 # elec, df = protocolParser('examples/ip-2d/protocol.dat', ip=True)
 # elec, df = protocolParser('examples/ip-3d/protocol2.dat', ip=True)
+
+
+# s1 = np.unique(elec['label'].values)
+# s2 = np.unique(df[['a','b','m','n']].values.flatten())
+# x = np.intersect1d(s1, s2)
+# lookupDict = dict(zip(elec['label'], np.arange(elec.shape[0])))
+# array = df[['a','b','m','n']].replace(lookupDict).values
+# print(array)
 
 
 #%% PRIME system parser
