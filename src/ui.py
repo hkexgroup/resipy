@@ -1153,7 +1153,6 @@ class App(QMainWindow):
                 """
                 cols = ['label','x','y','z','buried']
                 df = pd.DataFrame(np.zeros((self.nrow, self.ncol)), columns=cols)
-                print('++', self.nrow, self.ncol)
                 for i in range(self.nrow):
                     for j in range(self.ncol):
                         col = cols[j]
@@ -1171,7 +1170,6 @@ class App(QMainWindow):
                                 df.loc[i, 'buried'] = True
                             else:
                                 df.loc[i, 'buried'] = False
-                print('=++++', df.shape)
                 return df.astype({'label':str, 'x':float, 'y':float, 'z':float, 'buried':bool}).reset_index(drop=True)
             
 
@@ -1215,6 +1213,8 @@ class App(QMainWindow):
                         df2['buried'] = df.values[:,3]
                 if 'label' not in df.columns:
                     df2.insert(0, 'label', (1 + np.arange(df.shape[0])).astype(str))
+                    if self.parent.r2.typ[-1] == 't': # 3D
+                        df2.loc[:, 'label'] = '1 ' + df2['label']
                 else:
                     df2.insert(0, 'label', df['label'].values)
                 

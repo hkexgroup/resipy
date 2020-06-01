@@ -286,14 +286,25 @@ class R2(object): # R2 master class instanciated by the GUI
             ok = False
             elec = self._num2elec(elec)
             if self.elec is not None: # electrode already inferred when parsing data
-                if elec.shape[0] >= self.elec.shape[0]:
+                if self.iForward: # in case of forward modelling, changing the number of electrodes is allowed
                     ok = True
-                elif self.iForward: # in case of forward modelling, changing the number of electrodes is allowed
-                    ok = True
-                else:
-                    print('ERROR : number of electrodes read ({:d}) is smaller'
-                          ' than the number of electrode from data file ({:d})'.format(
-                              elec.shape[0], self.elec.shape[0]))
+                else: # check intersection of labels
+                    if len(self.surveys) > 0:
+                        s1 = np.unique(elec['label'].values)
+                        s2 = np.unique(self.surveys[0].df[['a','b','m','n']].values.flatten())
+                        x = np.intersect1d(s1, s2)
+                        if len(x) == len(s2):
+                            ok = True
+                        else:
+                            raise ValueError('The following electrode labels are missing'
+                                  ' from the electrode declaration: ' + ', '.join(s2[~np.in1d(s2, x)]))
+                    else:
+                        if elec.shape[0] >= self.elec.shape[0]:
+                            ok = True
+                        else:
+                            raise ValueError('The number of electrodes read ({:d}) is smaller'
+                              ' than the number of electrode from data file ({:d})'.format(
+                                  elec.shape[0], self.elec.shape[0]))                
             else:
                 ok = True # first assignement of electrodes
             if ok:
