@@ -3718,7 +3718,7 @@ class R2(object): # R2 master class instanciated by the GUI
             dfs2 = []
             for df in dfs:
                 df = df.astype({'P+':int, 'P-':int, 'C+':int, 'C-':int})
-                if (self.typ == 'R3t') & (self.typ == 'cR3t'):
+                if (self.typ == 'R3t') | (self.typ == 'cR3t'):
                     df = df.astype({'sa':int, 'sb':int, 'sm':int, 'sn':int})
                     df['P+'] = df['sa'].astype(str) + ' ' + df['P+'].astype(str)
                     df['P-'] = df['sb'].astype(str) + ' ' + df['P-'].astype(str)
