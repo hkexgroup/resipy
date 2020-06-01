@@ -142,6 +142,8 @@ class Survey(object):
             dfelec['remote'] = False
             dfelec['buried'] = False
             dfelec['label'] = (1 + np.arange(dfelec.shape[0])).astype(str)
+        else:
+            dfelec = elec
         self.elec = dfelec
         
         self.ndata = self.df.shape[0]
