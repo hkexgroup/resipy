@@ -300,8 +300,8 @@ def protocolParser(fname, ip=False, fwd=False):
         dfelec = dfelec.drop(['string', 'elec'], axis=1)
         df['a2'] = df['sa'].astype(str) + ' ' + df['a'].astype(str)
         df['b2'] = df['sb'].astype(str) + ' ' + df['b'].astype(str)
-        df['m2'] = df['sm'].astype(str) + ' ' + df['n'].astype(str)
-        df['n2'] = df['sn'].astype(str) + ' ' + df['m'].astype(str)
+        df['m2'] = df['sm'].astype(str) + ' ' + df['m'].astype(str)
+        df['n2'] = df['sn'].astype(str) + ' ' + df['n'].astype(str)
         df = df.drop(['a','b','m','n','sa','sb','sm','sn'], axis=1)
         df = df.rename(columns={'a2':'a','b2':'b','m2':'m','n2':'n'})
     else:
