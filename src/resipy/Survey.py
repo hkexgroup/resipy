@@ -1153,9 +1153,24 @@ class Survey(object):
             temp_heatmap_recip_filterN ['Phase'] = temp_heatmap_recip_filterN ['ip']*np.abs(self.kFactor)
         # because 'a' and 'm' are now string, we need to convert them back to int so that
         # the indexes are sorted properly (string sorting gives: '1', '10', '11', '2', ...)
-        temp_heatmap_recip_filterN['A'] = temp_heatmap_recip_filterN['a'].astype(int)
-        temp_heatmap_recip_filterN['M'] = temp_heatmap_recip_filterN['m'].astype(int)
-        heat_recip_Filter = temp_heatmap_recip_filterN.set_index(['M','A']).Phase.unstack(0)     
+        def tsort(val): # sort string of electrodes
+            elec = [int(a.split()[-1]) for a in val]
+            if len(val[0].split()) > 1:
+                string = [int(a.split()[0]) for a in val]
+            else:
+                string = np.ones(len(val))
+            return np.lexsort((elec, string))
+        
+        # if len(temp_heatmap_recip_filterN['a'].values[0].split()) > 1: # string is included
+        #     temp_heatmap_recip_filterN['A'] = [int(a.split()[0])*100000 + int(a.split()[1]) for a in temp_heatmap_recip_filterN['a']]
+        #     temp_heatmap_recip_filterN['M'] = [int(a.split()[0])*100000 + int(a.split()[1]) for a in temp_heatmap_recip_filterN['m']]
+        # else:
+        #     temp_heatmap_recip_filterN['A'] = temp_heatmap_recip_filterN['a'].astype(int)
+        #     temp_heatmap_recip_filterN['M'] = temp_heatmap_recip_filterN['m'].astype(int)
+        df = temp_heatmap_recip_filterN.set_index(['m','a']).Phase.unstack(0)
+        isortA = tsort(df.index.values)
+        isortM = tsort(df.columns.values)
+        heat_recip_Filter = df.loc[df.index[isortA], df.columns[isortM]].copy()
         if ax is None:
             fig, ax = plt.subplots()  
         else:
@@ -1172,14 +1187,14 @@ class Survey(object):
         ax.set_xlabel('M')#,fontsize = 22)
 #        ax.tick_params(labelsize=18)
         ax.set_title('%s\n%s measurements' % (self.filt_typ, dflen))#, fontsize=20)     
-        ax.grid(False)
-        if self.cbar==True:
+        if self.cbar == True:
             cbhnf = fig.colorbar(m, ax=ax)
             cbhnf.set_label(r'-$\phi$ [mrad]')#, fontsize=20)
 #            cbhnf.ax.tick_params(labelsize=18)
         if ax is None:
             return fig
-    
+        
+        
     
     def filterRangeIP(self, phimin, phimax):
         """Filter IP data according to a specified range.
