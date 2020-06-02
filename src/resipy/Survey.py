@@ -325,7 +325,9 @@ class Survey(object):
                 elec, data = bertParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
-        self.df = self.df.append(data)
+        
+        data = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
+        self.df = self.df.append(data).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
         if ftype == 'BGS Prime':
             self.checkTxSign()
         if ftype == 'Syscal':
@@ -1784,7 +1786,9 @@ class Survey(object):
 
         inan = np.zeros(len(val), dtype=bool)
         val = val.copy()[~inan]
+        self.arrBfore = array.copy() ########## REMOVE
         array = array.copy()[~inan]
+        self.arrAfter = array.copy() ########## REMOVE
         self.iselect = np.zeros(len(inan), dtype=bool)
         
         def setSelect(ie, boolVal):
