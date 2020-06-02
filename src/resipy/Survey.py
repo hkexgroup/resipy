@@ -1786,9 +1786,7 @@ class Survey(object):
 
         inan = np.zeros(len(val), dtype=bool)
         val = val.copy()[~inan]
-        self.arrBfore = array.copy() ########## REMOVE
         array = array.copy()[~inan]
-        self.arrAfter = array.copy() ########## REMOVE
         self.iselect = np.zeros(len(inan), dtype=bool)
         
         def setSelect(ie, boolVal):
