@@ -1298,7 +1298,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D survey:
             if len(self.surveys) > 0:
                 lookupDict = dict(zip(dfelec['label'], np.arange(dfelec.shape[0])))
-                array = self.surveys[0].df[['a','b','m','n']].replace(lookupDict).values
+                array = self.surveys[0].df[['a','b','m','n']].replace(lookupDict).values.copy().astype(int) # strings don't have max/min
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
                 self.fmd = (1/3)*maxDist
             else: # if it's a forward model for instance
@@ -3401,7 +3401,6 @@ class R2(object): # R2 master class instanciated by the GUI
         # recompute doi
         self.computeFineMeshDepth()
         self.zlim[0] = np.min(elec[:,2]) - self.fmd
-
         if iplot is True:
             self.showPseudo()
         dump('Forward modelling done.')
