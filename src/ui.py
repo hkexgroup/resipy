@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = False # set to false to not display message in the console
+DEBUG = True # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -4953,7 +4953,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     if self.r2.typ[0] == 'c':
                         self.plotPseudoIP()
         except Exception as e:
-            self.errorDump('Error updating pseudosection: ' + e)
+            self.errorDump('Error updating pseudosection: ' + str(e))
     
     def plotPseudo(self):
         pdebug('plotPseudo()')
@@ -5182,6 +5182,23 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #forward model
         self.mwFwdPseudo.clear()
         self.mwFwdPseudoIP.clear()
+        if self.iForward is True: # in case the "Restart" button is used while Forward radio is already checked
+            self.tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
+            self.tabs.setTabEnabled(2, True)
+            self.tabs.setTabEnabled(3, True)
+            self.tabs.setTabEnabled(4, False)
+            self.tabs.setTabEnabled(5, False)
+            self.tabs.setTabEnabled(6, False)
+            self.ftypeCombo.setEnabled(False)
+            self.invRadio.setChecked(False)
+            self.importDataBtn.setEnabled(False)
+            self.timeLapseCheck.setEnabled(False)
+            self.batchCheck.setEnabled(False)
+            self.tabImporting.setTabEnabled(2,False) # no custom parser needed
+            self.nbElecEdit.setEnabled(True)
+            self.ipCheck.setEnabled(True)
+            self.psContourCheck.setEnabled(False)
+            
 
         # inversion settings
         self.flux_type.setCurrentIndex(0)
