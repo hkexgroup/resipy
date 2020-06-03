@@ -58,7 +58,7 @@ import traceback
 
 
 # debug options
-DEBUG = True # set to false to not display message in the console
+DEBUG = False # set to false to not display message in the console
 def pdebug(*args, **kwargs):
     if DEBUG:
         print('DEBUG:', *args, **kwargs)
@@ -3303,11 +3303,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
                 self.errorDump('Please specify a mesh and an initial model first.')
                 return
-            try:
-                seqCreateFunc()
-            except:
-                self.errorDump('Error in sequence generation')
-                return
+            # try:
+            seqCreateFunc()
+            # except:
+            #     self.errorDump('Error in sequence generation')
+            #     return
             if len(self.r2.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return
