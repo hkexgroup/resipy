@@ -2272,6 +2272,11 @@ class R2(object): # R2 master class instanciated by the GUI
         if 'mesh' not in self.param:
             self.createMesh()
             
+        # clean previous iterations
+        for f in os.listdir(self.dirname):
+            if f[:3] == 'f00':
+                os.remove(os.path.join(self.dirname, f))
+            
         # run Oldenburg and Li DOI estimation
         if modelDOI is True:
             sensScaled = self.modelDOI(dump=dump)
