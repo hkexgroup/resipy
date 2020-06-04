@@ -3843,12 +3843,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.tabs.addTab(tabInversion, '&Inversion')
         self.tabs.setTabEnabled(5, False)
         
-        invtabs = QTabWidget()
+        self.invtabs = QTabWidget()
         logTab = QWidget()
         showTab = QWidget()
-        invtabs.addTab(logTab, 'Log')
-        invtabs.addTab(showTab, 'Results')
-        invtabs.setTabEnabled(1, False)
+        self.invtabs.addTab(logTab, 'Log')
+        self.invtabs.addTab(showTab, 'Results')
+        self.invtabs.setTabEnabled(1, False)
                 
         
         def frozeUI(val=True): # when inversion is running
@@ -3866,8 +3866,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # ------------------------ log sub tab
         def invertBtnFunc():
             self.end = False # will be set to True if inversion successfull
-            invtabs.setCurrentIndex(0) # log tab
-            invtabs.setTabEnabled(1, False)
+            self.invtabs.setCurrentIndex(0) # log tab
+            self.invtabs.setTabEnabled(1, False)
             
             # check if we kill or invert
             if self.invertBtn.text() == 'Invert':
@@ -3961,8 +3961,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             # show results
             if self.end is True:
                 # try:
-                invtabs.setCurrentIndex(1) # show tab
-                invtabs.setTabEnabled(1, True)
+                self.invtabs.setCurrentIndex(1) # show tab
+                self.invtabs.setTabEnabled(1, True)
                 if self.r2.typ[-1] == '2':
                     showStackedLayout.setCurrentIndex(0)
 #                    maxDepth = self.r2.fmd if self.cropBelowFmd.isChecked() else None
@@ -4517,7 +4517,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         logTab.setLayout(logLayout)
         showTab.setLayout(showLayout)
         
-        invLayout.addWidget(invtabs)
+        invLayout.addWidget(self.invtabs)
         tabInversion.setLayout(invLayout)
     
     
@@ -5221,6 +5221,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.helpSection2.setText('Click on the labels and help will be displayed here')
 
         # inversion
+        self.invtabs.setCurrentIndex(0)
+        self.invtabs.setTabEnabled(1, False)
         self.logText.setText('')
         self.mwRMS.clear()
         self.mwIter.clear()
