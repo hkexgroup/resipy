@@ -4828,13 +4828,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
     def loadingWidget(self, msgtxt='', exitflag=False):
         '''Shows a dialog to indicate ResIPy is working (e.g., loading large dataset, etc.)'''
-        if exitflag == False:
-            self.loadingDialogTxtWidget.setText(msgtxt)
-            self.loadingDialog.show()
-            QApplication.processEvents()
-        
-        else:
-            self.loadingDialog.accept()  
+        if OS != 'Linux':
+            if exitflag == False:
+                self.loadingDialogTxtWidget.setText(msgtxt)
+                self.loadingDialog.show()
+                QApplication.processEvents()
+            
+            else:
+                self.loadingDialog.accept()  
             
     def calcAspectRatio(self): # for calculating aspect ratio of long surveys
         if self.r2.fmd is None:
