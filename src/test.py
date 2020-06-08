@@ -561,14 +561,10 @@ print('total time running the test = {:.4f}s'.format(time.time() - tstart))
 # 
 
 #%% test timelapse 3D -- takes a long time
-#k = R2(typ='R3t')
-#k.createBatchSurvey('resipy/test/timelapse3D/dataLeadingRidge')
-#k.importElec('resipy/test/timelapse3D/elecLeadingRidge.csv')
-#k.pseudo()
-#k.pwlfit()
-#k.createMesh('tetra', cl=0.3, cl_factor=5)
-#k.showMesh()
-#k.invert(parallel=True)
-#k.showResults()
-#k.showInParaview()
-
+k = R2(typ='R3t')
+k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
+k.createMesh()
+k.invert()
+k.showResults(index=0)
+k.showResults(index=1)
