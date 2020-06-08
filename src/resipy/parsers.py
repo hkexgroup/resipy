@@ -1540,7 +1540,7 @@ def bertParser(fname):
     while dump[line][0] == '#':
         line += 1
     
-    numStr = r'[-+]?\d*\.\d+[eE]?[-+]?\d+|\d+' # all posible numbering formats
+    numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
     
     numElec = re.findall(numStr, dump[line])
     if len(numElec) == 1: # we have number of elecs
