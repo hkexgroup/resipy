@@ -4150,7 +4150,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 
                 self.vtkWidget.clear()
                 self.vtkWidget.clear_plane_widgets()
-                self.r2.meshResults[index].show3D(ax=self.vtkWidget, attr=attr,
+                # self.r2.meshResults[index].show3D(ax=self.vtkWidget, attr=attr,
+                #                                   edge_color=edge_color, vmin=vmin,
+                #                                   vmax=vmax, color_map=cmap,
+                #                                   background_color=(0.8,0.8,0.8),
+                #                                   pvslices=pvslices,
+                #                                   pvthreshold=pvthreshold,
+                #                                   pvgrid=pvgrid,
+                #                                   pvcontour=pvcontour)
+            
+                self.r2.showResults(index=index, ax=self.vtkWidget, attr=attr,
                                                   edge_color=edge_color, vmin=vmin,
                                                   vmax=vmax, color_map=cmap,
                                                   background_color=(0.8,0.8,0.8),
