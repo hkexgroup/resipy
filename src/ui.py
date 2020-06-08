@@ -345,6 +345,7 @@ class App(QMainWindow):
                 self.recipErrorSaveBtn.setVisible(True)
                 self.tabPreProcessing.setCurrentIndex(0)
                 self.tabPreProcessing.setTabEnabled(0, True)
+                self.mwManualFiltering.show()
                 try:
                     if not self.r2.surveys[0].df.empty:
                         self.tabs.setTabEnabled(1, True)
@@ -393,16 +394,11 @@ class App(QMainWindow):
                 #Pre-processing tab
                 self.recipErrorBottomTabs.setTabEnabled(0, False)
                 self.recipErrorSaveBtn.setVisible(False)
+                self.mwManualFiltering.hide() # manual filtering pseudo section is not optimized for 3D
                 
                 try:
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        self.tabs.setTabEnabled(1, False)
-                        self.tabPreProcessing.setTabEnabled(0, False)
-                    else:
-                        self.tabs.setTabEnabled(1, True)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
                         self.recipErrorBottomTabs.setCurrentIndex(1)
-                    if self.ipCheck.checkState() == Qt.Checked:
-                        self.tabs.setTabEnabled(1, True)
                 except:
                     pass
 
@@ -772,6 +768,9 @@ class App(QMainWindow):
                     self.errHist()
                     if self.m3DRadio.isChecked():
                         self.recipErrorBottomTabs.setCurrentIndex(1)
+                self.plotPseudo()
+                if self.r2.typ[0] == 'c':
+                    self.plotPseudoIP()
                 self.plotManualFiltering()
                 self.infoDump(fnameRecip + ' imported successfully')
         self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
