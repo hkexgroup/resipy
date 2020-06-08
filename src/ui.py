@@ -2710,8 +2710,8 @@ class App(QMainWindow):
 
 
         def meshTetraFunc():
-            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
-            self.cropBelowFmd.setEnabled(False)
+#            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
+#            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
             topo = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(topo[:,0])
