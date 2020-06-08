@@ -400,6 +400,7 @@ class App(QMainWindow):
                         self.tabPreProcessing.setTabEnabled(0, False)
                     else:
                         self.tabs.setTabEnabled(1, True)
+                        self.recipErrorBottomTabs.setCurrentIndex(1)
                     if self.ipCheck.checkState() == Qt.Checked:
                         self.tabs.setTabEnabled(1, True)
                 except:
@@ -767,8 +768,10 @@ class App(QMainWindow):
                         self.recipFiltBtn.setEnabled(True)
                         phaseplotError()
                         heatRaw()
-                        heatFilter()
+                        heatFilter()    
                     self.errHist()
+                    if self.m3DRadio.isChecked():
+                        self.recipErrorBottomTabs.setCurrentIndex(1)
                 self.plotManualFiltering()
                 self.infoDump(fnameRecip + ' imported successfully')
         self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
@@ -4985,17 +4988,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.tabs.setTabEnabled(4,val)
             self.tabs.setTabEnabled(5,val)
             self.tabs.setTabEnabled(6,val)
-            try:
-                if self.m3DRadio.isChecked():
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
-                        self.tabs.setTabEnabled(1, False)
-                        self.tabPreProcessing.setTabEnabled(0, False)
-                    else:
-                        self.tabs.setTabEnabled(1, True)
-                    if self.ipCheck.checkState() == Qt.Checked:
-                        self.tabs.setTabEnabled(1, True)
-            except:
-                pass
+            # try:
+            if self.m3DRadio.isChecked():
+                self.mwManualFiltering.hide()
+                # if len(self.r2.surveys) > 0 and all(self.r2.surveys[0].df['irecip'].values == 0):
+                #     self.tabs.setTabEnabled(1, False)
+                #     self.tabPreProcessing.setTabEnabled(0, False)
+                # else:
+                #     self.tabs.setTabEnabled(1, True)
+                # if self.ipCheck.checkState() == Qt.Checked:
+                #     self.tabs.setTabEnabled(1, True)
+            else:
+                self.mwManualFiltering.show()
+            # except:
+            #     pass
+            
         else:
             self.tabs.setTabEnabled(2,val)
         self.meshTrianGroup.setFocus() # needed after tab activation as default is the fmdBox (QLineEdit) for some strange reasons...
