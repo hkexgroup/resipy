@@ -1539,8 +1539,10 @@ def bertParser(fname):
     # skip comment lines
     while dump[line][0] == '#':
         line += 1
-
-    numElec = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    
+    numStr = r'[-+]?\d*\.\d+[eE]?[-+]?\d+|\d+' # all posible numbering formats
+    
+    numElec = re.findall(numStr, dump[line])
     if len(numElec) == 1: # we have number of elecs
         line += 1
     
@@ -1549,10 +1551,10 @@ def bertParser(fname):
         line += 1
     
     elec_list = []
-    elecLocs0 = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    elecLocs0 = re.findall(numStr, dump[line])
     elecLocs_line = elecLocs0.copy()
     while len(elecLocs_line) == len(elecLocs0):
-        elecLocs_line = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+        elecLocs_line = re.findall(numStr, dump[line])
         elec_list.append(elecLocs_line)
         line += 1
     
@@ -1561,17 +1563,20 @@ def bertParser(fname):
     if elec.shape[1] != 3: # we have xz format so conver into xyz
         elec = np.c_[elec[:,0], np.zeros(len(elec)), elec[:,1]]
     
-    vals = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+    vals = re.findall(numStr, dump[line])
     while len(vals) < 4: # finding the data line
         line += 1
-        vals = re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])
+        vals = re.findall(numStr, dump[line])
     
     headers = re.findall(r'[A-Za-z]+', dump[line-1]) # for finding data types
 
-    topo_check_vals = len(re.findall(r'[-+]?\d*\.\d+|\d+', dump[line])) # TODO: is topography included without any flags?
+    topo_check_vals = len(re.findall(numStr, dump[line])) # TODO: is topography included without any flags?
     df_list = []
     for val in dump[line:]: # reding data
-        df_list.append(re.findall(r'[-+]?\d*\.\d+|\d+', val))
+        vals = re.findall(numStr, val)
+        if len(vals) != len(headers): # for end of data flags
+            break
+        df_list.append(vals)
     
     df = pd.DataFrame(np.array(df_list).astype(float)) # getting the electrode array
     df.columns = headers
