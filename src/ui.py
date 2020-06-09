@@ -4751,10 +4751,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p>
             <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p>
             <p>ResIPy uses 
-                <a href="./resipy/exe/R2_manual.pdf">R2</a>,
-                <a href="./resipy/exe/cR2_manual.pdf">cR2</a>,
-                <a href="./resipy/exe/R3t_manual.pdf">R3t</a> and 
-                <a href="./resipy/exe/cR3t_manual.pdf">cR3t</a> developed by Andrew Binley</p>
+                <a href="{}">R2</a>,
+                <a href="{}">cR2</a>,
+                <a href="{}">R3t</a> and 
+                <a href="{}">cR3t</a> developed by Andrew Binley</p>
             <p>For generation of triangular mesh, ResIPy uses software 
                 <a href="http://gmsh.info/">Gmsh</a></p>
             <p>Python packages used: 
@@ -4771,7 +4771,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for 
             Complex Geoelectrical Inversion/Modeling.”<br>Computers & Geosciences, February, 104423.
             <a href="https://doi.org/10.1016/j.cageo.2020.104423">https://doi.org/10.1016/j.cageo.2020.104423</a>.</p>
-            '''.format(ResIPy_version))
+            '''.format(ResIPy_version, R2_help, cR2_help, R3t_help, cR3t_help))
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
