@@ -1046,9 +1046,9 @@ class Survey(object):
         a2 = coefs[1]
         print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
         if a1 > 0.001 and a2 > 0.001:
-            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:+.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
         else:
-            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:+.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         def errorModel(df):
             x = df['recipMean'].values
