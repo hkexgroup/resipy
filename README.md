@@ -12,12 +12,12 @@ ResIPy aims to be
 
 Downloads
 ---------
-Version 2.2.0 (beta):<br>
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.0%20-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-windows.exe)
+Version 2.2.1 (beta):<br>
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.1%20-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.0%20-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-macOS.dmg)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.0%20-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-linux)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.1%20-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-linux)
 
-Version 2.0.2:<br>
+Version 2.0.2 (stable):<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-macOS.dmg "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
@@ -31,9 +31,9 @@ Notes for Mac and Linux users:
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 Zip files:<br>
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.0%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-windows.zip)
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.1%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-windows.zip)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.0%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-macOS.zip)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.0%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-linux.zip)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.1%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-linux.zip)
 
 
 What it can do
