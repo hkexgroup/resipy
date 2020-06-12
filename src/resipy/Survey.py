@@ -654,6 +654,38 @@ class Survey(object):
                 return numRemoved
         else:
             raise ValueError("No stacking error column (dev) found!")
+    
+    def filterInvError(self, vmin=None, vmax=None, debug=False):
+        """Filter measurements by inversion error. 
+        Parameters
+        -----------
+        vmin : float, optional
+            Minimum error.
+        vmax : float, optional
+            Maximum error.
+        debug : bool, optional
+            Print output to screen. Default is False.
+        """
+        df = self.df.copy()
+        if 'resInvError' not in df.columns:
+            return
+        else:
+            resInvError = self.df['resInvError'].values
+            resInvError[np.isnan(resInvError)] = 0 # do not remove NaNs
+            if vmin is None:
+                vmin = np.min(resInvError)
+            if vmax is None:
+                vmax = np.max(resInvError)
+            ikeep = (resInvError >= vmin) & (resInvError <= vmax)
+            self.df = df[ikeep]
+            self.df.reset_index()
+            
+            if debug:
+                numRemoved = len(df)-len(self.df)
+                msgDump = "%i measurements outside [%s,%s] removed!" % (numRemoved, vmin, vmax)
+                print(msgDump)
+                return numRemoved
+        
         
     def addFilteredIP(self):
         """Add filtered IP data after IP filtering and pre-processing. This is

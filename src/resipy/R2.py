@@ -3819,6 +3819,26 @@ class R2(object): # R2 master class instanciated by the GUI
         ax.plot((1,measurement_no[-1]),baseline,'k--')
 
 
+    def filterInvError(self, index=-1, vmin=None, vmax=None):
+        """Remove measurements where inversion error is outside of the defined range.
+
+        Parameters
+        ----------
+        vmin : float, optional
+            minimum value of normalized error below which data will be discarded.
+        vmax : float, optional
+            maximum value of normalized error above which data will be discarded.
+        index : int, optional
+            Index of the survey to process. If `index == -1` (default) then the
+            processing is applied on all survey independantly.
+        """
+        if index == -1:
+            for s in self.surveys:
+                s.filterInvError(vmin=vmin, vmax=vmax)
+        else:
+            self.surveys[index].filterInvError(vmin=vmin, vmax=vmax) 
+        
+        
     def saveMeshVtk(self, outputname=None):
         """Save mesh as .vtk to be viewed in paraview.
 
