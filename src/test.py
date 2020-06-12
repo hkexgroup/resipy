@@ -192,7 +192,7 @@ timings['methods-meshing'] = time.time() - tstart
 # k = R2() # IP specific
 # k.createSurvey(testdir + 'ip-2d/syscal.csv')
 # k.showPseudoIP()
-# #k.showHeatmap() # UI only ?
+# #k.showHeatmap() # must have k.surveys[0].filt_typ = 'Raw' or 'Filtered # TODO fix this @Sina
 # k.showErrorIP()
 #k.showSection() #TODO in cases or deprecate
 #k.showPseudoInvErrorIP() # tested in cases
@@ -235,6 +235,9 @@ k.err = True
 k.invert(modErr=True, modelDOI=True)
 k.showResults(attr='Conductivity(mS/m)', doiSens=True)
 k.showResults(doi=True)
+
+#filter data based on inversion error
+k.filterInvError(vmin=-3, vmax=3)
 
 # save and load project
 k.saveProject(testdir + 'project')
