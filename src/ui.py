@@ -1813,19 +1813,16 @@ class App(QMainWindow):
         self.recipErrorInputLine.setValidator(QDoubleValidator())
 
         self.rhoRangeInputLabel = QLabel('Range:')
-        # self.rhoRangeInputLabel.hide()
         
         self.rhoRangeMinInput = QLineEdit('')
         self.rhoRangeMinInput.setPlaceholderText('min')
         self.rhoRangeMinInput.setFixedWidth(80)
         self.rhoRangeMinInput.setValidator(QDoubleValidator())
-        # self.rhoRangeMinInput.hide()
         
         self.rhoRangeMaxInput = QLineEdit('')
         self.rhoRangeMaxInput.setPlaceholderText('max')
         self.rhoRangeMaxInput.setFixedWidth(80)
         self.rhoRangeMaxInput.setValidator(QDoubleValidator())
-        # self.rhoRangeMaxInput.hide()
         
         
         def filterAttrComboFunc(index):
@@ -1853,16 +1850,8 @@ class App(QMainWindow):
             
         self.filterAttrCombo = QComboBox()
         
-        # self.filterAttrComboItems = ['Transfer Resistance', 'App. Resistivity',
-        #                              'Reciprocal Error', 'Stacking Error (Dev.)']
-        
         self.filterAttrComboItems = ['Transfer Resistance', 'App. Resistivity']
-        # self.filterAttrCombo.addItem('Transfer Resistance')
-        # self.filterAttrCombo.addItem('App. Resistivity')
-        # self.filterAttrCombo.addItem('Reciprocal Error')
-        # self.filterAttrCombo.addItem('Stacking Error (Dev.)')
         self.filterAttrCombo.addItems(self.filterAttrComboItems)
-        # self.filterAttrCombo.currentIndexChanged.connect(filterAttrComboFunc)
         self.filterAttrCombo.activated.connect(filterAttrComboFunc)
 
 
@@ -1949,7 +1938,6 @@ class App(QMainWindow):
         recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
         recipErrorInputLeftlayoutL.addWidget(self.rhoRangeInputLabel)
         recipErrorInputLeftlayoutL.addWidget(self.recipErrorInputLabel)
-        # recipErrorInputLeftlayoutL.addWidget(self.tResRangeInputLabel)
         recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
         
         recipErrorInputLineLayout = QHBoxLayout()
@@ -1957,8 +1945,6 @@ class App(QMainWindow):
         recipErrorInputLineLayout.addWidget(self.rhoRangeMinInput)
         recipErrorInputLineLayout.addWidget(self.rhoRangeMaxInput)
         recipErrorInputLineLayout.addWidget(self.recipErrorInputLine)
-        # recipErrorInputLineLayout.addWidget(self.tResRangeMinInput)
-        # recipErrorInputLineLayout.addWidget(self.tResRangeMaxInput)
         recipErrorInputLineLayout.addWidget(self.filterAttrCombo)
         recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
 
@@ -4540,8 +4526,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         self.errorGraphs = QTabWidget()
         
-        self.invPseudoErrLabel = QLabel('Select datapoints on the pseudo section to remove and reinvert the data.')
-
+        self.invErrorTabLabel = QLabel('Enter error range to filter the data based on inversion error or '
+                                       'manually remove points on the pseudo section and then reinvert the data.')
+        
+        self.invPseudoErrLabel = QLabel('Select datapoints on the pseudo section to remove.')
+        
         def prepareInvError():
             names = [s.name for s in self.r2.surveys]
             if len(names) > 1:
@@ -4556,13 +4545,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 
             # self.invErrorCombo.disconnect()
             self.invErrorCombo.clear()
+            self.invErrorCombo.addItem('Apply to Each')
             for name in names:
                 self.invErrorCombo.addItem(name)
             self.invErrorCombo.activated.connect(invErrorComboFunc)
-            invErrorComboFunc(0)
+            invErrorComboFunc(1)
+            self.invErrorIndex = 0
         
         def invErrorComboFunc(index):
             try:
+                index = self.invErrorIndex if index == 0 else index-1 # for apply to each (time-lapse or batch only)
                 plotInvError2(index)
                 if self.iBorehole is False:
                     plotInvError(index)
@@ -4574,8 +4566,62 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invErrorCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.invErrorCombo.activated.connect(invErrorComboFunc)
         self.invErrorCombo.hide()
-        self.invErrorComboLabel = QLabel('Choose a dataset to plot the error:')
+        self.invErrorComboLabel = QLabel('Dataset:')
+        self.invErrorComboLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.invErrorComboLabel.hide()
+        
+        self.rangeInvErrorLabel = QLabel('Error range:')
+        self.rangeInvErrorLabel.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        
+        
+        def filterInvError():
+            if self.invErrorCombo.currentIndex() == 0: # apply to each
+                index = -1
+            else:
+                index = self.invErrorIndex
+            vminVal = self.rangeInvErrorMinInput.text()
+            vmaxVal = self.rangeInvErrorMaxInput.text()
+            self.r2.filterInvError(index=index, 
+                                   vmin=float(vminVal) if vminVal != '' else None, 
+                                   vmax=float(vmaxVal) if vmaxVal != '' else None)
+            plotInvError(self.invErrorIndex)
+            plotInvError2(self.invErrorIndex)
+            
+        def resetInvErrorFilter():
+            if self.invErrorCombo.currentIndex() == 0: # apply to each
+                for s in self.r2.surveys:
+                    s.df = s.dfInvErrOutputOrigin.copy()
+            else:
+                self.r2.surveys[self.invErrorIndex].df = self.r2.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
+            self.rangeInvErrorMinInput.setText('')
+            self.rangeInvErrorMaxInput.setText('')
+            plotInvError(self.invErrorIndex)
+            plotInvError2(self.invErrorIndex)
+
+        
+        self.rangeInvErrorMinInput = QLineEdit('')
+        self.rangeInvErrorMinInput.setPlaceholderText('min')
+        self.rangeInvErrorMinInput.setToolTip('Minimum accepted normalized error')
+        self.rangeInvErrorMinInput.setFixedWidth(80)
+        self.rangeInvErrorMinInput.setValidator(QDoubleValidator())
+        
+        self.rangeInvErrorMaxInput = QLineEdit('')
+        self.rangeInvErrorMaxInput.setPlaceholderText('max')
+        self.rangeInvErrorMaxInput.setToolTip('Maximum accepted normalized error')
+        self.rangeInvErrorMaxInput.setFixedWidth(80)
+        self.rangeInvErrorMaxInput.setValidator(QDoubleValidator())
+        
+        self.rangeInvErrorApplyBtn = QPushButton('Apply filter')
+        self.rangeInvErrorApplyBtn.setToolTip('Apply range filtering to selected dataset(s)')
+        self.rangeInvErrorApplyBtn.setFixedWidth(150)
+        self.rangeInvErrorApplyBtn.clicked.connect(filterInvError)
+        
+        self.rangeInvErrorResetBtn = QPushButton('Reset filters')
+        self.rangeInvErrorResetBtn.setStyleSheet("color: red")
+        self.rangeInvErrorResetBtn.setToolTip('Reset plots and filters to after inversion state.')
+        self.rangeInvErrorResetBtn.setFixedWidth(150)
+        self.rangeInvErrorResetBtn.clicked.connect(resetInvErrorFilter)
+        
         
         def plotInvError(index=0):
             pdebug('plotInvError()')
@@ -4627,9 +4673,29 @@ combination of multiple sequence is accepted as well as importing a custom seque
         postProcessingLayout = QVBoxLayout()
         
         topInvErrorLayout = QHBoxLayout()
-        topInvErrorLayout.addWidget(self.invErrorComboLabel, 1)
+        # topInvErrorLayout.setAlignment(Qt.AlignRight)
+        topInvErrorLayout.addWidget(self.invErrorTabLabel, 1)
+        topInvErrorLayout.addWidget(self.invErrorComboLabel, 0)
         topInvErrorLayout.addWidget(self.invErrorCombo, 0)
         postProcessingLayout.addLayout(topInvErrorLayout)
+        
+        rangeInvErrorLayout = QHBoxLayout()
+        rangeInvErrorLayoutL = QHBoxLayout()
+        rangeInvErrorLayoutL.setAlignment(Qt.AlignLeft)
+        rangeInvErrorLayoutL.addWidget(self.rangeInvErrorLabel)
+        rangeInvErrorLayoutL.addWidget(self.rangeInvErrorMinInput)
+        rangeInvErrorLayoutL.addWidget(self.rangeInvErrorMaxInput)
+        rangeInvErrorLayout.addLayout(rangeInvErrorLayoutL, 0)
+        
+        rangeInvErrorLayoutR = QHBoxLayout()
+        rangeInvErrorLayoutR.setAlignment(Qt.AlignRight)
+        rangeInvErrorLayoutR.addWidget(self.rangeInvErrorApplyBtn)
+        rangeInvErrorLayoutR.addWidget(self.rangeInvErrorResetBtn)
+        rangeInvErrorLayoutR.addWidget(self.invErrorReinvertBtn)
+        rangeInvErrorLayout.addLayout(rangeInvErrorLayoutR, 1)
+        
+        postProcessingLayout.addLayout(rangeInvErrorLayout)
+        
         postProcessingLayout.addWidget(self.errorGraphs)
         
         invError = QWidget()
@@ -4646,7 +4712,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorTopLayoutR = QHBoxLayout()
         invErrorTopLayoutR.setAlignment(Qt.AlignRight)
         invErrorTopLayoutR.addWidget(self.invErrorFilterBtn)
-        invErrorTopLayoutR.addWidget(self.invErrorReinvertBtn)
+        # invErrorTopLayoutR.addWidget(self.invErrorReinvertBtn)
         invErrorTopLayout.addLayout(invErrorTopLayoutR)
         
         invErrorLayout.addLayout(invErrorTopLayout, 0)
@@ -5266,6 +5332,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwInv.clear()
         self.mwInvError.clear()
         self.mwInvError2.clear()
+        self.rangeInvErrorMinInput.setText('')
+        self.rangeInvErrorMaxInput.setText('')
 
   
 #%% updater function and wine check
