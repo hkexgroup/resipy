@@ -3,11 +3,7 @@
 block_cipher = None
 
 
-datas=[('./resipy/exe/R2.exe','./resipy/exe'),
-       ('./resipy/exe/gmsh.exe','./resipy/exe'),
-       ('./resipy/exe/cR2.exe', './resipy/exe'),
-       ('./resipy/exe/R3t.exe', './resipy/exe'),
-       ('./resipy/exe/cR3t.exe', './resipy/exe'),
+datas=[('./resipy/exe/*','./resipy/exe'),
        ('./resipy/cext/*', './resipy/cext'),
        ('./logo.png', '.'),
        ('./logo.ico', '.'),
