@@ -3749,6 +3749,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'phaseInvMisfit' in s.df.columns:
                 s.df = s.df.drop('phaseInvMisfit', axis=1)
             s.df = pd.merge(s.df, df[cols], on=['a','b','m','n'], how='left')
+            s.dfInvErrOutputOrigin = s.df.copy() # for being able to reset post processing filters
 
                     
 
