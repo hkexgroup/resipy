@@ -8,11 +8,7 @@ block_cipher = None
 OS = platform.system()
 
 # https://stackoverflow.com/questions/11322538/including-a-directory-using-pyinstaller  
-datas=[('./resipy/exe/R2.exe','./resipy/exe'),
-        ('./resipy/exe/gmsh.exe','./resipy/exe'),
-        ('./resipy/exe/cR2.exe', './resipy/exe'),
-        ('./resipy/exe/R3t.exe', './resipy/exe'),
-        ('./resipy/exe/cR3t.exe', './resipy/exe'),
+datas=[('./resipy/exe/*','./resipy/exe'),
         ('./logo.png', '.'),
         ('./loadingLogo.png', '.'),
         ('./image/dipdip.png', './image'),
