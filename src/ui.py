@@ -3319,7 +3319,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)
             self.tabs.setTabEnabled(5, True)
-            self.tabs.setTabEnabled(6, True)
+            # self.tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
                 self.mwFwdPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
         self.forwardBtn = QPushButton('Forward Modelling')
@@ -3849,6 +3849,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else: # unfrozing
                 for i in range(n):
                     self.tabs.setTabEnabled(i, self.tabState[i])
+                if self.end is True:
+                    self.tabs.setTabEnabled(6, True) # post processing tab should only be activated after successful inversion
+                else:
+                    self.tabs.setTabEnabled(6, False)
                     
             
         # ------------------------ log sub tab
@@ -5052,7 +5056,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.tabs.setTabEnabled(2,val)
             self.tabs.setTabEnabled(4,val)
             self.tabs.setTabEnabled(5,val)
-            self.tabs.setTabEnabled(6,val)
+            # self.tabs.setTabEnabled(6,val)
             # try:
             if self.m3DRadio.isChecked():
                 self.mwManualFiltering.hide()
@@ -5270,7 +5274,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.tabs.setTabEnabled(3, True)
             self.tabs.setTabEnabled(4, False)
             self.tabs.setTabEnabled(5, False)
-            self.tabs.setTabEnabled(6, False)
             self.ftypeCombo.setEnabled(False)
             self.invRadio.setChecked(False)
             self.importDataBtn.setEnabled(False)
@@ -5330,6 +5333,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'pvslices':([],[],[]), 'pvthreshold':None,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         self.mwInv.clear()
+        self.tabs.setTabEnabled(6, False) # there is no post-processing after a reset!
         self.mwInvError.clear()
         self.mwInvError2.clear()
         self.rangeInvErrorMinInput.setText('')
