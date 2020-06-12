@@ -14,7 +14,7 @@ Downloads
 ---------
 Version 2.2.1 (beta):<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.1%20-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.0%20-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-macOS.dmg)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.1%20-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-macos.dmg)
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.1%20-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-linux)
 
 Version 2.0.2 (stable):<br>
@@ -32,7 +32,7 @@ Notes for Mac and Linux users:
 
 Zip files:<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.1%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-windows.zip)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.0%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.0/ResIPy-macOS.zip)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.1%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-macos.zip)
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.1%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.1/ResIPy-linux.zip)
 
 
