@@ -814,6 +814,16 @@ class App(QMainWindow):
                     self.plotManualFiltering()
                     self.elecTable.initTable(self.r2.elec)
                     self.tabImporting.setTabEnabled(1,True)
+                    if all(self.r2.surveys[0].df['irecip'].values == 0): # enabling some filtering capacities
+                        self.recipOrNoRecipShow(recipPresence=False)
+                    else:
+                        self.recipOrNoRecipShow(recipPresence=True)
+                        self.tabPreProcessing.setTabEnabled(2, True)
+                        self.filterAttrCombo.addItem('Reciprocal Error')
+                        self.plotError()
+                        self.errHist()
+                    if 'dev' in self.r2.surveys[0].df.columns:
+                        self.filterAttrCombo.addItem('Stacking Error (Dev.)')
                     if 'ip' in self.r2.surveys[0].df.columns:
                         if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
