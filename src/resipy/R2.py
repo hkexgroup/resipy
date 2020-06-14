@@ -645,6 +645,9 @@ class R2(object): # R2 master class instanciated by the GUI
         
         survey0.elec = elec
         survey0.df = dfm
+        survey0.dfOrigin = dfm # for raw phase plot
+        survey0.dfReset = dfm # for reseting filters on res
+        survey0.dfPhaseReset = dfm # for reseting filters on IP
         survey0.name = '3Dfrom2Dlines' if name is None else name
         self.surveys= [survey0]
         self.elec = None
