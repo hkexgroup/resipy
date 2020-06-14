@@ -890,11 +890,11 @@ class Survey(object):
         self.phaseErrorModel = errorModel
         # formatting coefs for print
         formattedCoefs = self.numFormating([a1, a2, R2_ip])
-        a1 = formattedCoefs[0]
-        a2 = formattedCoefs[1]
-        R2_ip = formattedCoefs[2]
-        print ('Error model is: Sp(m) = {}*R^{} (R^2 = {})'.format(a1,a2,R2_ip))
-        ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {}$R^{{{}}}$ (R$^2$ = {})'.format(a1, a2, R2_ip))
+        a1s = formattedCoefs[0]
+        a2s = formattedCoefs[1]
+        R2_ips = formattedCoefs[2]
+        print ('Error model is: Sp(m) = {}*R^{} (R^2 = {})'.format(a1s,a2s,R2_ips))
+        ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {}$R^{{{}}}$ (R$^2$ = {})'.format(a1s,a2s,R2_ips))
         if ax is None:
             return fig   
 
@@ -952,11 +952,11 @@ class Survey(object):
         self.phaseErrorModel = errorModel
         # formatting coefs for print
         formattedCoefs = self.numFormating([a3, b3, c3, R2_ip])
-        a3 = formattedCoefs[0]
-        b3 = formattedCoefs[1]
-        c3 = formattedCoefs[2]
-        R2_ip = formattedCoefs[3]
-        ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {}$R_{{avg}}^2$ + {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a3, b3, c3, R2_ip))
+        a3s = formattedCoefs[0]
+        b3s = formattedCoefs[1]
+        c3s = formattedCoefs[2]
+        R2_ips = formattedCoefs[3]
+        ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {}$R_{{avg}}^2$ + {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a3s, b3s, c3s, R2_ips))
         if ax is None:
             return fig   
 
@@ -1018,11 +1018,11 @@ class Survey(object):
         self.errorModel = errorModel
         # formatting coefs for print
         formattedCoefs = self.numFormating([a1, a2, R2])
-        a1 = formattedCoefs[0]
-        a2 = formattedCoefs[1]
-        R2 = formattedCoefs[2]
-        print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1,a2,R2))
-        ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1,a2,R2))
+        a1s = formattedCoefs[0]
+        a2s = formattedCoefs[1]
+        R2s = formattedCoefs[2]
+        print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1s,a2s,R2s))
+        ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig
         
@@ -1085,11 +1085,11 @@ class Survey(object):
 #        self.errorModel = lambda x : a1*(np.abs(x))+a2
         # formatting coefs for print
         formattedCoefs = self.numFormating([a1, a2, R2])
-        a1 = formattedCoefs[0]
-        a2 = formattedCoefs[1]
-        R2 = formattedCoefs[2]
-        print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1,a2,R2))
-        ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a1,a2,R2))
+        a1s = formattedCoefs[0]
+        a2s = formattedCoefs[1]
+        R2s = formattedCoefs[2]
+        print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1s,a2s,R2s))
+        ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig                  
         
