@@ -812,6 +812,30 @@ class Survey(object):
     #         t = '-'
     #     return t    
     
+    @staticmethod
+    def numFormating(numList):
+        """Formats numbers between -1 to 1 based on their decimals.
+        e.g., 0.00001 would be 1e-5 while 0.1 would remain 0.1
+        
+        Parameters
+        ----------
+        numList: list of floats
+        
+        Return
+        ------
+        formattedNums: string list of formatted floats
+        """
+        formattedNums = []
+        for num in numList:
+            if num != 0:
+                if np.abs(num) <= 0.001:
+                    formattedNums.append('{:.2e}'.format(num))
+                else:
+                    formattedNums.append('{:.3f}'.format(num))
+            else:
+                formattedNums.append('0')
+        return formattedNums
+                
     
     def fitErrorPwlIP(self, ax=None):
         """Plot the reciprocal phase errors with a power-law fit.
@@ -854,20 +878,23 @@ class Survey(object):
         ax.set_ylabel(r's($\phi$) [mrad]')
         ax.set_xlabel(r'$R_{avg}$ [$\Omega$]')      
         ax.legend(loc='best', frameon=True)
-        R2_ip= self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
+        R2_ip = self.R_sqr(np.log(bins_ip.iloc[:,1]),np.log(R_error_predict_ip))
         a1 = np.exp(coefs_ip[0])
         a2 = coefs_ip[1]
-        print ('Error model is: Sp(m) = {:.2f}*R^{:.2f} (R^2 = {:.2f})'.format(a1,a2,R2_ip))
-        if a1 > 0.001 and a2 > 0.001:
-            ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {:.2f}$R^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
-        else:
-            ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {:.2e}$R^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1, a2, R2_ip))
+        
         self.df['phaseError'] = a1*(np.abs(self.df['recipMean'])**a2)
         self.df['phase'] = -self.kFactor*self.df['ip']
         def errorModel(df):
             x = df['recipMean'].values
             return a1*(np.abs(x)**a2)
         self.phaseErrorModel = errorModel
+        # formatting coefs for print
+        formattedCoefs = self.numFormating([a1, a2, R2_ip])
+        a1 = formattedCoefs[0]
+        a2 = formattedCoefs[1]
+        R2_ip = formattedCoefs[2]
+        print ('Error model is: Sp(m) = {}*R^{} (R^2 = {})'.format(a1,a2,R2_ip))
+        ax.set_title('Multi bin power-law phase error plot\n' + r's($\phi$) = {}$R^{{{}}}$ (R$^2$ = {})'.format(a1, a2, R2_ip))
         if ax is None:
             return fig   
 
@@ -916,16 +943,20 @@ class Survey(object):
         a3 = coefs_ip[0]
         b3 = coefs_ip[1]
         c3 = coefs_ip[2]
-        if a3 > 0.001 and b3 > 0.001 and c3 > 0.001:
-            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.3f}$R_{{avg}}^2${:+.3f}$R_{{avg}}${:+.3f} ($R_{{avg}}^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
-        else:
-            ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {:.2e}$R_{{avg}}^2${:+.2e}$R_{{avg}}${:+.2e} ($R_{{avg}}^2$ = {:.3f})'.format(a3, b3, c3, R2_ip))
+        
         self.df['phaseError'] = (a3*np.log10(np.abs(self.df['recipMean']))**2) + (b3*np.log10(np.abs(self.df['recipMean'])) + c3)
         self.df['phase'] = -self.kFactor*self.df['ip']
         def errorModel(df):
             x = df['recipMean'].values
             return (a3*np.log10(np.abs(x))**2) + (b3*np.log10(np.abs(x)) + c3)
         self.phaseErrorModel = errorModel
+        # formatting coefs for print
+        formattedCoefs = self.numFormating([a3, b3, c3, R2_ip])
+        a3 = formattedCoefs[0]
+        b3 = formattedCoefs[1]
+        c3 = formattedCoefs[2]
+        R2_ip = formattedCoefs[3]
+        ax.set_title('Multi bin parabola phase error plot\n' + r's($\phi$) = {}$R_{{avg}}^2$ + {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a3, b3, c3, R2_ip))
         if ax is None:
             return fig   
 
@@ -979,18 +1010,19 @@ class Survey(object):
         R2= self.R_sqr(np.log(bins[:,1]),np.log(R_error_predict))
         a1 = np.exp(coefs[0])
         a2 = coefs[1]
-#        a3 = np.exp(coefs[0])
-#        a4 = coefs[1]
-        print('Error model is R_err = {:.2f} R_avg^{:.3f} (R^2 = {:.4f})'.format(a1,a2,R2))
-        if a1 > 0.001 and a2 > 0.001:
-            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}^{{{:.3f}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
-        else:
-            ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}^{{{:.3e}}}$ (R$^2$ = {:.3f})'.format(a1,a2,R2))
+
         self.df['resError'] = a1*(np.abs(self.df['recipMean'])**a2)
         def errorModel(df):
             x = df['recipMean'].values
             return a1*(np.abs(x)**a2)
         self.errorModel = errorModel
+        # formatting coefs for print
+        formattedCoefs = self.numFormating([a1, a2, R2])
+        a1 = formattedCoefs[0]
+        a2 = formattedCoefs[1]
+        R2 = formattedCoefs[2]
+        print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1,a2,R2))
+        ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1,a2,R2))
         if ax is None:
             return fig
         
@@ -1044,17 +1076,20 @@ class Survey(object):
         R2= self.R_sqr((bins[:,1]),(R_error_predict))
         a1 = coefs[0]
         a2 = coefs[1]
-        print('Error model is R_err = {:.2f}*R_avg + {:.2f} (R^2 = {:.4f})'.format(a1,a2,R2))
-        if a1 > 0.001 and a2 > 0.001:
-            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.3f}$R_{{avg}}${:+.3f} (R$^2$ = {:.3f})'.format(a1,a2,R2))
-        else:
-            ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {:.2e}$R_{{avg}}${:+.2e} (R$^2$ = {:.3f})'.format(a1,a2,R2))
+        
         self.df['resError'] = a1*(np.abs(self.df['recipMean']))+a2
         def errorModel(df):
             x = df['recipMean'].values
             return a1*(np.abs(x))+a2
         self.errorModel = errorModel
 #        self.errorModel = lambda x : a1*(np.abs(x))+a2
+        # formatting coefs for print
+        formattedCoefs = self.numFormating([a1, a2, R2])
+        a1 = formattedCoefs[0]
+        a2 = formattedCoefs[1]
+        R2 = formattedCoefs[2]
+        print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1,a2,R2))
+        ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a1,a2,R2))
         if ax is None:
             return fig                  
         
