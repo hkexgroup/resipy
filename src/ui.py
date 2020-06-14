@@ -674,6 +674,7 @@ class App(QMainWindow):
                 self.restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 try:
+                    self.loadingWidget('Loading data, please wait...', False)
                     if self.r2.iBatch is False:
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
@@ -697,6 +698,7 @@ class App(QMainWindow):
                     self.fnamesCombo.show()
                     self.fnamesComboLabel.show()
                     self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
+                    self.loadingWidget(exitflag=True)
                     self.plotPseudo()
                     self.elecTable.initTable(self.r2.elec)
                     self.tabImporting.setTabEnabled(1,True)
@@ -721,6 +723,7 @@ class App(QMainWindow):
                             self.dcaButton.setEnabled(True)
                             self.dcaProgress.setEnabled(True)
                 except Exception as e:
+                    self.loadingWidget(exitflag=True)
                     print('Error in getdir(): ', e)
                     self.errorDump('File format is not recognized (one or all files!)')
         
@@ -797,6 +800,7 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 val = float(self.lineSpacing.text())
                 try:
+                    self.loadingWidget('Loading data, please wait...', False)
                     self.r2.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
                     self.infoDump('3D survey from regular 2D lines created.')
                     self.ipCheck.setEnabled(True)
@@ -830,6 +834,7 @@ class App(QMainWindow):
                         if self.ftype == 'Syscal':
                             self.dcaButton.setEnabled(True)
                             self.dcaProgress.setEnabled(True)               
+                    self.loadingWidget(exitflag=True)
                     self.plotPseudo()
                     self.invNowBtn.setEnabled(True)
                     self.activateTabs(True)
@@ -840,6 +845,7 @@ class App(QMainWindow):
                     if np.isnan(self.r2.elec[['x','y','z']].values).any():
                         self.topoInterpBtnFunc()
                 except Exception as e:
+                    self.loadingWidget(exitflag=True)
                     print('Error in create3DFunc(): ', e)
                     self.errorDump('File format is not recognized or not all files go the same number of electrodes')
         
