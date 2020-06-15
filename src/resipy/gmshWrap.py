@@ -1,8 +1,8 @@
 # GMSH WRAPPER FUNCTIONS
 """
 Created on Tue Apr 10 14:32:14 2018 in python 3.6.5
-Wrapper for creating 2d triangular meshes with gmsh and converting it 
-into a mesh.dat format for R2. The program tri_mesh () expects a directory "exe"
+Wrapper for creating 2d and 3d triangular meshes with gmsh and converting it 
+into a mesh.dat format for R2 and R3t. The program tri_mesh () expects a directory "exe"
 to be within the api (or working) directory with a gmsh.exe inside it. 
 
 @author: jimmy Boyd - jamyd91@bgs.ac.uk
@@ -332,7 +332,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     
     # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
     if np.max(z_base) > np.min(electrodes[1]):
-        warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh likely to be buggy!", Warning)   
+        warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh could be buggy!", Warning)   
     
     basal_pnt_cache = []
     for i in range(len(x_base)):

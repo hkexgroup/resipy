@@ -491,7 +491,7 @@ timings['dc-3d'] = time.time() - t0
 
 
 
-#%% 3D testing importing a mesh (takes a while)
+#%% 3D testing importing and exporting a mesh 
 plt.close('all')
 print('-------------Testing 3D inversion with custom mesh ------------')
 t0 = time.time()
@@ -507,6 +507,7 @@ k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
 #mesh calculations 
+k.mesh.exportTetgenMesh(testdir + 'mesh/tetgen_test')
 smesh = k.mesh.extractSurface() # this test mesh.computeNiegh as well 
 tmesh = k.meshResults[0].threshold(attr='Resistivity',vmin=20,vmax=100)
 print('elapsed: {:.4}s'.format(time.time() - t0))
@@ -540,9 +541,9 @@ t0 = time.time()
 k = R2(typ='R3t') # create R2 class
 k.importElec(testdir + 'dc-3d-column/elec.csv') # import electrodes 
 k.createMesh(typ='prism',cl=0.1,elemz=2)
-a = np.array(k.mesh.elm_centre).T
+a = k.mesh.elmCentre
 idx = (a[:,1]<0.45) & (a[:,1]>-0.45) & (a[:,0]<0.45) & (a[:,0]>-0.45) # set a zone of different resistivity 
-res0 = np.array(k.mesh.attr_cache['res0'])
+res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
 k.setRefModel(res0) # set parameters for forward model 
 k.showMesh(attr='res0',color_map='jet')
@@ -551,7 +552,7 @@ k.forward() # do forward model
 
 k.setRefModel(np.ones_like(res0)*100) # reset reference model 
 k.invert() # invert the problem 
-k.showResults(index=1) #show result 
+k.showResults(index=1, use_pyvista=False) #show result 
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
@@ -561,7 +562,6 @@ timings['dc-3d-column-mesh'] = time.time() - t0
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
-# 
 
 #%% test timelapse 3D -- takes a long time
 k = R2(typ='R3t')
