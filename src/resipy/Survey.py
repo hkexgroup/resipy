@@ -2325,10 +2325,10 @@ class Survey(object):
         # format >>> m_indx a b m n V/I stdev_V/I
         for i in range(nomeas): 
             line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
-                    df['a'][i],
-                    df['b'][i],
-                    df['m'][i],
-                    df['n'][i],
+                    int(df['a'][i]),
+                    int(df['b'][i]),
+                    int(df['m'][i]),
+                    int(df['n'][i]),
                     df['recipMean'][i],
                     df['resError'][i])
             fh.write(line)
