@@ -186,41 +186,46 @@ class Mesh:
     
     Parameters
     ----------
-    num_nodes : int
-        number of nodes
-    num_elms : int 
-        number of elements 
     node_x : list, 1d numpy array
         x coordinates of nodes 
     node_y : list, 1d numpy array
         coordinates of nodes
     node_z : list, 1d numpy array
         z coordinates of nodes 
-    node_id : list
-        node id number (ie 1,2,3,4,...)
-    elm_id : list
-        element id number 
-    node_data : list of lists of ints 
+    connection_matrix: M by N numpy array 
         nodes of element vertices in the form [[node1],[node2],[node3],...], each
         node id should be an integer type. 
-    elm_centre : list of lists of floats
-        centre of elements (x,y)
-    elm_area : list 
-        area of each element
     cell_type : list of ints
         code referencing cell geometry (e.g. triangle) according to vtk format
-    cell_attributes : list of floats
-        the values of the attributes given to each cell 
-    atribute_title : string 
-        what is the attribute? we may use conductivity instead of resistivity for example
     original_file_path : string, optional
         file path to where the mesh file was originally imported
     regions : optional
         element indexes for a material in the mesh (needs further explanation)
         
     Returns
-    -------
+    ----------
     Mesh : class
+    
+    Attritbutes 
+    ----------
+    numnp: int
+        Number of nodes 
+    numel: int 
+        Number of elements 
+    node: N by 3 np array 
+        Node coordinates (x y z columns)
+    connection: N by M np array 
+        Connection matrix mapping elements on to thier respective vertices or 
+        nodes. Where N is the number of elements and M is the number of element
+        vertices (i.e. M = 3 for a triangle mesh)
+    elmCentre: N by 3 np array
+        Coordinates for the geometric center for each element (x y z columns)
+    df: pandas dataframe 
+        Contains attributes assocaited with each element inside the mesh, for 
+        example resistivity or parameter number 
+    Note: 
+    ----------
+    Something about the attribute_cache 
     """
 
     #%% mesh creation
@@ -228,43 +233,36 @@ class Mesh:
                  node_x,#x coordinates of nodes 
                  node_y,#y coordinates of nodes
                  node_z,#z coordinates of nodes 
-                 node_id,#node id number 
-                 elm_id,#element id number 
                  node_data,#nodes of element vertices
                  cell_type,#according to vtk format
-                 cell_attributes,#the values of the attributes given to each cell 
-                 atribute_title,#what is the attribute? we may use conductivity instead of resistivity for example
                  original_file_path='N/A',
                  order_nodes=True,# order nodes if True, can be computationally expensive 
                  compute_centre=True): # compute cell centres if true, also expensive for big meshes  
         
 
         #assign variables to the mesh object 
-        self.num_nodes = len(node_x)
-        self.num_elms = len(node_data[0])
-        self.node_x = node_x
-        self.node_y = node_y
-        self.node_z = node_z
-        self.node_id = node_id
-        self.elm_id = elm_id
-        self.con_matrix = node_data #connection matrix
-        self.cell_type = cell_type
-        self.cell_attributes = cell_attributes 
-        self.atribute_title = atribute_title
-        self.original_file_path = original_file_path
-        self.surface = None # surface points for cropping the mesh when contouring
-        self.e_nodes = None
+        self.numnp = len(node_x) # ninum >>> use Andy's naming scheme 
+        self.numel = node_data.shape[0] # numel 
+        self.node = np.array([node_x,node_y,node_z]).T 
+        self.connection = np.array(node_data,dtype='int64') #connection matrix # connection 
+        self.cell_type = cell_type # cellType
+        self.originalFilePath = original_file_path # originalFilePath 
+        self.eNodes  = None # node number that electrodes occupy # eNode 
         self.iremote = None # specify which electrode is remote
-        self.cax = None # store mesh.shwo() output for faster mesh.draw()
-        self.zone = np.ones(self.num_elms) # by default all in the same zone
-        self.elm_centre = None
-        self.elm_area = None
-        self.attr_cache={'param': np.arange(self.num_elms)+1,
-                         'region':cell_attributes,
-                         'zone':np.ones(self.num_elms)}# store attributes values per cell
+        self.cax = None # store mesh.show() output for faster mesh.draw()
+        self.zone = np.ones(self.numel) # by default all in the same zone # remove? 
+        self.elmCentre = None  # remove? 
+        
+        #mesh element attributes 
+        df={'param': np.arange(self.numel)+1,
+                    'elm_id': np.arange(self.numel)+1,
+                    'region': np.ones(self.numel),
+                    'cellType':np.ones(self.numel)*cell_type[0]}# store attributes values per cell
+        self.df= pd.DataFrame(df) # rename to df 
+        
         self.mesh_title = "2D_R2_mesh"
         self.no_attributes = 0
-        self.neigh_matrix = None #neighbour matrix, not usually needed unless for 3d tetrahedra problems 
+        self.neigh_matrix = None # neighbour matrix, not usually needed unless for 3d tetrahedra problems 
         self.tri_combo = None
         
         #decide on number of dimensions
@@ -282,24 +280,34 @@ class Mesh:
             self.cellCentres()
         if order_nodes: # order nodes 
             self.orderNodes()
+            
+        #old variable names 
+            
+        # self.num_nodes = len(node_x) # ninum >>> use Andy's naming scheme 
+        # self.num_elms = node_data.shape[0] # numel 
+        # self.node = np.array([node_x,node_y,node_z]).T 
+        # self.con_matrix = np.array(node_data,dtype='int64') #connection matrix # connection 
+        # self.cell_type = cell_type # cellType
+        # self.original_file_path = original_file_path # originalFilePath 
+        # self.e_nodes = None # node number that electrodes occupy # eNode 
+        # self.iremote = None # specify which electrode is remote
+        # self.cax = None # store mesh.show() output for faster mesh.draw()
+        # self.zone = np.ones(self.num_elms) # by default all in the same zone # remove? 
+        # self.elm_centre = None  # remove? 
     
     def copy(self):
         """Return a copy of mesh object. 
         """
-        mesh = Mesh(self.node_x,
-                    self.node_y,
-                    self.node_z,
-                    self.node_id,
-                    self.elm_id,
-                    self.con_matrix,
+        mesh = Mesh(self.node[:,0],
+                    self.node[:,1],
+                    self.node[:,2],
+                    self.connection,
                     self.cell_type,
-                    self.cell_attributes,
-                    self.atribute_title,
-                    self.original_file_path,
+                    self.originalFilePath,
                     order_nodes=False,# should be already ordered
                     compute_centre=False)# should be already computed 
-        mesh.elm_centre = self.elm_centre
-        mesh.attr_cache = self.attr_cache.copy()
+        mesh.elmCentre = self.elmCentre
+        mesh.df = self.df.copy()
         return mesh 
     
     
@@ -307,17 +315,17 @@ class Mesh:
         """ Make Y column Z column and vice versa, this is useful for when 
         dealing with 2D meshes. Dimensions are modified in place. 
         """
-        node_y_cache = np.array(self.node_y)
-        node_z_cache = np.array(self.node_z)
+        node_y_cache = self.node[:,1].copy()
+        node_z_cache = self.node[:,2].copy()
         
-        self.node_y = list(node_z_cache) # flip the yz columns 
-        self.node_z = list(node_y_cache)
+        self.node[:,1] = node_z_cache
+        self.node[:,2] = node_y_cache
         
         self.cellCentres() # recompute cell centres 
                 
     
     #%% mesh attribute handling 
-    def add_e_nodes(self, e_nodes):
+    def setElecNode(self, e_nodes):
         """Assign node numbers to electrodes. 
         
         Parameters
@@ -325,24 +333,28 @@ class Mesh:
         e_nodes: array like
             array of ints which index the electrode nodes in a mesh
         """
-        self.e_nodes = e_nodes
-        self.elec_x = np.array(self.node_x)[np.array(e_nodes, dtype=int)]
-        if self.ndims==3:
-            self.elec_y = np.array(self.node_y)[np.array(e_nodes, dtype=int)]
-        else:
-            self.elec_y = np.zeros_like(self.elec_x)
-        self.elec_z = np.array(self.node_z)[np.array(e_nodes, dtype=int)]
+        self.eNodes  = e_nodes
+        self.elec = self.node[e_nodes,:]
+    
+    def setElec(self,elec_x,elec_y,elec_z):
+        if len(elec_x) != len(elec_y) or len(elec_x) != len(elec_z):
+            raise ValueError('Mismatch in the electrode array lengths when setting the electrodes in mesh class')
+        self.elec = np.array([elec_x,elec_y,elec_z]).T
+    
+    def add_e_nodes(self, e_nodes):
+        warnings.warn('add_e_nodes is deprecaited: use setElecNode instead')
+        self.setElecNode(e_nodes)
     
     #add some functions to allow adding some extra attributes to mesh 
     def add_sensitivity(self,values):#sensitivity of the mesh
-        if len(values)!=self.num_elms:
+        if len(values)!=self.numel:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.sensitivities = values
         
     def file_path(self):
         """Returns the file path from where the mesh was imported
         """
-        return(format(self.original_file_path))
+        return(format(self.originalFilePath))
        
     def type2VertsNo(self):
         """Converts vtk cell types into number of vertices each element has
@@ -365,11 +377,11 @@ class Mesh:
     def summary(self,flag=True):
         """Prints summary information about the mesh
         """
-        self.no_attributes = len(self.attr_cache)
+        self.no_attributes = len(self.df.keys())
         #returns summary information about the mesh, flagto print info, change to return string
         out = "\n_______mesh summary_______\n"
-        out += "Number of elements: %i\n"%int(self.num_elms)
-        out += "Number of nodes: %i\n"%int(self.num_nodes)
+        out += "Number of elements: %i\n"%int(self.numel)
+        out += "Number of nodes: %i\n"%int(self.numnp)
         out += "Number of cell vertices: %i\n"%self.type2VertsNo()
         out += "Number of cell attributes: %i\n"%int(self.no_attributes)
         out += "Dimensions: %i\n"%int(self.ndims)
@@ -381,10 +393,14 @@ class Mesh:
 
     def __str__(self):
         #returns the summary function if the object is printed using print()
-        return self.summary(flag=False) + self.show_avail_attr(flag=False)
+        return self.summary(flag=False) + self.showAvailAttr(flag=False)
             
     def add_attribute(self,values,key):
-        """Add a new attribute to mesh. 
+        warnings.warn('add_attribute is depreciated, use addAttribute instead')
+        self.addAttribute(values, key)
+        
+    def addAttribute(self,values,key):
+        """Add a new/update attribute to mesh. 
         
         Parameters
         ------------
@@ -395,22 +411,22 @@ class Mesh:
             Name of the attribute, this will be used to reference to the values
             in other mesh functions. 
         """
-        if len(values)!=self.num_elms:
-            print(len(values),self.num_elms)
-            raise ValueError("The length of the new attributes array (%i) does not match the number of elements in the mesh (%i)"%(len(values),self.num_elms))
+        if len(values)!=self.numel:
+            print(len(values),self.numel)
+            raise ValueError("The length of the new attributes array (%i) does not match the number of elements in the mesh (%i)"%(len(values),self.numel))
         self.no_attributes += 1
-        try: 
-            self.attr_cache[key]=values #allows us to add an attributes to each element.
-        except AttributeError:
-            self.attr_cache = {}
-            self.attr_cache[key]=values #add attribute 
+        self.df[key]=values #allows us to add an attributes to each element.
         
     def show_avail_attr(self,flag=True):
-        """Show available attributes in mesh.attr_cache. 
+        warnings.warn("show_avail_attr is depreciated, use showAvailAttr instead")
+        self.showAvailAttr(flag)
+        
+    def showAvailAttr(self,flag=True):
+        """Show available attributes in mesh.df. 
         """
         out = '\n______cell attributes_____\n'
         try: 
-            for i,key in enumerate(self.attr_cache.keys()):
+            for i,key in enumerate(self.df.keys()):
                 out += key + '\n'
         except:
             out += "None\n"
@@ -418,14 +434,6 @@ class Mesh:
             print(out)
         else:
             return out
-    
-    def update_attribute(self,new_attributes,new_title='default'):
-        """Allows you to reassign the default cell attribute in the mesh object.  
-        """
-        if len(new_attributes)!=self.num_elms:
-            raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
-        self.cell_attributes=new_attributes
-        self.atribute_title=str(new_title)
     
     #%% mesh calculations 
     def orderNodes(self,return_count=False):
@@ -436,79 +444,67 @@ class Mesh:
         return_count:bool, optional
             Function returns the number of reordered elements, default is False. 
         """
-        con_mat = self.con_matrix
-        con_mata = np.array(self.con_matrix).T.copy() # new object of the connection matrix to reference
-        node_x = self.node_x
-        node_y = self.node_y
-        node_z = self.node_z
+        con_mat = self.connection
+        con_mata = con_mat.copy() # new object of the connection matrix to reference
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
         count = 0
         
         if int(self.cell_type[0])==5:#then elements are triangles
-            for i in range(self.num_elms):
-                n1=(node_x[con_mat[0][i]],node_z[con_mat[0][i]])#define node coordinates
-                n2=(node_x[con_mat[1][i]],node_z[con_mat[1][i]])
-                n3=(node_x[con_mat[2][i]],node_z[con_mat[2][i]])
+            for i in range(self.numel):
+                n1=(node_x[con_mat[i][0]],node_z[con_mat[i][0]])#define node coordinates
+                n2=(node_x[con_mat[i][1]],node_z[con_mat[i][1]])
+                n3=(node_x[con_mat[i][2]],node_z[con_mat[i][2]])
                 #compute triangle centre
                 if interp.ccw(n1,n2,n3)==1:
                     count+=1
                     #points are clockwise and therefore need swapping round
-                    con_mat[1][i] = con_mata[i][0]
-                    con_mat[0][i] = con_mata[i][1]
+                    con_mat[i][1] = con_mata[i][0]
+                    con_mat[i][0] = con_mata[i][1]
                     
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
-            for i in range(self.num_elms):
-                n1=(node_x[con_mat[0][i]],node_z[con_mat[0][i]])#define node coordinates
-                n2=(node_x[con_mat[1][i]],node_z[con_mat[1][i]])
-                n3=(node_x[con_mat[2][i]],node_z[con_mat[2][i]])
-                n4=(node_x[con_mat[3][i]],node_z[con_mat[3][i]])
-                
-                p = np.array((n1,n2,n3,n4)).T
+            for i in range(self.numel):
+                p = self.node[con_mat[i]].T
                 #compute triangle centre
-                order = interp.order_quad(p[0],p[1])
+                order = interp.order_quad(p[0],p[2])
                 if list(order) != [0,1,2,3]:
                     count+=1
                     #points are not counter clockwise
-                    con_mat[0][i] = con_mata[i][order[0]]
-                    con_mat[1][i] = con_mata[i][order[1]]
-                    con_mat[2][i] = con_mata[i][order[2]]
-                    con_mat[3][i] = con_mata[i][order[3]]
+                    con_mat[i][0] = con_mata[i][order[0]]
+                    con_mat[i][1] = con_mata[i][order[1]]
+                    con_mat[i][2] = con_mata[i][order[2]]
+                    con_mat[i][3] = con_mata[i][order[3]]
                     
         elif int(self.cell_type[0]) == 11: # elements are voxels
             #print('Node ordering scheme not avialable with this mesh type')
             return
         
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
-            for i in range(self.num_elms):
-                n1=(node_x[con_mat[0][i]],node_y[con_mat[0][i]],node_z[con_mat[0][i]])#define node coordinates
-                n2=(node_x[con_mat[1][i]],node_y[con_mat[1][i]],node_z[con_mat[1][i]])
-                n3=(node_x[con_mat[2][i]],node_y[con_mat[2][i]],node_z[con_mat[2][i]])
-                n4=(node_x[con_mat[3][i]],node_y[con_mat[3][i]],node_z[con_mat[3][i]])
+            for i in range(self.numel):
+                p = self.node[con_mat[i]].T
                 
-                p = np.array((n1,n2,n3,n4)).T
-                #compute triangle centre
                 if interp.check_tetra(p[0],p[1],p[2]) == 1:
                     count += 1
-                    con_mat[1][i] = con_mata[i][0]
-                    con_mat[0][i] = con_mata[i][1]
+                    con_mat[i][1] = con_mata[i][0]
+                    con_mat[i][0] = con_mata[i][1]
                     
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
-            for i in range(self.num_elms):
-                n1=(node_x[con_mat[0][i]],node_y[con_mat[0][i]],node_z[con_mat[0][i]])#define node coordinates
-                n2=(node_x[con_mat[1][i]],node_y[con_mat[1][i]],node_z[con_mat[1][i]])
-                n3=(node_x[con_mat[2][i]],node_y[con_mat[2][i]],node_z[con_mat[2][i]])
-                # n4=(node_x[con_mat[3][i]],node_y[con_mat[3][i]],node_z[con_mat[3][i]])
-                # n5=(node_x[con_mat[4][i]],node_y[con_mat[4][i]],node_z[con_mat[4][i]])
-                # n6=(node_x[con_mat[5][i]],node_y[con_mat[5][i]],node_z[con_mat[5][i]])
+            for i in range(self.numel):
+                n1=(node_x[con_mat[i][0]],node_y[con_mat[i][0]],node_z[con_mat[i][0]])#define node coordinates
+                n2=(node_x[con_mat[i][1]],node_y[con_mat[i][1]],node_z[con_mat[i][1]])
+                n3=(node_x[con_mat[i][2]],node_y[con_mat[i][2]],node_z[con_mat[i][2]])
+
                 #see if top of triangle is counter-clockwise
                 if interp.ccw(n1,n2,n3) == 1: #points are clockwise and therefore need swapping round
                     count += 1
-                    con_mat[1][i] = con_mata[i][0] # correct the top of the triangle 
-                    con_mat[0][i] = con_mata[i][1]
-                    con_mat[3][i] = con_mata[i][4] # correct the bottom of the triangle 
-                    con_mat[4][i] = con_mata[i][3]
+                    con_mat[i][1] = con_mata[i][0] # correct the top of the triangle 
+                    con_mat[i][0] = con_mata[i][1]
+                    con_mat[i][3] = con_mata[i][4] # correct the bottom of the triangle 
+                    con_mat[i][4] = con_mata[i][3]
 
         
-        self.con_matrix = con_mat
+        self.connection = con_mat
         
         if return_count:
             return count
@@ -519,9 +515,9 @@ class Mesh:
         connection matrix
         """
         if param is None:
-            param = np.array(self.attr_cache['param'])
+            param = self.df['param'].values
         else:
-            if len(param)!= self.num_elms:
+            if len(param)!= self.numel:
                 raise ValueError('The parameter array does not match the number of elements')
                 return
 
@@ -534,103 +530,119 @@ class Mesh:
         newval = newparam[np.searchsorted(val, param)] # https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
         param = newval
         order = np.argsort(param)[::-1]
-        
-        dims = len(self.con_matrix)        
-        con_mat_fix = [np.array([0]*self.num_elms)]*dims
+           
+        con_mata = self.connection.copy()
+        con_mat_fix = con_mata[order,:]
         paramFixed = np.array(param)[order]
-
-        for i in range(dims):
-            arr = np.array(self.con_matrix[i])
-            con_mat_fix[i] = list(arr[order])
             
-        for key in self.attr_cache.keys():
-            self.attr_cache[key] = list(np.array(self.attr_cache[key])[order])
+        for key in self.df.keys():
+            self.df[key] = self.df[key].values[order]
         
-        self.con_matrix = con_mat_fix
+        self.connection = con_mat_fix
         self.cellCentres() # recompute them too
-        self.add_attribute(paramFixed,'param')
+        self.addAttribute(paramFixed,'param')
+        
+    def resetParam(self):
+        """Reorder parameters into consective ascending order 
+        """
+        param = np.arange(self.numel) + 1
+        self.addAttribute(param,'param')
         
     
     def cellCentres(self):
         """A numpy-based approximation of cell centres for 2D and 3D elements. 
         It's calculated from the mean of cell x y z node coordinates 
         """
-        con_mat = np.array(self.con_matrix).T
-        vertx = np.array(self.node_x)[con_mat]
-        verty = np.array(self.node_y)[con_mat]
-        vertz = np.array(self.node_z)[con_mat]
+        #print('Calculating cell centres')
+        con_mat = self.connection
+        vertx = self.node[:,0][con_mat]
+        verty = self.node[:,1][con_mat]
+        vertz = self.node[:,2][con_mat]
 
-        elm_centre = [[0]*self.num_elms, [0]*self.num_elms, [0]*self.num_elms]
+        elm_centre = np.zeros((self.numel,3))
         
-        elm_centre[0] = list(np.mean(vertx,axis=1))
-        elm_centre[1] = list(np.mean(verty,axis=1))
-        elm_centre[2] = list(np.mean(vertz,axis=1))
-        self.elm_centre = elm_centre
+        elm_centre[:,0] = np.mean(vertx,axis=1)
+        elm_centre[:,1] = np.mean(verty,axis=1)
+        elm_centre[:,2] = np.mean(vertz,axis=1)
+        self.elmCentre = elm_centre
+        self.df['X'] = elm_centre[:,0]
+        self.df['Y'] = elm_centre[:,1]
+        self.df['Z'] = elm_centre[:,2]
     
     
     def cellArea(self):
         """Compute the element areas, or in the case of 3D meshes compute the 
         cell volumes. Not yet implimented. 
         """
-        con_mat = self.con_matrix
-        self.elm_area=[0]*self.num_elms
+        con_mat = self.connection
+        elm_area=[0]*self.numel
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
 
         if int(self.cell_type[0])==5:#then elements are triangles
-            for i in range(self.num_elms):
-                n1=(self.node_x[con_mat[0][i]],self.node_z[con_mat[0][i]])#define node coordinates
-                n2=(self.node_x[con_mat[1][i]],self.node_z[con_mat[1][i]])
-                n3=(self.node_x[con_mat[2][i]],self.node_z[con_mat[2][i]])
+            for i in range(self.numel):
+                n1=(node_x[con_mat[i][0]], node_z[con_mat[i][0]])#define node coordinates
+                n2=(node_x[con_mat[i][1]], node_z[con_mat[i][1]])
+                n3=(node_x[con_mat[i][2]], node_z[con_mat[i][2]])
                 #compute area (for a triangle this is 0.5*base*height)
                 base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
                 mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
                 height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
-                self.elm_area[i] = 0.5*base*height
+                elm_area[i] = 0.5*base*height
                 
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
-            for i in range(self.num_elms):
-                n1=(self.node_x[con_mat[0][i]],self.node_z[con_mat[0][i]])#define node coordinates
-                n2=(self.node_x[con_mat[1][i]],self.node_z[con_mat[1][i]])
-                n3=(self.node_x[con_mat[2][i]],self.node_z[con_mat[2][i]])
-                n4=(self.node_x[con_mat[3][i]],self.node_z[con_mat[3][i]])
-                p = np.array((n1,n2,n3,n4)).T
+            for i in range(self.numel):
+                p = self.node[con_mat[i]].T
                 dx = abs(max(p[0]) - min(p[0]))
                 dz = abs(max(p[1]) - min(p[1]))
-                self.elm_area[i] = dx*dz
+                elm_area[i] = dx*dz
                 
         elif int(self.cell_type[0]) == 11: # elements are voxels
-            for i in range(self.num_elms):
-                n1=(self.node_x[con_mat[0][i]],self.node_y[con_mat[0][i]],self.node_z[con_mat[0][i]])#define node coordinates
-                n2=(self.node_x[con_mat[1][i]],self.node_y[con_mat[1][i]],self.node_z[con_mat[1][i]])
-                n3=(self.node_x[con_mat[2][i]],self.node_y[con_mat[2][i]],self.node_z[con_mat[2][i]])
-                n4=(self.node_x[con_mat[3][i]],self.node_y[con_mat[3][i]],self.node_z[con_mat[3][i]])
-                n5=(self.node_x[con_mat[4][i]],self.node_y[con_mat[4][i]],self.node_z[con_mat[4][i]])#define node coordinates
-                n6=(self.node_x[con_mat[5][i]],self.node_y[con_mat[5][i]],self.node_z[con_mat[5][i]])
-                n7=(self.node_x[con_mat[6][i]],self.node_y[con_mat[6][i]],self.node_z[con_mat[6][i]])
-                n8=(self.node_x[con_mat[7][i]],self.node_y[con_mat[7][i]],self.node_z[con_mat[7][i]])
+            for i in range(self.numel):
+                p = self.node[con_mat[i]].T
                 #compute volume (which is a bit of an approximation)
-                p = np.array((n1,n2,n3,n4,n5,n6,n7,n8)).T
                 dx = abs(max(p[0]) - min(p[0]))
                 dy = abs(max(p[1]) - min(p[1]))
                 dz = abs(max(p[2]) - min(p[2]))
-                self.elm_area[i] = dx*dy*dz
+                elm_area[i] = dx*dy*dz
 
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
-            print('sorry cant compute element areas for this cell type yet')
-            return 
-            for i in range(self.num_elms):
-                n1=(self.node_x[con_mat[0][i]],self.node_y[con_mat[0][i]],self.node_z[con_mat[0][i]])#define node coordinates
-                n2=(self.node_x[con_mat[1][i]],self.node_y[con_mat[1][i]],self.node_z[con_mat[1][i]])
-                n3=(self.node_x[con_mat[2][i]],self.node_y[con_mat[2][i]],self.node_z[con_mat[2][i]])
-                n4=(self.node_x[con_mat[3][i]],self.node_y[con_mat[3][i]],self.node_z[con_mat[3][i]])
-
+            warnings.warn('Area calculation for tetrahedral meshes is not yet validated')
+            for i in range(self.numel):
+                p = self.node[con_mat[i]].T
+                #find apex of tetra (solve via dot product)
+                P = p[:,0] # point 1 
+                Q = p[:,1] # point 2 
+                R = p[:,2] # point 3
+                pq = Q - P # p to q vector 
+                pr = R - P # p to r vector 
+                v = np.cross(pq, pr) # cross product 
+                A = v[0] # equation of plane parameters 
+                B = v[1]
+                C = v[2]
+                D = -(A*P[0] + B*P[1] + C*P[2])
+                S = p[:,3] # point 4
+                #height of tetra 
+                height = np.abs(A*S[0] + B*S[1] + C*S[2] + D) / np.sqrt(A**2 + B**2 + C**2)
+                #area of base triangle 
+                PQ = np.linalg.norm(pq) # magnitude / norm of vectors 
+                PR = np.linalg.norm(pr)
+                theta = np.arccos(np.dot(pq,pr) / (PQ*PR)) # find angle between vectors 
+                area = 0.5 * PQ * PR * np.sin(theta) #area of baseline triangle 
+                
+                #according to http://mathcentral.uregina.ca/QQ/database/QQ.09.03/peter2.html
+                #the volume is calculated as 1/3 * height * area of triangle 
+                elm_area[i] = (1/3)*area*height
+                
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
-            for i in range(self.num_elms):
-                n1=(self.node_x[con_mat[0][i]],self.node_y[con_mat[0][i]],self.node_z[con_mat[0][i]])#define node coordinates
-                n2=(self.node_x[con_mat[1][i]],self.node_y[con_mat[1][i]],self.node_z[con_mat[1][i]])
-                n3=(self.node_x[con_mat[2][i]],self.node_y[con_mat[2][i]],self.node_z[con_mat[2][i]])
-                n4=(self.node_x[con_mat[3][i]],self.node_y[con_mat[3][i]],self.node_z[con_mat[3][i]])
-                n5=(self.node_x[con_mat[3][i]],self.node_y[con_mat[3][i]],self.node_z[con_mat[3][i]])
-                n6=(self.node_x[con_mat[3][i]],self.node_y[con_mat[3][i]],self.node_z[con_mat[3][i]])
+            for i in range(self.numel):
+                n1=(node_x[con_mat[i][0]], node_y[con_mat[i][0]], node_z[con_mat[i][0]])#define node coordinates
+                n2=(node_x[con_mat[i][1]], node_y[con_mat[i][1]], node_z[con_mat[i][1]])
+                n3=(node_x[con_mat[i][2]], node_y[con_mat[i][2]], node_z[con_mat[i][2]])
+                n4=(node_x[con_mat[i][3]], node_y[con_mat[i][3]], node_z[con_mat[i][3]])
+                n5=(node_x[con_mat[i][4]], node_y[con_mat[i][4]], node_z[con_mat[i][4]])
+                n6=(node_x[con_mat[i][5]], node_y[con_mat[i][5]], node_z[con_mat[i][5]])
                 #compute wedge volume by computing face area first
                 base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
                 mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
@@ -638,18 +650,28 @@ class Mesh:
                 area = 0.5*base*height
                 p = np.array((n1,n2,n3,n4,n5,n6)).T
                 dz = abs(max(p[2]) - min(p[2]))
-                self.elm_area[i] = area * dz
+                elm_area[i] = area * dz
+                
+        if self.ndims == 2:
+            self.df['Area'] = elm_area
+        else:                
+            self.df['Volume'] = elm_area
 
             
-    def computeNeigh(self):
+    def computeNeigh(self): # fix me 
         """Compute element neighbour matrix
         """
         if self.type2VertsNo() == 6 or self.type2VertsNo()==8:#not a tetrahedra 3d mesh 
             raise Exception("Sorry neighbour calculation not available yet with this mesh type")
         elif self.type2VertsNo() == 4 and self.ndims==2:#then its a quad mesh 
             raise Exception("Sorry neighbour calculation not available yet with this mesh type")
+         
+        dim = self.connection.shape[1]
+        con_mat = [[0]*self.numel]*dim
+        for i in range(dim):
+            con_mat[i] = list(self.connection[:,i])
             
-        con_mat = tuple(self.con_matrix)
+        con_mat = tuple(con_mat)
         if self.ndims == 3:
             self.neigh_matrix, self.tri_combo = mc.neigh3d(con_mat,1)
         elif self.ndims == 2:
@@ -678,7 +700,7 @@ class Mesh:
         print('done')
         
         
-    def splitTri(self,param=None):
+    def splitTri(self,param=None): # fix me 
         """Refine triangles by splitting them into 4 smaller triangles 
         """
         #error checks 
@@ -689,39 +711,50 @@ class Mesh:
         
         #see if parameter already assigned 
         if param is None:
-            if 'param' not in self.attr_cache.keys():
-                self.attr_cache['param'] = 1 + np.arange(self.num_elms)
-            param = self.attr_cache['param'].copy()
+            if 'param' not in self.df.keys():
+                self.df['param'] = 1 + np.arange(self.numel)
+            param = self.df['param'].copy()
         else:
-            if len(param)!= self.num_elms:
+            if len(param)!= self.numel:
                 raise ValueError('The parameter array does not match the number of elements')
                 return
+            
+        dim = self.connection.shape[1]
+        con_mat = [[0]*self.numel]*dim
+        for i in range(dim):
+            con_mat[i] = list(self.connection[:,i])
         
         (new_con_mat, nnode_x, nnode_y, nnode_z,
          nnum_elms, nnum_nodes) = mc.split_tri(
-            list(self.con_matrix), 
-            list(self.node_x), 
-            list(self.node_y), 
-            list(self.node_z))
-         
-        self.con_matrix = new_con_mat
-        self.node_x = nnode_x
-        self.node_y = nnode_y
-        self.node_z = nnode_z
-        self.num_elms = nnum_elms
-        self.num_nodes = nnum_nodes
-        self.cell_attributes = np.repeat(self.cell_attributes,4)
-        
-        if self.attr_cache is not None:
-            for key in self.attr_cache.keys():
-                a = np.repeat(self.attr_cache[key],4)
-                self.attr_cache[key] = a
-        newparam = np.repeat(param,4)
-
-        self.add_attribute(newparam,'param')
+            con_mat, 
+            list(self.node[:,0]), 
+            list(self.node[:,1]), 
+            list(self.node[:,2]))
              
         
-    def splitTetra(self, param=None):
+        nmesh = self.copy() 
+        nmesh.connection = np.array(new_con_mat).T
+        # nmesh.node_x = nnode_x
+        # nmesh.node_y = nnode_y
+        # nmesh.node_z = nnode_z
+        nmesh.node = np.array([nnode_x,nnode_y,nnode_z]).T
+        nmesh.numel = nnum_elms
+        nmesh.numnp = nnum_nodes
+        #nmesh.cell_attributes = np.repeat(self.cell_attributes,4)
+        
+        if self.df is not None:
+            df = self.df.copy()
+            new_df = {}
+            for key in self.df.keys():
+                a = np.repeat(df[key].values,4)
+                new_df[key] = a
+            
+        nmesh.df = pd.DataFrame(new_df)
+        nmesh.cellCentres()
+        return nmesh 
+             
+        
+    def splitTetra(self, param=None): # fix me 
         """Refine tetrahedra by splitting them in six smaller tetrahedra.
         """
         #error checks 
@@ -732,37 +765,48 @@ class Mesh:
             
         #see if parameter already assigned 
         if param is None:
-            if 'param' not in self.attr_cache.keys():
-                self.attr_cache['param'] = 1 + np.arange(self.num_elms)
-            param = self.attr_cache['param'].copy()
+            if 'param' not in self.df.keys():
+                self.df['param'] = 1 + np.arange(self.numel)
+            param = self.df['param'].copy()
         else:
-            if len(param)!= self.num_elms:
+            if len(param)!= self.numel:
                 raise ValueError('The parameter array does not match the number of elements')
                 return
+            
+        dim = self.connection.shape[1]
+        con_mat = [[0]*self.numel]*dim
+        for i in range(dim):
+            con_mat[i] = list(self.connection[:,i])
         
         (new_con_mat, nnode_x, nnode_y, nnode_z,
-         nnum_elms, nnum_nodes) = mc.split_tetra(
-            list(self.con_matrix), 
-            list(self.node_x), 
-            list(self.node_y), 
-            list(self.node_z))
+         nnum_elms, nnum_nodes) = mc.split_tetra(con_mat, 
+                                                list(self.node[:,0]), 
+                                                list(self.node[:,1]), 
+                                                list(self.node[:,2]))
          
-        self.con_matrix = new_con_mat
-        self.node_x = nnode_x
-        self.node_y = nnode_y
-        self.node_z = nnode_z
-        self.num_elms = nnum_elms
-        self.num_nodes = nnum_nodes
-        self.cell_attributes = np.repeat(self.cell_attributes,8)
+        nmesh = self.copy() 
+        nmesh.connection = np.array(new_con_mat).T
+        # nmesh.node_x = nnode_x
+        # nmesh.node_y = nnode_y
+        # nmesh.node_z = nnode_z
+        nmesh.node = np.array([nnode_x,nnode_y,nnode_z]).T
+        nmesh.numel = nnum_elms
+        nmesh.numnp = nnum_nodes
+        #nmesh.cell_attributes = np.repeat(self.cell_attributes,8)
         
-        if self.attr_cache is not None:
-            for key in self.attr_cache.keys():
-                a = np.repeat(self.attr_cache[key],8)
-                self.attr_cache[key] = a
-        newparam = np.repeat(param,8)
-        self.add_attribute(newparam,'param')
+        if self.df is not None:
+            df = self.df.copy()
+            new_df = {}
+            for key in self.df.keys():
+                a = np.repeat(df[key].values,8)
+                new_df[key] = a
+                
+        nmesh.df = pd.DataFrame(new_df)
+        
+        nmesh.cellCentres()
+        return nmesh
     
-    def quad2tri(self,param=None):
+    def quad2tri(self):
         """Make a triangle mesh from a quad mesh 
 
         Returns
@@ -776,34 +820,29 @@ class Mesh:
         elif self.type2VertsNo() == 3: #not a triangle mesh 
             raise Exception("Mesh must be quadalateral")
         
-        con_mata = np.array(self.con_matrix).T # get connection matrix 
+        con_mata = self.connection.copy() # get connection matrix 
         con1 = con_mata[:,[0,1,2]] # retrieve vertices of columns 
         con2 = con_mata[:,[0,3,2]] # and split to make right angle triangles 
-        out_mat = np.zeros((self.num_elms*2,3),dtype=int)       
+        out_mat = np.zeros((self.numel*2,3),dtype=int)       
         out_mat[0::2,:] = con1
         out_mat[1::2,:] = con2 
         
         tri_mesh = self.copy()
-        tri_mesh.con_matrix = [list(out_mat[:,0]),list(out_mat[:,1]),list(out_mat[:,2])]
-        tri_mesh.num_elms = self.num_elms*2
+        tri_mesh.connection = out_mat
+        tri_mesh.numel = self.numel*2
         tri_mesh.cell_type=[5]
         
-        tri_mesh.cell_attributes = np.repeat(self.cell_attributes,2)
+        #tri_mesh.cell_attributes = np.repeat(self.cell_attributes,2)
         
         tri_mesh.cellCentres()
         
-        if self.attr_cache is not None:
-            for key in self.attr_cache.keys():
-                a = np.repeat(self.attr_cache[key],2)
-                tri_mesh.attr_cache[key] = a
+        if self.df is not None:
+            calculated = ['X','Y','Z']
+            for key in self.df.keys():
+                if key not in calculated:
+                    a = np.repeat(self.df[key],2) # repeat cell attributes 
+                    tri_mesh.df[key] = a
                 
-        if param is None:
-            if 'param' not in self.attr_cache.keys():
-                self.attr_cache['param'] = 1 + np.arange(self.num_elms)
-            param = self.attr_cache['param'].copy()
-            
-        newparam = np.repeat(param,2)
-        tri_mesh.add_attribute(newparam,'param')
         tri_mesh.orderNodes()
         
         return tri_mesh
@@ -812,16 +851,19 @@ class Mesh:
     def elemDist(self):
         """Work out the distance of each cell in the mesh to its closest electrode
         """
-        elec = np.array([self.elec_x,self.elec_y,self.elec_z]).T
-        points = np.array([self.elm_centre[0],
-                           self.elm_centre[1],
-                           self.elm_centre[1]]).T
+        try: 
+            elec = self.elec.copy()
+        except:
+            warnings.warn('No electrodes have been set in mesh class, aborting ... ')
+            return
+        points = self.elmCentre.copy()
+        
         tree = cKDTree(elec) ### setup tree
         dist,idx = tree.query(points) ### >> maps to points to nearest electrode
-        self.add_attribute(dist,'cell_distance')
+        self.addAttribute(dist,'cell_distance')
         return dist
     
-    def extractSurface(self):
+    def extractSurface(self): 
         """ Extract the surface of a triangle or tetrahedral mesh. Ouput of 
         function will depend on mesh type. 
     
@@ -845,22 +887,22 @@ class Mesh:
             if self.type2VertsNo() == 6 or self.type2VertsNo() == 8:#not a tetrahedra 3d mesh 
                 raise Exception("Sorry surface extraction isnt available for this type of mesh")
         
-        con_mat=self.con_matrix
+        con_mat=self.connection
         if self.neigh_matrix is None: # compute neighbour matrix 
             self.computeNeigh() # this will find the element neighbours and the elements which lie on the outside of the mesh! 
         neigh = np.array(self.neigh_matrix).T
         
         out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
         neigh_trunc = neigh[out_elem]
-        con_trunc = np.array(con_mat).T[out_elem]           
+        con_trunc = con_mat[out_elem]           
         
-        node_x = np.array(self.node_x)
-        node_y = np.array(self.node_y)
-        node_z = np.array(self.node_z)
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
         
         if typ == 2: ### Extract 2D faces of top of the mesh ###
-            xm = self.elm_centre[0]
-            zm = self.elm_centre[2]
+            xm = self.elmCentre[:,0]
+            zm = self.elmCentre[:,2]
             map1 = np.array([1,2]) -1 
             map2 = np.array([2,3]) -1 
             map3 = np.array([3,1]) -1 
@@ -976,22 +1018,26 @@ class Mesh:
             face_cmat = [list(face_matrix[:,0]),
                          list(face_matrix[:,1]),
                          list(face_matrix[:,2])]
-            no_elms = len(face_matrix) # number of elements 
 
             nmesh = Mesh(node_x, # make new mesh 
                          node_y, 
                          node_z, 
-                         node_id = np.arange(len(node_x)), 
-                         elm_id = np.arange(no_elms), 
-                         node_data = face_cmat, 
+                         node_data = np.array(face_cmat).T, 
                          cell_type = [5], 
-                         cell_attributes = [0]*no_elms, 
-                         atribute_title='face')
+                         order_nodes=False,
+                         compute_centre=False)
             
-            for key in self.attr_cache.keys(): # add attributes 
-                X = np.array(self.attr_cache[key])[out_elem]
-                nmesh.add_attribute(X[attr_idx], key)                
+            df = self.df.copy()
+            d = {}
+            idx = np.array(attr_idx,dtype=int)
+            for key in df.keys():
+                a = df[key].values
+                d[key] = a[idx]
+                
+            nmesh.df = pd.DataFrame(d)
+              
             nmesh.__rmexcessNodes() # remove excess nodes which are not used 
+            nmesh.cellCentres()
             
             return nmesh
         
@@ -1000,7 +1046,7 @@ class Mesh:
     def __rmexcessNodes(self):
         """ Remove any nodes are not inside the connection matrix
         """
-        con_mat = np.array(self.con_matrix).T.copy()
+        con_mat = self.connection.copy()
         shp = con_mat.shape # connection matrix shape 
         con_matf = con_mat.flatten() # flattened connection matrix 
         sort_idx = np.argsort(con_matf) # sort the connection matrix 
@@ -1018,15 +1064,13 @@ class Mesh:
             new_nodes[i] = count
         
         #remap indexes 
-        self.node_x = list(np.array(self.node_x)[uni_nodes])
-        self.node_y = list(np.array(self.node_y)[uni_nodes])
-        self.node_z = list(np.array(self.node_z)[uni_nodes])
+        node = self.node.copy()
+        self.node = node[uni_nodes,:]
         new_conf = new_nodes[map_idx]
         new_con = new_conf.reshape(shp)
-        for i in range(shp[1]):
-            self.con_matrix[i] = list(new_con[:,i])
+        self.connection = new_con
             
-        self.num_nodes = len(uni_nodes)
+        self.numnp = len(uni_nodes)
         
     def crop(self, polyline):
         """Crop the mesh given a polyline in 2D.
@@ -1040,25 +1084,27 @@ class Mesh:
         """
         # get points inside the polygon
         path = mpath.Path(polyline)
-        centroids = np.c_[self.elm_centre[0], self.elm_centre[2]]
+        centroids = np.c_[self.elmCentre[:,0], self.elmCentre[:,2]]
         i2keep = path.contains_points(centroids) # this is the fastest way to check if point are in polygon 
         
         # filter element-based attribute
-        ecx = np.array(self.elm_centre[0])[i2keep].tolist()
-        ecy = np.array(self.elm_centre[1])[i2keep].tolist()
-        ecz = np.array(self.elm_centre[2])[i2keep].tolist()
-        self.elm_centre = (ecx, ecy, ecz)
-        self.con_matrix = tuple(np.array(self.con_matrix)[:,i2keep].tolist())
-        self.elm_area = np.array(self.elm_area)[i2keep].tolist()
-        self.elm_id = np.array(self.elm_id)[i2keep].tolist()
-        self.cell_attributes = np.array(self.cell_attributes)[i2keep].tolist()
-        for key in self.attr_cache.keys():
-            self.attr_cache[key] = np.array(self.attr_cache[key])[i2keep]
-        self.num_elms = np.sum(i2keep)
+        ec = self.elmCentre.copy()[i2keep,:]
         
-        self.__rmexcessNodes            
+        nmesh = self.copy()
+        nmesh.elmCentre = ec 
+        nmesh.connection = self.connection[i2keep,:]
+        nmesh.elm_id = np.arrange(1,self.numel+1)[i2keep]
+        #nmesh.cell_attributes = np.array(self.cell_attributes)[i2keep]
         
-        # return a truncated mesh 
+        df = self.df.copy()
+        nmesh.df = df[i2keep].reset_index()
+        del nmesh.df['index']
+        nmesh.numel = np.sum(i2keep)
+        
+        nmesh.__rmexcessNodes         
+        return nmesh
+        
+    # return a truncated mesh (for 3D)
     def truncateMesh(self,xlim=None,ylim=None,zlim=None):
         """Crop the mesh to a box of given limits, like how R3t behaves 
         when outputting inverted results. 
@@ -1078,43 +1124,37 @@ class Mesh:
             New instance of mesh class which is truncated 
         """
         if xlim is None:
-            xlim=[min(self.elec_x), max(self.elec_x)]
+            xlim=[min(self.elec[:,0]), max(self.elec[:,0])]
         if ylim is None:
-            ylim=[min(self.elec_y), max(self.elec_y)]
+            ylim=[min(self.elec[:,1]), max(self.elec[:,1])]
         if zlim is None:
-            zlim=[min(self.elec_z), max(self.elec_z)]
+            zlim=[min(self.elec[:,2]), max(self.elec[:,2])]
             
-        elm_x = np.array(self.elm_centre[0])
-        elm_y = np.array(self.elm_centre[1])
-        elm_z = np.array(self.elm_centre[2])
+        elm_x = self.elmCentre[:,0]
+        elm_y = self.elmCentre[:,1]
+        elm_z = self.elmCentre[:,2]
         in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find inside of limits 
-        temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
+        temp_con_mat = self.connection.copy() # temporary connection matrix which is just the elements inside the box
         #con_mat=list(temp_con_mat[:,in_elem]) # truncate connection matrix
         
-        new_attr_cache = self.attr_cache.copy()
-        new_attr = np.array(self.cell_attributes)
         
-        elm_id = np.array(self.elm_id)
+        #new_attr = np.array(self.cell_attributes)
+        
+        elm_id = np.arrange(self.numel)+1
 
         #truncate the attribute table down to the inside elements 
-        for key in self.attr_cache.keys():
-            X = np.array(self.attr_cache[key])
-            new_attr_cache[key] = X[in_elem]
+        new_df = self.df[in_elem]
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
         
-        nmesh.attr_cache = new_attr_cache
-        nmesh.num_elms = len(elm_id[in_elem])
-        nmesh.cell_attributes = new_attr[in_elem]
+        nmesh.df = new_df
+        nmesh.numel = len(elm_id[in_elem])
+        #nmesh.cell_attributes = new_attr[in_elem]
         nmesh.elm_id = elm_id[in_elem]
-        new_elm_centre = [[],[],[]]
-        new_elm_centre[0] = elm_x[in_elem]
-        new_elm_centre[1] = elm_y[in_elem]
-        new_elm_centre[2] = elm_z[in_elem]
-        nmesh.elm_centre = new_elm_centre
+        nmesh.elmCentre = self.elmCentre[in_elem,:]
         
-        new_con_mat = temp_con_mat[:,in_elem].copy()            
-        nmesh.con_matrix=list(new_con_mat)
+        new_con_mat = temp_con_mat[in_elem,:]
+        nmesh.connection = new_con_mat     
         
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
@@ -1137,12 +1177,12 @@ class Mesh:
         mesh: Class
             New instance of mesh class which is thresholded 
         """
-        if self.attr_cache is None:
-            raise EnvironmentError("No 'attr_cache' varaible exists for the mesh class!")
-        elif attr not in self.attr_cache.keys():
+        if self.df is None:
+            raise EnvironmentError("No 'df' varaible exists for the mesh class!")
+        elif attr not in self.df.keys():
             raise ValueError("Specified attribute has not been defined")
             
-        X = np.array(self.attr_cache[attr])
+        X = self.df[attr].values
         
         if vmin is None:
             vmin = np.min(X)
@@ -1151,36 +1191,29 @@ class Mesh:
             
         in_elem = (X >= vmin) & (X <= vmax) # index of elements to keep 
         
-        temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
+        temp_con_mat = self.connection.copy() #temporary connection matrix which is just the elements inside the box
         
-        new_attr_cache = self.attr_cache.copy()
-        new_attr = np.array(self.cell_attributes)
+        #new_attr = np.array(self.cell_attributes)
         
-        elm_id = np.array(self.elm_id)
+        elm_id = np.arange(self.numel)+1
 
         #truncate the attribute table down to the inside elements 
-        for key in self.attr_cache.keys():
-            X = np.array(self.attr_cache[key])
-            new_attr_cache[key] = X[in_elem]
+        new_df = self.df[in_elem]
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
         
-        nmesh.attr_cache = new_attr_cache
-        nmesh.num_elms = len(elm_id[in_elem])
-        nmesh.cell_attributes = new_attr[in_elem]
-        nmesh.elm_id = elm_id[in_elem]
-        new_elm_centre = [[],[],[]]
-        new_elm_centre[0] = list(np.array(self.elm_centre[0])[in_elem])
-        new_elm_centre[1] = list(np.array(self.elm_centre[1])[in_elem])
-        new_elm_centre[2] = list(np.array(self.elm_centre[2])[in_elem])
-        nmesh.elm_centre = new_elm_centre
+        nmesh.df = new_df
+        nmesh.numel = len(elm_id[in_elem])
+        # nmesh.cell_attributes = new_attr[in_elem]
+        # nmesh.elm_id = elm_id[in_elem]
+        nmesh.elmCentre = self.elmCentre[in_elem,:]
         
-        new_con_mat = temp_con_mat[:,in_elem].copy()            
-        nmesh.con_matrix=list(new_con_mat)
+        new_con_mat = temp_con_mat[in_elem,:]
+        nmesh.connection = new_con_mat     
         
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
-        return nmesh # return truncated mesh    
+        return nmesh # return truncated mesh 
 
 #%% lookup information      
     def quadMeshNp(self, topo=None):
@@ -1195,17 +1228,19 @@ class Mesh:
         if int(self.cell_type[0])!=8 and int(self.cell_type[0])!=9:#elements are not quads
             raise TypeError('Mesh is not composed of 2D quads')
         
-        unix = np.unique(self.node_x) # unique x values in the x node coordinates 
+        unix = np.unique(self.node[:,0]) # unique x values in the x node coordinates 
         if topo is None: # find the y column is a little challanging without knowing the original topography 
-            uniz = np.unique(self.node_z) # if you dont know any better then just use the unique z values 
+            uniz = np.unique(self.node[:,2]) # if you dont know any better then just use the unique z values 
         else:
             uniz = topo # ideally use mesh topography 
-        e_nodes = self.e_nodes
+        e_nodes = self.eNodes 
         colx = [0]*len(e_nodes) # column indexes for x coordinates 
         colz = [0]*len(e_nodes) # column indexes for z coordinates 
+        node_x = self.node[:,0]
+        node_z = self.node[:,2]
         for i in range(len(e_nodes)):
-            x = self.node_x[e_nodes[i]] # get node x coordinate 
-            z = self.node_z[e_nodes[i]]
+            x = node_x[e_nodes[i]] # get node x coordinate 
+            z = node_z[e_nodes[i]]
             colx[i] = int(np.argwhere(x==unix) + 1) # find its index 
             colz[i] = int(np.argwhere(z==uniz) + 1)
             
@@ -1225,13 +1260,12 @@ class Mesh:
         This can fail for  large meshes due to the size of matrices involved. 
         """
         #assign coordinate arrays 
-        attr_cache = {} # pd.DataFrame()
-        x_old = look_up_mesh.elm_centre[0]
-        x_new = self.elm_centre[0]
-        y_old = look_up_mesh.elm_centre[1]
-        y_new = self.elm_centre[1]
-        z_old = look_up_mesh.elm_centre[2]
-        z_new = self.elm_centre[2]
+        x_old = look_up_mesh.elmCentre[0]
+        x_new = self.elmCentre[:,0]
+        y_old = look_up_mesh.elmCentre[1]
+        y_new = self.elmCentre[:,1]
+        z_old = look_up_mesh.elmCentre[2]
+        z_new = self.elmCentre[:,2]
         i_old = np.array(look_up_mesh.cell_attributes)
         #do look up 
         if self.ndims==3:
@@ -1243,19 +1277,18 @@ class Mesh:
                                             x_old,z_old,i_old,
                                             return_idx=True) 
             
-        look_up_cache = look_up_mesh.attr_cache.copy()
-        look_up_keys = look_up_cache.keys()
-        for k in look_up_keys:
-            look_up_array = np.array(look_up_cache[k])
-            attr_cache[k] = look_up_array[idxes]
-        self.attr_cache = attr_cache.copy()
+        look_up_cache = look_up_mesh.df.copy()
+        self.df= look_up_cache[idxes]
             
-    def trans_mesh(self,x,y,z):
+    def transMesh(self,x,y,z):
         """Translate mesh by x y z coordinate
         """
-        self.node_x = np.array(self.node_x)+x
-        self.node_y = np.array(self.node_y)+y
-        self.node_z = np.array(self.node_z)+z
+        t = np.array([x,y,z]).T
+        self.node += t
+        
+    def trans_mesh(self,x,y,z):
+        warnings.warn("trans_mesh is depreciated, use transMesh instead")
+        self.transMesh(x, y, z)
         
     #%% mesh display 
     def _clipContour(self, ax, cont, maxDepth=None):
@@ -1271,23 +1304,23 @@ class Mesh:
                 Depth of the fine/coarse region in mesh. 
                 If not None: Contour plots will crop out below maxDepth [m].
         """
+        if self.ndims == 3:
+            raise ValueError('Cant clip contour on a 3D mesh')
         # mask outer region
-        xmin = np.min(self.node_x)
-        xmax = np.max(self.node_x)
-        zmin = np.min(self.node_z)
-        zmax = np.max(self.node_z)
-        if self.surface is not None:
-            xsurf, zsurf = self.surface[:,0], self.surface[:,1]
-            if maxDepth is not None:
-                xfmd, zfmd = self.surface[:,0][::-1], self.surface[:,1][::-1] - maxDepth
-                verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
-                              np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
-            else:
-                verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
-                              np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]     
+        xmin = np.min(self.node[:,0])
+        xmax = np.max(self.node[:,0])
+        zmin = np.min(self.node[:,2])
+        zmax = np.max(self.node[:,2])
+        
+        (xsurf, zsurf) = self.extractSurface() # extract 2d mesh surface 
+        if maxDepth is not None:
+            xfmd, zfmd = xsurf[::-1], zsurf[::-1] - maxDepth
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
         else:
-            verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
-                          np.r_[zmin, zmax, zmax, zmin, zmin]]                
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]     
+             
         # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
         path = mpath.Path(verts)
         patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
@@ -1378,7 +1411,7 @@ class Mesh:
         
         if self.iremote is None:
             try:
-                iremote = np.zeros(len(self.elec_x), dtype=bool)
+                iremote = np.zeros(self.elec.shape[0], dtype=bool)
                 self.iremote = iremote
             except Exception as e:
                 print('No electrode found: ', e)
@@ -1403,15 +1436,18 @@ class Mesh:
             
         
         # decide which attribute to plot, we may decide to have other attritbutes! 
-        if attr not in self.attr_cache.keys():
-            attr == None
-        if attr == None:
-            attr = list(self.attr_cache.keys())[3]
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
-        else:
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
+        keys = self.df.keys()
+        if attr not in keys:
+            attr = None
+            warnings.warn('Chosen attribute not found in mesh class')
+        if attr is None:
+            if 'region' in keys:
+                attr = 'region'
+            else: 
+                attr = keys[0]
+
+        X = np.array(self.df[attr])
+        color_bar_title = attr
             
         if clabel is not None:
             color_bar_title = clabel
@@ -1428,18 +1464,18 @@ class Mesh:
         #if no dimensions are given then set the plot limits to edge of mesh
         
         try: 
-            elec_x = self.elec_x[~iremote]
+            elec_x = self.elec[:,0][~iremote]
             if xlim==None:
                 xlim=[min(elec_x),max(elec_x)]
             if zlim==None:
-                doiEstimate = 2/3*np.abs(elec_x[0]-elec_x[-1])
+                doiEstimate = 2/3*np.abs(np.min(elec_x) - np.max(elec_x))
                 # longest dipole calculation available in R2 class
-                zlim=[min(self.elec_z)-doiEstimate,max(self.elec_z)]
+                zlim=[min(self.elec[:,2])-doiEstimate,max(self.elec[:,2])]
         except AttributeError:
             if xlim==None:
-                xlim=[min(self.node_x),max(self.node_x)]
+                xlim=[min(self.node[:,0]),max(self.node[:,0])]
             if zlim==None:
-                zlim=[min(self.node_z),max(self.node_z)]
+                zlim=[min(self.node[:,2]),max(self.node[:,2])]
 
         if np.diff(xlim) == 0: # protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
@@ -1448,8 +1484,8 @@ class Mesh:
                 
         ##plot mesh! ##
         #compile mesh coordinates into polygon coordinates  
-        nodes = np.c_[self.node_x, self.node_z]
-        connection = np.array(self.con_matrix).T # connection matrix 
+        nodes = np.array([self.node[:,0],self.node[:,2]]).T
+        connection = self.connection.copy() # connection matrix 
         if maxDepth is not None: 
             depths = np.array(self.computeElmDepth())
             ikeep = depths < maxDepth
@@ -1458,7 +1494,6 @@ class Mesh:
             X = X[ikeep]
             
         #compile polygons patches into a "patch collection"
-        ###X=np.array(self.cell_attributes) # maps resistivity values on the color map### <-- disabled 
         coordinates = nodes[connection]
         if vmin is None:
             vmin = np.min(X)
@@ -1469,7 +1504,7 @@ class Mesh:
             edge_color='face'#set the edge colours to the colours of the polygon patches
 
         if contour is False:
-            if attr is 'region': # so the default material
+            if attr == 'region': # so the default material
                 cm = plt.get_cmap(color_map, len(np.unique(X))) # this makes a discrete colormap
             else:
                 cm = color_map
@@ -1482,11 +1517,11 @@ class Mesh:
 
         else:#use contour algorithm (only for 2D and y is considered depth here)
             if maxDepth is not None:
-                xc = np.array(self.elm_centre[0])[ikeep]
-                yc = np.array(self.elm_centre[2])[ikeep]
+                xc = self.elmCentre[ikeep,0]
+                yc = self.elmCentre[ikeep,2]
             else:
-                xc = np.array(self.elm_centre[0])
-                yc = np.array(self.elm_centre[2])
+                xc = self.elmCentre[:,0]
+                yc = self.elmCentre[:,2]
             zc = np.array(X)
             
             # check for 0 in sigma log
@@ -1495,8 +1530,8 @@ class Mesh:
                 zc = zc[ie]
                 xc = xc[ie]
                 yc = yc[ie]
-            x = np.array(self.node_x)
-            y = np.array(self.node_z)
+            x = np.array(self.node[:,0])
+            y = np.array(self.node[:,2])
             
             # set scale arrangement
             if vmin is None:
@@ -1511,54 +1546,7 @@ class Mesh:
             if self.cell_type[0] == -1:
                 print('really ?!')
                 pass
-#            if self.cell_type[0] == 9: # quadrilateral mesh (exact topo)   
-#                # interpolate the cell-centered value to the node to be able
-#                # to use the quadrilateral mesh already in the grid
-#                z = interp.linear(x, y, xc, yc, zc)
-#                
-#                def rebuildRegularGrid(x2, y2, z2):
-#                    x2unique = np.unique(x2)
-#                    xs = []
-#                    for xuni in x2unique: # for loop otherwise dataframe groupby
-#                        xs.append(np.where(x2 == xuni)[0])
-#                    minLength = np.min([len(a) for a in xs])
-#                    xs2 = []
-#                    for a in xs:
-#                        isort = np.argsort(y2[a])
-#                        xs2.append(a[isort][-minLength:])
-#                    xs2 = np.vstack(xs2)
-#                    X = x2[xs2]
-#                    Y = y2[xs2]
-#                    Z = z2[xs2]
-#                    return X, Y, Z
-#            
-#                Xi, Yi, Zi = rebuildRegularGrid(x, y, z)
-#                self.cax = ax.contourf(Xi, Yi, Zi, levels=levels, cmap=color_map, extend = 'both')
-#            
-            
-#            elif self.cell_type[0] == 5: # triangular mesh (exact topo)
-#                # interpolate the cell-centered value to the node to be able
-#                # to use the triangular mesh already in the grid
-#                z = interp.nearest(x, y, xc, yc, zc)
-#                triang = tri.Triangulation(x, y, connection)
-#                
-#                self.cax = ax.tricontourf(triang, z, levels=levels, extend='both', cmap=color_map)
-            
-            else: # fallback mode with tricontourf and cropSurface() (topo based on centroids) 
-#                if self.surface is not None:
-#                    xf, yf = self.surface[:,0], self.surface[:,1]
-#                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-#                    xc = np.r_[xc, xf]
-#                    yc = np.r_[yc, yf]
-#                    zc = np.r_[zc, zf]
-#                triang = tri.Triangulation(xc, yc) # build grid based on centroids
-#                
-#                if self.surface is not None:
-#                    try:
-#                        triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-#                    except Exception as e:
-#                        print('Error in Mesh.show() for contouring: ', e)
-#                
+            else: # fallback mode with tricontourf and cropSurface() (topo based on centroids)             
                 triang = tri.Triangulation(xc, yc) # build grid based on centroids
                 self.cax = ax.tricontourf(triang, zc, levels=levels, extend='both', cmap=color_map)
                 self._clipContour(ax, self.cax, maxDepth=maxDepth)
@@ -1589,11 +1577,11 @@ class Mesh:
 
         #biuld alpha channel if we have sensitivities 
         if sens:
-            if 'Sensitivity(log10)' not in self.attr_cache.keys():
+            if 'Sensitivity(log10)' not in self.df.keys():
                 print('ERROR: No sensitivity attribute found')
             else:
                 try:
-                    weights = np.array(self.attr_cache['Sensitivity(log10)']) #values assigned to alpha channels 
+                    weights = np.array(self.df['Sensitivity(log10)']) #values assigned to alpha channels 
                     if maxDepth is not None:
                         weights = weights[ikeep]
                     if sensPrc is None:
@@ -1602,9 +1590,9 @@ class Mesh:
                         x = np.sort(weights)
                         i = np.where(x > thresh)[0][0]
                         x = np.argsort(weights)
-                        alphas = np.zeros(self.num_elms)
+                        alphas = np.zeros(self.numel)
                         alphas[:i] = np.linspace(1, 0, len(alphas[:i]))
-                        raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                        raw_alpha = np.ones((self.numel,4),dtype=float) #raw alpha values 
                         raw_alpha[:, -1] = alphas
                         alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
                         #make alpha collection
@@ -1618,13 +1606,12 @@ class Mesh:
                         b = np.log10(0.1*(10**np.nanmax(weights)))
                         ab = np.linspace(a, b, 100)
                         thresh = ab[int(sensPrc*99)]
-        #                    thresh = np.percentile(weights, sensPrc*100, interpolation='nearest')
                         x = np.sort(weights)
                         i = np.where(x > thresh)[0][0]
                         x = np.argsort(weights)
-                        alphas = np.zeros(self.num_elms)
+                        alphas = np.zeros(self.numel)
                         alphas[:i] = np.linspace(1, 0.2, len(alphas[:i]))
-                        raw_alpha = np.ones((self.num_elms,4),dtype=float) #raw alpha values 
+                        raw_alpha = np.ones((self.numel,4),dtype=float) #raw alpha values 
                         raw_alpha[:, -1] = alphas
                         alpha_map = ListedColormap(raw_alpha) # make a alpha color map which can be called by matplotlib
                         #make alpha collection
@@ -1633,76 +1620,20 @@ class Mesh:
                         #*** i still cant figure out why this is because its the same code used to plot the resistivities 
                         ax.add_collection(alpha_coll)
                     
-                    # legacy implementation of the mesh cropping below (don't delete it)
-#                    x = np.array(self.attr_cache['Sensitivity(log10)'])
-#                    alphas = np.zeros(len(x))
-#                    xmin, xmax = np.nanmin(x), np.nanmax(x)
-#                    xnorm = (x-xmin)/(xmax-xmin) # should all be between 0 and 1
-#                    i2mask = xnorm < sensPrc
-#                    xnorm[i2mask] = 0
-#                    xnorm[~i2mask] = 1
-#                    raw_alpha = np.ones((2, 4), dtype=float)
-#                    raw_alpha[-1,-1] = 0 # larger sensitivity values are transparent
-#                    alpha_map = ListedColormap(raw_alpha)
-#                    if contour is False:
-#                        alpha_coll = PolyCollection(coordinates[i2mask], array=xnorm[i2mask], cmap=alpha_map, edgecolors='face', linewidths=1)
-#                        ax.add_collection(alpha_coll)
-#                    else: # if contour is True, cropSurface() should have been defined
-#                        xc = np.array(self.elm_centre[0])
-#                        yc = np.array(self.elm_centre[2])
-#                        x = np.array(self.node_x)
-#                        y = np.array(self.node_z)
-#                        zc = xnorm # normalized sensitivity here
-#                        
-#                        # doesn't work as the QHull alright discard the elements forming the topo :/
-#    #                    from scipy.interpolate import LinearNDInterpolator
-#    #                    lin = LinearNDInterpolator(np.c_[xc, yc], zc)
-#    #                    z = lin(np.c_[x, y])
-#    #                    print(np.sum(np.isnan(z)))
-#    #                    inan = ~np.isnan(z)
-#    #                    x, y, z = x[inan], y[inan], z[inan]
-#    #                    triang = tri.Triangulation(x, y)
-#                        
-#                        # adding surface points to form surface triangles
-#                        if self.surface is not None:
-#                            xf, yf = self.surface[:,0], self.surface[:,1]
-#                            zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-#                            xc = np.r_[xc, xf]
-#                            yc = np.r_[yc, yf]
-#                            zc = np.r_[zc, zf]
-#                        triang = tri.Triangulation(xc, yc) # build grid based on centroids and surface points
-#                        z = zc
-#                    
-#                        # discarding triangles out of surface
-#                        if self.surface is not None:        
-#                            try:
-#                                triang.set_mask(~cropSurface(triang, self.surface[:,0], self.surface[:,1]))
-#                            except Exception as e:
-#                                print('Error in Mesh.show for contouring: ', e)
-#                        
-#                        self.cax = ax.tricontourf(triang, z, cmap=alpha_map)
-#                                                    
                 except Exception as e:
                     print('Error in the sensitivity overlay:', e)
         
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-#                ax.plot(elec_x, self.elec_z[~iremote],'ko')
-                x = np.c_[self.elec_x, self.elec_y, self.elec_z]
+                x = self.elec.copy()
                 if self.iremote is not None: # it's None for quad mesh
                     x = x[~self.iremote, :]
-#                x1 = np.repeat(x, len(x), axis=0)
-#                x2 = np.tile(x.T, len(x)).T
-#                dist = np.sqrt(np.sum((x1-x2)**2, axis=1))
-#                radius = np.nanmin(dist[dist != 0])/3
-#                circles = [plt.Circle((xi,yi), radius=radius) for xi,yi in zip(elec_x, self.elec_z[~iremote])]
-#                ax.add_collection(PatchCollection(circles, color='k'))
                 ax.plot(x[:,0], x[:,2], 'ko', markersize=4)
             except AttributeError:
                 print("no electrodes in mesh object to plot")
 
         # adding interactive display when mouse-over
-        centroids = np.array([self.elm_centre[0], self.elm_centre[2]]).T
+        centroids = np.array([self.elmCentre[:,0], self.elmCentre[:,2]]).T
         def format_coord(x, y):
             dist = np.sqrt(np.sum((centroids - np.array([x, y]))**2, axis=1))
             imin = np.argmin(dist)
@@ -1753,15 +1684,14 @@ class Mesh:
         if self.cax == None :
             raise Exception ("mesh canvas variable has not been assigned! Use mesh.show() first")
             
-        if attr not in self.attr_cache.keys():
-            attr == None
-        if attr == None:
-            attr = list(self.attr_cache.keys())[3]
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
-        else:
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
+        # decide which attribute to plot, we may decide to have other attritbutes! 
+        if attr not in self.df.keys():
+            attr = None
+        if attr is None:
+            attr = self.df.keys()[0]
+
+        X = np.array(self.df[attr])
+        color_bar_title = attr
                 
         a = time.time() #start timer on how long it takes to plot the mesh
         
@@ -1889,36 +1819,39 @@ class Mesh:
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
         
-        #decide which attribute to plot, we may decide to have other attritbutes! 
-        if attr not in self.attr_cache.keys():
-            attr == None
-        if attr == None:
-            attr = list(self.attr_cache.keys())[3]
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
-        else:
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
+        # decide which attribute to plot, we may decide to have other attritbutes! 
+        keys = self.df.keys()
+        if attr not in keys:
+            attr = None
+            warnings.warn('Chosen attribute not found in mesh class')
+        if attr is None:
+            if 'region' in keys:
+                attr = 'region'
+            else: 
+                attr = keys[0]
+
+        X = np.array(self.df[attr])
+        color_bar_title = attr
                 
-        #determine how to crop the mesh  
+        #determine how to crop the mesh 
         if zlim == None:
-            zlim = [min(self.node_z), max(self.node_z)]
+            zlim = [min(self.node[:,2]), max(self.node[:,2])]
         if self.iremote is not None: 
             if xlim == None:
-                xlim = [min(self.elec_x[~self.iremote]), max(self.elec_x[~self.iremote])]
+                xlim = [min(self.elec[:,0][~self.iremote]), max(self.elec[:,0][~self.iremote])]
             if ylim == None:
-                ylim = [min(self.elec_y[~self.iremote]), max(self.elec_y[~self.iremote])]
+                ylim = [min(self.elec[:,1][~self.iremote]), max(self.elec[:,1][~self.iremote])]
         else:
             try: 
                 if xlim == None:
-                    xlim = [min(self.elec_x), max(self.elec_x)]
+                    xlim = [min(self.elec[:,0]), max(self.elec[:,0])]
                 if ylim == None:
-                    ylim = [min(self.elec_y), max(self.elec_y)]
+                    ylim = [min(self.elec[:,1]), max(self.elec[:,1])]
             except AttributeError: #if no electrodes present use the node limits 
                 if xlim == None:
-                    xlim = [min(self.node_x), max(self.node_x)]
+                    xlim = [min(self.node[:,0]), max(self.node[:,0])]
                 if ylim == None:
-                    ylim = [min(self.node_y), max(self.node_y)]
+                    ylim = [min(self.node[:,1]), max(self.node[:,1])]
            
         if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
             xlim=[xlim[0]-2,xlim[1]+2]
@@ -1935,16 +1868,16 @@ class Mesh:
         #### use pyvista for 3D viewing ####         
         if use_pyvista and pyvista_installed:
             nmesh = self.copy() # new mesh which is cropped down 
-            nmesh.attr_cache = {color_bar_title:X} # make the attr of interest the only attribute
+            nmesh.df = {color_bar_title:X} # make the attr of interest the only attribute
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
-            nmesh.write_vtk(fname)
+            nmesh.vtk(fname)
             self.pvmesh = pv.read(fname)
             folder.cleanup()
             #### possible to iniate pyvista mesh directly with vertices and connection matrix #### 
             #### however the below code is apparently unstable on pyvista 0.24.0 #### 
             # self.pvmesh = pv.PolyData(np.array([self.node_x,self.node_y,self.node_z]).T, 
-            #                           np.array(self.con_matrix).T)
+            #                           np.array(self.connection).T)
             # self.pvmesh[color_bar_title] = X
             
             #crop down to the bounding box 
@@ -1982,8 +1915,8 @@ class Mesh:
                     normal = np.zeros(3)
                     normal[i] = 1
                     for s in ss:
-                        if ((s > np.nanmin(self.elm_centre[i])) &
-                            (s < np.nanmax(self.elm_centre[i]))):
+                        if ((s > np.nanmin(self.elmCentre[:,i])) &
+                            (s < np.nanmax(self.elmCentre[:,i]))):
                             origin = np.zeros(3)
                             origin[i] = s
                             mesh_slice = self.pvmesh.slice(normal=normal, origin=origin)
@@ -2014,7 +1947,7 @@ class Mesh:
                     
             if electrodes: # then add the electrodes to the plot 
                 try:
-                    points = np.array([self.elec_x,self.elec_y,self.elec_z]).T
+                    points = self.elec.copy()
                     pvelec = pv.PolyData(points)
                     ax.add_mesh(pvelec, color=elec_color, point_size=10.,
                                 render_points_as_spheres=True)
@@ -2022,14 +1955,26 @@ class Mesh:
                     print("Could not plot 3d electrodes, error = "+str(e))
             
             ax.show()
-            return
+            return # exit function
         #### else fall back on to matplotlib scheme ####    
         
         #if prism mesh use that function instead 
         if self.ndims==2:
-            warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D show will be unstable")
+            warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D could be unstable")
         elif self.type2VertsNo() == 6: # use column mesh show instead 
-            self.show_prism_mesh()
+            self.showPrismMesh(color_map = color_map, #displays prism mesh using matplotlib
+                color_bar = color_bar,
+                xlim = xlim,
+                ylim = ylim,
+                zlim = zlim, 
+                ax = ax,
+                electrodes = electrodes,
+                sens = sens,
+                edge_color = edge_color,
+                alpha = alpha,
+                vmax = vmax,
+                vmin = vmin,
+                attr = attr)
             return 
         
         t0 = time.time() # benchmark function
@@ -2056,17 +2001,17 @@ class Mesh:
         # this step is important as it is very expensive to plot anything in 3D using matplotlib 
         # triangles on the edge of the mesh will be used only once
         
-        elm_x = self.elm_centre[0]
-        elm_y = self.elm_centre[1]
-        elm_z = self.elm_centre[2]
+        elm_x = self.elmCentre[:,0]
+        elm_y = self.elmCentre[:,1]
+        elm_z = self.elmCentre[:,2]
         in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find elements veiwable in axis
         X = X[in_elem]#reassign X to elements inside the box limits 
-        temp_con_mat = np.array(self.con_matrix,dtype='int64')#temporary connection matrix which is just the elements inside the box
-        con_mat=temp_con_mat[:,in_elem] # truncate elements
+        temp_con_mat = self.connection.copy() #temporary connection matrix which is just the elements inside the box
+        con_mat=temp_con_mat[in_elem,:] # truncate elements
         inside_numel = len(con_mat[0])#number of inside elements 
         tri_combo = np.zeros((inside_numel,4),dtype='float64')
         
-        S = [0]*self.num_elms 
+        S = [0]*self.numel 
         if sens:
             try:
                 S = self.sensitivities
@@ -2075,10 +2020,10 @@ class Mesh:
                 print('no sensitivities to plot')
         
         for i in range(inside_numel):
-            idx1 = con_mat[0][i]#extract indexes 
-            idx2 = con_mat[1][i]
-            idx3 = con_mat[2][i]
-            idx4 = con_mat[3][i]
+            idx1 = con_mat[i][0]#extract indexes 
+            idx2 = con_mat[i][1]
+            idx3 = con_mat[i][2]
+            idx4 = con_mat[i][3]
             
             face1 = idx1*idx2*idx3 # assign each face a code
             face2 = idx1*idx2*idx4
@@ -2101,17 +2046,21 @@ class Mesh:
         assign = [0] * truncated_numel # the number assigned to each face
         sensi = [0] * truncated_numel # the sensitivity assigned to each face
         
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
+        
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
-            idx1 = con_mat[0][ref]
-            idx2 = con_mat[1][ref]
-            idx3 = con_mat[2][ref]
-            idx4 = con_mat[3][ref]
+            idx1 = con_mat[ref][0]
+            idx2 = con_mat[ref][1]
+            idx3 = con_mat[ref][2]
+            idx4 = con_mat[ref][3]
             
-            vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
-            vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
-            vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
-            vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
+            vert1 = (node_x[idx1], node_y[idx1], node_z[idx1])
+            vert2 = (node_x[idx2], node_y[idx2], node_z[idx2])
+            vert3 = (node_x[idx3], node_y[idx3], node_z[idx3])
+            vert4 = (node_x[idx4], node_y[idx4], node_z[idx4])
             
             if face_probe[i] == 0: #if single_val_idx. == 0 > face1
                 face_list[i] = (vert1,vert2,vert3)#face 1 
@@ -2131,10 +2080,12 @@ class Mesh:
             polly.set_array(np.array(assign))
         except MemoryError:#catch this error and print something more helpful than matplotlibs output
             raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
-        try:
-            polly.set_edgecolor(edge_color) #seems to be a bug with matplotlib where this function doesnt work in 3.1
-        except AttributeError:
-            pass 
+
+        if edge_color != 'face':#attempt to set edge colour 
+            try:
+                polly.set_edgecolor(edge_color)
+            except AttributeError:  #seems to be a bug with matplotlib where this function doesnt work in 3.1
+                pass
         
         polly.set_cmap(color_map) # set color map 
         polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
@@ -2159,7 +2110,7 @@ class Mesh:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z),
+                ax.scatter(self.elec[:,0],self.elec[:,1],zs=np.array(self.elec[:,2]),
                            s=20, c=elec_color, marker='o')
                 #note 3D plotting doesnt work well in matplotlib, use of 
                 #pyvista is recomended here. 
@@ -2186,15 +2137,19 @@ class Mesh:
         ax : matplotlib.Axis
             If provided, plot will be drawn on this axis.
         """
-        values = np.array(self.attr_cache[attr])        
+        values = np.array(self.df[attr])        
         dimDico = {'x':0,'y':1,'z':2}
         dim = dimDico[axis]
-        elms = np.array(self.con_matrix).T
-        nodes = np.array([self.node_x, self.node_y, self.node_z]).T
+        elms = self.connection.copy()
+        nodes = self.node.copy()
         sliceMesh(nodes, elms, values, label=attr, dim=dim, vmin=vmin, vmax=vmax, ax=ax)
         
         
-    def show_prism_mesh(self,color_map = 'Spectral',#displays the mesh using matplotlib
+    def show_prism_mesh(self,*args):
+        warnings.warn("show_prism_mesh is depreciated, use either show3D or showPrismMesh instead")
+        self.showPrismMesh(*args)
+        
+    def showPrismMesh(self,color_map = 'Spectral',#displays the mesh using matplotlib
              color_bar = True,
              ax = None,
              electrodes = True,
@@ -2260,16 +2215,19 @@ class Mesh:
             warnings.warn("Function can only be used to display prism meshes")
             return 
             
-        #decide which attribute to plot, we may decide to have other attritbutes! 
-        if attr not in self.attr_cache.keys():
-            attr == None
-        if attr == None:
-            attr = list(self.attr_cache.keys())[3]
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
-        else:
-            X = np.array(self.attr_cache[attr])
-            color_bar_title = attr
+        # decide which attribute to plot, we may decide to have other attritbutes! 
+        keys = self.df.keys()
+        if attr not in keys:
+            attr = None
+            warnings.warn('Chosen attribute not found in mesh class or none was chosen')
+        if attr is None:
+            if 'region' in keys:
+                attr = 'region'
+            else: 
+                attr = keys[0]
+
+        X = np.array(self.df[attr])
+        color_bar_title = attr
 
         t0 = time.time() # benchmark function
         
@@ -2283,11 +2241,11 @@ class Mesh:
         ax.set_ylabel('y')
         
         if zlim==None:
-            zlim=[min(self.node_z),max(self.node_z)]
+            zlim=[min(self.node[:,2]), max(self.node[:,2])]
         if xlim==None:
-            xlim=[min(self.node_x), max(self.node_x)]
+            xlim=[min(self.node[:,0]), max(self.node[:,0])]
         if ylim==None:
-            ylim=[min(self.node_y), max(self.node_y)]
+            ylim=[min(self.node[:,1]), max(self.node[:,1])]
         #set axis limits     
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
@@ -2304,7 +2262,7 @@ class Mesh:
             
         #construct patches 
         #print('constructing patches')
-        S = [0]*self.num_elms 
+        S = [0]*self.numel 
         if sens:
             try:
                 S = self.sensitivities
@@ -2312,16 +2270,16 @@ class Mesh:
                 sens = False
                 print('no sensitivities to plot')
                 
-        con_mat = self.con_matrix # just plotting top and bottom parts of elements 
-        combo = np.zeros((self.num_elms,5),dtype='float64')
+        con_mat = self.connection # just plotting top and bottom parts of elements 
+        combo = np.zeros((self.numel,5),dtype='float64')
         
-        for i in range(self.num_elms):
-            idx1 = con_mat[0][i]
-            idx2 = con_mat[1][i]
-            idx3 = con_mat[2][i]
-            idx4 = con_mat[3][i]
-            idx5 = con_mat[4][i]
-            idx6 = con_mat[5][i]
+        for i in range(self.numel):
+            idx1 = con_mat[i][0]
+            idx2 = con_mat[i][1]
+            idx3 = con_mat[i][2]
+            idx4 = con_mat[i][3]
+            idx5 = con_mat[i][4]
+            idx6 = con_mat[i][5]
             
             #assign each face a code 
             fc1 = int(str(idx1)+str(idx2)+str(idx3))#face code 1 
@@ -2349,21 +2307,26 @@ class Mesh:
         face_list = [()] * truncated_numel
         assign = [0] * truncated_numel # the number assigned to each face
         sensi = [0] * truncated_numel # the sensitivity assigned to each face
+        
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
+        
             
         for i in range(truncated_numel):
             ref = int(face_element_idx[i])
-            idx1 = con_mat[0][ref]
-            idx2 = con_mat[1][ref]
-            idx3 = con_mat[2][ref]
-            idx4 = con_mat[3][ref]
-            idx5 = con_mat[4][ref]
-            idx6 = con_mat[5][ref]
-            vert1 = (self.node_x[idx1],self.node_y[idx1],self.node_z[idx1])
-            vert2 = (self.node_x[idx2],self.node_y[idx2],self.node_z[idx2])
-            vert3 = (self.node_x[idx3],self.node_y[idx3],self.node_z[idx3])
-            vert4 = (self.node_x[idx4],self.node_y[idx4],self.node_z[idx4])
-            vert5 = (self.node_x[idx5],self.node_y[idx5],self.node_z[idx5])
-            vert6 = (self.node_x[idx6],self.node_y[idx6],self.node_z[idx6])
+            idx1 = con_mat[ref][0]
+            idx2 = con_mat[ref][1]
+            idx3 = con_mat[ref][2]
+            idx4 = con_mat[ref][3]
+            idx5 = con_mat[ref][4]
+            idx6 = con_mat[ref][5]
+            vert1 = (node_x[idx1], node_y[idx1], node_z[idx1])
+            vert2 = (node_x[idx2], node_y[idx2], node_z[idx2])
+            vert3 = (node_x[idx3], node_y[idx3], node_z[idx3])
+            vert4 = (node_x[idx4], node_y[idx4], node_z[idx4])
+            vert5 = (node_x[idx5], node_y[idx5], node_z[idx5])
+            vert6 = (node_x[idx6], node_y[idx6], node_z[idx6])
             
             if face_probe[i] == 0: #if single_val_idx. == 0 > face1
                 face_list[i] = (vert1,vert2,vert3)#face 1 
@@ -2386,7 +2349,13 @@ class Mesh:
             polly.set_array(np.array(assign))
         except MemoryError:#catch this error and print something more helpful than matplotlibs output
             raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
-        polly.set_edgecolor(edge_color)
+        
+        if edge_color != 'face':
+            try:
+                polly.set_edgecolor(edge_color)
+            except AttributeError: # can throw an error with certian versions of matplotlib
+                pass
+            
         polly.set_cmap(color_map) # set color map 
         polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
 #        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
@@ -2411,7 +2380,7 @@ class Mesh:
             
         if electrodes: #try add electrodes to figure if we have them 
             try: 
-                ax.scatter(self.elec_x,self.elec_y,zs=np.array(self.elec_z),
+                ax.scatter(self.elec[:,0],self.elec[:,1],zs=np.array(self.elec[:,2]),
                            s=20, c='k', marker='o')
             except AttributeError as e:
                 print("could not plot 3d electrodes, error = "+str(e))
@@ -2419,7 +2388,7 @@ class Mesh:
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
         
     #%% mesh zoning     
-    def assign_zone(self,poly_data):
+    def assignZone(self,poly_data):
         """ Assign material/region assocations with certain elements in the mesh 
         say if you have an area you'd like to forward model. 
         ***2D ONLY***
@@ -2440,8 +2409,8 @@ class Mesh:
         if self.ndims==3:
             raise ValueError('Assign zone available with 2D meshes only')
             
-        no_elms=self.num_elms#number of elements 
-        elm_xz=np.array([self.elm_centre[0],self.elm_centre[2]]).T#centriods of 2d mesh elements 
+        no_elms=self.numel#number of elements 
+        elm_xz=np.array([self.elmCentre[:,0],self.elmCentre[:,2]]).T#centriods of 2d mesh elements 
         material_no=np.zeros(no_elms,dtype=int)#attribute number
         
         if not isinstance(poly_data,dict):
@@ -2456,50 +2425,53 @@ class Mesh:
             material_no[inside]=i+1
                             
         self.zone = material_no
-        self.add_attribute(material_no,'zone')
+        self.addAttribute(material_no,'zone')
         return material_no     
         
-    def assign_zone_attribute(self,material_no,attr_list,new_key):
+    def assignZoneAttribute(self,attr_list,new_key,zone=None):
         """ Asssigns values to the mesh which depend on region / material only. E.G 
         a single resistivity value.
             
         Parameters
         ----------
-        material_no : array or list
-            Integers starting at 0 or 1, and ascend in intervals of 1, which 
-            correspond to a material in the mesh returned from assign_attr_ID.
-            Should have the same length as the number of elements in the mesh.
         attr_list : list
             Values corresponding to a material number in the mesh. eg. if you had 3 regions in the mesh then you give
             `[resistivity1,resistivity2,resistivity3]`.
         new_key : string
-            Key identifier assigned to the attribute in the attr_cache. 
+            Key identifier assigned to the attribute in the df. 
+        zone : array or list
+            Integers starting at 0 or 1, and ascend in intervals of 1, which 
+            correspond to a material in the mesh returned from assign_attr_ID.
+            Should have the same length as the number of elements in the mesh.
         
         Notes  
         -----
         Mesh object will now have the new attribute added once the function is run.
         Use the `mesh.show()` (or `.draw()`) function to see the result. 
         """ 
-        if len(material_no) != self.num_elms:
+        if zone is None:
+            zone = self.zone
+            
+        if len(zone) != self.numel:
             raise ValueError("Mismatch between the number of elements and material propeties")
         
-        new_para=np.array([0]*self.num_elms)
+        new_para=np.array([0]*self.numel)
         
-        if min(material_no)==1:#cor_fac allows for compatability with an index system starting at 1 or 0 
+        if min(zone)==1:#cor_fac allows for compatability with an index system starting at 1 or 0 
             cor_fac=1
         else:
             cor_fac=0
             
-        material_no = np.array(material_no) - cor_fac
+        zone = np.array(zone) - cor_fac
         
         for i in range(len(attr_list)):
-            idx = material_no == i
+            idx = zone == i
             new_para[idx] = attr_list[i]
         
-        self.attr_cache[new_key] = new_para
+        self.df[new_key] = new_para
         self.no_attributes += 1            
 
-    def apply_func(self,mesh_paras,material_no,new_key,function,*args):
+    def applyFunc(self,mesh_paras,material_no,new_key,function,*args):
         """ Applies a function to a mesh by zone number and mesh parameter.
         
         Parameters
@@ -2510,7 +2482,7 @@ class Mesh:
             Material type assigned to each element, should be numbered consectively from 1 to n. in the form 1 : 1 : 2 : n.
             ...ie if you have 2 materials in the mesh then pass an array of ones and twos. zeros will be ignored. 
         new_key : string
-            Key assigned to the parameter in the attr_cache. DOES NOT default.
+            Key assigned to the parameter in the df. DOES NOT default.
         function : function
             Function to be applied to mesh attributes, first argument must be the mesh parameter.
         args : [see function info]
@@ -2526,16 +2498,16 @@ class Mesh:
     
         if len(material_no)!=len(mesh_paras):
             raise ValueError('Mismatch between the number of material propeties (for the mesh) and parameters to be converted')
-        new_para=[0]*self.num_elms
+        new_para=[0]*self.numel
         #iterate through each set of argument variables
         for iteration in range(len(args[0])):
             parameters=[items[iteration] for items in args]#return parameters 
             parameters.insert(0,0)#this adds an element to the front of the parameters which can be swapped out to mesh_paras
-            for i in range(self.num_elms):
+            for i in range(self.numel):
                 if material_no[i]==iteration+1:#does the material match the iteration? 
                     parameters[0]=mesh_paras[i]#change parameter value at start of variables list
                     new_para[i]=function(*parameters)#compute new parameter   
-        self.attr_cache[new_key] = new_para
+        self.df[new_key] = new_para
         self.no_attributes += 1
         #return new_para
         
@@ -2547,29 +2519,30 @@ class Mesh:
             datum_x = xz[0]
             datum_z = xz[1]
             
-            elm_x = np.array(self.elm_centre[0])
-            elm_z = np.array(self.elm_centre[2])
+            elm_x = np.array(self.elmCentre[:,0])
+            elm_z = np.array(self.elmCentre[:,2])
             min_idx = np.argmin(datum_x)
             max_idx = np.argmax(datum_x)
             Z = np.interp(elm_x,datum_x,datum_z,left=datum_z[min_idx],
                           right=datum_z[max_idx])
             depth = Z - elm_z
-            self.attr_cache['depths'] = depth
+            self.df['depths'] = depth
             self.no_attributes += 1
             return depth
         if self.ndims == 3: # use 2D interpolation
-            elm_x = np.array(self.elm_centre[0])
-            elm_y = np.array(self.elm_centre[1])
-            elm_z = np.array(self.elm_centre[2])  
+            elm_x = np.array(self.elmCentre[:,0])
+            elm_y = np.array(self.elmCentre[:,1])
+            elm_z = np.array(self.elmCentre[:,2])  
             #use interpolation to work out depth to datum 
             surmesh = self.extractSurface()
-            Z = interp.triangulate(elm_x, elm_y, surmesh.node_x, 
-                                   surmesh.node_y, surmesh.node_z)
+            Z = interp.triangulate(elm_x, elm_y, surmesh.node[:,0], 
+                                   surmesh.node[:,1], surmesh.node[:,2])
             depth = Z - elm_z
-            self.attr_cache['depths'] = depth # add cell depths to attribute cache
+            self.df['depths'] = depth # add cell depths to attribute cache
             self.no_attributes += 1
             return depth
-            
+    
+    #%% electrode movements         
     def moveElecNodes(self, new_x, new_y, new_z, debug=True):
         """ Move the electrodes to different nodes which are close to the given coordinates. 
         This is useful for timelapse surveys where the electrodes move through time, 
@@ -2601,7 +2574,7 @@ class Mesh:
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
             raise ValueError("mismatch in the length of the new_x, new_y and new_z arrays")
         try:
-            if len(new_x) != len(self.elec_x) or len(new_z) != len(self.e_nodes):
+            if len(new_x) != len(self.elec[:,0]) or len(new_z) != len(self.eNodes ):
                 raise ValueError("mismatch between the length of new electrode position array and old array")
             has_nodes = True
         except AttributeError:
@@ -2610,27 +2583,30 @@ class Mesh:
         if new_y is None:
             new_y = np.zeros_like(new_x)
             
-        self.node_x = np.array(self.node_x)
-        self.node_y = np.array(self.node_y)
-        self.node_z = np.array(self.node_z)
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
             
         node_in_mesh = [0]*len(new_x)    
         for i in range(len(new_x)):
-            sq_dist = (self.node_x - new_x[i])**2 + (self.node_y - new_y[i])**2 + (self.node_z - new_z[i])**2 # find the minimum square distance
+            sq_dist = (node_x - new_x[i])**2 + (node_y - new_y[i])**2 + (node_z - new_z[i])**2 # find the minimum square distance
             node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
             if has_nodes and debug:
-                if node_in_mesh[i] != self.e_nodes[i]:
-                    print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.e_nodes[i]))#print to show something happening
+                if node_in_mesh[i] != self.eNodes [i]:
+                    print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.eNodes [i]))#print to show something happening
         
-        self.add_e_nodes(node_in_mesh) # update e_node parameter
+        self.setElecNode(node_in_mesh) # update e_node parameter
         if len(np.unique(node_in_mesh)) != len(new_x):
             warnings.warn("The number of new electrode nodes does not match the number of electrodes, which means a duplicated node is present! Please make mesh finer.")   
      
-    
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
 
-
+    #%% write mesh to file 
     def write_dat(self, file_path='mesh.dat'):
+        warnings.warn('write_dat is depreciated, use dat instead')
+        self.dat(file_path)
+        
+    def dat(self, file_path='mesh.dat'):
         """Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
         input file for triangular and quadrilateral meshes.
         
@@ -2643,51 +2619,56 @@ class Mesh:
             raise TypeError("expected string argument for file_path")
         ### write data to mesh.dat kind of file ###
         #open mesh.dat for input      
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
         with open(file_path, 'w') as fid:
-            
             #write to mesh.dat total num of elements and nodes
             # find furthest node from first electrode to be dirichlet node
-            xyz = np.array([self.node_x, self.node_y, self.node_z]).T # N x 3
-            if self.e_nodes is not None:
-                idirichlet = np.argmax(np.sqrt(np.sum((xyz-xyz[self.e_nodes[0],:])**2, axis=1)))
+            xyz = self.node.copy() 
+            if self.eNodes  is not None:
+                idirichlet = np.argmax(np.sqrt(np.sum((xyz-xyz[self.eNodes [0],:])**2, axis=1)))
             else:
-                idirichlet = len(self.node_x)
+                idirichlet = self.numnp
             if self.ndims == 3:
-                fid.write('%i %i %i 0 %i\n'%(self.num_elms,self.num_nodes,1,self.type2VertsNo()))
+                fid.write('%i %i %i 0 %i\n'%(self.numel,self.numnp,1,self.type2VertsNo()))
             else:
-                fid.write('%i %i %i\n'%(self.num_elms,self.num_nodes,idirichlet))
-            param = np.array(self.attr_cache['param'])
-            zone = np.array(self.attr_cache['zones'])
+                fid.write('%i %i %i\n'%(self.numel,self.numnp,idirichlet))
+            param = np.array(self.df['param'])
+            zone = np.array(self.df['zones'])
     
             #write out elements         
             no_verts = self.type2VertsNo()
-            for i in range(self.num_elms):
+            for i in range(self.numel):
                 elm_no=i+1
                 fid.write("%i "%elm_no)
-                [fid.write("%i "%(self.con_matrix[k][i]+1)) for k in range(no_verts)]
+                [fid.write("%i "%(self.connection[i][k]+1)) for k in range(no_verts)]
                 fid.write("%i %i\n"%(param[i],zone[i]))
     
             #now add nodes
             if self.ndims == 3:
-                for i in range(self.num_nodes):
+                for i in range(self.numnp):
                     ni_no=i+1
                     fid.write("%i %16.8f %16.8f %16.8f\n"%#node number, x coordinate, y coordinate, z coordinate
                               (ni_no,
-                               self.node_x[i],
-                               self.node_y[i],
-                               self.node_z[i]))
+                               node_x[i],
+                               node_y[i],
+                               node_z[i]))
                 fid.write('{:d}'.format(idirichlet))
             else:
-                for i in range(self.num_nodes):
+                for i in range(self.numnp):
                     ni_no=i+1
                     fid.write("%i %16.8f %16.8f\n"%#node number, x coordinate, y coordinate
                               (ni_no,
-                               self.node_x[i],
-                               self.node_z[i]))
-
+                               node_x[i],
+                               node_z[i]))
 
     def write_vtk(self, file_path="mesh.vtk", title=None, replace_nan=-9999):
-        """Writes a vtk file for the mesh object, everything in the attr_cache
+        warnings.warn('write_vtk is depreciated, use vtk instead')
+        self.vtk(file_path, title, replace_nan)
+        
+    def vtk(self, file_path="mesh.vtk", title=None, replace_nan=-9999):
+        """Writes a vtk file for the mesh object, everything in the df
         will be written to file as attributes. We suggest using Paraview 
         to display the mesh outside of ResIPy. It's fast and open source :). 
         
@@ -2707,44 +2688,55 @@ class Mesh:
                 title = "output from resipy meshTools module"
         if not file_path.endswith('.vtk'):
             file_path +='.vtk'#append .vtk extension to end of file path if not there
+        
         #open file and write header information  
         fh = open(file_path,'w')
         fh.write("# vtk DataFile Version 3.0\n")
         fh.write(title+"\n")
         fh.write("ASCII\nDATASET UNSTRUCTURED_GRID\n")
         #define node coordinates
-        fh.write("POINTS %i double\n"%self.num_nodes)
-        for i in range(self.num_nodes):
-            fh.write("%8.6f\t%8.6f\t%8.6f\n"%(self.node_x[i],self.node_y[i],self.node_z[i]))
+        fh.write("POINTS %i double\n"%self.numnp)
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
+        
+        for i in range(self.numnp):
+            fh.write("%16.8f\t%16.8f\t%16.8f\n"%(node_x[i],node_y[i],node_z[i]))
+        
         #define the connection matrix    
         no_verts = self.type2VertsNo()
-        no_readable = self.num_elms*(1+no_verts)
-        fh.write("CELLS %i %i\n"%(self.num_elms,no_readable))
-        for i in range(self.num_elms):
+        no_readable = self.numel*(1+no_verts)
+        fh.write("CELLS %i %i\n"%(self.numel,no_readable))
+        for i in range(self.numel):
             fh.write("%i\t"%no_verts)
             for k in range(no_verts):
-                fh.write("{}    ".format(self.con_matrix[k][i]))
+                fh.write("{}    ".format(self.connection[i][k]))
             fh.write("\n")
+        
         #cell types
-        fh.write("CELL_TYPES %i\n"%self.num_elms)
-        [fh.write("%i "%self.cell_type[0]) for i in range(self.num_elms)];fh.write("\n")
+        fh.write("CELL_TYPES %i\n"%self.numel)
+        [fh.write("%i "%self.cell_type[0]) for i in range(self.numel)];fh.write("\n")
+        
         #write out the data
-        fh.write("CELL_DATA %i\n"%self.num_elms)
-        attr_cache = self.attr_cache
-        for i,key in enumerate(attr_cache.keys()):
+        fh.write("CELL_DATA %i\n"%self.numel)
+        df = self.df
+        for i,key in enumerate(df.keys()):
             fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
             fh.write("LOOKUP_TABLE default\n")
-            X = np.array(attr_cache[key])
+            X = np.array(df[key])
             X[np.isnan(X)]=replace_nan
-            [fh.write("%8.6f "%X[j]) for j in range(self.num_elms)]
+            [fh.write("%16.8f "%X[j]) for j in range(self.numel)]
             fh.write("\n")
         
         #finish writing
-        fh.write("POINT_DATA %i"%self.num_nodes)        
+        fh.write("POINT_DATA %i"%self.numnp)        
         fh.close()
     
-
-    def write_attr(self,attr_key,file_name='_res.dat'):
+    def write_attr(self,attr_key=None,file_name='_res.dat'):
+        warnings.warn('write_attr is depreciated use writeAttr instead')
+        self.writeAttr(attr_key,file_name)
+    
+    def writeAttr(self,attr_key=None,file_name='_res.dat'):
         """ Writes a attribute to a _res.dat type file. file_name entered
         seperately because it will be needed for the R2 config file.
         The reason for this function is so you can write a forward model 
@@ -2753,7 +2745,7 @@ class Mesh:
         Parameters
         ----------
         attr_key: string
-            Key identifying the attr to be written in the mesh object attr_cache.
+            Key identifying the attr to be written in the mesh object df.
         file_name: string, optional
             Name of the _res.dat type file.
         """
@@ -2762,30 +2754,36 @@ class Mesh:
         if len(ntpath.basename(file_name))>15:
             raise NameError("File name for _res.dat type file cannot be longer than 15 characters")
             
+        if attr_key is None: 
+            attr_key = 'Resistivity'
+        
+        if attr_key not in self.df.keys():
+            raise NameError('Given key is not inside of the mesh.df')
+            
         if isinstance(file_name,str)==False:
             raise NameError("file_name argument must be a string")
         
         #the format of the _res.dat file is such that
         #| x coordinate | y coordinate | value | log(value) | 
         fh = open(file_name,'w')#open file handle 
-        x_coords=self.elm_centre[0]#get element coordinates
-        y_coords=self.elm_centre[1]
-        z_coords=self.elm_centre[2]
-        values=self.attr_cache[attr_key]
+        x_coords=self.elmCentre[:,0]#get element coordinates
+        y_coords=self.elmCentre[:,1]
+        z_coords=self.elmCentre[:,2]
+        values=self.df[attr_key]
         log_values=np.log10(np.array(values))
         if self.ndims==3:
-            for i in range(self.num_elms):
+            for i in range(self.numel):
                 fh.write("\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\n".format(x_coords[i],y_coords[i],z_coords[i],values[i],log_values[i]))
         else:
-            for i in range(self.num_elms):
+            for i in range(self.numel):
                 fh.write("\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\t{: 10.5e}\n".format(x_coords[i],z_coords[i],values[i],log_values[i]))
             
         fh.close()
         
-    def write_csv(self,file_name='mesh.csv'):
+    def toCSV(self,file_name='mesh.csv'):
         """ Write a .csv file of the mesh, the first 3 columns are the element 
         centres at coordinates x,y,z and the rest of the columns are the 
-        attributes in the attr_cache
+        attributes in the df
 
         Parameters
         ----------
@@ -2799,20 +2797,25 @@ class Mesh:
         """
         if isinstance(file_name,str)==False:
             raise NameError("file_name argument must be a string")
-        x_coords=self.elm_centre[0]#get element coordinates
-        y_coords=self.elm_centre[1]
-        z_coords=self.elm_centre[2]
-        keys = self.attr_cache.keys()
+        x_coords=self.elmCentre[:,0]#get element coordinates
+        y_coords=self.elmCentre[:,1]
+        z_coords=self.elmCentre[:,2]
+        keys = self.df.keys()
+        #ignore the x y z columns if already in df
+        ignore = ['X','Y','Z']
+        for d in ignore:
+            if d in keys:
+                del keys[d]
         
         #open file 
         fh = open(file_name,'w')
         fh.write('x,y,z') # write xyz headers 
         [fh.write(','+key) for key in keys] # write attribute headers 
         fh.write('\n') # drop a line 
-        for i in range(self.num_elms):
+        for i in range(self.numel):
             line = '{:f},{:f},{:f}'.format(x_coords[i],y_coords[i],z_coords[i])
             for key in keys:
-                line += ',{:}'.format(self.attr_cache[key][i])
+                line += ',{:}'.format(self.df[key][i])
             line += '\n'
             fh.write(line)
         #close file     
@@ -2884,7 +2887,7 @@ class Mesh:
             if not isinstance(loc,str):
                 raise NameError("Excepted string type argument for 'loc'")
                 
-        self.write_vtk(fname)#write vtk to working directory with all associated attributes
+        self.vtk(fname)#write vtk to working directory with all associated attributes
         op_sys = platform.system()#find kernel type
         if op_sys == "Windows":
             if look4: # find where paraview is installed 
@@ -2926,10 +2929,10 @@ class Mesh:
         if not isinstance(prefix,str):
             raise NameError('prefix argument is not a string.')
         if zone is not None:
-            if len(zone) != self.num_elms:
+            if len(zone) != self.numel:
                 raise ValueError('Number of zone array elements given to exportTetgenMesh does not match the number of elements in the mesh.')
         else:
-            zone = [1]*self.num_elms # all elements are inside zone 1 
+            zone = [1]*self.numel # all elements are inside zone 1 
             
         print('## Exporting to tetgen format  ##')# 
             
@@ -2940,14 +2943,14 @@ class Mesh:
         
         #NB: faces on side/bottom of mesh are given a marker of 2. Face on top of mesh denoted 1. 
         #NB: Nodes on side of mesh are given a marker of 2, 1 if on top of the mesh and 0 if inside the mesh 
-        con_mat=self.con_matrix
+        con_mat=self.connection.copy()
         if self.neigh_matrix is None: # compute neighbour matrix 
             self.computeNeigh() # this will find the element neighbours and the elements which lie on the outside of the mesh! 
             
         neigh = np.array(self.neigh_matrix).T
         out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
         neigh_trunc = neigh[out_elem]
-        con_trunc = np.array(con_mat).T[out_elem]
+        con_trunc = con_mat[out_elem,:]
         
         ## map used in neigh calculation ##         
         map1 = np.array([2,3,4]) -1 
@@ -2955,9 +2958,9 @@ class Mesh:
         map3 = np.array([1,2,4]) -1 
         map4 = np.array([1,2,3]) -1 
         nmap = np.array([map1,map2,map3,map4])
-        node_x = np.array(self.node_x)
-        node_y = np.array(self.node_y)
-        node_z = np.array(self.node_z)
+        node_x = self.node[:,0]
+        node_y = self.node[:,1]
+        node_z = self.node[:,2]
         
         face_list = []
         ocheck = [] # orientation check, referenced for making face file 
@@ -3001,7 +3004,7 @@ class Mesh:
         #return ochecka, face_matrix
         top_face = ochecka == 1
         other_face = ochecka != 1
-        node_bounday_marker = np.zeros(self.num_nodes,dtype=int) # most nodes are inside the mesh 
+        node_bounday_marker = np.zeros(self.numnp,dtype=int) # most nodes are inside the mesh 
         top_nodes = np.unique(face_matrix[top_face])
         node_bounday_marker[top_nodes]=1 # these nodes have a value of 1
         
@@ -3014,14 +3017,14 @@ class Mesh:
         fh = open(prefix+'.1.node','w')
         #header line : 
         #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
-        fh.write('{:d}\t{:d}\t{:d}\t{:d}\n'.format(self.num_nodes,self.ndims,1,1))
+        fh.write('{:d}\t{:d}\t{:d}\t{:d}\n'.format(self.numnp,self.ndims,1,1))
         #all other lines: 
         #<point #> <x> <y> <z> [attributes] [boundary marker]
-        for i in range(self.num_nodes):
+        for i in range(self.numnp):
             line = '{:d}\t{:f}\t{:f}\t{:f}\t{:d}\t{:d}\n'.format((i+1),
-                                                        self.node_x[i],
-                                                        self.node_y[i],
-                                                        self.node_z[i],
+                                                        node_x[i],
+                                                        node_y[i],
+                                                        node_z[i],
                                                         1,
                                                         node_bounday_marker[i])
             fh.write(line)
@@ -3033,14 +3036,14 @@ class Mesh:
         print('writing .ele file... ',end='')
         fh = open(prefix+'.1.ele','w')
         #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
-        fh.write('{:d}\t{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo(),1))
+        fh.write('{:d}\t{:d}\t{:d}\n'.format(self.numel,self.type2VertsNo(),1))
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
-        for i in range(self.num_elms):
+        for i in range(self.numel):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
-                                                         self.con_matrix[0][i]+1,#need to add one because of fortran indexing 
-                                                         self.con_matrix[1][i]+1,
-                                                         self.con_matrix[2][i]+1,
-                                                         self.con_matrix[3][i]+1,
+                                                         con_mat[i][0]+1,#need to add one because of fortran indexing 
+                                                         con_mat[i][1]+1,
+                                                         con_mat[i][2]+1,
+                                                         con_mat[i][3]+1,
                                                          zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
@@ -3080,15 +3083,15 @@ class Mesh:
         #Here we want look for faces which share with another element 
         #(handled by mesh calc)
             
-        neigh_matrix = np.array(self.neigh_matrix).T
+        neigh_matrix = neigh.copy()
         neigh_matrix+=1 # add one for tetgen indexing
         neigh_matrix[neigh_matrix==0]=-1#-1 for face elements 
         
         print('writing .neigh file... ',end='')
         fh = open(prefix+'.1.neigh','w') # write to file 
-        fh.write('{:d}\t{:d}\n'.format(self.num_elms,self.type2VertsNo())) # header line         
-        elm_id = self.elm_id
-        for i in range(self.num_elms):
+        fh.write('{:d}\t{:d}\n'.format(self.numel,self.type2VertsNo())) # header line         
+        elm_id = np.arange(self.numel) + 1
+        for i in range(self.numel):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format(elm_id[i],
                                                             neigh_matrix[i,0],
                                                             neigh_matrix[i,1],
@@ -3229,51 +3232,36 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
                 line_idx += 1
             attr_dict[attr_title] = array
             
-            if num_attr == 0:# primary attribute defaults to the first attribute found
-                parameter_title = attr_title
-                values_oi = array   
             num_attr += 1
     
-    #put in fail safe if no attributes are found        
-    if num_attr == 0:
-        values_oi= [0]*no_elms
-        parameter_title = "n/a"
-        
     #if cell_type[0] == 5 or cell_type[0] == 8 or cell_type[0] == 9: # then its a 2D mesh
     if title == 'Output from cR2' or title == 'Output from R2': # account for the fact the y and z columns should be swapped 
         mesh = Mesh(node_x,#x coordinates of nodes 
                     node_z,#y coordinates of nodes
-                    node_y,#z coordinates of nodes 
-                    node_num,#node id number 
-                    elm_num,#element id number 
-                    con_mat,#nodes of element vertices
+                    node_y,#z coordinates of nodes  
+                    np.array(con_mat).T,#nodes of element vertices
                     cell_type,#according to vtk format
-                    values_oi,#the values of the attributes given to each cell 
-                    parameter_title,#what is the attribute? we may use conductivity instead of resistivity for example
-                    file_path) #nb: nodes should ordered already  
+                    file_path,
+                    order_nodes=False) #nb: nodes should ordered already  
     else:
         mesh = Mesh(node_x,#x coordinates of nodes 
                     node_y,#y coordinates of nodes
                     node_z,#z coordinates of nodes 
-                    node_num,#node id number 
-                    elm_num,#element id number 
-                    con_mat,#nodes of element vertices
+                    np.array(con_mat).T,#nodes of element vertices
                     cell_type,#according to vtk format
-                    values_oi,#the values of the attributes given to each cell 
-                    parameter_title,#what is the attribute? we may use conductivity instead of resistivity for example
                     file_path,
                     order_nodes) 
     
     #add attributes / cell parameters 
     for key in attr_dict.keys():
-        mesh.attr_cache[key] = attr_dict[key]
+        mesh.df[key] = attr_dict[key]
     
     #see if sensivity output from R2/R3t is inside the .vtk 
     try:
         if mesh.ndims==2:
-            mesh.add_sensitivity(mesh.attr_cache['Sensitivity(log10)'])
+            mesh.add_sensitivity(mesh.df['Sensitivity(log10)'])
         else:
-            mesh.add_sensitivity(mesh.attr_cache['Sensitivity_map(log10)'])
+            mesh.add_sensitivity(mesh.df['Sensitivity_map(log10)'])
     except:
         pass 
     
@@ -3362,15 +3350,11 @@ def dat_import(file_path='mesh.dat', order_nodes=True):
     mesh = Mesh(node_x = node_x,#x coordinates of nodes 
                 node_y = node_y,#y coordinates of nodes
                 node_z = node_z,#z coordinates of nodes 
-                node_id= node_id,#node id number 
-                elm_id=elm_no,#element id number 
-                node_data=node_map,#nodes of element vertices
+                node_data=np.array(node_map).T,#nodes of element vertices
                 cell_type = [cell_type],#according to vtk format
-                cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
-                atribute_title='zone', #what is the attribute? we may use conductivity instead of resistivity for example
                 order_nodes = order_nodes)
     
-    mesh.add_attribute(zone,'zone')
+    mesh.addAttribute(zone,'zone')
     
     return mesh 
         
@@ -3456,22 +3440,18 @@ def tetgen_import(file_path, order_nodes=True):
     mesh = Mesh(node_x = node_x,#x coordinates of nodes 
                 node_y = node_y,#y coordinates of nodes
                 node_z = node_z,#z coordinates of nodes 
-                node_id= node_id,#node id number 
-                elm_id=elm_no,#element id number 
-                node_data=node_map,#nodes of element vertices
+                node_data=np.array(node_map).T,#nodes of element vertices
                 cell_type = [10],#according to vtk format
-                cell_attributes = zone,#the values of the attributes given to each cell, we dont have any yet 
                 original_file_path = file_path,
-                atribute_title='zone',#what is the attribute? 
                 order_nodes = order_nodes)
     
-    mesh.add_attribute(zone,'zone')
+    mesh.addAttribute(zone,'zone')
     
     return mesh
         
         
 #%% build a quad mesh        
-def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, fmd=None, pad=2, 
+def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, fmd=None, pad=2, 
               surface_x=None,surface_z=None):
     """Creates a quaderlateral mesh given the electrode x and y positions.
             
@@ -3660,7 +3640,6 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         warnings.warn("Electrode node vector and number of electrodes mismatch! ")
      
     # what is the number of regions? (elements)
-    no_elms=(len(meshx)-1)*(len(meshz)-1)
     no_nodes=len(meshx)*len(meshz)
     
     # compute node mappins (connection matrix)
@@ -3687,13 +3666,11 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
     mesh = Mesh(node_x,
                 node_y,
                 node_z,
-                list(np.arange(0,no_nodes)),
-                list(np.arange(0,no_elms)),
-                node_mappins,
-                [9],
-                [1]*no_elms,
-                'zones',
-                order_nodes=False)
+                np.array(node_mappins).T,
+                cell_type=[9],
+                original_file_path='N/A',
+                order_nodes=False) 
+ 
     
     #find the node which the electrodes are actually on in terms of the mesh. 
     node_in_mesh = [0]*len(elec_x)
@@ -3701,21 +3678,7 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
         sq_dist = (node_x - elec_x[i])**2 + (node_z - elec_z[i])**2 # find the minimum square distance
         
         node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
-    mesh.add_e_nodes(node_in_mesh) # add nodes to the mesh class
-    
-    # point at the surface
-    xsurf = []
-    zsurf = []
-    for x, z, t in zip(elec_x, elec_z, elec_type):
-        if t == 'electrode': # surface electrode
-            xsurf.append(x)
-            zsurf.append(z)
-    if surface_x is not None:
-        xsurf = xsurf + list(surface_x)
-        zsurf = zsurf + list(surface_z)
-    surfacePoints = np.array([xsurf, zsurf]).T
-    isort = np.argsort(xsurf)
-    mesh.surface = surfacePoints[isort, :]
+    mesh.setElecNode(node_in_mesh) # add nodes to the mesh class
 
     # OVERWRITE elec_node using node_in_mesh that doesn't assume surface
     # electrode but snap them to node based on distance
@@ -3723,8 +3686,12 @@ def quad_mesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.
 
     return mesh, meshx, meshz, topo, elec_node
 
+def quad_mesh(*args):
+    warnings.warn('quad_mesh is depreciated, use quadMesh instead')
+    quadMesh(*args)
+
 #%% build a triangle mesh - using the gmsh wrapper
-def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
+def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
              **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
@@ -3857,46 +3824,30 @@ def tri_mesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
                 mesh_info['node_y'],
                 mesh_info['node_z'],
-                mesh_info['node_id'],
-                mesh_info['elm_id'],
-                mesh_info['node_data'],
+                np.array(mesh_info['node_data']).T,
                 mesh_info['cell_type'],
-                regions, # this is the region
-                mesh_info['parameter_title'], # and it's label
                 mesh_info['original_file_path'])
+    
+    mesh.addAttribute(regions, 'region')
     
     if keep_files is False: 
         os.remove(file_name+".geo")
         os.remove(file_name+".msh")
 
-    mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+    mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
-    # point at the surface
-    xsurf = []
-    zsurf = []
-    # add remote if any
     if elec_type is not None:
         iremote = np.array([a == 'remote' for a in elec_type])
         mesh.iremote = iremote
-    
-        for x, z, t in zip(elec_x, elec_z, elec_type):
-            if t == 'electrode': # surface electrode
-                xsurf.append(x)
-                zsurf.append(z)
-    
-    if geom_input is not None:             
-        if 'surface' in geom_input.keys():
-            xsurf = xsurf + list(geom_input['surface'][0])
-            zsurf = zsurf + list(geom_input['surface'][1])
-        surfacePoints = np.array([xsurf, zsurf]).T
-        isort = np.argsort(xsurf)
-        mesh.surface = surfacePoints[isort, :]
 
     return mesh
 
+def tri_mesh(*args):
+    warnings.warn('tri_mesh is depreciated, use triMesh instead')
+    triMesh(**args)
 
 #%% 3D tetrahedral mesh 
-def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'triangulate',
+def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'triangulate',
                surface_refinement = None, mesh_refinement = None,show_output=True, 
                path='exe', dump=print, whole_space=False, padding=20, ncores=2,
                search_radius = 10, **kwargs):
@@ -4138,17 +4089,15 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
     mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
                 mesh_info['node_y'],
                 mesh_info['node_z'],
-                mesh_info['node_id'],
-                mesh_info['elm_id'],
-                mesh_info['node_data'],
+                np.array(mesh_info['node_data']).T,
                 mesh_info['cell_type'],
-                regions, # this is used as cell_attributes
-                mesh_info['parameter_title'],
                 mesh_info['original_file_path'])
 
+    mesh.addAttribute(regions, 'region')
+    
     #mesh.write_dat(file_path='mesh.dat') # write mesh.dat - disabled as handled higher up in the R2 class 
-    node_x = np.array(mesh.node_x)
-    node_y = np.array(mesh.node_y)
+    node_x = np.array(mesh.node[:,0])
+    node_y = np.array(mesh.node[:,1])
     
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
@@ -4174,7 +4123,7 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         nodez = np.zeros_like(node_x,dtype=float)
     print('done')
     
-    mesh.node_z = np.array(mesh.node_z) + nodez
+    mesh.node[:,2] = mesh.node[:,2] + nodez
     #need to recompute cell centres as well as they will have changed. 
     mesh.cellCentres()
 
@@ -4186,12 +4135,16 @@ def tetra_mesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, int
         node_pos = np.insert(node_pos,np.array(rem_elec_idx)-1,[rem_node[0][0]]*len(rem_elec_idx),axis=0)
         
     #add nodes to mesh
-    mesh.add_e_nodes(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+    mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh
 
+def tetra_mesh(*args):
+    warnings.warn('tetra_mesh is depreciated, use tetraMesh instead')
+    tetraMesh(*args)
+    
 #%% column mesh 
-def prism_mesh(elec_x,elec_y,elec_z, 
+def prismMesh(elec_x,elec_y,elec_z, 
                file_path='column_mesh.geo',
                keep_files=True,
                show_output=True, 
@@ -4285,23 +4238,24 @@ def prism_mesh(elec_x,elec_y,elec_z,
     mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
                 mesh_info['node_y'],
                 mesh_info['node_z'],
-                mesh_info['node_id'],
-                mesh_info['elm_id'],
-                mesh_info['node_data'],
+                np.array(mesh_info['node_data']).T,
                 mesh_info['cell_type'],
-                regions, # this is used as cell_attributes
-                mesh_info['parameter_title'],
                 mesh_info['original_file_path'])
     
+    mesh.addAttribute(regions, 'region')
     mesh.moveElecNodes(elec_x,elec_y,elec_z)
     
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
     return mesh 
+
+def prism_mesh(*args):
+    warnings.warn('prism_mesh is depreciated, use prismMesh instead')
+    prismMesh(*args)
     
 #%% import a custom mesh, you must know the node positions 
-def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
+def readMesh(file_path, node_pos=None, order_nodes=True):
     """ 
     Import user defined mesh, currently supports .msh, .vtk and .dat (native to R2/3t)
     format for quad, triangular and tetrahedral meshes. The type of file is guessed from the 
@@ -4336,12 +4290,8 @@ def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
         mesh = Mesh(node_x = mesh_dict['node_x'],
                     node_y = mesh_dict['node_y'],
                     node_z = mesh_dict['node_z'],
-                    node_id = mesh_dict['node_id'],
-                    elm_id = mesh_dict['elm_id'],
-                    node_data = mesh_dict['node_data'],
+                    node_data = np.array(mesh_dict['node_data']).T,
                     cell_type = mesh_dict['cell_type'],
-                    cell_attributes = mesh_dict['parameters'],
-                    atribute_title = mesh_dict['parameter_title'],
                     order_nodes = order_nodes)
         
     elif ext == '.dat':
@@ -4353,10 +4303,15 @@ def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
         raise ImportError("Unrecognised file extension, available extensions are "+str(avail_ext))
     
     if node_pos is not None:
-        mesh.add_e_nodes(np.array(node_pos, dtype=int)) # add electrode nodes to mesh provided by the user
+        mesh.setElecNode(np.array(node_pos, dtype=int)) # add electrode nodes to mesh provided by the user
     
     return mesh
 
+def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
+    warnings.warn('custom_mesh_import is depreciated, use readMesh instead')
+    mesh = readMesh(file_path, node_pos, order_nodes)
+    return mesh
+    
 #%% ram amount check and is wine installed?. 
 #Now for complicated meshes we need alot more RAM. the below function is a os agnostic
 #function for returning the amount of total ram. 

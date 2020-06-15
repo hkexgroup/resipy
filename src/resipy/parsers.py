@@ -1639,6 +1639,7 @@ def srvParser(fname):
         elec[i,0] = float(line[1])
         elec[i,1] = float(line[2])
         elec[i,2] = float(line[3])
+   
     #read in measurements 
     line = fh.readline()
     while len(line.split())==0:

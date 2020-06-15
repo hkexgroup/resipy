@@ -1,5 +1,7 @@
 cimport cython  #import relevant modules 
+cimport numpy 
 import math as ma
+import numpy as np
 
 # mesh calculations - need to be in cython otherwise they will take too long 
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
