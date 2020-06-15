@@ -2877,7 +2877,7 @@ class App(QMainWindow):
                         replotMesh()
                         meshOutputStack.setCurrentIndex(1)
                     self.regionTable.reset()
-                    for i in range(len(np.unique(self.r2.mesh.attr_cache['region']))-1):
+                    for i in range(len(np.unique(self.r2.mesh.df['region']))-1):
                         self.regionTable.addRow()
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
@@ -3962,7 +3962,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.logText.setText(text)
             self.r2.proc = None
             
-            if any(self.r2.mesh.attr_cache['param'] == 0): # if fixed element are present, the mesh
+            if any(self.r2.mesh.df['param'] == 0): # if fixed element are present, the mesh
             # will be sorted, meaning we need to replot it
                 self.mwMesh.replot()
             
@@ -3991,7 +3991,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     index = 1
                     self.displayParams['index'] = 1
                 self.attrCombo.clear()
-                attrs = self.r2.meshResults[index].attr_cache.keys()
+                attrs = self.r2.meshResults[index].df.keys()
                 c = 0
                 ci = 0
                 for i, attr in enumerate(attrs):
@@ -4192,7 +4192,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # change survey
         def surveyComboFunc(index):
             self.displayParams['index'] = index
-            attrs = list(self.r2.meshResults[index].attr_cache.keys())
+            attrs = list(self.r2.meshResults[index].df.keys())
             attr0 = str(self.attrCombo.currentText())
             ci = 0
             c = -1
@@ -4225,7 +4225,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             resetAttributeSpecificSettings()
             self.displayParams['attr'] = str(self.attrCombo.currentText())
             if self.displayParams['attr'] == 'Sigma_imag(log10)':
-                sigma_imag_vals = self.r2.meshResults[self.displayParams['index']].attr_cache['Sigma_imag(log10)']
+                sigma_imag_vals = self.r2.meshResults[self.displayParams['index']].df['Sigma_imag(log10)']
                 if any(val == 0 for val in sigma_imag_vals):
                     if all(val == 0 for val in sigma_imag_vals):
                         pass

@@ -378,13 +378,13 @@ class R2(object): # R2 master class instanciated by the GUI
         os.mkdir(savedir)
         
         # add files to it
-        self.mesh.write_vtk(os.path.join(savedir, 'mesh.vtk'))
+        self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
         self.elec.to_csv(os.path.join(savedir, 'elec.csv'))
         for i, survey in enumerate(self.surveys):
             f = os.path.join(savedir, 'survey{:d}'.format(i))
             survey.df.to_csv(f + '-df.csv', index=False)
             survey.elec.to_csv(f + '-elec.csv')
-            self.meshResults[i].write_vtk(f + '.vtk')
+            self.meshResults[i].vtk(f + '.vtk')
 
         # TODO add flags (borehole, timelapse)
         # TODO add all param
@@ -1418,11 +1418,11 @@ class R2(object): # R2 master class instanciated by the GUI
             print('Creating quadrilateral mesh...', end='')
             surface_x = surface[:,0] if surface is not None else None
             surface_z = surface[:,2] if surface is not None else None
-            mesh,meshx,meshy,topo,e_nodes = mt.quad_mesh(elec_x,elec_z,list(elec_type),
+            mesh,meshx,meshy,topo,e_nodes = mt.quadMesh(elec_x,elec_z,list(elec_type),
                                                          surface_x=surface_x, surface_z=surface_z,
                                                          **kwargs)   #generate quad mesh
             self.param['mesh_type'] = 6
-            e_nodes = np.array(mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
+            e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
             self.param['node_elec'] = [elecLabels, e_nodes.astype(int)]
 
             if 'regions' in self.param: # allow to create a new mesh then rerun inversion
@@ -1453,7 +1453,7 @@ class R2(object): # R2 master class instanciated by the GUI
             with cd(self.dirname):#change to working directory so that mesh files written in working directory
                 if typ == 'trian':
                     print('Creating triangular mesh...', end='')
-                    mesh = mt.tri_mesh(elec_x,elec_z,elec_type,geom_input,
+                    mesh = mt.triMesh(elec_x,elec_z,elec_type,geom_input,
                                  path=os.path.join(self.apiPath, 'exe'),
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=show_output,
@@ -1464,7 +1464,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if cl == -1:
                         dist = cdist(self.elec[~self.elec['remote']][['x','y']].values)/2 # half the minimal electrode distance
                         cl = np.min(dist[dist != 0])
-                    mesh = mt.tetra_mesh(elec_x, elec_y, elec_z,elec_type,
+                    mesh = mt.tetraMesh(elec_x, elec_y, elec_z,elec_type,
                                  path=os.path.join(self.apiPath, 'exe'),
                                  surface_refinement=surface,
                                  cl_factor=cl_factor,
@@ -1473,7 +1473,7 @@ class R2(object): # R2 master class instanciated by the GUI
                                  **kwargs)
                 if typ=='prism':
                     print('Creating prism mesh...', end='')
-                    mesh = mt.prism_mesh(elec_x, elec_y, elec_z,
+                    mesh = mt.prismMesh(elec_x, elec_y, elec_z,
                                          path=os.path.join(self.apiPath, 'exe'),
                                          cl=cl, dump=dump, show_output=show_output,
                                          **kwargs)
@@ -1487,19 +1487,19 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh.refine()
             
             self.param['mesh_type'] = 3
-            e_nodes = np.array(mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
+            e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
             self.param['node_elec'] = [elecLabels, e_nodes.astype(int)]
 
         self.mesh = mesh
         self.param['mesh'] = mesh
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
-        numel = self.mesh.num_elms
-        self.mesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
-        self.mesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
-        self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
-        self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
-        self.mesh.add_attribute(np.arange(numel)+1,'param') # param = 0 if fixed
+        numel = self.mesh.numel
+        self.mesh.addAttribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.addAttribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
+        self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
+        self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
+        self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
 
         # define zlim
         if surface is not None:
@@ -1578,7 +1578,7 @@ class R2(object): # R2 master class instanciated by the GUI
             flag_3D = True
         else:
             flag_3D = False
-        self.mesh = mt.custom_mesh_import(file_path, node_pos=node_pos, 
+        self.mesh = mt.readMesh(file_path, node_pos=node_pos, 
                                           order_nodes=order_nodes)
         if elec is not None:
             self.mesh.moveElecNodes(elec[:,0], elec[:,1], elec[:,2])
@@ -1594,7 +1594,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 warnings.warn("No electrode nodes associated with mesh! Electrode positions are unknown!")
 
         #R2 class mesh handling
-        e_nodes = np.array(self.mesh.e_nodes) + 1 # +1 because of indexing staring at 0 in python
+        e_nodes = np.array(self.mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
         self.param['mesh'] = self.mesh
         # if mesh_type == 'quad':
         #     self.param['mesh_type'] = 6
@@ -1618,25 +1618,25 @@ class R2(object): # R2 master class instanciated by the GUI
             raise ValueError('Some electrodes are positionned on the same nodes !')
         
         # make regions continuous
-        regions = self.mesh.attr_cache['region']
+        regions = self.mesh.df['region']
         uregions = np.unique(regions)
         iregions = np.arange(len(uregions)) + 1
         dico = dict(zip(uregions, iregions))
-        self.mesh.attr_cache['region'] = [dico[a] for a in regions]
+        self.mesh.df['region'] = [dico[a] for a in regions]
         
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
-        numel = self.mesh.num_elms
-        self.mesh.add_attribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
-        self.mesh.add_attribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
-        self.mesh.add_attribute(np.ones(numel, dtype=int), 'zones')
-        self.mesh.add_attribute(np.zeros(numel, dtype=float), 'iter')
+        numel = self.mesh.numel
+        self.mesh.addAttribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
+        self.mesh.addAttribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
+        self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
+        self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
 
         name = 'mesh.dat'
         if self.typ == 'R3t' or self.typ == 'cR3t':
             name = 'mesh3d.dat'
         file_path = os.path.join(self.dirname, name)
-        self.mesh.write_dat(file_path)
+        self.mesh.dat(file_path)
 
         # define zlim
         if self.fmd is None:
@@ -1662,7 +1662,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'attr' not in kwargs.keys():
                 kwargs['attr'] = 'region' # this will print regions
             if 'color_bar' not in kwargs.keys():
-                if np.unique(np.array(self.mesh.attr_cache['region'])).shape[0] > 1:
+                if np.unique(np.array(self.mesh.df['region'])).shape[0] > 1:
                     kwargs['color_bar'] = True # show colorbar for multiple regions
                 else:
                     kwargs['color_bar'] = False
@@ -1719,8 +1719,8 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 param['num_xy_poly'] = 0
                 param['inverse_type'] = 0 # normal regularisation
-                param['zmin'] = np.min(self.mesh.node_z) - 10 # we want to keep the whole mesh for background regularisation
-                param['zmax'] = np.max(self.mesh.node_z) + 10
+                param['zmin'] = np.min(self.mesh.node[:,2]) - 10 # we want to keep the whole mesh for background regularisation
+                param['zmax'] = np.max(self.mesh.node[:,2]) + 10
             self.configFile = write2in(param, refdir, typ=typ) # background survey
             
             # now prepare the actual timelapse settings
@@ -1733,33 +1733,33 @@ class R2(object): # R2 master class instanciated by the GUI
             self.configFile = write2in(self.param, self.dirname, typ=typ)
 
         # writing mesh.dat
-        ifixed = np.array(self.mesh.attr_cache['param']) == 0
+        ifixed = np.array(self.mesh.df['param']) == 0
         if np.sum(ifixed) > 0: # fixed element need to be at the end
             self.mesh.orderElem()
         name = 'mesh.dat'
         if (typ == 'R3t') | (typ == 'cR3t'):
             name = 'mesh3d.dat'
-        self.mesh.write_dat(os.path.join(self.dirname, name))
+        self.mesh.dat(os.path.join(self.dirname, name))
         
         # write the res0.dat needed for starting resistivity
         if self.iForward is True: # we will invert results from forward
             # inversion so we need to start from a homogeneous model
             print('All non fixed parameters reset to 100 Ohm.m and 0 mrad, '
                   'as the survey to be inverted is from a forward model.')
-            ifixed = self.mesh.attr_cache['param'] == 0
-            res0 = np.array(self.mesh.attr_cache['res0'])
-            phase0 = np.array(self.mesh.attr_cache['phase0'])
+            ifixed = self.mesh.df['param'] == 0
+            res0 = np.array(self.mesh.df['res0'])
+            phase0 = np.array(self.mesh.df['phase0'])
             res0f = res0.copy()
             phase0f = phase0.copy()
             res0f[~ifixed] = 100
             phase0f[~ifixed] = 0
-            self.mesh.attr_cache['res0'] = list(res0f)
-            self.mesh.attr_cache['phase0'] = list(phase0f)
+            self.mesh.df['res0'] = list(res0f)
+            self.mesh.df['phase0'] = list(phase0f)
 
         if (self.typ == 'cR2') or (self.typ == 'cR3t'):
-            r = np.array(self.mesh.attr_cache['res0'])
-            phase = np.array(self.mesh.attr_cache['phase0'])
-            centroids = np.array(self.mesh.elm_centre).T
+            r = np.array(self.mesh.df['res0'])
+            phase = np.array(self.mesh.df['phase0'])
+            centroids = self.mesh.elmCentre.copy()
             centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
             x = np.c_[centroids2,
                       r,
@@ -1769,12 +1769,12 @@ class R2(object): # R2 master class instanciated by the GUI
                       np.log10(np.sin(-phase/1000)/np.log10(r))] #log10(imaginary conductivity)
             np.savetxt(os.path.join(self.dirname, 'res0.dat'), x)
         else:
-            self.mesh.write_attr('res0', os.path.join(self.dirname, 'res0.dat'))
+            self.mesh.writeAttr('res0', os.path.join(self.dirname, 'res0.dat'))
         
         if self.iForward: # restore initial res0 and phase0 so that user can 
         # rerun the forward model with a different sequence for instance
-            self.mesh.attr_cache['res0'] = list(res0)
-            self.mesh.attr_cache['phase0'] = list(phase0)
+            self.mesh.df['res0'] = list(res0)
+            self.mesh.df['phase0'] = list(phase0)
             
 
     def write2protocol(self, err=None, errTot=False, **kwargs):
@@ -2328,7 +2328,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.getResults()
             if modelDOI is True:
                 for m in self.meshResults:
-                    m.attr_cache['doiSens'] = sensScaled
+                    m.df['doiSens'] = sensScaled
         except Exception as e:
             print('Could not retrieve files maybe inversion failed')
             print('Error: ', e)
@@ -2352,7 +2352,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 print(x, end='')
                 
         # backup for normal inversion (0 : original, 1 : normal background, 2: background *10)
-        res0 = np.array(self.mesh.attr_cache['res0'])
+        res0 = np.array(self.mesh.df['res0'])
         param0 = self.param.copy()
         self.param['reg_mode'] = 1 # we need constrain to background
         typ0 = self.typ
@@ -2368,9 +2368,9 @@ class R2(object): # R2 master class instanciated by the GUI
         # build the cropping polygon
         if self.param['num_xz_poly'] != 0:
             path = mpath.Path(self.param['xz_poly_table'])
-            iselect = path.contains_points(np.c_[self.mesh.elm_centre[0], self.mesh.elm_centre[2]])
+            iselect = path.contains_points(np.c_[self.mesh.elmCentre[:,0], self.mesh.elmCentre[:,2]])
         else:
-            iselect = np.ones(len(self.mesh.elm_centre[0]), dtype=bool)
+            iselect = np.ones(len(self.mesh.elmCentre[:,0]), dtype=bool)
             
         # clean function
         def cleandir():
@@ -2383,8 +2383,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # run first background constrained inversion
         dump('===== modelDOI: Running background constrained inversion with initial resistivity =====\n')
         res1 = res0
-        self.mesh.attr_cache['res0b'] = list(res1)
-        self.mesh.write_attr('res0b', os.path.join(self.dirname,'res0.dat'))
+        self.mesh.df['res0b'] = res1
+        self.mesh.writeAttr('res0b', os.path.join(self.dirname,'res0.dat'))
         self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh1 = self.meshResults[0]
@@ -2393,8 +2393,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # run second background constrained inversion
         dump('===== modelDOI: Running background constrained inversion with initial resistivity * 10 =====\n')
         res2 = res0 * 10
-        self.mesh.attr_cache['res0b'] = list(res2)
-        self.mesh.write_attr('res0b', os.path.join(self.dirname,'res0.dat'))
+        self.mesh.df['res0b'] = list(res2)
+        self.mesh.writeAttr('res0b', os.path.join(self.dirname,'res0.dat'))
         self.runR2(dump=dump) # re-run inversion
         self.getResults()
         mesh2 = self.meshResults[0]
@@ -2403,12 +2403,12 @@ class R2(object): # R2 master class instanciated by the GUI
         
         # sensitivity = difference between final inversion / difference init values
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
-        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].attr_cache.keys()))][0]
-        invValues1 = np.array(mesh1.attr_cache[res_name])
-        invValues2 = np.array(mesh2.attr_cache[res_name])
+        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].df.keys()))][0]
+        invValues1 = np.array(mesh1.df[res_name])
+        invValues2 = np.array(mesh2.df[res_name])
         sens = (invValues1 - invValues2)/(res1[iselect]-res2[iselect])
         sensScaled = np.abs(sens)
-#        mesh0.attr_cache['doiSens'] = sensScaled # add attribute to original mesh
+#        mesh0.df['doiSens'] = sensScaled # add attribute to original mesh
         self.doiComputed = True
         
         # restore
@@ -2436,23 +2436,22 @@ class R2(object): # R2 master class instanciated by the GUI
             If 'True', area below fmd will be cropped out.
         """
         # mask outer region
-        xmin = np.min(self.mesh.node_x)
-        xmax = np.max(self.mesh.node_x)
-        zmin = np.min(self.mesh.node_z)
-        zmax = np.max(self.mesh.node_z)
-        if self.mesh.surface is not None:
-            xsurf, zsurf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-            if cropMaxDepth and self.fmd is not None:
-                xfmd, zfmd = self.mesh.surface[:,0][::-1], self.mesh.surface[:,1][::-1] - self.fmd
-                verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
-                              np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
-            else:
-                verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
-                              np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
-                
+        node_x = self.mesh.node[:,0]
+        node_z = self.mesh.node[:,2]
+        xmin = np.min(node_x)
+        xmax = np.max(node_x)
+        zmin = np.min(node_z)
+        zmax = np.max(node_z)
+        
+        (xsurf, zsurf) = self.mesh.extractSurface()
+        if cropMaxDepth and self.fmd is not None:
+            xfmd, zfmd = xsurf[::-1], zsurf[::-1] - self.fmd
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
         else:
-            verts = np.c_[np.r_[xmin, xmin, xmax, xmax, xmin],
-                          np.r_[zmin, zmax, zmax, zmin, zmin]]                
+            verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                          np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+                            
         # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
         poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
         path = mpath.Path(verts, poly_codes)
@@ -2503,7 +2502,7 @@ class R2(object): # R2 master class instanciated by the GUI
             attr = 'Resistivity(log10)'
         if (attr == '') & (self.typ[0] == 'c'):
             attr = 'Sigma_real(log10)'
-        keys = list(self.meshResults[index].attr_cache.keys())
+        keys = list(self.meshResults[index].df.keys())
         if attr not in keys:
             attr = keys[3]
             print('Attribute not found, revert to {:s}'.format(attr))
@@ -2517,20 +2516,20 @@ class R2(object): # R2 master class instanciated by the GUI
                             zlim=zlim, clabel=clabel, contour=contour, **kwargs)
                 if doi is True: # DOI based on Oldenburg and Li
                     if self.doiComputed is True: 
-                        z = np.array(mesh.attr_cache['doiSens'])
+                        z = np.array(mesh.df['doiSens'])
                         levels = [0.2]
                         linestyle = ':'
                     else:
                         raise ValueError('Rerun the inversion with `modelDOI=True` first or use `doiSens`.')
                 if doiSens is True: # DOI based on log10(sensitivity)
-                    if 'Sensitivity(log10)' in mesh.attr_cache.keys():
-                        z = np.array(mesh.attr_cache['Sensitivity(log10)'])
+                    if 'Sensitivity(log10)' in mesh.df.keys():
+                        z = np.array(mesh.df['Sensitivity(log10)'])
                         levels=[np.log10(0.001*(10**np.nanmax(z)))]
                         linestyle = '--'
                     else:
                         doiSens = False
                 if doi is True or doiSens is True:
-                    xc, yc = np.array(mesh.elm_centre[0]), np.array(mesh.elm_centre[2])
+                    xc, yc = mesh.elmCentre[:,0], mesh.elmCentre[:,2]
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
                     self._clipContour(mesh.ax, cont.collections)
@@ -2538,7 +2537,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
                 if zlim is None:
-                    zlim = [np.min(mesh.node_z), np.max(mesh.node_z)]
+                    zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
                 if cropMaxDepth and self.fmd is not None:
                     zlim[0] = self.elec['z'].min() - self.fmd
                 mesh.show(ax=ax, edge_color=edge_color,
@@ -2570,18 +2569,18 @@ class R2(object): # R2 master class instanciated by the GUI
             mesh0.mesh_title = self.surveys[0].name
             elec = self.surveys[0].elec.copy()
             ie = ~elec['remote'].values
-            mesh0.elec_x = elec[ie]['x'].values
-            mesh0.elec_y = elec[ie]['y'].values
-            mesh0.elec_z = elec[ie]['z'].values
-            mesh0.surface = self.mesh.surface
+            elec_x = elec[ie]['x'].values
+            elec_y = elec[ie]['y'].values
+            elec_z = elec[ie]['z'].values
+            mesh0.setElec(elec_x, elec_y, elec_z)
             self.meshResults.append(mesh0)
             idone += 1
         if self.iForward is True:
             initMesh = mt.vtk_import(os.path.join(dirname, 'fwd','forward_model.vtk'), order_nodes=False)
-            initMesh.elec_x = self.elec['x'].values
-            initMesh.elec_y = self.elec['y'].values
-            initMesh.elec_z = self.elec['z'].values
-            initMesh.surface = self.mesh.surface
+            elec_x = self.elec['x'].values
+            elec_y = self.elec['y'].values
+            elec_z = self.elec['z'].values
+            initMesh.setElec(elec_x, elec_y, elec_z)
             initMesh.mesh_title = 'Initial Model'
             self.meshResults.append(initMesh)
 
@@ -2597,11 +2596,12 @@ class R2(object): # R2 master class instanciated by the GUI
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
                     ie = ~elec['remote'].values
-                    mesh.elec_x = elec[ie]['x'].values
-                    mesh.elec_y = elec[ie]['y'].values
-                    mesh.elec_z = elec[ie]['z'].values
-                    mesh.surface = self.mesh.surface
-                    self.meshResults.append(mesh)
+                    elec_x = elec[ie]['x'].values
+                    elec_y = elec[ie]['y'].values
+                    elec_z = elec[ie]['z'].values
+                    mesh.setElec(elec_x, elec_y, elec_z)
+                    self.meshResults.append(mesh) # this will be very memory intensive to put all meshes into a list for long time lapse surveys
+                    #TODO : Rethink storage of timelapse results 
                     idone += 1
                 except Exception:
                     ifailed += 1
@@ -2620,11 +2620,11 @@ class R2(object): # R2 master class instanciated by the GUI
         # compute conductivity in mS/m
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)', 'Magnitude(ohm.m)'])
         for mesh in self.meshResults:
-            res_name = res_names[np.in1d(res_names, list(mesh.attr_cache.keys()))][0]
-            mesh.attr_cache['Conductivity(mS/m)'] = 1000/np.array(mesh.attr_cache[res_name])
+            res_name = res_names[np.in1d(res_names, list(mesh.df.keys()))][0]
+            mesh.df['Conductivity(mS/m)'] = 1000/np.array(mesh.df[res_name])
         if self.typ[0] == 'c' and self.surveys[0].kFactor != 1: # if kFactor is 1 then probably phase is provided and we shouldn't estimate chargeability
             for mesh in self.meshResults:
-                mesh.attr_cache['Chargeability(mV/V)'] = np.array(mesh.attr_cache['Phase(mrad)'])/-self.surveys[0].kFactor
+                mesh.df['Chargeability(mV/V)'] = np.array(mesh.df['Phase(mrad)'])/-self.surveys[0].kFactor
         # compute difference in percent in case of reg_mode == 1
         if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
             try:
@@ -2863,38 +2863,33 @@ class R2(object): # R2 master class instanciated by the GUI
         iplot : bool, optional
             If `True` , the updated mesh with the region will be plotted.
         """
-#        selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
-#                                typ='poly', iplot=iplot) # LIMITED FOR 2D case
-#        selector.setVertices(xz)
-#        selector.getPointsInside()
-#        idx = selector.iselect
 
-        centroids = np.array(self.mesh.elm_centre).T[:,[0,2]]
+        centroids = self.mesh.elmCentre[:,[0,2]]
         path = mpath.Path(np.array(xz))
         idx = path.contains_points(centroids)
 
-        region = np.array(self.mesh.attr_cache['region'])
+        region = np.array(self.mesh.df['region'])
         regid = np.max(region) + 1
         region[idx] = regid
-        self.mesh.attr_cache['region'] = region
-        resist0 = np.array(self.mesh.attr_cache['res0'])
+        self.mesh.df['region'] = region
+        resist0 = np.array(self.mesh.df['res0'])
         resist0[idx] = res0
-        self.mesh.attr_cache['res0'] = resist0
-        phase = np.array(self.mesh.attr_cache['phase0'])
+        self.mesh.df['res0'] = resist0
+        phase = np.array(self.mesh.df['phase0'])
         phase[idx] = phase0
-        self.mesh.attr_cache['phase0'] = phase
+        self.mesh.df['phase0'] = phase
 
         # define zone
         if blocky is True:
-            zones = np.array(self.mesh.attr_cache['zones'])
+            zones = np.array(self.mesh.df['zones'])
             zones[idx] = regid
-            self.mesh.attr_cache['zones'] = zones
+            self.mesh.df['zones'] = zones
 
         # define fixed area
         if fixed is True:
-            paramFixed = np.array(self.mesh.attr_cache['param'])
+            paramFixed = np.array(self.mesh.df['param'])
             paramFixed[idx] = 0
-            self.mesh.attr_cache['param'] = list(paramFixed)
+            self.mesh.df['param'] = list(paramFixed)
             print('fixed {:d} elements'.format(np.sum(paramFixed == 0)))
 
         if iplot is True:
@@ -2907,8 +2902,8 @@ class R2(object): # R2 master class instanciated by the GUI
         for inversion. The only purpose of this is to use an inhomogeous
         starting model to invert data from forward modelling.
         """
-        self.mesh.attr_cache['region'] = np.ones(self.mesh.num_elms)
-        self.mesh.attr_cache['res0'] = np.ones(self.mesh.num_elms)*100 # set back as default
+        self.mesh.df['region'] = np.ones(self.mesh.numel)
+        self.mesh.df['res0'] = np.ones(self.mesh.numel)*100 # set back as default
 
 
     def createModel(self, ax=None, dump=None, typ='poly', addAction=None):
@@ -2945,18 +2940,18 @@ class R2(object): # R2 master class instanciated by the GUI
             fig = ax.figure
 
         def callback(idx):
-            region = np.array(self.mesh.attr_cache['region']).copy()
+            region = np.array(self.mesh.df['region']).copy()
             regid = np.max(region) + 1
             print('nb elements selected:', np.sum(idx), 'in region', regid)
             region[idx] = regid
-            self.mesh.attr_cache['region'] = region
+            self.mesh.df['region'] = region
             self.mesh.draw(attr='region')
             if addAction is not None:
                 addAction()
         self.mesh.atribute_title = 'Regions'
         self.mesh.show(attr='region', ax=ax, zlim=self.zlim)
         # we need to assign a selector to self otherwise it's not used
-        self.selector = SelectPoints(ax, np.array(self.mesh.elm_centre).T[:,[0,2]],
+        self.selector = SelectPoints(ax, self.mesh.elmCentre[:,[0,2]],
                                      typ=typ, callback=callback)
         if ax is None:
             return fig
@@ -3057,33 +3052,33 @@ class R2(object): # R2 master class instanciated by the GUI
         ----
         Region 0 is the background region. It has zone=1, and fixed=False
         """
-        regions = np.array(self.mesh.attr_cache['region'])
-        res0 = np.array(self.mesh.attr_cache['res0']).copy()
+        regions = np.array(self.mesh.df['region'])
+        res0 = np.array(self.mesh.df['res0']).copy()
         for key in regionValues.keys():
             idx = regions == key
             res0[idx] = regionValues[key]
-        self.mesh.attr_cache['res0'] = res0
+        self.mesh.df['res0'] = res0
         print('regionValues:',regionValues)
 
-        zones = np.array(self.mesh.attr_cache['zones']).copy()
+        zones = np.array(self.mesh.df['zones']).copy()
         for key in zoneValues.keys():
             idx = regions == key
             zones[idx] = zoneValues[key]
-        self.mesh.attr_cache['zones'] = zones
+        self.mesh.df['zones'] = zones
 
-        # fixed = np.array(self.mesh.attr_cache['param']).copy()
-        fixed = np.arange(self.mesh.num_elms)+1
+        # fixed = np.array(self.mesh.df['param']).copy()
+        fixed = np.arange(self.mesh.numel)+1
         for key in fixedValues.keys():
             idx = regions == key
             if fixedValues[key] == True:
                 fixed[idx] = 0
-        self.mesh.attr_cache['param'] = fixed
+        self.mesh.df['param'] = fixed
 
-        phase0 = np.array(self.mesh.attr_cache['phase0']).copy()
+        phase0 = np.array(self.mesh.df['phase0']).copy()
         for key in ipValues.keys():
             idx = regions == key
             phase0[idx] = ipValues[key]
-        self.mesh.attr_cache['phase0'] = phase0
+        self.mesh.df['phase0'] = phase0
 
 
     def setRefModel(self, res0):
@@ -3101,7 +3096,7 @@ class R2(object): # R2 master class instanciated by the GUI
             length of this array should be the same as the number of elements.
         """
         try:
-            self.mesh.add_attribute(res0,'res0')
+            self.mesh.addAttribute(res0,'res0')
         except AttributeError:
             print('Cant set reference model without first assigning/creating a mesh')
             return
@@ -3110,7 +3105,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.param['inverse_type']=1
         self.param['res0File'] = 'Start_res.dat'
         self.param['num_regions'] = 0
-        self.mesh.write_attr('res0',os.path.join(self.dirname,'Start_res.dat'))
+        self.mesh.writeAttr('res0',os.path.join(self.dirname,'Start_res.dat'))
         self.referenceMdl = True
         print('Reference model successfully assigned')
 
@@ -3305,9 +3300,9 @@ class R2(object): # R2 master class instanciated by the GUI
         # no need to order the mesh in forward as zone and param are not read
 
         if self.typ[0] == 'c':
-            r = np.array(self.mesh.attr_cache['res0'])
-            phase = np.array(self.mesh.attr_cache['phase0'])
-            centroids = np.array(self.mesh.elm_centre).T
+            r = np.array(self.mesh.df['res0'])
+            phase = np.array(self.mesh.df['phase0'])
+            centroids = self.mesh.elmCentre.copy()
             centroids2 = centroids[:,[0,2]] if self.typ[-1] != 't' else centroids
             x = np.c_[centroids2,
                       r,
@@ -3317,13 +3312,13 @@ class R2(object): # R2 master class instanciated by the GUI
                       np.log10(np.sin(-phase/1000)/np.log10(r))] #log10(imaginary conductivity)
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), x)
         else:
-            self.mesh.write_attr('res0', os.path.join(fwdDir,'resistivity.dat'))
+            self.mesh.writeAttr('res0', os.path.join(fwdDir,'resistivity.dat'))
 
         # write mesh.dat (no ordering of elements needed in forward mode)
         if (self.typ == 'R2') | (self.typ == 'cR2'):
-            self.mesh.write_dat(os.path.join(fwdDir, 'mesh.dat'))
+            self.mesh.dat(os.path.join(fwdDir, 'mesh.dat'))
         else:
-            self.mesh.write_dat(os.path.join(fwdDir, 'mesh3d.dat'))
+            self.mesh.dat(os.path.join(fwdDir, 'mesh3d.dat'))
 
         # write the forward .in file
         dump('Writing .in file and mesh.dat... ')
@@ -3501,7 +3496,8 @@ class R2(object): # R2 master class instanciated by the GUI
         # write the resistivity.dat and fparam
         fparam = self.param.copy()
         fparam['job_type'] = 0
-        centroids = np.array(mesh.elm_centre).T
+        centroids = mesh.elmCentre
+        
         if self.param['mesh_type'] == 6:
             fparam['num_regions'] = 1
             maxElem = centroids.shape[0]
@@ -3513,12 +3509,12 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 n = 3
                 name = 'mesh3d.dat'
-            resFile = np.zeros((centroids.shape[0],n+1)) # centroix x, y, z, res0
+            resFile = np.zeros((centroids.shape[0],n+1)) # centroid x, y, z, res0
             resFile[:,-1] = 100
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                        fmt='%.3f')
             file_path = os.path.join(fwdDir, name)
-            mesh.write_dat(file_path)
+            mesh.dat(file_path)
             if node_elec is not None: # then we need to overwrite it
                 fparam['node_elec'] = node_elec
             fparam['num_regions'] = 0
@@ -3854,7 +3850,7 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if outputname is None:
             outputname = os.path.join(self.dirname, 'mesh.vtk')
-        self.mesh.write_vtk(outputname)
+        self.mesh.vtk(outputname)
 
 
     def _toParaview(self, fname,  paraview_loc=None): # pragma: no cover
@@ -3947,7 +3943,7 @@ class R2(object): # R2 master class instanciated by the GUI
             Maximum value for colorbar.
         """
         if attr is None:
-            attr = list(self.meshResults[index].attr_cache.keys())[0]
+            attr = list(self.meshResults[index].df.keys())[0]
         self.meshResults[index].showSlice(
                 attr=attr, axis=axis, ax=ax, vmin=vmin, vmax=vmax)
 
@@ -4099,11 +4095,11 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # create an index for the values inside of the zone of interest
         # needed as the reference survey is not cropped by default
-        inside = np.ones(self.meshResults[0].num_elms, dtype=bool)
+        inside = np.ones(self.meshResults[0].numel, dtype=bool)
         if self.param['num_xz_poly'] > 0:
-            meshx = np.array(self.meshResults[0].elm_centre[0])
-            meshy = np.array(self.meshResults[0].elm_centre[1])
-            meshz = np.array(self.meshResults[0].elm_centre[2])
+            meshx = np.array(self.meshResults[0].elmCentre[:,0])
+            meshy = np.array(self.meshResults[0].elmCentre[:,1])
+            meshz = np.array(self.meshResults[0].elmCentre[:,2])
             # poly = (self.param['xz_poly_table'][:,0],
                     # self.param['xz_poly_table'][:,1])
             path = mpath.Path(self.param['xz_poly_table'])
@@ -4119,26 +4115,26 @@ class R2(object): # R2 master class instanciated by the GUI
                 
         # compute absolute and relative difference in resistivity
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
-        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].attr_cache.keys()))][0]
-        res0 = np.array(self.meshResults[0].attr_cache[res_name])[inside]
+        res_name = res_names[np.in1d(res_names, list(self.meshResults[0].df.keys()))][0]
+        res0 = np.array(self.meshResults[0].df[res_name])[inside]
         for i in range(1, len(self.meshResults)):
             try:
-                res = np.array(self.meshResults[i].attr_cache[res_name])
-                self.meshResults[i].add_attribute(res - res0, 'diff(Resistivity)')
-                self.meshResults[i].add_attribute((res-res0)/res0*100, 'difference(percent)')
+                res = np.array(self.meshResults[i].df[res_name])
+                self.meshResults[i].addAttribute(res - res0, 'diff(Resistivity)')
+                self.meshResults[i].addAttribute((res-res0)/res0*100, 'difference(percent)')
             except Exception as e:
                 print('error in computing difference:', e)
                 pass
         
-        # num_attr = len(self.meshResults[0].attr_cache)
-        # num_elm = self.meshResults[0].num_elms
+        # num_attr = len(self.meshResults[0].df)
+        # num_elm = self.meshResults[0].numel
         # baselines = np.zeros((num_attr,num_elm))
-        # for i, key in enumerate(self.meshResults[0].attr_cache):
-        #     baselines[i,:] = self.meshResults[0].attr_cache[key]
+        # for i, key in enumerate(self.meshResults[0].df):
+        #     baselines[i,:] = self.meshResults[0].df[key]
         # change = np.zeros_like(baselines)
         # new_keys = []
         # baseline_keys = []
-        # for j, key in enumerate(self.meshResults[0].attr_cache):
+        # for j, key in enumerate(self.meshResults[0].df):
         #     new_keys.append('Difference('+key+')')
         #     baseline_keys.append(key)
         # for j, key in enumerate(new_keys):
@@ -4156,7 +4152,7 @@ class R2(object): # R2 master class instanciated by the GUI
         #     change = np.zeros_like(baselines)
         #     for j, key in enumerate(baseline_keys):
         #         try:
-        #             change[count,:] = (np.array(step.attr_cache[key])-baselines[count,:])/baselines[count,:] * 100
+        #             change[count,:] = (np.array(step.df[key])-baselines[count,:])/baselines[count,:] * 100
         #         except KeyError:
         #             problem+=1
         #         new_keys.append('Difference('+key+')')
@@ -4187,7 +4183,7 @@ class R2(object): # R2 master class instanciated by the GUI
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
             file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
-            mesh.write_vtk(file_path, title=mesh.mesh_title)
+            mesh.vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
         amtContent += endAnmt
         fh = open(os.path.join(dirname,'amt_track.py'),'w')
