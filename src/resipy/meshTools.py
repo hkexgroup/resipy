@@ -255,9 +255,10 @@ class Mesh:
         
         #mesh element attributes 
         df={'param': np.arange(self.numel)+1,
-                    'elm_id': np.arange(self.numel)+1,
-                    'region': np.ones(self.numel),
-                    'cellType':np.ones(self.numel)*cell_type[0]}# store attributes values per cell
+            'elm_id': np.arange(self.numel)+1,
+            #'zones':np.ones(self.numel) + 1,
+            'region': np.ones(self.numel),
+            'cellType':np.ones(self.numel)*cell_type[0]}# store attributes values per cell
         self.df= pd.DataFrame(df) # rename to df 
         
         self.mesh_title = "2D_R2_mesh"
@@ -1260,13 +1261,13 @@ class Mesh:
         This can fail for  large meshes due to the size of matrices involved. 
         """
         #assign coordinate arrays 
-        x_old = look_up_mesh.elmCentre[0]
+        x_old = look_up_mesh.elmCentre[:,0]
         x_new = self.elmCentre[:,0]
-        y_old = look_up_mesh.elmCentre[1]
+        y_old = look_up_mesh.elmCentre[:,1]
         y_new = self.elmCentre[:,1]
-        z_old = look_up_mesh.elmCentre[2]
+        z_old = look_up_mesh.elmCentre[:,2]
         z_new = self.elmCentre[:,2]
-        i_old = np.array(look_up_mesh.cell_attributes)
+        i_old = np.ones(look_up_mesh.numel) # dummy parameter 
         #do look up 
         if self.ndims==3:
             i_new, idxes = interp.nearest3d(x_new,y_new,z_new,
@@ -1276,9 +1277,20 @@ class Mesh:
             i_new, idxes = interp.nearest(x_new,z_new,
                                             x_old,z_old,i_old,
                                             return_idx=True) 
-            
+         
+        #look up values from look up mesh     
         look_up_cache = look_up_mesh.df.copy()
-        self.df= look_up_cache[idxes]
+        new_df = {}
+        for key in look_up_cache.keys():
+            x = look_up_cache[key].values[idxes]
+            new_df[key] = x
+            
+        #keep any attributes already in own dataframe 
+        for key in self.df.keys():
+            if key not in look_up_cache.keys():
+                new_df[key] = self.df[key].values
+                
+        self.df= pd.DataFrame(new_df) # map indexes using dataframe 
             
     def transMesh(self,x,y,z):
         """Translate mesh by x y z coordinate
@@ -2635,8 +2647,9 @@ class Mesh:
             else:
                 fid.write('%i %i %i\n'%(self.numel,self.numnp,idirichlet))
             param = np.array(self.df['param'])
+
             zone = np.array(self.df['zones'])
-    
+
             #write out elements         
             no_verts = self.type2VertsNo()
             for i in range(self.numel):
