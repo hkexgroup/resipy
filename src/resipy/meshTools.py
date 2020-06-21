@@ -1885,8 +1885,8 @@ class Mesh:
         
         #### use pyvista for 3D viewing ####         
         if use_pyvista and pyvista_installed:
-            if attr == 'region': # we crop the mesh (only way to reduce it's bounds for better viewing)
-                nmesh = self.truncateMesh(xlim=xlim, ylim=ylim, zlim=zlim) # this returns a mesh copy
+            # if attr == 'region': # we crop the mesh (only way to reduce it's bounds for better viewing)
+            nmesh = self.truncateMesh(xlim=xlim, ylim=ylim, zlim=zlim) # this returns a mesh copy
             nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
