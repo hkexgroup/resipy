@@ -1320,7 +1320,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.fmd = np.abs(0 - np.min(elec[:,2])) + 1
             else: # surface given by max z elec
                 self.fmd = np.abs(np.max(elec[:,2])  - np.min(elec[:,2])) + (0.5*self.fmd)
-        print('Fine Mesh Depth (relative to the surface): {:.2f} m'.format(self.fmd))
+        # print('Fine Mesh Depth (relative to the surface): {:.2f} m'.format(self.fmd))
 
 
 
@@ -3479,9 +3479,10 @@ class R2(object): # R2 master class instanciated by the GUI
         node_elec = None # we need this as the node_elec with topo and without might be different
         if all(self.elec['z'].values == 0) is False: # so we have topography
             print('New mesh created with flat topo...', end='')
-            if 'interp_method' in self.meshParams:
-                del self.meshParams['interp_method']
-            self.createModelErrorMesh(**self.meshParams)
+            meshParams = self.meshParams.copy()
+            if 'interp_method' in meshParams:
+                meshParams['interp_method'] = None # dont do any interpolation 
+            self.createModelErrorMesh(**meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh # create flat mesh
         else:
