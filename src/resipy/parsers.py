@@ -1037,213 +1037,6 @@ def ericParser(file_path):
     lines of electrodes. 
     """
     #ericParser Rev 2020-05-18
-    try: # see if it's 3D
-        fh = open(file_path,'r')#open file handle for reading
-        dump = fh.readlines()#cache file contents into a list
-        fh.close()#close file handle, free up resources
-        
-        #declaration of variables    
-        proto_file = []   
-        array_type = []
-        proto_org = []
-        num_meas = []
-        mid_st_coord = []
-        idx_meas = []
-        c1 = np.array(())
-        c2 = np.array(())
-        p1 = np.array(())
-        p2 = np.array(())
-        pt = np.array(())
-        pa = np.array(())
-        var_coef = np.array(())
-        n_cycles = np.array(())
-        n_tot_cycles = np.array(())
-        total_x = np.array(())
-        h_dist = np.array(())
-        a_dist = np.array(())
-        b_dist = np.array(())
-        e_x = np.array(())
-        e_y = np.array(())
-        e_z = np.array(())    
-    #    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
-        df = pd.DataFrame()
-        
-        tot_num_meas = 0
-        #first find the general information
-        idx_oi = 0
-        line = dump[idx_oi]
-        sur_name = line.strip() #name of survey
-        if "b dist=" in sur_name:
-            vals = line.strip().split()
-            b_dist = float(vals[2])
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        x_location = float(vals[0])#First midstation coordinate
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
-        eric_version = str(vals[2]) + str(': ') + str(vals[3])
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        a_spac = float(vals[0]) #electrode spacing
-        idx_oi += 1
-        no_protocols = 0
-        idx_proto_file = 1
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        elec_cable = int(vals[0][2:4])    
-    #    no_cables = int(vals[0][-2:-1])    
-        no_cables = int([s for s in vals[0] if s.isdigit()].pop())
-        proto_file.append(str(vals[0]))
-        array_type.append(int(vals[1]))
-        pdip_pp_flag = False
-        polpol_flag = False
-            
-        #First find how many protocol, measurements and mid first location are 
-        #included in the *.OHM file
-        
-        for i, line in enumerate(dump):
-            pro_type = line.strip().split('.')
-            if 'ORG' in pro_type or 'UP' in pro_type or 'DWN' in pro_type:
-                proto_org.append(str(line)) 
-                no_protocols = no_protocols + 1
-                linea = dump[i+1]
-                vals = linea.strip().split()
-                num_meas.append(int(vals[0]))
-                mid_st_coord.append(float(dump[i+2]))
-                idx_oi = i + 4
-                idx_meas.append(idx_oi)
-                
-        for i in range(len(num_meas)):
-            for k in range(num_meas[i]):
-                line = dump[idx_meas[i] + k]
-                vals = line.strip().split()
-                c1 = np.append(c1, float(vals[0]))
-                c2 = np.append(c2, float(vals[1]))
-                p1 = np.append(p1, float(vals[2]))
-                p2 = np.append(p2, float(vals[3]))
-                pt = np.append(pt, float(vals[4]))
-                var_coef = np.append(var_coef, float(vals[5]))
-                n_cycles = np.append(n_cycles, int(vals[6]))
-                n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
-    
-        if array_type == [12]:
-            if sur_name == "":
-                b_dist = a_spac
-            e_x = np.linspace(0, (no_cables - 1)*b_dist, num= no_cables)
-            e_y = np.linspace(0, (elec_cable - 1)*a_spac, num= elec_cable)
-            e_z = [0]
-            elec = np.vstack((ndmesh(e_x,e_y,e_z))).reshape(3,-1).T
-            num_elec = len(elec)
-            df['a'] = np.copy(c1)
-            df['b'] = np.copy(c2)
-            df['m'] = np.copy(p1)
-            df['n'] = np.copy(p2)
-            k = geom_factor_3D(df, elec, array_type)
-        else:
-            min_dist_c1 = min(c1)
-            min_dist_p1 = min(p1)
-            if min_dist_c1 <= min_dist_p1:
-                min_dist = min_dist_c1
-            else:
-                min_dist = min_dist_p1
-                
-            max_dist_c2 = max(c2)
-            max_dist_p1 = max(p1)
-               
-            if max_dist_c2 >= max_dist_p1:
-                max_dist = max_dist_c2
-            else:
-                max_dist = max_dist_p1
-            
-            if min_dist <= 0.0:
-                half_dist = abs(min_dist)
-            else:
-                half_dist = 0.0
-                
-            max_dist_p2 = max(p2) 
-            largo = len(c1)    
-            for k in range(largo):
-                h_dist = np.append(h_dist, half_dist)
-            
-            c1 = np.add(c1, h_dist)
-            if max_dist_c2 == 1e+38:
-                for k in range(largo):
-                    c2[k] = -999999
-            else:
-                c2 = np.add(c2, h_dist)
-            p1 = np.add(p1, h_dist)
-            if max_dist_p2 == 1e+38:
-                for k in range(largo):
-                    p2[k] = 999999
-            else:
-                p2 = np.add(p2, h_dist)
-            
-            total_x = np.append(total_x, c1)
-            total_x = np.append(total_x, c2)
-            total_x = np.append(total_x, p1)
-            total_x = np.append(total_x, p2)
-            ex_pos = np.unique(total_x)
-            
-            num_elec = len(ex_pos)
-            e_idx_c1 = []
-            e_idx_c2 = []
-            e_idx_p1 = []
-            e_idx_p2 = []
-        
-            e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
-            e_idx_c1 = np.add(e_idx_c1, 1)
-            df['a'] = np.copy(e_idx_c1)
-        
-            e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
-            e_idx_c2 = np.add(e_idx_c2, 1)
-            df['b'] = np.copy(e_idx_c2)
-            e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
-            e_idx_p1 = np.add(e_idx_p1, 1)
-            df['m'] = np.copy(e_idx_p1)
-            e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
-            e_idx_p2 = np.add(e_idx_p2, 1)   
-            df['n'] = np.copy(e_idx_p2)
-            df['resist'] = np.copy(pt)
-                    
-            k = geom_fac(c1, c2, p1, p2)
-            ey_pos=[0]*num_elec
-            ez_pos=[0]*num_elec  
-            elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-            
-            #for pole-pole and pole-dipole arrays
-            elec[elec > 9999] = 999999
-            elec[elec < -9999] = -999999
-    
-       
-        df['resist'] = np.copy(pt)
-        df['Rho'] = pt*k 
-        df['dev'] = (var_coef * n_tot_cycles * pt)/100
-        df['ip'] = [0]*len(c1)
-        #we dont have any topography at x coordinates
-        array = df[['a','b','m','n']].values
-        arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        if arrayMin != 0: # all surveys must start from x = 0
-            array -= arrayMin
-        df[['a','b','m','n']] = (array+1).astype(int)
-           
-        df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
-    except:
-        elec, df = ericParser2D(file_path) # well it seems to be 2D
-        
-    return elec,df
-
-def ericParser2D(file_path):
-    """
-    Reads *.ohm ASCII-files with information related to the profile, comment,
-    first station coordinate, date and time, version of data collection program
-    used, electrode take-out spaing and the protocol files used.
-    """
-    
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
     fh.close()#close file handle, free up resources
@@ -1266,12 +1059,25 @@ def ericParser2D(file_path):
     n_tot_cycles = np.array(())
     total_x = np.array(())
     h_dist = np.array(())
-    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    a_dist = np.array(())
+    b_dist = np.array(())
+    e_x = np.array(())
+    e_y = np.array(())
+    e_z = np.array(())  
+    meas_type_flag = 1 # if 0 = apparent resistivity; 1 = Resistance
+#    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    df = pd.DataFrame()
+    
     tot_num_meas = 0
     #first find the general information
     idx_oi = 0
     line = dump[idx_oi]
     sur_name = line.strip() #name of survey
+    if "b dist=" in sur_name:
+        vals = line.strip().split()
+        b_dist = float(vals[2])
+    else:
+        sur_name = ""
     idx_oi += 1
     line = dump[idx_oi]
     vals = line.strip().split()
@@ -1286,9 +1092,6 @@ def ericParser2D(file_path):
     vals = line.strip().split()
     a_spac = float(vals[0]) #electrode spacing
     idx_oi += 1
-    #line = dump[idx_oi]
-    #vals = line.strip().split()
-    #no_protocols = int(vals[0])#no. of protocol used
     no_protocols = 0
     idx_proto_file = 1
     idx_oi += 1
@@ -1296,6 +1099,21 @@ def ericParser2D(file_path):
     vals = line.strip().split()
     proto_file.append(str(vals[0]))
     array_type.append(int(vals[1]))
+    
+    # for 3D
+    if array_type == [12]: # array 12 is 3D array
+        numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all possible numbering formats
+        # getting rid of "3D" prefix and if needed any ohter prefixes
+        prefixs = ['3d', '3D']
+        prefix3d = [prefix for prefix in prefixs if prefix in line]
+        if prefix3d != []:
+            line = line.replace(prefix3d[0], '') # removing the prefix if it's 3d or 3D
+        numElec = re.findall(numStr, line)    
+        elec_cable = int(numElec[0])
+        no_cables = int(numElec[1])
+    
+    pdip_pp_flag = False
+    polpol_flag = False
         
     #First find how many protocol, measurements and mid first location are 
     #included in the *.OHM file
@@ -1308,6 +1126,7 @@ def ericParser2D(file_path):
             linea = dump[i+1]
             vals = linea.strip().split()
             num_meas.append(int(vals[0]))
+            meas_type_flag = int(vals[1])
             mid_st_coord.append(float(dump[i+2]))
             idx_oi = i + 4
             idx_meas.append(idx_oi)
@@ -1324,95 +1143,117 @@ def ericParser2D(file_path):
             var_coef = np.append(var_coef, float(vals[5]))
             n_cycles = np.append(n_cycles, int(vals[6]))
             n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
-            data_dict['ip'].append(0)
-            
-    min_dist_c1 = min(c1)
-    min_dist_p1 = min(p1)
-    if min_dist_c1 <= min_dist_p1:
-        min_dist = min_dist_c1
-    else:
-        min_dist = min_dist_p1
+
+    if array_type == [12]: #3D only
+        if sur_name == "":
+            b_dist = a_spac
+        e_x = np.linspace(0, (no_cables - 1)*b_dist, num= no_cables)
+        e_y = np.linspace(0, (elec_cable - 1)*a_spac, num= elec_cable)
+        e_z = [0]
+        elec = np.vstack((ndmesh(e_x,e_y,e_z))).reshape(3,-1).T
+        num_elec = len(elec)
+        df['a'] = np.copy(c1)
+        df['b'] = np.copy(c2)
+        df['m'] = np.copy(p1)
+        df['n'] = np.copy(p2)
+        k = geom_factor_3D(df, elec, array_type)
         
-    max_dist_c2 = max(c2)
-    max_dist_p1 = max(p1)
-       
-    if max_dist_c2 >= max_dist_p1:
-        max_dist = max_dist_c2
-    else:
-        max_dist = max_dist_p1
-    
-    if min_dist <= 0.0:
-        half_dist = abs(min_dist)
-    else:
-        half_dist = 0.0
-        
-    max_dist_p2 = max(p2) 
-    largo = len(c1)    
-    for k in range(largo):
-        h_dist = np.append(h_dist, half_dist)
-    
-    c1 = np.add(c1, h_dist)
-    if max_dist_c2 == 1e+38:
-        for k in range(largo):
-            c2[k] = -999999
-    else:
-        c2 = np.add(c2, h_dist)
-    p1 = np.add(p1, h_dist)
-    if max_dist_p2 == 1e+38:
-        for k in range(largo):
-            p2[k] = 999999
-    else:
-        p2 = np.add(p2, h_dist)
-    
-    total_x = np.append(total_x, c1)
-    total_x = np.append(total_x, c2)
-    total_x = np.append(total_x, p1)
-    total_x = np.append(total_x, p2)
-    ex_pos = np.unique(total_x)
-    
-    num_elec = len(ex_pos)
-    e_idx_c1 = []
-    e_idx_c2 = []
-    e_idx_p1 = []
-    e_idx_p2 = []
-    e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
-    e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
-    e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
-    e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
-    
-    e_idx_c1 = np.add(e_idx_c1, 1)
-    e_idx_c2 = np.add(e_idx_c2, 1)
-    e_idx_p1 = np.add(e_idx_p1, 1)
-    e_idx_p2 = np.add(e_idx_p2, 1)
-    
-    data_dict['a'] = np.copy(e_idx_c1)
-    data_dict['b'] = np.copy(e_idx_c2)
-    data_dict['m'] = np.copy(e_idx_p1)
-    data_dict['n'] = np.copy(e_idx_p2)
-    data_dict['resist'] = np.copy(pt)
+    else: #2D
+        min_dist_c1 = min(c1)
+        min_dist_p1 = min(p1)
+        if min_dist_c1 <= min_dist_p1:
+            min_dist = min_dist_c1
+        else:
+            min_dist = min_dist_p1
             
-    AM = np.abs(c1-p1)
-    BM = np.abs(c2-p1)
-    AN = np.abs(c1-p2)
-    BN = np.abs(c2-p2)
-    K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN))#geometric factor
-    data_dict['Rho'] = pt*K
-    data_dict['dev'] = (var_coef * n_tot_cycles * pt)/100
+        max_dist_c2 = max(c2)
+        max_dist_p1 = max(p1)
+           
+        if max_dist_c2 >= max_dist_p1:
+            max_dist = max_dist_c2
+        else:
+            max_dist = max_dist_p1
+        
+        if min_dist <= 0.0:
+            half_dist = abs(min_dist)
+        else:
+            half_dist = 0.0
+            
+        max_dist_p2 = max(p2) 
+        largo = len(c1)    
+        for k in range(largo):
+            h_dist = np.append(h_dist, half_dist)
+        
+        c1 = np.add(c1, h_dist)
+        if max_dist_c2 == 1e+38:
+            for k in range(largo):
+                c2[k] = -999999
+        else:
+            c2 = np.add(c2, h_dist)
+        p1 = np.add(p1, h_dist)
+        if max_dist_p2 == 1e+38:
+            for k in range(largo):
+                p2[k] = 999999
+        else:
+            p2 = np.add(p2, h_dist)
+        
+        total_x = np.append(total_x, c1)
+        total_x = np.append(total_x, c2)
+        total_x = np.append(total_x, p1)
+        total_x = np.append(total_x, p2)
+        ex_pos = np.unique(total_x)
+        
+        num_elec = len(ex_pos)
+        e_idx_c1 = []
+        e_idx_c2 = []
+        e_idx_p1 = []
+        e_idx_p2 = []
+    
+        e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
+        e_idx_c1 = np.add(e_idx_c1, 1)
+        df['a'] = np.copy(e_idx_c1)
+    
+        e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
+        e_idx_c2 = np.add(e_idx_c2, 1)
+        df['b'] = np.copy(e_idx_c2)
+        e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
+        e_idx_p1 = np.add(e_idx_p1, 1)
+        df['m'] = np.copy(e_idx_p1)
+        e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
+        e_idx_p2 = np.add(e_idx_p2, 1)   
+        df['n'] = np.copy(e_idx_p2)
+        df['resist'] = np.copy(pt)
+                
+        k = geom_fac(c1, c2, p1, p2)
+        ey_pos=[0]*num_elec
+        ez_pos=[0]*num_elec  
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+        
+        #for pole-pole and pole-dipole arrays
+        elec[elec > 9999] = 999999
+        elec[elec < -9999] = -999999
+
+   
+    if meas_type_flag == 0:
+        df['Rho'] = np.copy(pt)
+        df['resist'] = pt/k  
+    else:
+        df['resist'] = np.copy(pt)
+        df['Rho'] = pt*k 
+    df['dev'] = (var_coef * n_tot_cycles * pt)/100
+    df['ip'] = [0]*len(c1)
     #we dont have any topography at x coordinates
-    ey_pos=[0]*num_elec
-    ez_pos=[0]*num_elec  
-    elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-    
-    #for pole-pole and pole-dipole arrays
-    elec[elec > 9999] = 999999
-    elec[elec < -9999] = -999999
+    array = df[['a','b','m','n']].values
+    arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    if arrayMin != 0: # all surveys must start from x = 0
+        array -= arrayMin
+    df[['a','b','m','n']] = (array+1).astype(int)
        
-    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    return elec, df
-
-
+    return elec,df
+    
+    
 #%% 
 def lippmannParser(fname):
     """Read in *.tx0 file from Lippmann instruments
