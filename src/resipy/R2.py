@@ -222,6 +222,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # to run an inversion (and so need to reset the regions before this)
         self.fmd = None # depth of investigation below the surface [in survey units]
         self.proc = None # where the process to run R2/cR2 will be
+        self.mproc = None # where the process for mesh building
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
         
@@ -1450,6 +1451,10 @@ class R2(object): # R2 master class instanciated by the GUI
 
             elec_type = elec_type.tolist()
 
+            def setMeshProc(a): # little function to be passed to meshTools fct
+            # to get the variable outputed by Popen (allow mesh killing in UI)
+                self.mproc = a
+                
             with cd(self.dirname):#change to working directory so that mesh files written in working directory
                 if typ == 'trian':
                     print('Creating triangular mesh...', end='')
@@ -1458,7 +1463,8 @@ class R2(object): # R2 master class instanciated by the GUI
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=show_output,
                                  fmd=self.fmd, whole_space=whole_space,
-                                 **kwargs)
+                                 handle=setMeshProc, **kwargs)
+                    self.mproc = None
                 if typ == 'tetra': # TODO add buried
                     print('Creating tetrahedral mesh...', end='')    
                     if cl == -1:
@@ -1470,13 +1476,15 @@ class R2(object): # R2 master class instanciated by the GUI
                                  cl_factor=cl_factor,
                                  cl=cl, dump=dump, show_output=show_output,
                                  fmd=self.fmd, whole_space=whole_space,
-                                 **kwargs)
+                                 handle=setMeshProc, **kwargs)
+                    self.mproc = None
                 if typ=='prism':
                     print('Creating prism mesh...', end='')
                     mesh = mt.prismMesh(elec_x, elec_y, elec_z,
                                          path=os.path.join(self.apiPath, 'exe'),
                                          cl=cl, dump=dump, show_output=show_output,
-                                         **kwargs)
+                                         handle=setMeshProc, **kwargs)
+                    self.mproc = None
                     self.param['num_xz_poly'] = 0
                     
 
