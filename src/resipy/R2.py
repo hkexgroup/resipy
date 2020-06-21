@@ -3631,7 +3631,8 @@ class R2(object): # R2 master class instanciated by the GUI
 #                else:
 #                    zc = z.copy()
                 cax = ax.tricontourf(triang, z, extend='both')
-                self._clipContour(ax, cax.collections, cropMaxDepth)
+                if (self.typ == 'R2') or (self.typ == 'cR2'):
+                    self._clipContour(ax, cax.collections, cropMaxDepth)
                 fig.colorbar(cax, ax=ax, label=r'$\log_{10}\rho$ [$\Omega$.m]')
                 elec = self.elec[~self.elec['remote']][['x','y','z']].values
                 if self.typ[-1] == 't': # adjust for 3D 
