@@ -886,7 +886,7 @@ def res2invInputParser(file_path):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    return elec,df
+    return elec, df
 
 
 def resInvParser(filename): # keeping it for now, in case of Res3DInv files
