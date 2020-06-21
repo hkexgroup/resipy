@@ -1246,7 +1246,7 @@ class App(QMainWindow):
                         # df2.loc[:, 'label'] = '1 ' + df2['label']
                 else:
                     a = df['label'].values[0]
-                    if ~isinstance(a, str):
+                    if isinstance(a, str) is False:
                         df['label'] = df['label'].astype(int).astype(str)
                     df2.insert(0, 'label', df['label'].values)
                 
@@ -2684,6 +2684,17 @@ class App(QMainWindow):
         self.meshQuad.setToolTip('Generate quadrilateral mesh.')
 
         def meshTrianFunc():
+            if self.r2.mproc is not None:
+                print('killing')
+                self.r2.mproc.kill()
+                self.r2.mproc = None
+                meshOutputStack.setCurrentIndex(1)
+                self.meshTrianBtn.setText('Triangular Mesh')
+                self.meshTrianBtn.setStyleSheet('background-color:orange')
+                return
+            else:
+                self.meshTrianBtn.setText('Kill')
+                self.meshTrianBtn.setStyleSheet('background-color:red')
 #            self.cropBelowFmd.setChecked(True)
             self.cropBelowFmd.setEnabled(True)
             elec = self.elecTable.getTable()
@@ -2710,24 +2721,41 @@ class App(QMainWindow):
             pdebug('meshTrian(): fmd', fmd)
             pdebug('meshTrian(): elec:', self.r2.elec)
             pdebug('meshTrian(): surface:', surface)
-            self.r2.createModelMesh(surface=surface,
-                                    cl=cl, cl_factor=cl_factor, show_output=True,
-                                    dump=meshLogTextFunc, refine=refine, fmd=fmd)
-            # if self.iForward is False:
-            #     self.regionTable.setColumnHidden(2, False) # show zone column
-            #     self.regionTable.setColumnHidden(3, False) # show fixed column
-            self.scale.setVisible(True)
-            self.scaleLabel.setVisible(True)
-            meshOutputStack.setCurrentIndex(1)
+            try:
+                self.r2.createModelMesh(surface=surface,
+                                        cl=cl, cl_factor=cl_factor, show_output=True,
+                                        dump=meshLogTextFunc, refine=refine, fmd=fmd)
+                # if self.iForward is False:
+                #     self.regionTable.setColumnHidden(2, False) # show zone column
+                #     self.regionTable.setColumnHidden(3, False) # show fixed column
+                self.scale.setVisible(True)
+                self.scaleLabel.setVisible(True)
+                meshOutputStack.setCurrentIndex(1)
+            except Exception:
+                pass # caused by killing the mesh process
+            self.meshTrianBtn.setText('Triangular Mesh')
+            self.meshTrianBtn.setStyleSheet('background-color:orange')
             replotMesh()
-        meshTrian = QPushButton('Triangular Mesh')
-        meshTrian.setAutoDefault(True)
-        meshTrian.setFocus()
-        meshTrian.clicked.connect(meshTrianFunc)
-        meshTrian.setToolTip('Generate triangular mesh.')
+        self.meshTrianBtn = QPushButton('Triangular Mesh')
+        self.meshTrianBtn.setAutoDefault(True)
+        self.meshTrianBtn.setFocus()
+        self.meshTrianBtn.clicked.connect(meshTrianFunc)
+        self.meshTrianBtn.setToolTip('Generate triangular mesh.')
+        self.meshTrianBtn.setStyleSheet('background-color:orange')
 
 
         def meshTetraFunc():
+            if self.r2.mproc is not None:
+                print('killing')
+                self.r2.mproc.kill()
+                self.r2.mproc = None
+                meshOutputStack.setCurrentIndex(1)
+                self.meshTetraBtn.setText('Tetrahedral Mesh')
+                self.meshTetraBtn.setStyleSheet('background-color:orange')
+                return
+            else:
+                self.meshTetraBtn.setText('Kill')
+                self.meshTetraBtn.setStyleSheet('background-color:red')
 #            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
 #            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
@@ -2754,20 +2782,26 @@ class App(QMainWindow):
                 topo = topo[inan,:]
             
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-            self.r2.createMesh(typ='tetra', surface=topo, fmd=fmd,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
-                               cln_factor=cln_factor, refine=refine, show_output=True)
-            if pvfound:
-                mesh3Dplotter.clear() # clear all actors 
-                self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
-            else:
-                self.mwMesh3D.plot(self.r2.showMesh, threed=True)
-            meshOutputStack.setCurrentIndex(2)
+            try:
+                self.r2.createMesh(typ='tetra', surface=topo, fmd=fmd,
+                                   cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
+                                   cln_factor=cln_factor, refine=refine, show_output=True)
+                if pvfound:
+                    mesh3Dplotter.clear() # clear all actors 
+                    self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                else:
+                    self.mwMesh3D.plot(self.r2.showMesh, threed=True)
+                meshOutputStack.setCurrentIndex(2)
+            except Exception:
+                pass # caused by killing the mesh process
+            self.meshTetraBtn.setText('Tetrahedral Mesh')
+            self.meshTetraBtn.setStyleSheet('background-color:orange')
 
-        meshTetra = QPushButton('Tetrahedral Mesh')
-        meshTetra.setAutoDefault(True)
-        meshTetra.clicked.connect(meshTetraFunc)
-        meshTetra.setToolTip('Generate tetrahedral mesh.')
+        self.meshTetraBtn = QPushButton('Tetrahedral Mesh')
+        self.meshTetraBtn.setAutoDefault(True)
+        self.meshTetraBtn.clicked.connect(meshTetraFunc)
+        self.meshTetraBtn.setToolTip('Generate tetrahedral mesh.')
+        self.meshTetraBtn.setStyleSheet('background-color:orange')
 
 
         # additional options for quadrilateral mesh
@@ -3017,7 +3051,7 @@ class App(QMainWindow):
         meshButtonTrianLayout = QHBoxLayout()
         meshButtonTrianLayout.addWidget(refineTrianCheck)
         meshButtonTrianLayout.addWidget(self.designModelBtn)
-        meshButtonTrianLayout.addWidget(meshTrian)
+        meshButtonTrianLayout.addWidget(self.meshTrianBtn)
         
         importCustomLayout = QVBoxLayout()
         importCustomLayout.addWidget(importCustomMeshLabel2)
@@ -3072,7 +3106,7 @@ class App(QMainWindow):
         meshChoiceLayout.addWidget(meshCustomGroup,0)
         
         meshTetraLayout.addLayout(meshOptionTetraLayout)
-        meshTetraLayout.addWidget(meshTetra)
+        meshTetraLayout.addWidget(self.meshTetraBtn)
         meshTetraGroup.setLayout(meshTetraLayout)
         meshChoiceLayout.addWidget(meshTetraGroup)
         meshTetraGroup.setHidden(True)
