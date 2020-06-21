@@ -616,7 +616,7 @@ class App(QMainWindow):
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 3:
-                self.ftype = 'Res2Dinv'
+                self.ftype = 'ResInv'
                 self.fformat = 'DAT (*.dat *.DAT)'
             elif index == 4:
                 self.ftype = 'BGS Prime'
@@ -650,7 +650,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('Protocol DC')
         self.ftypeCombo.addItem('Syscal')
         self.ftypeCombo.addItem('Protocol IP')
-        self.ftypeCombo.addItem('Res2Dinv')
+        self.ftypeCombo.addItem('ResInv (2D/3D)')
         self.ftypeCombo.addItem('BGS Prime')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
@@ -4787,6 +4787,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
            <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</li>
            <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
+           <li>Note: Res3DInv files are only supported in general 4 electrode format.</ul></li>
            <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
            <ul><li><i>Pole-dipole arrays</i>: the remote electrode's X location must be exactly at 99999 or -99999 m.</li>

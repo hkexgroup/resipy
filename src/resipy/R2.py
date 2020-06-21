@@ -433,7 +433,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Filename to be parsed.
         ftype : str, optional
-            Type of file to be parsed. Either 'Syscal','ProtocolDC','Res2Dinv',
+            Type of file to be parsed. Either 'Syscal','ProtocolDC','ResInv',
             'BGS Prime', 'ProtocolIP', 'Sting', 'ABEM-Lund', 'Lippmann' or 'ARES'.
         info : dict, optional
             Dictionnary of info about the survey.
