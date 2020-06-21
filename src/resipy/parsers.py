@@ -889,8 +889,173 @@ def res2invInputParser(file_path):
     return elec, df
 
 
-def resInvParser(filename): # keeping it for now, in case of Res3DInv files
-    """Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+def res3invInputParser(fname):
+    """Reads Res3DInv input files"""
+    def readLine(line): # simplify re.findall
+        numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
+        vals = re.findall(numStr, line)
+        vals = [float(val) for val in vals] # change to float
+        return vals
+        
+    with open(fname, 'r') as fh:
+        dump = fh.readlines()
+    # numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
+    # attempts to find array type
+    line = 1 # line 0 is title
+    numelecsXY = readLine(dump[line])
+    if len(numelecsXY) > 1: # we have x and y in one line
+        numelecsX = int(numelecsXY[0])
+        numelecsY = int(numelecsXY[1])
+    else:
+        numelecsX = int(numelecsXY[0])
+        line += 1
+        numelecsY = int(readLine(dump[line])[0])
+    line += 1
+    
+    spacingXY = readLine(dump[line])
+    if len(spacingXY) > 1: # we have x and y in one line
+        spacingX = int(spacingXY[0])
+        spacingY = int(spacingXY[1])
+    else:
+        spacingX = int(spacingXY[0])
+        line += 1
+        spacingY = int(readLine(dump[line])[0])
+    line += 1
+    
+    arrayType = int(readLine(dump[line])[0]) # array type
+    line += 1
+    subArrayType = int(readLine(dump[line])[0]) # sub array type (if any)
+    line += 1
+    
+    try: # if a text is provided 
+        float(dump[line])
+    except:
+        line += 1
+    measType = int(float(dump[line])) # measurement type: 0 app res, 1 resistance
+    
+    # see if there is  error flag in headers
+    for i in range(20): # looking at first 20 lines of the file
+        if 'Error' in dump[i] or 'error' in dump[i]:
+            errFlag = True
+            break
+        else:
+            errFlag = False
+    
+    # see if there is  IP data
+    ipChecks = ['Chargeability', 'ip', 'IP', 'chargeability', 'mv/v', 'msec', 'mV/V']
+    for i in range(20): # looking at first 20 lines of the file
+        if any(check in dump[i+1] for check in ipChecks): # ommit first line
+            ipFlag = True
+            break
+        else:
+            ipFlag = False
+    
+    if arrayType == 11: # general array (ABMN are all provided)
+        # finding data line - assuming we would have atleast 5 numerical values in the line
+        valTemp = readLine(dump[line])
+        while len(valTemp) < 5:
+            line += 1 # would be line number of data if the while loop breaks
+            valTemp = readLine(dump[line])
+        
+        dataLine0 = readLine(dump[line]) # we can't import mixed arrays - for now that we only support general array 3D
+        numElec = int(dataLine0[0]) # for general array it is 4
+        data = []
+        for val in dump[line:]: # reding data
+            vals = readLine(val)
+            if len(vals) != len(dataLine0): # for end of data flags
+                break
+            data.append(vals[1:]) # we don't want the number of electrodes at each line hence vals[1:]
+        
+        dfi = pd.DataFrame(np.array(data).astype(float)) # building the initial df
+        
+        # check what data are available - skipping x, y columns to get to data (res, err, ip, etc.)
+        res = dfi.iloc[:, numElec*2]
+        # not sure we can have both error and IP at the same time
+        if len(dfi.loc[0]) > numElec*2 + 1 and errFlag is True:
+            error = dfi.iloc[:, numElec*2 + 1]
+        elif len(dfi.loc[0]) > numElec*2 + 1 and ipFlag is True:
+            ip = dfi.iloc[:, numElec*2 + 1]
+        
+        elec_x =  np.concatenate(dfi.iloc[:,[0,2,4,6]].values)
+        elec_y =  np.concatenate(dfi.iloc[:,[1,3,5,7]].values)
+        # elec_z =  np.concatenate(df_raw.iloc[:,[11,14,17,20]].values)
+        elec_raw = np.unique(np.column_stack((elec_x,elec_y)), axis=0)     
+        elec_z = np. zeros_like(elec_raw[:,0]) # for now we have no topgraphy information
+        elec_raw = np.c_[elec_raw, elec_z]
+        elecdf = pd.DataFrame(elec_raw[elec_raw[:,1].argsort(kind='mergesort')]).rename(columns={0:'x',1:'y',2:'z'})
+        
+        # organize 3D electrodes based on lines (y values)
+        elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
+        elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
+        
+        ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
+        # i = 1 # index of odd lines
+        # while i <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+        #     elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1]
+        #     i = 2*i + 1
+        ######### NOT SURE ABOUT ABOVE #########
+        
+        elec = np.concatenate(elecdf_lines) # final electrode array
+        
+        lines = np.unique(elecdf.y) # basically saying what is the y val of each line    
+        
+        # positions of ABMN
+        array_A = dfi.iloc[:,0:2].rename(columns={0:'x',1:'y'})
+        array_B = dfi.iloc[:,2:4].rename(columns={2:'x',3:'y'})
+        array_M = dfi.iloc[:,4:6].rename(columns={4:'x',5:'y'})
+        array_N = dfi.iloc[:,6:8].rename(columns={6:'x',7:'y'})
+        
+        def buildElecLoc(array):
+            # building locs/labels
+            f = []
+            array_groups = array.groupby('y', sort=False, as_index=False)
+            array_lines = [array_groups.get_group(x) for x in array_groups.groups]
+            # which lines
+            for line in array_lines:
+                line_num = np.where(lines == line['y'].iloc[0])[0][0]
+                a = [0]*len(line)
+                for i in range(len(line)):
+                    a[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
+                f.extend(a)
+            return np.array(f)
+        
+        a_f = buildElecLoc(array_A)
+        b_f = buildElecLoc(array_B)
+        m_f = buildElecLoc(array_M)
+        n_f = buildElecLoc(array_N)
+        
+    # future array supports go below! for now only array type 11 is supported with no sub array
+    
+    #build df
+    df = pd.DataFrame()
+    df['a'] = np.array(a_f)
+    df['b'] = np.array(b_f)
+    df['n'] = np.array(n_f)
+    df['m'] = np.array(m_f)
+    
+    if measType == 1: # Survey class will take care of calculating GF if one of the columns (resist or app) is not present
+        df['resist'] = res.values
+    else:
+        df['app'] = res.values
+    
+    if errFlag is True:
+        df['magErr'] = np.abs(error.values)
+    
+    if ipFlag is True:
+        df['ip'] = ip.values
+    else:
+        df['ip'] = np.zeros_like(df['a'])
+        
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
+    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
+    
+    return elec, df
+
+
+def resInvParser(filename): 
+    """Returns info on the electrode geometry and transfer resistances held in the resinv (2D or 3D) input file. 
     
     Parameters
     -----------
@@ -900,8 +1065,10 @@ def resInvParser(filename): # keeping it for now, in case of Res3DInv files
     try:
         elec, df = res2invInputParser(filename)
     except:
-        raise ImportError('Unsupported ResInv file')
-        
+        try:
+            elec, df = res3invInputParser(filename)
+        except:
+            raise ImportError('Unsupported ResInv file')
     return elec,df
 
 #%% parse 3D sting data
@@ -1022,7 +1189,7 @@ def stingParser(fname):
     elec[elec < -9999] = -999999
     df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
     
-    return elec,df
+    return elec, df
 
 
 #%% ABEM Lund parsers (2D and 3D)
