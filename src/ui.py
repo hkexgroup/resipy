@@ -1235,9 +1235,19 @@ class App(QMainWindow):
                         df2['buried'] = df.values[:,3]
                 if 'label' not in df.columns:
                     df2.insert(0, 'label', (1 + np.arange(df.shape[0])).astype(str))
-                    if self.parent.r2.typ[-1] == 't': # 3D
-                        df2.loc[:, 'label'] = '1 ' + df2['label']
+                    # if self.parent.r2.typ[-1] == 't': # 3D
+                    #     df2_groups = df2.groupby('y') # finding number of lines based on y vals
+                    #     df2_grouppedData = [df2_groups.get_group(x) for x in df2_groups.groups]
+                    #     for i, group in enumerate(df2_grouppedData):
+                    #         group['label'] = (np.arange(group.shape[0]) + 1).astype(str)
+                    #         group.loc[:, 'label'] = str(i+1) + ' ' + group['label']
+                    #     df2_temp = pd.concat(df2_grouppedData)
+                    #     df2['label'] = df2_temp['label'].values
+                        # df2.loc[:, 'label'] = '1 ' + df2['label']
                 else:
+                    a = df['label'].values[0]
+                    if ~isinstance(a, str):
+                        df['label'] = df['label'].astype(int).astype(str)
                     df2.insert(0, 'label', df['label'].values)
                 
                 pdebug('elecTable.readTable():\n', df2.head())
