@@ -1073,6 +1073,8 @@ class Mesh:
             
         self.numnp = len(uni_nodes)
         
+        
+        
     def crop(self, polyline):
         """Crop the mesh given a polyline in 2D.
         
@@ -1105,6 +1107,8 @@ class Mesh:
         nmesh.__rmexcessNodes         
         return nmesh
         
+    
+    
     # return a truncated mesh (for 3D)
     def truncateMesh(self,xlim=None,ylim=None,zlim=None):
         """Crop the mesh to a box of given limits, like how R3t behaves 
@@ -1141,9 +1145,9 @@ class Mesh:
         
         #new_attr = np.array(self.cell_attributes)
         
-        elm_id = np.arrange(self.numel)+1
+        elm_id = np.arange(self.numel)+1
 
-        #truncate the attribute table down to the inside elements 
+        #truncate the attribute table down to the inside elements
         new_df = self.df[in_elem]
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
@@ -1160,6 +1164,8 @@ class Mesh:
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
         return nmesh # return truncated mesh 
+    
+    
     
     def threshold(self,attr=None,vmin=None,vmax=None):
         """Threshold the mesh to certian attribute values. 
@@ -1879,8 +1885,9 @@ class Mesh:
         
         #### use pyvista for 3D viewing ####         
         if use_pyvista and pyvista_installed:
-            nmesh = self.copy() # new mesh which is cropped down 
-            nmesh.df = {color_bar_title:X} # make the attr of interest the only attribute
+            if attr == 'region': # we crop the mesh (only way to reduce it's bounds for better viewing)
+                nmesh = self.truncateMesh(xlim=xlim, ylim=ylim, zlim=zlim) # this returns a mesh copy
+            nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
             nmesh.vtk(fname)
