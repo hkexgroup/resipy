@@ -2087,15 +2087,24 @@ class Survey(object):
             Replacement electrode number
         """
          
-        df = self.df
-        sch_mat = np.array((df['a'],df['b'],df['m'],df['n'])).T
+        df = self.df.copy()
+        sch_mat = np.array((df['a'],df['b'],df['m'],df['n']),dtype=int).T
         idx = np.argwhere(sch_mat == old_indx)
         sch_mat[idx[:,0],idx[:,1]] = new_indx
-        corrected = sch_mat
-        df['a'] = corrected[:,0]
-        df['b'] = corrected[:,1]
-        df['m'] = corrected[:,2]
-        df['n'] = corrected[:,3]
+        nmeas = len(df)
+        a = ['0']*nmeas 
+        b = ['0']*nmeas 
+        m = ['0']*nmeas 
+        n = ['0']*nmeas 
+        for i in range(len(self.df)): # replace with strings 
+            a[i] = str(sch_mat[i,0])
+            b[i] = str(sch_mat[i,1])
+            m[i] = str(sch_mat[i,2])
+            n[i] = str(sch_mat[i,3])
+        df['a'] = a
+        df['b'] = b
+        df['m'] = m
+        df['n'] = n
         self.df = df 
         
     
