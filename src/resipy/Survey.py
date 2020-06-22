@@ -978,7 +978,8 @@ class Survey(object):
             fig, ax = plt.subplots()        
         if 'recipMean' not in self.df.columns:
             self.computeReciprocal()
-        dfg = self.df[self.df['irecip'] > 0]
+        dfg = self.df[self.df['irecip'] > 0][['recipMean','recipError']].copy()
+        dfg = dfg.replace([np.inf,-np.inf], np.nan).dropna()
         binsize = 20 # default to 20 sample per bins
         numbins = int(dfg.shape[0]/binsize) # max 20 bins
         if numbins > 20: # we want max 20 bins
@@ -1044,7 +1045,8 @@ class Survey(object):
             fig, ax = plt.subplots()        
         if 'recipMean' not in self.df.columns:
             self.computeReciprocal()
-        dfg = self.df[self.df['irecip'] > 0]
+        dfg = self.df[self.df['irecip'] > 0][['recipMean','recipError']].copy()
+        dfg = dfg.replace([np.inf,-np.inf], np.nan).dropna()
         binsize = 20 # default to 20 sample per bins
         numbins = int(dfg.shape[0]/binsize) # max 20 bins
         if numbins > 20: # we want max 20 bins
@@ -1116,13 +1118,14 @@ class Survey(object):
         
         if 'recipMean' not in self.df.columns:
             self.computeReciprocal()
-        dfg = self.df[self.df['irecip'] > 0]
+        dfg = self.df[self.df['irecip'] > 0][['a','b','m','n','recipMean','recipError']].copy()
+        dfg = dfg.replace([np.inf,-np.inf], np.nan).dropna()
         
         recipMean = np.abs(dfg['recipMean'].values)
         recipError = np.abs(dfg['recipError'].values)
         array = dfg[['a','b','m','n']].values.astype(int)        
         data = np.vstack([recipMean, recipError]).T
-        data = np.hstack((array,data))
+        data = np.hstack((array, data))
         df = pd.DataFrame(data, columns=['a','b','m','n','recipMean','obsErr'])  
         df.insert(0, 'idx', df.index + 1)
         df = df.astype({"idx": int, "a": int, "b": int, "m": int, "n": int})
