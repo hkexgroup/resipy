@@ -4043,7 +4043,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 c = 0
                 ci = 0
                 for i, attr in enumerate(attrs):
-                    if attr not in ['param', 'region', 'zone']:
+                    if attr not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
                         self.attrCombo.addItem(attr)
                         if attr == self.displayParams['attr']:
                             ci = c
@@ -4246,7 +4246,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             c = -1
             found = False
             for i, a in enumerate(attrs): # find same attribute or plot first one
-                if a not in ['param', 'region', 'zone']:
+                if a not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
                     c = c + 1
                     if a == attr0:
                         ci = c
@@ -4260,7 +4260,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams['attr'] = attr
             self.attrCombo.clear()
             for attr in attrs:
-                if attr not in ['param', 'region', 'zone']:
+                if attr not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
                     self.attrCombo.addItem(attr)
             self.attrCombo.setCurrentIndex(ci)
             replotSection()
