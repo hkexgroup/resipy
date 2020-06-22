@@ -886,11 +886,177 @@ def res2invInputParser(file_path):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    return elec,df
+    return elec, df
 
 
-def resInvParser(filename): # keeping it for now, in case of Res3DInv files
-    """Returns info on the electrode geometry and transfer resistances held in the res2dinv input file. 
+def res3invInputParser(fname):
+    """Reads Res3DInv input files"""
+    def readLine(line): # simplify re.findall
+        numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
+        vals = re.findall(numStr, line)
+        vals = [float(val) for val in vals] # change to float
+        return vals
+        
+    with open(fname, 'r') as fh:
+        dump = fh.readlines()
+    # numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
+    # attempts to find array type
+    line = 1 # line 0 is title
+    numelecsXY = readLine(dump[line])
+    if len(numelecsXY) > 1: # we have x and y in one line
+        numelecsX = int(numelecsXY[0])
+        numelecsY = int(numelecsXY[1])
+    else:
+        numelecsX = int(numelecsXY[0])
+        line += 1
+        numelecsY = int(readLine(dump[line])[0])
+    line += 1
+    
+    spacingXY = readLine(dump[line])
+    if len(spacingXY) > 1: # we have x and y in one line
+        spacingX = int(spacingXY[0])
+        spacingY = int(spacingXY[1])
+    else:
+        spacingX = int(spacingXY[0])
+        line += 1
+        spacingY = int(readLine(dump[line])[0])
+    line += 1
+    
+    arrayType = int(readLine(dump[line])[0]) # array type
+    line += 1
+    subArrayType = int(readLine(dump[line])[0]) # sub array type (if any)
+    line += 1
+    
+    try: # if a text is provided 
+        float(dump[line])
+    except:
+        line += 1
+    measType = int(float(dump[line])) # measurement type: 0 app res, 1 resistance
+    
+    # see if there is  error flag in headers
+    for i in range(20): # looking at first 20 lines of the file
+        if 'Error' in dump[i] or 'error' in dump[i]:
+            errFlag = True
+            break
+        else:
+            errFlag = False
+    
+    # see if there is  IP data
+    ipChecks = ['Chargeability', 'ip', 'IP', 'chargeability', 'mv/v', 'msec', 'mV/V']
+    for i in range(20): # looking at first 20 lines of the file
+        if any(check in dump[i+1] for check in ipChecks): # ommit first line
+            ipFlag = True
+            break
+        else:
+            ipFlag = False
+    
+    if arrayType == 11: # general array (ABMN are all provided)
+        # finding data line - assuming we would have atleast 5 numerical values in the line
+        valTemp = readLine(dump[line])
+        while len(valTemp) < 5:
+            line += 1 # would be line number of data if the while loop breaks
+            valTemp = readLine(dump[line])
+        
+        dataLine0 = readLine(dump[line]) # we can't import mixed arrays - for now that we only support general array 3D
+        numElec = int(dataLine0[0]) # for general array it is 4
+        data = []
+        for val in dump[line:]: # reding data
+            vals = readLine(val)
+            if len(vals) != len(dataLine0): # for end of data flags
+                break
+            data.append(vals[1:]) # we don't want the number of electrodes at each line hence vals[1:]
+        
+        dfi = pd.DataFrame(np.array(data).astype(float)) # building the initial df
+        
+        # check what data are available - skipping x, y columns to get to data (res, err, ip, etc.)
+        res = dfi.iloc[:, numElec*2]
+        # not sure we can have both error and IP at the same time
+        if len(dfi.loc[0]) > numElec*2 + 1 and errFlag is True:
+            error = dfi.iloc[:, numElec*2 + 1]
+        elif len(dfi.loc[0]) > numElec*2 + 1 and ipFlag is True:
+            ip = dfi.iloc[:, numElec*2 + 1]
+        
+        elec_x =  np.concatenate(dfi.iloc[:,[0,2,4,6]].values)
+        elec_y =  np.concatenate(dfi.iloc[:,[1,3,5,7]].values)
+        # elec_z =  np.concatenate(df_raw.iloc[:,[11,14,17,20]].values)
+        elec_raw = np.unique(np.column_stack((elec_x,elec_y)), axis=0)     
+        elec_z = np. zeros_like(elec_raw[:,0]) # for now we have no topgraphy information
+        elec_raw = np.c_[elec_raw, elec_z]
+        elecdf = pd.DataFrame(elec_raw[elec_raw[:,1].argsort(kind='mergesort')]).rename(columns={0:'x',1:'y',2:'z'})
+        
+        # organize 3D electrodes based on lines (y values)
+        elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
+        elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
+        
+        ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
+        m = 0
+        while 2*m + 1 <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+            i = 2*m + 1 # index of odd lines
+            elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
+            m += 1
+        ######### NOT SURE ABOUT ABOVE #########
+        
+        elec = np.concatenate(elecdf_lines) # final electrode array
+        
+        lines = np.unique(elecdf.y) # basically saying what is the y val of each line    
+        
+        # positions of ABMN
+        array_A = dfi.iloc[:,0:2].rename(columns={0:'x',1:'y'})
+        array_B = dfi.iloc[:,2:4].rename(columns={2:'x',3:'y'})
+        array_M = dfi.iloc[:,4:6].rename(columns={4:'x',5:'y'})
+        array_N = dfi.iloc[:,6:8].rename(columns={6:'x',7:'y'})
+        
+        def buildElecLoc(array):
+            # building locs/labels
+            f = []
+            array_groups = array.groupby('y', sort=False, as_index=False)
+            array_lines = [array_groups.get_group(x) for x in array_groups.groups]
+            # which lines
+            for line in array_lines:
+                line_num = np.where(lines == line['y'].iloc[0])[0][0]
+                a = [0]*len(line)
+                for i in range(len(line)):
+                    a[i] = elecdf_lines[line_num]['x'][elecdf_lines[line_num]['x'] == line['x'].iloc[i]].index[0] + 1
+                f.extend(a)
+            return np.array(f)
+        
+        a_f = buildElecLoc(array_A)
+        b_f = buildElecLoc(array_B)
+        m_f = buildElecLoc(array_M)
+        n_f = buildElecLoc(array_N)
+        
+    # future array supports go below! for now only array type 11 is supported with no sub array
+    
+    #build df
+    df = pd.DataFrame()
+    df['a'] = np.array(a_f)
+    df['b'] = np.array(b_f)
+    df['n'] = np.array(n_f)
+    df['m'] = np.array(m_f)
+    
+    if measType == 1: # Survey class will take care of calculating GF if one of the columns (resist or app) is not present
+        df['resist'] = res.values
+    else:
+        df['app'] = res.values
+    
+    if errFlag is True:
+        df['magErr'] = np.abs(error.values)
+    
+    if ipFlag is True:
+        df['ip'] = ip.values
+    else:
+        df['ip'] = np.zeros_like(df['a'])
+        
+    #for pole-pole and pole-dipole arrays
+    elec[elec > 9999] = 999999
+    elec[elec < -9999] = -999999
+    df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
+    
+    return elec, df
+
+
+def resInvParser(filename): 
+    """Returns info on the electrode geometry and transfer resistances held in the resinv (2D or 3D) input file. 
     
     Parameters
     -----------
@@ -900,8 +1066,10 @@ def resInvParser(filename): # keeping it for now, in case of Res3DInv files
     try:
         elec, df = res2invInputParser(filename)
     except:
-        raise ImportError('Unsupported ResInv file')
-        
+        try:
+            elec, df = res3invInputParser(filename)
+        except:
+            raise ImportError('Unsupported ResInv file')
     return elec,df
 
 #%% parse 3D sting data
@@ -937,10 +1105,14 @@ def stingParser(fname):
         # organize 3D electrodes
         elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
         elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
-        i = 1 # index of odd lines
-        while i <= len(elecdf_lines): # electrodes are laied out like a snake - although not sure if this is correct
-            elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1]
-            i = 2*i + 1
+        
+        ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
+        m = 0
+        while 2*m + 1 <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+            i = 2*m + 1 # index of odd lines
+            elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
+            m += 1
+        ######### NOT SURE ABOUT ABOVE #########
         
         elec = np.concatenate(elecdf_lines) # final electrode array
         
@@ -1022,7 +1194,7 @@ def stingParser(fname):
     elec[elec < -9999] = -999999
     df = df.query('a!=b & b!=m & m!=n & a!=m & a!=n & b!=n') # removing data where ABMN overlap
     
-    return elec,df
+    return elec, df
 
 
 #%% ABEM Lund parsers (2D and 3D)
@@ -1037,213 +1209,6 @@ def ericParser(file_path):
     lines of electrodes. 
     """
     #ericParser Rev 2020-05-18
-    try: # see if it's 3D
-        fh = open(file_path,'r')#open file handle for reading
-        dump = fh.readlines()#cache file contents into a list
-        fh.close()#close file handle, free up resources
-        
-        #declaration of variables    
-        proto_file = []   
-        array_type = []
-        proto_org = []
-        num_meas = []
-        mid_st_coord = []
-        idx_meas = []
-        c1 = np.array(())
-        c2 = np.array(())
-        p1 = np.array(())
-        p2 = np.array(())
-        pt = np.array(())
-        pa = np.array(())
-        var_coef = np.array(())
-        n_cycles = np.array(())
-        n_tot_cycles = np.array(())
-        total_x = np.array(())
-        h_dist = np.array(())
-        a_dist = np.array(())
-        b_dist = np.array(())
-        e_x = np.array(())
-        e_y = np.array(())
-        e_z = np.array(())    
-    #    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
-        df = pd.DataFrame()
-        
-        tot_num_meas = 0
-        #first find the general information
-        idx_oi = 0
-        line = dump[idx_oi]
-        sur_name = line.strip() #name of survey
-        if "b dist=" in sur_name:
-            vals = line.strip().split()
-            b_dist = float(vals[2])
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        x_location = float(vals[0])#First midstation coordinate
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        date_time_sur = str(vals[0]) + str('  ') + str(vals[1]) 
-        eric_version = str(vals[2]) + str(': ') + str(vals[3])
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        a_spac = float(vals[0]) #electrode spacing
-        idx_oi += 1
-        no_protocols = 0
-        idx_proto_file = 1
-        idx_oi += 1
-        line = dump[idx_oi]
-        vals = line.strip().split()
-        elec_cable = int(vals[0][2:4])    
-    #    no_cables = int(vals[0][-2:-1])    
-        no_cables = int([s for s in vals[0] if s.isdigit()].pop())
-        proto_file.append(str(vals[0]))
-        array_type.append(int(vals[1]))
-        pdip_pp_flag = False
-        polpol_flag = False
-            
-        #First find how many protocol, measurements and mid first location are 
-        #included in the *.OHM file
-        
-        for i, line in enumerate(dump):
-            pro_type = line.strip().split('.')
-            if 'ORG' in pro_type or 'UP' in pro_type or 'DWN' in pro_type:
-                proto_org.append(str(line)) 
-                no_protocols = no_protocols + 1
-                linea = dump[i+1]
-                vals = linea.strip().split()
-                num_meas.append(int(vals[0]))
-                mid_st_coord.append(float(dump[i+2]))
-                idx_oi = i + 4
-                idx_meas.append(idx_oi)
-                
-        for i in range(len(num_meas)):
-            for k in range(num_meas[i]):
-                line = dump[idx_meas[i] + k]
-                vals = line.strip().split()
-                c1 = np.append(c1, float(vals[0]))
-                c2 = np.append(c2, float(vals[1]))
-                p1 = np.append(p1, float(vals[2]))
-                p2 = np.append(p2, float(vals[3]))
-                pt = np.append(pt, float(vals[4]))
-                var_coef = np.append(var_coef, float(vals[5]))
-                n_cycles = np.append(n_cycles, int(vals[6]))
-                n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
-    
-        if array_type == [12]:
-            if sur_name == "":
-                b_dist = a_spac
-            e_x = np.linspace(0, (no_cables - 1)*b_dist, num= no_cables)
-            e_y = np.linspace(0, (elec_cable - 1)*a_spac, num= elec_cable)
-            e_z = [0]
-            elec = np.vstack((ndmesh(e_x,e_y,e_z))).reshape(3,-1).T
-            num_elec = len(elec)
-            df['a'] = np.copy(c1)
-            df['b'] = np.copy(c2)
-            df['m'] = np.copy(p1)
-            df['n'] = np.copy(p2)
-            k = geom_factor_3D(df, elec, array_type)
-        else:
-            min_dist_c1 = min(c1)
-            min_dist_p1 = min(p1)
-            if min_dist_c1 <= min_dist_p1:
-                min_dist = min_dist_c1
-            else:
-                min_dist = min_dist_p1
-                
-            max_dist_c2 = max(c2)
-            max_dist_p1 = max(p1)
-               
-            if max_dist_c2 >= max_dist_p1:
-                max_dist = max_dist_c2
-            else:
-                max_dist = max_dist_p1
-            
-            if min_dist <= 0.0:
-                half_dist = abs(min_dist)
-            else:
-                half_dist = 0.0
-                
-            max_dist_p2 = max(p2) 
-            largo = len(c1)    
-            for k in range(largo):
-                h_dist = np.append(h_dist, half_dist)
-            
-            c1 = np.add(c1, h_dist)
-            if max_dist_c2 == 1e+38:
-                for k in range(largo):
-                    c2[k] = -999999
-            else:
-                c2 = np.add(c2, h_dist)
-            p1 = np.add(p1, h_dist)
-            if max_dist_p2 == 1e+38:
-                for k in range(largo):
-                    p2[k] = 999999
-            else:
-                p2 = np.add(p2, h_dist)
-            
-            total_x = np.append(total_x, c1)
-            total_x = np.append(total_x, c2)
-            total_x = np.append(total_x, p1)
-            total_x = np.append(total_x, p2)
-            ex_pos = np.unique(total_x)
-            
-            num_elec = len(ex_pos)
-            e_idx_c1 = []
-            e_idx_c2 = []
-            e_idx_p1 = []
-            e_idx_p2 = []
-        
-            e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
-            e_idx_c1 = np.add(e_idx_c1, 1)
-            df['a'] = np.copy(e_idx_c1)
-        
-            e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
-            e_idx_c2 = np.add(e_idx_c2, 1)
-            df['b'] = np.copy(e_idx_c2)
-            e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
-            e_idx_p1 = np.add(e_idx_p1, 1)
-            df['m'] = np.copy(e_idx_p1)
-            e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
-            e_idx_p2 = np.add(e_idx_p2, 1)   
-            df['n'] = np.copy(e_idx_p2)
-            df['resist'] = np.copy(pt)
-                    
-            k = geom_fac(c1, c2, p1, p2)
-            ey_pos=[0]*num_elec
-            ez_pos=[0]*num_elec  
-            elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-            
-            #for pole-pole and pole-dipole arrays
-            elec[elec > 9999] = 999999
-            elec[elec < -9999] = -999999
-    
-       
-        df['resist'] = np.copy(pt)
-        df['Rho'] = pt*k 
-        df['dev'] = (var_coef * n_tot_cycles * pt)/100
-        df['ip'] = [0]*len(c1)
-        #we dont have any topography at x coordinates
-        array = df[['a','b','m','n']].values
-        arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        if arrayMin != 0: # all surveys must start from x = 0
-            array -= arrayMin
-        df[['a','b','m','n']] = (array+1).astype(int)
-           
-        df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
-    except:
-        elec, df = ericParser2D(file_path) # well it seems to be 2D
-        
-    return elec,df
-
-def ericParser2D(file_path):
-    """
-    Reads *.ohm ASCII-files with information related to the profile, comment,
-    first station coordinate, date and time, version of data collection program
-    used, electrode take-out spaing and the protocol files used.
-    """
-    
     fh = open(file_path,'r')#open file handle for reading
     dump = fh.readlines()#cache file contents into a list
     fh.close()#close file handle, free up resources
@@ -1266,12 +1231,25 @@ def ericParser2D(file_path):
     n_tot_cycles = np.array(())
     total_x = np.array(())
     h_dist = np.array(())
-    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    a_dist = np.array(())
+    b_dist = np.array(())
+    e_x = np.array(())
+    e_y = np.array(())
+    e_z = np.array(())  
+    meas_type_flag = 1 # if 0 = apparent resistivity; 1 = Resistance
+#    data_dict = {'a':[],'b':[],'m':[],'n':[],'Rho':[],'ip':[],'resist':[],'dev':[]}
+    df = pd.DataFrame()
+    
     tot_num_meas = 0
     #first find the general information
     idx_oi = 0
     line = dump[idx_oi]
     sur_name = line.strip() #name of survey
+    if "b dist=" in sur_name:
+        vals = line.strip().split()
+        b_dist = float(vals[2])
+    else:
+        sur_name = ""
     idx_oi += 1
     line = dump[idx_oi]
     vals = line.strip().split()
@@ -1286,9 +1264,6 @@ def ericParser2D(file_path):
     vals = line.strip().split()
     a_spac = float(vals[0]) #electrode spacing
     idx_oi += 1
-    #line = dump[idx_oi]
-    #vals = line.strip().split()
-    #no_protocols = int(vals[0])#no. of protocol used
     no_protocols = 0
     idx_proto_file = 1
     idx_oi += 1
@@ -1296,6 +1271,21 @@ def ericParser2D(file_path):
     vals = line.strip().split()
     proto_file.append(str(vals[0]))
     array_type.append(int(vals[1]))
+    
+    # for 3D
+    if array_type == [12]: # array 12 is 3D array
+        numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all possible numbering formats
+        # getting rid of "3D" prefix and if needed any ohter prefixes
+        prefixs = ['3d', '3D']
+        prefix3d = [prefix for prefix in prefixs if prefix in line]
+        if prefix3d != []:
+            line = line.replace(prefix3d[0], '') # removing the prefix if it's 3d or 3D
+        numElec = re.findall(numStr, line)    
+        elec_cable = int(numElec[0])
+        no_cables = int(numElec[1])
+    
+    pdip_pp_flag = False
+    polpol_flag = False
         
     #First find how many protocol, measurements and mid first location are 
     #included in the *.OHM file
@@ -1308,6 +1298,7 @@ def ericParser2D(file_path):
             linea = dump[i+1]
             vals = linea.strip().split()
             num_meas.append(int(vals[0]))
+            meas_type_flag = int(vals[1])
             mid_st_coord.append(float(dump[i+2]))
             idx_oi = i + 4
             idx_meas.append(idx_oi)
@@ -1324,95 +1315,117 @@ def ericParser2D(file_path):
             var_coef = np.append(var_coef, float(vals[5]))
             n_cycles = np.append(n_cycles, int(vals[6]))
             n_tot_cycles = np.append(n_tot_cycles, int(vals[7]))
-            data_dict['ip'].append(0)
-            
-    min_dist_c1 = min(c1)
-    min_dist_p1 = min(p1)
-    if min_dist_c1 <= min_dist_p1:
-        min_dist = min_dist_c1
-    else:
-        min_dist = min_dist_p1
+
+    if array_type == [12]: #3D only
+        if sur_name == "":
+            b_dist = a_spac
+        e_x = np.linspace(0, (no_cables - 1)*b_dist, num= no_cables)
+        e_y = np.linspace(0, (elec_cable - 1)*a_spac, num= elec_cable)
+        e_z = [0]
+        elec = np.vstack((ndmesh(e_x,e_y,e_z))).reshape(3,-1).T
+        num_elec = len(elec)
+        df['a'] = np.copy(c1)
+        df['b'] = np.copy(c2)
+        df['m'] = np.copy(p1)
+        df['n'] = np.copy(p2)
+        k = geom_factor_3D(df, elec, array_type)
         
-    max_dist_c2 = max(c2)
-    max_dist_p1 = max(p1)
-       
-    if max_dist_c2 >= max_dist_p1:
-        max_dist = max_dist_c2
-    else:
-        max_dist = max_dist_p1
-    
-    if min_dist <= 0.0:
-        half_dist = abs(min_dist)
-    else:
-        half_dist = 0.0
-        
-    max_dist_p2 = max(p2) 
-    largo = len(c1)    
-    for k in range(largo):
-        h_dist = np.append(h_dist, half_dist)
-    
-    c1 = np.add(c1, h_dist)
-    if max_dist_c2 == 1e+38:
-        for k in range(largo):
-            c2[k] = -999999
-    else:
-        c2 = np.add(c2, h_dist)
-    p1 = np.add(p1, h_dist)
-    if max_dist_p2 == 1e+38:
-        for k in range(largo):
-            p2[k] = 999999
-    else:
-        p2 = np.add(p2, h_dist)
-    
-    total_x = np.append(total_x, c1)
-    total_x = np.append(total_x, c2)
-    total_x = np.append(total_x, p1)
-    total_x = np.append(total_x, p2)
-    ex_pos = np.unique(total_x)
-    
-    num_elec = len(ex_pos)
-    e_idx_c1 = []
-    e_idx_c2 = []
-    e_idx_p1 = []
-    e_idx_p2 = []
-    e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
-    e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
-    e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
-    e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
-    
-    e_idx_c1 = np.add(e_idx_c1, 1)
-    e_idx_c2 = np.add(e_idx_c2, 1)
-    e_idx_p1 = np.add(e_idx_p1, 1)
-    e_idx_p2 = np.add(e_idx_p2, 1)
-    
-    data_dict['a'] = np.copy(e_idx_c1)
-    data_dict['b'] = np.copy(e_idx_c2)
-    data_dict['m'] = np.copy(e_idx_p1)
-    data_dict['n'] = np.copy(e_idx_p2)
-    data_dict['resist'] = np.copy(pt)
+    else: #2D
+        min_dist_c1 = min(c1)
+        min_dist_p1 = min(p1)
+        if min_dist_c1 <= min_dist_p1:
+            min_dist = min_dist_c1
+        else:
+            min_dist = min_dist_p1
             
-    AM = np.abs(c1-p1)
-    BM = np.abs(c2-p1)
-    AN = np.abs(c1-p2)
-    BN = np.abs(c2-p2)
-    K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN))#geometric factor
-    data_dict['Rho'] = pt*K
-    data_dict['dev'] = (var_coef * n_tot_cycles * pt)/100
+        max_dist_c2 = max(c2)
+        max_dist_p1 = max(p1)
+           
+        if max_dist_c2 >= max_dist_p1:
+            max_dist = max_dist_c2
+        else:
+            max_dist = max_dist_p1
+        
+        if min_dist <= 0.0:
+            half_dist = abs(min_dist)
+        else:
+            half_dist = 0.0
+            
+        max_dist_p2 = max(p2) 
+        largo = len(c1)    
+        for k in range(largo):
+            h_dist = np.append(h_dist, half_dist)
+        
+        c1 = np.add(c1, h_dist)
+        if max_dist_c2 == 1e+38:
+            for k in range(largo):
+                c2[k] = -999999
+        else:
+            c2 = np.add(c2, h_dist)
+        p1 = np.add(p1, h_dist)
+        if max_dist_p2 == 1e+38:
+            for k in range(largo):
+                p2[k] = 999999
+        else:
+            p2 = np.add(p2, h_dist)
+        
+        total_x = np.append(total_x, c1)
+        total_x = np.append(total_x, c2)
+        total_x = np.append(total_x, p1)
+        total_x = np.append(total_x, p2)
+        ex_pos = np.unique(total_x)
+        
+        num_elec = len(ex_pos)
+        e_idx_c1 = []
+        e_idx_c2 = []
+        e_idx_p1 = []
+        e_idx_p2 = []
+    
+        e_idx_c1 = [np.where(ex_pos == c1[i])[0][0] for i in range(largo)]
+        e_idx_c1 = np.add(e_idx_c1, 1)
+        df['a'] = np.copy(e_idx_c1)
+    
+        e_idx_c2 = [np.where(ex_pos == c2[i])[0][0] for i in range(largo)]
+        e_idx_c2 = np.add(e_idx_c2, 1)
+        df['b'] = np.copy(e_idx_c2)
+        e_idx_p1 = [np.where(ex_pos == p1[i])[0][0] for i in range(largo)]
+        e_idx_p1 = np.add(e_idx_p1, 1)
+        df['m'] = np.copy(e_idx_p1)
+        e_idx_p2 = [np.where(ex_pos == p2[i])[0][0] for i in range(largo)]
+        e_idx_p2 = np.add(e_idx_p2, 1)   
+        df['n'] = np.copy(e_idx_p2)
+        df['resist'] = np.copy(pt)
+                
+        k = geom_fac(c1, c2, p1, p2)
+        ey_pos=[0]*num_elec
+        ez_pos=[0]*num_elec  
+        elec = np.column_stack((ex_pos,ey_pos,ez_pos))
+        
+        #for pole-pole and pole-dipole arrays
+        elec[elec > 9999] = 999999
+        elec[elec < -9999] = -999999
+
+   
+    if meas_type_flag == 0:
+        df['Rho'] = np.copy(pt)
+        df['resist'] = pt/k  
+    else:
+        df['resist'] = np.copy(pt)
+        df['Rho'] = pt*k 
+    df['dev'] = (var_coef * n_tot_cycles * pt)/100
+    df['ip'] = [0]*len(c1)
     #we dont have any topography at x coordinates
-    ey_pos=[0]*num_elec
-    ez_pos=[0]*num_elec  
-    elec = np.column_stack((ex_pos,ey_pos,ez_pos))
-    
-    #for pole-pole and pole-dipole arrays
-    elec[elec > 9999] = 999999
-    elec[elec < -9999] = -999999
+    array = df[['a','b','m','n']].values
+    arrayMin = np.min(np.unique(np.sort(array.flatten())))
+    if arrayMin != 0: # all surveys must start from x = 0
+        array -= arrayMin
+    df[['a','b','m','n']] = (array+1).astype(int)
        
-    df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    return elec, df
-
-
+    return elec,df
+    
+    
 #%% 
 def lippmannParser(fname):
     """Read in *.tx0 file from Lippmann instruments
