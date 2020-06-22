@@ -1310,12 +1310,16 @@ class App(QMainWindow):
             dx = float(self.elecDxEdit.text())
             dy = float(self.elecDyEdit.text())
             dz = float(self.elecDzEdit.text())
-            electrodes = np.zeros((nbElec, 4))
-            electrodes[:,0] = 1 + np.arange(nbElec) # label
-            electrodes[:,1] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
-            electrodes[:,2] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
-            electrodes[:,3] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
-            self.elecTable.initTable(electrodes)
+            df = pd.DataFrame()
+            if self.r2.iForward:
+                df['label'] = 1 + np.arange(nbElec) # label
+                df['label'] = df['label'].astype(int).astype(str)
+            else:
+                df['label'] = self.r2.elec['label'].values
+            df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
+            df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
+            df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
+            self.elecTable.initTable(df)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
