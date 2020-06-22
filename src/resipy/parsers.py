@@ -989,10 +989,11 @@ def res3invInputParser(fname):
         elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
         
         ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
-        # i = 1 # index of odd lines
-        # while i <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
-        #     elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1]
-        #     i = 2*i + 1
+        m = 0
+        while 2*m + 1 <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+            i = 2*m + 1 # index of odd lines
+            elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
+            m += 1
         ######### NOT SURE ABOUT ABOVE #########
         
         elec = np.concatenate(elecdf_lines) # final electrode array
@@ -1104,10 +1105,14 @@ def stingParser(fname):
         # organize 3D electrodes
         elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
         elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
-        i = 1 # index of odd lines
-        while i <= len(elecdf_lines): # electrodes are laied out like a snake - although not sure if this is correct
-            elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1]
-            i = 2*i + 1
+        
+        ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
+        m = 0
+        while 2*m + 1 <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+            i = 2*m + 1 # index of odd lines
+            elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
+            m += 1
+        ######### NOT SURE ABOUT ABOVE #########
         
         elec = np.concatenate(elecdf_lines) # final electrode array
         
