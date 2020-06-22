@@ -1073,6 +1073,8 @@ class Mesh:
             
         self.numnp = len(uni_nodes)
         
+        
+        
     def crop(self, polyline):
         """Crop the mesh given a polyline in 2D.
         
@@ -1105,6 +1107,8 @@ class Mesh:
         nmesh.__rmexcessNodes         
         return nmesh
         
+    
+    
     # return a truncated mesh (for 3D)
     def truncateMesh(self,xlim=None,ylim=None,zlim=None):
         """Crop the mesh to a box of given limits, like how R3t behaves 
@@ -1141,9 +1145,9 @@ class Mesh:
         
         #new_attr = np.array(self.cell_attributes)
         
-        elm_id = np.arrange(self.numel)+1
+        elm_id = np.arange(self.numel)+1
 
-        #truncate the attribute table down to the inside elements 
+        #truncate the attribute table down to the inside elements
         new_df = self.df[in_elem]
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
@@ -1160,6 +1164,8 @@ class Mesh:
         nmesh.__rmexcessNodes() # remove the excess nodes 
             
         return nmesh # return truncated mesh 
+    
+    
     
     def threshold(self,attr=None,vmin=None,vmax=None):
         """Threshold the mesh to certian attribute values. 
@@ -1845,7 +1851,7 @@ class Mesh:
         X = np.array(self.df[attr])
         color_bar_title = attr
                 
-        #determine how to crop the mesh 
+        # determine the extent of the survey for bounding box
         if zlim == None:
             zlim = [min(self.node[:,2]), max(self.node[:,2])]
         if self.iremote is not None: 
@@ -1864,23 +1870,26 @@ class Mesh:
                     xlim = [min(self.node[:,0]), max(self.node[:,0])]
                 if ylim == None:
                     ylim = [min(self.node[:,1]), max(self.node[:,1])]
-           
-        if abs(xlim[0] - xlim[1]) < 0.001:# protection against thin axis margins 
+          
+        # protection against thin axis margins 
+        if abs(xlim[0] - xlim[1]) < 0.001:
             xlim=[xlim[0]-2,xlim[1]+2]
         if abs(zlim[0] - zlim[1]) < 0.001:
             zlim=[zlim[0]-2,zlim[1]+2]
         if abs(ylim[0] - ylim[1]) < 0.001:
             ylim=[ylim[0]-2,ylim[1]+2]
-            
-        if vmin is None: # determine min and max of X array 
+        
+        # determine min and max of X array 
+        if vmin is None:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
         
         #### use pyvista for 3D viewing ####         
         if use_pyvista and pyvista_installed:
-            nmesh = self.copy() # new mesh which is cropped down 
-            nmesh.df = {color_bar_title:X} # make the attr of interest the only attribute
+            # if attr == 'region': # we crop the mesh (only way to reduce it's bounds for better viewing)
+            nmesh = self.truncateMesh(xlim=xlim, ylim=ylim, zlim=zlim) # this returns a mesh copy
+            nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
             nmesh.vtk(fname)
@@ -1892,14 +1901,16 @@ class Mesh:
             #                           np.array(self.connection).T)
             # self.pvmesh[color_bar_title] = X
             
-            #crop down to the bounding box 
+            # clip mesh to bounding box
             self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         
             if edge_color is None or edge_color=='none' or edge_color=='None':
                 edges = False # then dont show element edges 
             else:
                 edges = True
-            if ax is None: # make a plotter object if not already given 
+            
+            # make a plotter object if not already given or check it
+            if ax is None: 
                 ax = pv.BackgroundPlotter()
                 ax.background_color = background_color
             else: # check the ax argument is for pyvista not matplotlib 
@@ -1907,7 +1918,8 @@ class Mesh:
                 if typ_str.find('pyvista') == -1:
                     raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
                 ax.set_background(background_color)
-                
+            
+            # apply threshold
             if pvthreshold is not None:
                 if isinstance(pvthreshold, list):
                     if pvthreshold[0] is None:
@@ -1915,12 +1927,17 @@ class Mesh:
                     if pvthreshold[1] is None:
                         pvthreshold[1] = np.nanmax(X)
                 self.pvmesh = self.pvmesh.threshold(value=pvthreshold)
+            
+            # create isosurfaces
             if len(pvcontour) > 0:
                 self.pvmesh = self.pvmesh.cell_data_to_point_data()
                 self.pvmesh = self.pvmesh.contour(isosurfaces=pvcontour)
+            
+            # show grid
             if pvgrid:
                 ax.show_grid(color='k')
-                
+            
+            # plot slices or entire mesh
             if np.sum([len(a) for a in pvslices]) > 0: # we have slices
                 ax.add_mesh(self.pvmesh.outline(), color='k')
                 for i, ss in enumerate(pvslices): # X, Y then Z slice
@@ -1956,8 +1973,9 @@ class Mesh:
                                                  'label_font_size':14})
                 else:
                     print('empty mesh')
-                    
-            if electrodes: # then add the electrodes to the plot 
+            
+             # then add the electrodes to the plot 
+            if electrodes:
                 try:
                     points = self.elec.copy()
                     pvelec = pv.PolyData(points)
@@ -1966,7 +1984,12 @@ class Mesh:
                 except AttributeError as e:
                     print("Could not plot 3d electrodes, error = "+str(e))
             
+            # show mesh
             ax.show()
+            # NOTE: because we've truncated the copy of the mesh that pyvista
+            # reads in, it should scale correctly in showMesh() even if the
+            # mesh object represents the entire mesh with the coarse region.
+            
             return # exit function
         #### else fall back on to matplotlib scheme ####    
         
@@ -3706,7 +3729,7 @@ def quad_mesh(*args):
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
-             **kwargs):
+             handle=None, **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
     Uses gmsh version 3.0.6.
@@ -3739,6 +3762,9 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
         the default.
+    handle : variable, optional
+        Will be assigned the output of 'Popen' in case the process needs to be
+        killed in the UI for instance.
     **kwargs : optional
         Key word arguments to be passed to genGeoFile. 
             
@@ -3817,15 +3843,19 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)#run gmsh with ouput displayed in console
+        if handle is not None:
+            handle(p)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
             if line.decode('utf-8') != '':
                 dump(line.decode('utf-8'))
     else:
         p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
+        if handle is not None:
+            handle(p)
         p.communicate() # wait to finish
         
-    #convert into mesh.dat 
+    #convert into mesh.dat
     mesh_info = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
     
     # merge fine with coarse regions
@@ -3859,11 +3889,13 @@ def tri_mesh(*args):
     warnings.warn('tri_mesh is depreciated, use triMesh instead')
     triMesh(**args)
 
+
+
 #%% 3D tetrahedral mesh 
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'triangulate',
                surface_refinement = None, mesh_refinement = None,show_output=True, 
                path='exe', dump=print, whole_space=False, padding=20, ncores=2,
-               search_radius = 10, **kwargs):
+               search_radius = 10, handle=None, **kwargs):
     """ Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
     in the working directory. This function expects the current working directory 
     has path: exe/gmsh.exe.
@@ -3909,6 +3941,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     search_radius: float, None, optional
         Defines search radius used in the inverse distance weighting interpolation. 
         If None then no search radius will be used and all points will be considered in the interpolation. 
+    handle : variable, optional
+        Will be assigned the output of 'Popen' in case the process needs to be
+        killed in the UI for instance.
     **kwargs : optional
         Key word arguments to be passed to box_3d. 
             
@@ -4082,16 +4117,19 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         # except: # hotfix to deal with failing commits on gitlab's server. 
             # cmd_line = ['wine', ewd + '/gmsh.exe', file_name + '.geo', '-3', 'nt', '%i'%ncores] # use .exe through wine instead
         p = Popen(cmd_line, stdout=PIPE, shell=False)
+        if handle is not None:
+            handle(p)
         while p.poll() is None:
             line = p.stdout.readline().rstrip()
             dump(line.decode('utf-8'))
     else:
         p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
+        if handle is not None:
+            handle(p)
         p.communicate() # wait to finish
-
         
     #convert into mesh.dat
-    mesh_info = gw.msh_parse(file_path = file_name+'.msh') # read in 3D mesh file
+    mesh_info = gw.msh_parse(file_path=file_name+'.msh') # read in 3D mesh file
     
     # merge fine with coarse regions
     regions = np.array(mesh_info['parameters'])
@@ -4162,7 +4200,7 @@ def prismMesh(elec_x,elec_y,elec_z,
                keep_files=True,
                show_output=True, 
                path='exe', dump=print,
-               **kwargs):
+               handle=None, **kwargs):
     """Make a prism mesh 
     Parameters
     ------------
@@ -4187,6 +4225,9 @@ def prismMesh(elec_x,elec_y,elec_z,
         a characteristic length 1/4 the minimum electrode spacing is computed.
     elemz: int, optional
         Number of layers in between each electrode inside the column mesh. 
+    handle : variable, optional
+        Will be assigned the output of 'Popen' in case the process needs to be
+        killed in the UI for instance.
     """
     #error checks 
     if len(elec_x) != len(elec_y):

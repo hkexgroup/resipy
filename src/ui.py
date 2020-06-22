@@ -616,7 +616,7 @@ class App(QMainWindow):
                 self.ftype = 'ProtocolIP'
                 self.fformat = 'DAT (Tab delimited) (*.dat *.DAT)'
             elif index == 3:
-                self.ftype = 'Res2Dinv'
+                self.ftype = 'ResInv'
                 self.fformat = 'DAT (*.dat *.DAT)'
             elif index == 4:
                 self.ftype = 'BGS Prime'
@@ -637,6 +637,9 @@ class App(QMainWindow):
                 self.ftype = 'BERT'
                 self.fformat = 'BERT (*.dat *.DAT *.ohm *.OHM)'
             elif index == 10:
+                self.ftype = 'E4D'
+                self.fformat = 'srv (*.srv *.SRV)'
+            elif index == 11:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -647,13 +650,14 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('Protocol DC')
         self.ftypeCombo.addItem('Syscal')
         self.ftypeCombo.addItem('Protocol IP')
-        self.ftypeCombo.addItem('Res2Dinv')
+        self.ftypeCombo.addItem('ResInv (2D/3D)')
         self.ftypeCombo.addItem('BGS Prime')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
         self.ftypeCombo.addItem('ARES (beta)')
         self.ftypeCombo.addItem('BERT')
+        self.ftypeCombo.addItem('E4D')
         self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
@@ -1231,9 +1235,19 @@ class App(QMainWindow):
                         df2['buried'] = df.values[:,3]
                 if 'label' not in df.columns:
                     df2.insert(0, 'label', (1 + np.arange(df.shape[0])).astype(str))
-                    if self.parent.r2.typ[-1] == 't': # 3D
-                        df2.loc[:, 'label'] = '1 ' + df2['label']
+                    # if self.parent.r2.typ[-1] == 't': # 3D
+                    #     df2_groups = df2.groupby('y') # finding number of lines based on y vals
+                    #     df2_grouppedData = [df2_groups.get_group(x) for x in df2_groups.groups]
+                    #     for i, group in enumerate(df2_grouppedData):
+                    #         group['label'] = (np.arange(group.shape[0]) + 1).astype(str)
+                    #         group.loc[:, 'label'] = str(i+1) + ' ' + group['label']
+                    #     df2_temp = pd.concat(df2_grouppedData)
+                    #     df2['label'] = df2_temp['label'].values
+                        # df2.loc[:, 'label'] = '1 ' + df2['label']
                 else:
+                    a = df['label'].values[0]
+                    if isinstance(a, str) is False:
+                        df['label'] = df['label'].astype(int).astype(str)
                     df2.insert(0, 'label', df['label'].values)
                 
                 pdebug('elecTable.readTable():\n', df2.head())
@@ -1296,12 +1310,16 @@ class App(QMainWindow):
             dx = float(self.elecDxEdit.text())
             dy = float(self.elecDyEdit.text())
             dz = float(self.elecDzEdit.text())
-            electrodes = np.zeros((nbElec, 4))
-            electrodes[:,0] = 1 + np.arange(nbElec) # label
-            electrodes[:,1] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
-            electrodes[:,2] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
-            electrodes[:,3] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
-            self.elecTable.initTable(electrodes)
+            df = pd.DataFrame()
+            if self.r2.iForward:
+                df['label'] = 1 + np.arange(nbElec) # label
+                df['label'] = df['label'].astype(int).astype(str)
+            else:
+                df['label'] = self.r2.elec['label'].values
+            df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
+            df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
+            df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
+            self.elecTable.initTable(df)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -1654,7 +1672,7 @@ class App(QMainWindow):
 
             if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(10)
+            self.ftypeCombo.setCurrentIndex(11)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
@@ -2670,6 +2688,17 @@ class App(QMainWindow):
         self.meshQuad.setToolTip('Generate quadrilateral mesh.')
 
         def meshTrianFunc():
+            if self.r2.mproc is not None:
+                print('killing')
+                self.r2.mproc.kill()
+                self.r2.mproc = None
+                meshOutputStack.setCurrentIndex(1)
+                self.meshTrianBtn.setText('Triangular Mesh')
+                self.meshTrianBtn.setStyleSheet('background-color:orange')
+                return
+            else:
+                self.meshTrianBtn.setText('Kill')
+                self.meshTrianBtn.setStyleSheet('background-color:red')
 #            self.cropBelowFmd.setChecked(True)
             self.cropBelowFmd.setEnabled(True)
             elec = self.elecTable.getTable()
@@ -2696,24 +2725,41 @@ class App(QMainWindow):
             pdebug('meshTrian(): fmd', fmd)
             pdebug('meshTrian(): elec:', self.r2.elec)
             pdebug('meshTrian(): surface:', surface)
-            self.r2.createModelMesh(surface=surface,
-                                    cl=cl, cl_factor=cl_factor, show_output=True,
-                                    dump=meshLogTextFunc, refine=refine, fmd=fmd)
-            # if self.iForward is False:
-            #     self.regionTable.setColumnHidden(2, False) # show zone column
-            #     self.regionTable.setColumnHidden(3, False) # show fixed column
-            self.scale.setVisible(True)
-            self.scaleLabel.setVisible(True)
-            meshOutputStack.setCurrentIndex(1)
+            try:
+                self.r2.createModelMesh(surface=surface,
+                                        cl=cl, cl_factor=cl_factor, show_output=True,
+                                        dump=meshLogTextFunc, refine=refine, fmd=fmd)
+                # if self.iForward is False:
+                #     self.regionTable.setColumnHidden(2, False) # show zone column
+                #     self.regionTable.setColumnHidden(3, False) # show fixed column
+                self.scale.setVisible(True)
+                self.scaleLabel.setVisible(True)
+                meshOutputStack.setCurrentIndex(1)
+            except Exception:
+                pass # caused by killing the mesh process
+            self.meshTrianBtn.setText('Triangular Mesh')
+            self.meshTrianBtn.setStyleSheet('background-color:orange')
             replotMesh()
-        meshTrian = QPushButton('Triangular Mesh')
-        meshTrian.setAutoDefault(True)
-        meshTrian.setFocus()
-        meshTrian.clicked.connect(meshTrianFunc)
-        meshTrian.setToolTip('Generate triangular mesh.')
+        self.meshTrianBtn = QPushButton('Triangular Mesh')
+        self.meshTrianBtn.setAutoDefault(True)
+        self.meshTrianBtn.setFocus()
+        self.meshTrianBtn.clicked.connect(meshTrianFunc)
+        self.meshTrianBtn.setToolTip('Generate triangular mesh.')
+        self.meshTrianBtn.setStyleSheet('background-color:orange')
 
 
         def meshTetraFunc():
+            if self.r2.mproc is not None:
+                print('killing')
+                self.r2.mproc.kill()
+                self.r2.mproc = None
+                meshOutputStack.setCurrentIndex(1)
+                self.meshTetraBtn.setText('Tetrahedral Mesh')
+                self.meshTetraBtn.setStyleSheet('background-color:orange')
+                return
+            else:
+                self.meshTetraBtn.setText('Kill')
+                self.meshTetraBtn.setStyleSheet('background-color:red')
 #            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
 #            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
@@ -2740,20 +2786,26 @@ class App(QMainWindow):
                 topo = topo[inan,:]
             
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-            self.r2.createMesh(typ='tetra', surface=topo, fmd=fmd,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
-                               cln_factor=cln_factor, refine=refine, show_output=True)
-            if pvfound:
-                mesh3Dplotter.clear() # clear all actors 
-                self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
-            else:
-                self.mwMesh3D.plot(self.r2.showMesh, threed=True)
-            meshOutputStack.setCurrentIndex(2)
+            try:
+                self.r2.createMesh(typ='tetra', surface=topo, fmd=fmd,
+                                   cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
+                                   cln_factor=cln_factor, refine=refine, show_output=True)
+                if pvfound:
+                    mesh3Dplotter.clear() # clear all actors 
+                    self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                else:
+                    self.mwMesh3D.plot(self.r2.showMesh, threed=True)
+                meshOutputStack.setCurrentIndex(2)
+            except Exception:
+                pass # caused by killing the mesh process
+            self.meshTetraBtn.setText('Tetrahedral Mesh')
+            self.meshTetraBtn.setStyleSheet('background-color:orange')
 
-        meshTetra = QPushButton('Tetrahedral Mesh')
-        meshTetra.setAutoDefault(True)
-        meshTetra.clicked.connect(meshTetraFunc)
-        meshTetra.setToolTip('Generate tetrahedral mesh.')
+        self.meshTetraBtn = QPushButton('Tetrahedral Mesh')
+        self.meshTetraBtn.setAutoDefault(True)
+        self.meshTetraBtn.clicked.connect(meshTetraFunc)
+        self.meshTetraBtn.setToolTip('Generate tetrahedral mesh.')
+        self.meshTetraBtn.setStyleSheet('background-color:orange')
 
 
         # additional options for quadrilateral mesh
@@ -3003,7 +3055,7 @@ class App(QMainWindow):
         meshButtonTrianLayout = QHBoxLayout()
         meshButtonTrianLayout.addWidget(refineTrianCheck)
         meshButtonTrianLayout.addWidget(self.designModelBtn)
-        meshButtonTrianLayout.addWidget(meshTrian)
+        meshButtonTrianLayout.addWidget(self.meshTrianBtn)
         
         importCustomLayout = QVBoxLayout()
         importCustomLayout.addWidget(importCustomMeshLabel2)
@@ -3058,7 +3110,7 @@ class App(QMainWindow):
         meshChoiceLayout.addWidget(meshCustomGroup,0)
         
         meshTetraLayout.addLayout(meshOptionTetraLayout)
-        meshTetraLayout.addWidget(meshTetra)
+        meshTetraLayout.addWidget(self.meshTetraBtn)
         meshTetraGroup.setLayout(meshTetraLayout)
         meshChoiceLayout.addWidget(meshTetraGroup)
         meshTetraGroup.setHidden(True)
@@ -3995,7 +4047,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 c = 0
                 ci = 0
                 for i, attr in enumerate(attrs):
-                    if attr not in ['param', 'region', 'zone']:
+                    if attr not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
                         self.attrCombo.addItem(attr)
                         if attr == self.displayParams['attr']:
                             ci = c
@@ -4198,7 +4250,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             c = -1
             found = False
             for i, a in enumerate(attrs): # find same attribute or plot first one
-                if a not in ['param', 'region', 'zone']:
+                if a not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
                     c = c + 1
                     if a == attr0:
                         ci = c
@@ -4212,7 +4264,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.displayParams['attr'] = attr
             self.attrCombo.clear()
             for attr in attrs:
-                if attr not in ['param', 'region', 'zone']:
+                if attr not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
                     self.attrCombo.addItem(attr)
             self.attrCombo.setCurrentIndex(ci)
             replotSection()
@@ -4773,6 +4825,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
            <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</li>
            <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
+           <li>Note: Res3DInv files are only supported in general 4 electrode format.</ul></li>
            <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
            <ul><li><i>Pole-dipole arrays</i>: the remote electrode's X location must be exactly at 99999 or -99999 m.</li>

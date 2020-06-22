@@ -77,7 +77,7 @@ class Survey(object):
             warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
                       DeprecationWarning)
             
-        avail_ftypes = ['Syscal','ProtocolDC','Res2Dinv', 'BGS Prime', 'ProtocolIP',
+        avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
                         'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT']# add parser types here! 
 
         
@@ -89,7 +89,7 @@ class Survey(object):
                 self.kFactor = 1.2
             elif ftype =='ProtocolDC':
                 elec, data = protocolParser(fname, ip=False)
-            elif ftype == 'Res2Dinv':
+            elif ftype == 'ResInv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
 #                try:
@@ -304,7 +304,7 @@ class Survey(object):
                 self.kFactor = 1.2
             elif ftype =='ProtocolDC':
                 elec, data = protocolParser(fname, ip=False)
-            elif ftype == 'Res2Dinv':
+            elif ftype == 'ResInv':
                 elec, data = resInvParser(fname)
             elif ftype == 'BGS Prime':
                 elec, data = primeParserTab(fname)
