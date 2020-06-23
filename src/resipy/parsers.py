@@ -260,6 +260,8 @@ def protocolParser(fname, ip=False, fwd=False):
     IP 3D + fwd   12
     """
     x = np.genfromtxt(fname, skip_header=1) # we don't know if it's tab or white-space
+    if len(x.shape) == 1: # a single quadrupole
+        x = x[None,:]
     if fwd:
         x = x[:,:-1] # discard last column as it is appRes
     if ip:
