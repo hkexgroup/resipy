@@ -994,7 +994,6 @@ def res3invInputParser(fname):
         m = 0
         while 2*m + 1 <= len(elecdf_lines) - 1: # electrodes are laid out like a snake - although not sure if this is correct
             i = 2*m + 1 # index of odd lines
-            print(i)
             elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
             m += 1
         ######### NOT SURE ABOUT ABOVE #########
