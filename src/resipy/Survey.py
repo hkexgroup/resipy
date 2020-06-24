@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 import pandas as pd
-from scipy.stats import norm
+from scipy.stats import norm, linregress
 from scipy.stats.kde import gaussian_kde
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
@@ -1060,7 +1060,9 @@ class Survey(object):
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
-        coefs = np.polyfit(bins[:,0], bins[:,1], 1)
+        # coefs = np.polyfit(bins[:,0], bins[:,1], 1)
+        slope, intercept, r_value, p_value, std_err = linregress(bins[:,0], bins[:,1])
+        coefs = [slope, intercept]
         if coefs[1] < 0: # we don't want negative error -> doesn't make sense
             x = bins[:,0][:,None]
             slope, _, _, _ = np.linalg.lstsq(x, bins[:,1])
