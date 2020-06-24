@@ -2473,7 +2473,7 @@ class R2(object): # R2 master class instanciated by the GUI
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
-                    **kwargs):
+                    clipContour=True, **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -2503,6 +2503,8 @@ class R2(object): # R2 master class instanciated by the GUI
             of the log10 sensitivity.
         contour : bool, optional
             If True, contours will be plotted.
+        clipContour : bool, optional
+            If True, the contour of the area of interest will be clipped (default).
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -2540,9 +2542,11 @@ class R2(object): # R2 master class instanciated by the GUI
                     xc, yc = mesh.elmCentre[:,0], mesh.elmCentre[:,2]
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
-                    self._clipContour(mesh.ax, cont.collections)
+                    if clipContour:
+                        self._clipContour(mesh.ax, cont.collections)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
-                self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
+                if clipContour: 
+                    self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
                 if zlim is None:
                     zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
