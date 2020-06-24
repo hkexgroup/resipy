@@ -992,7 +992,7 @@ def res3invInputParser(fname):
         
         ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
         m = 0
-        while 2*m + 1 <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+        while 2*m + 1 <= len(elecdf_lines) - 1: # electrodes are laid out like a snake - although not sure if this is correct
             i = 2*m + 1 # index of odd lines
             elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
             m += 1
@@ -1110,7 +1110,7 @@ def stingParser(fname):
         
         ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
         m = 0
-        while 2*m + 1 <= len(elecdf_lines): # electrodes are laid out like a snake - although not sure if this is correct
+        while 2*m + 1 <= len(elecdf_lines) - 1: # electrodes are laid out like a snake - although not sure if this is correct
             i = 2*m + 1 # index of odd lines
             elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
             m += 1
