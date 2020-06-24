@@ -1207,6 +1207,8 @@ class App(QMainWindow):
                     header = 'infer'
                     pdebug('elecTable.readTable: header provided')
                 df = pd.read_csv(fname, header=header)
+                newcols = [a.lower() for a in df.columns]
+                df = df.rename(dict(zip(df.columns, newcols)))
                 
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
@@ -1269,10 +1271,10 @@ class App(QMainWindow):
 
         self.elecTable = ElecTable(parent=self)
         self.elecTable.setColumnHidden(2, True)
-        self.elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV (x,y,z header).\
-                           The last column is 1 if checked (= buried electrode) and 0 if not (=surface electrode).\
-                           You can also use the form below to generate \
-                           regular electrode spacing. <b>Click on the <font color="red">"Buried"</font> table header to check/unchek all</b></i>')
+        self.elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV with headers matching: label,x,y,z,buried.'
+                           'The last column (buried) is 1 if checked (= buried electrode) and 0 if not (=surface electrode).'
+                           'You can also use the form below to generate '
+                           'regular electrode spacing. <b>Click on the <font color="red">"Buried"</font> table header to check/unchek all</b></i>')
         self.elecLabel.setWordWrap(True)
 
         def importElecBtnFunc():
@@ -1283,7 +1285,7 @@ class App(QMainWindow):
                 else:
                     nbElec = None
                 self.elecTable.readTable(fname, nbElec=nbElec)
-        self.importElecBtn = QPushButton('Import from CSV files (x, y, z headers)')
+        self.importElecBtn = QPushButton('Import from CSV files with headers: label, x, y, z, buried')
         self.importElecBtn.setAutoDefault(True)
         self.importElecBtn.clicked.connect(importElecBtnFunc)
         
@@ -1336,7 +1338,7 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,'Open File', directory=self.datadir)
             if fname != '':
                 self.topoTable.readTable(fname)
-        self.topoBtn = QPushButton('Import from CSV files (x, y, z headers)')
+        self.topoBtn = QPushButton('Import from CSV file with headers: x, y, z')
         self.topoBtn.setAutoDefault(True)
         self.topoBtn.clicked.connect(topoBtnFunc)
         
