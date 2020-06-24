@@ -375,6 +375,24 @@ class Mesh:
             print("WARNING: unrecognised cell type")
             return 0
         
+    def type2FaceNo(self):
+        """Converts vtk cell types into number of vertices each element has
+        """
+        if int(self.cell_type[0])==5:#then elements are triangles
+            return 3
+        elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
+            return 4
+        elif int(self.cell_type[0]) == 11: # elements are voxels
+            return 8
+        elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
+            return 4
+        elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
+            return 6
+        #add element types as neccessary 
+        else:
+            print("WARNING: unrecognised cell type")
+            return 0
+        
     def summary(self,flag=True):
         """Prints summary information about the mesh
         """
