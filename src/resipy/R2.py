@@ -4234,7 +4234,64 @@ class R2(object): # R2 master class instanciated by the GUI
                 del(self.surveys[bad_idx])
                 count += 1
         print("%i surveys removed as they had no measurements!"%count)
-
+        
+    def _estimateMemory(self,dump=print,inverse=True):
+        #NB: using variable names from Andy's codes 
+        if self.mesh is None:
+            print('A mesh is required before a memory usage estimate can be made')
+            return 
+        if len(self.surveys) == 0:
+            print('A survey needs to imported before a memory usage estimate can be made')
+        else: # number of measurements computation 
+            nmeas = []
+            for s in self.surveys:
+                df = s.df 
+                ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
+                nmeas.append(sum(ie))
+            num_ind_meas=np.mean(nmeas)
+            
+        if self.mesh.neigh_matrix is None: # compute neighbour matrix, this is needed for calculation of nsizeA 
+            self.mesh.computeNeigh() 
+        
+        #nsize A computation 
+        neigh = np.array(self.mesh.neigh_matrix).T # nieghbour matrix 
+        out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
+        extra_connect = sum(out_elem) # for every outside element add 1 to the number of respective number of node connections 
+        kxf = self.mesh.connection.flatten() # flattened connection matrix
+        uni_node, counts = np.unique(kxf,return_counts=True)
+        nsizeA = (np.sum(counts) + extra_connect)
+        #other mesh parameters 
+        numnp = self.mesh.numnp
+        numel = self.mesh.numel
+        npere = self.mesh.type2VertsNo()
+        if 'param' in self.mesh.df.keys():
+            num_param = len(np.unique(self.mesh.df['param'].values))
+        else:
+            num_param = self.mesh.numel
+        nfaces = self.mesh.type2FaceNo()
+        
+        #electrodes 
+        num_electrodes = len(self.elec)
+        
+        memDP=numnp*(8+num_electrodes)+nsizeA+numel+num_ind_meas * 2
+        memR=0
+        memI=numnp*2+(npere+2)*numel+numnp+1+nsizeA+num_electrodes*3+num_ind_meas*12
+        memL=numel*2
+          
+        if inverse: 
+            #print('inverse = true')
+            memDP=(memDP+num_param)*9 + num_ind_meas*(num_param+6) 
+            memR=memR+(num_param*nfaces)
+            memI=memI+num_param*nfaces         
+        
+        Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
+        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
+        
+        # print('nsizeA = %f'%nsizeA)
+        # print('nfaces = %f'%nfaces)
+        
+        return Gb
+        
 
 #%% deprecated funcions
 
