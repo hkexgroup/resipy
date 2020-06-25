@@ -1054,12 +1054,13 @@ class Survey(object):
             numbins = 20
         error_input = np.abs(dfg[['recipMean', 'recipError']]).sort_values(by='recipMean').reset_index(drop=True) # Sorting data based on R_avg
         error_input['recipError'] = error_input['recipError']
-        bins = np.zeros((numbins,2))
+        bins = np.zeros((numbins,2), dtype=float)
         for i in range(numbins): # bining 
             ns=i*binsize
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
+        np.savetxt(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','lin-error-bins.txt'), bins)
         # coefs = np.polyfit(bins[:,0], bins[:,1], 1)
         slope, intercept, r_value, p_value, std_err = linregress(bins[:,0], bins[:,1])
         coefs = [slope, intercept]
