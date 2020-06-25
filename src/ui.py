@@ -3024,7 +3024,7 @@ class App(QMainWindow):
         self.mwMesh = MatplotlibWidget(navi=True, itight=False)
         self.mwMesh3D = MatplotlibWidget(threed=True, navi=True)
         if pvfound:
-            mesh3Dplotter = pv.QtInteractor()
+            mesh3Dplotter = QtInteractor()
             self.mwMesh3D.setVisible(False)
 
         def meshLogTextFunc(text):
@@ -4160,7 +4160,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #interactive vtk widget with pyvista
         self.frame = QFrame()
         vlayout = QVBoxLayout()
-        self.vtkWidget = pv.QtInteractor(self.frame)
+        self.vtkWidget = QtInteractor(self.frame)
         vlayout.addWidget(self.vtkWidget.interactor)
         self.frame.setLayout(vlayout)
         self.mSlice = None
@@ -4927,7 +4927,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         # self.fframe = QFrame()
         # vlayout = QVBoxLayout()
-        # self.vtk_widget = pv.QtInteractor(self.fframe)
+        # self.vtk_widget = QtInteractor(self.fframe)
         # vlayout.addWidget(self.vtk_widget)
         # self.fframe.setLayout(vlayout)
         
@@ -5561,6 +5561,10 @@ if __name__ == '__main__':
 
     try:
         import pyvista as pv
+        try:
+            from pyvistaqt import QtInteractor # newer version
+        except:
+            from pyvista import QtInteractor # older version
         pvfound = True
     except:
         pvfound = False
