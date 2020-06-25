@@ -4289,11 +4289,7 @@ class R2(object): # R2 master class instanciated by the GUI
             memI=memI+num_param*nfaces         
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
-        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
-        
-        # print('nsizeA = %f'%nsizeA)
-        # print('nfaces = %f'%nfaces)
-        
+        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)        
         return Gb
         
 
