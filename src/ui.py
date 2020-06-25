@@ -46,12 +46,12 @@ import traceback
 # from subprocess import PIPE, Popen
 # from urllib import request as urlRequest
 # import webbrowser
-# try:
-#     import pyvista as pv
-#     pvfound = True
-# except:
-#     pvfound = False
-#     print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
+#try:
+#    import pyvista as pv
+#    pvfound = True
+#except:
+#    pvfound = False
+#    print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
 # from resipy.R2 import R2
 # from resipy.r2help import r2help
 
