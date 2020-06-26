@@ -1444,10 +1444,9 @@ class R2(object): # R2 master class instanciated by the GUI
                 kwargs.pop('geom_input')
 
             whole_space = False
-            if buried is not None:
-                if np.sum(buried) == len(buried) and surface is None:
-                    # all electrodes buried and no surface given
-                    whole_space = True
+            if self.elec['buried'].values.all() and surface is None:
+                # all electrodes buried and no surface given
+                whole_space = True
 
             elec_type = elec_type.tolist()
 
@@ -1478,7 +1477,7 @@ class R2(object): # R2 master class instanciated by the GUI
                                  fmd=self.fmd, whole_space=whole_space,
                                  handle=setMeshProc, **kwargs)
                     self.mproc = None
-                if typ=='prism':
+                if typ == 'prism':
                     print('Creating prism mesh...', end='')
                     mesh = mt.prismMesh(elec_x, elec_y, elec_z,
                                          path=os.path.join(self.apiPath, 'exe'),
@@ -1513,11 +1512,14 @@ class R2(object): # R2 master class instanciated by the GUI
         if surface is not None:
             zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
         else:
-            if all(self.elec['buried']): # if all buried we assume surface at 0 m
-                zlimTop = 0
-            else:
-                zlimTop = np.max(elec_z)
-        zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
+            # if all(self.elec['buried']): # if all buried we assume surface at 0 m
+                # zlimTop = 0
+            # else:
+            zlimTop = np.max(elec_z)
+        if all(self.elec['buried']) and surface is None: # whole mesh
+            zlimBot = np.min(elec_z)
+        else:
+            zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
         # from surface then it is as well the zlimMin)
         self.zlim = [zlimBot, zlimTop]
         

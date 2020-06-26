@@ -2713,7 +2713,7 @@ class App(QMainWindow):
             QApplication.processEvents()
             self.meshLogText.clear()
             elecSpacing = np.sqrt(np.sum(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2])**2 +
-                                         np.diff(self.r2.elec[~self.r2.elec['remote']]['y'].values[:2])**2))
+                                         np.diff(self.r2.elec[~self.r2.elec['remote']]['z'].values[:2])**2))
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
             cl_factor = clFactorSld.value()
             surface = self.topoTable.getTable()[['x','y','z']].values
