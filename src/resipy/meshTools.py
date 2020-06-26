@@ -1497,8 +1497,8 @@ class Mesh:
         else:
             self.fig = ax.figure
             self.ax = ax
-        #if no dimensions are given then set the plot limits to edge of mesh
         
+        # if no dimensions are given then set the plot limits to edge of mesh
         try: 
             elec_x = self.elec[:,0][~iremote]
             if xlim==None:
