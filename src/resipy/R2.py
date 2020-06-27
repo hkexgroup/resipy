@@ -1533,11 +1533,13 @@ class R2(object): # R2 master class instanciated by the GUI
         elec_x, elec_y, elec_z = elec[:,0], elec[:,1], elec[:,2]
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.param['num_xz_poly'] = 5
-            if self.elec['buried'].sum() == self.elec.shape[0]:
-                zmax = 0
+            if all(self.elec['buried']): # we don't know if there is a surface
+            # or not so we trust the zlim computation done in createMesh()
+                zmax = self.zlim[1]
+                zmin = self.zlim[0]
             else:
                 zmax = np.max(elec_z)
-            zmin = np.min(elec_z) - self.fmd 
+                zmin = np.min(elec_z) - self.fmd 
             xmin, xmax = np.min(elec_x), np.max(elec_x)
             xz_poly_table = np.array([
             [xmin, zmax],
@@ -2453,6 +2455,7 @@ class R2(object): # R2 master class instanciated by the GUI
         zmin = np.min(node_z)
         zmax = np.max(node_z)
         
+        #TODO this doesn't work for whole_space mesh
         (xsurf, zsurf) = self.mesh.extractSurface()
         if cropMaxDepth and self.fmd is not None:
             xfmd, zfmd = xsurf[::-1], zsurf[::-1] - self.fmd
@@ -2461,7 +2464,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
                           np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
-                            
+             
         # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
         poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
         path = mpath.Path(verts, poly_codes)
