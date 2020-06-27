@@ -2654,34 +2654,18 @@ class App(QMainWindow):
                 self.r2.setElec(elec)
             surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
-            if not np.isnan(surface[0,0]):
-                surface_flag = True
-            else:
-                surface_flag = False
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
-#            if not np.isnan(surface[0,0]):
-#                surface_flag = True
-#            else:
-#                surface_flag = False
             nnodes = nnodesSld.value()
             try:
                 fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-                if surface_flag:
-                    print("quad mesh + topo")
-                    self.r2.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
-                else:
-                    print("quad mesh no topo")
-                    self.r2.createMesh(typ='quad', elemx=nnodes, fmd=fmd)
+                self.r2.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
                 self.scale.setVisible(False)
                 self.scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
                 replotMesh()
-                # if self.iForward is False:
-                #     self.regionTable.setColumnHidden(2, False) # hide zone column
-                #     self.regionTable.setColumnHidden(3, False) # hide fixed column
             except Exception as e:
                 self.errorDump('Error creating the mesh: ' + str(e))
         self.meshQuad = QPushButton('Quadrilateral Mesh')
