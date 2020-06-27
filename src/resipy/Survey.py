@@ -1129,9 +1129,10 @@ class Survey(object):
         slope, intercept, r_value, p_value, std_err = linregress(bins[:,0], bins[:,1])
         coefs = [slope, intercept]
         if coefs[1] < 0: # we don't want negative error -> doesn't make sense
-            x = bins[:,0][:,None]
-            slope, _, _, _ = np.linalg.lstsq(x, bins[:,1])
-            coefs = [slope[0], 0]
+#            x = bins[:,0][:,None]
+#            slope, _, _, _ = np.linalg.lstsq(x, bins[:,1])
+#            coefs = [slope[0], 0]
+            coefs[1] = 0 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
