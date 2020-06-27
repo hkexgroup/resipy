@@ -3988,7 +3988,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                    dict(zip(regid, phase0)))
 
             # invert
-            # TODO run inversion in different thread
+            # TODO run inversion in different thread to not block the UI
             self.r2.invert(iplot=False, dump=logTextFunc,
                            modErr=self.modErrCheck.isChecked(),
                            parallel=self.parallelCheck.isChecked(),
@@ -3999,6 +3999,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 text = f.read()
             self.logText.setText(text)
             self.r2.proc = None
+            
+            # check if we don't have a fatal error
+            if 'FATAL' in text:
+                self.end = False
             
             if any(self.r2.mesh.df['param'] == 0): # if fixed element are present, the mesh
             # will be sorted, meaning we need to replot it
@@ -4090,10 +4094,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if a[0] == 'End':
                     self.end = True
                 if a[0] == 'Iteration':
-                    if self.typ[-1]=='t':
-                        cropMaxDepth=False # this parameter doesnt make sense for 3D surveys 
+                    if self.typ[-1] == 't':
+                        cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
-                        cropMaxDepth=self.cropBelowFmd.isChecked()
+                        cropMaxDepth = self.cropBelowFmd.isChecked()
                     self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
                                              cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
             return newFlag
