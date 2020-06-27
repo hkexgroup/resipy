@@ -4284,7 +4284,7 @@ class R2(object): # R2 master class instanciated by the GUI
           
         if inverse: 
             #print('inverse = true')
-            memDP=(memDP+num_param)*9 + num_ind_meas*(num_param+6) 
+            memDP=memDP+num_param*9+num_ind_meas*(num_param+6) 
             memR=memR+(num_param*nfaces)
             memI=memI+num_param*nfaces         
         
