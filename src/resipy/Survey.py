@@ -15,6 +15,7 @@ import matplotlib.mlab as mlab
 import pandas as pd
 from scipy.stats import norm, linregress
 from scipy.stats.kde import gaussian_kde
+from scipy.linalg import lstsq
 
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
@@ -32,6 +33,69 @@ try:#import pyvista if avaiable
 except ModuleNotFoundError:
     pyvista_installed = False
     # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
+    
+#replacement for numpy polyfit function which works on open blas 
+def polyfit(x,y,deg=1, w=None, cov=False):
+    """Replacement function for numpy polyfit that works consistently (avoids 
+    SVD convergence error prsent on some W10 computers) Nb: is not as robust
+    as numpy polyfit function. 
+    
+    Parameters
+    ----------
+    x : TYPE
+        DESCRIPTION.
+    y : TYPE
+        DESCRIPTION.
+    deg : TYPE, optional
+        DESCRIPTION. The default is 1.
+    w : TYPE, optional
+        DESCRIPTION. The default is None.
+    cov : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Raises
+    ------
+    ValueError
+        DESCRIPTION.
+    TypeError
+        DESCRIPTION.
+
+    Returns
+    -------
+    coef : TYPE
+        DESCRIPTION.
+
+    """
+    x = np.asarray(x,dtype=float)
+    y = np.asarray(y,dtype=float)
+
+    # check arguments.
+    if deg < 0:
+        raise ValueError("expected deg >= 0")
+    if x.ndim != 1:
+        raise TypeError("expected 1D vector for x")
+    if x.size == 0:
+        raise TypeError("expected non-empty vector for x")
+    if y.ndim < 1 or y.ndim > 2:
+        raise TypeError("expected 1D or 2D array for y")
+    if x.shape[0] != y.shape[0]:
+        raise TypeError("expected x and y to have same length")
+
+    # set up least squares equation for powers of x, to be solved in the form Ax = y
+    A = np.ones((len(x),deg+1))
+    exps = np.arange(deg,0,-1) # exponents of polynomail 
+    
+    #construct A 
+    count = 0
+    for e in exps:
+        A[:,count] = x**e
+        count+=1
+
+    #now solve 
+    coef, resids, rank, s = lstsq(A, y, lapack_driver = 'gelss')
+    
+    return coef 
+
 
 
 class Survey(object):
@@ -870,7 +934,7 @@ class Survey(object):
             bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
         bins_ip = bins_ip.dropna()
 #        coefs_ip= np.linalg.lstsq(np.vstack([np.ones(len(bins_ip.iloc[:,0])), np.log(bins_ip.iloc[:,0])]).T, np.log(bins_ip.iloc[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)
-        coefs_ip = np.polyfit(np.log(bins_ip.iloc[:,0]), np.log(bins_ip.iloc[:,1]), 1)[::-1]
+        coefs_ip = polyfit(np.log(bins_ip.iloc[:,0]), np.log(bins_ip.iloc[:,1]), 1)[::-1]
         R_error_predict_ip = np.exp(coefs_ip[0])*(bins_ip.iloc[:,0]**coefs_ip[1]) # error prediction based of fitted power law model       
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
@@ -931,7 +995,7 @@ class Survey(object):
             bins_ip.iloc[i,0] = np.abs(error_input_ip['absRn'].iloc[ns:ne].mean())
             bins_ip.iloc[i,1] = error_input_ip['Phase_dicrep'].iloc[ns:ne].std()  
         bins_ip = bins_ip.dropna()
-        coefs_ip = np.polyfit(np.log10(bins_ip.iloc[:,0]), bins_ip.iloc[:,1], 2) # calculating fitting coefficients (a, b, c)
+        coefs_ip = polyfit(np.log10(bins_ip.iloc[:,0]), bins_ip.iloc[:,1], 2) # calculating fitting coefficients (a, b, c)
         R_error_predict_ip = (coefs_ip[0]*np.log10(bins_ip.iloc[:,0])**2) + (coefs_ip[1]*np.log10(bins_ip.iloc[:,0]) + coefs_ip[2] ) # error prediction based of fitted parabola model       
         ax.semilogx(error_input_ip['absRn'],np.abs(error_input_ip['Phase_dicrep']), '+', label = "Raw")
         ax.semilogx(bins_ip.iloc[:,0],bins_ip.iloc[:,1],'o',label="Bin Means")
@@ -997,7 +1061,7 @@ class Survey(object):
 #        print(np.sum(np.isnan(bins)))
 #        print(np.sum(np.isinf(bins)))
 #        coefs= np.linalg.lstsq(np.vstack([np.ones(len(bins[:,0])), np.log(bins[:,0])]).T, np.log(bins[:,1]), rcond=None)[0] # calculating fitting coefficients (a,m)       
-        coefs = np.polyfit(np.log(bins[:,0]), np.log(bins[:,1]), 1)[::-1] #order is of coefs is opposite to lstqd       
+        coefs = polyfit(np.log(bins[:,0]), np.log(bins[:,1]), 1)[::-1] #order is of coefs is opposite to lstqd       
         R_error_predict = np.exp(coefs[0])*(bins[:,0]**coefs[1]) # error prediction based of power law model        
         ax.plot(np.abs(dfg['recipMean']),np.abs(dfg['recipError']), '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
@@ -1061,7 +1125,7 @@ class Survey(object):
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
         np.savetxt(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','lin-error-bins.txt'), bins)
-        # coefs = np.polyfit(bins[:,0], bins[:,1], 1)
+        # coefs = polyfit(bins[:,0], bins[:,1], 1)
         slope, intercept, r_value, p_value, std_err = linregress(bins[:,0], bins[:,1])
         coefs = [slope, intercept]
         if coefs[1] < 0: # we don't want negative error -> doesn't make sense
