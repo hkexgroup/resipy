@@ -208,6 +208,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
         self.mesh = None # mesh object (one per R2 instance)
+        self.topo = pd.DataFrame(columns=['x','y','z']) # store additional topo points
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
         self.typ = typ # or cR2 or R3, cR3
@@ -1388,7 +1389,7 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 typ = 'tetra'
 
-        #check if remote electrodes present?
+        # check if remote electrodes present
         if (self.elec['remote'].sum() > 0) & (typ == 'quad'):
             dump('remote electrode is not supported in quadrilateral mesh for now, please use triangular mesh instead.')
             return
@@ -1400,7 +1401,6 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 print('length of argument "buried" ({:s}) does not match length'
                       ' of self.elec ({:d})'.format(len(buried), self.elec.shape[0]))
-                
         elec_x = self.elec['x'].values
         elec_y = self.elec['y'].values
         elec_z = self.elec['z'].values
@@ -1408,6 +1408,13 @@ class R2(object): # R2 master class instanciated by the GUI
         elec_type[self.elec['buried'].values] = 'buried'
         elec_type[self.elec['remote'].values] = 'remote'
         elecLabels = self.elec['label'].values
+        
+        # assign possible topography (surface)
+        if surface is not None:
+            if surface.shape[1] == 2:
+                self.topo = pd.DataFrame(surface, columns=['x','z'])
+            else:
+                self.topo = pd.DataFrame(surface, columns=['x','y','z'])
         
         # estimate depth of fine mesh
         if fmd is None:
@@ -1417,8 +1424,8 @@ class R2(object): # R2 master class instanciated by the GUI
 
         if typ == 'quad':
             print('Creating quadrilateral mesh...', end='')
-            surface_x = surface[:,0] if surface is not None else None
-            surface_z = surface[:,2] if surface is not None else None
+            surface_x = self.topo['x'].values if surface is not None else None
+            surface_z = self.topo['z'].values if surface is not None else None
             mesh,meshx,meshy,topo,e_nodes = mt.quadMesh(elec_x,elec_z,list(elec_type),
                                                          surface_x=surface_x, surface_z=surface_z,
                                                          **kwargs)   #generate quad mesh
@@ -1434,20 +1441,17 @@ class R2(object): # R2 master class instanciated by the GUI
             geom_input = {}
 
             if surface is not None:
-                if surface.shape[1] == 2:
-                    geom_input['surface'] = [surface[:,0], surface[:,1]]
-                else:
-                    geom_input['surface'] = [surface[:,0], surface[:,2]]
-
+                geom_input['surface'] = [self.topo['x'].values,
+                                         self.topo['z'].values]
+                
             if 'geom_input' in kwargs:
                 geom_input.update(kwargs['geom_input'])
                 kwargs.pop('geom_input')
 
             whole_space = False
-            if buried is not None:
-                if np.sum(buried) == len(buried) and surface is None:
-                    # all electrodes buried and no surface given
-                    whole_space = True
+            if self.elec['buried'].values.all() and surface is None:
+                # all electrodes buried and no surface given
+                whole_space = True
 
             elec_type = elec_type.tolist()
 
@@ -1478,7 +1482,7 @@ class R2(object): # R2 master class instanciated by the GUI
                                  fmd=self.fmd, whole_space=whole_space,
                                  handle=setMeshProc, **kwargs)
                     self.mproc = None
-                if typ=='prism':
+                if typ == 'prism':
                     print('Creating prism mesh...', end='')
                     mesh = mt.prismMesh(elec_x, elec_y, elec_z,
                                          path=os.path.join(self.apiPath, 'exe'),
@@ -1513,11 +1517,14 @@ class R2(object): # R2 master class instanciated by the GUI
         if surface is not None:
             zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
         else:
-            if all(self.elec['buried']): # if all buried we assume surface at 0 m
-                zlimTop = 0
-            else:
-                zlimTop = np.max(elec_z)
-        zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
+            # if all(self.elec['buried']): # if all buried we assume surface at 0 m
+                # zlimTop = 0
+            # else:
+            zlimTop = np.max(elec_z)
+        if all(self.elec['buried']) and surface is None: # whole mesh
+            zlimBot = np.min(elec_z)
+        else:
+            zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
         # from surface then it is as well the zlimMin)
         self.zlim = [zlimBot, zlimTop]
         
@@ -1531,11 +1538,13 @@ class R2(object): # R2 master class instanciated by the GUI
         elec_x, elec_y, elec_z = elec[:,0], elec[:,1], elec[:,2]
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.param['num_xz_poly'] = 5
-            if self.elec['buried'].sum() == self.elec.shape[0]:
-                zmax = 0
+            if all(self.elec['buried']): # we don't know if there is a surface
+            # or not so we trust the zlim computation done in createMesh()
+                zmax = self.zlim[1]
+                zmin = self.zlim[0]
             else:
                 zmax = np.max(elec_z)
-            zmin = np.min(elec_z) - self.fmd 
+                zmin = np.min(elec_z) - self.fmd 
             xmin, xmax = np.min(elec_x), np.max(elec_x)
             xz_poly_table = np.array([
             [xmin, zmax],
@@ -2451,7 +2460,9 @@ class R2(object): # R2 master class instanciated by the GUI
         zmin = np.min(node_z)
         zmax = np.max(node_z)
         
+        #TODO this doesn't work for whole_space mesh
         (xsurf, zsurf) = self.mesh.extractSurface()
+        
         if cropMaxDepth and self.fmd is not None:
             xfmd, zfmd = xsurf[::-1], zsurf[::-1] - self.fmd
             verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
@@ -2459,7 +2470,7 @@ class R2(object): # R2 master class instanciated by the GUI
         else:
             verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
                           np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
-                            
+            
         # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
         poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
         path = mpath.Path(verts, poly_codes)
@@ -2538,6 +2549,9 @@ class R2(object): # R2 master class instanciated by the GUI
                         linestyle = '--'
                     else:
                         doiSens = False
+                if (clipContour) & (self.topo.shape[0] == 0) & (all(self.elec['buried'])):
+                    # it's a whole space mesh, clipContour is not needed for that
+                    clipContour = False
                 if doi is True or doiSens is True:
                     xc, yc = mesh.elmCentre[:,0], mesh.elmCentre[:,2]
                     triang = tri.Triangulation(xc, yc)
@@ -3400,7 +3414,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
 
-        elec = self.elec[['x','y','z']].values
+        elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolIP')
@@ -3415,7 +3429,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         # recompute doi
         self.computeFineMeshDepth()
-        self.zlim[0] = np.min(elec[:,2]) - self.fmd
+        # self.zlim[0] = np.min(elec['z']) - self.fmd
         if iplot is True:
             self.showPseudo()
         dump('Forward modelling done.')
@@ -3644,7 +3658,11 @@ class R2(object): # R2 master class instanciated by the GUI
 #                    zc = z.copy()
                 cax = ax.tricontourf(triang, z, extend='both')
                 if (self.typ == 'R2') or (self.typ == 'cR2'):
-                    self._clipContour(ax, cax.collections, cropMaxDepth)
+                    print('topot', self.topo)
+                    print('elec', self.elec['buried'].sum())
+                    if (self.topo.shape[0] != 0) | (self.elec['buried'].sum() < self.elec.shape[0]):
+                        # just checking we don't have a whole space mesh
+                        self._clipContour(ax, cax.collections, cropMaxDepth)
                 fig.colorbar(cax, ax=ax, label=r'$\log_{10}\rho$ [$\Omega$.m]')
                 elec = self.elec[~self.elec['remote']][['x','y','z']].values
                 if self.typ[-1] == 't': # adjust for 3D 
@@ -4289,11 +4307,7 @@ class R2(object): # R2 master class instanciated by the GUI
             memI=memI+num_param*nfaces         
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
-        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
-        
-        # print('nsizeA = %f'%nsizeA)
-        # print('nfaces = %f'%nfaces)
-        
+        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)        
         return Gb
         
 
