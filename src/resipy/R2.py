@@ -3658,7 +3658,11 @@ class R2(object): # R2 master class instanciated by the GUI
 #                    zc = z.copy()
                 cax = ax.tricontourf(triang, z, extend='both')
                 if (self.typ == 'R2') or (self.typ == 'cR2'):
-                    self._clipContour(ax, cax.collections, cropMaxDepth)
+                    print('topot', self.topo)
+                    print('elec', self.elec['buried'].sum())
+                    if (self.topo.shape[0] != 0) | (self.elec['buried'].sum() < self.elec.shape[0]):
+                        # just checking we don't have a whole space mesh
+                        self._clipContour(ax, cax.collections, cropMaxDepth)
                 fig.colorbar(cax, ax=ax, label=r'$\log_{10}\rho$ [$\Omega$.m]')
                 elec = self.elec[~self.elec['remote']][['x','y','z']].values
                 if self.typ[-1] == 't': # adjust for 3D 
