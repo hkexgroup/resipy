@@ -46,12 +46,12 @@ import traceback
 # from subprocess import PIPE, Popen
 # from urllib import request as urlRequest
 # import webbrowser
-# try:
-#     import pyvista as pv
-#     pvfound = True
-# except:
-#     pvfound = False
-#     print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
+#try:
+#    import pyvista as pv
+#    pvfound = True
+#except:
+#    pvfound = False
+#    print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
 # from resipy.R2 import R2
 # from resipy.r2help import r2help
 
@@ -2654,34 +2654,18 @@ class App(QMainWindow):
                 self.r2.setElec(elec)
             surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
-            if not np.isnan(surface[0,0]):
-                surface_flag = True
-            else:
-                surface_flag = False
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
-#            if not np.isnan(surface[0,0]):
-#                surface_flag = True
-#            else:
-#                surface_flag = False
             nnodes = nnodesSld.value()
             try:
                 fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-                if surface_flag:
-                    print("quad mesh + topo")
-                    self.r2.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
-                else:
-                    print("quad mesh no topo")
-                    self.r2.createMesh(typ='quad', elemx=nnodes, fmd=fmd)
+                self.r2.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
                 self.scale.setVisible(False)
                 self.scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
                 replotMesh()
-                # if self.iForward is False:
-                #     self.regionTable.setColumnHidden(2, False) # hide zone column
-                #     self.regionTable.setColumnHidden(3, False) # hide fixed column
             except Exception as e:
                 self.errorDump('Error creating the mesh: ' + str(e))
         self.meshQuad = QPushButton('Quadrilateral Mesh')
@@ -2713,7 +2697,7 @@ class App(QMainWindow):
             QApplication.processEvents()
             self.meshLogText.clear()
             elecSpacing = np.sqrt(np.sum(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2])**2 +
-                                         np.diff(self.r2.elec[~self.r2.elec['remote']]['y'].values[:2])**2))
+                                         np.diff(self.r2.elec[~self.r2.elec['remote']]['z'].values[:2])**2))
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
             cl_factor = clFactorSld.value()
             surface = self.topoTable.getTable()[['x','y','z']].values
@@ -4004,7 +3988,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                    dict(zip(regid, phase0)))
 
             # invert
-            # TODO run inversion in different thread
+            # TODO run inversion in different thread to not block the UI
             self.r2.invert(iplot=False, dump=logTextFunc,
                            modErr=self.modErrCheck.isChecked(),
                            parallel=self.parallelCheck.isChecked(),
@@ -4015,6 +3999,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 text = f.read()
             self.logText.setText(text)
             self.r2.proc = None
+            
+            # check if we don't have a fatal error
+            if 'FATAL' in text:
+                self.end = False
             
             if any(self.r2.mesh.df['param'] == 0): # if fixed element are present, the mesh
             # will be sorted, meaning we need to replot it
@@ -4106,10 +4094,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if a[0] == 'End':
                     self.end = True
                 if a[0] == 'Iteration':
-                    if self.typ[-1]=='t':
-                        cropMaxDepth=False # this parameter doesnt make sense for 3D surveys 
+                    if self.typ[-1] == 't':
+                        cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
-                        cropMaxDepth=self.cropBelowFmd.isChecked()
+                        cropMaxDepth = self.cropBelowFmd.isChecked()
                     self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
                                              cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
             return newFlag
