@@ -85,11 +85,14 @@ def polyfit(x,y,deg=1, w=None, cov=False):
     A = np.ones((len(x),deg+1))
     exps = np.arange(deg,0,-1) # exponents of polynomail 
     
-    #construct A 
-    count = 0
-    for e in exps:
-        A[:,count] = x**e
-        count+=1
+    #construct A
+    if deg == 0: # just fit y = mx
+        A[:,0] = x
+    else:
+        count = 0
+        for e in exps:
+            A[:,count] = x**e
+            count+=1
 
     #now solve 
     coef, resids, rank, s = lstsq(A, y, lapack_driver = 'gelss')
@@ -1131,8 +1134,10 @@ class Survey(object):
         if coefs[1] < 0: # we don't want negative error -> doesn't make sense
 #            x = bins[:,0][:,None]
 #            slope, _, _, _ = np.linalg.lstsq(x, bins[:,1])
-#            coefs = [slope[0], 0]
-            coefs[1] = 0 
+            slope = polyfit(bins[:,0], bins[:,1],0)
+            coefs = [slope[0], 0]
+            
+ 
         R_error_predict = ((coefs[0])*(bins[:,0]))+coefs[1] # error prediction based of linear model        
         ax.plot(error_input['recipMean'], error_input['recipError'], '+', label = "Raw")
         ax.plot(bins[:,0],bins[:,1],'o',label="Bin Means")
