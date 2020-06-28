@@ -97,7 +97,7 @@ def polyfit(x,y,deg=1, w=None, cov=False):
     #now solve 
     coef, resids, rank, s = lstsq(A, y, lapack_driver = 'gelss')
     
-    if all(coef) == 0 or any(coef) == np.nan:
+    if all(coef) == 0 or any(np.isnan(coef)) == True:
         #then try again 
         coef, resids, rank, s = lstsq(A, y, lapack_driver = 'gelss')
         
