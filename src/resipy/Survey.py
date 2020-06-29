@@ -1501,8 +1501,16 @@ class Survey(object):
             resist = resist*self.df['K']
 
         # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
-            
+        # array = np.sort(array, axis=1) # for better presentation
+        pos = elecpos[array]
+        isort = np.argsort(pos, axis=1)
+        arraySorted = np.vstack([a[b] for a, b in zip(array, isort)])
+        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
+                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
+        inested = (np.abs(pos[:,0] - pos[:,2]) == np.abs(pos[:,1] - pos[:,3]))
+        if np.sum(inested) > 0.3*len(inested): # there are a few, so let's correct
+            array[inested,:] = arraySorted[inested,:]
+        
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
@@ -1518,9 +1526,16 @@ class Survey(object):
         padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
         padd[np.isinf(padd)] = 0
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-
+        
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
         ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        # cmin = np.min(elecpos[array], axis=1)
+        # cmax = np.max(elecpos[array], axis=1)
+        # xpos = np.mean(elecpos[array[:,:2]], axis=1)
+        # ypos = np.sqrt(2)/2*np.abs(cmax - cmin)
+        # print('+++', len(xpos))
+        # print('+++', len(ypos))
 
         if ax is None:
             fig, ax = plt.subplots()
