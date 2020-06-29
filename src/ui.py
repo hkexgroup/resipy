@@ -5442,32 +5442,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
     
     def checkWine(self): # check if wine is installed, on Unix system
         #check operating system
-        OpSys=platform.system()
-        wineInstalled = True
-        #detect wine
-        if OpSys == 'Linux':
-            p = Popen("wine --version", stdout=PIPE, shell=True)
-            is_wine = str(p.stdout.readline())
-            if is_wine.find("wine") == -1:
-                wineInstalled = False
-            else:
-                pass
-    
-        elif OpSys == 'Darwin':
-            try:
-                winePath = []
-                wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-                for stdout_line in iter(wine_path.stdout.readline, ''):
-                    winePath.append(stdout_line)
-                if winePath != []:
-                    is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-                else:
-                    is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
-    
-            except:
-                wineInstalled = False
+        wineInstalled = sysinfo['wineCheck']
         return wineInstalled
-
 
     def checkWineShow(self, wineInstalled):
         print('is wine installed?', wineInstalled)
@@ -5510,7 +5486,8 @@ if __name__ == '__main__':
     progressBar.setMaximum(10)
     progressBar.setGeometry(100, splash_pix.height() - 50, splash_pix.width() - 200, 20)
 
-    from resipy.R2 import ResIPy_version
+    from resipy.R2 import ResIPy_version, sysinfo
+    global sysinfo
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     app.processEvents()

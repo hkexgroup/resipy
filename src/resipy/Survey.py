@@ -103,8 +103,6 @@ def polyfit(x,y,deg=1, w=None, cov=False):
         
     return coef 
 
-
-
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
@@ -1520,7 +1518,7 @@ class Survey(object):
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
 
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle) 
 
         if ax is None:
             fig, ax = plt.subplots()
