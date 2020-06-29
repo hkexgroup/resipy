@@ -35,35 +35,31 @@ except ModuleNotFoundError:
     # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
     
 #replacement for numpy polyfit function which works on open blas 
-def polyfit(x,y,deg=1, w=None, cov=False):
+def polyfit(x,y,deg=1):
     """Replacement function for numpy polyfit that works consistently (avoids 
     SVD convergence error prsent on some W10 computers) Nb: is not as robust
     as numpy polyfit function. 
     
     Parameters
     ----------
-    x : TYPE
-        DESCRIPTION.
+    x : array like
+        x values of data
     y : TYPE
-        DESCRIPTION.
+        y values of data
     deg : TYPE, optional
         DESCRIPTION. The default is 1.
-    w : TYPE, optional
-        DESCRIPTION. The default is None.
-    cov : TYPE, optional
-        DESCRIPTION. The default is False.
 
     Raises
     ------
     ValueError
-        DESCRIPTION.
+        If deg < 0 .
     TypeError
-        DESCRIPTION.
+        array data is not as expected for fitting a polynomail.
 
     Returns
     -------
-    coef : TYPE
-        DESCRIPTION.
+    coef : np.array 
+        coefficents of polynomail 
 
     """
     x = np.asarray(x,dtype=float)

@@ -216,7 +216,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             dump(helpful_msg)
     
     return {'totalMemory':totalMemory,
-            'avialMemory':availMemory,
+            'availMemory':availMemory,
             'core_count':num_threads,
             'max_freq':max_freq,
             'OS':OpSys,
