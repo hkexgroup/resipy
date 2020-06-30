@@ -2666,6 +2666,11 @@ class App(QMainWindow):
                 self.scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
                 replotMesh()
+                if self.r2.param['reqMemory'] <= 0: # RAM requirement
+                    self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
+                    ramRequiredLabel.show()
+                else:
+                    ramRequiredLabel.hide()
             except Exception as e:
                 self.errorDump('Error creating the mesh: ' + str(e))
         self.meshQuad = QPushButton('Quadrilateral Mesh')
@@ -2721,6 +2726,11 @@ class App(QMainWindow):
                 self.scale.setVisible(True)
                 self.scaleLabel.setVisible(True)
                 meshOutputStack.setCurrentIndex(1)
+                if self.r2.param['reqMemory'] <= 0: # RAM requirement
+                    self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
+                    ramRequiredLabel.show()
+                else:
+                    ramRequiredLabel.hide()
             except Exception:
                 pass # caused by killing the mesh process
             self.meshTrianBtn.setText('Triangular Mesh')
@@ -2762,7 +2772,7 @@ class App(QMainWindow):
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
-            cl = float(cl3Edit.text())
+            cl = -1 if cl3Edit.text() == '' else float(cl3Edit.text())
             cl_factor = float(cl3FactorEdit.text())
             cln_factor = float(clnFactorEdit.text()) if clnFactorEdit.text() != '' else 100
             refine = 1 if refineTetraCheck.isChecked() else 0
@@ -2782,6 +2792,11 @@ class App(QMainWindow):
                 else:
                     self.mwMesh3D.plot(self.r2.showMesh, threed=True)
                 meshOutputStack.setCurrentIndex(2)
+                if self.r2.param['reqMemory'] <= 0: # RAM requirement
+                    self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
+                    ramRequiredLabel.show()
+                else:
+                    ramRequiredLabel.hide()
             except Exception:
                 pass # caused by killing the mesh process
             self.meshTetraBtn.setText('Tetrahedral Mesh')
@@ -2843,16 +2858,29 @@ class App(QMainWindow):
                                     'without increasing the number of parameters.')
 
         # additional options for tetrahedral mesh
+        cl3ToolTip = 'Describes how big the nodes assocaited elements will be aroud the electrodes.\n' \
+                     'Default: 1/2 the minimum electrode spacing (in meters).'
         cl3Label = QLabel('Characteristic Length:')
+        cl3Label.setToolTip(cl3ToolTip)
         cl3Edit = QLineEdit()
         cl3Edit.setValidator(QDoubleValidator())
-        cl3Edit.setText('-1')
+        cl3Edit.setText('')
+        cl3Edit.setPlaceholderText('[m]')
+        cl3Edit.setToolTip(cl3ToolTip)
+        cl3FactorToolTip = 'Factor for the incremental size increase with depth in the mesh.\n' \
+                           'Default: 8 (elements at the fine/coarse bondary depth are 8 times as big as those at the surface)'
         cl3FactorLabel = QLabel('Growth factor Top:')
+        cl3FactorLabel.setToolTip(cl3FactorToolTip)
         cl3FactorEdit = QLineEdit()
+        cl3FactorEdit.setToolTip(cl3FactorToolTip)
         cl3FactorEdit.setValidator(QDoubleValidator())
-        cl3FactorEdit.setText('8')       
+        cl3FactorEdit.setText('8')
+        clnFactorToolTip = 'Factor applied to the characteristic length for the region below fine/coarse bondary depth to ' \
+                           'compute a characteristic length for background region'
         clnFactorLabel = QLabel('Growth factor Bottom:')
+        clnFactorLabel.setToolTip(clnFactorToolTip)
         clnFactorEdit = QLineEdit()
+        clnFactorEdit.setToolTip(clnFactorToolTip)
         clnFactorEdit.setValidator(QDoubleValidator())
         clnFactorEdit.setText('100')
         refineTetraCheck = QCheckBox('Refine')
@@ -3108,7 +3136,13 @@ class App(QMainWindow):
         instructionLayout.addWidget(self.meshAspectBtn, 7)
         instructionLayout.addWidget(self.resetMeshBtn, 7)
         meshLayout.addLayout(instructionLayout)
-
+        
+        # for RAM issue
+        ramRequiredLabel = QLabel('<font color="red">Make a coarser mesh!! It is likely that <b><u>more RAM is required</u></b> for inversion!</font>')
+        ramRequiredLabel.setAlignment(Qt.AlignCenter)
+        ramRequiredLabel.hide()
+        meshLayout.addWidget(ramRequiredLabel)
+        
         regionLayout = QVBoxLayout()
         regionLayout.addWidget(self.regionTable)
 

@@ -1575,7 +1575,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
         self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
-
+        self.param['reqMemory'] = sysinfo['availMemory'] - self._estimateMemory() # if negative then we need more RAM
+        
         # define zlim
         if surface is not None:
             zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
@@ -4391,7 +4392,12 @@ class R2(object): # R2 master class instanciated by the GUI
             memI=memI+num_param*nfaces         
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
-        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)  
+        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
+        
+        avialMemory = sysinfo['availMemory']
+        if Gb >= avialMemory:
+            dump('*** It is likely that more RAM is required for inversion! ***\n'
+                 '*** Make a coarser mesh ***')
         
         if debug: #print everything out 
             print('numnp = %i'%numnp)
@@ -4445,6 +4451,10 @@ class R2(object): # R2 master class instanciated by the GUI
         Gb=(numel*num_ind_meas*8)/1.0e9
         dump('ResIPy Estimated RAM usage = %f Gb'%Gb)  
         
+        avialMemory = sysinfo['availMemory']
+        if Gb >= avialMemory:
+            dump('*** It is likely that more RAM is required for inversion! ***\n'
+                 '*** Make a coarser mesh ***')
         return Gb     
         
 
