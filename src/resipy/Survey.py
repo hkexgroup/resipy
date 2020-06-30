@@ -1503,13 +1503,13 @@ class Survey(object):
         # sorting the array in case of Wenner measurements (just for plotting)
         # array = np.sort(array, axis=1) # for better presentation
         pos = elecpos[array]
-        isort = np.argsort(pos, axis=1)
-        arraySorted = np.vstack([a[b] for a, b in zip(array, isort)])
+        # isort = np.argsort(pos, axis=1)
+        # arraySorted = np.vstack([a[b] for a, b in zip(array, isort)])
         inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
                     (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
-        inested = (np.abs(pos[:,0] - pos[:,2]) == np.abs(pos[:,1] - pos[:,3]))
-        if np.sum(inested) > 0.3*len(inested): # there are a few, so let's correct
-            array[inested,:] = arraySorted[inested,:]
+        # inested = (np.abs(pos[:,0] - pos[:,2]) == np.abs(pos[:,1] - pos[:,3]))
+        # if np.sum(inested) > 0.3*len(inested): # there are a few, so let's correct
+        #     array[inested,:] = arraySorted[inested,:]
         
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
@@ -1527,8 +1527,22 @@ class Survey(object):
         padd[np.isinf(padd)] = 0
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
         
-        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        # for non-nested measurements
+        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        # for nested measurements
+        xposNested = pmiddle
+        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
+        
+        xpos = np.zeros_like(pmiddle)
+        ypos = np.zeros_like(pmiddle)
+        
+        xpos[~inested] = xposNonNested[~inested]
+        xpos[inested] = xposNested[inested]
+        
+        ypos[~inested] = yposNonNested[~inested]
+        ypos[inested] = yposNested[inested]
         
         # cmin = np.min(elecpos[array], axis=1)
         # cmax = np.max(elecpos[array], axis=1)
