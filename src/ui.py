@@ -5483,8 +5483,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
         print('====================system-information======================')
 
         for key in sysinfo.keys():
-            print(key + str(sysinfo[key]))
-            
+            print(key + ' = ' + str(sysinfo[key]), end='')
+            if key == 'max_freq':
+                print(' Mhz')
+            elif key.find('Memory') != -1:
+                print(' Gb')
+            elif key == 'wineCheck' and sysinfo['OS'] == 'Windows':
+                print(' (Native Windows)')
+            else:
+                print('')
+         
+        print('============================================================')
         #print('is wine installed?', wineInstalled)
         if OS == 'Linux':
             OpSys = 'Linux'
