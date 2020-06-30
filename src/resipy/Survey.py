@@ -553,7 +553,7 @@ class Survey(object):
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         
         R = np.copy(resist)
         M = np.copy(phase)
@@ -662,7 +662,7 @@ class Survey(object):
         measurements added for speed).
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values
         AB = np.abs(elecpos[array[:,0]]- elecpos[array[:,1]])
         MN = np.abs(elecpos[array[:,2]] - elecpos[array[:,3]])
@@ -1435,7 +1435,7 @@ class Survey(object):
         in self.df['K'].
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elec = self.elec[['x','y','z']].values
         
         aposx = elec[:,0][array[:,0]]
@@ -1486,7 +1486,7 @@ class Survey(object):
             Maximum value for the colorbar.
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values.copy() # we don't want the x values become np.inf in remote situation as it'll mess up future computeK()
         resist = self.df[column].values.copy()
         
@@ -1580,7 +1580,7 @@ class Survey(object):
             ax.set_background(background_color)
             
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
@@ -1692,7 +1692,7 @@ class Survey(object):
             If `ax` is not specified, the method returns a figure.
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values.copy()
         
         # sorting the array in case of Wenner measurements (just for plotting)
@@ -1903,7 +1903,7 @@ class Survey(object):
             If `True`, the electrodes are shown and can be used for filtering.
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         if len(array) == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
