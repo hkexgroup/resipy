@@ -5480,7 +5480,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         return wineInstalled
 
     def checkWineShow(self, wineInstalled):
-        print('is wine installed?', wineInstalled)
+        print('====================system-information======================')
+
+        for key in sysinfo.keys():
+            print(key + str(sysinfo[key]))
+            
+        #print('is wine installed?', wineInstalled)
         if OS == 'Linux':
             OpSys = 'Linux'
         elif OS == 'Darwin':

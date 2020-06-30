@@ -2123,7 +2123,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 # print('done')
 
         # create workers directory
-        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        ncoresAvailable = ncores = systemCheck()['core_count']
         if ncores is None:
             ncores = ncoresAvailable
         else:
@@ -4346,10 +4346,10 @@ class R2(object): # R2 master class instanciated by the GUI
         #NB: using variable names from Andy's codes 
         if self.mesh is None:
             print('A mesh is required before a memory usage estimate can be made')
-            return 
+            return 0
         if len(self.surveys) == 0:
             print('A survey needs to imported before a memory usage estimate can be made')
-            return
+            return 0
         else: # number of measurements computation 
             nmeas = []
             for s in self.surveys:
@@ -4434,10 +4434,10 @@ class R2(object): # R2 master class instanciated by the GUI
         #NB: using variable names from Andy's codes 
         if self.mesh is None:
             print('A mesh is required before a memory usage estimate can be made')
-            return 
+            return 0
         if len(self.surveys) == 0:
             print('A survey needs to imported before a memory usage estimate can be made')
-            return 
+            return 0
         else: # number of measurements computation 
             nmeas = []
             for s in self.surveys:
