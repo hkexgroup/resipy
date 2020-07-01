@@ -1,3 +1,12 @@
+v2.2.2
+------
+- Add 3D capabilities by the use of pyvista
+- Fix issue with forward modelling error
+- Fix issue with buried electrodes
+- Fix SVD error on some Windows 10 laptop
+- Add electrode label capabilities ('a','b','m','n' columns are now string not int)
+
+
 v2.0.2
 ------
 - Fix issues due to remote electrodes
