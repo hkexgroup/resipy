@@ -1495,8 +1495,13 @@ class Survey(object):
             resist = resist*self.df['K']
 
         # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
-            
+        # array = np.sort(array, axis=1) # for better presentation
+        
+        # Finding fully nested measurements
+        pos = elecpos[array]
+        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
+                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
+        
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
@@ -1513,8 +1518,22 @@ class Survey(object):
         padd[np.isinf(padd)] = 0
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
 
-        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle) 
+        # for non-nested measurements
+        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        # for nested measurements
+        xposNested = pmiddle
+        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
+        
+        xpos = np.zeros_like(pmiddle)
+        ypos = np.zeros_like(pmiddle)
+        
+        xpos[~inested] = xposNonNested[~inested]
+        xpos[inested] = xposNested[inested]
+        
+        ypos[~inested] = yposNonNested[~inested]
+        ypos[inested] = yposNested[inested] 
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1707,7 +1726,12 @@ class Survey(object):
         
 
         # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
+        # array = np.sort(array, axis=1) # for better presentation
+        
+        # Finding fully nested measurements
+        pos = elecpos[array]
+        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
+                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
         
         elecpos[self.elec['remote']] = np.inf
             
@@ -1719,8 +1743,22 @@ class Survey(object):
         padd[np.isinf(padd)] = 0
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
         
-        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        # for non-nested measurements
+        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        # for nested measurements
+        xposNested = pmiddle
+        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
+        
+        xpos = np.zeros_like(pmiddle)
+        ypos = np.zeros_like(pmiddle)
+        
+        xpos[~inested] = xposNonNested[~inested]
+        xpos[inested] = xposNested[inested]
+        
+        ypos[~inested] = yposNonNested[~inested]
+        ypos[inested] = yposNested[inested]
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1728,12 +1766,9 @@ class Survey(object):
             fig = ax.get_figure()
         
         if contour is False:
-            plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
-#            divider = make_axes_locatable(ax)
-#            cax = divider.append_axes("right", size="5%", pad=0.05)
+            plotPsIP = ax.scatter(xpos, ypos, c=ip, s=70, vmin=vmin, vmax=vmax)
             cbar = fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04)
             cbar.set_label(label)
-#            ax.set_title('Phase Shift\npseudo section')
         
         else:
             if vmin is None:
@@ -1743,8 +1778,7 @@ class Survey(object):
             levels = np.linspace(vmin, vmax, 13)
             plotPsIP = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
-#            cbar.set_label(label)
-#            ax.set_title('Phase Shift\npseudo section')
+
         ax.invert_yaxis() # to remove negative sign in y axis
         ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
@@ -1935,6 +1969,12 @@ class Survey(object):
             self.iselect[~inan] = ipoints
         
         elecpos = self.elec['x'].values.copy()
+        
+        # Finding fully nested measurements
+        pos = elecpos[array]
+        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
+                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
+        
         elecpos[self.elec['remote']] = np.inf # so it will never be taken as minimium
 
         self.eselect = np.zeros(len(elecpos), dtype=bool)
@@ -1942,7 +1982,7 @@ class Survey(object):
         if log:
             val = np.sign(val)*np.log10(np.abs(val))
 
-        array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
+        # array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
         
         cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
         cadd[np.isinf(cadd)] = 0 # they are nan because of our remote
@@ -1952,8 +1992,22 @@ class Survey(object):
         padd[np.isinf(padd)] = 0
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
         
-        xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        # for non-nested measurements
+        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        # for nested measurements
+        xposNested = pmiddle
+        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
+        
+        xpos = np.zeros_like(pmiddle)
+        ypos = np.zeros_like(pmiddle)
+        
+        xpos[~inested] = xposNonNested[~inested]
+        xpos[inested] = xposNested[inested]
+        
+        ypos[~inested] = yposNonNested[~inested]
+        ypos[inested] = yposNested[inested]
         
         def onpick(event):
             if lines[event.artist] == 'data':
