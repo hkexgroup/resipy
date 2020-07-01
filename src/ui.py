@@ -3024,7 +3024,11 @@ class App(QMainWindow):
         self.mwMesh = MatplotlibWidget(navi=True, itight=False)
         self.mwMesh3D = MatplotlibWidget(threed=True, navi=True)
         if pvfound:
-            mesh3Dplotter = QtInteractor()
+            self.meshFrame = QFrame()
+            vlayout = QVBoxLayout()
+            mesh3Dplotter = QtInteractor(self.meshFrame)
+            vlayout.addWidget(mesh3Dplotter.interactor)
+            self.meshFrame.setLayout(vlayout)
             self.mwMesh3D.setVisible(False)
 
         def meshLogTextFunc(text):
@@ -3144,7 +3148,7 @@ class App(QMainWindow):
         meshPlot3DLayout = QHBoxLayout()
         meshPlot3DLayout.addWidget(self.mwMesh3D)
         if pvfound:
-            meshPlot3DLayout.addWidget(mesh3Dplotter.interactor)
+            meshPlot3DLayout.addWidget(self.meshFrame)
         meshPlot3D.setLayout(meshPlot3DLayout)
 
         meshOutputStack = QStackedLayout()
