@@ -37,10 +37,15 @@ try:#meshCalc needs to be compiled
 except (ModuleNotFoundError,AttributeError):
     warnings.warn('Failed to import meshTools c extension, meshing options maybe limited')
 
-try:#import pyvista if avaiable
+# import pyvista if available
+try:
     import pyvista as pv
+    try:
+        from pyvistaqt import BackgroundPlotter # newer version
+    except:
+        from pyvista import BackgroundPlotter # older version
     pyvista_installed = True
-except ModuleNotFoundError:
+except:
     pyvista_installed = False
     warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
     
@@ -1929,7 +1934,7 @@ class Mesh:
             
             # make a plotter object if not already given or check it
             if ax is None: 
-                ax = pv.BackgroundPlotter()
+                ax = BackgroundPlotter()
                 ax.background_color = background_color
             else: # check the ax argument is for pyvista not matplotlib 
                 typ_str = str(type(ax))
