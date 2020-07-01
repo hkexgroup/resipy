@@ -71,7 +71,7 @@ k = R2()
 k.createSurvey(testdir + 'ip-2d/syscal.csv')
 k.filterDummy()
 k.filterUnpaired() # will remove dummy but can remove more as well
-k.filterElec([2])
+k.filterElec(['2'])
 k.filterNested()
 #k.filterDCA() # tested in cases
 k.filterManual()
