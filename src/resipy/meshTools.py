@@ -12,7 +12,7 @@ Dependencies:
     python3 standard libaries
 """
 #import standard python packages
-import os, platform, warnings, multiprocessing, re, sys
+import os, platform, warnings, psutil
 from subprocess import PIPE, Popen
 import tempfile
 import time, ntpath
@@ -379,15 +379,15 @@ class Mesh:
         """Converts vtk cell types into number of vertices each element has
         """
         if int(self.cell_type[0])==5:#then elements are triangles
-            return 3
+            return 1
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
-            return 4
+            return 1
         elif int(self.cell_type[0]) == 11: # elements are voxels
             return 8
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
             return 4
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
-            return 6
+            return 5
         #add element types as neccessary 
         else:
             print("WARNING: unrecognised cell type")
@@ -4384,124 +4384,126 @@ def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
     mesh = readMesh(file_path, node_pos, order_nodes)
     return mesh
     
-#%% ram amount check and is wine installed?. 
+#%% ram amount check and is wine installed?. Now handled by R2.py
 #Now for complicated meshes we need alot more RAM. the below function is a os agnostic
 #function for returning the amount of total ram. 
 # we also need to check wine is installed if running on macOs or linux. 
-def systemCheck(show=False):
-    """Performs a simple diagnostic of the system, no input commands needed. System
-    info is printed to screen, number of CPUs, memory and OS. This check is 
-    useful for parallel processing. 
+
+# def systemCheckOld(show=False):
+#     """Performs a simple diagnostic of the system, no input commands needed. System
+#     info is printed to screen, number of CPUs, memory and OS. This check is 
+#     useful for parallel processing. 
     
-    Parameters
-    ----------
-    show : bool, optional
-        If `True`, system specs will be printed.
+#     Parameters
+#     ----------
+#     show : bool, optional
+#         If `True`, system specs will be printed.
     
-    Returns
-    -------
-    system_info: dict
-        Dictionary keys refer information about the system 
-    """
-    if show:
-        def dump(x):
-            print(x)
-    else:
-        def dump(x):
-            pass
-    dump("________________System-Check__________________")
+#     Returns
+#     -------
+#     system_info: dict
+#         Dictionary keys refer information about the system 
+#     """
+#     if show:
+#         def dump(x):
+#             print(x)
+#     else:
+#         def dump(x):
+#             pass
+#     dump("________________System-Check__________________")
     
-    totalMemory = '' # incase system can't figure it out!
-    num_threads = ''
-    OpSys = ''
-    #display processor info
-    dump("Processor info: %s"%platform.processor())
-    num_threads = multiprocessing.cpu_count()
-    dump("Number of logical CPUs: %i"%num_threads)
-    #this message will display if wine is not installed / detected
-    helpful_msg ="""   
-This version of ResIPy requires wine to run R2.exe, please consider installing
-'wine is not an emulator' package @ https://www.winehq.org/. On linux wine can be found on
-most reprositories (ubuntu/debian users can use "sudo apt install wine"). Wine acts as
-a compatiblity layer between unix like OS systems (ie macOS and linux) and windows programs. 
-    """
-    msg_flag = False
-    #check operating system 
-    OpSys=platform.system()    
-    if OpSys=='Darwin':
-        dump("Kernel type: macOS")
-    else:
-        dump("Kernel type: %s"%OpSys)
-    #check the amount of ram 
-    if OpSys=="Linux":
-        p = Popen('free -m', stdout=PIPE, shell=True)
-        totalMemory = p.stdout.readlines()[1].split()[1]
-        #detect wine 
-        p = Popen("wine --version", stdout=PIPE, shell=True)
-        is_wine = str(p.stdout.readline())#[0].split()[0]
-        if is_wine.find("wine") == -1:
-            warnings.warn("Wine is not installed!", Warning)
-            msg_flag = True
-        else:
-            wine_version = is_wine.split()[0].split('-')[1]
-            dump("Wine version = "+wine_version)
+#     totalMemory = '' # incase system can't figure it out!
+#     num_threads = ''
+#     OpSys = ''
+#     #display processor info
+#     dump("Processor info: %s"%platform.processor())
+#     num_threads = multiprocessing.cpu_count()
+#     dump("Number of logical CPUs: %i"%num_threads)
+#     #this message will display if wine is not installed / detected
+#     helpful_msg ="""   
+# This version of ResIPy requires wine to run R2.exe, please consider installing
+# 'wine is not an emulator' package @ https://www.winehq.org/. On linux wine can be found on
+# most reprositories (ubuntu/debian users can use "sudo apt install wine"). Wine acts as
+# a compatiblity layer between unix like OS systems (ie macOS and linux) and windows programs. 
+#     """
+#     msg_flag = False
+#     #check operating system 
+#     OpSys=platform.system()    
+#     if OpSys=='Darwin':
+#         dump("Kernel type: macOS")
+#     else:
+#         dump("Kernel type: %s"%OpSys)
+#     #check the amount of ram 
+#     if OpSys=="Linux":
+#         p = Popen('free -m', stdout=PIPE, shell=True)
+#         totalMemory = p.stdout.readlines()[1].split()[1]
+#         #detect wine 
+#         p = Popen("wine --version", stdout=PIPE, shell=True)
+#         is_wine = str(p.stdout.readline())#[0].split()[0]
+#         if is_wine.find("wine") == -1:
+#             warnings.warn("Wine is not installed!", Warning)
+#             msg_flag = True
+#         else:
+#             wine_version = is_wine.split()[0].split('-')[1]
+#             dump("Wine version = "+wine_version)
                           
-    elif OpSys=="Windows":
-        p = Popen('wmic MEMORYCHIP get Capacity', stdout=PIPE)
-        info = p.stdout.readlines()#first entry is the header, subsiquent entries 
-        #correspond to dimm slot capacity in bytes 
-        totalMemory = 0 # memory returned in binary bytes 
-        for i in range(1,len(info)):
-            try:
-                mem=int(info[i].strip())
-                totalMemory += mem
-            except ValueError:
-                break
-        totalMemory = totalMemory/1048576
+#     elif OpSys=="Windows":
+#         p = Popen('wmic MEMORYCHIP get Capacity', stdout=PIPE)
+#         info = p.stdout.readlines()#first entry is the header, subsiquent entries 
+#         #correspond to dimm slot capacity in bytes 
+#         totalMemory = 0 # memory returned in binary bytes 
+#         for i in range(1,len(info)):
+#             try:
+#                 mem=int(info[i].strip())
+#                 totalMemory += mem
+#             except ValueError:
+#                 break
+#         totalMemory = totalMemory/1048576
                 
-    elif OpSys=='Darwin':
-        sysinfo = []
-        info = Popen(['system_profiler','SPHardwareDataType'], shell = False, stdout=PIPE, universal_newlines=True)
-        for stdout_line in iter(info.stdout.readline, ''):
-            sysinfo.append(stdout_line)
-        memoryLine = [s for s in sysinfo if any(xs in s for xs in ['Memory'])] 
-        totalMemory = re.findall('\\d+', memoryLine[0]) 
-        totalMemory = int(totalMemory[0])*1000
-        #detect wine
-        try: 
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            else:
-                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
-            wineVersion = []
-            for stdout_line in iter(is_wine.stdout.readline, ""):
-                wineVersion.append(stdout_line)
-            wine_version = stdout_line.split()[0].split('-')[1]
-            dump("Wine version = "+wine_version)
-        except:
-            warnings.warn("Wine is not installed!", Warning)
-            msg_flag = True
+#     elif OpSys=='Darwin':
+#         sysinfo = []
+#         info = Popen(['system_profiler','SPHardwareDataType'], shell = False, stdout=PIPE, universal_newlines=True)
+#         for stdout_line in iter(info.stdout.readline, ''):
+#             sysinfo.append(stdout_line)
+#         memoryLine = [s for s in sysinfo if any(xs in s for xs in ['Memory'])] 
+#         totalMemory = re.findall('\\d+', memoryLine[0]) 
+#         totalMemory = int(totalMemory[0])*1000
+#         #detect wine
+#         try: 
+#             winePath = []
+#             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+#             for stdout_line in iter(wine_path.stdout.readline, ''):
+#                 winePath.append(stdout_line)
+#             if winePath != []:
+#                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+#             else:
+#                 is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+#             wineVersion = []
+#             for stdout_line in iter(is_wine.stdout.readline, ""):
+#                 wineVersion.append(stdout_line)
+#             wine_version = stdout_line.split()[0].split('-')[1]
+#             dump("Wine version = "+wine_version)
+#         except:
+#             warnings.warn("Wine is not installed!", Warning)
+#             msg_flag = True
         
-    else:
-        raise OSError("unrecognised/unsupported operating system")
+#     else:
+#         raise OSError("unrecognised/unsupported operating system")
      
-    if totalMemory != '':
-        totalMemory = int(totalMemory)
-        dump("Total RAM available: %i Mb"%totalMemory)
+#     if totalMemory != '':
+#         totalMemory = int(totalMemory)
+#         dump("Total RAM available: %i Mb"%totalMemory)
         
-        #print some warnings incase the user has a low end PC
-        if totalMemory <= 4000:
-            warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
+#         #print some warnings incase the user has a low end PC
+#         if totalMemory <= 4000:
+#             warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
     
-    if num_threads!= '':
-        if num_threads <=2:
-            warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
+#     if num_threads!= '':
+#         if num_threads <=2:
+#             warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
             
-    if msg_flag:
-        dump(helpful_msg)
+#     if msg_flag:
+#         dump(helpful_msg)
     
-    return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
+#     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
+
