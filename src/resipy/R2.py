@@ -8,6 +8,7 @@ ResIPy_version = '2.2.1' # ResIPy version (semantic versionning in use)
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
+import psutil
 
 # used to download the binaries
 import requests
@@ -30,8 +31,7 @@ from resipy.Survey import Survey
 from resipy.r2in import write2in
 import resipy.meshTools as mt
 from resipy.meshTools import cropSurface
-import resipy.geomTools as iip
-from resipy.template import parallelScript, startAnmt, endAnmt
+from resipy.template import startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
@@ -93,21 +93,100 @@ def checkExe(dirname):
                 
 checkExe(os.path.join(apiPath, 'exe'))
             
-#%% wine check
-def wineCheck():
-    #check operating system
-    OpSys=platform.system()
-    #detect wine
-    if OpSys == 'Linux':
-        p = Popen("wine --version", stdout=PIPE, shell=True)
-        is_wine = str(p.stdout.readline())
-        if is_wine.find("wine") == -1:
-            print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `sudo apt-get install wine-stable`.')
-        else:
-            pass
+#%% system check
+# def wineCheck():
+#     #check operating system
+#     OpSys=platform.system()
+#     #detect wine
+#     if OpSys == 'Linux':
+#         p = Popen("wine --version", stdout=PIPE, shell=True)
+#         is_wine = str(p.stdout.readline())
+#         if is_wine.find("wine") == -1:
+#             print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `sudo apt-get install wine-stable`.')
+#         else:
+#             pass
 
-    elif OpSys == 'Darwin':
-        try:
+#     elif OpSys == 'Darwin':
+#         try:
+#             winePath = []
+#             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+#             for stdout_line in iter(wine_path.stdout.readline, ''):
+#                 winePath.append(stdout_line)
+#             if winePath != []:
+#                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
+#             else:
+#                 is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+
+#         except:
+#             print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `brew install wine`.')
+
+# wineCheck()
+
+def systemCheck(dump=print):
+    """Performs a simple diagnostic of the system, no input commands needed. System
+    info is printed to screen, number of CPUs, memory and OS. This check is 
+    useful for parallel processing. 
+    
+    Parameters
+    ----------
+    dump : function
+        stdout pointer
+    
+    Returns
+    -------
+    system_info: dict
+        Dictionary keys refer information about the system 
+    """
+    dump("________________System-Check__________________")
+    #check operating system 
+    OpSys=platform.system()    
+    if OpSys=='Darwin':
+        dump("Kernel type: macOS")
+    else:
+        dump("Kernel type: %s"%OpSys)
+    
+    totalMemory = 0 # incase system can't figure it out!
+    num_threads = 0
+    
+    #display processor info
+    dump("Processor info: %s"%platform.processor())
+    num_threads = psutil.cpu_count()
+    max_freq = max(psutil.cpu_freq())
+    dump("%i Threads at <= %5.1f Mhz"%(num_threads,max_freq))
+        
+    #check the amount of ram 
+    ram = psutil.virtual_memory()
+    totalMemory = ram[0]*9.31e-10
+    availMemory = ram[1]*9.31e-10
+    usage = ram[2]
+    dump('Total memory = %3.1f Gb (usage = %3.1f)'%(totalMemory,usage))
+    
+    #wine check - this message will display if wine is not installed / detected
+    helpful_msg ="""   
+This version of ResIPy requires wine to run R2.exe, please consider installing
+'wine is not an emulator' package @ https://www.winehq.org/. On linux wine can be found on
+most reprositories (ubuntu/debian users can use "sudo apt install wine-stable"). Wine acts as
+a compatiblity layer between unix like OS systems (ie macOS and linux) and windows programs. 
+    """
+    wineCheck = True
+    msg_flag = False
+    if OpSys=="Linux":
+        #detect wine 
+        p = Popen("wine --version", stdout=PIPE, shell=True)
+        is_wine = str(p.stdout.readline())#[0].split()[0]
+        if is_wine.find("wine") == -1:
+            warnings.warn("Wine is not installed!", Warning)
+            msg_flag = True
+            wineCheck = False
+        else:
+            wine_version = is_wine.split()[0].split('-')[1]
+            dump("Wine version = "+wine_version)
+                          
+    elif OpSys=="Windows":
+        dump('Wine Version = Native Windows (N/A)')
+                
+    elif OpSys=='Darwin':
+        try: 
             winePath = []
             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
@@ -116,54 +195,38 @@ def wineCheck():
                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
             else:
                 is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
-
+            wineVersion = []
+            for stdout_line in iter(is_wine.stdout.readline, ""):
+                wineVersion.append(stdout_line)
+            wine_version = stdout_line.split()[0].split('-')[1]
+            dump("Wine version = "+wine_version)
         except:
-            print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `brew install wine`.')
+            warnings.warn("Wine is not installed!", Warning)
+            msg_flag = True
+            wineCheck = False
+        
+    else:
+        print(OpSys)
+        raise OSError("unrecognised/unsupported operating system")
+            
+    if msg_flag:
+        if dump != print:
+            print(helpful_msg)
+        else:
+            dump(helpful_msg)
+    
+    return {'totalMemory':totalMemory,
+            'availMemory':availMemory,
+            'core_count':num_threads,
+            'max_freq':max_freq,
+            'OS':OpSys,
+            'wineCheck':wineCheck}
 
-wineCheck()
-
+def pointer(x):
+    pass
+sysinfo = systemCheck(dump=pointer)
 
 #%% useful functions
-
-# small useful function for reading and writing mesh.dat
-# def readMeshDat(fname):
-#     """Read mesh.dat or mesh3d.dat and returns elements, nodes, idirichlet.
-#     """
-#     with open(fname, 'r') as f:
-#         x = f.readline().split()
-#     numel = int(x[0])
-#     nnodes = int(x[1])
-#     idirichlet = int(x[2])
-#     elems = np.genfromtxt(fname, skip_header=1, max_rows=numel)
-#     if fname[-6:] == '3d.dat': # it's a 3D mesh
-#         idirichlet = np.genfromtxt(fname, skip_header=numel+nnodes+1, skip_footer=0)[0]
-#         skip_footer = 1
-#     else:
-#         skip_footer = 0
-#     nodes = np.genfromtxt(fname, skip_header=numel+1, skip_footer=skip_footer)
-#     return elems, nodes, idirichlet
-
-
-# def writeMeshDat(fname, elems, nodes, extraHeader='', footer='1', idirichlet=1):
-#     """Write mesh.dat/mesh3d.dat provided elements and nodes at least.
-#     """
-#     numel = len(elems)
-#     nnodes = len(nodes)
-#     threed = nodes.shape[1] == 4 # it's a 3D mesh
-#     if threed is True:
-#         extraHeader = '\t1\t0\t4'
-#     with open(fname, 'w') as f:
-#         f.write('{:.0f} {:.0f} {:.0f}{}\n'.format(numel, nnodes, idirichlet, extraHeader))
-#     with open(fname, 'ab') as f:
-#         np.savetxt(f, elems, fmt='%.0f')
-#         if threed is True:
-#             np.savetxt(f, nodes, fmt='%.0f %f %f %f')
-#         else:
-#             np.savetxt(f, nodes, fmt='%.0f %f %f')
-#     if threed is True: # for 3D only
-#         with open(fname, 'a') as f:
-#             f.write(footer)
-
 class cd:
     """Context manager for changing the current working directory"""
     def __init__(self, newPath):
@@ -1512,7 +1575,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
         self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
-
+        self.param['reqMemory'] = sysinfo['availMemory'] - self._estimateMemory() # if negative then we need more RAM
+        
         # define zlim
         if surface is not None:
             zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
@@ -2059,7 +2123,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 # print('done')
 
         # create workers directory
-        ncoresAvailable = ncores = mt.systemCheck()['core_count']
+        ncoresAvailable = ncores = systemCheck()['core_count']
         if ncores is None:
             ncores = ncoresAvailable
         else:
@@ -4257,13 +4321,35 @@ class R2(object): # R2 master class instanciated by the GUI
                 count += 1
         print("%i surveys removed as they had no measurements!"%count)
         
-    def _estimateMemory(self,dump=print,inverse=True):
+    def _computeMemory(self,dump=print,inverse=True,debug=False):
+        """More accurate calculation of the amount of memory required
+        to run a forward model or inversion. 
+        
+        Nb: currently only experimental 
+
+        Parameters
+        ----------
+        dump : function, optional
+            stdout direction, ie where to print outputs 
+        inverse : Bool, optional
+            Is the problem to be inverted? The default is True.
+        debug : TYPE, optional
+            If true all the variable values are printed to console. The 
+            default is False.
+
+        Returns
+        -------
+        Gb : float
+            Memory needed for problem in gigabytes 
+
+        """
         #NB: using variable names from Andy's codes 
         if self.mesh is None:
             print('A mesh is required before a memory usage estimate can be made')
-            return 
+            return 0
         if len(self.surveys) == 0:
             print('A survey needs to imported before a memory usage estimate can be made')
+            return 0
         else: # number of measurements computation 
             nmeas = []
             for s in self.surveys:
@@ -4271,17 +4357,17 @@ class R2(object): # R2 master class instanciated by the GUI
                 ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
                 nmeas.append(sum(ie))
             num_ind_meas=np.mean(nmeas)
-            
+                    
+        #nsize A computation (not needed currently)
         if self.mesh.neigh_matrix is None: # compute neighbour matrix, this is needed for calculation of nsizeA 
             self.mesh.computeNeigh() 
-        
-        #nsize A computation 
         neigh = np.array(self.mesh.neigh_matrix).T # nieghbour matrix 
         out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
         extra_connect = sum(out_elem) # for every outside element add 1 to the number of respective number of node connections 
         kxf = self.mesh.connection.flatten() # flattened connection matrix
         uni_node, counts = np.unique(kxf,return_counts=True)
         nsizeA = (np.sum(counts) + extra_connect)
+        
         #other mesh parameters 
         numnp = self.mesh.numnp
         numel = self.mesh.numel
@@ -4301,14 +4387,75 @@ class R2(object): # R2 master class instanciated by the GUI
         memL=numel*2
           
         if inverse: 
-            #print('inverse = true')
             memDP=memDP+num_param*9+num_ind_meas*(num_param+6) 
             memR=memR+(num_param*nfaces)
             memI=memI+num_param*nfaces         
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
-        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)        
+        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
+        
+        avialMemory = sysinfo['availMemory']
+        if Gb >= avialMemory:
+            dump('*** It is likely that more RAM is required for inversion! ***\n'
+                 '*** Make a coarser mesh ***')
+        
+        if debug: #print everything out 
+            print('numnp = %i'%numnp)
+            print('numel = %i'%numel)
+            print('nsizA = %i'%nsizeA)
+            print('num_param = %i'%num_param)
+            print('num_electrodes = %i'%num_electrodes)
+            print('num_ind_meas = %i'%num_ind_meas)
+            print('npere = %i'%npere)
+            print('nfaces = %i'%nfaces)
+            print('inverse = %s'%str(inverse))
+            print('memDP = %i'%memDP)
+            print('memR = %i'%memR)
+            print('memI = %i'%memI)
+            print('memL = %i'%memL)
+            
         return Gb
+    
+    def _estimateMemory(self,dump=print):
+        """Estimates the memory needed by inversion code to formulate 
+        a jacobian matrix
+
+        Parameters
+        ----------
+        dump : function, optional
+            stdout direction, ie where to print outputs 
+
+        Returns
+        -------
+        Gb : float
+            Memory needed for jacobian formulation in gigabytes 
+
+        """
+        #NB: using variable names from Andy's codes 
+        if self.mesh is None:
+            print('A mesh is required before a memory usage estimate can be made')
+            return 0
+        if len(self.surveys) == 0:
+            print('A survey needs to imported before a memory usage estimate can be made')
+            return 0
+        else: # number of measurements computation 
+            nmeas = []
+            for s in self.surveys:
+                df = s.df 
+                ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
+                nmeas.append(sum(ie))
+            num_ind_meas=np.mean(nmeas)
+        
+        numel = self.mesh.numel
+        
+        Gb=(numel*num_ind_meas*8)/1.0e9
+        dump('ResIPy Estimated RAM usage = %f Gb'%Gb)  
+        
+        avialMemory = sysinfo['availMemory']
+        if Gb >= avialMemory:
+            dump('*** It is likely that more RAM is required for inversion! ***\n'
+                 '*** Make a coarser mesh ***')
+        return Gb     
         
 
 #%% deprecated funcions
