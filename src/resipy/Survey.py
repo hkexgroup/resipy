@@ -2104,7 +2104,7 @@ class Survey(object):
             Print output to screen. Default is True.
         """
         for e in elec:
-            i2keep = (self.df[['a','b','m','n']].values != e).all(1)
+            i2keep = (self.df[['a','b','m','n']].values != str(e)).all(1)
             self.filterData(i2keep)
         if debug:
             numRemoved = np.sum(~i2keep)
