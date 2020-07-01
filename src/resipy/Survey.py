@@ -35,35 +35,31 @@ except ModuleNotFoundError:
     # warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
     
 #replacement for numpy polyfit function which works on open blas 
-def polyfit(x,y,deg=1, w=None, cov=False):
+def polyfit(x,y,deg=1):
     """Replacement function for numpy polyfit that works consistently (avoids 
     SVD convergence error prsent on some W10 computers) Nb: is not as robust
     as numpy polyfit function. 
     
     Parameters
     ----------
-    x : TYPE
-        DESCRIPTION.
+    x : array like
+        x values of data
     y : TYPE
-        DESCRIPTION.
+        y values of data
     deg : TYPE, optional
         DESCRIPTION. The default is 1.
-    w : TYPE, optional
-        DESCRIPTION. The default is None.
-    cov : TYPE, optional
-        DESCRIPTION. The default is False.
 
     Raises
     ------
     ValueError
-        DESCRIPTION.
+        If deg < 0 .
     TypeError
-        DESCRIPTION.
+        array data is not as expected for fitting a polynomail.
 
     Returns
     -------
-    coef : TYPE
-        DESCRIPTION.
+    coef : np.array 
+        coefficents of polynomail 
 
     """
     x = np.asarray(x,dtype=float)
@@ -102,8 +98,6 @@ def polyfit(x,y,deg=1, w=None, cov=False):
         coef, resids, rank, s = lstsq(A, y, lapack_driver = 'gelss')
         
     return coef 
-
-
 
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 
@@ -559,7 +553,7 @@ class Survey(object):
         phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
         ndata = self.ndata
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         
         R = np.copy(resist)
         M = np.copy(phase)
@@ -668,7 +662,7 @@ class Survey(object):
         measurements added for speed).
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values
         AB = np.abs(elecpos[array[:,0]]- elecpos[array[:,1]])
         MN = np.abs(elecpos[array[:,2]] - elecpos[array[:,3]])
@@ -1441,7 +1435,7 @@ class Survey(object):
         in self.df['K'].
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elec = self.elec[['x','y','z']].values
         
         aposx = elec[:,0][array[:,0]]
@@ -1492,7 +1486,7 @@ class Survey(object):
             Maximum value for the colorbar.
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values.copy() # we don't want the x values become np.inf in remote situation as it'll mess up future computeK()
         resist = self.df[column].values.copy()
         
@@ -1520,7 +1514,7 @@ class Survey(object):
         pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
 
         xpos = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        ypos = np.sqrt(2)/2*np.abs(cmiddle-pmiddle) 
 
         if ax is None:
             fig, ax = plt.subplots()
@@ -1586,7 +1580,7 @@ class Survey(object):
             ax.set_background(background_color)
             
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
@@ -1698,7 +1692,7 @@ class Survey(object):
             If `ax` is not specified, the method returns a figure.
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values.copy()
         
         # sorting the array in case of Wenner measurements (just for plotting)
@@ -1909,7 +1903,7 @@ class Survey(object):
             If `True`, the electrodes are shown and can be used for filtering.
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         if len(array) == 0:
             raise ValueError('Unable to plot! Dataset is empty - can be due to filtering out all datapoints')
         
