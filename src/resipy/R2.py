@@ -1364,7 +1364,7 @@ class R2(object): # R2 master class instanciated by the GUI
         dfelec = dfelec[~self.elec['remote']] # discard remote electrode for this
         elec = dfelec[['x','y','z']].values
         if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D survey:
-            if len(self.surveys) > 0:
+            if (len(self.surveys) > 0) & (self.iForward == False):
                 lookupDict = dict(zip(dfelec['label'], np.arange(dfelec.shape[0])))
                 array = self.surveys[0].df[['a','b','m','n']].replace(lookupDict).values.copy().astype(int) # strings don't have max/min
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
@@ -1386,7 +1386,6 @@ class R2(object): # R2 master class instanciated by the GUI
             else: # surface given by max z elec
                 self.fmd = np.abs(np.max(elec[:,2])  - np.min(elec[:,2])) + (0.5*self.fmd)
         # print('Fine Mesh Depth (relative to the surface): {:.2f} m'.format(self.fmd))
-
 
 
     def createMesh(self, typ='default', buried=None, surface=None, cl_factor=2,
@@ -2296,8 +2295,7 @@ class R2(object): # R2 master class instanciated by the GUI
             shutil.move(os.path.join(dirname, 'electrodes_' + surveys[-1].name + '.vtk'),
                         os.path.join(dirname, 'electrodes.vtk'))
             shutil.move(os.path.join(dirname, 'electrodes_' + surveys[-1].name + '.dat'),
-                        os.path.join(dirname, 'electrodes.dat'))
-            
+                        os.path.join(dirname, 'electrodes.dat'))      
 
         # delete the dirs and the files
         if rmDirTree:
@@ -2421,6 +2419,7 @@ class R2(object): # R2 master class instanciated by the GUI
             else:
                 self.showResults()
                 
+                
 
 
     def modelDOI(self, dump=None):
@@ -2524,9 +2523,7 @@ class R2(object): # R2 master class instanciated by the GUI
         zmin = np.min(node_z)
         zmax = np.max(node_z)
         
-        #TODO this doesn't work for whole_space mesh
         (xsurf, zsurf) = self.mesh.extractSurface()
-        
         if cropMaxDepth and self.fmd is not None:
             xfmd, zfmd = xsurf[::-1], zsurf[::-1] - self.fmd
             verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
@@ -2578,6 +2575,10 @@ class R2(object): # R2 master class instanciated by the GUI
             of the log10 sensitivity.
         contour : bool, optional
             If True, contours will be plotted.
+        cropMaxDepth : bool, optional
+            If True, the mesh will be clipped with at a depth following the surface.
+            If False, the mesh will be clipped at the maximum depth available.
+            This doesn't have any effect if clipContour is False.
         clipContour : bool, optional
             If True, the contour of the area of interest will be clipped (default).
         """
@@ -3477,7 +3478,8 @@ class R2(object): # R2 master class instanciated by the GUI
         addnoiseIP = np.vectorize(addnoiseIP)
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
-
+        
+        fmd = self.fmd.copy()
         elec = self.elec.copy()
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
@@ -3490,9 +3492,9 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
-
-        # recompute doi
-        self.computeFineMeshDepth()
+        self.fmd = fmd        
+        # recompute doi (don't actually otherwise zlim is jumping)
+        # self.computeFineMeshDepth()
         # self.zlim[0] = np.min(elec['z']) - self.fmd
         if iplot is True:
             self.showPseudo()
