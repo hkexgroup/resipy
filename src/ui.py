@@ -2624,8 +2624,6 @@ class App(QMainWindow):
             if elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            else:
-                self.r2.setElec(elec)
             
             # plot the interactive model
             self.regionTable.reset()
@@ -2650,8 +2648,6 @@ class App(QMainWindow):
             if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            else:
-                self.r2.setElec(elec)
             surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             if np.sum(~inan) == surface.shape[0]:
@@ -2691,8 +2687,6 @@ class App(QMainWindow):
             if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            else:
-                self.r2.setElec(elec)
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
@@ -2757,8 +2751,6 @@ class App(QMainWindow):
             elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
                 self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
                 return
-            else:
-                self.r2.setElec(elec)
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
@@ -2872,8 +2864,6 @@ class App(QMainWindow):
             if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            else:
-                self.r2.setElec(elec)
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
@@ -2901,8 +2891,6 @@ class App(QMainWindow):
             if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            else:
-                self.r2.setElec(elec)
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
@@ -3308,8 +3296,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.r2.elec is None:
                 self.errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
-            else:
-                self.r2.setElec(self.elecTable.getTable())
             params = getDataBtnFunc()
             if len(params) == 0:
                 raise ValueError('You must specify at least one sequence.')
@@ -5081,6 +5067,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.infoDump('Interpolation successful.')
         
     def updateElec(self):
+        pdebug('updateElec()')
         try:
             elec = self.elecTable.getTable()
             if self.tempElec is None or np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
