@@ -168,19 +168,7 @@ the latest release available.
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-macOS.dmg)
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-linux)
-- v1.1.9
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.9-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.9-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-macOS.dmg)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.9-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.9/ResIPy-linux)
-- v1.1.6
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.6-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.6/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.6-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.6/ResIPy-macOS.dmg)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.6-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.6/ResIPy-linux)
-- v1.1.5
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v1.1.5-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.5/pyR2-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v1.1.5-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.5/pyR2-macOS.dmg)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v1.1.5-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v1.1.5/pyR2-linux)
-
+- v1.x.x are available on github: https://github.com/hkexgroup/resipy/releases
 
 Zenodo project DOI: [![zenodo doi](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
 
