@@ -12,23 +12,29 @@ ResIPy aims to be
 
 Downloads
 ---------
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
+Version 2.2.2:<br>
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-macOS.dmg "wine is required - see below")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
 
 Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
 
 Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
-- *wine* is still not supported on macOS Catalina!
+- *wine* is partially supported on macOS Catalina!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
+
+Zip files:<br>
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.2%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-windows.zip)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.2%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-macos.zip)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.2%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-linux.zip)
 
 
 What it can do
 --------------
-<img src='src/image/teaser.gif' width="600">
-
+<img src='src/image/teaser3D.gif' width="600">
+<img src='src/image/teaser2D.gif' width="600">
 
 Project structure
 -----------------
@@ -40,7 +46,7 @@ The full description of the API can be found in the *[documentation](https://hke
 
 
 Try it from source
------------
+------------------
 After downloading or cloning (`git clone https://gitlab.com/hkex/pyr2`) the repository,
 you can run the GUI using:
 ```sh
@@ -67,7 +73,7 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
-IMPORTANT NOTE: *wine* is still not supported on macOS Catalina!   
+IMPORTANT NOTE: *wine* is partially supported on macOS Catalina! Please try installing *wine* v5.x with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
 You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
 Open "terminal" and install ```homebrew``` with:
@@ -94,6 +100,8 @@ wine /your example.exe file directory/example.exe
 ```
 
 **NOTE: the first time you're running ```wine``` it will need to be updated and that will take some time.
+
+If *wine* does not run properly on your Catalina machine, try [these instructions](https://apple.stackexchange.com/questions/373851/how-to-get-wine-working-on-catalina/376427#376427) instead.
 
 
 Feature request and bug report
@@ -146,12 +154,16 @@ Below are the links to current and previous releases of ResIPy/pyR2. Note that p
 the latest release available.
 
 *Current stable release*:
+- v2.2.2
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-macOS.dmg)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.2.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-linux)
+
+*Past releases*:
 - v2.0.2
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-macOS.dmg)
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v2.0.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.2/ResIPy-linux)
-
-*Past releases*:
 - v2.0.1
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.0.1/ResIPy-macOS.dmg)
@@ -172,3 +184,4 @@ the latest release available.
 
 Zenodo project DOI: [![zenodo doi](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
 
+[![coverage report](https://gitlab.com/hkex/pyr2/badges/master/coverage.svg)](https://gitlab.com/hkex/pyr2/-/commits/master)

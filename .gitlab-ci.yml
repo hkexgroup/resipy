@@ -5,9 +5,10 @@ test:
   - apt-get update
   - apt-get install --assume-yes wine
   - pip install -r requirements.txt
-  - pip install SALib
+  - pip install coverage
   - cd src
-  - python test.py
+  - coverage run --source=resipy test.py
+  - coverage report --include=resipy/R2.py,resipy/Survey.py
   
 pages:
   script:

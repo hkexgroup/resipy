@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QSplashScreen, QApplication, QProgressBar
 from PyQt5.QtGui import QPixmap, QIcon, QMovie
 from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
-from subprocess import Popen, call
+from subprocess import Popen, PIPE
 import os, sys, shutil, platform, time 
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
 QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
@@ -25,24 +25,28 @@ print( 'we are',frozen,'frozen')
 print( 'bundle dir is', bundle_dir )
 
 #workaround to deal with removing old _MEI folders on windows (works when compile WITH console=False)
-if OS == 'Windows':
-
-    week_seconds = 7*24*60*60
-    usrname = os.getlogin()
-    temp_path = os.path.join('C:\\Users',usrname,'AppData\\Local\\Temp')
-    files = sorted(os.listdir(temp_path))
-    print('Checking for old _MEI directories in %s'%temp_path)
-    for f in files:
-        mtime = os.stat(os.path.join(temp_path,f)).st_mtime#modifcation time
-        dtime = ctime - mtime # delta time in seconds 
-        if f.find('_MEI')==0 and dtime>week_seconds:
-            print('removing %s ...'%f,end='')
-            try:
-                cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
-                p = Popen(cmd,shell=True)
-                print('done.')
-            except:# (PermissionError, FileNotFoundError):
-                print('ERROR')
+try:
+    if OS == 'Windows':
+        week_seconds = 7*24*60*60
+        cmd = "echo %LOCALAPPDATA%" # get local storage 
+        p = Popen(cmd,shell=True,stdout=PIPE)
+        appdata = p.stdout.readline().rstrip().decode()
+        temp_path = os.path.join(appdata,'Temp')
+        files = sorted(os.listdir(temp_path))
+        print('Checking for old _MEI directories in %s'%temp_path)
+        for f in files:
+            mtime = os.stat(os.path.join(temp_path,f)).st_mtime#modifcation time
+            dtime = ctime - mtime # delta time in seconds 
+            if f.find('_MEI')==0 and dtime>week_seconds:
+                print('removing %s ...'%f,end='')
+                try:
+                    cmd = "RMDIR {:s} /q /s".format(os.path.join(temp_path,f))
+                    p = Popen(cmd,shell=True)
+                    print('done.')
+                except:
+                    print('ERROR')
+except:
+    pass
 
 
 """ PERMISSION ISSUE WITH ZIPFILE MODULE

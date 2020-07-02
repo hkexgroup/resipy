@@ -3,11 +3,8 @@
 block_cipher = None
 
 
-datas=[('./resipy/exe/R2.exe','./resipy/exe'),
-       ('./resipy/exe/gmsh.exe','./resipy/exe'),
-       ('./resipy/exe/cR2.exe', './resipy/exe'),
-       ('./resipy/exe/R3t.exe', './resipy/exe'),
-       ('./resipy/exe/cR3t.exe', './resipy/exe'),
+datas=[('./resipy/exe/*','./resipy/exe'),
+       ('./resipy/cext/*', './resipy/cext'),
        ('./logo.png', '.'),
        ('./logo.ico', '.'),
        ('./loadingLogo.png', '.'),
@@ -15,7 +12,7 @@ datas=[('./resipy/exe/R2.exe','./resipy/exe'),
        ('./image/schlum.png', './image'),
        ('./image/wenner.png', './image'),
        ('./image/gradient.png', './image')]
-             
+
 
 def extra_datas(mydir):
     def rec_glob(p, files):
@@ -40,7 +37,7 @@ a = Analysis(['ui.py'],
              pathex=[],
              binaries=[],
              datas=datas,
-             hiddenimports=[],
+             hiddenimports=['pkg_resources.py2_warn'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

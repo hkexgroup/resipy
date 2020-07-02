@@ -1,22 +1,27 @@
 # -*- mode: python -*-
 # this file is used by pyinstaller to generate a zip file that would 
 # then be uncompressed by the splashScreen.spec
-
+# nb needs to be a python 3.7 environment for the final executable to work 
+import platform, os
 block_cipher = None
 
+OS = platform.system()
+
 # https://stackoverflow.com/questions/11322538/including-a-directory-using-pyinstaller  
-datas=[('./resipy/exe/R2.exe','./resipy/exe'),
-        ('./resipy/exe/gmsh.exe','./resipy/exe'),
-        ('./resipy/exe/cR2.exe', './resipy/exe'),
-        ('./resipy/exe/R3t.exe', './resipy/exe'),
-        ('./resipy/exe/cR3t.exe', './resipy/exe'),
+datas=[('./resipy/exe/*','./resipy/exe'),
         ('./logo.png', '.'),
         ('./loadingLogo.png', '.'),
         ('./image/dipdip.png', './image'),
         ('./image/schlum.png', './image'),
         ('./image/wenner.png', './image'),
-        ('./image/gradient.png', './image')
+        ('./image/gradient.png', './image'),
         ]
+
+if OS == 'Linux':
+    datas.append(('./resipy/cext/*gnu.so','./resipy/cext'))
+elif OS == 'Windows':
+    datas.append(('./resipy/cext/*.pyd','./resipy/cext'))
+#raise error if not linux or windows? 
 
 def extra_datas(mydir):
     def rec_glob(p, files):
@@ -41,7 +46,7 @@ a = Analysis(['ui.py'],
              pathex=[],
              binaries=[],
              datas = datas,
-             hiddenimports=['numpy.core._dtype_ctypes'],
+             hiddenimports=['pkg_resources.py2_warn'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -59,7 +64,9 @@ exe = EXE(pyz,
           debug=False,
           strip=False,
           upx=True,
-          console=False)
+          console=False,
+          version='Version.details',
+          icon='logo.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,

@@ -1,3 +1,20 @@
+v2.2.2
+------
+- Add 3D interactive plotting capabilities by the use of pyvista (mesh and inversion plots).
+- Add electrode labeling capabilities ('a','b','m','n' columns are now string).
+- More robust pre- and post-porcessing filtering capabilities.
+- Better pseudo-section calculations.
+- Ability to crop mesh below a certain depth (crop below accepted DOI).
+- Ability to parse E4D and BERT files directly (2D and 3D).
+- Ability to export data in E4D format (add to Res2Dinv format).
+- Ability to interpolate missing topography points.
+- Ability to parse externally calculated error models (Custom parser)
+- Fix issue with forward modeling error.
+- Fix issue with buried electrodes and whole space problems.
+- Fix SVD error on some Windows 10 laptops.
+- Reporting if more RAM is required than available for the inversion.
+
+
 v2.0.2
 ------
 - Fix issues due to remote electrodes

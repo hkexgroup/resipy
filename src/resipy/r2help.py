@@ -9,7 +9,7 @@ Created on Wed May 30 16:46:04 2018
 r2help = {
 'flux_type': "<p>Define the flux type to be used (either 2D or 3D)</p>",
 'res_matrix' : "<p><code>res_matrix</code> is 1 if a 'sensitivity matrix' is required for the converged solution (default). This matrix is not the Jacobian but is the diagonal of [J^T.W^T.W.J] which gives an idea of the mesh sensitivity (see equation 5.20 of Binley and Kemna, 2005)</p><p>Set <code>res_matrix</code> to 2 if the true resolution matrix is computed for a converged solution and the diagonal is stored (see equation 5.18 of Binley and Kemna,  2005), note that this calculation is more time consuming than the ‘sensitivity matrix’ option.</p><p>Set <code>res_matrix</code> to 3 if the sensitivity map is required and an output of the jacobian matrix and roughness matrix.</p><p>If neither sensitivity map or resolution matrix is required then set <code>res_matrix</code> to 0.</p>",
-'singular_type' : "<p>Note that singularity removal can only be applied is (a) the boundaries are infinite and (b) the y=0 plane defines the upper boundary. </p>",
+'singular_type' : "<p><b>Warning</b>: Note that singularity removal can only be applied is (a) the boundaries are infinite (far away from the region of interest) and (b) the z=0 plane defines the upper boundary (so a flat mesh). This is because the singularity remove uses the analytical solution to remove infinite potential around the electrode. If these two conditions applied, removing the singularity will make the forward computation more accurate.</p>",
 'inverse_type' : "<p><code>inverse_type</code> is 0 for pseudo-Marquardt solution or 1 for regularised solution with linear filter (default) or 2 for regularised type with quadratic filter or 3 for qualitative solution or 4 for blocked linear regularised type.</p>",
 'target_decrease': "<p><code>target_decrease</code> is a real number which allows the user to specify the relative reduction of misfit in each iteration. A value of 0.25 will mean that R2 will aim to drop the misfit by 25% (and no more) of the value at the start of the iteration. This allows a slower progression of the inversion, which can often result in a better convergence. If you set <code>target_decrease</code> to 0.0 then R2 will try to achieve the maximum reduction in misfit in the iteration (default).</p> ",
 'qual_code' : "<p><code>qual_ratio</code> is 0 for qualitative comparison with forward solution, i.e. only when one observed data set is available, or <code>qual_ratio</code> is 1 if the observed data in <code>protocol.dat</code> contains a ratio of two datasets.</p>",
@@ -69,10 +69,13 @@ r2help = {
 'min_step' : "<p><code>min_step</code> is the minimum step length for attempting to improve solution. This is "
             "usually set to 0.001 to 0.01.</p>",
 'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.',
+'cropBelowFmd' : '<p>If checked, this will crop out the mesh (inverted plot) below fine/coarse boundary depth (set in mesh tab).',
 'modelDOI' : "<p>If checked, two more background constrained inversion will be run with the normal background and a background ten times more resistive."
             " The ratio of the difference of inverted value divided by the difference in initial resistivity gives"
             " an estimate of the depth of investigation of the inversion (Oldenburg and Li, 1999)</p>",
 'sensDOI' : "<p>Sensitivity based DOI. If a dashed line will be drawn on the inverted section at 0.001*maxSensitivity."
-            "Note that this is not the DOI based on the Oldenburg and Li method.</p>"
+            "Note that this is not the DOI based on the Oldenburg and Li method.</p>",
+'txSign' : "<p>Check if the polarity of provided transfer resistanses is correct in each survey and if not, automatically corrects them."
+            "<br><i>Note: this assumes a provided survey is on a flat 2D profile.</i></p>"
 }
 
