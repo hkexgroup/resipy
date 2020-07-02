@@ -129,19 +129,6 @@ def sliceMesh(nodes, elms, values, label='', dim=2 ,vmin=None, vmax=None, ax=Non
     meshSliceSlider = Slider(ax0, title, np.min(centroids[:,dim]),
                              np.max(centroids[:,dim]), 
                              valinit=np.mean(centroids[:,dim]))
+    
     meshSliceSlider.on_changed(callback)
     
-
-
-#%% test code
-#import api.meshTools as mt # circular reference with meshTools
-#mesh = mt.vtk_import('api/test/mesh3Dinverted.vtk')
-#
-## import data
-#elms = np.array(mesh.con_matrix).T
-#nodes = np.array([mesh.node_x, mesh.node_y, mesh.node_z]).T
-#values = np.array(mesh.attr_cache['Resistivity(log10)'])
-#
-#
-#sliceMesh(nodes, elms, values, label=r'$\log_{10}(\rho)$ [Ohm.m]')
-
