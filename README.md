@@ -38,8 +38,8 @@ Zip files:<br>
 
 What it can do
 --------------
-<img src='src/image/teaser.gif' width="600">
-
+<img src='src/image/teaser3D.gif' width="600">
+<img src='src/image/teaser2D.gif' width="600">
 
 Project structure
 -----------------
