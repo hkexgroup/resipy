@@ -54,8 +54,8 @@ numpydoc_show_class_members = False
 example_gallery_config = {
     'examples_dirs': '../jupyter-notebook',
     'gallery_dirs': 'auto_examples',
-    'dont_preprocess': '../jupyter-notebook/Morris.ipynb',
-    'pattern': '.+.ipynb',
+    'dont_preprocess': '../jupyter-notebook/nb_Morris.ipynb',
+    'pattern': 'nb_.+.ipynb',
     'urls': 'https://gitlab.com/hkex/pyr2/blob/master/jupyter-notebook',
     'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fpyr2/stable?filepath=jupyter-notebook',
 }
