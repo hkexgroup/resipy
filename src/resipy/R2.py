@@ -2615,8 +2615,8 @@ class R2(object): # R2 master class instanciated by the GUI
                     else:
                         doiSens = False
                 if (clipContour) & (self.topo.shape[0] == 0) & (all(self.elec['buried'])):
-                    # it's a whole space mesh, clipContour is not needed for that
-                    clipContour = False
+                    # it's a whole space mesh, clipContour is not needed for that but contour can be drawn
+                    cropMaxDepth = False
                 if doi is True or doiSens is True:
                     xc, yc = mesh.elmCentre[:,0], mesh.elmCentre[:,2]
                     triang = tri.Triangulation(xc, yc)

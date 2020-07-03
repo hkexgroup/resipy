@@ -4838,7 +4838,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
            <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</li>
-           <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
+           <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</li>
            <li>Note: Res3DInv files are only supported in general 4 electrode format.</ul></li>
            <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
