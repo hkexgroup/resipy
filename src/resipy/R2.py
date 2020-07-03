@@ -4106,6 +4106,37 @@ class R2(object): # R2 master class instanciated by the GUI
         self.elec = None
         self.setElec(self.surveys[0].elec)
 
+    @staticmethod
+    def topo2distance(x,y,z): # pragma: no cover
+        """Convert 3d xy data in pure x lateral distance.
+        Use for 2D data only!
+        """
+        x = np.array(x)
+        y = np.array(y)
+        z = np.array(z)
+        
+        idx = np.argsort(x) # sort by x axis
+        x_sorted = x[idx]
+        y_sorted = y[idx]
+        z_sorted = z[idx]
+        
+        x_abs = np.zeros_like(x, dtype=float)
+        #the first entry should be x = 0
+        for i in range(len(x)-1):
+            delta_x = x_sorted[i] - x_sorted[i+1]
+            delta_y = y_sorted[i] - y_sorted[i+1]
+            sq_dist = delta_x**2 + delta_y**2
+            x_abs[i+1] =  x_abs[i] + np.sqrt(sq_dist)
+        
+        # return values in the order in which they came
+        new_topo = np.zeros((len(x),3), dtype=float)        
+        for i in range(len(z)):
+            put_back = idx[i] # index to where to the value back again
+            new_topo[put_back,0] = x_abs[i]
+            new_topo[put_back,2] =  z_sorted[i]
+    
+        return new_topo
+
 # WIP
 #    def timelapseErrorModel(self, ax=None):
 #        """Fit an power law to time-lapse datasets.

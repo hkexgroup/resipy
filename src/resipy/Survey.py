@@ -1858,7 +1858,7 @@ class Survey(object):
             if np.sum(np.isnan(df['resError'])) == 0: # no NaN inside
                 protocol['resError'] = df['resError'].values
                 if errTot == True: # we want to add modelling error to that
-                    print('Using total error')
+                    # print('Using total error')
                     if 'modErr' not in df.columns:
                         raise ValueError('ERROR : you must specify a modelling error')
                     else: # if present, compute geometric mean of the errors
@@ -2393,8 +2393,7 @@ class Survey(object):
             new_elec[put_back,2] =  z_sorted[i]
     
         self.elec.loc[:, ['x','y','z']] = new_elec
-        
-        
+    
     def addPerError(self,pnct=2.5): # pragma: no cover
         """Add a flat percentage error to resistivity data.
         
