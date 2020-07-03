@@ -1125,7 +1125,6 @@ class Survey(object):
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
-        np.savetxt(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','lin-error-bins.txt'), bins)
         # coefs = polyfit(bins[:,0], bins[:,1], 1)
         slope, intercept, r_value, p_value, std_err = linregress(bins[:,0], bins[:,1])
         coefs = [slope, intercept]
