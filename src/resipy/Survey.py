@@ -1724,11 +1724,11 @@ class Survey(object):
         
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-            label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
-        elif column =='ip':
-            label = r'$\phi$ [mrad]'
+            label = 'log10(Apparent Resistivity) [Ohm.m]'
+        elif column == 'ip':
+            label = 'Phase [mrad]'
         else:
-            label = r'$\rho_a$ [$\Omega.m$]'
+            label = 'Apparent Resistivity [Ohm.m]'
 
         if vmin is None:
             vmin = np.nanmin(resist)
