@@ -337,6 +337,9 @@ class App(QMainWindow):
                 self.boreholeCheck.setChecked(False)
                 self.boreholeCheck.setEnabled(True)
                 self.regular3DCheck.setVisible(False)
+                self.pParams['threed'] = False
+                self.pParamsIP['threed'] = False
+                self.pseudoLayout.setCurrentIndex(0)
                 # self.ipCheck.setEnabled(True)
                 
                 #Pre-processing tab
@@ -386,9 +389,13 @@ class App(QMainWindow):
                         self.elecTable.initTable(self.r2.elec)
                 self.elecDyEdit.setEnabled(True)
                 self.invRadio.setChecked(True)
-                self.boreholeCheck.setChecked(True) # to disable pseudo-section
+                # self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
                 self.regular3DCheck.setVisible(True)
+                self.pParams['threed'] = True
+                self.pParamsIP['threed'] = True
+                if pvfound:
+                    self.pseudoLayout.setCurrentIndex(1)
                 # self.ipCheck.setEnabled(False) # TODO disabling cR3t for now
                 
                 #Pre-processing tab
@@ -882,6 +889,7 @@ class App(QMainWindow):
                     self.noiseEditIP.show()
                 else:
                     self.mwPseudoIP.setVisible(True)
+                    self.pseudoFrameIP.setVisible(True)
                     self.plotPseudoIP()
                     self.tabPreProcessing.setTabEnabled(1, True)
                     if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
@@ -901,6 +909,7 @@ class App(QMainWindow):
                 [p.setVisible(False) for p in [self.pvminIPLabel, self.pvminIP, self.pvmaxIPLabel, self.pvmaxIP]]
 #                self.timeLapseCheck.setEnabled(True)
                 self.mwPseudoIP.setVisible(False)
+                self.pseudoFrameIP.setVisible(False)
                 self.tabPreProcessing.setTabEnabled(1, False)
                 self.tabPreProcessing.setTabEnabled(3, False)
                 self.regionTable.setColumnHidden(1, True)
@@ -969,8 +978,8 @@ class App(QMainWindow):
         self.pvmaxIP.setValidator(QDoubleValidator())
         self.pvmaxIP.setVisible(False)
         
-        self.pParams = {'index':0, 'vmin':None, 'vmax':None}
-        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None}
+        self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False}
+        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False}
         def prescaleBtnFunc():
             if self.r2 is not None:
                 self.pParams['vmin'] = float(self.pvmin.text()) if self.pvmin.text() != '' else None
@@ -1001,16 +1010,26 @@ class App(QMainWindow):
         self.tabImporting.currentChanged.connect(logImportTab)
         self.tabs.currentChanged.connect(logTab)
 
+        if pvfound:
+            self.pseudoFrame = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudoPlotter = QtInteractor(self.pseudoFrame)
+            vlayout.addWidget(self.pseudoPlotter.interactor)
+            self.pseudoFrame.setLayout(vlayout)
         self.mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
-
+        
+        if pvfound:
+            self.pseudoFrameIP = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudoPlotterIP = QtInteractor(self.pseudoFrameIP)
+            vlayout.addWidget(self.pseudoPlotterIP.interactor)
+            self.pseudoFrameIP.setLayout(vlayout)
+            self.pseudoFrameIP.setVisible(False)
         self.mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwPseudoIP.setVisible(False)
 
-
-
         # layout
         hbox1 = QHBoxLayout()
-#        hbox1.addWidget(restartBtn)
         hbox1.addWidget(dimGroup)
         hbox1.addWidget(self.titleLabel)
         hbox1.addWidget(self.titleEdit)
@@ -1060,10 +1079,21 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
 
-        pseudoLayout = QHBoxLayout()
-        pseudoLayout.addWidget(self.mwPseudo, 50)
-        pseudoLayout.addWidget(self.mwPseudoIP, 50)
-        tabImportingDataLayout.addLayout(pseudoLayout, 60)
+        self.pseudoLayout = QStackedLayout()
+        mwLayoutWidget = QWidget()
+        mwLayout = QHBoxLayout()
+        mwLayout.addWidget(self.mwPseudo, 50)
+        mwLayout.addWidget(self.mwPseudoIP, 50)
+        mwLayoutWidget.setLayout(mwLayout)
+        self.pseudoLayout.addWidget(mwLayoutWidget)
+        if pvfound:
+            pvLayoutWidget = QWidget()
+            pvLayout = QHBoxLayout()
+            pvLayout.addWidget(self.pseudoFrame, 50)
+            pvLayout.addWidget(self.pseudoFrameIP, 50)
+            pvLayoutWidget.setLayout(pvLayout)
+            self.pseudoLayout.addWidget(pvLayoutWidget)
+        tabImportingDataLayout.addLayout(self.pseudoLayout, 60)
         self.tabImportingData.setLayout(tabImportingDataLayout)
 
 
@@ -5123,16 +5153,25 @@ combination of multiple sequence is accepted as well as importing a custom seque
     
     def plotPseudo(self):
         pdebug('plotPseudo()')
-        self.mwPseudo.setCallback(self.r2.showPseudo)
-        if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
-            self.mwPseudo.replot(aspect='auto', **self.pParams)
+        if (pvfound 
+            & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
+            & (self.boreholeCheck.isChecked() == False)):
+            self.pseudoPlotter.clear()
+            self.r2.showPseudo(ax=self.pseudoPlotter, **self.pParams)
         else:
+            self.mwPseudo.setCallback(self.r2.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
     
     def plotPseudoIP(self):
         pdebug('plotPseudoIP()')
-        self.mwPseudoIP.setCallback(self.r2.showPseudoIP)
-        self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
+        if (pvfound 
+            & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
+            & (self.boreholeCheck.isChecked() == False)):
+            self.pseudoPlotterIP.clear()
+            self.r2.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP)
+        else:
+            self.mwPseudoIP.setCallback(self.r2.showPseudoIP)
+            self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
 
     def activateTabs(self, val=True):
         if self.iForward is False:
@@ -5188,76 +5227,76 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pdebug('importFile:', fname)
         if len(self.r2.surveys) > 0:
             self.r2.surveys = []
-        try:                
-            self.loadingWidget('Loading data, please wait...', False) # for large datasets
-            self.ipCheck.setEnabled(True)
-            self.psContourCheck.setEnabled(True)
-            self.fname = fname
-            self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
-            if float(self.spacingEdit.text()) == -1:
-                spacing = None
-            else:
-                spacing = float(self.spacingEdit.text())
-            try:
-                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
-                                     parser=self.parser)
-                # self.calcAspectRatio()
-                if 'magErr' in self.r2.surveys[0].df.columns:
-                    self.a_wgt.setText('0.0')
-                    self.b_wgt.setText('0.0')
-            except:
-                self.errorDump('File is not recognized.')
-                pass
-            pdebug('importFile: setting up UI')
-            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
-                # we need more than a single reciprocal to fit error model and so
-                self.importDataRecipBtn.show()
-                self.recipOrNoRecipShow(recipPresence = False)
-            else:
-                self.recipOrNoRecipShow(recipPresence = True)
-                self.importDataRecipBtn.hide()
-                self.tabPreProcessing.setTabEnabled(2, True)
-                self.filterAttrCombo.addItem('Reciprocal Error')
-                self.plotError()
-                self.errHist()
-            if 'dev' in self.r2.surveys[0].df.columns:
-                self.filterAttrCombo.addItem('Stacking Error (Dev.)')
-                
-            if self.r2.elec['remote'].sum() > 0:
-                self.meshQuadGroup.setEnabled(False)
-            else:
-                self.meshQuadGroup.setEnabled(True)
-            if self.boreholeCheck.isChecked() is True:
-                self.r2.setBorehole(True)
-            else:
-                self.r2.setBorehole(False)
-            self.plotManualFiltering()
-            self.elecTable.initTable(self.r2.elec)
-            self.tabImporting.setTabEnabled(1,True)
-            if 'ip' in self.r2.surveys[0].df.columns:
-                if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                    self.ipCheck.setChecked(True)
-                if self.ftype == 'Syscal':
-                    self.dcaButton.setEnabled(True)
-                    self.dcaProgress.setEnabled(True)
-            if np.isnan(self.r2.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
-                self.topoInterpBtnFunc()
-                self.updateElec()
-            self.plotPseudo()
-            self.loadingWidget(exitflag=True) #close the loading widget
-            self.infoDump(fname + ' imported successfully')
-            self.invNowBtn.setEnabled(True)
-            self.activateTabs(True)
-            self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
-            self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2]))[0]))
-            self.fnamesCombo.hide()
-            self.fnamesComboLabel.hide()
-        except Exception as e:
-            self.loadingWidget(exitflag=True)
-            pdebug('importFile: ERROR:', e)
-            self.errorDump('Importation failed. File is not being recognized. \
-                      Make sure you have selected the right file type.')
+        # try:                
+        self.loadingWidget('Loading data, please wait...', False) # for large datasets
+        self.ipCheck.setEnabled(True)
+        self.psContourCheck.setEnabled(True)
+        self.fname = fname
+        self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
+        if float(self.spacingEdit.text()) == -1:
+            spacing = None
+        else:
+            spacing = float(self.spacingEdit.text())
+        try:
+            self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                                 parser=self.parser)
+            # self.calcAspectRatio()
+            if 'magErr' in self.r2.surveys[0].df.columns:
+                self.a_wgt.setText('0.0')
+                self.b_wgt.setText('0.0')
+        except:
+            self.errorDump('File is not recognized.')
             pass
+        pdebug('importFile: setting up UI')
+        if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
+            # we need more than a single reciprocal to fit error model and so
+            self.importDataRecipBtn.show()
+            self.recipOrNoRecipShow(recipPresence = False)
+        else:
+            self.recipOrNoRecipShow(recipPresence = True)
+            self.importDataRecipBtn.hide()
+            self.tabPreProcessing.setTabEnabled(2, True)
+            self.filterAttrCombo.addItem('Reciprocal Error')
+            self.plotError()
+            self.errHist()
+        if 'dev' in self.r2.surveys[0].df.columns:
+            self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+            
+        if self.r2.elec['remote'].sum() > 0:
+            self.meshQuadGroup.setEnabled(False)
+        else:
+            self.meshQuadGroup.setEnabled(True)
+        if self.boreholeCheck.isChecked() is True:
+            self.r2.setBorehole(True)
+        else:
+            self.r2.setBorehole(False)
+        self.plotManualFiltering()
+        self.elecTable.initTable(self.r2.elec)
+        self.tabImporting.setTabEnabled(1,True)
+        if 'ip' in self.r2.surveys[0].df.columns:
+            if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                self.ipCheck.setChecked(True)
+            if self.ftype == 'Syscal':
+                self.dcaButton.setEnabled(True)
+                self.dcaProgress.setEnabled(True)
+        if np.isnan(self.r2.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
+            self.topoInterpBtnFunc()
+            self.updateElec()
+        self.plotPseudo()
+        self.loadingWidget(exitflag=True) #close the loading widget
+        self.infoDump(fname + ' imported successfully')
+        self.invNowBtn.setEnabled(True)
+        self.activateTabs(True)
+        self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
+        self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2]))[0]))
+        self.fnamesCombo.hide()
+        self.fnamesComboLabel.hide()
+        # except Exception as e:
+        #     self.loadingWidget(exitflag=True)
+        #     pdebug('importFile: ERROR:', e)
+        #     self.errorDump('Importation failed. File is not being recognized. \
+        #               Make sure you have selected the right file type.')
+        #     pass
 
     def restartFunc(self):
         pdebug('restartFunc: creating new R2 object')

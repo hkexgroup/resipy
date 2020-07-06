@@ -1405,7 +1405,7 @@ class Survey(object):
         if bx is False and threed is False:
             self._showPseudoSection(ax=ax, **kwargs)
         elif bx is False and threed is True:
-            self.showPseudoSection3D(ax=ax, **kwargs)
+            self._showPseudoSection3D(ax=ax, **kwargs)
         else:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1414,13 +1414,15 @@ class Survey(object):
             ax.set_ylabel('Transfer Resistance [Ohm]')
 
 
-    def showPseudoIP(self, ax=None, bx=None, **kwargs):
+    def showPseudoIP(self, ax=None, bx=None, threed=False, **kwargs):
         """Plot pseudo section if 2D survey or just quadrupoles phase otherwise.
         """
         if bx is None:
             bx = self.iBorehole
-        if bx is False:
+        if bx is False and threed is False:
             self._showPseudoSectionIP(ax=ax, **kwargs)
+        elif bx is False and threed is True:
+            self._showPseudoSection3D(ax=ax, column='ip', geom=False, **kwargs)
         else:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1463,6 +1465,155 @@ class Survey(object):
         self.df['K'] = K
         
         
+    def _computePseudoDepth(self):
+        """Compute pseudo-depths.
+        
+        Returns
+        -------
+        xpos, ypos, zpos all arrays containing position of the pseudo-section.
+        """
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        elecm = self.elec[['x','y','z']].values.copy() #electrode matrix
+        
+        # Finding fully nested measurements
+        # pos = elecpos[array]
+        # A = np.min(pos[:,:2], axis=1)
+        # B = np.max(pos[:,:2], axis=1)
+        # M = np.min(pos[:,2:], axis=1)
+        # N = np.max(pos[:,2:], axis=1)
+        # innerMN = ((pos[:,2] > A) 
+        #             & (pos[:,2] < B)
+        #             & (pos[:,3] > A)
+        #             & (pos[:,3] < B))
+        # innerAB = ((pos[:,0] > M)
+        #            & (pos[:,1] < N)
+        #            & (pos[:,0] > M)
+        #            & (pos[:,1] < N))
+        # inested = innerMN | innerAB
+                
+        # elecpos[k.elec['remote'].values] = np.inf # so it will never be taken as minimium
+                
+        # cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
+        # cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
+        # cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
+        
+        # padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
+        # padd[np.isinf(padd)] = 0
+        # pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
+        
+        # # for non-nested measurements
+        # xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
+        # yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
+        
+        # # for nested measurements (need to define the outer and inner dipole)
+        # xposNested = np.zeros(len(pmiddle))
+        # if np.sum(innerMN) > 0:
+        #     xposNested[innerMN] = pmiddle[innerMN]
+        # if np.sum(innerAB) > 0:
+        #     xposNested[innerAB] = cmiddle[innerAB]
+        # outerLeft = np.min(pos, axis=1)
+        # outerRight = np.max(pos, axis=1)
+        # yposNested  = np.min([np.abs(pmiddle - outerLeft), np.abs(outerRight - pmiddle)], axis=0)/3
+        
+        # xpos = np.zeros_like(pmiddle)
+        # ypos = np.zeros_like(pmiddle)
+        
+        # xpos[~inested] = xposNonNested[~inested]
+        # xpos[inested] = xposNested[inested]
+        
+        # ypos[~inested] = yposNonNested[~inested]
+        # ypos[inested] = yposNested[inested] 
+                
+        
+        ### first determine if measurements are nested ###
+        #find mid points of AB 
+        AB = (elecm[array[:,0]] + elecm[array[:,1]]) / 2 # mid points of AB 
+        MN = (elecm[array[:,2]] + elecm[array[:,3]]) / 2 # mid points of MN 
+        ABrad = np.sqrt(np.sum((elecm[array[:,0]] - AB)**2,axis=1)) # radius of AB circle 
+        MNrad = np.sqrt(np.sum((elecm[array[:,2]] - MN)**2,axis=1)) # radius of MN circle 
+        
+        Amn = np.sqrt(np.sum((elecm[array[:,0]] - MN)**2,axis=1)) # distance of A to mid point of MN 
+        Bmn = np.sqrt(np.sum((elecm[array[:,1]] - MN)**2,axis=1)) # distance of B to mid point of MN 
+        Nab = np.sqrt(np.sum((elecm[array[:,2]] - AB)**2,axis=1)) # distance of N to mid point of AB 
+        Mab = np.sqrt(np.sum((elecm[array[:,3]] - AB)**2,axis=1)) # distance of M to mid point of AB
+        
+        iABinMN = (Amn < MNrad) & (Bmn < MNrad)
+        iMNinAB = (Nab < ABrad) & (Mab < ABrad)
+        inested = iABinMN | iMNinAB #if AB encompasses MN or MN encompasses AB 
+                       
+        # so it will never be taken as minimium
+        elecm[self.elec['remote'].values,:] = np.inf
+        
+        # compute midpoint position of AB and MN dipoles
+        elecx = elecm[:,0]
+        elecy = elecm[:,1]
+        #CURRENT ELECTRODE MIDPOINTS 
+        caddx = np.abs(elecx[array[:,0]]-elecx[array[:,1]])/2
+        caddy = np.abs(elecy[array[:,0]]-elecy[array[:,1]])/2
+        caddx[np.isinf(caddx)] = 0 
+        caddy[np.isinf(caddy)] = 0 
+        cmiddlex = np.min([elecx[array[:,0]], elecx[array[:,1]]], axis=0) + caddx
+        cmiddley = np.min([elecy[array[:,0]], elecy[array[:,1]]], axis=0) + caddy
+        
+        #POTENTIAL ELECTRODE MIDPOINTS
+        paddx = np.abs(elecx[array[:,2]]-elecx[array[:,3]])/2
+        paddy = np.abs(elecy[array[:,2]]-elecy[array[:,3]])/2
+        paddx[np.isinf(paddx)] = 0 
+        paddy[np.isinf(paddy)] = 0 
+        pmiddlex = np.min([elecx[array[:,2]], elecx[array[:,3]]], axis=0) + paddx
+        pmiddley = np.min([elecy[array[:,2]], elecy[array[:,3]]], axis=0) + paddy
+        
+        # for non-nested measurements
+        xposNonNested  = np.min([cmiddlex, pmiddlex], axis=0) + np.abs(cmiddlex-pmiddlex)/2
+        yposNonNested  = np.min([cmiddley, pmiddley], axis=0) + np.abs(cmiddley-pmiddley)/2
+        pcdist = np.sqrt((cmiddlex-pmiddlex)**2 + (cmiddley-pmiddley)**2)
+        zposNonNested = np.sqrt(2)/2*pcdist
+        
+        # for nested measurements use formula of Dalhin 2006
+        xposNested = np.zeros(len(pmiddlex))
+        yposNested = np.zeros(len(pmiddlex))
+        outerElec1 = np.zeros((len(pmiddlex), 2)) # position of one electrode of outer dipole
+        outerElec2 = np.zeros((len(pmiddlex), 2)) # position of one electrode of outer dipole
+        # innerMid = np.zeros((len(pmiddlex), 2)) # middle of inner dipole
+        if np.sum(iMNinAB) > 0:
+            xposNested[iMNinAB] = pmiddlex[iMNinAB]
+            yposNested[iMNinAB] = pmiddley[iMNinAB]
+            outerElec1[iMNinAB] = np.c_[elecx[array[iMNinAB,0]], elecy[array[iMNinAB,0]]]
+            outerElec2[iMNinAB] = np.c_[elecx[array[iMNinAB,1]], elecy[array[iMNinAB,1]]]
+            # innerMid = np.c_[pmiddlex, pmiddley]
+        if np.sum(iABinMN) > 0:
+            xposNested[iABinMN] = cmiddlex[iABinMN]
+            yposNested[iABinMN] = cmiddley[iABinMN]
+            outerElec1[iABinMN] = np.c_[elecx[array[iABinMN,2]], elecy[array[iABinMN,2]]]
+            outerElec2[iABinMN] = np.c_[elecx[array[iABinMN,3]], elecy[array[iABinMN,3]]]
+            # innerMid = np.c_[cmiddlex, cmiddley]
+        
+        innerMid = np.c_[pmiddlex, pmiddley] # always use potential dipole
+        
+        # apdist = np.sqrt((elecx[array[:,0]]-pmiddlex)**2 + (elecy[array[:,0]]-pmiddley)**2)
+        # bpdist = np.sqrt((elecx[array[:,1]]-pmiddlex)**2 + (elecy[array[:,1]]-pmiddley)**2)
+        apdist = np.sqrt(np.sum((outerElec1-innerMid)**2, axis=1))
+        bpdist = np.sqrt(np.sum((outerElec2-innerMid)**2, axis=1))
+        zposNested  = np.min([apdist, bpdist], axis=0)/3
+        
+        xpos = np.zeros_like(pmiddlex)
+        ypos = np.zeros_like(pmiddlex)
+        zpos = np.zeros_like(pmiddlex)
+        
+        xpos[~inested] = xposNonNested[~inested]
+        xpos[inested] = xposNested[inested]
+        
+        ypos[~inested] = yposNonNested[~inested]
+        ypos[inested] = yposNested[inested]
+        
+        zpos[~inested] = zposNonNested[~inested]
+        zpos[inested] = zposNested[inested]
+        
+        return xpos,ypos,zpos
+        
+    
+        
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist'):
         """Create a pseudo-section for 2D given electrode positions.
@@ -1484,56 +1635,19 @@ class Survey(object):
         vmax : float, optional
             Maximum value for the colorbar.
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
-        elecpos = self.elec['x'].values.copy() # we don't want the x values become np.inf in remote situation as it'll mess up future computeK()
         resist = self.df[column].values.copy()
+        xpos, _, ypos = self._computePseudoDepth()
         
         if geom: # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
-
-        # sorting the array in case of Wenner measurements (just for plotting)
-        # array = np.sort(array, axis=1) # for better presentation
-        
-        # Finding fully nested measurements
-        pos = elecpos[array]
-        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
-                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
         
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
-                       
-        elecpos[self.elec['remote'].values] = np.inf # so it will never be taken as minimium
-        
-        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-
-        # for non-nested measurements
-        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # for nested measurements
-        xposNested = pmiddle
-        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
-        
-        xpos = np.zeros_like(pmiddle)
-        ypos = np.zeros_like(pmiddle)
-        
-        xpos[~inested] = xposNonNested[~inested]
-        xpos[inested] = xposNested[inested]
-        
-        ypos[~inested] = yposNonNested[~inested]
-        ypos[inested] = yposNested[inested] 
-
+                               
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -1550,7 +1664,7 @@ class Survey(object):
             if vmax is None:
                 vmax = np.max(resist)
             levels = np.linspace(vmin, vmax, 13)
-            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
+            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels=levels, extend='both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
         
         ax.invert_yaxis() # to remove negative sign in y axis    
@@ -1561,7 +1675,7 @@ class Survey(object):
             return fig
         
         
-    def showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
+    def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
                            background_color=(0.8,0.8,0.8), elec_color='k'):
         """Create a pseudo-section for 3D surface array.
@@ -1569,7 +1683,7 @@ class Survey(object):
         Parameters
         ----------
         ax : matplotlib.Axes, optional
-            If specified, the plot will be plotted agains this axis.
+            If specified, the plot will be plotted against this axis.
         contour : bool, optional
             If `True`, contour will be plotted. Otherwise, only dots. Warning
             this is unstable. 
@@ -1585,8 +1699,12 @@ class Survey(object):
             Maximum value for the colorbar.
         """
         if not pyvista_installed:
-            print('pyvista not installed, cannot show 3D psuedo section')
-            return 
+            print('pyvista not installed, cannot show 3D pseudo section')
+            return
+        
+        #TODO contour is not working!
+        if contour:
+            contour = False
             
         if ax is None: # make a plotter object if not already given 
             ax = pv.BackgroundPlotter()
@@ -1597,60 +1715,30 @@ class Survey(object):
                 raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
             ax.set_background(background_color)
             
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
-
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
-            
+        
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+        elif column =='ip':
+            label = r'$\phi$ [mrad]'
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
 
         if vmin is None:
-            vmin = np.min(resist)
+            vmin = np.nanmin(resist)
         if vmax is None:
-            vmax = np.max(resist)
+            vmax = np.nanmax(resist)
         
-        if self.elec['remote'].sum() > 0: # how to deal with remote electrodes?!! 
-            raise Exception('Remote electrodes not currently supported for 3D pseudo sections')
-        #     elec = elec[self.iremote!=True,:] # ignore the 
-            
-        #might be a better way to do this than looping, for example caculating the euclidian matrix (can be RAM limiting)
-        #or use SciPy's KDTree
-        def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
-            dist = np.zeros((len(elec_x),len(elec_x)))   
-            x1 = np.array(elec_x)
-            y1 = np.array(elec_y)
-            z1 = np.array(elec_z)
-            for i in range(len(elec_x)):
-                x2 = elec_x[i]
-                y2 = elec_y[i]
-                z2 = elec_z[i]
-                dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
-            return dist.flatten() # array of all electrode distances 
+        dp_x,dp_y,dp_z = self._computePseudoDepth() # get dipole depths 
+        #Nb pseudo depths are returned as positive 
         
-        #loop to work out the 3D setup of the apparent resistivity measurements 
-        nmeas = array.shape[0]
-        dp_x = np.zeros(nmeas)
-        dp_y = np.zeros(nmeas)
-        dp_z = np.zeros(nmeas)
-        for i in range(nmeas):
-            dp_elec = elec[array[i]-1,:]
-            dp_dist = np.max(find_dist(dp_elec[:,0], dp_elec[:,1], dp_elec[:,2]))
-            dp_x[i] = np.mean(dp_elec[:,0])
-            dp_y[i] = np.mean(dp_elec[:,1])
-            dp_z[i] = np.mean(dp_elec[:,2]) - dp_dist/2
-        
-        points = np.array([dp_x,dp_y,dp_z]).T
+        points = np.array([dp_x,dp_y,-dp_z]).T # convert to 3xn matrix. 
         pvpont = pv.PolyData(points)
         pvpont[label] = resist
         
@@ -1668,8 +1756,11 @@ class Survey(object):
         else:
             warnings.warn('3D contours are currently not stable!')
             ax.add_mesh(pvpont.outline())
-            levels = np.linspace(vmin, vmax, 13)
-            contrmesh = pvpont.contour(levels,scaler=resist)
+            levels = np.linspace(vmin, vmax, 13)[1:-1]
+            contrmesh = pvpont.contour(isosurfaces=levels)
+            #TODO somehow this does create an empty mesh
+            print(levels)
+            print(contrmesh)
             ax.add_mesh(contrmesh,
                         #cmap=color_map, #matplotlib colormap 
                         clim=[vmin,vmax], #color bar limits 
@@ -1709,12 +1800,8 @@ class Survey(object):
         fig : matplotlib figure
             If `ax` is not specified, the method returns a figure.
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values.copy()
-        
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
+        xpos, _, ypos = self._computePseudoDepth()
         
         if self.protocolIPFlag == True:
             ip = self.df['ip'].values
@@ -1723,42 +1810,6 @@ class Survey(object):
 
         label = r'$\phi$ [mrad]'
         
-
-        # sorting the array in case of Wenner measurements (just for plotting)
-        # array = np.sort(array, axis=1) # for better presentation
-        
-        # Finding fully nested measurements
-        pos = elecpos[array]
-        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
-                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
-        
-        elecpos[self.elec['remote']] = np.inf
-            
-        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-        
-        # for non-nested measurements
-        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # for nested measurements
-        xposNested = pmiddle
-        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
-        
-        xpos = np.zeros_like(pmiddle)
-        ypos = np.zeros_like(pmiddle)
-        
-        xpos[~inested] = xposNonNested[~inested]
-        xpos[inested] = xposNested[inested]
-        
-        ypos[~inested] = yposNonNested[~inested]
-        ypos[inested] = yposNested[inested]
-
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -1967,46 +2018,13 @@ class Survey(object):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
         
-        elecpos = self.elec['x'].values.copy()
-        
-        # Finding fully nested measurements
-        pos = elecpos[array]
-        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
-                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
-        
+        elecpos = self.elec['x'].values.copy()        
         elecpos[self.elec['remote']] = np.inf # so it will never be taken as minimium
-
+        xpos, _, ypos = self._computePseudoDepth()
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
         if log:
             val = np.sign(val)*np.log10(np.abs(val))
-
-        # array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
-        
-        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        cadd[np.isinf(cadd)] = 0 # they are nan because of our remote
-        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-        
-        # for non-nested measurements
-        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # for nested measurements
-        xposNested = pmiddle
-        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
-        
-        xpos = np.zeros_like(pmiddle)
-        ypos = np.zeros_like(pmiddle)
-        
-        xpos[~inested] = xposNonNested[~inested]
-        xpos[inested] = xposNested[inested]
-        
-        ypos[~inested] = yposNonNested[~inested]
-        ypos[inested] = yposNested[inested]
         
         def onpick(event):
             if lines[event.artist] == 'data':

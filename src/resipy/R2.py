@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '2.2.2' # ResIPy version (semantic versionning in use)
+ResIPy_version = '2.2.3' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -94,33 +94,28 @@ def checkExe(dirname):
 checkExe(os.path.join(apiPath, 'exe'))
             
 #%% system check
-# def wineCheck():
-#     #check operating system
-#     OpSys=platform.system()
-#     #detect wine
-#     if OpSys == 'Linux':
-#         p = Popen("wine --version", stdout=PIPE, shell=True)
-#         is_wine = str(p.stdout.readline())
-#         if is_wine.find("wine") == -1:
-#             print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `sudo apt-get install wine-stable`.')
-#         else:
-#             pass
-
-#     elif OpSys == 'Darwin':
-#         try:
-#             winePath = []
-#             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-#             for stdout_line in iter(wine_path.stdout.readline, ''):
-#                 winePath.append(stdout_line)
-#             if winePath != []:
-#                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-#             else:
-#                 is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
-
-#         except:
-#             print('wine could not be found on your system. resipy needs wine to run the inversion. You can install wine by running `brew install wine`.')
-
-# wineCheck()
+def getSysStat():
+    """Return processor speed and usage, and free RAM and usage. 
+    Returns
+    -------
+    cpu_speed: float
+        in Mhz.
+    cpu_usage: float
+        in percent. 
+    ram_avail: float
+        avialable memory.
+    ram_usage: float
+        in percent. 
+    """
+    #processor info
+    cpu_speed = psutil.cpu_freq()[0]
+    cpu_usage = psutil.cpu_percent()
+        
+    #check the amount of ram avialable 
+    ram = psutil.virtual_memory()
+    ram_avail = ram[1]*9.31e-10
+    ram_usage = ram[2]
+    return cpu_speed, cpu_usage, ram_avail, ram_usage 
 
 def systemCheck(dump=print):
     """Performs a simple diagnostic of the system, no input commands needed. System
@@ -1574,7 +1569,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
         self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
-        self.param['reqMemory'] = sysinfo['availMemory'] - self._estimateMemory() # if negative then we need more RAM
+        self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory() # if negative then we need more RAM
         
         # define zlim
         if surface is not None:
@@ -4354,7 +4349,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 count += 1
         print("%i surveys removed as they had no measurements!"%count)
         
-    def _computeMemory(self,dump=print,inverse=True,debug=False):
+    def _estimateMemory(self,dump=print,inverse=True,debug=False):
         """More accurate calculation of the amount of memory required
         to run a forward model or inversion. 
         
@@ -4391,15 +4386,10 @@ class R2(object): # R2 master class instanciated by the GUI
                 nmeas.append(sum(ie))
             num_ind_meas=np.mean(nmeas)
                     
-        #nsize A computation (not needed currently)
-        if self.mesh.neigh_matrix is None: # compute neighbour matrix, this is needed for calculation of nsizeA 
-            self.mesh.computeNeigh() 
-        neigh = np.array(self.mesh.neigh_matrix).T # nieghbour matrix 
-        out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
-        extra_connect = sum(out_elem) # for every outside element add 1 to the number of respective number of node connections 
+        #nsize A estimation - describes number of connected nodes 
         kxf = self.mesh.connection.flatten() # flattened connection matrix
         uni_node, counts = np.unique(kxf,return_counts=True)
-        nsizeA = (np.sum(counts) + extra_connect)
+        nsizeA = (np.sum(counts) - self.mesh.numel) # an estimate only of NsizeA
         
         #other mesh parameters 
         numnp = self.mesh.numnp
@@ -4414,20 +4404,37 @@ class R2(object): # R2 master class instanciated by the GUI
         #electrodes 
         num_electrodes = len(self.elec)
         
-        memDP=numnp*(8+num_electrodes)+nsizeA+numel+num_ind_meas * 2
-        memR=0
-        memI=numnp*2+(npere+2)*numel+numnp+1+nsizeA+num_electrodes*3+num_ind_meas*12
-        memL=numel*2
-          
-        if inverse: 
-            memDP=memDP+num_param*9+num_ind_meas*(num_param+6) 
-            memR=memR+(num_param*nfaces)
-            memI=memI+num_param*nfaces         
+        # this refers to the roughness matrix in 2D problems
+        if 'inverse_type' in self.param and self.param['inverse_type'] == 2:
+            numRterm = 13 
+        else:
+            numRterm = 5 
+        
+        if self.typ == 'R3t' or self.typ =='cR3t': # do 3D calculation 
+            memDP=numnp*(8+num_electrodes)+nsizeA+numel+num_ind_meas * 2
+            memR=0
+            memI=numnp*2+(npere+2)*numel+numnp+1+nsizeA+num_electrodes*3+num_ind_meas*12
+            memL=numel*2
+              
+            if inverse: 
+                memDP=memDP+num_param*9+num_ind_meas*(num_param+6) 
+                memR=memR+(num_param*nfaces)
+                memI=memI+num_param*nfaces    
+        else: # do 2D calculation
+            memDP=(numnp)*(4+num_electrodes)+nsizeA+numel+num_ind_meas*4+num_ind_meas
+            memR=0
+            memI=numnp*(8+nsizeA)+num_ind_meas*8
+            memL=numel+numnp
+
+            if inverse:
+                memDP=numel+memDP+num_param*10+num_ind_meas*(num_param+6) 
+                memR=memR+num_param*numRterm
+                memI=memI+num_param*numRterm
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
         dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
         
-        avialMemory = sysinfo['availMemory']
+        avialMemory = getSysStat()[2]
         if Gb >= avialMemory:
             dump('*** It is likely that more RAM is required for inversion! ***\n'
                  '*** Make a coarser mesh ***')
@@ -4449,7 +4456,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         return Gb
     
-    def _estimateMemory(self,dump=print):
+    def _estimateMemoryJac(self,dump=print):
         """Estimates the memory needed by inversion code to formulate 
         a jacobian matrix
 

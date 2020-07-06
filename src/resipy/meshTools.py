@@ -856,19 +856,18 @@ class Mesh:
         tri_mesh.numel = self.numel*2
         tri_mesh.cell_type=[5]
         
-        #tri_mesh.cell_attributes = np.repeat(self.cell_attributes,2)
-        
-        tri_mesh.cellCentres()
+        tri_df = {}
         
         if self.df is not None:
             calculated = ['X','Y','Z']
             for key in self.df.keys():
                 if key not in calculated:
                     a = np.repeat(self.df[key],2) # repeat cell attributes 
-                    tri_mesh.df[key] = a
-                
-        tri_mesh.orderNodes()
+                    tri_df[key] = a
         
+        tri_mesh.df = pd.DataFrame(tri_df) #reassign dataframe 
+        tri_mesh.orderNodes() # order the nodes 
+        tri_mesh.cellCentres() # calculate cell centres 
         return tri_mesh
         
         
