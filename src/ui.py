@@ -5227,76 +5227,76 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pdebug('importFile:', fname)
         if len(self.r2.surveys) > 0:
             self.r2.surveys = []
-        # try:                
-        self.loadingWidget('Loading data, please wait...', False) # for large datasets
-        self.ipCheck.setEnabled(True)
-        self.psContourCheck.setEnabled(True)
-        self.fname = fname
-        self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
-        if float(self.spacingEdit.text()) == -1:
-            spacing = None
-        else:
-            spacing = float(self.spacingEdit.text())
-        try:
-            self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
-                                 parser=self.parser)
-            # self.calcAspectRatio()
-            if 'magErr' in self.r2.surveys[0].df.columns:
-                self.a_wgt.setText('0.0')
-                self.b_wgt.setText('0.0')
-        except:
-            self.errorDump('File is not recognized.')
+        try:                
+            self.loadingWidget('Loading data, please wait...', False) # for large datasets
+            self.ipCheck.setEnabled(True)
+            self.psContourCheck.setEnabled(True)
+            self.fname = fname
+            self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
+            if float(self.spacingEdit.text()) == -1:
+                spacing = None
+            else:
+                spacing = float(self.spacingEdit.text())
+            try:
+                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                                     parser=self.parser)
+                # self.calcAspectRatio()
+                if 'magErr' in self.r2.surveys[0].df.columns:
+                    self.a_wgt.setText('0.0')
+                    self.b_wgt.setText('0.0')
+            except:
+                self.errorDump('File is not recognized.')
+                pass
+            pdebug('importFile: setting up UI')
+            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
+                # we need more than a single reciprocal to fit error model and so
+                self.importDataRecipBtn.show()
+                self.recipOrNoRecipShow(recipPresence = False)
+            else:
+                self.recipOrNoRecipShow(recipPresence = True)
+                self.importDataRecipBtn.hide()
+                self.tabPreProcessing.setTabEnabled(2, True)
+                self.filterAttrCombo.addItem('Reciprocal Error')
+                self.plotError()
+                self.errHist()
+            if 'dev' in self.r2.surveys[0].df.columns:
+                self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                
+            if self.r2.elec['remote'].sum() > 0:
+                self.meshQuadGroup.setEnabled(False)
+            else:
+                self.meshQuadGroup.setEnabled(True)
+            if self.boreholeCheck.isChecked() is True:
+                self.r2.setBorehole(True)
+            else:
+                self.r2.setBorehole(False)
+            self.plotManualFiltering()
+            self.elecTable.initTable(self.r2.elec)
+            self.tabImporting.setTabEnabled(1,True)
+            if 'ip' in self.r2.surveys[0].df.columns:
+                if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                    self.ipCheck.setChecked(True)
+                if self.ftype == 'Syscal':
+                    self.dcaButton.setEnabled(True)
+                    self.dcaProgress.setEnabled(True)
+            if np.isnan(self.r2.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
+                self.topoInterpBtnFunc()
+                self.updateElec()
+            self.plotPseudo()
+            self.loadingWidget(exitflag=True) #close the loading widget
+            self.infoDump(fname + ' imported successfully')
+            self.invNowBtn.setEnabled(True)
+            self.activateTabs(True)
+            self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
+            self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2]))[0]))
+            self.fnamesCombo.hide()
+            self.fnamesComboLabel.hide()
+        except Exception as e:
+            self.loadingWidget(exitflag=True)
+            pdebug('importFile: ERROR:', e)
+            self.errorDump('Importation failed. File is not being recognized. \
+                      Make sure you have selected the right file type.')
             pass
-        pdebug('importFile: setting up UI')
-        if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
-            # we need more than a single reciprocal to fit error model and so
-            self.importDataRecipBtn.show()
-            self.recipOrNoRecipShow(recipPresence = False)
-        else:
-            self.recipOrNoRecipShow(recipPresence = True)
-            self.importDataRecipBtn.hide()
-            self.tabPreProcessing.setTabEnabled(2, True)
-            self.filterAttrCombo.addItem('Reciprocal Error')
-            self.plotError()
-            self.errHist()
-        if 'dev' in self.r2.surveys[0].df.columns:
-            self.filterAttrCombo.addItem('Stacking Error (Dev.)')
-            
-        if self.r2.elec['remote'].sum() > 0:
-            self.meshQuadGroup.setEnabled(False)
-        else:
-            self.meshQuadGroup.setEnabled(True)
-        if self.boreholeCheck.isChecked() is True:
-            self.r2.setBorehole(True)
-        else:
-            self.r2.setBorehole(False)
-        self.plotManualFiltering()
-        self.elecTable.initTable(self.r2.elec)
-        self.tabImporting.setTabEnabled(1,True)
-        if 'ip' in self.r2.surveys[0].df.columns:
-            if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                self.ipCheck.setChecked(True)
-            if self.ftype == 'Syscal':
-                self.dcaButton.setEnabled(True)
-                self.dcaProgress.setEnabled(True)
-        if np.isnan(self.r2.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
-            self.topoInterpBtnFunc()
-            self.updateElec()
-        self.plotPseudo()
-        self.loadingWidget(exitflag=True) #close the loading widget
-        self.infoDump(fname + ' imported successfully')
-        self.invNowBtn.setEnabled(True)
-        self.activateTabs(True)
-        self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
-        self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2]))[0]))
-        self.fnamesCombo.hide()
-        self.fnamesComboLabel.hide()
-        # except Exception as e:
-        #     self.loadingWidget(exitflag=True)
-        #     pdebug('importFile: ERROR:', e)
-        #     self.errorDump('Importation failed. File is not being recognized. \
-        #               Make sure you have selected the right file type.')
-        #     pass
 
     def restartFunc(self):
         pdebug('restartFunc: creating new R2 object')
