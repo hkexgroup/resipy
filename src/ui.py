@@ -428,6 +428,13 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
+            try: # to force update the pseudo sections
+                if self.r2 is not None:
+                    self.plotPseudo()
+                    if self.r2.typ[0] == 'c':
+                        self.plotPseudoIP()
+            except:
+                pass
 
         self.m2DRadio = QRadioButton('2D')
         self.m2DRadio.setChecked(True)
@@ -5234,7 +5241,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(True)
             self.fname = fname
-            self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
             if float(self.spacingEdit.text()) == -1:
                 spacing = None
             else:
@@ -5286,6 +5292,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.updateElec()
             self.plotPseudo()
             self.loadingWidget(exitflag=True) #close the loading widget
+            self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
             self.infoDump(fname + ' imported successfully')
             self.invNowBtn.setEnabled(True)
             self.activateTabs(True)
