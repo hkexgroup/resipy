@@ -5155,23 +5155,25 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pdebug('plotPseudo()')
         if (pvfound 
             & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
-            & (self.boreholeCheck.isChecked() == False)):
+            & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotter.clear()
             self.r2.showPseudo(ax=self.pseudoPlotter, **self.pParams)
         else:
             self.mwPseudo.setCallback(self.r2.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
+        QApplication.processEvents()
     
     def plotPseudoIP(self):
         pdebug('plotPseudoIP()')
         if (pvfound 
             & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
-            & (self.boreholeCheck.isChecked() == False)):
+            & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotterIP.clear()
             self.r2.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP)
         else:
             self.mwPseudoIP.setCallback(self.r2.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
+        QApplication.processEvents()
 
     def activateTabs(self, val=True):
         if self.iForward is False:
