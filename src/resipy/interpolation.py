@@ -639,6 +639,13 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
         z coordinates at xnew and ynew. 
         
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)
     for i,(x,y) in enumerate(zip(xnew, ynew)):
@@ -696,6 +703,13 @@ def triangulate(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     znew: numpy array
         z coordinates at xnew and ynew.  
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     #error checking 
     if len(xnew) != len(ynew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
@@ -757,6 +771,13 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False):
         z coordinates at xnew and ynew.  
         
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     #error checking 
     if len(xnew) != len(ynew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
@@ -803,6 +824,13 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
         extrapolated values at (xnew ynew znew) coordinates 
         
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     #error checking 
     if len(xnew) != len(ynew) or len(xnew) != len(znew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
