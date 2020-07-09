@@ -4,7 +4,7 @@ GUI for R2 family of codes
 
 ResIPy is a Python wrapper around the [R2 family of codes](http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm) (for 2D/3D DC/IP inversion).
 ResIPy provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
-for use in Jupyter notebook. Have a look at the [**documentation and the examples**](https://hkex.gitlab.io/pyr2) to know more.
+for use in Jupyter notebook. Have a look at the [**documentation and the examples**](https://hkex.gitlab.io/pyr2) or subscribe to our [**YouTube channel (ResIPy)**](https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q) to learn more.
 
 ResIPy aims to be 
 - (1) **Simple and intuitive** to use (you can invert your data in one-click with all default settings)
