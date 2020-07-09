@@ -3573,7 +3573,8 @@ class R2(object): # R2 master class instanciated by the GUI
         if all(self.elec['z'].values == 0) is False: # so we have topography
             print('New mesh created with flat topo...', end='')
             meshParams = self.meshParams.copy()
-            meshParams['interp_method'] = None # dont do any interpolation 
+            if '3' in self.typ:#change interp method 
+                meshParams['interp_method'] = None # dont do any interpolation 
             self.createModelErrorMesh(**meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh # create flat mesh
