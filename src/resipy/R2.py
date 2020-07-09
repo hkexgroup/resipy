@@ -1767,6 +1767,12 @@ class R2(object): # R2 master class instanciated by the GUI
                 self.param['a_wgt'] = 0.02 # variance for magnitude (no more offset)
             if 'b_wgt' not in self.param:
                 self.param['b_wgt'] = 2 # mrad
+        
+        #catch infinite z limits 
+        if 'zmin' in self.param and self.param['zmin'] == np.inf:
+            self.param['zmin'] = np.min(self.mesh.node[:,2]) - 10 
+        if 'zmax' in self.param and self.param['zmax'] == np.inf:
+            self.param['zmax'] = np.max(self.mesh.node[:,2]) + 10 
 
         # all those parameters are default but the user can change them and call
         # write2in again
@@ -3567,8 +3573,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if all(self.elec['z'].values == 0) is False: # so we have topography
             print('New mesh created with flat topo...', end='')
             meshParams = self.meshParams.copy()
-            if 'interp_method' in meshParams:
-                meshParams['interp_method'] = None # dont do any interpolation 
+            meshParams['interp_method'] = None # dont do any interpolation 
             self.createModelErrorMesh(**meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh # create flat mesh
@@ -4010,10 +4015,7 @@ class R2(object): # R2 master class instanciated by the GUI
             **Windows ONLY** maps to the excuatable paraview.exe. The program
             will attempt to find the location of the paraview install if not given.
         """
-        if self.typ[-1] == '2':
-            fname = 'f{:03d}_res.vtk'.format(index+1)
-        else:
-            fname = 'f{:03d}.vtk'.format(index+1)
+        fname = 'f{:03d}_res.vtk'.format(index+1)
         self._toParaview(os.path.join(self.dirname, fname), paraview_loc=paraview_loc)
 
 
