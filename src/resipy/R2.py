@@ -1655,6 +1655,16 @@ class R2(object): # R2 master class instanciated by the GUI
             flag_3D = False
         self.mesh = mt.readMesh(file_path, node_pos=node_pos, 
                                           order_nodes=order_nodes)
+
+        # recover region based on resistivity
+        if file_path[-4:] == '.vtk':
+            if 'Resistivity(ohm.m)' in self.mesh.df.columns:
+                res = self.mesh.df['Resistivity(ohm.m)']
+                ures = np.unique(res)
+                for i, reg in enumerate(ures):
+                    ie = res == reg
+                    self.mesh.df.loc[ie, 'region'] = i+1
+            
         if elec is not None:
             self.mesh.moveElecNodes(elec[:,0], elec[:,1], elec[:,2])
 

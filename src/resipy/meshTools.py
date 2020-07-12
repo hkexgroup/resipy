@@ -3300,7 +3300,7 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
                     np.array(con_mat).T,#nodes of element vertices
                     cell_type,#according to vtk format
                     file_path,
-                    order_nodes=False) #nb: nodes should ordered already  
+                    order_nodes) #nb: nodes should ordered already, not if quad  
     else:
         mesh = Mesh(node_x,#x coordinates of nodes 
                     node_y,#y coordinates of nodes
