@@ -249,7 +249,7 @@ class Mesh:
         self.numnp = len(node_x) # ninum >>> use Andy's naming scheme 
         self.numel = node_data.shape[0] # numel 
         self.node = np.array([node_x,node_y,node_z]).T 
-        self.connection = np.array(node_data,dtype='int64') #connection matrix # connection 
+        self.connection = np.array(node_data,dtype='int64') #connection matrix
         self.cell_type = cell_type # cellType
         self.originalFilePath = original_file_path # originalFilePath 
         self.eNodes  = None # node number that electrodes occupy # eNode 
@@ -469,49 +469,38 @@ class Mesh:
             Function returns the number of reordered elements, default is False. 
         """
         con_mat = self.connection
-        con_mata = con_mat.copy() # new object of the connection matrix to reference
+        con_mata = self.connection.copy() # new object of the connection matrix to reference
         node_x = self.node[:,0]
         node_y = self.node[:,1]
         node_z = self.node[:,2]
         count = 0
         
-        if int(self.cell_type[0])==5:#then elements are triangles
-            for i in range(self.numel):
-                n1=(node_x[con_mat[i][0]],node_z[con_mat[i][0]])#define node coordinates
-                n2=(node_x[con_mat[i][1]],node_z[con_mat[i][1]])
-                n3=(node_x[con_mat[i][2]],node_z[con_mat[i][2]])
-                #compute triangle centre
-                if interp.ccw(n1,n2,n3)==1:
-                    count+=1
-                    #points are clockwise and therefore need swapping round
-                    con_mat[i][1] = con_mata[i][0]
-                    con_mat[i][0] = con_mata[i][1]
+        if int(self.cell_type[0])==5:#then elements are triangles, now vectorised
+            p = np.array((node_x[con_mata[:,0]], node_z[con_mata[:,0]])).T
+            q = np.array((node_x[con_mata[:,1]], node_z[con_mata[:,1]])).T
+            r = np.array((node_x[con_mata[:,2]], node_z[con_mata[:,2]])).T
+            ccw = interp.ccwv(p, q, r)
+            ds = ccw==1 # do switch 
+            ns = ccw!=1 # no switch
+            con_mat = np.zeros_like(con_mata)
+            con_mat[:,0] = con_mata[:,0]
+            con_mat[ds,1] = con_mata[ds,2]
+            con_mat[ns,1] = con_mata[ns,1]
+            con_mat[ds,2] = con_mata[ds,1]
+            con_mat[ns,2] = con_mata[ns,2]
+            count = np.sum(ds)
                     
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
-            for i in range(self.numel):
-                p = self.node[con_mat[i]].T
-                #compute triangle centre
-                order = interp.order_quad(p[0],p[2])
-                if list(order) != [0,1,2,3]:
-                    count+=1
-                    #points are not counter clockwise
-                    con_mat[i][0] = con_mata[i][order[0]]
-                    con_mat[i][1] = con_mata[i][order[1]]
-                    con_mat[i][2] = con_mata[i][order[2]]
-                    con_mat[i][3] = con_mata[i][order[3]]
+            con_mat, count = mc.orderQuad(np.asarray(self.connection,dtype='int64'),
+                                          self.node) # call cython 
                     
         elif int(self.cell_type[0]) == 11: # elements are voxels
-            #print('Node ordering scheme not avialable with this mesh type')
+            #Node ordering scheme not avialable with this mesh type
             return
         
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
-            for i in range(self.numel):
-                p = self.node[con_mat[i]].T
-                
-                if interp.check_tetra(p[0],p[1],p[2]) == 1:
-                    count += 1
-                    con_mat[i][1] = con_mata[i][0]
-                    con_mat[i][0] = con_mata[i][1]
+            con_mat, count, _ = mc.orderTetra(np.asarray(self.connection,dtype='int64'),
+                                              self.node) # call cython 
                     
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 
             for i in range(self.numel):
