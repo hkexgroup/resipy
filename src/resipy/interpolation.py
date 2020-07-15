@@ -206,45 +206,6 @@ def check_tetra(x,y,z):
         return 0 # something dogdey has happened as all points are on the same plane 
     
 
-def check_tetra2(x, y, z): # TODO vectorized version
-    """Check if 4 points in a tetrahedra are ordered counter clocwise
-    Parameters
-    -----------
-    x : array like 
-        x coordinates of tetrahedral cell, 4 by N array. 
-    y : array like 
-        y coordinates of tetrahedral cell, 4 by N array. 
-    z : array like 
-        z coordinates of tetrahedral cell, 4 by N array.
-    
-    Returns
-    -------
-    An array with:
-        0 if coplanar
-        1 if clockwise
-        2 if counter clockwise
-    """
-
-    p = np.array([z for z in zip(x,y,z)]) # list of [x, y, z] points coords
-    print(p)
-    S = np.cross(p[1] - p[0], p[2] - p[0])
-    N = np.dot(S, p[0] - p[3])
-    
-    if N>0:
-        return 1 # points are clockwise
-    elif N<0:
-        return 2 # points are counter clockwise
-    else:
-        return 0 # something dogdey has happened as all points are on the same plane 
-
-# a = np.random.randn(4,3)
-# b = np.random.randn(4,3)
-# x = a[:,0]
-# y = a[:,1]
-# z = a[:,2]
-# check_tetra2(x, y, z)
-
-
 #check order of 4 points  
 def order_quad(x,y,raycast=100000):
     """Order 4 points in a quad 

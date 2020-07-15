@@ -1,12 +1,14 @@
 cimport cython  #import relevant modules 
-cimport numpy 
 import math as ma
 import numpy as np
+cimport numpy as np
+from cython.parallel import prange
 
+DINT = np.intc
 # mesh calculations - need to be in cython otherwise they will take too long 
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
 @cython.wraparound(False)
-@cython.nonecheck(False)                      
+@cython.nonecheck(False)           
 def bisection_search(list arr, long long int var):
     """Efficent search algorithm for sorted lists of ints 
     Parameters
@@ -30,6 +32,7 @@ def bisection_search(list arr, long long int var):
             return m
     return -1
 
+@cython.boundscheck(False)
 def unique(list arr): # unique with out numpy for an array of ints 
     """Find the unique values inside a list of ints (ONLY!!).Relies on the 
     efficeint bisection search as above. 
@@ -70,8 +73,8 @@ def int2str(int a, int pad):
     cdef str s
     s = '{:0>%id}'%pad
     return s.format(a)
-    
-                        
+       
+@cython.boundscheck(False)                 
 def neigh3d(tuple con_mat, int return_tri_combo):
     """Compute neighbours of each element within a 3D tetrahedral mesh 
     Parameters
@@ -167,6 +170,7 @@ def neigh3d(tuple con_mat, int return_tri_combo):
     else:
         return neigh
 
+@cython.boundscheck(False)
 def neigh2d(tuple con_mat, int return_tri_combo=0):
     """Compute neighbours of each element within a 2D triangular mesh 
     Parameters
@@ -259,78 +263,7 @@ def neigh2d(tuple con_mat, int return_tri_combo=0):
     else:
         return neigh
     
-def tri_combo(tuple con_mat):
-    """Compute node combination for tetrahedra
-    -------------
-    con_mat: tuple of length 4
-        Each entry in tuple is a list column on the connection matrix in the 
-        3D mesh. 
-    
-    Returns
-    --------------
-    tri_combo: tuple
-        Corresponding node combination indexes for each face of the cells in the 
-        connection matrix
-    """
-    
-    cdef int i,idx1,idx2,idx3,idx4
-    cdef int num_elem = len(con_mat[0])
-    cdef list face1s, face2s, face3s, face4s
-    cdef str face1t, face2t, face3t, face4t
-    cdef long long int face1, face2, face3, face4
-    cdef tuple tri_combo = ([0]*num_elem,[0]*num_elem,[0]*num_elem,[0]*num_elem) # allocate space for tri_combo 
-    
-    for i in range(num_elem):
-        idx1 = con_mat[0][i]#extract indexes 
-        idx2 = con_mat[1][i]
-        idx3 = con_mat[2][i]
-        idx4 = con_mat[3][i]
-        
-        # assign each face an organised and unique code
-        #sort face indexes 
-        face1s = sorted((idx2,idx3,idx4))
-        face2s = sorted((idx1,idx4,idx3))
-        face3s = sorted((idx1,idx2,idx4))
-        face4s = sorted((idx1,idx2,idx3))
-        face1t = str(face1s[0])+str(face1s[1])+str(face1s[2])
-        face2t = str(face2s[0])+str(face2s[1])+str(face2s[2])
-        face3t = str(face3s[0])+str(face3s[1])+str(face3s[2])
-        face4t = str(face4s[0])+str(face4s[1])+str(face4s[2])
-        face1 = int(face1t)
-        face2 = int(face2t)
-        face3 = int(face3t)
-        face4 = int(face4t)
-    
-        tri_combo[0][i] = face1#face 1 
-        tri_combo[1][i] = face2#face 2 
-        tri_combo[2][i] = face3#face 3 
-        tri_combo[3][i] = face4#face 4 
-    
-    return tri_combo 
-
-def group(tuple neigh_matrix, list groupings):
-    """Group elements according to thier neighbours 
-    """
-    cdef int i, pt, a, j, h
-    cdef int loops = len(groupings) # number of elements to loop through 
-    cdef int dims = len(neigh_matrix) # dimensions of neighbour matrix
-    cdef list param = [0]*loops
-    
-    pt = 0 
-    for i in range(loops):
-        if param[i]==0: # then the element is ungrouped
-            pt += 1
-            param[i] = pt
-            a = 0 # number of parameters assigned per element
-            for j in range(dims):
-                h = neigh_matrix[j][i]
-                if h!=-1 and param[h]==0 and a<=groupings[i]: # make sure its not already paired or on the edge
-                    a += 1
-                    param[h] = pt
-                    
-    return param
-
-
+@cython.boundscheck(False)
 def split_tri(list con_mat, list node_x, list node_y, list node_z):
     """Split triangle elements down into 4 smaller triangles 
     Parameters
@@ -443,6 +376,7 @@ def split_tri(list con_mat, list node_x, list node_y, list node_z):
                 
     return new_con_mat, outx, outy, outz, len(new_con_mat[0]), len(node_x)+len(nnodex)
 
+@cython.boundscheck(False)
 def split_tetra(list con_mat, list node_x, list node_y, list node_z):
     """Split tetrahedral elements down into 8 smaller tetrahedra 
     Parameters
@@ -564,3 +498,192 @@ def split_tetra(list con_mat, list node_x, list node_y, list node_z):
     cdef list outz = node_z+nnodez
                     
     return new_con_mat, outx, outy, outz, len(new_con_mat[0]), len(node_x)+len(nnodex)
+
+@cython.boundscheck(False)
+def orderTetra(long[:,:] connection, double[:,:] node):
+    """ Organise tetrahedral element nodes into a clockwise order
+    
+    following solution at: 
+    https://stackoverflow.com/questions/10612829/tetrahedron-orientation-for-triangle-meshes
+    
+    Parameters
+    ----------
+    connection: np array (long)
+        Mesh connection matrix, N by 4 array. 
+    node: np array (float64)
+        N by 3 array describing the mesh nodes 
+
+    Returns
+    -------
+    con : np array (long)
+        Mesh connection matrix which has been 'corrected' such that all elements
+        are counterclockwise. 
+    count : TYPE
+        Number of elements with switched nodes (ie been 'corrected')
+    """
+    #get the number of nodes and elements etc 
+    cdef int numel = connection.shape[0]
+    cdef int npere = connection.shape[1]
+    cdef int count = 0 #rolling total for the number of corrected elements 
+    
+    con = np.zeros((numel,npere), dtype=DINT)# new connection matrix 
+    cdef int[:,:] conv = con # connection memeory view
+    
+    cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
+    cdef np.ndarray[double, ndim=1] node_y = np.asarray(node[:,1],dtype=float)
+    cdef np.ndarray[double, ndim=1] node_z = np.asarray(node[:,2],dtype=float)
+
+    #looping variables 
+    cdef np.ndarray[double,ndim=2] v = np.zeros((3,3),dtype=float) # matrix
+    cdef np.ndarray[double,ndim=1] v1 = np.zeros(3) # comparison vector 
+    cdef np.ndarray[double,ndim=1] v2 = np.zeros(3)
+    cdef np.ndarray[double,ndim=1] v3 = np.zeros(3)
+    cdef np.ndarray[double,ndim=1] S = np.zeros(3)
+    cdef double N # orientation indicator 
+    cdef np.ndarray[long, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
+    cdef int i, k # loop integers 
+    cdef int num_threads = 2 # number of threads to use (using 2 for now)
+
+    for i in prange(numel, nogil=True, num_threads=num_threads):
+        for k in range(3): # work out delta matrix 
+            v[0,k] = node_x[connection[i,k+1]] - node_x[connection[i,0]] 
+            v[1,k] = node_y[connection[i,k+1]] - node_y[connection[i,0]] 
+            v[2,k] = node_z[connection[i,0]] - node_z[connection[i,k+1]] 
+            
+        for k in range(3): #extract delta vectors 
+            v1[k] = v[k,0]
+            v2[k] = v[k,1]
+            v3[k] = v[k,2]
+        
+        #compute cross product
+        S[0] = v1[1]*v2[2] - v1[2]*v2[1]
+        S[1] = v1[2]*v2[0] - v1[0]*v2[2]
+        S[2] = v1[0]*v2[1] - v1[1]*v2[0]
+        #compute dot product (gives orientation)
+        N = S[0]*v3[0] + S[1]*v3[1] + S[2]*v3[2]
+        
+        if N>0: # then tetrahedra is clockwise 
+            count += 1
+            conv[i,1] = connection[i,0]
+            conv[i,0] = connection[i,1]
+            ccw[i] = 1
+        elif N<0: # then its counter clockwise 
+            conv[i,0] = connection[i,0]
+            conv[i,1] = connection[i,1]
+            ccw[i] = 2
+        else: # shouldn't be possible 
+            ccw[i] = 0
+            
+        conv[i,2] = connection[i,2]
+        conv[i,3] = connection[i,3]
+    
+    for i in range(numel):
+        if ccw[i]==0:
+            raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered')
+            
+    return con, count, ccw
+
+@cython.boundscheck(False)
+def orderQuad(long[:,:] connection, double[:,:] node):
+    """Order quaderlateral elements counterclockwise 
+    
+    Parameters
+    ----------
+    connection: np array (long)
+        Mesh connection matrix, N by 4 array. 
+    node: np array (float64)
+        N by 3 array describing the mesh nodes 
+
+    Returns
+    -------
+    con : np array (long)
+        Mesh connection matrix which has been 'corrected' such that all elements
+        are counterclockwise. 
+    count : TYPE
+        Number of elements with switched nodes (ie been 'corrected')
+    """
+    #get the number of nodes and elements etc 
+    cdef int numel = connection.shape[0]
+    cdef int npere = connection.shape[1]
+    cdef int count = 0 # number of corrected elements 
+    
+    if npere!=4: 
+        raise ValueError('Got the wrong number of nodes per element when ordering mesh nodes')
+    
+    con = np.zeros((numel,npere), dtype=DINT)# new connection matrix 
+    cdef int[:,:] conv = con # connection view
+    
+    cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) 
+    cdef np.ndarray[double, ndim=1] node_y = np.asarray(node[:,1],dtype=float)
+    cdef np.ndarray[double, ndim=1] node_z = np.asarray(node[:,2],dtype=float)
+    
+    #loop varaibles 
+    cdef np.ndarray[double, ndim=1] x = np.zeros(4,dtype=float) # x array 
+    cdef np.ndarray[double, ndim=1] z = np.zeros(4,dtype=float) # z array 
+    cdef np.ndarray[double, ndim=1] xtmp = np.zeros(4,dtype=float)
+    cdef np.ndarray[double, ndim=1] ztmp = np.zeros(4,dtype=float)
+    cdef np.ndarray[double, ndim=1] theta = np.zeros(4,dtype=float) # theta array 
+    cdef np.ndarray[double, ndim=1] thetas = np.zeros(4,dtype=float) # sorted theta 
+    cdef np.ndarray[long, ndim=1] order = np.zeros(4,dtype=int) #ordering array
+    
+    cdef int i, k, c
+    cdef int num_threads = 2
+    cdef double minx, minz
+    cdef float xinf = 10*max(node_x) # infinite like x 
+    cdef float zinf = 10*max(node_z) # infinite like z 
+    cdef float rz, rx # ray casted coordinate
+    cdef float dx10, dx20, dz10, dz20, m01, m02
+
+    #aim is to work out angles from point with minimum x and z coordinate 
+    #min angle >>> bottom left most point 
+    #max angle >>> upper left most point
+    for i in range(numel):
+    #for i in prange(numel, nogil=True, num_threads=num_threads):
+        for k in range(4):
+            x[k] = node_x[connection[i,k]]
+            z[k] = node_z[connection[i,k]]
+        
+        #find starting x coordinate 
+        minx = min(x)
+        c = 0
+        #protect against colinear points on left hand side of quad 
+        for k in range(4):
+            if x[k] == minx:
+                ztmp[k] = z[k]
+                xtmp[k] = x[k] # put in array where x == min(x)
+                c= c + 1
+            else:
+                ztmp[k] = zinf
+                xtmp[k] = xinf
+                
+        minz = min(ztmp)        
+        if c>2: # then there is more than one min x coordinate (presumably 2 at most)
+            raise ValueError('Element %i has more than 2 colinear points and therefore not a quad'%i)
+        
+        #create order angle 
+        for k in range(4):
+            if x[k] == minx and z[k] == minz:
+                theta[k] = 0 # angle is zero becuase we are comparing on left bottom most point 
+            else:
+                rz = minz - zinf # ray casted coordinate below min z point
+                rx = minx
+                dx10 = rx - minx
+                dx20 = x[k] - minx
+                dz10 = rz - minz
+                dz20 = z[k] - minz
+                m01 = (dx10*dx10 + dz10*dz10)**0.5
+                m02 = (dx20*dx20 + dz20*dz20)**0.5
+                theta[k] = ma.acos((dx10*dx20 + dz10*dz20) / (m01 * m02))
+       
+        order = np.asarray(theta.argsort(),dtype=int) #sorted indices 
+        #note that this function needs the GIL and hence the loop can't be parallised 
+        
+        for k in range(k):# flag if order changes >>> count as ordered element 
+            if order[k] != k:#order has been changed 
+                count +=1 
+                break
+        
+        for k in range(4):
+            conv[i,k] = connection[i,order[k]]
+        
+    return con, count
