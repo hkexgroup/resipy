@@ -1553,7 +1553,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if (typ == 'trian') | (typ == 'tetra'):
                 for l in range(refine):
                     print('Refining...', end='')
-                    mesh.refine()
+                    mesh = mesh.refine()
             
             self.param['mesh_type'] = 3
             e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
