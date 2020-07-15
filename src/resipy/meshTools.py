@@ -698,13 +698,13 @@ class Mesh:
         print('refining mesh ...', end='')
         if self.ndims==2 and self.type2VertsNo()==3:
             #then its a triangle mesh
-            self.splitTri()
+            return self.splitTri()
         elif self.ndims==2 and self.type2VertsNo()==4:
             # then its a quad mesh (returns a new mesh)
             return self.quad2tri()
         elif self.ndims==3 and self.type2VertsNo()==4:
             #then its a tetra mesh 
-            self.splitTetra()
+            return self.splitTetra()
         else:
             print('Sorry not implimented for this mesh type yet')
             return 
