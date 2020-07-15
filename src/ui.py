@@ -716,7 +716,6 @@ class App(QMainWindow):
                     self.fnamesCombo.show()
                     self.fnamesComboLabel.show()
                     self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
-                    self.loadingWidget(exitflag=True)
                     self.elecTable.initTable(self.r2.elec)
                     self.tabImporting.setTabEnabled(1,True)
                     self.invNowBtn.setEnabled(True)
@@ -731,6 +730,7 @@ class App(QMainWindow):
                         self.errHist()
                     self.plotManualFiltering()
                     self.plotPseudo()
+                    self.loadingWidget(exitflag=True)
                     self.activateTabs(True)
                     if 'dev' in self.r2.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
@@ -5037,11 +5037,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if OS != 'Linux':
             if exitflag == False:
                 self.loadingDialogTxtWidget.setText(msgtxt)
-                self.loadingDialog.show()
-                QApplication.processEvents()
-            
+                self.loadingDialog.show()            
             else:
-                self.loadingDialog.accept()  
+                self.loadingDialog.accept() 
+            QApplication.processEvents()
             
     def calcAspectRatio(self): # for calculating aspect ratio of long surveys
         if self.r2.fmd is None:
@@ -5164,7 +5163,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.errorDump('Error updating pseudosection: ' + str(e))
     
     def plotPseudo(self):
-        QApplication.processEvents()
         pdebug('plotPseudo()')
         if (pvfound 
             & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
@@ -5174,10 +5172,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.mwPseudo.setCallback(self.r2.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
-        # QApplication.processEvents()
+        QApplication.processEvents()
     
     def plotPseudoIP(self):
-        QApplication.processEvents()
         pdebug('plotPseudoIP()')
         if (pvfound 
             & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
@@ -5187,7 +5184,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.mwPseudoIP.setCallback(self.r2.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
-        # QApplication.processEvents()
+        QApplication.processEvents()
 
     def activateTabs(self, val=True):
         if self.iForward is False:
