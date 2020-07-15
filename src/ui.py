@@ -717,7 +717,6 @@ class App(QMainWindow):
                     self.fnamesComboLabel.show()
                     self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     self.loadingWidget(exitflag=True)
-                    self.plotPseudo()
                     self.elecTable.initTable(self.r2.elec)
                     self.tabImporting.setTabEnabled(1,True)
                     self.invNowBtn.setEnabled(True)
@@ -731,6 +730,7 @@ class App(QMainWindow):
                         self.plotError()
                         self.errHist()
                     self.plotManualFiltering()
+                    self.plotPseudo()
                     self.activateTabs(True)
                     if 'dev' in self.r2.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
@@ -4154,13 +4154,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.pindex = self.pindex + 1
                 if a[0] == 'End':
                     self.end = True
-                if a[0] == 'Iteration':
+                if a[0] == 'Alpha:': # if initial RMS shows solution then this will be "FATAL:" instead
                     if self.typ[-1] == 't':
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
                         cropMaxDepth = self.cropBelowFmd.isChecked()
                     self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
-                                             cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
+                                              cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
+                elif a[0] == 'FATAL:':
+                    self.invertBtn.animateClick()
+                    self.errorDump('Error weights too high! lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+                    raise ValueError('*** Error weights too high! lower a_wgt and b_wgt or choose an error model. ***')
+                    
             return newFlag
 
         def plotRMS(ax):
@@ -5159,6 +5164,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.errorDump('Error updating pseudosection: ' + str(e))
     
     def plotPseudo(self):
+        QApplication.processEvents()
         pdebug('plotPseudo()')
         if (pvfound 
             & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
@@ -5168,9 +5174,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.mwPseudo.setCallback(self.r2.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
-        QApplication.processEvents()
+        # QApplication.processEvents()
     
     def plotPseudoIP(self):
+        QApplication.processEvents()
         pdebug('plotPseudoIP()')
         if (pvfound 
             & ((self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t')) 
@@ -5180,7 +5187,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.mwPseudoIP.setCallback(self.r2.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
-        QApplication.processEvents()
+        # QApplication.processEvents()
 
     def activateTabs(self, val=True):
         if self.iForward is False:
