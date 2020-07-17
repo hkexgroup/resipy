@@ -485,6 +485,9 @@ class Mesh:
         node_y = self.node[:,1]
         node_z = self.node[:,2]
         count = 0
+        dint = 'int64'
+        if platform.system() == 'Windows':
+            dint = 'int32' # avoid windows quirk where type long is actually a 32 bit integer 
         
         if int(self.cell_type[0])==5:#then elements are triangles, now vectorised
             p = np.array((node_x[con_mata[:,0]], node_z[con_mata[:,0]])).T
@@ -502,7 +505,7 @@ class Mesh:
             count = np.sum(ds)
                     
         elif int(self.cell_type[0])==8 or int(self.cell_type[0])==9:#elements are quads
-            con_mat, count = mc.orderQuad(np.asarray(self.connection,dtype='int64'),
+            con_mat, count = mc.orderQuad(np.asarray(self.connection,dtype=dint),
                                           self.node) # call cython 
                     
         elif int(self.cell_type[0]) == 11: # elements are voxels
@@ -510,7 +513,7 @@ class Mesh:
             return
         
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
-            con_mat, count, _ = mc.orderTetra(np.asarray(self.connection,dtype='int64'),
+            con_mat, count, _ = mc.orderTetra(np.asarray(self.connection,dtype=dint),
                                               self.node) # call cython 
                     
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 

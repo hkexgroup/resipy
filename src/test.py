@@ -577,3 +577,7 @@ k.createMesh()
 k.invert()
 k.showResults(index=0)
 k.showResults(index=1)
+
+t0 = time.time()
+k.mesh.orderNodes()
+t1 = time.time() - t0
