@@ -2,7 +2,15 @@
 from distutils.core import setup, Extension 
 from Cython.Build import cythonize
 import numpy as np
+import platorm
 
+if platorm.system() == 'Linux':
+    earg = '-fopenmp'
+elif platorm.system() == 'Windows':
+    earg = '/openmp'
+else:
+    earg = ''
+    
 ext_modules = [
     Extension(
         "meshCalc",
