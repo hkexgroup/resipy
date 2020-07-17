@@ -4062,8 +4062,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.r2.proc = None
             
             # check if we don't have a fatal error
-            if 'FATAL' in text:
+            if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
                 self.end = False
+                self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
             
             if any(self.r2.mesh.df['param'] == 0): # if fixed element are present, the mesh
             # will be sorted, meaning we need to replot it
@@ -4154,17 +4155,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.pindex = self.pindex + 1
                 if a[0] == 'End':
                     self.end = True
-                if a[0] == 'Alpha:': # if initial RMS shows solution then this will be "FATAL:" instead
+                if self.iBatch and self.parallelCheck.isChecked(): # parallel inversion of batch surveys doesn't show "End" rather a "x/x" format 
+                    try:
+                        spla0 = a[0].split('/')
+                        if spla0[0] == spla0[-1]:
+                            self.end = True
+                    except:
+                        pass
+                if a[0] == 'Iteration': # if initial RMS shows solution then this will be "FATAL:" instead
                     if self.typ[-1] == 't':
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
                         cropMaxDepth = self.cropBelowFmd.isChecked()
                     self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
                                               cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
-                elif a[0] == 'FATAL:':
-                    self.invertBtn.animateClick()
-                    self.errorDump('Error weights too high! lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
-                    raise ValueError('*** Error weights too high! lower a_wgt and b_wgt or choose an error model. ***')
+                if a[0] == 'FATAL:':
+#                    self.invertBtn.animateClick()
+                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+#                    raise ValueError('*** Error weights too high! lower a_wgt and b_wgt or choose an error model. ***')
                     
             return newFlag
 
