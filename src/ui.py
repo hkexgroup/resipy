@@ -4140,7 +4140,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             newFlag = False
             a = tt.split()
             if len(a) > 0:
-                print('######### a[0]:', a[0])
                 if a[0] == 'Initial':
                     try:
                         newFlag = True
