@@ -142,18 +142,23 @@ timings['methods-error-modelling'] = time.time() - tstart
 
 
 #%% mesh generation (will be tested in the cases)
+plt.close('all')
 # 2D flat
 k = R2()
 k.createSurvey(testdir + 'dc-2d/syscal.csv')
 k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
-k.createMesh('trian', refine=1)
+k.createMesh('trian')
 
 # 2D topo
 k = R2()
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
 k.createMesh('quad')
+k.showMesh()
 k.createMesh('trian')
+k.showMesh()
+k.createMesh('trian',refine=1)
+k.showMesh()
 
 # 2D borehole (see example)
 
