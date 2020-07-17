@@ -514,6 +514,7 @@ def split_tetra(list con_mat, list node_x, list node_y, list node_z):
     return new_con_mat, outx, outy, outz, len(new_con_mat[0]), len(node_x)+len(nnodex)
 
 @cython.boundscheck(False)
+@cython.wraparound(False)   
 def orderTetra(long[:,:] connection, double[:,:] node):
     """ Organise tetrahedral element nodes into a clockwise order
     
@@ -558,7 +559,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef int i, k, ei # loop integers 
     cdef int num_threads = 2 # number of threads to use (using 2 for now)
 
-    for i in prange(numel, nogil=True, num_threads=num_threads):
+    for i in prange(numel, nogil=True, num_threads=num_threads,schedule='static'):
         for k in range(3): # work out delta matrix 
             v[0,k] = node_x[connection[i,k+1]] - node_x[connection[i,0]] 
             v[1,k] = node_y[connection[i,k+1]] - node_y[connection[i,0]] 
@@ -593,7 +594,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
         conv[i,3] = connection[i,3]
     
     for i in range(numel):
-        if ccw[i]==0:
+        if ccw[i]==0 and ei>-1:
             raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered'%ei)
             
     return con, count, ccw
