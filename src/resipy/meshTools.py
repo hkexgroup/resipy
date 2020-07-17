@@ -252,7 +252,8 @@ class Mesh:
         self.connection = np.array(node_data,dtype='int64') #connection matrix
         self.cell_type = cell_type # cellType
         self.originalFilePath = original_file_path # originalFilePath 
-        self.eNodes  = None # node number that electrodes occupy # eNode 
+        self.eNodes  = None # node number that electrodes occupy 
+        self.elec = None
         self.iremote = None # specify which electrode is remote
         self.cax = None # store mesh.show() output for faster mesh.draw()
         self.zone = np.ones(self.numel) # by default all in the same zone # remove? 
@@ -314,6 +315,14 @@ class Mesh:
                     compute_centre=False)# should be already computed 
         mesh.elmCentre = self.elmCentre
         mesh.df = self.df.copy()
+        
+        #electrode handling
+        mesh.eNodes = self.eNodes
+        if self.eNodes is not None:
+            mesh.setElecNode(self.eNodes)
+        mesh.iremote = self.iremote
+        mesh.zone = self.zone
+        
         return mesh 
     
     
@@ -346,6 +355,8 @@ class Mesh:
         if len(elec_x) != len(elec_y) or len(elec_x) != len(elec_z):
             raise ValueError('Mismatch in the electrode array lengths when setting the electrodes in mesh class')
         self.elec = np.array([elec_x,elec_y,elec_z]).T
+        if self.eNodes is not None:
+            self.moveElecNodes(elec_x,elec_y,elec_z,debug=False)
     
     def add_e_nodes(self, e_nodes):
         warnings.warn('add_e_nodes is deprecaited: use setElecNode instead')
@@ -695,7 +706,6 @@ class Mesh:
     def refine(self):
         """Refine the mesh into smaller elements 
         """
-        print('refining mesh ...', end='')
         if self.ndims==2 and self.type2VertsNo()==3:
             #then its a triangle mesh
             return self.splitTri()
@@ -710,7 +720,6 @@ class Mesh:
             return 
         self.cellCentres()
         self.orderNodes()
-        print('done')
         
         
     def splitTri(self,param=None): # fix me 
@@ -747,13 +756,9 @@ class Mesh:
         
         nmesh = self.copy() 
         nmesh.connection = np.array(new_con_mat).T
-        # nmesh.node_x = nnode_x
-        # nmesh.node_y = nnode_y
-        # nmesh.node_z = nnode_z
         nmesh.node = np.array([nnode_x,nnode_y,nnode_z]).T
         nmesh.numel = nnum_elms
         nmesh.numnp = nnum_nodes
-        #nmesh.cell_attributes = np.repeat(self.cell_attributes,4)
         
         if self.df is not None:
             df = self.df.copy()
@@ -2619,12 +2624,13 @@ class Mesh:
         #formalities 
         if len(new_x) != len(new_y) and len(new_x) != len(new_z):#set up protection
             raise ValueError("mismatch in the length of the new_x, new_y and new_z arrays")
-        try:
-            if len(new_x) != len(self.elec[:,0]) or len(new_z) != len(self.eNodes ):
-                raise ValueError("mismatch between the length of new electrode position array and old array")
-            has_nodes = True
-        except AttributeError:
-            has_nodes = False
+        
+        has_nodes = True
+        if self.eNodes is None:
+             has_nodes = False
+    
+        if has_nodes and len(new_z) != len(self.eNodes):
+            raise ValueError("mismatch between the length of new electrode position array and old array")
             
         if new_y is None:
             new_y = np.zeros_like(new_x)
@@ -2638,7 +2644,7 @@ class Mesh:
             sq_dist = (node_x - new_x[i])**2 + (node_y - new_y[i])**2 + (node_z - new_z[i])**2 # find the minimum square distance
             node_in_mesh[i] = np.argmin(sq_dist) # min distance should be zero, ie. the node index.
             if has_nodes and debug:
-                if node_in_mesh[i] != self.eNodes [i]:
+                if node_in_mesh[i] != self.eNodes[i]:
                     print("Electrode %i moved from node %i to node %i"%(i,node_in_mesh[i],self.eNodes [i]))#print to show something happening
         
         self.setElecNode(node_in_mesh) # update e_node parameter

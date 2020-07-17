@@ -4,11 +4,13 @@ import numpy as np
 cimport numpy as np
 from cython.parallel import prange
 
+cdef extern from "math.h" nogil:
+    cpdef double acos(double x)
+
 DINT = np.intc
 # mesh calculations - need to be in cython otherwise they will take too long 
 @cython.boundscheck(False)#speeds up indexing, however it can be dangerous if the indexes are not in the range of the actual array, 
-@cython.wraparound(False)
-@cython.nonecheck(False)           
+@cython.wraparound(False)        
 def bisection_search(list arr, long long int var):
     """Efficent search algorithm for sorted lists of ints 
     Parameters
@@ -73,6 +75,18 @@ def int2str(int a, int pad):
     cdef str s
     s = '{:0>%id}'%pad
     return s.format(a)
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef double fmin(double[:] arr) nogil: # import note: You need to pass the memory view
+    # to a nogil function like this otherwise you get instability 
+    cdef int n = arr.shape[0]
+    cdef double tmp = arr[0]
+    cdef int i 
+    for i in range(1,n):
+        if tmp>arr[i]:
+            tmp = arr[i]
+    return tmp
        
 @cython.boundscheck(False)                 
 def neigh3d(tuple con_mat, int return_tri_combo):
@@ -541,7 +555,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef np.ndarray[double,ndim=1] S = np.zeros(3)
     cdef double N # orientation indicator 
     cdef np.ndarray[long, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
-    cdef int i, k # loop integers 
+    cdef int i, k, ei # loop integers 
     cdef int num_threads = 2 # number of threads to use (using 2 for now)
 
     for i in prange(numel, nogil=True, num_threads=num_threads):
@@ -573,17 +587,19 @@ def orderTetra(long[:,:] connection, double[:,:] node):
             ccw[i] = 2
         else: # shouldn't be possible 
             ccw[i] = 0
+            ei = i #problem index 
             
         conv[i,2] = connection[i,2]
         conv[i,3] = connection[i,3]
     
     for i in range(numel):
         if ccw[i]==0:
-            raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered')
+            raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered'%ei)
             
     return con, count, ccw
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
 def orderQuad(long[:,:] connection, double[:,:] node):
     """Order quaderlateral elements counterclockwise 
     
@@ -599,7 +615,7 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     con : np array (long)
         Mesh connection matrix which has been 'corrected' such that all elements
         are counterclockwise. 
-    count : TYPE
+    count : int
         Number of elements with switched nodes (ie been 'corrected')
     """
     #get the number of nodes and elements etc 
@@ -622,17 +638,28 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     cdef np.ndarray[double, ndim=1] z = np.zeros(4,dtype=float) # z array 
     cdef np.ndarray[double, ndim=1] xtmp = np.zeros(4,dtype=float)
     cdef np.ndarray[double, ndim=1] ztmp = np.zeros(4,dtype=float)
-    cdef np.ndarray[double, ndim=1] theta = np.zeros(4,dtype=float) # theta array 
-    cdef np.ndarray[double, ndim=1] thetas = np.zeros(4,dtype=float) # sorted theta 
-    cdef np.ndarray[long, ndim=1] order = np.zeros(4,dtype=int) #ordering array
+    cdef double[:] xv = x # xview
+    cdef double[:] zv = z # z view 
+    cdef double[:] xtmpv = xtmp 
+    cdef double[:] ztmpv = ztmp 
     
-    cdef int i, k, c
+    cdef np.ndarray[double, ndim=1] theta = np.zeros(4,dtype=float) # theta array
+    cdef double[:] thetav = theta # theta view 
+    
+    cdef np.ndarray[long, ndim=1] order = np.zeros(4,dtype=int) #ordering array
+    cdef long[:] orderv = order #ordering view
+    
+    cdef int i, k, c, j
+    cdef int eflag = 0 # error flag
+    cdef int ei # error number 
     cdef int num_threads = 2
     cdef double minx, minz
-    cdef float xinf = 10*max(node_x) # infinite like x 
-    cdef float zinf = 10*max(node_z) # infinite like z 
-    cdef float rz, rx # ray casted coordinate
-    cdef float dx10, dx20, dz10, dz20, m01, m02
+    cdef double xinf = 10*max(node_x) # infinite like x 
+    cdef double zinf = 10*max(node_z) # infinite like z 
+    cdef double tinf = 314  #infinite like theta 
+    cdef double mtheta
+    cdef double rz, rx # ray casted coordinate
+    cdef double dx10, dx20, dz10, dz20, m01, m02
 
     #aim is to work out angles from point with minimum x and z coordinate 
     #min angle >>> bottom left most point 
@@ -640,30 +667,31 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     for i in range(numel):
     #for i in prange(numel, nogil=True, num_threads=num_threads):
         for k in range(4):
-            x[k] = node_x[connection[i,k]]
-            z[k] = node_z[connection[i,k]]
+            xv[k] = node_x[connection[i,k]]
+            zv[k] = node_z[connection[i,k]]
         
         #find starting x coordinate 
-        minx = min(x)
-        c = 0
+        minx = fmin(xv)
+        c = 0 # rolling count 
         #protect against colinear points on left hand side of quad 
         for k in range(4):
             if x[k] == minx:
-                ztmp[k] = z[k]
-                xtmp[k] = x[k] # put in array where x == min(x)
-                c= c + 1
+                ztmpv[k] = zv[k]
+                xtmpv[k] = xv[k] # put in array where x == min(x)
+                c = c + 1
             else:
-                ztmp[k] = zinf
-                xtmp[k] = xinf
+                ztmpv[k] = zinf
+                xtmpv[k] = xinf
                 
-        minz = min(ztmp)        
+        minz = fmin(ztmpv)        
         if c>2: # then there is more than one min x coordinate (presumably 2 at most)
-            raise ValueError('Element %i has more than 2 colinear points and therefore not a quad'%i)
+            eflag = 1 
+            ei = i 
         
         #create order angle 
         for k in range(4):
-            if x[k] == minx and z[k] == minz:
-                theta[k] = 0 # angle is zero becuase we are comparing on left bottom most point 
+            if xv[k] == minx and zv[k] == minz:
+                thetav[k] = 0 # angle is zero becuase we are comparing on left bottom most point 
             else:
                 rz = minz - zinf # ray casted coordinate below min z point
                 rx = minx
@@ -673,17 +701,29 @@ def orderQuad(long[:,:] connection, double[:,:] node):
                 dz20 = z[k] - minz
                 m01 = (dx10*dx10 + dz10*dz10)**0.5
                 m02 = (dx20*dx20 + dz20*dz20)**0.5
-                theta[k] = ma.acos((dx10*dx20 + dz10*dz20) / (m01 * m02))
+                thetav[k] = acos((dx10*dx20 + dz10*dz20) / (m01 * m02))
        
-        order = np.asarray(theta.argsort(),dtype=int) #sorted indices 
-        #note that this function needs the GIL and hence the loop can't be parallised 
+        mtheta = fmin(thetav) # min theta 
+        for j in range(4):
+            for k in range(4):
+                if thetav[k] == mtheta:
+                    thetav[k] = tinf
+                    orderv[j] = k
+                    mtheta = fmin(thetav)
+                    break  
         
-        for k in range(k):# flag if order changes >>> count as ordered element 
-            if order[k] != k:#order has been changed 
-                count +=1 
+        for k in range(4):# flag if order changes >>> count as ordered element 
+            if orderv[k] != k:#order has been changed 
+                count += 1 
                 break
         
         for k in range(4):
             conv[i,k] = connection[i,order[k]]
+            
+        #nb: looked at parallising this loop but it yeilded unstable results 
+            
+        
+    if eflag == 1: 
+        raise ValueError('Element %i has more than 2 colinear points and therefore not a quad'%ei)
         
     return con, count

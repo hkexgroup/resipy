@@ -1554,6 +1554,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 for l in range(refine):
                     print('Refining...', end='')
                     mesh = mesh.refine()
+                print('Done')
             
             self.param['mesh_type'] = 3
             e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
@@ -1753,6 +1754,9 @@ class R2(object): # R2 master class instanciated by the GUI
                     kwargs['color_bar'] = False
         
             self.mesh.show(ax=ax, **kwargs)
+            
+    def refineMesh(self):
+        self.mesh = self.mesh.refine()
 
 
     def write2in(self, param={}):
