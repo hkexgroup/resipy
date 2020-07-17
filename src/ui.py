@@ -4140,6 +4140,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             newFlag = False
             a = tt.split()
             if len(a) > 0:
+                print('######### a[0]:', a[0])
                 if a[0] == 'Initial':
                     try:
                         newFlag = True
@@ -4155,6 +4156,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.pindex = self.pindex + 1
                 if a[0] == 'End':
                     self.end = True
+                if self.iBatch and self.parallelCheck.isChecked(): # parallel inversion of batch surveys doesn't show "End" rather a "x/x" format 
+                    try:
+                        spla0 = a[0].split('/')
+                        if spla0[0] == spla0[-1]:
+                            self.end = True
+                    except:
+                        pass
                 if a[0] == 'Iteration': # if initial RMS shows solution then this will be "FATAL:" instead
                     if self.typ[-1] == 't':
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
