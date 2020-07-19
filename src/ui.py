@@ -4929,7 +4929,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cR3t_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/cR3t_manual.pdf')).toEncoded()).decode()
         helpLabel = QLabel( 
         '''
-        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
+        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">Documentation and the examples</a></p>
+        <p>Video tutorials: <a href="https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q">ResIPy on YouTube</a></p>
         <p>Read more on 2D resistivity inversion: <a href="%s">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="%s">R3t_readme.pdf</a></p>
         <p>Read more on 2D complex resistivity (IP) inversion: <a href="%s">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="%s">cR3t_readme.pdf</a></p>
         '''% (R2_help,R3t_help, cR2_help, cR3t_help))
