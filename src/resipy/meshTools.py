@@ -1884,7 +1884,7 @@ class Mesh:
                     xlim = [min(self.elec[:,0]), max(self.elec[:,0])]
                 if ylim == None:
                     ylim = [min(self.elec[:,1]), max(self.elec[:,1])]
-            except AttributeError: #if no electrodes present use the node limits 
+            except (AttributeError,TypeError): #if no electrodes present use the node limits 
                 if xlim == None:
                     xlim = [min(self.node[:,0]), max(self.node[:,0])]
                 if ylim == None:
