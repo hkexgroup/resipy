@@ -4401,7 +4401,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 df = s.df 
                 ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
                 nmeas.append(sum(ie))
-            num_ind_meas=np.mean(nmeas)
+            num_ind_meas = np.mean(nmeas) # number of measurements 
+            mnum_ind_meas = num_ind_meas # maximum number of measurements
                     
         #nsize A estimation - describes number of connected nodes 
         kxf = self.mesh.connection.flatten() # flattened connection matrix
@@ -4438,15 +4439,16 @@ class R2(object): # R2 master class instanciated by the GUI
                 memR=memR+(num_param*nfaces)
                 memI=memI+num_param*nfaces    
         else: # do 2D calculation
-            memDP=(numnp)*(4+num_electrodes)+nsizeA+numel+num_ind_meas*4+num_ind_meas
+            memDP=(numnp)*(5+num_electrodes)+nsizeA+numel+mnum_ind_meas*3+num_ind_meas       
             memR=0
-            memI=numnp*(8+nsizeA)+num_ind_meas*8
+            memI=nsizeA+numel*6+numnp*4+mnum_ind_meas*8
             memL=numel+numnp
 
             if inverse:
-                memDP=numel+memDP+num_param*10+num_ind_meas*(num_param+6) 
+                memDP=memDP+numel+num_param*10+num_ind_meas*(num_param+7) 
                 memR=memR+num_param*numRterm
                 memI=memI+num_param*numRterm
+                memL=memL+num_ind_meas
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
         dump('ResIPy Estimated RAM usage = %f Gb'%Gb)

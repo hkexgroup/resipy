@@ -547,6 +547,10 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
     cdef np.ndarray[double, ndim=1] node_y = np.asarray(node[:,1],dtype=float)
     cdef np.ndarray[double, ndim=1] node_z = np.asarray(node[:,2],dtype=float)
+    cdef double[:] node_xv = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
+    cdef double[:] node_yv = np.asarray(node[:,1],dtype=float)
+    cdef double[:] node_zv = np.asarray(node[:,2],dtype=float)
+
 
     #looping variables 
     cdef np.ndarray[double,ndim=2] v = np.zeros((3,3),dtype=float) # matrix
@@ -554,40 +558,49 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef np.ndarray[double,ndim=1] v2 = np.zeros(3)
     cdef np.ndarray[double,ndim=1] v3 = np.zeros(3)
     cdef np.ndarray[double,ndim=1] S = np.zeros(3)
+    #memory views of the above
+    cdef double[:,:] vv = v
+    cdef double[:] v1v = v1 
+    cdef double[:] v2v = v2 
+    cdef double[:] v3v = v3
+    cdef double[:] Sv = S 
+    
     cdef double N # orientation indicator 
     cdef np.ndarray[long, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
+    cdef long[:] ccwv = ccw #clockwise view
     cdef int i, k, ei # loop integers 
     cdef int num_threads = 2 # number of threads to use (using 2 for now)
 
     for i in prange(numel, nogil=True, num_threads=num_threads,schedule='static'):
+    #for i in range(numel):
         for k in range(3): # work out delta matrix 
-            v[0,k] = node_x[connection[i,k+1]] - node_x[connection[i,0]] 
-            v[1,k] = node_y[connection[i,k+1]] - node_y[connection[i,0]] 
-            v[2,k] = node_z[connection[i,0]] - node_z[connection[i,k+1]] 
+            vv[0,k] = node_xv[connection[i,k+1]] - node_xv[connection[i,0]] 
+            vv[1,k] = node_yv[connection[i,k+1]] - node_yv[connection[i,0]] 
+            vv[2,k] = node_zv[connection[i,0]] - node_zv[connection[i,k+1]] 
             
         for k in range(3): #extract delta vectors 
-            v1[k] = v[k,0]
-            v2[k] = v[k,1]
-            v3[k] = v[k,2]
+            v1v[k] = vv[k,0]
+            v2v[k] = vv[k,1]
+            v3v[k] = vv[k,2]
         
         #compute cross product
-        S[0] = v1[1]*v2[2] - v1[2]*v2[1]
-        S[1] = v1[2]*v2[0] - v1[0]*v2[2]
-        S[2] = v1[0]*v2[1] - v1[1]*v2[0]
+        Sv[0] = v1v[1]*v2v[2] - v1v[2]*v2v[1]
+        Sv[1] = v1v[2]*v2v[0] - v1v[0]*v2v[2]
+        Sv[2] = v1v[0]*v2v[1] - v1v[1]*v2v[0]
         #compute dot product (gives orientation)
-        N = S[0]*v3[0] + S[1]*v3[1] + S[2]*v3[2]
+        N = Sv[0]*v3v[0] + Sv[1]*v3v[1] + Sv[2]*v3v[2]
         
         if N>0: # then tetrahedra is clockwise 
             count += 1
             conv[i,1] = connection[i,0]
             conv[i,0] = connection[i,1]
-            ccw[i] = 1
+            ccwv[i] = 1
         elif N<0: # then its counter clockwise 
             conv[i,0] = connection[i,0]
             conv[i,1] = connection[i,1]
-            ccw[i] = 2
+            ccwv[i] = 2
         else: # shouldn't be possible 
-            ccw[i] = 0
+            ccwv[i] = 0
             ei = i #problem index 
             
         conv[i,2] = connection[i,2]
