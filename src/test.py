@@ -564,20 +564,19 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
 
 #%% test timelapse 3D -- takes a long time
-#k = R2(typ='R3t')
-#k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
-#k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
-#k.createMesh()
-#k.invert()
-#k.showResults(index=0)
-#k.showResults(index=1)
-#
-#t0 = time.time()
-#k.mesh.orderNodes()
-#t1 = time.time() - t0
+k = R2(typ='R3t')
+k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
+k.createMesh()
+k.invert()
+k.showResults(index=0)
+k.showResults(index=1)
+
+t0 = time.time()
+k.mesh.orderNodes()
+t1 = time.time() - t0
 
 #%% print final summary information 
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
-
