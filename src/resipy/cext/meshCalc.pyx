@@ -539,7 +539,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     #get the number of nodes and elements etc 
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
-    cdef int count = 0 #rolling total for the number of corrected elements 
+    #cdef int count = 0 #rolling total for the number of corrected elements 
     
     con = np.zeros((numel,npere), dtype=DINT)# new connection matrix 
     cdef int[:,:] conv = con # connection memeory view
@@ -570,6 +570,8 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef long[:] ccwv = ccw #clockwise view
     cdef int i, k, ei # loop integers 
     cdef int num_threads = 2 # number of threads to use (using 2 for now)
+    cdef np.ndarray[long, ndim=1] count = np.zeros(numel,dtype=int)
+    cdef long[:] countv = count
 
     for i in prange(numel, nogil=True, num_threads=num_threads,schedule='static'):
     #for i in range(numel):
@@ -591,7 +593,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
         N = Sv[0]*v3v[0] + Sv[1]*v3v[1] + Sv[2]*v3v[2]
         
         if N>0: # then tetrahedra is clockwise 
-            count += 1
+            countv[i] = 1
             conv[i,1] = connection[i,0]
             conv[i,0] = connection[i,1]
             ccwv[i] = 1
@@ -609,8 +611,9 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     for i in range(numel):
         if ccw[i]==0 and ei>-1 and ei!=(numel-1):
             raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered'%ei)
+    c = sum(count)
             
-    return con, count, ccw
+    return con, c, ccw
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
