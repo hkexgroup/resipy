@@ -13,6 +13,15 @@ if platform.system() == 'Linux': #open mp support on linux only
             extra_link_args=['-fopenmp'],
         )
     ]
+elif platform.system() == 'Windows': #open mp support on linux only 
+    ext_modules = [
+        Extension(
+            "meshCalc",
+            ["meshCalc.pyx"],
+            extra_compile_args=['/openmp'],
+            #extra_link_args=['/openmp'],
+        )
+    ]
 else:
     ext_modules = [
         Extension(
