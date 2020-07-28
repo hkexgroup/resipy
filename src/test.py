@@ -494,8 +494,8 @@ k.showInvError()
 k.saveMeshVtk()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
-
-
+#timeit k.mesh.orderNodes()
+#print(k.mesh)
 
 #%% 3D testing importing and exporting a mesh 
 plt.close('all')

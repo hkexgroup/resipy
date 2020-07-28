@@ -594,7 +594,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
         conv[i,3] = connection[i,3]
     
     for i in range(numel):
-        if ccw[i]==0 and ei>-1:
+        if ccw[i]==0 and ei>-1 and ei!=(numel-1):
             raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered'%ei)
             
     return con, count, ccw
