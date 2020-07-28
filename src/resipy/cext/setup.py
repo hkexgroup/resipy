@@ -4,7 +4,7 @@ from Cython.Build import cythonize
 import numpy as np
 import platform
 
-if platform.system() == 'Linux': #open mp support on linux only 
+if platform.system() == 'Linux': #open mp support on linux 
     ext_modules = [
         Extension(
             "meshCalc",
@@ -13,7 +13,7 @@ if platform.system() == 'Linux': #open mp support on linux only
             extra_link_args=['-fopenmp'],
         )
     ]
-elif platform.system() == 'Windows': #open mp support on linux only 
+elif platform.system() == 'Windows': #open mp support on windows
     ext_modules = [
         Extension(
             "meshCalc",
