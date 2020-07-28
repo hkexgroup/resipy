@@ -1147,12 +1147,18 @@ class Mesh:
         mesh: Class
             New instance of mesh class which is truncated 
         """
-        if xlim is None:
-            xlim=[min(self.elec[:,0]), max(self.elec[:,0])]
-        if ylim is None:
-            ylim=[min(self.elec[:,1]), max(self.elec[:,1])]
+        if self.elec is not None:
+            if xlim is None:
+                xlim=[min(self.elec[:,0]), max(self.elec[:,0])]
+            if ylim is None:
+                ylim=[min(self.elec[:,1]), max(self.elec[:,1])]
+        else:
+            if xlim is None:
+                xlim=[min(self.node[:,0]), max(self.node[:,0])]
+            if ylim is None:
+                ylim=[min(self.node[:,1]), max(self.node[:,1])]
         if zlim is None:
-            zlim=[min(self.elec[:,2]), max(self.elec[:,2])]
+            zlim=[min(self.node[:,2]), max(self.node[:,2])]
             
         elm_x = self.elmCentre[:,0]
         elm_y = self.elmCentre[:,1]
