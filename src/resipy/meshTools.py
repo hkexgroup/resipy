@@ -33,7 +33,7 @@ from resipy.sliceMesh import sliceMesh # mesh slicing function
 import resipy.interpolation as interp
 
 try:#meshCalc needs to be compiled 
-    import resipy.cext.meshCalc as mc
+    from resipy.cext import meshCalc as mc
 except (ModuleNotFoundError,AttributeError):
     warnings.warn('Failed to import meshTools c extension, meshing options maybe limited')
 
