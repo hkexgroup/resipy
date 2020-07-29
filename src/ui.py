@@ -2816,8 +2816,8 @@ class App(QMainWindow):
                                    cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
                                    cln_factor=cln_factor, refine=refine, show_output=True)
                 if pvfound:
-                    mesh3Dplotter.clear() # clear all actors 
-                    self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                    self.mesh3Dplotter.clear() # clear all actors 
+                    self.r2.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                 else:
                     self.mwMesh3D.plot(self.r2.showMesh, threed=True)
                 meshOutputStack.setCurrentIndex(2)
@@ -2935,8 +2935,8 @@ class App(QMainWindow):
                     self.r2.importMesh(fname)
                     print('mesh imported ... now displaying ... ')
                     if pvfound:
-                        mesh3Dplotter.clear() # clear all actors 
-                        self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                        self.mesh3Dplotter.clear() # clear all actors 
+                        self.r2.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                     else:
                         self.mwMesh3D.plot(self.r2.showMesh, threed=True)
                     meshOutputStack.setCurrentIndex(2)
@@ -3063,8 +3063,8 @@ class App(QMainWindow):
         if pvfound:
             self.meshFrame = QFrame()
             vlayout = QVBoxLayout()
-            mesh3Dplotter = QtInteractor(self.meshFrame)
-            vlayout.addWidget(mesh3Dplotter.interactor)
+            self.mesh3Dplotter = QtInteractor(self.meshFrame)
+            vlayout.addWidget(self.mesh3Dplotter.interactor)
             self.meshFrame.setLayout(vlayout)
             self.mwMesh3D.setVisible(False)
 
@@ -4564,7 +4564,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
         def pvgridCheckFunc(state):
             self.displayParams['pvgrid'] = self.pvgridCheck.isChecked()
-            replotSection()
+            try:
+                replotSection()
+            except:
+                pass
         self.pvgridCheck = QCheckBox('Grid')
         self.pvgridCheck.stateChanged.connect(pvgridCheckFunc)
             
@@ -5351,6 +5354,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.psContourCheck.setEnabled(False)
         self.tabImporting.setTabEnabled(1, False)
         self.mwPseudo.clear() # clearing figure
+        if pvfound:
+            self.pseudoPlotter.clear()
         self.tempElec = None
         self.elecTable.initTable(np.array([['',''],['','']]))
         self.topoTable.initTable(np.array([['',''],['','']]))
@@ -5409,6 +5414,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwMesh.clear()
         self.meshLogText.clear()
         self.regionTable.reset()
+        if pvfound:
+            self.mesh3Dplotter.clear()
         
         #forward model
         self.mwFwdPseudo.clear()
