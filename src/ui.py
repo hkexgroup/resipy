@@ -1245,7 +1245,7 @@ class App(QMainWindow):
                     pdebug('elecTable.readTable: header provided')
                 df = pd.read_csv(fname, header=header)
                 newcols = [a.lower() for a in df.columns]
-                df = df.rename(dict(zip(df.columns, newcols)))
+                df = df.rename(columns = dict(zip(df.columns, newcols)))
                 
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
