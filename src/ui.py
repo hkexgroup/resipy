@@ -328,6 +328,7 @@ class App(QMainWindow):
                 # importing tab
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.setColumnHidden(2, True)
+                self.regular3DCheck.setChecked(False)
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
@@ -5571,8 +5572,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
-                webbrowser.open('https://www.winehq.org/')
-#                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+#                webbrowser.open('https://www.winehq.org/')
+                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
 
     
 
