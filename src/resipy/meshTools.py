@@ -3880,11 +3880,11 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     #convert into mesh.dat
     mesh_info = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
     
-    # merge fine with coarse regions
+    # merge fine with coarse regions (coarse = 1, fine = -1)
     regions = np.array(mesh_info['parameters'])
-    for reg in np.unique(regions)[1:]:
-        ie = regions == reg
-        regions[ie] = reg - 1
+    ureg = np.sort(np.unique(regions))
+    ie = regions == ureg[-1] # fine region
+    regions[ie] = 1 # is same number as the coarse
     
     mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
                 mesh_info['node_y'],

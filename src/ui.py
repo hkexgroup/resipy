@@ -328,6 +328,7 @@ class App(QMainWindow):
                 # importing tab
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.setColumnHidden(2, True)
+                self.regular3DCheck.setChecked(False)
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
@@ -1245,7 +1246,7 @@ class App(QMainWindow):
                     pdebug('elecTable.readTable: header provided')
                 df = pd.read_csv(fname, header=header)
                 newcols = [a.lower() for a in df.columns]
-                df = df.rename(dict(zip(df.columns, newcols)))
+                df = df.rename(columns = dict(zip(df.columns, newcols)))
                 
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
@@ -2816,8 +2817,8 @@ class App(QMainWindow):
                                    cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
                                    cln_factor=cln_factor, refine=refine, show_output=True)
                 if pvfound:
-                    mesh3Dplotter.clear() # clear all actors 
-                    self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                    self.mesh3Dplotter.clear() # clear all actors 
+                    self.r2.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                 else:
                     self.mwMesh3D.plot(self.r2.showMesh, threed=True)
                 meshOutputStack.setCurrentIndex(2)
@@ -2935,8 +2936,8 @@ class App(QMainWindow):
                     self.r2.importMesh(fname)
                     print('mesh imported ... now displaying ... ')
                     if pvfound:
-                        mesh3Dplotter.clear() # clear all actors 
-                        self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                        self.mesh3Dplotter.clear() # clear all actors 
+                        self.r2.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                     else:
                         self.mwMesh3D.plot(self.r2.showMesh, threed=True)
                     meshOutputStack.setCurrentIndex(2)
@@ -3063,8 +3064,8 @@ class App(QMainWindow):
         if pvfound:
             self.meshFrame = QFrame()
             vlayout = QVBoxLayout()
-            mesh3Dplotter = QtInteractor(self.meshFrame)
-            vlayout.addWidget(mesh3Dplotter.interactor)
+            self.mesh3Dplotter = QtInteractor(self.meshFrame)
+            vlayout.addWidget(self.mesh3Dplotter.interactor)
             self.meshFrame.setLayout(vlayout)
             self.mwMesh3D.setVisible(False)
 
@@ -4062,8 +4063,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.r2.proc = None
             
             # check if we don't have a fatal error
-            if 'FATAL' in text:
+            if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
                 self.end = False
+                self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
             
             if any(self.r2.mesh.df['param'] == 0): # if fixed element are present, the mesh
             # will be sorted, meaning we need to replot it
@@ -4154,17 +4156,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.pindex = self.pindex + 1
                 if a[0] == 'End':
                     self.end = True
-                if a[0] == 'Alpha:': # if initial RMS shows solution then this will be "FATAL:" instead
+                if self.iBatch and self.parallelCheck.isChecked(): # parallel inversion of batch surveys doesn't show "End" rather a "x/x" format 
+                    try:
+                        spla0 = a[0].split('/')
+                        if spla0[0] == spla0[-1]:
+                            self.end = True
+                    except:
+                        pass
+                if a[0] == 'Iteration': # if initial RMS shows solution then this will be "FATAL:" instead
                     if self.typ[-1] == 't':
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
                         cropMaxDepth = self.cropBelowFmd.isChecked()
                     self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
                                               cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
-                elif a[0] == 'FATAL:':
-                    self.invertBtn.animateClick()
-                    self.errorDump('Error weights too high! lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
-                    raise ValueError('*** Error weights too high! lower a_wgt and b_wgt or choose an error model. ***')
+                if a[0] == 'FATAL:':
+#                    self.invertBtn.animateClick()
+                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+#                    raise ValueError('*** Error weights too high! lower a_wgt and b_wgt or choose an error model. ***')
                     
             return newFlag
 
@@ -4556,7 +4565,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
         def pvgridCheckFunc(state):
             self.displayParams['pvgrid'] = self.pvgridCheck.isChecked()
-            replotSection()
+            try:
+                replotSection()
+            except:
+                pass
         self.pvgridCheck = QCheckBox('Grid')
         self.pvgridCheck.stateChanged.connect(pvgridCheckFunc)
             
@@ -4921,7 +4933,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cR3t_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/cR3t_manual.pdf')).toEncoded()).decode()
         helpLabel = QLabel( 
         '''
-        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
+        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">Documentation and the examples</a></p>
+        <p>Video tutorials: <a href="https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q">ResIPy on YouTube</a></p>
         <p>Read more on 2D resistivity inversion: <a href="%s">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="%s">R3t_readme.pdf</a></p>
         <p>Read more on 2D complex resistivity (IP) inversion: <a href="%s">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="%s">cR3t_readme.pdf</a></p>
         '''% (R2_help,R3t_help, cR2_help, cR3t_help))
@@ -5342,6 +5355,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.psContourCheck.setEnabled(False)
         self.tabImporting.setTabEnabled(1, False)
         self.mwPseudo.clear() # clearing figure
+        if pvfound:
+            self.pseudoPlotter.clear()
         self.tempElec = None
         self.elecTable.initTable(np.array([['',''],['','']]))
         self.topoTable.initTable(np.array([['',''],['','']]))
@@ -5400,6 +5415,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwMesh.clear()
         self.meshLogText.clear()
         self.regionTable.reset()
+        if pvfound:
+            self.mesh3Dplotter.clear()
         
         #forward model
         self.mwFwdPseudo.clear()
@@ -5555,8 +5572,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
-                webbrowser.open('https://www.winehq.org/')
-#                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+#                webbrowser.open('https://www.winehq.org/')
+                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
 
     
 
