@@ -572,6 +572,7 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef int num_threads = 2 # number of threads to use (using 2 for now)
     cdef np.ndarray[long, ndim=1] count = np.zeros(numel,dtype=int)
     cdef long[:] countv = count
+    cdef int count_out
 
     for i in prange(numel, nogil=True, num_threads=num_threads,schedule='static'):
     #for i in range(numel):
@@ -609,11 +610,11 @@ def orderTetra(long[:,:] connection, double[:,:] node):
         conv[i,3] = connection[i,3]
     
     for i in range(numel):
-        if ccw[i]==0 and ei>-1 and ei!=(numel-1):
+        if ccw[i]==0 and ei>-1:
             raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered'%ei)
-    c = sum(count)
+    count_out = sum(count)
             
-    return con, c, ccw
+    return con, count_out, ccw
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -638,7 +639,6 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     #get the number of nodes and elements etc 
     cdef int numel = connection.shape[0]
     cdef int npere = connection.shape[1]
-    cdef int count = 0 # number of corrected elements 
     
     if npere!=4: 
         raise ValueError('Got the wrong number of nodes per element when ordering mesh nodes')
@@ -659,6 +659,10 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     cdef double[:] zv = z # z view 
     cdef double[:] xtmpv = xtmp 
     cdef double[:] ztmpv = ztmp 
+
+    cdef np.ndarray[long, ndim=1] count = np.zeros(numel,dtype=int)
+    cdef long[:] countv = count
+    cdef int count_out 
     
     cdef np.ndarray[double, ndim=1] theta = np.zeros(4,dtype=float) # theta array
     cdef double[:] thetav = theta # theta view 
@@ -681,8 +685,8 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     #aim is to work out angles from point with minimum x and z coordinate 
     #min angle >>> bottom left most point 
     #max angle >>> upper left most point
-    for i in range(numel):
-    #for i in prange(numel, nogil=True, num_threads=num_threads):
+    #for i in range(numel):
+    for i in prange(numel, nogil=True, num_threads=num_threads):
         for k in range(4):
             xv[k] = node_x[connection[i,k]]
             zv[k] = node_z[connection[i,k]]
@@ -731,7 +735,7 @@ def orderQuad(long[:,:] connection, double[:,:] node):
         
         for k in range(4):# flag if order changes >>> count as ordered element 
             if orderv[k] != k:#order has been changed 
-                count += 1 
+                countv[i] = 1 
                 break
         
         for k in range(4):
@@ -743,4 +747,6 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     if eflag == 1: 
         raise ValueError('Element %i has more than 2 colinear points and therefore not a quad'%ei)
         
-    return con, count
+    count_out = sum(count)
+    
+    return con, count_out 
