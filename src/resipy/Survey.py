@@ -1474,7 +1474,7 @@ class Survey(object):
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
         array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
-        elecm = self.elec[['x','y','z']].values.copy() #electrode matrix
+        elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
         
         # Finding fully nested measurements
         # pos = elecpos[array]
