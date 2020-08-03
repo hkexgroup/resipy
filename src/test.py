@@ -226,7 +226,10 @@ k.filterManual(attr='resError')
 k.showPseudo(contour=True)
 k.createMesh(typ='quad', elemx=4)
 k.showMesh()
-k.createMesh(typ='trian', cl=0.1, cl_factor=5)
+xz = [[0,2,4,6],[29.20,29.0,28.5,27.75]]
+geom_input={'boundary1':xz}
+k.createMesh(typ='trian', cl=0.1, cl_factor=5,geom_input=geom_input)
+# mesh = mt.triMesh(k.elec['x'].values,k.elec['z'].values,geom_input=geom_input)
 k.showMesh()
 
 #k.fitErrorLin()
