@@ -3,6 +3,7 @@ import math as ma
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange
+cimport openmp
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
@@ -515,7 +516,7 @@ def split_tetra(list con_mat, list node_x, list node_y, list node_z):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)   
-def orderTetra(long[:,:] connection, double[:,:] node):
+def orderTetra(long[:,::1] connection, double[:,:] node):
     """ Organise tetrahedral element nodes into a clockwise order
     
     following solution at: 
@@ -550,55 +551,57 @@ def orderTetra(long[:,:] connection, double[:,:] node):
     cdef double[:] node_xv = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
     cdef double[:] node_yv = np.asarray(node[:,1],dtype=float)
     cdef double[:] node_zv = np.asarray(node[:,2],dtype=float)
-
+    
+    cdef int num_threads = 2 # number of threads to use (using 2 for now)
 
     #looping variables 
-    cdef np.ndarray[double,ndim=2] v = np.zeros((3,3),dtype=float) # matrix
-    cdef np.ndarray[double,ndim=1] v1 = np.zeros(3) # comparison vector 
-    cdef np.ndarray[double,ndim=1] v2 = np.zeros(3)
-    cdef np.ndarray[double,ndim=1] v3 = np.zeros(3)
-    cdef np.ndarray[double,ndim=1] S = np.zeros(3)
+    cdef np.ndarray[double,ndim=3] v = np.zeros((3,3,num_threads),dtype=float) # matrix
+    cdef np.ndarray[double,ndim=2] v1 = np.zeros((3,num_threads)) # comparison vector 
+    cdef np.ndarray[double,ndim=2] v2 = np.zeros((3,num_threads))
+    cdef np.ndarray[double,ndim=2] v3 = np.zeros((3,num_threads))
+    cdef np.ndarray[double,ndim=2] S = np.zeros((3,num_threads))
     #memory views of the above
-    cdef double[:,:] vv = v
-    cdef double[:] v1v = v1 
-    cdef double[:] v2v = v2 
-    cdef double[:] v3v = v3
-    cdef double[:] Sv = S 
+    cdef double[:,:,:] vv = v
+    cdef double[:,:] v1v = v1 
+    cdef double[:,:] v2v = v2 
+    cdef double[:,:] v3v = v3
+    cdef double[:,:] Sv = S 
     
-    cdef double N # orientation indicator 
+    cdef double[:] N = np.zeros(num_threads,dtype=float)# orientation indicator 
     cdef np.ndarray[long, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
     cdef long[:] ccwv = ccw #clockwise view
-    cdef int i, k, ei # loop integers 
-    cdef int num_threads = 2 # number of threads to use (using 2 for now)
+    cdef Py_ssize_t i 
+    cdef int k, ei, tid # loop integers 
     cdef np.ndarray[long, ndim=1] count = np.zeros(numel,dtype=int)
     cdef long[:] countv = count
     cdef int count_out
 
     for i in prange(numel, nogil=True, num_threads=num_threads,schedule='static'):
     #for i in range(numel):
+        tid = openmp.omp_get_thread_num()
         for k in range(3): # work out delta matrix 
-            vv[0,k] = node_xv[connection[i,k+1]] - node_xv[connection[i,0]] 
-            vv[1,k] = node_yv[connection[i,k+1]] - node_yv[connection[i,0]] 
-            vv[2,k] = node_zv[connection[i,0]] - node_zv[connection[i,k+1]] 
+            vv[0,k,tid] = node_xv[connection[i,k+1]] - node_xv[connection[i,0]] 
+            vv[1,k,tid] = node_yv[connection[i,k+1]] - node_yv[connection[i,0]] 
+            vv[2,k,tid] = node_zv[connection[i,0]] - node_zv[connection[i,k+1]] 
             
         for k in range(3): #extract delta vectors 
-            v1v[k] = vv[k,0]
-            v2v[k] = vv[k,1]
-            v3v[k] = vv[k,2]
+            v1v[k,tid] = vv[k,0,tid]
+            v2v[k,tid] = vv[k,1,tid]
+            v3v[k,tid] = vv[k,2,tid]
         
         #compute cross product
-        Sv[0] = v1v[1]*v2v[2] - v1v[2]*v2v[1]
-        Sv[1] = v1v[2]*v2v[0] - v1v[0]*v2v[2]
-        Sv[2] = v1v[0]*v2v[1] - v1v[1]*v2v[0]
+        Sv[0,tid] = v1v[1,tid]*v2v[2,tid] - v1v[2,tid]*v2v[1,tid]
+        Sv[1,tid] = v1v[2,tid]*v2v[0,tid] - v1v[0,tid]*v2v[2,tid]
+        Sv[2,tid] = v1v[0,tid]*v2v[1,tid] - v1v[1,tid]*v2v[0,tid]
         #compute dot product (gives orientation)
-        N = Sv[0]*v3v[0] + Sv[1]*v3v[1] + Sv[2]*v3v[2]
+        N[tid] = Sv[0,tid]*v3v[0,tid] + Sv[1,tid]*v3v[1,tid] + Sv[2,tid]*v3v[2,tid]
         
-        if N>0: # then tetrahedra is clockwise 
+        if N[tid]>0: # then tetrahedra is clockwise 
             countv[i] = 1
             conv[i,1] = connection[i,0]
             conv[i,0] = connection[i,1]
             ccwv[i] = 1
-        elif N<0: # then its counter clockwise 
+        elif N[tid]<0: # then its counter clockwise 
             conv[i,0] = connection[i,0]
             conv[i,1] = connection[i,1]
             ccwv[i] = 2
@@ -673,7 +676,7 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     cdef int i, k, c, j
     cdef int eflag = 0 # error flag
     cdef int ei # error number 
-    cdef int num_threads = 2
+    cdef int num_threads = 1
     cdef double minx, minz
     cdef double xinf = 10*max(node_x) # infinite like x 
     cdef double zinf = 10*max(node_z) # infinite like z 
@@ -685,8 +688,9 @@ def orderQuad(long[:,:] connection, double[:,:] node):
     #aim is to work out angles from point with minimum x and z coordinate 
     #min angle >>> bottom left most point 
     #max angle >>> upper left most point
-    #for i in range(numel):
-    for i in prange(numel, nogil=True, num_threads=num_threads):
+    
+    for i in range(numel):
+        #could make loop parallel in future? 
         for k in range(4):
             xv[k] = node_x[connection[i,k]]
             zv[k] = node_z[connection[i,k]]
@@ -740,10 +744,7 @@ def orderQuad(long[:,:] connection, double[:,:] node):
         
         for k in range(4):
             conv[i,k] = connection[i,order[k]]
-            
-        #nb: looked at parallising this loop but it yeilded unstable results 
-            
-        
+                                
     if eflag == 1: 
         raise ValueError('Element %i has more than 2 colinear points and therefore not a quad'%ei)
         
