@@ -350,6 +350,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     end_pt_l = [sur_pnt_cache[0]]
     end_pt_r = [sur_pnt_cache[-1]]
     blines = [] # boundary line cache 
+    m = (cl_factor-1)/abs(fmd)
     while True:
         count += 1        
         key = 'boundary'+str(count)
@@ -365,6 +366,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             z_end = np.interp(x_end,bdx,bdz)
             bdx = np.append(bdx,x_end)
             bdz = np.append(bdz,z_end)
+            zdepth = np.abs(np.interp(bdx,x_pts,z_pts) - bdz)
+            clb = zdepth*m + 1 # boundary characteristic length 
             
             sortid = np.argsort(bdx)
             bdx = bdx[sortid] # reassign to sorted arrays by x coordinate 
@@ -374,7 +377,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             fh.write("// vertices for boundary line %i\n"%count)
             for k in range(len(bdx)):
                 tot_pnts += 1 
-                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//boundary vertex \n"%(tot_pnts,bdx[k],0,bdz[k]))
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//boundary vertex \n"%(tot_pnts,bdx[k],0,bdz[k],clb[k]))
                 pt_idx[k] = tot_pnts
             fh.write("// lines for boundary line %i\n"%count)
             line_idx = []
@@ -386,7 +389,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 tot_lins += 1
                 fh.write("Line (%i) = {%i,%i};\n"%(tot_lins,idx,idx+1))
                 blines.append(tot_lins)
-            #fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
                 
         else:
             fh.write("//end of boundaries.\n")

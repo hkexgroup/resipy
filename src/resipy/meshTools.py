@@ -513,7 +513,7 @@ class Mesh:
             return
         
         elif int(self.cell_type[0]) == 10:# elements are tetrahedra 
-            con_mat, count, _ = mc.orderTetra(np.asarray(self.connection,dtype=dint),
+            con_mat, count, _ = mc.orderTetra(np.asarray(self.connection,dtype=dint,order='C'),
                                               self.node) # call cython 
                     
         elif int(self.cell_type[0]) == 13: # elements are 3d wedges 

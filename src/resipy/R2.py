@@ -3527,8 +3527,15 @@ class R2(object): # R2 master class instanciated by the GUI
         zlim = self.zlim.copy()
         param = self.param.copy()
         
-        # create FLAT homogeneous mesh
-        self.elec['z'] = 0
+        # create FLAT homogeneous mesh 
+        if '2' in self.typ: # normalise to flat surface if 2D            
+            idx = (self.elec['remote'].values == False) & (self.elec['buried'].values == False)
+            ez = self.elec['z'].values[idx]
+            ex = self.elec['x'].values[idx]
+            ez_tmp = self.elec['z'].values - np.interp(self.elec['x'].values,ex,ez)
+            self.elec['z'] = ez_tmp
+            
+        # self.elec['z'] = 0
         self.createMesh(**kwargs)
         self.modErrMesh = self.mesh.copy()
         self.modErrMeshNE = self.param['node_elec'].copy()
@@ -3589,6 +3596,8 @@ class R2(object): # R2 master class instanciated by the GUI
             meshParams = self.meshParams.copy()
             if '3' in self.typ:#change interp method 
                 meshParams['interp_method'] = None # dont do any interpolation 
+            if 'geom_input' in meshParams: # dont use geometry from here because it'll likley be incompatible on the flat mesh
+                meshParams['geom_input'] = {}
             self.createModelErrorMesh(**meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh # create flat mesh
