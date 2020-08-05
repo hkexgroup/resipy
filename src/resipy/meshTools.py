@@ -1191,7 +1191,6 @@ class Mesh:
         return nmesh # return truncated mesh 
     
     
-    
     def threshold(self,attr=None,vmin=None,vmax=None):
         """Threshold the mesh to certian attribute values. 
         
@@ -1222,6 +1221,54 @@ class Mesh:
             vmax = np.max(X)
             
         in_elem = (X >= vmin) & (X <= vmax) # index of elements to keep 
+        
+        temp_con_mat = self.connection.copy() #temporary connection matrix which is just the elements inside the box
+        
+        #new_attr = np.array(self.cell_attributes)
+        
+        elm_id = np.arange(self.numel)+1
+
+        #truncate the attribute table down to the inside elements 
+        new_df = self.df[in_elem]
+        
+        nmesh = self.copy() # make a new mesh object with fewer elements 
+        
+        nmesh.df = new_df
+        nmesh.numel = len(elm_id[in_elem])
+        # nmesh.cell_attributes = new_attr[in_elem]
+        # nmesh.elm_id = elm_id[in_elem]
+        nmesh.elmCentre = self.elmCentre[in_elem,:]
+        
+        new_con_mat = temp_con_mat[in_elem,:]
+        nmesh.connection = new_con_mat     
+        
+        nmesh.__rmexcessNodes() # remove the excess nodes 
+            
+        return nmesh # return truncated mesh 
+    
+    def filterIdx(self, in_elem, attr=None):
+        """Filter mesh down on the basis of element number / index
+        
+        Parameters
+        ------------
+        vmin: array like
+            array of bool, True means to keep the element 
+        attr: string
+            Name of attribute to threshold by 
+        
+        Returns
+        ------------
+        mesh: Class
+            New instance of mesh class which is filtered 
+        """
+        if self.df is None:
+            raise EnvironmentError("No 'df' varaible exists for the mesh class!")
+            
+        if attr is None:
+            attr = 'elm_id'
+        
+        if len(in_elem) != self.numel:
+            raise ValueError('Number of filtered indices does not match number of mesh elements')
         
         temp_con_mat = self.connection.copy() #temporary connection matrix which is just the elements inside the box
         
@@ -2446,6 +2493,48 @@ class Mesh:
                 print("could not plot 3d electrodes, error = "+str(e))
                 
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
+        
+    #%% 3D selection 
+    def pick3Dbox(self,ax=None):
+        if ax is None:
+            #make pyvista background plotter 
+            ax = pv.BackgroundPlotter()
+            
+        if 'elm_id' not in self.df.keys():
+            self.df['elm_id'] = np.arange(1,self.numel+1,1)
+        
+        # surface mesh
+        smesh = self.extractSurface() # surface of mesh 
+        smesh.show3D(ax=ax,color_map='Greys',color_bar=False)
+        
+        # pyvista mesh
+        folder = tempfile.TemporaryDirectory()
+        fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
+        self.vtk(fname)
+        pvmesh = pv.read(fname)
+        folder.cleanup()
+        
+        #add box clip function
+        ax.add_mesh_clip_box(pvmesh, color='white',opacity=0.5)
+        
+        return ax.box_clipped_meshes[0]
+    
+    def addRegion3D(self,clipped):
+        idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'],dtype=int))-1
+        region = self.df['region'].values
+        c = np.max(region)
+        region[idx] = c + 1
+        self.df['region'] = region 
+        
+        in_elem = [False]*self.numel
+        for i in range(self.numel):
+            if i in idx:
+                in_elem[i]=True
+                
+        nmesh = self.filterIdx(in_elem)
+        
+        return nmesh
+                
         
     #%% mesh zoning     
     def assignZone(self,poly_data):

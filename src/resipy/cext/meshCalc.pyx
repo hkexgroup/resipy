@@ -534,8 +534,10 @@ def orderTetra(long[:,::1] connection, double[:,:] node):
     con : np array (long)
         Mesh connection matrix which has been 'corrected' such that all elements
         are counterclockwise. 
-    count : TYPE
+    count : int
         Number of elements with switched nodes (ie been 'corrected')
+    ccw : np array(long)
+        clockwise orientation vector
     """
     #get the number of nodes and elements etc 
     cdef int numel = connection.shape[0]
