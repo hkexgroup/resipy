@@ -707,7 +707,8 @@ def triangulate(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     
 
 #%% pure nearest neighbour interpolation
-def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False): 
+def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False,
+            num_threads=2): 
     """Nearest neighbour lookup using scipy.spatial.cKDTree
     Suitable where dense known coordinates occur.ie. in the case of a DEM.  
     
@@ -749,7 +750,7 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False):
     pnew = np.array([xnew,ynew]).T # new points 
 
     tree = cKDTree(pnew)#tree object 
-    dist,idx = tree.query(pknown)# map known points to new points 
+    dist,idx = tree.query(pknown,njobs=num_threads)# map known points to new points 
     
     if return_idx:
         return zknown[idx], idx
@@ -757,7 +758,8 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False):
         return zknown[idx]
 
 #%% nearest neighbour interpolation in 3D 
-def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
+def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False,
+              num_threads=2):
     """Nearest neighbour lookup using scipy.spatial.cKDTree
     
     Parameters
@@ -801,7 +803,7 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
     pknown = np.array([xknown,yknown,zknown]).T # known points 
     pnew = np.array([xnew,ynew,znew]).T # new points 
     tree = cKDTree(pknown)#tree object 
-    dist,idx = tree.query(pnew)# map known points to new points 
+    dist,idx = tree.query(pnew,njobs=num_threads)# map known points to new points 
 
     
     if return_idx:
