@@ -705,7 +705,7 @@ class Mesh:
         dim = self.connection.shape[1]
             
         if dim == 4:
-            self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1)
+            self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
         elif dim == 3:
             self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1) # works for 3D triangles as well 
         else:
@@ -748,23 +748,14 @@ class Mesh:
             if len(param)!= self.numel:
                 raise ValueError('The parameter array does not match the number of elements')
                 return
-            
-        dim = self.connection.shape[1]
-        con_mat = [[0]*self.numel]*dim
-        for i in range(dim):
-            con_mat[i] = list(self.connection[:,i])
-        
-        (new_con_mat, nnode_x, nnode_y, nnode_z,
-         nnum_elms, nnum_nodes) = mc.split_tri(
-            con_mat, 
-            list(self.node[:,0]), 
-            list(self.node[:,1]), 
-            list(self.node[:,2]))
+                    
+        (new_con_mat, new_node,
+         nnum_elms, nnum_nodes) = mc.split_tri(self.connection, self.node)
              
         
         nmesh = self.copy() 
-        nmesh.connection = np.array(new_con_mat).T
-        nmesh.node = np.array([nnode_x,nnode_y,nnode_z]).T
+        nmesh.connection = new_con_mat
+        nmesh.node = new_node
         nmesh.numel = nnum_elms
         nmesh.numnp = nnum_nodes
         
@@ -798,21 +789,13 @@ class Mesh:
             if len(param)!= self.numel:
                 raise ValueError('The parameter array does not match the number of elements')
                 return
-            
-        dim = self.connection.shape[1]
-        con_mat = [[0]*self.numel]*dim
-        for i in range(dim):
-            con_mat[i] = list(self.connection[:,i])
         
-        (new_con_mat, nnode_x, nnode_y, nnode_z,
-         nnum_elms, nnum_nodes) = mc.split_tetra(con_mat, 
-                                                list(self.node[:,0]), 
-                                                list(self.node[:,1]), 
-                                                list(self.node[:,2]))
+        (new_con_mat, new_node,
+         nnum_elms, nnum_nodes) = mc.split_tetra(self.connection, self.node)
          
         nmesh = self.copy() 
-        nmesh.connection = np.array(new_con_mat).T
-        nmesh.node = np.array([nnode_x,nnode_y,nnode_z]).T
+        nmesh.connection = new_con_mat
+        nmesh.node = new_node
         nmesh.numel = nnum_elms
         nmesh.numnp = nnum_nodes
         #nmesh.cell_attributes = np.repeat(self.cell_attributes,8)
@@ -2493,6 +2476,24 @@ class Mesh:
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
         
     #%% 3D selection 
+    def _select3Dsurface(self):
+        #return surface for 3D selection in forward modelling 
+        if self.ndims != 3:
+            raise Exception('Only use case for this is function is with 3D meshes')
+        if 'gmsh_phys_entity' in self.df.keys():
+            a = self.df['gmsh_phys_entity'].values            
+            nmesh = self.filterIdx(a==1)
+            return nmesh.extractSurface(post_neigh_check=False)
+        else:
+            try: # cut down to just the electrode area 
+                x = self.elec[:,0]
+                y = self.elec[:,1]
+                tmesh = self.truncateMesh([min(x),max(x)],
+                                          [min(y),max(y)])
+            except:
+                tmesh = self.copy()
+            return tmesh.extractSurface()
+        
     def pick3Dbox(self,ax=None):
         if self.ndims != 3:
             raise Exception('Only use case for this is function is with 3D meshes')
@@ -2500,11 +2501,11 @@ class Mesh:
             #make pyvista background plotter 
             ax = pv.BackgroundPlotter()
             
-        if 'elm_id' not in self.df.keys():
-            self.df['elm_id'] = np.arange(1,self.numel+1,1)
+        # if 'elm_id' not in self.df.keys():
+        self.df.loc[:,'elm_id'] = np.arange(1,self.numel+1,1)
         
         # surface mesh
-        smesh = self.extractSurface() # surface of mesh 
+        smesh = self._select3Dsurface() # surface of mesh 
         smesh.show3D(ax=ax,color_map='Greys',color_bar=False)
         
         # pyvista mesh
@@ -2528,32 +2529,12 @@ class Mesh:
         region[idx] = c + 1
         self.df['region'] = region 
         
-        in_elem = [False]*self.numel
-        for i in range(self.numel):
-            if i in idx:
-                in_elem[i]=True
+        in_elem = np.array([False]*self.numel,dtype=bool)
+        in_elem[idx] = True
                 
         nmesh = self.filterIdx(in_elem)
         
         return nmesh
-    
-    def select3Dsurface(self):
-        #return surface for 3D selection in forward modelling 
-        if self.ndims != 3:
-            raise Exception('Only use case for this is function is with 3D meshes')
-        if 'gmsh_phys_entity' in self.df.keys():
-            a = self.df['gmsh_phys_entity'].values            
-            nmesh = self.filterIdx(a==1)
-            return nmesh.extractSurface(post_neigh_check=False)
-        else:
-            try: # cut down to just the electrode area 
-                x = self.elec[:,0]
-                y = self.elec[:,1]
-                tmesh = self.truncateMesh([min(x),max(x)],
-                                          [min(y),max(y)])
-            except:
-                tmesh = self.copy()
-            return tmesh.extractSurface()
             
         
     #%% mesh zoning     

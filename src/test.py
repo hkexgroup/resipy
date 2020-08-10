@@ -146,8 +146,10 @@ plt.close('all')
 # 2D flat
 k = R2()
 k.createSurvey(testdir + 'dc-2d/syscal.csv')
-k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
+#k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
 k.createMesh('trian')
+k.mesh.computeNeigh()
+rmesh = k.mesh.refine()
 
 # 2D topo
 k = R2()
@@ -485,7 +487,6 @@ k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.showPseudo(threed=True)
 k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
-ssmesh = k.mesh.select3Dsurface()
 #k.mesh.write_vtk('resipy/test/mesh3D.vtk',title='3D mesh with flat surface')
 #k.err = True
 k.invert(modErr=True)
