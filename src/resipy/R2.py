@@ -19,9 +19,9 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
-#import resipy.interpolation as interp # for cropSurface()
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
+from scipy.spatial import cKDTree
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -370,7 +370,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if ok:
                 # identification remote electrode
                 remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                            9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+                            9999999, 999999, 99999] # values asssociated with remote electrodes
                 iremote = np.in1d(elec['x'].values, remote_flags)
                 iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
                 elec.loc[:, 'remote'] = iremote
@@ -395,6 +395,133 @@ class R2(object): # R2 master class instanciated by the GUI
         
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
+            
+    def estElecStrings(self,tolerance = 5, max_itr = 1000):
+        """Automatically detect electrode strings 
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Maximum (+/-) bearing (ie directional angle) tolerance each subsiquent
+            electrode may have. The default is 5.
+        max_itr : int, optional
+            Maximum number of searches that can be performed to find colinear
+            nieghbouring electrodes. The default is 1000.
+
+        Raises
+        ------
+        ValueError
+            if the change in x and y direction for 2 neighbouring electrodes is 
+            the same. ie no 2 electrodes can occupy the same x y position in 
+            this code. 
+        ValueError
+            if the change maxium number of searches is exceeded. 
+
+        Returns
+        -------
+        list (of list)
+            Each entry in the list corresponds to an electrode string, and is
+            a list of integers which are the indices of the respective electrodes
+            in self.elec
+        """
+        # compute bearing 
+        def bearing(dx,dy):
+            if dx == 0 and dy == 0:
+                raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
+            elif dx == 0 and dy > 0:
+                return 0
+            elif dx == 0 and dy < 0:
+                return 180
+            elif dx > 0 and dy == 0:
+                return 90
+            elif dx < 0 and dy == 0:
+                return 270
+            elif dx > 0 and dy > 0: 
+                return np.rad2deg(np.arctan(dx/dy))
+            elif dx > 0 and dy < 0: 
+                return 180 + np.rad2deg(np.arctan(dx/dy))
+            elif dx < 0 and dy < 0: 
+                return 180 + np.rad2deg(np.arctan(dx/dy))
+            elif dx < 0 and dy > 0: 
+                return 360 + np.rad2deg(np.arctan(dx/dy))
+
+        iremote = self.elec['remote'].values
+        x = self.elec['x'].values[~iremote]
+        y = self.elec['y'].values[~iremote]
+        # init - nb couple of commented lines are in here for displaying the selected electrode strings 
+        # fig, ax = plt.subplots()
+        # ax.scatter(x,y,c='k')
+        # ax.set_aspect('equal')
+        
+        # mid point of survey 
+        xm = np.mean(x)
+        ym = np.mean(y)
+        # ax.scatter(xm,ym,c='b',s=2)
+        dist = np.sqrt((x-xm)**2 + (y-ym)**2) # distance to all other points in survey
+        
+        # find neighbours 
+        points = np.array([x,y]).T
+        tree = cKDTree(points)
+        distm, niegh = tree.query(points,k=4)
+        
+        #start finding strings 
+        string = [] # caches for saving found electrodes
+        allocated = np.zeros(len(x),dtype=bool) 
+        
+        c = 0 
+        while any(allocated==False):
+            #color = tuple(np.random.rand(3)) # color for line 
+            #find starting point
+            si = np.argmax(dist) # start point index
+            # ax.scatter(x[si],y[si],c='r')
+            allocated[si] = True
+            dist[si] = -1
+            this_string = [si]
+            #get start point neighbours 
+            n = niegh[si,1:4]
+            dxdy = points[n,:] - points[si,:] #deltas 
+            d = distm[si,1:4]
+            di = np.argmin(d) # index of min distance
+            ni = n[di] # index of nearest neighbour
+            this_string.append(ni) # save
+            allocated[ni] = True
+            dist[ni] = -1
+            #work out staring direction 
+            theta = bearing(dxdy[di,0],dxdy[di,1])
+            # ax.plot([x[si],x[ni]],[y[si],y[ni]],c=color)
+            canidate = True
+            
+            while canidate:
+                pi = ni # prevoius neighbour 
+                n = niegh[ni,1:4]
+                dxdy = points[n,:] - points[ni,:] 
+                d = distm[ni,1:4]
+                itr = len(n)
+                thetav = np.zeros(itr)
+                for i in range(len(n)):
+                    thetav[i] = bearing(dxdy[i,0],dxdy[i,1])
+                thtest = np.abs(thetav - theta) < tolerance # test if another point on desired bearing
+                if all(thtest==False):
+                    canidate = False # no more canidates 
+                else:
+                    di = np.argmin(d[thtest]) # index of min distance
+                    ni = n[thtest][di] # index of next nearest neighbour
+                    theta = bearing(x[ni]-x[pi],y[ni]-y[pi])
+                    # ax.plot([x[pi],x[ni]],[y[pi],y[ni]],c=color)
+                    allocated[ni] = True
+                    this_string.append(ni)
+                    dist[ni] = -1
+                    #overwrite electrode string in data frame? #TODO
+                    # label = self.elec.loc[ni,'label'].split() 
+                c+=1
+                if c>max_itr:
+                    canidate=False
+            if c>max_itr:
+                raise ValueError('max number of iterations exceeded')
+                break
+            string.append(this_string)
+            
+        return string
 
 
     def setwd(self, dirname):
@@ -4524,7 +4651,27 @@ class R2(object): # R2 master class instanciated by the GUI
             dump('*** It is likely that more RAM is required for inversion! ***\n'
                  '*** Make a coarser mesh ***')
         return Gb     
-        
+    
+    @staticmethod
+    def setNcores(ncores):
+        """Set the number of cores to use for big calculations, for now 
+        this value only to mesh generation and calculations done on 3D meshes.
+
+        Parameters
+        ----------
+        ncores : int
+            Number of cores to use 
+        Raises
+        ------
+        EnvironmentError
+            Raised if ncores is more than that avialable
+
+        """
+        if ncores>sysinfo['core_count']:
+            raise EnvironmentError('More cores requested than detected/avialable')
+        if type(ncores) != int:
+            raise TypeError('Expected ncores as an int, but got %s'%str(type(ncores)))
+        mt.ncores = ncores
 
 #%% deprecated funcions
 
