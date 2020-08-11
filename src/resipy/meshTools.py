@@ -32,9 +32,9 @@ import resipy.gmshWrap as gw
 from resipy.sliceMesh import sliceMesh # mesh slicing function
 import resipy.interpolation as interp
 
-try:#meshCalc needs to be compiled 
+try: # meshCalc needs to be compiled 
     from resipy.cext import meshCalc as mc
-except (ModuleNotFoundError,AttributeError):
+except Exception: # let's be more general as old compiled module can also trigger the error
     warnings.warn('Failed to import meshTools c extension, meshing options maybe limited')
 
 # import pyvista if available

@@ -331,9 +331,8 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
-                self.elecDyEdit.setEnabled(False)
-                self.fwdRadio.setEnabled(True)
-                self.fwdRadio.setChecked(False)
+                self.elecLineEdit.setEnabled(False)
+                self.elecLineSpacingEdit.setEnabled(False)
                 self.boreholeCheck.setChecked(False)
                 self.boreholeCheck.setEnabled(True)
                 self.regular3DCheck.setVisible(False)
@@ -380,14 +379,13 @@ class App(QMainWindow):
                     self.r2.typ = self.r2.typ.replace('2', '3t')
 
                 # importing tab
-                self.fwdRadio.setChecked(False)
-                self.fwdRadio.setEnabled(False)
+                self.elecLineEdit.setEnabled(True)
+                self.elecLineSpacingEdit.setEnabled(True)
                 self.elecTable.setColumnHidden(2, False)
                 self.topoTable.setColumnHidden(2, False)
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
-                self.elecDyEdit.setEnabled(True)
                 self.invRadio.setChecked(True)
                 # self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
@@ -1332,33 +1330,46 @@ class App(QMainWindow):
         self.nbElecLabel = QLabel('Number of electrodes:')
         
         self.elecDxLabel = QLabel('X spacing:')
-        self.elecDxEdit = QLineEdit('0.0')
+        self.elecDxEdit = QLineEdit('1.0')
         self.elecDxEdit.setValidator(QDoubleValidator())
-
-        self.elecDyEditLabel = QLabel('Y spacing:')        
-        self.elecDyEdit = QLineEdit('0.0')
-        self.elecDyEdit.setValidator(QDoubleValidator())
-        self.elecDyEdit.setEnabled(False)
 
         self.elecDzLabel = QLabel('Z spacing:')
         self.elecDzEdit = QLineEdit('0.0')
         self.elecDzEdit.setValidator(QDoubleValidator())
+        
+        self.elecLineLabel = QLabel('Nb Lines:')
+        self.elecLineEdit = QLineEdit('1')
+        self.elecLineEdit.setValidator(QIntValidator())
+        self.elecLineEdit.setEnabled(False)
+        
+        self.elecLineSpacingLabel = QLabel('Line spacing:')
+        self.elecLineSpacingEdit = QLineEdit('2')
+        self.elecLineSpacingEdit.setValidator(QDoubleValidator())
+        self.elecLineSpacingEdit.setEnabled(False)
 
         def elecGenButtonFunc():
-            nbElec = int(self.nbElecEdit.text())
+            nb = int(self.nbElecEdit.text())
             dx = float(self.elecDxEdit.text())
-            dy = float(self.elecDyEdit.text())
             dz = float(self.elecDzEdit.text())
-            df = pd.DataFrame()
-            if self.r2.iForward:
-                df['label'] = 1 + np.arange(nbElec) # label
-                df['label'] = df['label'].astype(int).astype(str)
-            else:
-                df['label'] = self.r2.elec['label'].values
-            df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
-            df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
-            df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
-            self.elecTable.initTable(df)
+            nline = int(self.elecLineEdit.text())
+            lineSpacing = float(self.elecLineSpacingEdit.text())
+            
+            # df = pd.DataFrame()
+            # if self.r2.iForward: # if we are in forward mode, we overwrite the
+            # # electrode labels, otherwise, we keep them and just fill
+            #     df['label'] = 1 + np.arange(nbElec) # label
+            #     df['label'] = df['label'].astype(int).astype(str)
+            # else:
+            #     df['label'] = self.r2.elec['label'].values
+            # df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
+            # df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
+            # df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
+            
+            # try:
+            self.r2.generateElec(nb, dx, dz, nline, lineSpacing)
+            self.elecTable.initTable(self.r2.elec)
+            # except Exception as e:
+            #     self.errorDump(e)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -1400,10 +1411,12 @@ class App(QMainWindow):
         elecGenLayout.addWidget(self.nbElecEdit)
         elecGenLayout.addWidget(self.elecDxLabel)
         elecGenLayout.addWidget(self.elecDxEdit)
-        elecGenLayout.addWidget(self.elecDyEditLabel)
-        elecGenLayout.addWidget(self.elecDyEdit)
         elecGenLayout.addWidget(self.elecDzLabel)
         elecGenLayout.addWidget(self.elecDzEdit)
+        elecGenLayout.addWidget(self.elecLineLabel)
+        elecGenLayout.addWidget(self.elecLineEdit)
+        elecGenLayout.addWidget(self.elecLineSpacingLabel)
+        elecGenLayout.addWidget(self.elecLineSpacingEdit)
         elecGenLayout.addWidget(self.elecGenButton)
         topoLayout.addWidget(self.elecLabel)
         topoLayout.addLayout(elecGenLayout)
@@ -1518,8 +1531,6 @@ class App(QMainWindow):
         self.phaseLabel = QLabel('Phase/Chargeability Error:')
         
         
-#        elecSpacingLabel = QLabel('Electrode spacing')
-
 #        boxesLabels = [self.aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
 #                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
         boxesLabels = [self.aBoxLabel, self.bBoxLabel, self.mBoxLabel, 
