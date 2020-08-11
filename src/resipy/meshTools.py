@@ -256,7 +256,7 @@ class Mesh:
         
         dint = 'int64' # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
-            dint = 'int32' # avoid windows quirk where type long is actually a 32 bit integer 
+            dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer 
         self.connection = np.asarray(node_data,dtype=dint) #connection matrix
         
         self.cell_type = cell_type # cellType
@@ -703,11 +703,11 @@ class Mesh:
             raise Exception("Sorry neighbour calculation not available yet with this mesh type")
          
         dim = self.connection.shape[1]
-            
+
         if dim == 4:
             self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
         elif dim == 3:
-            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1) # works for 3D triangles as well 
+            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection) # works for 3D triangles as well 
         else:
             return 
         
@@ -730,7 +730,7 @@ class Mesh:
         self.orderNodes()
         
         
-    def splitTri(self,param=None): # fix me 
+    def splitTri(self, param=None): # fix me 
         """Refine triangles by splitting them into 4 smaller triangles 
         """
         #error checks 

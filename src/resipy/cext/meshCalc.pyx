@@ -4,6 +4,7 @@ cimport numpy as np
 from cython.parallel import prange, parallel 
 # from cpython cimport array
 cimport openmp
+#from libc.stdint cimport int32_t, int64_t
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
@@ -228,7 +229,7 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     #using binary search and sorted lists for efficient index lookup 
     cdef np.ndarray[long, ndim=1] tri_flatten = tri_combo.T.flatten() #all faces in one array 
 	
-    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten) # sorted indexes  (pure python code)
+    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
     cdef np.ndarray[long, ndim=1] tri_sort = tri_flatten[temp_idx] # sorted faces (forward direction)
     cdef long[:] tri_sortv = tri_sort
     cdef int maxo = len(tri_sort)-1
@@ -333,7 +334,7 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def neigh2d(long[:,:] connection, int return_tri_combo=0):
+def neigh2d(long[:,:] connection, int return_tri_combo=1):
     """Compute neighbours of each element within a 2D triangular mesh 
     Parameters
     -------------
@@ -348,7 +349,6 @@ def neigh2d(long[:,:] connection, int return_tri_combo=0):
         Corresponding neighbour indexes for each face of the cells in the 
         connection matrix
     """
-    
     cdef int i,j
     cdef str idx1,idx2,idx3,idx4
     cdef int numel = connection.shape[0]
@@ -383,7 +383,7 @@ def neigh2d(long[:,:] connection, int return_tri_combo=0):
     #cdef list tri_list = tri_combo[0] + tri_combo[1] + tri_combo[2] + tri_combo[3] #all faces together 
     cdef np.ndarray[long, ndim=1] tri_flatten = tri_combo.T.flatten()
 	
-    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten) # sorted indexes  (pure python code)
+    cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
     cdef np.ndarray[long, ndim=1] tri_sort = tri_flatten[temp_idx] # sorted faces (forward direction)
     cdef int maxo = len(tri_sort)-1
     cdef long long int o
