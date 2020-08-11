@@ -285,7 +285,8 @@ class App(QMainWindow):
         self.iCropping = True # by default crop the mesh
         self.num_xz_poly = None # to store the values
         self.tempElec = None # place holder to compare the new electrode agains
-
+        self.clip = None # to store the clipped mesh for 3D forward
+        
         if frozen == 'not':
             self.datadir = os.path.join(bundle_dir, './examples')
         else:
@@ -333,6 +334,7 @@ class App(QMainWindow):
                         self.elecTable.initTable(self.r2.elec)
                 self.elecLineEdit.setEnabled(False)
                 self.elecLineSpacingEdit.setEnabled(False)
+                self.elecLineEdit.setText('1')
                 self.boreholeCheck.setChecked(False)
                 self.boreholeCheck.setEnabled(True)
                 self.regular3DCheck.setVisible(False)
@@ -362,7 +364,10 @@ class App(QMainWindow):
                 instructionLabel.setVisible(True)
                 self.meshAspectBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
-
+                instructionLabel3D.setVisible(False)
+                self.select3DRegionBtn.setVisible(False)
+                self.add3DRegionBtn.setVisible(False)
+                
                 # inversion settings
                 show3DOptions(False)
                 if self.r2 is not None:
@@ -415,6 +420,9 @@ class App(QMainWindow):
                 instructionLabel.setVisible(False)
                 self.meshAspectBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
+                instructionLabel3D.setVisible(True)
+                self.select3DRegionBtn.setVisible(True)
+                self.add3DRegionBtn.setVisible(True)
 
                 # inversion settings
                 show3DOptions(True)
@@ -2961,6 +2969,7 @@ class App(QMainWindow):
         importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
         importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         importCustomMeshLabel2.setWordWrap(True)
+        
         def importCustomMeshFunc2():
             print('using importCustomMeshFunc2')
             elec = self.elecTable.getTable()
@@ -2997,6 +3006,23 @@ class App(QMainWindow):
         self.meshAspectBtn.setToolTip('Check for equal aspect of axis.')
         self.meshAspectBtn.setChecked(True)
         self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
+
+        def select3DRegionBtnFunc():
+            self.r2.showMesh(ax=mesh3Dplotter, attr='region', color_bar=True)
+            self.clip = self.r2.mesh.pick3Dbox(ax=mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
+        self.select3DRegionBtn = QPushButton('(1) Select region')
+        self.select3DRegionBtn.clicked.connect(select3DRegionBtnFunc)
+        self.select3DRegionBtn.setVisible(False)
+
+        def add3DRegionBtnFunc():
+            clipped_mesh = self.r2.mesh.addRegion3D(self.clip)
+            self.regionTable.addRow()
+            mesh3Dplotter.clear() # clear all actors 
+            # clipped_mesh.show(ax=mesh3Dplotter, attr='region', color_bar=True)
+            self.r2.showMesh(ax=mesh3Dplotter, attr='region', color_bar=True)
+        self.add3DRegionBtn = QPushButton('(2) Add region')
+        self.add3DRegionBtn.clicked.connect(add3DRegionBtnFunc)
+        self.add3DRegionBtn.setVisible(False)
 
         def resetMeshBtnFunc():
             self.regionTable.reset()
@@ -3068,6 +3094,13 @@ class App(QMainWindow):
             ' no smoothing at the boundaries) and fix the region value for '
             'triangular mesh only.')
         instructionLabel.setWordWrap(True)
+        
+        instructionLabel3D = QLabel('Click on "Select Region" to interactively'
+            ' define a region in 3D using the box. When done, hit the "Add Region"'
+            ' button to confirm. You can then specify different values in the '
+            ' table on the side. Recreate a mesh to erase all regions.')
+        instructionLabel3D.setWordWrap(True)
+        instructionLabel3D.setVisible(False)
 
         self.mwMesh = MatplotlibWidget(navi=True, itight=False)
         self.mwMesh3D = MatplotlibWidget(threed=True, navi=True)
@@ -3173,8 +3206,11 @@ class App(QMainWindow):
 
         instructionLayout = QHBoxLayout()
         instructionLayout.addWidget(instructionLabel, 86)
+        instructionLayout.addWidget(instructionLabel3D, 86)
         instructionLayout.addWidget(self.meshAspectBtn, 7)
         instructionLayout.addWidget(self.resetMeshBtn, 7)
+        instructionLayout.addWidget(self.select3DRegionBtn, 7)
+        instructionLayout.addWidget(self.add3DRegionBtn, 7)
         meshLayout.addLayout(instructionLayout)
         
         # for RAM issue
@@ -3188,8 +3224,7 @@ class App(QMainWindow):
 
         meshPlot = QWidget()
         meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(self.mwMesh, 70)
-        meshPlotLayout.addLayout(regionLayout, 30)
+        meshPlotLayout.addWidget(self.mwMesh)
         meshPlot.setLayout(meshPlotLayout)
 
         meshPlot3D = QWidget()
@@ -3205,7 +3240,11 @@ class App(QMainWindow):
         meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
 
-        meshLayout.addLayout(meshOutputStack, 1)
+        meshSubLayout = QHBoxLayout()
+        meshSubLayout.addLayout(meshOutputStack, 70)
+        meshSubLayout.addLayout(regionLayout, 30)
+        
+        meshLayout.addLayout(meshSubLayout)
 
         tabMesh.setLayout(meshLayout)
 
