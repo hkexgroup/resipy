@@ -102,10 +102,6 @@ def int2str(int a, int pad):
     cdef str s
     s = '{:0>%id}'%pad
     return s.format(a)
-
-# cdef int mergeInt(int a, int b):
-#     cdef int x = math.floor(math.log10(b))
-#     return a*10**(1+x)+b
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -150,8 +146,29 @@ cdef long tetra_signp(double[:] a, double[:] b, double [:] c, double[:] d,
     elif N<0:
         return 2 # points are counter clockwise
     else:
-        return 0 # something dogdey has happened as all points are on the same plane    
-    
+        return 0 # something dogdey has happened as all points are on the same plane   
+
+@cython.boundscheck(False)    
+cdef void sortInt(long[:] arr, int n) nogil: 
+    #adapted from https://www.geeksforgeeks.org/insertion-sort/
+    #sorts array in place
+    cdef int i, j, key
+    for i in range(1, n): 
+        key = arr[i] 
+        j = i-1
+        while j >= 0 and key < arr[j] : 
+                arr[j + 1] = arr[j] 
+                j -= 1
+        arr[j + 1] = key 
+    #return arr
+
+cdef long long int mergeInts(int a, int b, int c, int pad) nogil: # merge 3 ints 
+    cdef long long int x = a*10**pad + b # merge a and b
+    return x*10**pad + c # merge c 
+
+cdef long long int mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
+    return a*10**pad + b # merge a and b
+
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
 def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
@@ -170,44 +187,41 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
         connection matrix
     """
     
-    cdef int i, j
-    cdef str idx1,idx2,idx3,idx4
+    cdef int i, j, tid #thread indexing 
     cdef int numel = connection.shape[0]
-    cdef list face1s, face2s, face3s, face4s
-    cdef str face1t, face2t, face3t, face4t
-    cdef long long int face1, face2, face3, face4
+    #face arrays 
+    cdef long[:,:] face1s = np.zeros((3,num_threads),dtype=int)
+    cdef long[:,:] face2s = np.zeros((3,num_threads),dtype=int)
+    cdef long[:,:] face3s = np.zeros((3,num_threads),dtype=int)
+    cdef long[:,:] face4s = np.zeros((3,num_threads),dtype=int)
+    #cdef long[:,:] face np.zeros((4,num_threads),dtype=int)
+    #combination array 
     cdef np.ndarray[long, ndim=2] tri_combo = np.zeros((numel,4),dtype=int,order='C') # allocate space for tri_combo 
     cdef long[:,:] tri_combov = tri_combo
+    #maximum number of node digits 
     cdef int num_node = max([max(connection[:,0]),max(connection[:,1]),
                              max(connection[:,2]),max(connection[:,3])])
     cdef int pad = len(str(num_node))
-    #assign unique node combinations to each element edge, repeats pick out neighbours
-    for i in range(numel):
-        idx1 = int2str(connection[i,0],pad)#extract indexes 
-        idx2 = int2str(connection[i,1],pad)
-        idx3 = int2str(connection[i,2],pad)
-        idx4 = int2str(connection[i,3],pad)
-        
-        # assign each face an organised and unique code
-        #sort face indexes 
-        face1s = sorted((idx2,idx3,idx4))
-        face2s = sorted((idx1,idx4,idx3))
-        face3s = sorted((idx1,idx2,idx4))
-        face4s = sorted((idx1,idx2,idx3))
-        face1t = str(face1s[0])+str(face1s[1])+str(face1s[2]) # add one to deal with 0 node number bug 
-        face2t = str(face2s[0])+str(face2s[1])+str(face2s[2])
-        face3t = str(face3s[0])+str(face3s[1])+str(face3s[2])
-        face4t = str(face4s[0])+str(face4s[1])+str(face4s[2])
-        face1 = int(face1t)
-        face2 = int(face2t)
-        face3 = int(face3t)
-        face4 = int(face4t)
     
-        tri_combov[i,0] = face1#face 1 
-        tri_combov[i,1] = face2#face 2 
-        tri_combov[i,2] = face3#face 3 
-        tri_combov[i,3] = face4#face 4 
-        
+    #assign unique node combinations to each element edge, repeats pick out neighbours
+    #for i in range(numel):
+    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+        tid = openmp.omp_get_thread_num()
+        face1s[0,tid] = connection[i,1]; face1s[1,tid] = connection[i,2]; face1s[2,tid] = connection[i,3]
+        face2s[0,tid] = connection[i,0]; face2s[1,tid] = connection[i,3]; face2s[2,tid] = connection[i,2]
+        face3s[0,tid] = connection[i,0]; face3s[1,tid] = connection[i,1]; face3s[2,tid] = connection[i,3]
+        face4s[0,tid] = connection[i,0]; face4s[1,tid] = connection[i,1]; face4s[2,tid] = connection[i,2]
+        #sort face indexes 
+        sortInt(face1s[:,tid],3)
+        sortInt(face2s[:,tid],3)
+        sortInt(face3s[:,tid],3)
+        sortInt(face4s[:,tid],3)
+        # assign each face an organised and unique code
+        tri_combov[i,0] = mergeInts(face1s[0,tid],face1s[1,tid],face1s[2,tid],pad) #face 1 
+        tri_combov[i,1] = mergeInts(face2s[0,tid],face2s[1,tid],face2s[2,tid],pad) #face 2 
+        tri_combov[i,2] = mergeInts(face3s[0,tid],face3s[1,tid],face3s[2,tid],pad) #face 3 
+        tri_combov[i,3] = mergeInts(face4s[0,tid],face4s[1,tid],face4s[2,tid],pad) #face 4
+
     cdef np.ndarray[long, ndim=2] neigh = np.zeros((numel,4),dtype=int) # allocate space for neighbour matrix        
     cdef long[:,:] neighv = neigh  
     
@@ -231,12 +245,9 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
 
     cdef np.ndarray[long, ndim=1] lookup_idx = np.asarray(lookup[temp_idx],order='C')
     cdef long[:] lookup_idxv = lookup_idx
-    #thread indexing 
-    cdef int tid
-    cdef long[:] mtid = np.zeros(numel,dtype=int,order='C')
   
     #loop is parallel becuase it can be intense
-    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
+    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='dynamic'):
         tid = openmp.omp_get_thread_num()
         for j in range(4):
             o[tid] = bisection_search(tri_sortv,tri_combov[i,j]) # only works on a sorted array
@@ -341,36 +352,29 @@ def neigh2d(long[:,:] connection, int return_tri_combo=0):
     cdef int i,j
     cdef str idx1,idx2,idx3,idx4
     cdef int numel = connection.shape[0]
-    cdef list face1s, face2s, face3s
-    cdef str face1t, face2t, face3t
-    cdef long long int face1, face2, face3
+    #face arrays 
+    cdef long[:] face1s = np.zeros(2,dtype=int)
+    cdef long[:] face2s = np.zeros(2,dtype=int)
+    cdef long[:] face3s = np.zeros(2,dtype=int)
+    #combination array 
     cdef np.ndarray[long, ndim=2] tri_combo = np.zeros((numel,3),dtype=int) # allocate space for tri_combo 
+    cdef long[:,:] tri_combov = tri_combo
     cdef int num_node = max([max(connection[:,0]),max(connection[:,1]),
                              max(connection[:,2])])
     cdef int pad = len(str(num_node))
     
     for i in range(numel):
-        idx1 = int2str(connection[i,0],pad) # extract indexes 
-        idx2 = int2str(connection[i,1],pad) 
-        idx3 = int2str(connection[i,2],pad)
-        
-        # assign each face an organised and unique code
+        face1s[0] = connection[i,0]; face1s[1] = connection[i,1]; 
+        face2s[0] = connection[i,1]; face2s[1] = connection[i,2]; 
+        face3s[0] = connection[i,2]; face3s[1] = connection[i,0]; 
         #sort face indexes 
-        face1s = sorted([idx1,idx2])
-        face2s = sorted([idx2,idx3])
-        face3s = sorted([idx3,idx1])
-
-        face1t = str(face1s[0])+str(face1s[1]) 
-        face2t = str(face2s[0])+str(face2s[1])
-        face3t = str(face3s[0])+str(face3s[1])
-
-        face1 = int(face1t)
-        face2 = int(face2t)
-        face3 = int(face3t)
-    
-        tri_combo[i,0] = face1#face 1 
-        tri_combo[i,1] = face2#face 2 
-        tri_combo[i,2] = face3#face 3 
+        sortInt(face1s,2)
+        sortInt(face2s,2)
+        sortInt(face3s,2)
+        # assign each face an organised and unique code
+        tri_combov[i,0] = mergeInt(face1s[0],face1s[1],pad) #face 1 
+        tri_combov[i,1] = mergeInt(face2s[0],face2s[1],pad) #face 2 
+        tri_combov[i,2] = mergeInt(face3s[0],face3s[1],pad) #face 3 
         
     cdef np.ndarray[long, ndim=2] neigh = np.zeros((numel,3),dtype=int) # allocate space for neighbour matrix        
     cdef long[:,:] neighv = neigh             
@@ -449,7 +453,7 @@ def split_tri(long[:,:] connection, double[:,:] node):
     cdef double[:] z = np.zeros(3,dtype=float)
     cdef long[:] n = np.zeros(6,dtype=int) # new node numbers 
     cdef float mx, my, mz
-    cdef list nodes
+    cdef long[:] nodes = np.zeros(2,dtype=int)
     cdef unsigned long long int mn
     cdef int j, nno, tmpi 
 
@@ -495,10 +499,12 @@ def split_tri(long[:,:] connection, double[:,:] node):
             mx = (x[a[j]]+x[b[j]])/2
             my = (y[a[j]]+y[b[j]])/2
             mz = (z[a[j]]+z[b[j]])/2
-            nodes = sorted([int2str(n[a[j]],pad), int2str(n[b[j]],pad)])
-            mn = int(nodes[0]+nodes[1])
+
+            nodes[0] = n[a[j]]; nodes[1] = n[b[j]]
+            sortInt(nodes,2)
+            mn = mergeInt(nodes[0],nodes[1],pad)
             
-            new_nodev[tmpi+j,0] = mx
+            new_nodev[tmpi+j,0] = mx # mid point of 2 respective nodes 
             new_nodev[tmpi+j,1] = my
             new_nodev[tmpi+j,2] = mz
             new_node_idx[tmpi+j] = mn # node combination
@@ -517,8 +523,9 @@ def split_tri(long[:,:] connection, double[:,:] node):
             n[j] = nno 
         
         for j in range(3):
-            nodes = sorted([int2str(n[a[j]],pad), int2str(n[b[j]],pad)])
-            mn = int(nodes[0]+nodes[1])
+            nodes[0] = n[a[j]]; nodes[1] = n[b[j]]
+            sortInt(nodes,2)
+            mn = mergeInt(nodes[0],nodes[1],pad)
             search = bisection_searchL(unicl,mn)
             
             n[j+3] = node_id[search]#reference index
@@ -572,7 +579,7 @@ def split_tetra(long[:,:] connection, double[:,:] node):
     cdef double[:] z = np.zeros(4,dtype=float)
     cdef long[:] n = np.zeros(10,dtype=int) # new node numbers 
     cdef double mx, my, mz
-    cdef list nodes
+    cdef long[:] nodes = np.zeros(2,dtype=int)
     cdef long long int mn
     cdef int j, nno, tmpi #loop variables 
 
@@ -622,8 +629,9 @@ def split_tetra(long[:,:] connection, double[:,:] node):
             mx = (x[a[j]]+x[b[j]])/2
             my = (y[a[j]]+y[b[j]])/2
             mz = (z[a[j]]+z[b[j]])/2
-            nodes = sorted([int2str(n[a[j]],pad), int2str(n[b[j]],pad)])
-            mn = int(nodes[0]+nodes[1])
+            nodes[0] = n[a[j]]; nodes[1] = n[b[j]]
+            sortInt(nodes,2)
+            mn = mergeInt(nodes[0],nodes[1],pad)
             
             new_nodev[tmpi+j,0] = mx
             new_nodev[tmpi+j,1] = my
@@ -645,8 +653,9 @@ def split_tetra(long[:,:] connection, double[:,:] node):
             n[j] = nno 
         
         for j in range(6):
-            nodes = sorted([int2str(n[a[j]],pad), int2str(n[b[j]],pad)])
-            mn = int(nodes[0]+nodes[1])
+            nodes[0] = n[a[j]]; nodes[1] = n[b[j]]
+            sortInt(nodes,2)
+            mn = mergeInt(nodes[0],nodes[1],pad)
             search = bisection_searchL(unicl,mn)
             n[j+4] = node_id[search]#reference index
     
@@ -938,7 +947,6 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
         An array of 1 and 0. 1 means the face is likley on the top surface. 
 
     """
-    #print('number of threads = %i'%num_threads)
     #pull out important arrays / info 
     cdef int nfaces = fconnection.shape[0]
     cdef double[:] node_xv = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
