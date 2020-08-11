@@ -150,6 +150,8 @@ k.createSurvey(testdir + 'dc-2d/syscal.csv')
 k.createMesh('trian')
 k.mesh.computeNeigh()
 rmesh = k.mesh.refine()
+#k.mesh.connection = k.mesh.connection.astype(np.int_)
+#idx = np.argsort(t) 
 
 # 2D topo
 k = R2()
@@ -510,7 +512,7 @@ k = R2(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.importMesh(testdir + 'mesh/coarse3D.vtk')
-k.mesh.refine() # test refining mesh 
+rmesh = k.mesh.refine() # test refining mesh 
 k.addFlatError()
 k.invert()
 k.showResults() 
