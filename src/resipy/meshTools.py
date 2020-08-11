@@ -256,7 +256,7 @@ class Mesh:
         
         dint = 'int64' # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
-            dint = 'int32' # avoid windows quirk where type long is actually a 32 bit integer 
+            dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer 
         self.connection = np.asarray(node_data,dtype=dint) #connection matrix
         
         self.cell_type = cell_type # cellType
@@ -703,7 +703,7 @@ class Mesh:
             raise Exception("Sorry neighbour calculation not available yet with this mesh type")
          
         dim = self.connection.shape[1]
-            
+
         if dim == 4:
             self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
         elif dim == 3:
@@ -730,7 +730,7 @@ class Mesh:
         self.orderNodes()
         
         
-    def splitTri(self,param=None): # fix me 
+    def splitTri(self, param=None): # fix me 
         """Refine triangles by splitting them into 4 smaller triangles 
         """
         #error checks 
@@ -3192,10 +3192,10 @@ class Mesh:
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
         for i in range(self.numel):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
-                                                         con_mat[i][0]+1,#need to add one because of fortran indexing 
-                                                         con_mat[i][1]+1,
-                                                         con_mat[i][2]+1,
-                                                         con_mat[i][3]+1,
+                                                         con_mat[i,0]+1,#need to add one because of fortran indexing 
+                                                         con_mat[i,1]+1,
+                                                         con_mat[i,2]+1,
+                                                         con_mat[i,3]+1,
                                                          zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
