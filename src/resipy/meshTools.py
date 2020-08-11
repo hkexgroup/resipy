@@ -1183,7 +1183,7 @@ class Mesh:
         new_con_mat = temp_con_mat[in_elem,:]
         nmesh.connection = new_con_mat     
         
-        nmesh.__rmexcessNodes() # remove the excess nodes 
+        # nmesh.__rmexcessNodes() # remove the excess nodes 
             
         return nmesh # return truncated mesh 
     
