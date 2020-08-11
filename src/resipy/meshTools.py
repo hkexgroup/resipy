@@ -3192,10 +3192,10 @@ class Mesh:
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
         for i in range(self.numel):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
-                                                         con_mat[i][0]+1,#need to add one because of fortran indexing 
-                                                         con_mat[i][1]+1,
-                                                         con_mat[i][2]+1,
-                                                         con_mat[i][3]+1,
+                                                         con_mat[i,0]+1,#need to add one because of fortran indexing 
+                                                         con_mat[i,1]+1,
+                                                         con_mat[i,2]+1,
+                                                         con_mat[i,3]+1,
                                                          zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
