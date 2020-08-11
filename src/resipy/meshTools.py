@@ -1230,7 +1230,7 @@ class Mesh:
         elm_id = np.arange(self.numel)+1
 
         #truncate the attribute table down to the inside elements 
-        new_df = self.df[in_elem]
+        new_df = self.df[in_elem].copy() # TODO copy needed? (gb)
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
         
@@ -2520,14 +2520,13 @@ class Mesh:
         
         return ax.box_clipped_meshes[0]
     
-    def addRegion3D(self,clipped):
+    def addRegion3D(self, clipped):
         if self.ndims != 3:
-            raise Exception('Only use case for this is function iswith 3D meshes')
-        idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'],dtype=int))-1
-        region = self.df['region'].values
-        c = np.max(region)
-        region[idx] = c + 1
-        self.df['region'] = region 
+            raise Exception('Only use case for this function is with 3D meshes')
+        idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'], dtype=int))-1
+        ie = np.in1d(self.df['elm_id'].values, idx)
+        print(ie)
+        self.df.loc[ie, 'region'] = np.max(self.df['region']) + 1 
         
         in_elem = np.array([False]*self.numel,dtype=bool)
         in_elem[idx] = True
