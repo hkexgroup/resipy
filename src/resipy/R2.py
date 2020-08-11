@@ -396,7 +396,58 @@ class R2(object): # R2 master class instanciated by the GUI
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             
-    def estElecStrings(self,tolerance = 5, max_itr = 1000):
+            
+            
+    def generateElec(self, nb=24, dx=0.5, dz=0, nline=1, lineSpacing=2):
+        """Generate electrodes positions for 2D and 3D surveys.
+        
+        Parameters
+        ----------
+        nb : int, optional
+            Number of electrodes per line. For 3D survey, if multiple lines,
+            the total number of electrodes will be nb x nline.
+        dx : float, optional
+            Spacing in meters between electrodes in the X direction.
+        dz : float, optional
+            Increment in the Z direction (elevation) between consecutive electrodes.
+        nline : int, optional
+            Number of lines. 1 for 2D and multiple for 3D.
+        lineSpacing : float, optional
+            Spacing between lines (3D only).
+        """
+        # check type
+        nb = int(nb)
+        nline = int(nline)
+        
+        # electrode positions for one line
+        elec = np.zeros((nb, 3))
+        elec[:,0] = np.linspace(0, (nb-1)*dx, nb)
+        elec[:,1] = np.linspace(0, (nb-1)*dz, nb)
+        
+        # specific 2D or 3D additions and building dfelec
+        if (self.typ == 'R2') | (self.typ == 'cR2'):
+            dfelec = pd.DataFrame(columns=['label','x','y','z','buried'])
+            dfelec['label'] = (1 + np.arange(nb)).astype(int).astype(str)
+            dfelec.loc[:, ['x','y','z']] = elec
+            dfelec['buried'] = False
+        else:
+            grid = np.tile(elec.T, nline).T
+            labels = []
+            for i in range(nline):
+                labels.append(['{:d} {:d}'.format(i+1, j+1) for j in range(nb)]) # string + elec number
+                grid[i*nb:(i+1)*nb, 1] = (i+1)*lineSpacing # Y is line spacing
+            dfelec = pd.DataFrame(columns=['label','x','y','z','buried'])
+            dfelec['label'] = np.hstack(labels)
+            dfelec['x'] = grid[:,0]
+            dfelec['y'] = grid[:,1]
+            dfelec['z'] = grid[:,2]
+            dfelec['buried'] = False
+            
+        self.setElec(dfelec)
+        
+        
+        
+    def estElecStrings(self, tolerance=5, max_itr=1000):
         """Automatically detect electrode strings 
 
         Parameters
