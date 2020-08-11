@@ -2865,7 +2865,7 @@ class R2(object): # R2 master class instanciated by the GUI
             elec_y = self.elec['y'].values
             elec_z = self.elec['z'].values
             initMesh.setElec(elec_x, elec_y, elec_z)
-            initMesh.mesh_title = 'Initial Model'
+            initMesh.mesh_title = 'Forward Model'
             self.meshResults.append(initMesh)
 
         for i in range(len(self.surveys)):
