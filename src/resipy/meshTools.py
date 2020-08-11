@@ -707,7 +707,7 @@ class Mesh:
         if dim == 4:
             self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
         elif dim == 3:
-            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection) # works for 3D triangles as well 
+            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1) # works for 3D triangles as well 
         else:
             return 
         
