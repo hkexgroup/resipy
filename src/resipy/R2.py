@@ -3411,8 +3411,16 @@ class R2(object): # R2 master class instanciated by the GUI
         >>> k.createMesh(typ='trian')
         >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
         """
+        if (self.typ == 'cR3t') | (self.typ == 'R3t'):
+            lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
+            elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
+            nline = len(np.unique(lines))
+            nelec = self.elec.shape[0] // nline # as it is a grid
+        else:
+            nline = 0
+            nelec = self.elec.shape[0]
+        
         qs = []
-        nelec = self.elec.shape[0]
         def addCustSeq(fname):
             seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
@@ -3440,9 +3448,23 @@ class R2(object): # R2 master class instanciated by the GUI
                 pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
                 qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
         sequence = np.vstack(qs)
+        
         # detecing quadrupoles using out of bound electrodes
         iabove = (sequence > self.elec.shape[0]).any(1)
         sequence = sequence[~iabove,:]
+        
+        if (params[0][0] != 'custSeq') & (self.typ[-1] == 't'):
+            # add line number
+            qs2 = []
+            for i in range(nline):
+                df = pd.DataFrame(sequence.astype(int).astype(str), columns=['a','b','m','n'])
+                df['a'] = '{:d} '.format(i+1) + df['a']
+                df['b'] = '{:d} '.format(i+1) + df['b']
+                df['m'] = '{:d} '.format(i+1) + df['m']
+                df['n'] = '{:d} '.format(i+1) + df['n']
+                qs2.append(df.values)
+            sequence = np.vstack(qs2)
+            
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
 
@@ -3623,7 +3645,7 @@ class R2(object): # R2 master class instanciated by the GUI
         seq = self.sequence
 
         # let's check if IP that we have a positive geometric factor
-        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
+        if self.typ == 'cR2': # NOTE this doesn't work for borehole
             elecpos = self.elec['x'].values # and works only for 2D
             array = seq.copy()
             apos = elecpos[array[:,0]-1]
@@ -3642,11 +3664,11 @@ class R2(object): # R2 master class instanciated by the GUI
 
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
         # if it's 3D, we add the line number (all electrode on line 1)
-        if self.typ[-2] == '3':
-            protocol.insert(1, 'sa', 1)
-            protocol.insert(3, 'sb', 1)
-            protocol.insert(5, 'sm', 1)
-            protocol.insert(7, 'sn', 1)  
+        # if self.typ[-2] == '3':
+        #     protocol.insert(1, 'sa', 1)
+        #     protocol.insert(3, 'sb', 1)
+        #     protocol.insert(5, 'sm', 1)
+        #     protocol.insert(7, 'sn', 1)  
             
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
