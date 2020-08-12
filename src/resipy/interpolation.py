@@ -811,3 +811,90 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False,
     else: 
         return iknown[idx]
 
+#%% National grid handling (needed for accurate interpolation)
+def rotGridData(ngx, ngy, x0=None, y0=None, rotAngle=0):
+    """ Rotate National grid coordinates into local coordinates. 
+    
+    Parameters
+    ------------
+    ngx: array like 
+        Easting in National grid
+    ngy: array like
+        Northing in National grid
+    x0: int, float, optional
+        Initial easting
+    y0: int, float, optional
+        Initial northing
+    rotAngle:
+        Rotation angle (in degrees)
+    
+    Returns 
+    ------------   
+    rotx: array like
+        Local x coordinate 
+    roty: array like 
+        Local Y coordinate 
+    """
+    if len(ngx) != len(ngy):
+        raise ValueError('Got arrays of 2 different lengths in rotGridData')
+        
+    rotx = np.zeros(len(ngx))
+    roty = np.zeros(len(ngx))
+    
+    if x0 is None:
+        x0 = min(ngx)
+    if y0 is None:
+        y0 = min(ngy)
+        
+    rotAngle = np.deg2rad(rotAngle) # convert to radians for calculations 
+
+    for i in range(len(ngx)):
+        trans_x = ngx[i] - x0
+        trans_y = ngy[i] - y0
+        rotx[i] = trans_x*np.cos(rotAngle) - trans_y*np.sin(rotAngle)
+        roty[i] = trans_x*np.sin(rotAngle) + trans_y*np.cos(rotAngle) 
+        
+    return rotx,roty
+
+def invRotGridData(local_x, local_y, x0, y0, rotAngle=0):
+    """ Rotate local coordinates back into National Grid
+    Parameters
+    ------------
+    local_x: array like 
+        Local X array 
+    local_y: array like
+        Local Y array 
+    x0: int, float, 
+        Initial easting. Same as 
+    y0: int, float, 
+        Initial northing
+    rotAngle:
+        Rotation angle (in radians)
+    
+    Returns 
+    ------------   
+    rotx: array like
+        Rotated coordinate in National grid 
+    roty: array like 
+        Rotated coordinate in National grid 
+    """
+    if len(local_x) != len(local_y):
+        raise ValueError('Got arrays of 2 different lengths in invRotGridData')
+    rotx = np.zeros(len(local_x))
+    roty = np.zeros(len(local_y))
+    
+    rotAngle = np.deg2rad(rotAngle) # convert to radians for calculations 
+    for i in range(len(local_x)):
+        col1 = np.array((np.cos(rotAngle),np.sin(rotAngle)))
+        col2 = np.array((-np.sin(rotAngle),np.cos(rotAngle)))
+        col1.shape=(2,1)
+        col2.shape=(2,1)
+        G = np.matrix(np.concatenate((col1,col2),axis=1)) 
+        d = np.array([local_x[i], local_y[i]])
+        d.shape = (2,1)
+        mod = ((G.T * G)**-1) * G.T * d 
+        t = mod.A
+        rotx[i] = t[0][0]+ x0
+        roty[i] = t[1][0]+ y0
+        
+    return rotx,roty
