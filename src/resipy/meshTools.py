@@ -1886,26 +1886,32 @@ class Mesh:
             except AttributeError:
                 sens = False
                 #print('no sensitivities to plot')
-                
-        # determine the extent of the survey for bounding box
+                    
+        # determine the depth extent of the survey for bounding box
         if zlim == None:
             zlim = [min(self.node[:,2])-1, max(self.node[:,2])+1]
-        if self.iremote is not None: 
-            if xlim == None:
-                xlim = [min(self.elec[:,0][~self.iremote]), max(self.elec[:,0][~self.iremote])]
-            if ylim == None:
-                ylim = [min(self.elec[:,1][~self.iremote]), max(self.elec[:,1][~self.iremote])]
-        else:
-            try: 
+        
+        #work out lateral extents         
+        try:
+            if self.elec is not None:
+                if self.iremote is not None: 
+                    iremote = self.iremote
+                else:
+                    nelec = self.elec.shape[0]
+                    iremote = np.array([False]*nelec,dtype=bool)
+                    
                 if xlim == None:
-                    xlim = [min(self.elec[:,0]), max(self.elec[:,0])]
+                    elecx = self.elec[:,0][~iremote]
+                    xlim = [min(elecx), max(elecx)]
                 if ylim == None:
-                    ylim = [min(self.elec[:,1]), max(self.elec[:,1])]
-            except (AttributeError,TypeError): #if no electrodes present use the node limits 
-                if xlim == None:
-                    xlim = [min(self.node[:,0])-1, max(self.node[:,0])+1]
-                if ylim == None:
-                    ylim = [min(self.node[:,1])-1, max(self.node[:,1])+1]
+                    elecy = self.elec[:,1][~iremote]
+                    ylim = [min(elecy), max(elecy)]            
+        except (AttributeError,TypeError): #if no electrodes present use the node limits 
+            pass
+        if xlim == None: # if still none use the node limits 
+            xlim = [min(self.node[:,0])-1, max(self.node[:,0])+1]
+        if ylim == None:
+            ylim = [min(self.node[:,1])-1, max(self.node[:,1])+1]
           
         # protection against thin axis margins 
         if abs(xlim[0] - xlim[1]) < 0.001:
@@ -1923,8 +1929,8 @@ class Mesh:
         
         #### use pyvista for 3D viewing ####         
         if use_pyvista and pyvista_installed:
-            # if attr == 'region': # we crop the mesh (only way to reduce it's bounds for better viewing)
-            nmesh = self.truncateMesh(xlim=xlim, ylim=ylim, zlim=zlim) # this returns a mesh copy
+            # if attr == 'region': 
+            nmesh = self.copy() # this returns a mesh copy
             nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
@@ -1937,7 +1943,7 @@ class Mesh:
             #                           np.array(self.connection).T)
             # self.pvmesh[color_bar_title] = X
             
-            # clip mesh to bounding box
+            # clip mesh to bounding box ... we crop the mesh (only way to reduce it's bounds for better viewing)
             self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         
             if edge_color is None or edge_color=='none' or edge_color=='None':
@@ -2494,13 +2500,70 @@ class Mesh:
                 tmesh = self.copy()
             return tmesh.extractSurface()
         
-    def pick3Dbox(self,ax=None):
+    def pick3Dbox(self,ax=None,xlim=None,ylim=None,zlim=None,electrodes=True):
+        """Pick out regions on the mesh using the box widget (intended for 3D
+        forward modelling)
+
+        Parameters
+        ----------
+        ax : class, optional
+            pyvista plotting object. The default is None.
+        xlim : tuple, list, array like, optional
+            x limit of the selection area. The default is None 
+            and assigned automatically.
+        ylim : tuple, list, array like, optional
+            as with xlim. The default is None.
+        zlim : tuple, list, array like, optional
+            as with xlim. The default is None.
+        electrodes : bool, optional
+            If True the electrodes are also plotted on the mesh. The 
+            default is True.
+
+        Raises
+        ------
+        Exception
+            If mesh is 2D
+
+        Returns
+        -------
+        pyvista clip box handle
+        """
         if self.ndims != 3:
             raise Exception('Only use case for this is function is with 3D meshes')
+        if self.type2VertsNo() != 4:
+            raise Exception('Function only works on a tetrahedral mesh')
         if ax is None:
             #make pyvista background plotter 
             ax = pv.BackgroundPlotter()
-            
+        
+        # determine the extent of the survey for bounding box
+        if zlim == None:
+            zlim = [min(self.node[:,2])-1, max(self.node[:,2])+1]
+        
+        #work out lateral extents        
+        try:
+            if self.elec is not None:
+                if self.iremote is not None: 
+                    iremote = self.iremote
+                else:
+                    nelec = self.elec.shape[0]
+                    iremote = np.array([False]*nelec,dtype=bool)
+                elecx = self.elec[:,0][~iremote]
+                elecy = self.elec[:,1][~iremote]
+                dx = max(elecx) - min(elecx)
+                dy = max(elecy) - min(elecy)
+                d = np.sqrt(dx**2 + dy**2)
+                if xlim == None:
+                    xlim = [min(elecx)-d, max(elecx)+d]
+                if ylim == None:
+                    ylim = [min(elecy)-d, max(elecy)+d]
+        except (AttributeError,TypeError): #if no electrodes present use the node limits 
+            pass
+        if xlim == None:
+            xlim = [min(self.node[:,0])-1, max(self.node[:,0])+1]
+        if ylim == None:
+            ylim = [min(self.node[:,1])-1, max(self.node[:,1])+1]
+                
         # if 'elm_id' not in self.df.keys():
         self.df.loc[:,'elm_id'] = np.arange(1,self.numel+1,1)
         
@@ -2516,7 +2579,15 @@ class Mesh:
         folder.cleanup()
         
         #add box clip function
+        pvmesh = pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
         ax.add_mesh_clip_box(pvmesh, color='white',opacity=0.5)
+        
+        if self.elec is not None and electrodes: #try add electrodes to figure if we have them 
+            points = self.elec.copy()
+            elec_color = 'k' # give option to change this in future? 
+            pvelec = pv.PolyData(points)
+            ax.add_mesh(pvelec, color=elec_color, point_size=10.,
+                        render_points_as_spheres=True)
         
         return ax.box_clipped_meshes[0]
     
@@ -2524,9 +2595,7 @@ class Mesh:
         if self.ndims != 3:
             raise Exception('Only use case for this function is with 3D meshes')
         idx = np.unique(np.asarray(clipped.cell_arrays['elm_id'], dtype=int))-1
-        ie = np.in1d(self.df['elm_id'].values, idx)
-        print(ie)
-        self.df.loc[ie, 'region'] = np.max(self.df['region']) + 1 
+        self.df.loc[idx, 'region'] = np.max(self.df['region']) + 1 
         
         in_elem = np.array([False]*self.numel,dtype=bool)
         in_elem[idx] = True
