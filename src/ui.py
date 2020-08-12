@@ -3245,7 +3245,7 @@ class App(QMainWindow):
         meshSubLayout.addLayout(meshOutputStack, 70)
         meshSubLayout.addLayout(regionLayout, 30)
         
-        meshLayout.addLayout(meshSubLayout)
+        meshLayout.addLayout(meshSubLayout, 1)
 
         tabMesh.setLayout(meshLayout)
 
