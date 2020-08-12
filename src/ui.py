@@ -3009,8 +3009,8 @@ class App(QMainWindow):
         self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
 
         def select3DRegionBtnFunc():
-            self.r2.showMesh(ax=mesh3Dplotter, attr='region', color_bar=True)
-            self.clip = self.r2.mesh.pick3Dbox(ax=mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
+            self.r2.showMesh(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+            self.clip = self.r2.mesh.pick3Dbox(ax=self.mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
         self.select3DRegionBtn = QPushButton('(1) Select region')
         self.select3DRegionBtn.clicked.connect(select3DRegionBtnFunc)
         self.select3DRegionBtn.setVisible(False)
@@ -3018,9 +3018,9 @@ class App(QMainWindow):
         def add3DRegionBtnFunc():
             clipped_mesh = self.r2.mesh.addRegion3D(self.clip)
             self.regionTable.addRow()
-            mesh3Dplotter.clear() # clear all actors 
+            self.mesh3Dplotter.clear() # clear all actors 
             # clipped_mesh.show(ax=mesh3Dplotter, attr='region', color_bar=True)
-            self.r2.showMesh(ax=mesh3Dplotter, attr='region', color_bar=True)
+            self.r2.showMesh(ax=self.mesh3Dplotter, attr='region', color_bar=True)
         self.add3DRegionBtn = QPushButton('(2) Add region')
         self.add3DRegionBtn.clicked.connect(add3DRegionBtnFunc)
         self.add3DRegionBtn.setVisible(False)
