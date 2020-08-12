@@ -3480,7 +3480,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             noise = float(self.noiseEdit.text())
             noiseIP = float(self.noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
-            self.calcAspectRatio()
+            if self.r2.typ[-1] == '2':
+                self.calcAspectRatio() # doesn't work for 3D?
+            # TODO 3D pseudo-sections?
             self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)
