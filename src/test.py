@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy.Survey import Survey
 from resipy.R2 import R2, apiPath
+import pyvista as pv
 
 tstart = time.time()
 timings = {}
@@ -487,16 +488,17 @@ k.elec2distance()
 k = R2(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-try:
-    k.showPseudo(threed=True)
-    k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
-except Exception as e:
-    print(e)
+
+p = pv.Plotter()
+k.showPseudo(ax=p, threed=True)
+k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
+
 
 k.createSequence()
 #k.err = True
 k.invert(modErr=True)
-k.showResults()
+p = pv.Plotter()
+k.showResults(ax=p)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -519,7 +521,8 @@ k.importMesh(testdir + 'mesh/coarse3D.vtk')
 rmesh = k.mesh.refine() # test refining mesh 
 k.addFlatError()
 k.invert()
-k.showResults() 
+p = pv.Plotter()
+k.showResults(ax=p)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -540,9 +543,12 @@ k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
 k.createMesh(cl=5)
-k.showMesh()
+p = pv.Plotter()
+k.showMesh(ax=p)
+
 k.invert()
-k.showResults()
+p = pv.Plotter()
+k.showResults(ax=p)
 k.showSlice(index=0)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
@@ -565,7 +571,8 @@ idx = (a[:,1]<0.45) & (a[:,1]>-0.45) & (a[:,0]<0.45) & (a[:,0]>-0.45) # set a zo
 res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
 k.setRefModel(res0) # set parameters for forward model 
-k.showMesh(attr='res0',color_map='jet')
+p = pv.Plotter()
+k.showMesh(ax=p,attr='res0',color_map='jet')
 
 #create a forward modelling sequence, bit awkward at the moment because strings need to be picked individually
 xs = [0,0,1,-1]
@@ -604,8 +611,10 @@ k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='Protoc
 k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
 k.createMesh()
 k.invert()
-k.showResults(index=0)
-k.showResults(index=1)
+p = pv.Plotter()
+k.showResults(ax=p,index=0)
+p = pv.Plotter()
+k.showResults(ax=p,index=1)
 
 t0 = time.time()
 k.mesh.orderNodes()
