@@ -1,9 +1,8 @@
 # GMSH WRAPPER FUNCTIONS
 """
 Created on Tue Apr 10 14:32:14 2018 in python 3.6.5
-Wrapper for creating 2d and 3d triangular meshes with gmsh and converting it 
-into a mesh.dat format for R2 and R3t. The program tri_mesh () expects a directory "exe"
-to be within the api (or working) directory with a gmsh.exe inside it. 
+Wrapper for creating 2d and 3d triangular mesh scripts for gmsh and 
+parsing meshes into a python environment. 
 
 @author: jimmy Boyd - jamyd91@bgs.ac.uk
 """
@@ -11,7 +10,7 @@ to be within the api (or working) directory with a gmsh.exe inside it.
 import os, warnings
 #general 3rd party libraries
 import numpy as np
-import resipy.geomTools as iip
+import matplotlib.path as mpath
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -1440,7 +1439,8 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         fh.write("Plane Surface(1) = {1};\n\n")
         
         #work out which electrodes are inside or on the end of the column 
-        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
         
     
     if all(inside) == False:
@@ -1580,7 +1580,8 @@ def mesh2d(electrodes, poly=None, origin = (0,0),
         fh.write("Plane Surface(1) = {1};\n\n")
         
         #work out which electrodes are inside or on the end of the column 
-        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
         x = poly_x
         y = poly_y
     
