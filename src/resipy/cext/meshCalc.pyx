@@ -442,7 +442,6 @@ def split_tri(long[:,:] connection, double[:,:] node):
     num_nodes: int
     """
     #define variables 
-    cdef i=0
     cdef double[:] node_x = np.asarray(node[:,0], dtype=float)
     cdef double[:] node_y = np.asarray(node[:,1], dtype=float)
     cdef double[:] node_z = np.asarray(node[:,2], dtype=float)
@@ -455,7 +454,7 @@ def split_tri(long[:,:] connection, double[:,:] node):
     cdef float mx, my, mz
     cdef long[:] nodes = np.zeros(2,dtype=int)
     cdef unsigned long long int mn
-    cdef int j, nno, tmpi 
+    cdef int i, j, nno, tmpi 
 
     #matrices 
     cdef int num_nodes = len(node_x) # number of nodes 
@@ -570,7 +569,6 @@ def split_tetra(long[:,:] connection, double[:,:] node):
     numel: int
     num_nodes: int
     """
-    cdef i=0
     cdef double[:] node_x = np.asarray(node[:,0], dtype=float)
     cdef double[:] node_y = np.asarray(node[:,1], dtype=float)
     cdef double[:] node_z = np.asarray(node[:,2], dtype=float)
@@ -581,7 +579,7 @@ def split_tetra(long[:,:] connection, double[:,:] node):
     cdef double mx, my, mz
     cdef long[:] nodes = np.zeros(2,dtype=int)
     cdef long long int mn
-    cdef int j, nno, tmpi #loop variables 
+    cdef int i, j, nno, tmpi #loop variables 
 
     cdef int num_nodes = len(node_x)
     cdef int numel = connection.shape[0]
