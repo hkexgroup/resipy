@@ -1922,7 +1922,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'zlim' not in kwargs.keys():
                 kwargs['zlim'] = self.zlim
             if 'color_map' not in kwargs.keys():
-                kwargs['color_map'] = 'Spectral'
+                kwargs['color_map'] = 'Greys'
             if 'attr' not in kwargs.keys():
                 kwargs['attr'] = 'region' # this will print regions
             if 'color_bar' not in kwargs.keys():

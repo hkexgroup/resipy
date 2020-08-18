@@ -2035,6 +2035,7 @@ class Mesh:
             return # exit function
         #### else fall back on to matplotlib scheme ####    
         
+        
         #if prism mesh use that function instead 
         if self.ndims==2:
             warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D could be unstable")
@@ -2569,7 +2570,8 @@ class Mesh:
         
         # surface mesh
         smesh = self._select3Dsurface() # surface of mesh 
-        smesh.show3D(ax=ax,color_map='Greys',color_bar=False)
+        smesh.show3D(ax=ax,color_map='Greys', color_bar=False,
+                     edge_color=None, alpha=0.8)
         
         # pyvista mesh
         folder = tempfile.TemporaryDirectory()
