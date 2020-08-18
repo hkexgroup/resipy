@@ -490,15 +490,18 @@ k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 try: 
     k.showPseudo(threed=True)
-    k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
+    use_pyvista=True
 except Exception as e:
+    use_pyvista=False
     print(e)
-
+    print('there was a problem with pyvista in test.py, falling back onto matplotlib display schemes')
+    
+k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
 
 k.createSequence()
 #k.err = True
 k.invert(modErr=True)
-k.showResults()
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -522,7 +525,7 @@ rmesh = k.mesh.refine() # test refining mesh
 k.addFlatError()
 k.invert()
 
-k.showResults()
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -543,11 +546,11 @@ k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
 k.createMesh(cl=5)
-k.showMesh()
+k.showMesh(use_pyvista=use_pyvista)
 
 k.invert()
 
-k.showResults()
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(index=0)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
@@ -571,7 +574,7 @@ res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
 k.setRefModel(res0) # set parameters for forward model 
 
-k.showMesh(attr='res0',color_map='jet')
+k.showMesh(attr='res0',color_map='jet',use_pyvista=use_pyvista)
 
 #create a forward modelling sequence, bit awkward at the moment because strings need to be picked individually
 xs = [0,0,1,-1]
@@ -599,7 +602,7 @@ k.forward() # do forward model
 
 k.setRefModel(np.ones_like(res0)*100) # reset reference model 
 k.invert() # invert the problem 
-k.showResults(index=1, use_pyvista=False) #show result 
+k.showResults(index=1, use_pyvista=use_pyvista) #show result 
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
@@ -611,8 +614,8 @@ k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
 k.createMesh()
 k.invert()
 
-k.showResults(index=0)
-k.showResults(index=1)
+k.showResults(index=0,use_pyvista=use_pyvista)
+k.showResults(index=1,use_pyvista=use_pyvista)
 
 t0 = time.time()
 k.mesh.orderNodes()
