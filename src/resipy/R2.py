@@ -445,9 +445,26 @@ class R2(object): # R2 master class instanciated by the GUI
             
         self.setElec(dfelec)
         
+    def hasElecString(self):
+        """Determine if a electrode strings are present
+
+        Returns
+        -------
+        bool
+            True if strings present in electrode label
+        """
+        df = self.elec
+        if 'label' not in df.keys():
+            return False
+        else:
+            label = df['label']
+            for l in label:
+                if len(l.split()) == 1:
+                    return False
+        return True
         
         
-    def estElecStrings(self, tolerance=5, max_itr=1000):
+    def detectStrings(self, tolerance=5, max_itr=1000):
         """Automatically detect electrode strings 
 
         Parameters
@@ -3394,8 +3411,85 @@ class R2(object): # R2 master class instanciated by the GUI
         print('Reference model successfully assigned')
 
 
-    def createSequence(self, params=[('dpdp1', 1, 8)]):
-        """Create a dipole-dipole sequence.
+    # def createSequence(self, params=[('dpdp1', 1, 8)]):
+    #     """Create a dipole-dipole sequence.
+
+    #     Parameters
+    #     ----------
+    #     params : list of tuple, optional
+    #         Each tuple is the form (<array_name>, param1, param2, ...)
+    #         Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
+    #         'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+
+    #     Examples
+    #     --------
+    #     >>> k = R2()
+    #     >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+    #     >>> k.createMesh(typ='trian')
+    #     >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
+    #     """
+    #     if (self.typ == 'cR3t') | (self.typ == 'R3t'):
+    #         if not self.hasElecString():
+    #             raise ValueError('Electrode strings have not been set')
+    #         lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
+    #         elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
+    #         nline = len(np.unique(lines))
+    #         nelec = self.elec.shape[0] // nline # as it is a grid - not always 
+    #     else:
+    #         nline = 0
+    #         nelec = self.elec.shape[0]
+        
+    #     qs = []
+    #     def addCustSeq(fname):
+    #         seq = pd.read_csv(fname, header=0)
+    #         if seq.shape[1] != 4:
+    #             raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
+    #         else:
+    #             return seq.values
+    #     fdico = {'dpdp1': dpdp1,
+    #           'dpdp2': dpdp2,
+    #           'wenner': wenner,
+    #           'wenner_alpha': wenner_alpha,
+    #           'wenner_beta': wenner_beta,
+    #           'wenner_gamma': wenner_gamma,
+    #           'schlum1': schlum1,
+    #           'schlum2': schlum2,
+    #           'multigrad': multigrad,
+    #           'custSeq': addCustSeq}
+
+    #     for p in params:
+    #         if p[0] == 'custSeq':
+    #             try:
+    #                 qs.append(addCustSeq(p[1]))
+    #             except Exception as e:
+    #                 print('error when importing custom sequence:', e)
+    #         else:
+    #             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+    #             qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
+    #     sequence = np.vstack(qs)
+        
+    #     # detecing quadrupoles using out of bound electrodes
+    #     iabove = (sequence > self.elec.shape[0]).any(1)
+    #     sequence = sequence[~iabove,:]
+        
+    #     if (params[0][0] != 'custSeq') & (self.typ[-1] == 't'):
+    #         # add line number
+    #         qs2 = []
+    #         for i in range(nline):
+    #             df = pd.DataFrame(sequence.astype(int).astype(str), columns=['a','b','m','n'])
+    #             df['a'] = '{:d} '.format(i+1) + df['a']
+    #             df['b'] = '{:d} '.format(i+1) + df['b']
+    #             df['m'] = '{:d} '.format(i+1) + df['m']
+    #             df['n'] = '{:d} '.format(i+1) + df['n']
+    #             qs2.append(df.values)
+    #         sequence = np.vstack(qs2)
+            
+    #     self.sequence = sequence
+    #     print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
+    
+    def createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
+                       autoDS=True, *kwargs):
+        """Creates a forward modelling sequence, see examples below for usage.
 
         Parameters
         ----------
@@ -3403,6 +3497,14 @@ class R2(object): # R2 master class instanciated by the GUI
             Each tuple is the form (<array_name>, param1, param2, ...)
             Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
             'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+        seqIdx: list of array like 
+            Each entry in list contains electrode indices (not label and string)
+            for a given electrode string which is to be sequenced. The advantage
+            of a list means that sequences can be of different lengths. 
+        autoDS: bool
+            Automatically attempt to detect electrode strings, if seqIdx is None,
+            else if False the program falls back on the strings documented in
+            the electrode labels of self.elec
 
         Examples
         --------
@@ -3410,24 +3512,16 @@ class R2(object): # R2 master class instanciated by the GUI
         >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
         >>> k.createMesh(typ='trian')
         >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
+        >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
-        if (self.typ == 'cR3t') | (self.typ == 'R3t'):
-            lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
-            elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
-            nline = len(np.unique(lines))
-            nelec = self.elec.shape[0] // nline # as it is a grid
-        else:
-            nline = 0
-            nelec = self.elec.shape[0]
-        
-        qs = []
-        def addCustSeq(fname):
+        def addCustSeq(fname): # add custoim sequence 
             seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
                 raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
             else:
                 return seq.values
-        fdico = {'dpdp1': dpdp1,
+        
+        fdico = {'dpdp1': dpdp1, # dict referencing the seqeunce gen functions 
               'dpdp2': dpdp2,
               'wenner': wenner,
               'wenner_alpha': wenner_alpha,
@@ -3437,33 +3531,67 @@ class R2(object): # R2 master class instanciated by the GUI
               'schlum2': schlum2,
               'multigrad': multigrad,
               'custSeq': addCustSeq}
+        
+        if autoDS and seqIdx is None:
+            seqIdx = self.detectStrings(*kwargs)
 
-        for p in params:
-            if p[0] == 'custSeq':
-                try:
-                    qs.append(addCustSeq(p[1]))
-                except Exception as e:
-                    print('error when importing custom sequence:', e)
-            else:
-                pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
-                qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
-        sequence = np.vstack(qs)
-        
-        # detecing quadrupoles using out of bound electrodes
-        iabove = (sequence > self.elec.shape[0]).any(1)
-        sequence = sequence[~iabove,:]
-        
-        if (params[0][0] != 'custSeq') & (self.typ[-1] == 't'):
-            # add line number
-            qs2 = []
-            for i in range(nline):
-                df = pd.DataFrame(sequence.astype(int).astype(str), columns=['a','b','m','n'])
-                df['a'] = '{:d} '.format(i+1) + df['a']
-                df['b'] = '{:d} '.format(i+1) + df['b']
-                df['m'] = '{:d} '.format(i+1) + df['m']
-                df['n'] = '{:d} '.format(i+1) + df['n']
-                qs2.append(df.values)
-            sequence = np.vstack(qs2)
+        if self.typ[-1] == 't': #its 3D 
+            #determine sequence index if not already given 
+            if seqIdx is None: #(not been set, so use electrode strings)
+                if not self.hasElecString():
+                    raise ValueError('Electrode strings have not been set')
+                else:
+                    lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
+                    #elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
+                    uline = np.unique(lines)
+                    nline = len(uline)
+                    seqIdx = []
+                    for i in range(nline):
+                        lidx = np.argwhere(lines==uline[i])
+                        idx = [0]*len(lidx)
+                        for j in range(len(lidx)):
+                            idx[j]=lidx[j][0]
+                        seqIdx.append(np.array(idx))
+            elif type(seqIdx) != list: # check we have a list 
+                raise TypeError('Expected list type argument for seqIdx')
+            
+            #sequentially go through and create sequences for each electrode string 
+            qs = []
+            nseq = len(seqIdx) # number of sequences (ie num of lines strings)
+            for i in range(nseq):
+                nelec = len(seqIdx[i])
+                slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
+                for p in params:
+                    if p[0] == 'custSeq':
+                        try:
+                            qs.append(addCustSeq(p[1]))
+                        except Exception as e:
+                            print('error when importing custom sequence:', e)
+                    else:
+                        pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                        str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
+                        qs.append(slabels[str_seq-1])
+                        
+            sequence = np.vstack(qs)
+                    
+                
+        else: #its 2D 
+            nelec = self.elec.shape[0] 
+            qs = []
+            for p in params:
+                if p[0] == 'custSeq':
+                    try:
+                        qs.append(addCustSeq(p[1]))
+                    except Exception as e:
+                        print('error when importing custom sequence:', e)
+                else:
+                    pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                    qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
+            sequence = np.vstack(qs)
+            
+            # detecing quadrupoles using out of bound electrodes
+            iabove = (sequence > self.elec.shape[0]).any(1)
+            sequence = sequence[~iabove,:]
             
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))

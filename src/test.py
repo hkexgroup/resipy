@@ -489,7 +489,8 @@ k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.showPseudo(threed=True)
 k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
-#k.mesh.write_vtk('resipy/test/mesh3D.vtk',title='3D mesh with flat surface')
+
+k.createSequence()
 #k.err = True
 k.invert(modErr=True)
 k.showResults()
@@ -554,13 +555,37 @@ t0 = time.time()
 k = R2(typ='R3t') # create R2 class
 k.importElec(testdir + 'dc-3d-column/elec.csv') # import electrodes 
 k.createMesh(typ='prism',cl=0.1,elemz=2)
+
+#assign regions of resistivity 
 a = k.mesh.elmCentre
 idx = (a[:,1]<0.45) & (a[:,1]>-0.45) & (a[:,0]<0.45) & (a[:,0]>-0.45) # set a zone of different resistivity 
 res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
 k.setRefModel(res0) # set parameters for forward model 
 k.showMesh(attr='res0',color_map='jet')
-k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)]) # create a sequence 
+
+#create a forward modelling sequence, bit awkward at the moment because strings need to be picked individually
+xs = [0,0,1,-1]
+ys = [-1,1,0,0]
+zs = np.unique(k.elec['z'].values)
+seqIdx = []
+for i in range(4): # makes down column strings
+    sb = (k.elec['x'] == xs[i]) & (k.elec['y'] == ys[i]) # bool on string
+    si = [] # index on string
+    for j in range(len(sb)):
+        if sb[j]:
+            si.append(j)
+    seqIdx.append(si)
+for i in range(len(zs)):
+    sb = (k.elec['z'] == zs[i]) # bool on string
+    si = [] # index on string
+    for j in range(len(sb)):
+        if sb[j]:
+            si.append(j)
+    seqIdx.append(si)
+    
+
+k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)], seqIdx=seqIdx) # create a sequence 
 k.forward() # do forward model 
 
 k.setRefModel(np.ones_like(res0)*100) # reset reference model 
