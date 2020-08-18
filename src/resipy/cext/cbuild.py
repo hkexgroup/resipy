@@ -5,8 +5,17 @@ import numpy as np
 #NB: windows users will need visual studio installed to compile (or MS SDK)
 #NB: Unix users will need gcc installed 
 
+ext_modules = [
+    Extension(
+        "meshCalc",
+        ["meshCalc.c"],
+        extra_compile_args=['/openmp'],
+        extra_link_args=['/openmp'],
+    )
+]
+
 setup(
-      ext_modules=[Extension('meshCalc',['meshCalc.c'])],
+      ext_modules=ext_modules,
       include_dirs=[np.get_include()]
 )
 

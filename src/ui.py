@@ -285,7 +285,8 @@ class App(QMainWindow):
         self.iCropping = True # by default crop the mesh
         self.num_xz_poly = None # to store the values
         self.tempElec = None # place holder to compare the new electrode agains
-
+        self.clip = None # to store the clipped mesh for 3D forward
+        
         if frozen == 'not':
             self.datadir = os.path.join(bundle_dir, './examples')
         else:
@@ -332,9 +333,9 @@ class App(QMainWindow):
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
-                self.elecDyEdit.setEnabled(False)
-                self.fwdRadio.setEnabled(True)
-                self.fwdRadio.setChecked(False)
+                self.elecLineEdit.setEnabled(False)
+                self.elecLineSpacingEdit.setEnabled(False)
+                self.elecLineEdit.setText('1')
                 self.boreholeCheck.setChecked(False)
                 self.boreholeCheck.setEnabled(True)
                 self.regular3DCheck.setVisible(False)
@@ -364,7 +365,10 @@ class App(QMainWindow):
                 instructionLabel.setVisible(True)
                 self.meshAspectBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
-
+                instructionLabel3D.setVisible(False)
+                self.select3DRegionBtn.setVisible(False)
+                self.add3DRegionBtn.setVisible(False)
+                
                 # inversion settings
                 show3DOptions(False)
                 if self.r2 is not None:
@@ -381,14 +385,13 @@ class App(QMainWindow):
                     self.r2.typ = self.r2.typ.replace('2', '3t')
 
                 # importing tab
-                self.fwdRadio.setChecked(False)
-                self.fwdRadio.setEnabled(False)
+                self.elecLineEdit.setEnabled(True)
+                self.elecLineSpacingEdit.setEnabled(True)
                 self.elecTable.setColumnHidden(2, False)
                 self.topoTable.setColumnHidden(2, False)
                 if self.r2 is not None:
                     if self.r2.elec is not None:
                         self.elecTable.initTable(self.r2.elec)
-                self.elecDyEdit.setEnabled(True)
                 self.invRadio.setChecked(True)
                 # self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
@@ -418,6 +421,9 @@ class App(QMainWindow):
                 instructionLabel.setVisible(False)
                 self.meshAspectBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
+                instructionLabel3D.setVisible(True)
+                self.select3DRegionBtn.setVisible(True)
+                self.add3DRegionBtn.setVisible(True)
 
                 # inversion settings
                 show3DOptions(True)
@@ -1333,33 +1339,46 @@ class App(QMainWindow):
         self.nbElecLabel = QLabel('Number of electrodes:')
         
         self.elecDxLabel = QLabel('X spacing:')
-        self.elecDxEdit = QLineEdit('0.0')
+        self.elecDxEdit = QLineEdit('1.0')
         self.elecDxEdit.setValidator(QDoubleValidator())
-
-        self.elecDyEditLabel = QLabel('Y spacing:')        
-        self.elecDyEdit = QLineEdit('0.0')
-        self.elecDyEdit.setValidator(QDoubleValidator())
-        self.elecDyEdit.setEnabled(False)
 
         self.elecDzLabel = QLabel('Z spacing:')
         self.elecDzEdit = QLineEdit('0.0')
         self.elecDzEdit.setValidator(QDoubleValidator())
+        
+        self.elecLineLabel = QLabel('Nb Lines:')
+        self.elecLineEdit = QLineEdit('1')
+        self.elecLineEdit.setValidator(QIntValidator())
+        self.elecLineEdit.setEnabled(False)
+        
+        self.elecLineSpacingLabel = QLabel('Line spacing:')
+        self.elecLineSpacingEdit = QLineEdit('2')
+        self.elecLineSpacingEdit.setValidator(QDoubleValidator())
+        self.elecLineSpacingEdit.setEnabled(False)
 
         def elecGenButtonFunc():
-            nbElec = int(self.nbElecEdit.text())
+            nb = int(self.nbElecEdit.text())
             dx = float(self.elecDxEdit.text())
-            dy = float(self.elecDyEdit.text())
             dz = float(self.elecDzEdit.text())
-            df = pd.DataFrame()
-            if self.r2.iForward:
-                df['label'] = 1 + np.arange(nbElec) # label
-                df['label'] = df['label'].astype(int).astype(str)
-            else:
-                df['label'] = self.r2.elec['label'].values
-            df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
-            df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
-            df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
-            self.elecTable.initTable(df)
+            nline = int(self.elecLineEdit.text())
+            lineSpacing = float(self.elecLineSpacingEdit.text())
+            
+            # df = pd.DataFrame()
+            # if self.r2.iForward: # if we are in forward mode, we overwrite the
+            # # electrode labels, otherwise, we keep them and just fill
+            #     df['label'] = 1 + np.arange(nbElec) # label
+            #     df['label'] = df['label'].astype(int).astype(str)
+            # else:
+            #     df['label'] = self.r2.elec['label'].values
+            # df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
+            # df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
+            # df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
+            
+            # try:
+            self.r2.generateElec(nb, dx, dz, nline, lineSpacing)
+            self.elecTable.initTable(self.r2.elec)
+            # except Exception as e:
+            #     self.errorDump(e)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -1401,10 +1420,12 @@ class App(QMainWindow):
         elecGenLayout.addWidget(self.nbElecEdit)
         elecGenLayout.addWidget(self.elecDxLabel)
         elecGenLayout.addWidget(self.elecDxEdit)
-        elecGenLayout.addWidget(self.elecDyEditLabel)
-        elecGenLayout.addWidget(self.elecDyEdit)
         elecGenLayout.addWidget(self.elecDzLabel)
         elecGenLayout.addWidget(self.elecDzEdit)
+        elecGenLayout.addWidget(self.elecLineLabel)
+        elecGenLayout.addWidget(self.elecLineEdit)
+        elecGenLayout.addWidget(self.elecLineSpacingLabel)
+        elecGenLayout.addWidget(self.elecLineSpacingEdit)
         elecGenLayout.addWidget(self.elecGenButton)
         topoLayout.addWidget(self.elecLabel)
         topoLayout.addLayout(elecGenLayout)
@@ -1519,8 +1540,6 @@ class App(QMainWindow):
         self.phaseLabel = QLabel('Phase/Chargeability Error:')
         
         
-#        elecSpacingLabel = QLabel('Electrode spacing')
-
 #        boxesLabels = [self.aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
 #                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
         boxesLabels = [self.aBoxLabel, self.bBoxLabel, self.mBoxLabel, 
@@ -2951,6 +2970,7 @@ class App(QMainWindow):
         importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
         importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         importCustomMeshLabel2.setWordWrap(True)
+        
         def importCustomMeshFunc2():
             print('using importCustomMeshFunc2')
             elec = self.elecTable.getTable()
@@ -2987,6 +3007,23 @@ class App(QMainWindow):
         self.meshAspectBtn.setToolTip('Check for equal aspect of axis.')
         self.meshAspectBtn.setChecked(True)
         self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
+
+        def select3DRegionBtnFunc():
+            self.r2.showMesh(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+            self.clip = self.r2.mesh.pick3Dbox(ax=self.mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
+        self.select3DRegionBtn = QPushButton('(1) Select region')
+        self.select3DRegionBtn.clicked.connect(select3DRegionBtnFunc)
+        self.select3DRegionBtn.setVisible(False)
+
+        def add3DRegionBtnFunc():
+            clipped_mesh = self.r2.mesh.addRegion3D(self.clip)
+            self.regionTable.addRow()
+            self.mesh3Dplotter.clear() # clear all actors 
+            # clipped_mesh.show(ax=mesh3Dplotter, attr='region', color_bar=True)
+            self.r2.showMesh(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+        self.add3DRegionBtn = QPushButton('(2) Add region')
+        self.add3DRegionBtn.clicked.connect(add3DRegionBtnFunc)
+        self.add3DRegionBtn.setVisible(False)
 
         def resetMeshBtnFunc():
             self.regionTable.reset()
@@ -3058,6 +3095,13 @@ class App(QMainWindow):
             ' no smoothing at the boundaries) and fix the region value for '
             'triangular mesh only.')
         instructionLabel.setWordWrap(True)
+        
+        instructionLabel3D = QLabel('Click on "Select Region" to interactively'
+            ' define a region in 3D using the box. When done, hit the "Add Region"'
+            ' button to confirm. You can then specify different values in the '
+            ' table on the side. Recreate a mesh to erase all regions.')
+        instructionLabel3D.setWordWrap(True)
+        instructionLabel3D.setVisible(False)
 
         self.mwMesh = MatplotlibWidget(navi=True, itight=False)
         self.mwMesh3D = MatplotlibWidget(threed=True, navi=True)
@@ -3163,8 +3207,11 @@ class App(QMainWindow):
 
         instructionLayout = QHBoxLayout()
         instructionLayout.addWidget(instructionLabel, 86)
+        instructionLayout.addWidget(instructionLabel3D, 86)
         instructionLayout.addWidget(self.meshAspectBtn, 7)
         instructionLayout.addWidget(self.resetMeshBtn, 7)
+        instructionLayout.addWidget(self.select3DRegionBtn, 7)
+        instructionLayout.addWidget(self.add3DRegionBtn, 7)
         meshLayout.addLayout(instructionLayout)
         
         # for RAM issue
@@ -3178,8 +3225,7 @@ class App(QMainWindow):
 
         meshPlot = QWidget()
         meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(self.mwMesh, 70)
-        meshPlotLayout.addLayout(regionLayout, 30)
+        meshPlotLayout.addWidget(self.mwMesh)
         meshPlot.setLayout(meshPlotLayout)
 
         meshPlot3D = QWidget()
@@ -3195,7 +3241,11 @@ class App(QMainWindow):
         meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
 
-        meshLayout.addLayout(meshOutputStack, 1)
+        meshSubLayout = QHBoxLayout()
+        meshSubLayout.addLayout(meshOutputStack, 70)
+        meshSubLayout.addLayout(regionLayout, 30)
+        
+        meshLayout.addLayout(meshSubLayout, 1)
 
         tabMesh.setLayout(meshLayout)
 
@@ -3430,7 +3480,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             noise = float(self.noiseEdit.text())
             noiseIP = float(self.noiseEditIP.text())
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
-            self.calcAspectRatio()
+            if self.r2.typ[-1] == '2':
+                self.calcAspectRatio() # doesn't work for 3D?
+            # TODO 3D pseudo-sections?
             self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)

@@ -29,6 +29,10 @@ warnings.simplefilter('default', category=DeprecationWarning)
 
 try:#import pyvista if avaiable
     import pyvista as pv
+    try:
+        from pyvistaqt import BackgroundPlotter # newer version
+    except:
+        from pyvista import BackgroundPlotter # older version
     pyvista_installed = True
 except ModuleNotFoundError:
     pyvista_installed = False
@@ -1707,7 +1711,7 @@ class Survey(object):
             contour = False
             
         if ax is None: # make a plotter object if not already given 
-            ax = pv.BackgroundPlotter()
+            ax = BackgroundPlotter()
             ax.background_color = background_color
         else: # check the ax argument is for pyvista not matplotlib 
             typ_str = str(type(ax))

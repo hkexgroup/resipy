@@ -1,9 +1,8 @@
 # GMSH WRAPPER FUNCTIONS
 """
 Created on Tue Apr 10 14:32:14 2018 in python 3.6.5
-Wrapper for creating 2d and 3d triangular meshes with gmsh and converting it 
-into a mesh.dat format for R2 and R3t. The program tri_mesh () expects a directory "exe"
-to be within the api (or working) directory with a gmsh.exe inside it. 
+Wrapper for creating 2d and 3d triangular mesh scripts for gmsh and 
+parsing meshes into a python environment. 
 
 @author: jimmy Boyd - jamyd91@bgs.ac.uk
 """
@@ -11,7 +10,7 @@ to be within the api (or working) directory with a gmsh.exe inside it.
 import os, warnings
 #general 3rd party libraries
 import numpy as np
-import resipy.geomTools as iip
+import matplotlib.path as mpath
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -119,7 +118,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
         the first borehole string should be given the key 'borehole1' and so on. The code stops
         searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
-        and polygons to the mesh. See below example:
+        and polygons to the mesh. A boundary is a 1D line which is considered to span the fine mesh region,
+        and a polygon is a discrete shape within the fine mesh region. See below example for format:
             
             geom_input = {'surface': [surf_x,surf_z],
               'boundary1':[bound1x,bound1y],
@@ -304,7 +304,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     tot_pnts=0#setup a rolling total for points numbering
     sur_pnt_cache=[] # surface points cache 
     for i in range(len(x_pts)):
-        tot_pnts=tot_pnts+1
+        tot_pnts+=1
         fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],0,z_pts[i],flag_sort[i]))
         sur_pnt_cache.append(tot_pnts)
     
@@ -330,37 +330,94 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     x_base = np.linspace(x_pts[0],x_pts[-1],int(len(x_pts)/div))
     z_base = np.interp(x_base,x_pts,z_pts) - abs(fmd)
     
-    # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
-    if np.max(z_base) > np.min(electrodes[1]):
-        warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh could be buggy!", Warning)   
-    
     basal_pnt_cache = []
     for i in range(len(x_base)):
-        tot_pnts=tot_pnts+1
+        tot_pnts += 1
         fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//%s\n"%(tot_pnts,x_base[i],0,z_base[i],cl_factor,
                  'base of smoothed mesh region'))
         basal_pnt_cache.append(tot_pnts)
     
-    fh.write("//make a polygon by defining lines between points just made.\n")
+    fh.write("//make lines between base of fine mesh region points\n")
     basal_ln_cache=[]
     for i in range(len(x_base)-1):
-        tot_lins=tot_lins+1
+        tot_lins += 1
         fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,basal_pnt_cache[i],basal_pnt_cache[i+1]))
         basal_ln_cache.append(tot_lins)
     
-    fh.write("//Add lines at the end points of each of the fine mesh region.\n")
-    tot_lins=tot_lins+1;# add to the number of lines rolling total 
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[0],basal_pnt_cache[0]))#line from first point on surface to depth
-    tot_lins=tot_lins+1
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[-1],basal_pnt_cache[-1]))#line going bottom to last electrode point
-    end_ln_cache=[tot_lins-1,tot_lins]
+    fh.write("\n//Adding boundaries\n") # boundaries which stretch across the mesh
+    count = 0   
+    end_pt_l = [sur_pnt_cache[0]]
+    end_pt_r = [sur_pnt_cache[-1]]
+    blines = [] # boundary line cache 
+    m = (cl_factor-1)/abs(fmd)
+    while True:
+        count += 1        
+        key = 'boundary'+str(count)
+        if key in geom_input.keys():
+            bdx = np.array(geom_input[key][0])
+            bdz = np.array(geom_input[key][1])
+
+            #filtx = (bdx > x_pts[0]) & (bdx < x_pts[-1]) # filter out points beyond x bounds? 
+
+            pt_idx = [0] * (len(bdx)+2)
+            # interpolate right and left boundary points 
+            x_end = np.array([x_pts[0],x_pts[-1]])
+            z_end = np.interp(x_end,bdx,bdz)
+            bdx = np.append(bdx,x_end)
+            bdz = np.append(bdz,z_end)
+            zdepth = np.abs(np.interp(bdx,x_pts,z_pts) - bdz)
+            clb = zdepth*m + 1 # boundary characteristic length 
+            
+            sortid = np.argsort(bdx)
+            bdx = bdx[sortid] # reassign to sorted arrays by x coordinate 
+            bdz = bdz[sortid] # reassign to sorted arrays by x coordinate 
+            
+            
+            fh.write("// vertices for boundary line %i\n"%count)
+            for k in range(len(bdx)):
+                tot_pnts += 1 
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//boundary vertex \n"%(tot_pnts,bdx[k],0,bdz[k],clb[k]))
+                pt_idx[k] = tot_pnts
+            fh.write("// lines for boundary line %i\n"%count)
+            line_idx = []
+            end_pt_l.append(pt_idx[0])
+            end_pt_r.append(pt_idx[-1])
+            
+            for i in range(len(pt_idx)-1):
+                idx = pt_idx[i]
+                tot_lins += 1
+                fh.write("Line (%i) = {%i,%i};\n"%(tot_lins,idx,idx+1))
+                blines.append(tot_lins)
+                
+        else:
+            fh.write("//end of boundaries.\n")
+            dump('%i boundary(ies) added to input file'%(count-1))
+            break  
+        
+    end_pt_l.append(basal_pnt_cache[0])
+    end_pt_r.append(basal_pnt_cache[-1])
+    end_ln_l = []
+    end_ln_r = []
+    
+    #add left and rightmost lines to close off the fine mesh region
+    fh.write("//Add lines at leftmost side of fine mesh region.\n")
+    for i in range(len(end_pt_l)-1):
+        tot_lins=tot_lins+1;# add to the number of lines rolling total 
+        fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,end_pt_l[i],end_pt_l[i+1]))#line from first point on surface to depth
+        end_ln_l.append(tot_lins)
+    
+    fh.write("//Add lines at rightmost side of fine mesh region.\n")
+    for i in range(len(end_pt_r)-1):
+        tot_lins=tot_lins+1;# add to the number of lines rolling total 
+        fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,end_pt_r[i],end_pt_r[i+1]))#line from first point on surface to depth
+        end_ln_r.append(tot_lins)
+
     
     #compile line numbers into a line loop.
     fh.write("//compile lines into a line loop for a mesh surface/region.\n")
     sur_ln_cache_flipped = list(np.flipud(np.array(sur_ln_cache))*-1)
-    fine_msh_loop = [end_ln_cache[0]] + basal_ln_cache + [-1*end_ln_cache[1]] + sur_ln_cache_flipped
+    fine_msh_loop = end_ln_l + basal_ln_cache + [end_ln_r[i]*-1 for i in range(len(end_ln_r))] + sur_ln_cache_flipped
     fh.write("Line Loop(1) = {%s};\n"%str(fine_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
-#    fh.write("Plane Surface(1) = {1};//Fine mesh region surface\n")
     
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
     fh.write("\n//Background region (Neumann boundary) points\n")
@@ -399,7 +456,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("//Add line loops and plane surfaces for the Neumann region\n")
     #now add background region line loop (cos this be made more efficent?)
     basal_ln_cache_flipped = list(np.flipud(np.array(basal_ln_cache))*-1)
-    coarse_msh_loop = n_ln_cache + [end_ln_cache[1]] + basal_ln_cache_flipped + [-1*end_ln_cache[0]]
+    coarse_msh_loop = n_ln_cache + end_ln_r + basal_ln_cache_flipped + [end_ln_l[i]*-1 for i in range(len(end_ln_l))]
     fh.write("Line Loop(2) = {%s};\n"%str(coarse_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
     fh.write("Plane Surface(1) = {1, 2};//Coarse mesh region surface\n")
     
@@ -449,7 +506,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 fh.write("Line (%i) = {%i,%i};//borehole %i segment\n"%(no_lin,idx,idx+1,count))
                 line_idx.append(no_lin)
             
-            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+            fh.write("Line{%s} In Surface{2};\n"%str(line_idx).strip('[').strip(']'))
     
     no_plane = 1 # number of plane surfaces so far (actually two)
     fh.write("\n//Adding polygons\n")
@@ -503,6 +560,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("\n//Make a physical surface\n")
     fh.write("Physical Surface(1) = {%i, 1};\n"%no_plane)
     
+    if len(blines)>0:#add boundary lines if present 
+        fh.write("Line{%s} In Surface{2};//boundary lines\n"%str(blines).strip('[').strip(']'))
     
     #add buried electrodes? (added after as we need Surface 1 to be defined)       
     if bu_flag:
@@ -540,37 +599,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
         fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
         fh.write('//End of remote electrodes.\n')
-        
-    
-    fh.write("\n//Adding boundaries\n")
-    count = 0   
-    while True:
-        count += 1        
-        key = 'boundary'+str(count)
-        
-        if key in geom_input.keys():
-            bdx = geom_input[key][0]
-            bdz = geom_input[key][1]
-            bdy = [0]*len(bdx)
-            pt_idx = [0] *len(bdx)
-            fh.write("// vertices for boundary line %i\n"%count)
-            for k in range(len(bdx)):
-                no_pts += 1 
-                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//boundary vertex \n"%(no_pts,bdx[k],bdy[k],bdz[k]))
-                pt_idx[k] = no_pts
-            fh.write("//put lines between each vertex\n")
-            line_idx = []
-            for i in range(len(pt_idx)-1):
-                idx = pt_idx[i]
-                no_lin += 1
-                fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
-                line_idx.append(no_lin)
-            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
-                
-        else:
-            fh.write("//end of boundaries.\n")
-            dump('%i boundary(ies) added to input file'%(count-1))
-            break              
                     
     fh.write("\n//End gmsh script\n")
     fh.close()
@@ -1411,7 +1439,8 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         fh.write("Plane Surface(1) = {1};\n\n")
         
         #work out which electrodes are inside or on the end of the column 
-        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
         
     
     if all(inside) == False:
@@ -1551,7 +1580,8 @@ def mesh2d(electrodes, poly=None, origin = (0,0),
         fh.write("Plane Surface(1) = {1};\n\n")
         
         #work out which electrodes are inside or on the end of the column 
-        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
         x = poly_x
         y = poly_y
     

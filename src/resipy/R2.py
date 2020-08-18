@@ -19,9 +19,9 @@ import numpy as np # import default 3rd party libaries (can be downloaded from c
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
-#import resipy.interpolation as interp # for cropSurface()
 import matplotlib.patches as mpatches
 import matplotlib.path as mpath
+from scipy.spatial import cKDTree
 
 OS = platform.system()
 sys.path.append(os.path.relpath('..'))
@@ -370,7 +370,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if ok:
                 # identification remote electrode
                 remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                            9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+                            9999999, 999999, 99999] # values asssociated with remote electrodes
                 iremote = np.in1d(elec['x'].values, remote_flags)
                 iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
                 elec.loc[:, 'remote'] = iremote
@@ -395,6 +395,201 @@ class R2(object): # R2 master class instanciated by the GUI
         
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
+            
+            
+            
+    def generateElec(self, nb=24, dx=0.5, dz=0, nline=1, lineSpacing=2):
+        """Generate electrodes positions for 2D and 3D surveys.
+        
+        Parameters
+        ----------
+        nb : int, optional
+            Number of electrodes per line. For 3D survey, if multiple lines,
+            the total number of electrodes will be nb x nline.
+        dx : float, optional
+            Spacing in meters between electrodes in the X direction.
+        dz : float, optional
+            Increment in the Z direction (elevation) between consecutive electrodes.
+        nline : int, optional
+            Number of lines. 1 for 2D and multiple for 3D.
+        lineSpacing : float, optional
+            Spacing between lines (3D only).
+        """
+        # check type
+        nb = int(nb)
+        nline = int(nline)
+        
+        # electrode positions for one line
+        elec = np.zeros((nb, 3))
+        elec[:,0] = np.linspace(0, (nb-1)*dx, nb)
+        elec[:,1] = np.linspace(0, (nb-1)*dz, nb)
+        
+        # specific 2D or 3D additions and building dfelec
+        if (self.typ == 'R2') | (self.typ == 'cR2'):
+            dfelec = pd.DataFrame(columns=['label','x','y','z','buried'])
+            dfelec['label'] = (1 + np.arange(nb)).astype(int).astype(str)
+            dfelec.loc[:, ['x','y','z']] = elec
+            dfelec['buried'] = False
+        else:
+            grid = np.tile(elec.T, nline).T
+            labels = []
+            for i in range(nline):
+                labels.append(['{:d} {:d}'.format(i+1, j+1) for j in range(nb)]) # string + elec number
+                grid[i*nb:(i+1)*nb, 1] = (i+1)*lineSpacing # Y is line spacing
+            dfelec = pd.DataFrame(columns=['label','x','y','z','buried'])
+            dfelec['label'] = np.hstack(labels)
+            dfelec['x'] = grid[:,0]
+            dfelec['y'] = grid[:,1]
+            dfelec['z'] = grid[:,2]
+            dfelec['buried'] = False
+            
+        self.setElec(dfelec)
+        
+    def hasElecString(self):
+        """Determine if a electrode strings are present
+
+        Returns
+        -------
+        bool
+            True if strings present in electrode label
+        """
+        df = self.elec
+        if 'label' not in df.keys():
+            return False
+        else:
+            label = df['label']
+            for l in label:
+                if len(l.split()) == 1:
+                    return False
+        return True
+        
+        
+    def detectStrings(self, tolerance=5, max_itr=1000):
+        """Automatically detect electrode strings 
+
+        Parameters
+        ----------
+        tolerance : float, optional
+            Maximum (+/-) bearing (ie directional angle) tolerance each subsiquent
+            electrode may have. The default is 5.
+        max_itr : int, optional
+            Maximum number of searches that can be performed to find colinear
+            nieghbouring electrodes. The default is 1000.
+
+        Raises
+        ------
+        ValueError
+            if the change in x and y direction for 2 neighbouring electrodes is 
+            the same. ie no 2 electrodes can occupy the same x y position in 
+            this code. 
+        ValueError
+            if the change maxium number of searches is exceeded. 
+
+        Returns
+        -------
+        list (of list)
+            Each entry in the list corresponds to an electrode string, and is
+            a list of integers which are the indices of the respective electrodes
+            in self.elec
+        """
+        # compute bearing 
+        def bearing(dx,dy):
+            if dx == 0 and dy == 0:
+                raise ValueError('both dx and dy equal 0 - check no 2 electrodes occupy same xy coordinates')
+            elif dx == 0 and dy > 0:
+                return 0
+            elif dx == 0 and dy < 0:
+                return 180
+            elif dx > 0 and dy == 0:
+                return 90
+            elif dx < 0 and dy == 0:
+                return 270
+            elif dx > 0 and dy > 0: 
+                return np.rad2deg(np.arctan(dx/dy))
+            elif dx > 0 and dy < 0: 
+                return 180 + np.rad2deg(np.arctan(dx/dy))
+            elif dx < 0 and dy < 0: 
+                return 180 + np.rad2deg(np.arctan(dx/dy))
+            elif dx < 0 and dy > 0: 
+                return 360 + np.rad2deg(np.arctan(dx/dy))
+
+        iremote = self.elec['remote'].values
+        x = self.elec['x'].values[~iremote]
+        y = self.elec['y'].values[~iremote]
+        # init - nb couple of commented lines are in here for displaying the selected electrode strings 
+        # fig, ax = plt.subplots()
+        # ax.scatter(x,y,c='k')
+        # ax.set_aspect('equal')
+        
+        # mid point of survey 
+        xm = np.mean(x)
+        ym = np.mean(y)
+        # ax.scatter(xm,ym,c='b',s=2)
+        dist = np.sqrt((x-xm)**2 + (y-ym)**2) # distance to all other points in survey
+        
+        # find neighbours 
+        points = np.array([x,y]).T
+        tree = cKDTree(points)
+        distm, niegh = tree.query(points,k=4)
+        
+        #start finding strings 
+        string = [] # caches for saving found electrodes
+        allocated = np.zeros(len(x),dtype=bool) 
+        
+        c = 0 
+        while any(allocated==False):
+            #color = tuple(np.random.rand(3)) # color for line 
+            #find starting point
+            si = np.argmax(dist) # start point index
+            # ax.scatter(x[si],y[si],c='r')
+            allocated[si] = True
+            dist[si] = -1
+            this_string = [si]
+            #get start point neighbours 
+            n = niegh[si,1:4]
+            dxdy = points[n,:] - points[si,:] #deltas 
+            d = distm[si,1:4]
+            di = np.argmin(d) # index of min distance
+            ni = n[di] # index of nearest neighbour
+            this_string.append(ni) # save
+            allocated[ni] = True
+            dist[ni] = -1
+            #work out staring direction 
+            theta = bearing(dxdy[di,0],dxdy[di,1])
+            # ax.plot([x[si],x[ni]],[y[si],y[ni]],c=color)
+            canidate = True
+            
+            while canidate:
+                pi = ni # prevoius neighbour 
+                n = niegh[ni,1:4]
+                dxdy = points[n,:] - points[ni,:] 
+                d = distm[ni,1:4]
+                itr = len(n)
+                thetav = np.zeros(itr)
+                for i in range(len(n)):
+                    thetav[i] = bearing(dxdy[i,0],dxdy[i,1])
+                thtest = np.abs(thetav - theta) < tolerance # test if another point on desired bearing
+                if all(thtest==False):
+                    canidate = False # no more canidates 
+                else:
+                    di = np.argmin(d[thtest]) # index of min distance
+                    ni = n[thtest][di] # index of next nearest neighbour
+                    theta = bearing(x[ni]-x[pi],y[ni]-y[pi])
+                    # ax.plot([x[pi],x[ni]],[y[pi],y[ni]],c=color)
+                    allocated[ni] = True
+                    this_string.append(ni)
+                    dist[ni] = -1
+                    #overwrite electrode string in data frame? #TODO
+                    # label = self.elec.loc[ni,'label'].split() 
+                c+=1
+                if c>max_itr:
+                    canidate=False
+            if c>max_itr:
+                raise ValueError('max number of iterations exceeded')
+                break
+            string.append(this_string)
+            
+        return string
 
 
     def setwd(self, dirname):
@@ -1553,7 +1748,8 @@ class R2(object): # R2 master class instanciated by the GUI
             if (typ == 'trian') | (typ == 'tetra'):
                 for l in range(refine):
                     print('Refining...', end='')
-                    mesh.refine()
+                    mesh = mesh.refine()
+                print('Done')
             
             self.param['mesh_type'] = 3
             e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
@@ -1743,7 +1939,7 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'zlim' not in kwargs.keys():
                 kwargs['zlim'] = self.zlim
             if 'color_map' not in kwargs.keys():
-                kwargs['color_map'] = 'Spectral'
+                kwargs['color_map'] = 'Greys'
             if 'attr' not in kwargs.keys():
                 kwargs['attr'] = 'region' # this will print regions
             if 'color_bar' not in kwargs.keys():
@@ -1753,6 +1949,9 @@ class R2(object): # R2 master class instanciated by the GUI
                     kwargs['color_bar'] = False
         
             self.mesh.show(ax=ax, **kwargs)
+            
+    def refineMesh(self):
+        self.mesh = self.mesh.refine()
 
 
     def write2in(self, param={}):
@@ -3212,8 +3411,85 @@ class R2(object): # R2 master class instanciated by the GUI
         print('Reference model successfully assigned')
 
 
-    def createSequence(self, params=[('dpdp1', 1, 8)]):
-        """Create a dipole-dipole sequence.
+    # def createSequence(self, params=[('dpdp1', 1, 8)]):
+    #     """Create a dipole-dipole sequence.
+
+    #     Parameters
+    #     ----------
+    #     params : list of tuple, optional
+    #         Each tuple is the form (<array_name>, param1, param2, ...)
+    #         Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
+    #         'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+
+    #     Examples
+    #     --------
+    #     >>> k = R2()
+    #     >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
+    #     >>> k.createMesh(typ='trian')
+    #     >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
+    #     """
+    #     if (self.typ == 'cR3t') | (self.typ == 'R3t'):
+    #         if not self.hasElecString():
+    #             raise ValueError('Electrode strings have not been set')
+    #         lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
+    #         elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
+    #         nline = len(np.unique(lines))
+    #         nelec = self.elec.shape[0] // nline # as it is a grid - not always 
+    #     else:
+    #         nline = 0
+    #         nelec = self.elec.shape[0]
+        
+    #     qs = []
+    #     def addCustSeq(fname):
+    #         seq = pd.read_csv(fname, header=0)
+    #         if seq.shape[1] != 4:
+    #             raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
+    #         else:
+    #             return seq.values
+    #     fdico = {'dpdp1': dpdp1,
+    #           'dpdp2': dpdp2,
+    #           'wenner': wenner,
+    #           'wenner_alpha': wenner_alpha,
+    #           'wenner_beta': wenner_beta,
+    #           'wenner_gamma': wenner_gamma,
+    #           'schlum1': schlum1,
+    #           'schlum2': schlum2,
+    #           'multigrad': multigrad,
+    #           'custSeq': addCustSeq}
+
+    #     for p in params:
+    #         if p[0] == 'custSeq':
+    #             try:
+    #                 qs.append(addCustSeq(p[1]))
+    #             except Exception as e:
+    #                 print('error when importing custom sequence:', e)
+    #         else:
+    #             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+    #             qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
+    #     sequence = np.vstack(qs)
+        
+    #     # detecing quadrupoles using out of bound electrodes
+    #     iabove = (sequence > self.elec.shape[0]).any(1)
+    #     sequence = sequence[~iabove,:]
+        
+    #     if (params[0][0] != 'custSeq') & (self.typ[-1] == 't'):
+    #         # add line number
+    #         qs2 = []
+    #         for i in range(nline):
+    #             df = pd.DataFrame(sequence.astype(int).astype(str), columns=['a','b','m','n'])
+    #             df['a'] = '{:d} '.format(i+1) + df['a']
+    #             df['b'] = '{:d} '.format(i+1) + df['b']
+    #             df['m'] = '{:d} '.format(i+1) + df['m']
+    #             df['n'] = '{:d} '.format(i+1) + df['n']
+    #             qs2.append(df.values)
+    #         sequence = np.vstack(qs2)
+            
+    #     self.sequence = sequence
+    #     print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
+    
+    def createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
+                       autoDS=True, *kwargs):
+        """Creates a forward modelling sequence, see examples below for usage.
 
         Parameters
         ----------
@@ -3221,6 +3497,14 @@ class R2(object): # R2 master class instanciated by the GUI
             Each tuple is the form (<array_name>, param1, param2, ...)
             Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
             'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+        seqIdx: list of array like 
+            Each entry in list contains electrode indices (not label and string)
+            for a given electrode string which is to be sequenced. The advantage
+            of a list means that sequences can be of different lengths. 
+        autoDS: bool
+            Automatically attempt to detect electrode strings, if seqIdx is None,
+            else if False the program falls back on the strings documented in
+            the electrode labels of self.elec
 
         Examples
         --------
@@ -3228,16 +3512,16 @@ class R2(object): # R2 master class instanciated by the GUI
         >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
         >>> k.createMesh(typ='trian')
         >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
+        >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
-        qs = []
-        nelec = self.elec.shape[0]
-        def addCustSeq(fname):
+        def addCustSeq(fname): # add custoim sequence 
             seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
                 raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
             else:
                 return seq.values
-        fdico = {'dpdp1': dpdp1,
+        
+        fdico = {'dpdp1': dpdp1, # dict referencing the seqeunce gen functions 
               'dpdp2': dpdp2,
               'wenner': wenner,
               'wenner_alpha': wenner_alpha,
@@ -3247,20 +3531,68 @@ class R2(object): # R2 master class instanciated by the GUI
               'schlum2': schlum2,
               'multigrad': multigrad,
               'custSeq': addCustSeq}
+        
+        if autoDS and seqIdx is None:
+            seqIdx = self.detectStrings(*kwargs)
 
-        for p in params:
-            if p[0] == 'custSeq':
-                try:
-                    qs.append(addCustSeq(p[1]))
-                except Exception as e:
-                    print('error when importing custom sequence:', e)
-            else:
-                pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
-                qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
-        sequence = np.vstack(qs)
-        # detecing quadrupoles using out of bound electrodes
-        iabove = (sequence > self.elec.shape[0]).any(1)
-        sequence = sequence[~iabove,:]
+        if self.typ[-1] == 't': #its 3D 
+            #determine sequence index if not already given 
+            if seqIdx is None: #(not been set, so use electrode strings)
+                if not self.hasElecString():
+                    raise ValueError('Electrode strings have not been set')
+                else:
+                    lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
+                    #elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
+                    uline = np.unique(lines)
+                    nline = len(uline)
+                    seqIdx = []
+                    for i in range(nline):
+                        lidx = np.argwhere(lines==uline[i])
+                        idx = [0]*len(lidx)
+                        for j in range(len(lidx)):
+                            idx[j]=lidx[j][0]
+                        seqIdx.append(np.array(idx))
+            elif type(seqIdx) != list: # check we have a list 
+                raise TypeError('Expected list type argument for seqIdx')
+            
+            #sequentially go through and create sequences for each electrode string 
+            qs = []
+            nseq = len(seqIdx) # number of sequences (ie num of lines strings)
+            for i in range(nseq):
+                nelec = len(seqIdx[i])
+                slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
+                for p in params:
+                    if p[0] == 'custSeq':
+                        try:
+                            qs.append(addCustSeq(p[1]))
+                        except Exception as e:
+                            print('error when importing custom sequence:', e)
+                    else:
+                        pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                        str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
+                        qs.append(slabels[str_seq-1])
+                        
+            sequence = np.vstack(qs)
+                    
+                
+        else: #its 2D 
+            nelec = self.elec.shape[0] 
+            qs = []
+            for p in params:
+                if p[0] == 'custSeq':
+                    try:
+                        qs.append(addCustSeq(p[1]))
+                    except Exception as e:
+                        print('error when importing custom sequence:', e)
+                else:
+                    pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                    qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
+            sequence = np.vstack(qs)
+            
+            # detecing quadrupoles using out of bound electrodes
+            iabove = (sequence > self.elec.shape[0]).any(1)
+            sequence = sequence[~iabove,:]
+            
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
 
@@ -3441,7 +3773,7 @@ class R2(object): # R2 master class instanciated by the GUI
         seq = self.sequence
 
         # let's check if IP that we have a positive geometric factor
-        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
+        if self.typ == 'cR2': # NOTE this doesn't work for borehole
             elecpos = self.elec['x'].values # and works only for 2D
             array = seq.copy()
             apos = elecpos[array[:,0]-1]
@@ -3460,11 +3792,11 @@ class R2(object): # R2 master class instanciated by the GUI
 
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
         # if it's 3D, we add the line number (all electrode on line 1)
-        if self.typ[-2] == '3':
-            protocol.insert(1, 'sa', 1)
-            protocol.insert(3, 'sb', 1)
-            protocol.insert(5, 'sm', 1)
-            protocol.insert(7, 'sn', 1)  
+        # if self.typ[-2] == '3':
+        #     protocol.insert(1, 'sa', 1)
+        #     protocol.insert(3, 'sb', 1)
+        #     protocol.insert(5, 'sm', 1)
+        #     protocol.insert(7, 'sn', 1)  
             
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
@@ -3523,8 +3855,15 @@ class R2(object): # R2 master class instanciated by the GUI
         zlim = self.zlim.copy()
         param = self.param.copy()
         
-        # create FLAT homogeneous mesh
-        self.elec['z'] = 0
+        # create FLAT homogeneous mesh 
+        if '2' in self.typ: # normalise to flat surface if 2D            
+            idx = (self.elec['remote'].values == False) & (self.elec['buried'].values == False)
+            ez = self.elec['z'].values[idx]
+            ex = self.elec['x'].values[idx]
+            ez_tmp = self.elec['z'].values - np.interp(self.elec['x'].values,ex,ez)
+            self.elec['z'] = ez_tmp
+            
+        # self.elec['z'] = 0
         self.createMesh(**kwargs)
         self.modErrMesh = self.mesh.copy()
         self.modErrMeshNE = self.param['node_elec'].copy()
@@ -3585,6 +3924,8 @@ class R2(object): # R2 master class instanciated by the GUI
             meshParams = self.meshParams.copy()
             if '3' in self.typ:#change interp method 
                 meshParams['interp_method'] = None # dont do any interpolation 
+            if 'geom_input' in meshParams: # dont use geometry from here because it'll likley be incompatible on the flat mesh
+                meshParams['geom_input'] = {}
             self.createModelErrorMesh(**meshParams)
             node_elec = self.modErrMeshNE
             mesh = self.modErrMesh # create flat mesh
@@ -4397,7 +4738,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 df = s.df 
                 ie = df['irecip'].values >= 0 # count the number of measurements actually put to file 
                 nmeas.append(sum(ie))
-            num_ind_meas=np.mean(nmeas)
+            num_ind_meas = np.mean(nmeas) # number of measurements 
+            mnum_ind_meas = num_ind_meas # maximum number of measurements
                     
         #nsize A estimation - describes number of connected nodes 
         kxf = self.mesh.connection.flatten() # flattened connection matrix
@@ -4434,15 +4776,16 @@ class R2(object): # R2 master class instanciated by the GUI
                 memR=memR+(num_param*nfaces)
                 memI=memI+num_param*nfaces    
         else: # do 2D calculation
-            memDP=(numnp)*(4+num_electrodes)+nsizeA+numel+num_ind_meas*4+num_ind_meas
+            memDP=(numnp)*(5+num_electrodes)+nsizeA+numel+mnum_ind_meas*3+num_ind_meas       
             memR=0
-            memI=numnp*(8+nsizeA)+num_ind_meas*8
+            memI=nsizeA+numel*6+numnp*4+mnum_ind_meas*8
             memL=numel+numnp
 
             if inverse:
-                memDP=numel+memDP+num_param*10+num_ind_meas*(num_param+6) 
+                memDP=memDP+numel+num_param*10+num_ind_meas*(num_param+7) 
                 memR=memR+num_param*numRterm
                 memI=memI+num_param*numRterm
+                memL=memL+num_ind_meas
         
         Gb=(memL + memI*4 + memR*4 + memDP*8)/1.0e9
         dump('ResIPy Estimated RAM usage = %f Gb'%Gb)
@@ -4509,7 +4852,27 @@ class R2(object): # R2 master class instanciated by the GUI
             dump('*** It is likely that more RAM is required for inversion! ***\n'
                  '*** Make a coarser mesh ***')
         return Gb     
-        
+    
+    @staticmethod
+    def setNcores(ncores):
+        """Set the number of cores to use for big calculations, for now 
+        this value only to mesh generation and calculations done on 3D meshes.
+
+        Parameters
+        ----------
+        ncores : int
+            Number of cores to use 
+        Raises
+        ------
+        EnvironmentError
+            Raised if ncores is more than that avialable
+
+        """
+        if ncores>sysinfo['core_count']:
+            raise EnvironmentError('More cores requested than detected/avialable')
+        if type(ncores) != int:
+            raise TypeError('Expected ncores as an int, but got %s'%str(type(ncores)))
+        mt.ncores = ncores
 
 #%% deprecated funcions
 
