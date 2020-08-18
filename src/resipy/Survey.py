@@ -29,6 +29,10 @@ warnings.simplefilter('default', category=DeprecationWarning)
 
 try:#import pyvista if avaiable
     import pyvista as pv
+    try:
+        from pyvistaqt import BackgroundPlotter # newer version
+    except:
+        from pyvista import BackgroundPlotter # older version
     pyvista_installed = True
 except ModuleNotFoundError:
     pyvista_installed = False
