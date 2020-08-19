@@ -26,7 +26,7 @@ tstart = time.time()
 timings = {}
 
 
-testdir = 'examples`/'
+testdir = 'examples/'
 
 
 print('======================= GENERAL METHOD TESTS =====================')
