@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy.Survey import Survey
 from resipy.R2 import R2, apiPath
+import pyvista as pv
 
 tstart = time.time()
 timings = {}
@@ -142,18 +143,27 @@ timings['methods-error-modelling'] = time.time() - tstart
 
 
 #%% mesh generation (will be tested in the cases)
+plt.close('all')
 # 2D flat
 k = R2()
 k.createSurvey(testdir + 'dc-2d/syscal.csv')
-k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
-k.createMesh('trian', refine=1)
+#k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
+k.createMesh('trian')
+k.mesh.computeNeigh()
+rmesh = k.mesh.refine()
+#k.mesh.connection = k.mesh.connection.astype(np.int_)
+#idx = np.argsort(t) 
 
 # 2D topo
 k = R2()
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
 k.createMesh('quad')
+k.showMesh()
 k.createMesh('trian')
+k.showMesh()
+k.createMesh('trian',refine=1)
+k.showMesh()
 
 # 2D borehole (see example)
 
@@ -221,7 +231,10 @@ k.filterManual(attr='resError')
 k.showPseudo(contour=True)
 k.createMesh(typ='quad', elemx=4)
 k.showMesh()
-k.createMesh(typ='trian', cl=0.1, cl_factor=5)
+xz = [[0,2,4,6],[29.20,29.0,28.5,27.75]]
+geom_input={'boundary1':xz}
+k.createMesh(typ='trian', cl=0.1, cl_factor=5,geom_input=geom_input)
+# mesh = mt.triMesh(k.elec['x'].values,k.elec['z'].values,geom_input=geom_input)
 k.showMesh()
 
 #k.fitErrorLin()
@@ -475,12 +488,20 @@ k.elec2distance()
 k = R2(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-k.showPseudo(threed=True)
+try: 
+    k.showPseudo(threed=True)
+    use_pyvista=True
+except Exception as e:
+    use_pyvista=False
+    print(e)
+    print('there was a problem with pyvista in test.py, falling back onto matplotlib display schemes')
+    
 k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
-#k.mesh.write_vtk('resipy/test/mesh3D.vtk',title='3D mesh with flat surface')
+
+k.createSequence()
 #k.err = True
 k.invert(modErr=True)
-k.showResults()
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -489,8 +510,8 @@ k.showInvError()
 k.saveMeshVtk()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
-
-
+#timeit k.mesh.orderNodes()
+#print(k.mesh)
 
 #%% 3D testing importing and exporting a mesh 
 plt.close('all')
@@ -500,10 +521,11 @@ k = R2(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.importMesh(testdir + 'mesh/coarse3D.vtk')
-k.mesh.refine() # test refining mesh 
+rmesh = k.mesh.refine() # test refining mesh 
 k.addFlatError()
 k.invert()
-k.showResults() 
+
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -524,9 +546,11 @@ k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
 k.createMesh(cl=5)
-k.showMesh()
+k.showMesh(use_pyvista=use_pyvista)
+
 k.invert()
-k.showResults()
+
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(index=0)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
@@ -542,27 +566,46 @@ t0 = time.time()
 k = R2(typ='R3t') # create R2 class
 k.importElec(testdir + 'dc-3d-column/elec.csv') # import electrodes 
 k.createMesh(typ='prism',cl=0.1,elemz=2)
+
+#assign regions of resistivity 
 a = k.mesh.elmCentre
 idx = (a[:,1]<0.45) & (a[:,1]>-0.45) & (a[:,0]<0.45) & (a[:,0]>-0.45) # set a zone of different resistivity 
 res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
 k.setRefModel(res0) # set parameters for forward model 
-k.showMesh(attr='res0',color_map='jet')
-k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)]) # create a sequence 
+
+k.showMesh(attr='res0',color_map='jet',use_pyvista=use_pyvista)
+
+#create a forward modelling sequence, bit awkward at the moment because strings need to be picked individually
+xs = [0,0,1,-1]
+ys = [-1,1,0,0]
+zs = np.unique(k.elec['z'].values)
+seqIdx = []
+for i in range(4): # makes down column strings
+    sb = (k.elec['x'] == xs[i]) & (k.elec['y'] == ys[i]) # bool on string
+    si = [] # index on string
+    for j in range(len(sb)):
+        if sb[j]:
+            si.append(j)
+    seqIdx.append(si)
+for i in range(len(zs)):
+    sb = (k.elec['z'] == zs[i]) # bool on string
+    si = [] # index on string
+    for j in range(len(sb)):
+        if sb[j]:
+            si.append(j)
+    seqIdx.append(si)
+    
+
+k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)], seqIdx=seqIdx) # create a sequence 
 k.forward() # do forward model 
 
 k.setRefModel(np.ones_like(res0)*100) # reset reference model 
 k.invert() # invert the problem 
-k.showResults(index=1, use_pyvista=False) #show result 
+k.showResults(index=1, use_pyvista=use_pyvista) #show result 
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
-
-
-#%% print final summary information 
-for key in timings.keys():
-    print('{:s} : {:.2f}s'.format(key, timings[key]))
-print('total time running the test = {:.4f}s'.format(time.time() - tstart))
 
 #%% test timelapse 3D -- takes a long time
 k = R2(typ='R3t')
@@ -570,5 +613,15 @@ k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='Protoc
 k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
 k.createMesh()
 k.invert()
-k.showResults(index=0)
-k.showResults(index=1)
+
+k.showResults(index=0,use_pyvista=use_pyvista)
+k.showResults(index=1,use_pyvista=use_pyvista)
+
+t0 = time.time()
+k.mesh.orderNodes()
+t1 = time.time() - t0
+
+#%% print final summary information 
+for key in timings.keys():
+    print('{:s} : {:.2f}s'.format(key, timings[key]))
+print('total time running the test = {:.4f}s'.format(time.time() - tstart))
