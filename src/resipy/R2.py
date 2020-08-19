@@ -96,6 +96,7 @@ checkExe(os.path.join(apiPath, 'exe'))
 #%% system check
 def getSysStat():
     """Return processor speed and usage, and free RAM and usage. 
+    
     Returns
     -------
     cpu_speed: float
@@ -787,7 +788,7 @@ class R2(object): # R2 master class instanciated by the GUI
             reciprocal measurements. By default all surveys are used.
         dump : function, optional
             Function to dump information message when importing the files.
-         debug : bool, optional
+        debug : bool, optional
             If True informations about reciprocal computation, default filtering
             and so on will be displayed.
         """
@@ -1502,6 +1503,7 @@ class R2(object): # R2 master class instanciated by the GUI
     
     def filterAppResist(self, index=-1, vmin=None, vmax=None):
         """Filter measurements by apparent resistivity for surface surveys 
+        
         Parameters
         -----------
         vmin : float, optional
@@ -1524,6 +1526,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
     def filterTransferRes(self, index=-1, vmin=None, vmax=None):
         """Filter measurements by transfer resistance. 
+        
         Parameters
         -----------
         vmin : float, optional

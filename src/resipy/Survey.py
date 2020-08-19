@@ -726,6 +726,7 @@ class Survey(object):
     
     def filterInvError(self, vmin=None, vmax=None, debug=False):
         """Filter measurements by inversion error. 
+        
         Parameters
         -----------
         vmin : float, optional
@@ -1711,7 +1712,8 @@ class Survey(object):
             contour = False
             
         if ax is None: # make a plotter object if not already given 
-            ax = BackgroundPlotter()
+            # ax = BackgroundPlotter()
+            ax = pv.Plotter()
             ax.background_color = background_color
         else: # check the ax argument is for pyvista not matplotlib 
             typ_str = str(type(ax))
@@ -1976,7 +1978,7 @@ class Survey(object):
         ----------
         attr : str, optional
             Columns of `Survey.df` to use for plotting. Default is `app`
-            (apparent resistivity).
+        (apparent resistivity).
         ax : matplotlib axis, optional
             If specified, the graph is plotted along the axis.
         log : bool, optional
@@ -2136,6 +2138,7 @@ class Survey(object):
     
     def filterAppResist(self, vmin=None, vmax=None, debug=True):
         """Filter measurements by apparent resistivity for surface surveys 
+        
         Parameters
         -----------
         vmin : float, optional
@@ -2162,8 +2165,11 @@ class Survey(object):
             print(msgDump)
             return numRemoved
     
+    
+    
     def filterTransferRes(self, vmin=None, vmax=None, debug=True):
         """Filter measurements by transfer resistance. 
+        
         Parameters
         -----------
         vmin : float, optional

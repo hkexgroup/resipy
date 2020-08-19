@@ -115,23 +115,24 @@ def cropSurface(triang, xsurf, ysurf):
 
 #%% determine if points are inside cubiod  
 def in_box(x,y,z,xmax,xmin,ymax,ymin,zmax,zmin):
-    """
-    Determine if a point lies inside a bounding volume 
+    """Determine if a point lies inside a bounding volume.
+    
     Parameters
     ----------
-    x: array like, float
+    x : array like, float
         x coordinate of query point
-    y: array like, float
+    y : array like, float
         y coordinate of query point 
-    z: array like, float
+    z : array like, float
         z coordinate of query point
-    volume_data: list 
+    volume_data : list 
         contains column of poly_data, in the form (polyx, polyy, polyz)
-    ray_cast: float, optional
+    ray_cast : float, optional
         determines how the far in the x axis a point is ray casted 
+    
     Returns
-    ----------
-    inside: boolian, numpy array 
+    -------
+    inside : boolian, numpy array 
         true indexes where point is inside volume
     """
     
@@ -871,6 +872,7 @@ class Mesh:
     def extractSurface(self,return_idx =False, post_neigh_check=True): 
         """ Extract the surface of a triangle or tetrahedral mesh. Ouput of 
         function will depend on mesh type. 
+        
         Parameters
         -----------
         return_idx: bool
@@ -1953,7 +1955,8 @@ class Mesh:
             
             # make a plotter object if not already given or check it
             if ax is None: 
-                ax = BackgroundPlotter()
+                # ax = BackgroundPlotter()
+                ax = pv.Plotter()
                 ax.background_color = background_color
             else: # check the ax argument is for pyvista not matplotlib 
                 typ_str = str(type(ax))
@@ -2535,7 +2538,8 @@ class Mesh:
             raise Exception('Function only works on a tetrahedral mesh')
         if ax is None:
             #make pyvista background plotter 
-            ax = pv.BackgroundPlotter()
+            # ax = pv.BackgroundPlotter()
+            ax = pv.Plotter()
         
         # determine the extent of the survey for bounding box
         if zlim == None:
