@@ -2,9 +2,7 @@ cimport cython  #import relevant modules
 import numpy as np
 cimport numpy as np
 from cython.parallel import prange, parallel 
-# from cpython cimport array
 cimport openmp
-#from libc.stdint cimport int32_t, int64_t
 
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
