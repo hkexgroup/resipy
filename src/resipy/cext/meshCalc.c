@@ -4,9 +4,6 @@
 {
     "distutils": {
         "depends": [],
-        "extra_compile_args": [
-            "/openmp"
-        ],
         "name": "meshCalc",
         "sources": [
             "meshCalc.pyx"
@@ -2395,6 +2392,7 @@ static const char __pyx_k_zeros[] = "zeros";
 static const char __pyx_k_ztmpv[] = "ztmpv";
 static const char __pyx_k_astype[] = "astype";
 static const char __pyx_k_countv[] = "countv";
+static const char __pyx_k_cython[] = "cython";
 static const char __pyx_k_encode[] = "encode";
 static const char __pyx_k_face1s[] = "face1s";
 static const char __pyx_k_face2s[] = "face2s";
@@ -2609,6 +2607,7 @@ static PyObject *__pyx_n_s_conv;
 static PyObject *__pyx_n_s_count;
 static PyObject *__pyx_n_s_count_out;
 static PyObject *__pyx_n_s_countv;
+static PyObject *__pyx_n_s_cython;
 static PyObject *__pyx_n_s_dict;
 static PyObject *__pyx_n_s_dtype;
 static PyObject *__pyx_n_s_dtype_is_object;
@@ -36583,6 +36582,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_count, __pyx_k_count, sizeof(__pyx_k_count), 0, 0, 1, 1},
   {&__pyx_n_s_count_out, __pyx_k_count_out, sizeof(__pyx_k_count_out), 0, 0, 1, 1},
   {&__pyx_n_s_countv, __pyx_k_countv, sizeof(__pyx_k_countv), 0, 0, 1, 1},
+  {&__pyx_n_s_cython, __pyx_k_cython, sizeof(__pyx_k_cython), 0, 0, 1, 1},
   {&__pyx_n_s_dict, __pyx_k_dict, sizeof(__pyx_k_dict), 0, 0, 1, 1},
   {&__pyx_n_s_dtype, __pyx_k_dtype, sizeof(__pyx_k_dtype), 0, 0, 1, 1},
   {&__pyx_n_s_dtype_is_object, __pyx_k_dtype_is_object, sizeof(__pyx_k_dtype_is_object), 0, 0, 1, 1},
@@ -37931,6 +37931,15 @@ if (!__Pyx_RefNanny) {
   __Pyx_GOTREF(__pyx_t_1);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_np, __pyx_t_1) < 0) __PYX_ERR(0, 2, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "meshCalc.pyx":7
+ * cimport openmp
+ * 
+ * cython: auto_pickle=False             # <<<<<<<<<<<<<<
+ * 
+ * cdef extern from "math.h" nogil:
+ */
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cython, Py_False) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
 
   /* "meshCalc.pyx":12
  *     cpdef double acos(double x)

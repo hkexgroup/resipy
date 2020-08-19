@@ -19,7 +19,7 @@ elif platform.system() == 'Windows': #open mp support on windows
         Extension(
             "meshCalc",
             ["meshCalc.pyx"],
-            extra_compile_args=['/openmp'],
+            #extra_compile_args=['/openmp'],
             #extra_link_args=['/openmp'],
         )
     ]
