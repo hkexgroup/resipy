@@ -1955,7 +1955,8 @@ class Mesh:
             
             # make a plotter object if not already given or check it
             if ax is None: 
-                ax = BackgroundPlotter()
+                # ax = BackgroundPlotter()
+                ax = pv.Plotter()
                 ax.background_color = background_color
             else: # check the ax argument is for pyvista not matplotlib 
                 typ_str = str(type(ax))
@@ -2537,7 +2538,8 @@ class Mesh:
             raise Exception('Function only works on a tetrahedral mesh')
         if ax is None:
             #make pyvista background plotter 
-            ax = pv.BackgroundPlotter()
+            # ax = pv.BackgroundPlotter()
+            ax = pv.Plotter()
         
         # determine the extent of the survey for bounding box
         if zlim == None:
