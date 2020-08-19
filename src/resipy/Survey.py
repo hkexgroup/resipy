@@ -1712,7 +1712,8 @@ class Survey(object):
             contour = False
             
         if ax is None: # make a plotter object if not already given 
-            ax = BackgroundPlotter()
+            # ax = BackgroundPlotter()
+            ax = pv.Plotter()
             ax.background_color = background_color
         else: # check the ax argument is for pyvista not matplotlib 
             typ_str = str(type(ax))
