@@ -3681,8 +3681,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path where to save the file.
         savetyp : str, optional
-            Saving format. To be determined in GUI.
-            Default: Res2DInv (*.dat)
+            Saving format. To be determined in GUI. Default: Res2DInv (*.dat)
         """
         elec = self.elec[['x','y','z']].values
         spacing = elec[1,0] - elec[0,0] # TODO (gb) not sure if this is needed

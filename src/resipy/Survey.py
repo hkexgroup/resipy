@@ -1784,7 +1784,7 @@ class Survey(object):
         except AttributeError as e:
             print("Could not plot 3d electrodes, error = "+str(e))
         
-        ax.show()
+        # ax.show()
 
     
     def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
@@ -1978,11 +1978,11 @@ class Survey(object):
         ----------
         attr : str, optional
             Columns of `Survey.df` to use for plotting. Default is `app`
-        (apparent resistivity).
+            (apparent resistivity).
         ax : matplotlib axis, optional
             If specified, the graph is plotted along the axis.
         log : bool, optional
-            If `True``then all data will be log transformed.
+            If `True` then all data will be log transformed.
         label : str, optional
             Label of the colorbar. If None, will be given from the 'attr' argument.
         vmin : float, optional
