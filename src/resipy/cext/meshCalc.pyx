@@ -4,8 +4,6 @@ cimport numpy as np
 from cython.parallel import prange, parallel 
 cimport openmp
 
-cython: auto_pickle=False 
-
 cdef extern from "math.h" nogil:
     cpdef double acos(double x)
 
