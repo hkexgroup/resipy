@@ -14,6 +14,7 @@ pages:
   script:
   - apt-get update
   - apt-get install --assume-yes pandoc wine libxcb-xinerama0
+  - apt-get install --assume-yes libx11-xcb1
   - pip install -r requirements.txt
   - pip install sphinx numpydoc sphinx_rtd_theme sphinx_nbexamples pandoc
   - pip install SALib
