@@ -15,13 +15,18 @@ import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy.Survey import Survey
 from resipy.R2 import R2, apiPath
-import pyvista as pv
+
+use_pyvista = True
+try:
+    import pyvista as pv
+except:
+    use_pyvista = False
 
 tstart = time.time()
 timings = {}
 
 
-testdir = 'examples/'
+testdir = 'examples`/'
 
 
 print('======================= GENERAL METHOD TESTS =====================')
@@ -490,9 +495,7 @@ k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 try: 
     k.showPseudo(threed=True)
-    use_pyvista=True
 except Exception as e:
-    use_pyvista=False
     print(e)
     print('there was a problem with pyvista in test.py, falling back onto matplotlib display schemes')
     
