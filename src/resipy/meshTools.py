@@ -2030,7 +2030,7 @@ class Mesh:
                     print("Could not plot 3d electrodes, error = "+str(e))
             
             # show mesh
-            # ax.show()
+            ax.show()
             # NOTE: because we've truncated the copy of the mesh that pyvista
             # reads in, it should scale correctly in showMesh() even if the
             # mesh object represents the entire mesh with the coarse region.

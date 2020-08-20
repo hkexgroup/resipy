@@ -1784,7 +1784,7 @@ class Survey(object):
         except AttributeError as e:
             print("Could not plot 3d electrodes, error = "+str(e))
         
-        # ax.show()
+        ax.show()
 
     
     def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
