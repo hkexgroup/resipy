@@ -368,6 +368,7 @@ class App(QMainWindow):
                 instructionLabel3D.setVisible(False)
                 self.select3DRegionBtn.setVisible(False)
                 self.add3DRegionBtn.setVisible(False)
+                self.fin3DRegionBtn.setVisible(False)
                 
                 # inversion settings
                 show3DOptions(False)
@@ -424,6 +425,7 @@ class App(QMainWindow):
                 instructionLabel3D.setVisible(True)
                 self.select3DRegionBtn.setVisible(True)
                 self.add3DRegionBtn.setVisible(True)
+                self.fin3DRegionBtn.setVisible(True)
 
                 # inversion settings
                 show3DOptions(True)
@@ -3009,22 +3011,36 @@ class App(QMainWindow):
         self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
 
         def select3DRegionBtnFunc():
-            self.r2.showMesh(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+            self.mesh3Dplotter.clear() # clear all actors 
             self.clip = self.r2.mesh.pick3Dbox(ax=self.mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
-        self.select3DRegionBtn = QPushButton('(1) Select region')
+            self.select3DRegionBtn.setDisabled(True) # so button can't be clicked again 
+            self.add3DRegionBtn.setDisabled(False)
+            self.fin3DRegionBtn.setDisabled(False)
+        self.select3DRegionBtn = QPushButton('(1) Region Mode')
         self.select3DRegionBtn.clicked.connect(select3DRegionBtnFunc)
         self.select3DRegionBtn.setVisible(False)
 
         def add3DRegionBtnFunc():
             clipped_mesh = self.r2.mesh.addRegion3D(self.clip)
             self.regionTable.addRow()
-            self.mesh3Dplotter.clear() # clear all actors 
-            # clipped_mesh.show(ax=mesh3Dplotter, attr='region', color_bar=True)
-            self.r2.showMesh(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+            # self.mesh3Dplotter.clear() 
+            clipped_mesh.show(ax=self.mesh3Dplotter, attr='region', color_bar=True)
         self.add3DRegionBtn = QPushButton('(2) Add region')
         self.add3DRegionBtn.clicked.connect(add3DRegionBtnFunc)
         self.add3DRegionBtn.setVisible(False)
-
+        self.add3DRegionBtn.setDisabled(True)#start disabled 
+        
+        def fin3DRegionBtnFunc():#finish region selection mode 
+            self.mesh3Dplotter.clear() # clear all actors 
+            self.r2.showMesh(ax=self.mesh3Dplotter, color_map='Spectral', attr='region', color_bar=True)
+            self.select3DRegionBtn.setDisabled(False) #enable select region mode button again 
+            self.add3DRegionBtn.setDisabled(True)
+            self.fin3DRegionBtn.setDisabled(True)
+        self.fin3DRegionBtn = QPushButton('(3) Exit mode')
+        self.fin3DRegionBtn.clicked.connect(fin3DRegionBtnFunc)
+        self.fin3DRegionBtn.setVisible(False)
+        self.fin3DRegionBtn.setDisabled(True)#start disabled 
+            
         def resetMeshBtnFunc():
             self.regionTable.reset()
             self.mwMesh.clear()
@@ -3096,7 +3112,7 @@ class App(QMainWindow):
             'triangular mesh only.')
         instructionLabel.setWordWrap(True)
         
-        instructionLabel3D = QLabel('Click on "Select Region" to interactively'
+        instructionLabel3D = QLabel('Click on "Region Mode" to interactively'
             ' define a region in 3D using the box. When done, hit the "Add Region"'
             ' button to confirm. You can then specify different values in the '
             ' table on the side. Recreate a mesh to erase all regions.')
@@ -3210,8 +3226,10 @@ class App(QMainWindow):
         instructionLayout.addWidget(instructionLabel3D, 86)
         instructionLayout.addWidget(self.meshAspectBtn, 7)
         instructionLayout.addWidget(self.resetMeshBtn, 7)
+        ## for 3D forward modelling / region selection 
         instructionLayout.addWidget(self.select3DRegionBtn, 7)
         instructionLayout.addWidget(self.add3DRegionBtn, 7)
+        instructionLayout.addWidget(self.fin3DRegionBtn, 7)
         meshLayout.addLayout(instructionLayout)
         
         # for RAM issue
@@ -3426,7 +3444,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if len(params) == 0:
                 raise ValueError('You must specify at least one sequence.')
                 return
-            self.r2.createSequence(params=params)
+            self.seqIdx = self.r2.createSequence(params=params)
             self.seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.r2.sequence)))
 
         self.seqOutputLabel = QLabel('')
@@ -3482,14 +3500,25 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
             if self.r2.typ[-1] == '2':
                 self.calcAspectRatio() # doesn't work for 3D?
-            # TODO 3D pseudo-sections?
-            self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
+            
+            ### pseudo section plotting! ###
+            if pvfound and self.r2.typ[-1]=='t': # 3D pseudo-sections?
+                self.mwFwdPseudo.hide()
+                self.pseudo3Dplotter.clear() # clear all actors 
+                self.r2.surveys[0]._showPseudoSection3D(ax=self.pseudo3Dplotter,
+                                                        strIdx=self.seqIdx)
+                self.fwdContour.setDisabled(True)#can't contour 3D data atm 
+                self.pseudoFrame.setVisible(True)
+            else:
+                self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
+                
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)
             self.tabs.setTabEnabled(5, True)
             # self.tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
                 self.mwFwdPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
+                
         self.forwardBtn = QPushButton('Forward Modelling')
         self.forwardBtn.setAutoDefault(True)
         self.forwardBtn.clicked.connect(forwardBtnFunc)
@@ -3498,6 +3527,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwFwdPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP.setVisible(False)
+        if pvfound:
+            self.pseudoFrame = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudo3Dplotter = QtInteractor(self.pseudoFrame)
+            vlayout.addWidget(self.pseudo3Dplotter.interactor)
+            self.pseudoFrame.setLayout(vlayout)
+            self.pseudoFrame.setVisible(False)
 
         self.forwardLogText = QTextEdit()
         self.forwardLogText.setReadOnly(True)
@@ -3525,6 +3561,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.fwdContour = QCheckBox('Contour')
         self.fwdContour.stateChanged.connect(fwdContourFunc)
         self.fwdContour.setVisible(False)
+
 
         # layout
         forwardLayout = QVBoxLayout()
@@ -3557,6 +3594,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudo)
         forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudoIP)
         self.mwFwdPseudoIP.hide()
+        if pvfound:
+            forwardPseudoLayoutBottom.addWidget(self.pseudoFrame)
+            #self.pseudoFrame.hide()
         
         forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
 
@@ -3578,6 +3618,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         fwdTopWidget.setStyleSheet("QWidget#fwdTopWidget {border:1px solid rgb(185,185,185)}")
         fwdTopWidget.setLayout(forwardLayout)
         
+        #bottom part 
         fwdBottomWidget = QWidget()
         fwdBottomWidget.setObjectName('fwdBottomWidget')
         fwdBottomWidget.setStyleSheet("QWidget#fwdBottomWidget {border:1px solid rgb(185,185,185)}")

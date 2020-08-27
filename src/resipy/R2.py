@@ -447,7 +447,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.setElec(dfelec)
         
     def hasElecString(self):
-        """Determine if a electrode strings are present
+        """Determine if a electrode strings are present in the electrode labels 
 
         Returns
         -------
@@ -465,7 +465,7 @@ class R2(object): # R2 master class instanciated by the GUI
         return True
         
         
-    def detectStrings(self, tolerance=5, max_itr=1000):
+    def detectStrings(self, tolerance=5, max_itr=None):
         """Automatically detect electrode strings 
 
         Parameters
@@ -475,7 +475,7 @@ class R2(object): # R2 master class instanciated by the GUI
             electrode may have. The default is 5.
         max_itr : int, optional
             Maximum number of searches that can be performed to find colinear
-            nieghbouring electrodes. The default is 1000.
+            nieghbouring electrodes. The default is None.
 
         Raises
         ------
@@ -517,6 +517,8 @@ class R2(object): # R2 master class instanciated by the GUI
         iremote = self.elec['remote'].values
         x = self.elec['x'].values[~iremote]
         y = self.elec['y'].values[~iremote]
+        if max_itr is None:
+            max_itr = len(x)+10
         # init - nb couple of commented lines are in here for displaying the selected electrode strings 
         # fig, ax = plt.subplots()
         # ax.scatter(x,y,c='k')
@@ -1930,8 +1932,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.zlim = [zlimMin, zlimMax]
         
         self._computePolyTable()
-
-
+        
 
     def showMesh(self, ax=None, **kwargs):
         """Display the mesh.
@@ -1948,6 +1949,8 @@ class R2(object): # R2 master class instanciated by the GUI
             if 'color_bar' not in kwargs.keys():
                 if np.unique(np.array(self.mesh.df['region'])).shape[0] > 1:
                     kwargs['color_bar'] = True # show colorbar for multiple regions
+                    if kwargs['attr'] == 'region' and kwargs['color_map'] == 'Greys':
+                        kwargs['color_map'] = 'Spectral'
                 else:
                     kwargs['color_bar'] = False
         
@@ -3414,82 +3417,19 @@ class R2(object): # R2 master class instanciated by the GUI
         print('Reference model successfully assigned')
 
 
-    # def createSequence(self, params=[('dpdp1', 1, 8)]):
-    #     """Create a dipole-dipole sequence.
-
-    #     Parameters
-    #     ----------
-    #     params : list of tuple, optional
-    #         Each tuple is the form (<array_name>, param1, param2, ...)
-    #         Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
-    #         'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
-
-    #     Examples
-    #     --------
-    #     >>> k = R2()
-    #     >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
-    #     >>> k.createMesh(typ='trian')
-    #     >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
-    #     """
-    #     if (self.typ == 'cR3t') | (self.typ == 'R3t'):
-    #         if not self.hasElecString():
-    #             raise ValueError('Electrode strings have not been set')
-    #         lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
-    #         elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
-    #         nline = len(np.unique(lines))
-    #         nelec = self.elec.shape[0] // nline # as it is a grid - not always 
-    #     else:
-    #         nline = 0
-    #         nelec = self.elec.shape[0]
+    def _seqIdxFromLabel(self):
+        lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
+        uline = np.unique(lines)
+        nline = len(uline)
+        seqIdx = []
+        for i in range(nline):
+            lidx = np.argwhere(lines==uline[i])
+            idx = [0]*len(lidx)
+            for j in range(len(lidx)):
+                idx[j]=lidx[j][0]
+            seqIdx.append(np.array(idx))
+        return seqIdx
         
-    #     qs = []
-    #     def addCustSeq(fname):
-    #         seq = pd.read_csv(fname, header=0)
-    #         if seq.shape[1] != 4:
-    #             raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
-    #         else:
-    #             return seq.values
-    #     fdico = {'dpdp1': dpdp1,
-    #           'dpdp2': dpdp2,
-    #           'wenner': wenner,
-    #           'wenner_alpha': wenner_alpha,
-    #           'wenner_beta': wenner_beta,
-    #           'wenner_gamma': wenner_gamma,
-    #           'schlum1': schlum1,
-    #           'schlum2': schlum2,
-    #           'multigrad': multigrad,
-    #           'custSeq': addCustSeq}
-
-    #     for p in params:
-    #         if p[0] == 'custSeq':
-    #             try:
-    #                 qs.append(addCustSeq(p[1]))
-    #             except Exception as e:
-    #                 print('error when importing custom sequence:', e)
-    #         else:
-    #             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
-    #             qs.append(fdico[p[0]](nelec, *pok).values.astype(int))
-    #     sequence = np.vstack(qs)
-        
-    #     # detecing quadrupoles using out of bound electrodes
-    #     iabove = (sequence > self.elec.shape[0]).any(1)
-    #     sequence = sequence[~iabove,:]
-        
-    #     if (params[0][0] != 'custSeq') & (self.typ[-1] == 't'):
-    #         # add line number
-    #         qs2 = []
-    #         for i in range(nline):
-    #             df = pd.DataFrame(sequence.astype(int).astype(str), columns=['a','b','m','n'])
-    #             df['a'] = '{:d} '.format(i+1) + df['a']
-    #             df['b'] = '{:d} '.format(i+1) + df['b']
-    #             df['m'] = '{:d} '.format(i+1) + df['m']
-    #             df['n'] = '{:d} '.format(i+1) + df['n']
-    #             qs2.append(df.values)
-    #         sequence = np.vstack(qs2)
-            
-    #     self.sequence = sequence
-    #     print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
-    
     def createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
                        autoDS=True, *kwargs):
         """Creates a forward modelling sequence, see examples below for usage.
@@ -3544,17 +3484,8 @@ class R2(object): # R2 master class instanciated by the GUI
                 if not self.hasElecString():
                     raise ValueError('Electrode strings have not been set')
                 else:
-                    lines = [int(a.split(' ')[0]) for a in self.elec['label'].values]
-                    #elec = [int(a.split(' ')[1]) for a in self.elec['label'].values]
-                    uline = np.unique(lines)
-                    nline = len(uline)
-                    seqIdx = []
-                    for i in range(nline):
-                        lidx = np.argwhere(lines==uline[i])
-                        idx = [0]*len(lidx)
-                        for j in range(len(lidx)):
-                            idx[j]=lidx[j][0]
-                        seqIdx.append(np.array(idx))
+                    seqIdx = self._seqIdxFromLabel()
+
             elif type(seqIdx) != list: # check we have a list 
                 raise TypeError('Expected list type argument for seqIdx')
             
@@ -3576,8 +3507,13 @@ class R2(object): # R2 master class instanciated by the GUI
                         qs.append(slabels[str_seq-1])
                         
             sequence = np.vstack(qs)
+            if not self.hasElecString():
+                # if it's 3D, we need the line number for the sequence 
+                # (so all electrode on line 1)
+                for i in range(sequence.shape[0]):
+                    for j in range(sequence.shape[1]):
+                        sequence[i,j] = '1 '+ sequence[i,j]
                     
-                
         else: #its 2D 
             nelec = self.elec.shape[0] 
             qs = []
@@ -3598,6 +3534,7 @@ class R2(object): # R2 master class instanciated by the GUI
             
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
+        return seqIdx
 
 
     def saveSequence(self, fname=''):
@@ -3755,7 +3692,7 @@ class R2(object): # R2 master class instanciated by the GUI
             self.mesh.dat(os.path.join(fwdDir, 'mesh.dat'))
         else:
             self.mesh.dat(os.path.join(fwdDir, 'mesh3d.dat'))
-
+            
         # write the forward .in file
         dump('Writing .in file and mesh.dat... ')
         fparam = self.param.copy()
@@ -3791,15 +3728,9 @@ class R2(object): # R2 master class instanciated by the GUI
             seq2 = seq.copy()
             seq[ie,2] = seq2[ie,3] # swap if K is < 0
             seq[ie,3] = seq2[ie,2]
-
-        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
-        # if it's 3D, we add the line number (all electrode on line 1)
-        # if self.typ[-2] == '3':
-        #     protocol.insert(1, 'sa', 1)
-        #     protocol.insert(3, 'sb', 1)
-        #     protocol.insert(5, 'sm', 1)
-        #     protocol.insert(7, 'sn', 1)  
             
+        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
@@ -3826,6 +3757,11 @@ class R2(object): # R2 master class instanciated by the GUI
         
         fmd = self.fmd.copy()
         elec = self.elec.copy()
+        if self.typ[-1]=='t' and not self.hasElecString():
+            #need to add elec strings to labels if in 3D
+            for i in range(elec.shape[0]):
+                elec.loc[i,'label'] = '1 ' + elec['label'][i]
+            
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
             self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolIP')
@@ -3837,7 +3773,8 @@ class R2(object): # R2 master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
-        self.fmd = fmd        
+        self.fmd = fmd      
+
         # recompute doi (don't actually otherwise zlim is jumping)
         # self.computeFineMeshDepth()
         # self.zlim[0] = np.min(elec['z']) - self.fmd
@@ -4656,6 +4593,8 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         if dirname is None:
             dirname = self.dirname
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
         amtContent = startAnmt
         if len(self.meshResults) == 0:
             self.getResults()
