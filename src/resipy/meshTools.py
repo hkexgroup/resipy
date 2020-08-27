@@ -32,10 +32,13 @@ import resipy.gmshWrap as gw
 from resipy.sliceMesh import sliceMesh # mesh slicing function
 import resipy.interpolation as interp
 
-try: # meshCalc needs to be compiled 
-    from resipy.cext import meshCalc as mc
-except Exception: # let's be more general as old compiled module can also trigger the error
-    warnings.warn('Failed to import meshTools c extension, meshing options maybe limited')
+try: 
+    from resipy.cext import meshCalc as mc 
+except Exception as e:
+    print('Could not import meshCalc extension see the following error:')
+    print(e)# meshCalc needs to be compiled 
+    raise Exception('Could not import meshCalc extension to fix the problem try, '\
+                    'updating ResIPy, updating Numpy or recompiling the extension.')
 
 # import pyvista if available
 try:
@@ -297,6 +300,8 @@ class Mesh:
             self.cellCentres()
         if order_nodes: # order nodes 
             self.orderNodes()
+            
+        self.surfaceMesh = None # surface of mesh 
             
         #old variable names 
             
@@ -2484,7 +2489,7 @@ class Mesh:
                 
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
         
-    #%% 3D selection 
+    #%% 3D selection (designed to be used with the UI only really)
     def _select3Dsurface(self):
         #return surface for 3D selection in forward modelling 
         if self.ndims != 3:
@@ -2536,8 +2541,7 @@ class Mesh:
         if self.type2VertsNo() != 4:
             raise Exception('Function only works on a tetrahedral mesh')
         if ax is None:
-            #make pyvista background plotter 
-            # ax = pv.BackgroundPlotter()
+            #make pyvista plotter 
             ax = pv.Plotter()
         
         # determine the extent of the survey for bounding box
@@ -2572,8 +2576,9 @@ class Mesh:
         self.df.loc[:,'elm_id'] = np.arange(1,self.numel+1,1)
         
         # surface mesh
-        smesh = self._select3Dsurface() # surface of mesh 
-        smesh.show3D(ax=ax,color_map='Greys', color_bar=False,
+        if self.surfaceMesh is None: # do this to avoid recomputing surface mesh
+            self.surfaceMesh = self._select3Dsurface() # surface of mesh 
+        self.surfaceMesh .show3D(ax=ax,color_map='Greys', color_bar=False,
                      edge_color=None, alpha=0.8)
         
         # pyvista mesh
@@ -2583,9 +2588,16 @@ class Mesh:
         pvmesh = pv.read(fname)
         folder.cleanup()
         
+        #add all regions != 1 
+        reg = self.df['region'].values
+        idx = reg>1
+        if not all(idx==False):#then add regions > 1. So that background region is transparent
+            nmesh = self.filterIdx(idx)
+            nmesh.show3D(ax=ax,vmin=1)
+            
         #add box clip function
         pvmesh = pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
-        ax.add_mesh_clip_box(pvmesh, color='white',opacity=0.5)
+        ax.add_mesh_clip_box(pvmesh, color='white',opacity=0.4)
         
         if self.elec is not None and electrodes: #try add electrodes to figure if we have them 
             points = self.elec.copy()

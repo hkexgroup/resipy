@@ -278,6 +278,24 @@ class Survey(object):
         out = "Survey class with {:d} measurements and {:d} electrodes".format(
             self.df.shape[0], self.elec.shape[0])
         return out
+    
+    def hasElecString(self):
+        """Determine if a electrode strings are present in the electrode labels 
+
+        Returns
+        -------
+        bool
+            True if strings present in electrode label
+        """
+        df = self.elec
+        if 'label' not in df.keys():
+            return False
+        else:
+            label = df['label']
+            for l in label:
+                if len(l.split()) == 1:
+                    return False
+        return True
         
     
     def checkTxSign(self):
@@ -1477,60 +1495,10 @@ class Survey(object):
         -------
         xpos, ypos, zpos all arrays containing position of the pseudo-section.
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0]))) 
         array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
-        
-        # Finding fully nested measurements
-        # pos = elecpos[array]
-        # A = np.min(pos[:,:2], axis=1)
-        # B = np.max(pos[:,:2], axis=1)
-        # M = np.min(pos[:,2:], axis=1)
-        # N = np.max(pos[:,2:], axis=1)
-        # innerMN = ((pos[:,2] > A) 
-        #             & (pos[:,2] < B)
-        #             & (pos[:,3] > A)
-        #             & (pos[:,3] < B))
-        # innerAB = ((pos[:,0] > M)
-        #            & (pos[:,1] < N)
-        #            & (pos[:,0] > M)
-        #            & (pos[:,1] < N))
-        # inested = innerMN | innerAB
-                
-        # elecpos[k.elec['remote'].values] = np.inf # so it will never be taken as minimium
-                
-        # cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        # cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        # cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        # padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        # padd[np.isinf(padd)] = 0
-        # pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-        
-        # # for non-nested measurements
-        # xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        # yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # # for nested measurements (need to define the outer and inner dipole)
-        # xposNested = np.zeros(len(pmiddle))
-        # if np.sum(innerMN) > 0:
-        #     xposNested[innerMN] = pmiddle[innerMN]
-        # if np.sum(innerAB) > 0:
-        #     xposNested[innerAB] = cmiddle[innerAB]
-        # outerLeft = np.min(pos, axis=1)
-        # outerRight = np.max(pos, axis=1)
-        # yposNested  = np.min([np.abs(pmiddle - outerLeft), np.abs(outerRight - pmiddle)], axis=0)/3
-        
-        # xpos = np.zeros_like(pmiddle)
-        # ypos = np.zeros_like(pmiddle)
-        
-        # xpos[~inested] = xposNonNested[~inested]
-        # xpos[inested] = xposNested[inested]
-        
-        # ypos[~inested] = yposNonNested[~inested]
-        # ypos[inested] = yposNested[inested] 
-                
-        
+            
         ### first determine if measurements are nested ###
         #find mid points of AB 
         AB = (elecm[array[:,0]] + elecm[array[:,1]]) / 2 # mid points of AB 
@@ -1678,11 +1646,49 @@ class Survey(object):
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
             return fig
+    
+    def _showElecStrings3D(self,ax=None,strIdx=None, 
+                           background_color=(0.8,0.8,0.8),
+                           elec_color='k'):
+        if ax is None: # make a plotter object if not already given 
+            ax = pv.Plotter()
+            ax.background_color = background_color
+        else: # check the ax argument is for pyvista not matplotlib 
+            typ_str = str(type(ax))
+            if typ_str.find('pyvista') == -1:
+                raise Exception('Error plotting with pyvista, expected a pyvista plotter object but got %s instead'%typ_str)
+            ax.set_background(background_color)
+            
+        def lines_from_points(points):
+            """Given an array of points, make a line set, 
+            https://docs.pyvista.org/examples/00-load/create-spline.html"""
+            poly = pv.PolyData()
+            poly.points = points
+            cells = np.full((len(points)-1, 3), 2, dtype=np.int_)
+            cells[:, 1] = np.arange(0, len(points)-1, dtype=np.int_)
+            cells[:, 2] = np.arange(1, len(points), dtype=np.int_)
+            poly.lines = cells
+            return poly
+            
+        elec = self.elec[['x','y','z']].values # make electrode numpy array 
+        
+        if strIdx is not None: #add strings 
+            if not isinstance(strIdx,list):
+                raise TypeError('strIdx variable is not a list')
+            for s in strIdx:
+                line = lines_from_points(elec[s])
+                tube = line.tube(radius=0.1)
+                ax.add_mesh(tube,smooth_shading=True,color=(0.5,0.5,0.5))
+        
+        pvelec = pv.PolyData(elec)
+        ax.add_mesh(pvelec, color=elec_color, point_size=10.,
+                    render_points_as_spheres=True)
         
         
     def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
-                           background_color=(0.8,0.8,0.8), elec_color='k'):
+                           background_color=(0.8,0.8,0.8), elec_color='k',
+                           strIdx=None):
         """Create a pseudo-section for 3D surface array.
         
         Parameters
@@ -1702,11 +1708,20 @@ class Survey(object):
             Minimum value for the colorbar.
         vmax : float, optional
             Maximum value for the colorbar.
+        background_color: tuple, optional 
+            background color for pyvista plotter object
+        elec_color: tuple, string, optional
+            color identifier for pyvista plotter object, determines color of 
+            electrode points if they can be plotted. 
+        strIdx: list, optional 
+            returned from R2.detectStrings method. Each entry in list is an 
+            array like of ints defining an electrode string. 
         """
         if not pyvista_installed:
             print('pyvista not installed, cannot show 3D pseudo section')
             return
-        
+
+            
         #TODO contour is not working!
         if contour:
             contour = False
@@ -1718,10 +1733,10 @@ class Survey(object):
         else: # check the ax argument is for pyvista not matplotlib 
             typ_str = str(type(ax))
             if typ_str.find('pyvista') == -1:
-                raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
+                raise Exception('Error plotting with pyvista, expected a pyvista plotter object but got %s instead'%typ_str)
             ax.set_background(background_color)
             
-        elec = self.elec[['x','y','z']].values
+        # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
         if geom: # compute and applied geometric factor
@@ -1778,12 +1793,13 @@ class Survey(object):
                                          'label_font_size':14})
                                  
         try:
-            pvelec = pv.PolyData(elec)
-            ax.add_mesh(pvelec, color=elec_color, point_size=10.,
-                        render_points_as_spheres=True)
-        except AttributeError as e:
+            self._showElecStrings3D(ax=ax, strIdx = strIdx, 
+                                    background_color=background_color,
+                                    elec_color=elec_color)
+        except Exception as e:
             print("Could not plot 3d electrodes, error = "+str(e))
-        
+            
+        ax.show_grid(color='k')
         ax.show()
 
     
