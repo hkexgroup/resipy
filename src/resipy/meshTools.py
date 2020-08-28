@@ -4033,14 +4033,14 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','nt','%i'%ncores]
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
             else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2','nt','%i'%ncores]
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
-            cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', '-2','nt','%i'%ncores] # using linux version if avialable (can be more performant)
+            cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', '-2','-nt','%i'%ncores] # using linux version if avialable (can be more performant)
         else: # fall back to wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2','nt','%i'%ncores]
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
 
     if show_output: 
         p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)#run gmsh with ouput displayed in console
@@ -4303,20 +4303,16 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', 'nt','%i'%ncores]
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
             else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3', 'nt','%i'%ncores]
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', 'nt','%i'%ncores]
+            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', '-nt','%i'%ncores]
         else: # fallback on wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3', 'nt','%i'%ncores]
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
         
     if show_output: 
-        # try:
-            # p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        # except: # hotfix to deal with failing commits on gitlab's server. 
-            # cmd_line = ['wine', ewd + '/gmsh.exe', file_name + '.geo', '-3', 'nt', '%i'%ncores] # use .exe through wine instead
         p = Popen(cmd_line, stdout=PIPE, shell=False)
         if handle is not None:
             handle(p)
@@ -4549,6 +4545,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
                     node_data = np.array(mesh_dict['node_data']).T,
                     cell_type = mesh_dict['cell_type'],
                     order_nodes = order_nodes)
+        mesh.addAttribute(mesh_dict['parameters'], 'region')
         
     elif ext == '.dat':
         mesh = dat_import(file_path, order_nodes=order_nodes)   

@@ -683,19 +683,38 @@ def msh_parse(file_path,debug=True):
     nodey=[0]*no_nodes
     nodez=[0]*no_nodes
     #read in node information
-    node_idx = 1
-    for i in range(node_start, node_end):
-        line_info=dump[i].split()
-        #convert string info into floats
-        line=[float(k) for k in line_info]
-        previous_node = node_idx 
-        node_idx = int(line[0])
-        if not node_idx < previous_node: # else then its some weird flag used by gmsh, ignore
+    if gmshV == 3:
+        for i in range(node_start, node_end):
+            line_info=dump[i].split()
+            #convert string info into floats
+            line=[float(k) for k in line_info]
+            node_idx = int(line[0])
             node_num[node_idx-1]=node_idx
             nodex[node_idx-1]=line[1]
             nodey[node_idx-1]=line[2]
             nodez[node_idx-1]=line[3]
-    
+    else:
+        c = 0
+        i = node_start
+        while c <  no_nodes:
+            line_info=dump[i].split()
+            line = [int(k) for k in line_info] # entity line 
+            ent = line[-1] #number of nodes to follow
+            ent_start = i #starting line 
+            for j in range(ent):
+                #print(i+j)
+                line_info=dump[ent_start+1+j].split()
+                #convert string info into floats
+                line = [float(k) for k in line_info]
+                node_idx = int(line[0])
+                node_num[node_idx-1]=node_idx
+                nodex[node_idx-1]=line[1]
+                nodey[node_idx-1]=line[2]
+                nodez[node_idx-1]=line[3]
+                c+=1
+                i+=1   
+            i+=1
+        
     #### read in elements 
     # find where the elements start 
     for i, line in enumerate(dump):
@@ -719,24 +738,8 @@ def msh_parse(file_path,debug=True):
         if gmshV == 3:
             elm_type.append(int(line[1]))
         else:
-            elm_type.append(len(line) - 1)
-    
-    #if using gmsh version 4.x filter out the flag lines 
-    if gmshV == 4:
-        flagline = []
-        flagidx = []
-        flaglines = int(dump[element_start-1].split()[0])
-    
-        line = dump[element_start].split()
-        flagline.append(dump[element_start])
-        flagidx.append(element_start)
-        skip = int(line[-1])
-        for i in range(flaglines-1): 
-            line = dump[element_start+skip+1].split()
-            flagline.append(dump[element_start+skip+1])
-            flagidx.append(element_start+skip+1)
-            skip = int(line[-1])
-    
+            elm_type.append(len(line)-1)
+            
     if gmshV == 3:
         lookin4 = [2,4,6] # number of cell nodes we are looking for 
     else:
@@ -766,34 +769,50 @@ def msh_parse(file_path,debug=True):
     stream('Reading connection matrix...')
         
     phys = 0
-    for i in range(element_start,element_end):
-        splitted = dump[i].split()
-        line=[int(k) for k in splitted]
-        if gmshV == 3: 
+    if gmshV == 3:#parse elements for older gmsh file type 
+        for i in range(element_start,element_end):
+            splitted = dump[i].split()
+            line=[int(k) for k in splitted]
             elmV = line[1]
             if npere == 3:
                 elmV+=1 # in this format the flag for triangle elements is 2 so add 1
-            st = 5
-        else:
-            elmV = len(line) - 1
-            st = 1
-            if i in flagidx:
-                phys += 1 # physical entity incriments with flag lines 
-                elmV = -1 # then ignore this line as it's a flag
-        
-        #convert string info into floats and cache data
-        if npere == elmV:
-            nat_elm_num.append(line[0])
-            elm_type.append(line[1]) 
-            if gmshV == 4:
-                phys_entity.append(phys)
-            else:
+            #convert string info into ints and cache data
+            if npere == elmV:#if line contains number of element vertices we want
+                nat_elm_num.append(line[0])
+                elm_type.append(line[1]) 
                 phys_entity.append(line[4]) 
-            
-            for j in range(npere):
-                con_matrix[j].append(line[st+j]-1)
-        else:
-            ignored_elements += 1
+                for j in range(npere):
+                    con_matrix[j].append(line[5+j]-1)
+            else:
+                ignored_elements += 1
+    else: #newer gmsh parser
+        c = 0
+        i = element_start
+        while i < element_end:
+            #read in flag line 
+            splitted = dump[i].split()
+            line=[int(k) for k in splitted]
+            nef = line[3] # number of elements to follow 
+            elmV = line[2] # number of element vertices 
+            phys = line[0] # physical entity 
+            if npere == 3:
+                elmV+=1 # in this format the flag for triangle elements is 2 so add 1
+            if npere == elmV:
+                nef_start = i + 1
+                for j in range(nef):
+                    splitted = dump[nef_start+j].split()
+                    line=[int(k) for k in splitted]
+                    nat_elm_num.append(line[0])
+                    # elm_type.append(line[1]) 
+                    phys_entity.append(phys) 
+                    for k in range(npere):
+                        con_matrix[k].append(line[1+k]-1)
+                    c+=1
+                    i+=1 
+                i+=1
+            else:
+                ignored_elements += nef
+                i += nef+1
             
     stream("ignoring %i elements in the mesh file, as they are not required for R2/R3t"%ignored_elements)
     
