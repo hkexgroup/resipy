@@ -16,3 +16,13 @@ docker run -it python:3.7-stretch bash
 # packages, then you can run the test `python test.py`
 
 
+
+
+# for BINDER testing, we need the latest image of ubuntu:
+docker pull ubuntu:latest
+
+# and install
+sudo apt-get install python3 pip3
+
+
+
