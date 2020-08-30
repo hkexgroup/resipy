@@ -4,7 +4,7 @@ GUI for R2 family of codes
 
 ResIPy is a Python wrapper around the [R2 family of codes](http://www.es.lancs.ac.uk/people/amb/Freeware/R2/R2.htm) (for 2D/3D DC/IP inversion).
 ResIPy provides a standalone graphical user interface (GUI) along with a Python API (Application Programming Interface)
-for use in Jupyter notebook. Have a look at the [**documentation and the examples**](https://hkex.gitlab.io/pyr2) or subscribe to our [**YouTube channel (ResIPy)**](https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q) to learn more.
+for use in Jupyter notebook. Have a look at the [**documentation and the examples**](https://hkex.gitlab.io/resipy) or subscribe to our [**YouTube channel (ResIPy)**](https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q) to learn more.
 
 ResIPy aims to be 
 - (1) **Simple and intuitive** to use (you can invert your data in one-click with all default settings)
@@ -42,20 +42,20 @@ Project structure
 
 General overlook of the project structure with the three main parts.   
 Don't hesitate to consult the [CONTRIBUTING.md](./CONTRIBUTING.md) for more informations.   
-The full description of the API can be found in the *[documentation](https://hkex.gitlab.io/pyr2/api.html)*.
+The full description of the API can be found in the *[documentation](https://hkex.gitlab.io/resipy/api.html)*.
 
 
 Try it from source
 ------------------
-After downloading or cloning (`git clone https://gitlab.com/hkex/pyr2`) the repository,
+After downloading or cloning (`git clone https://gitlab.com/hkex/resipy`) the repository,
 you can run the GUI using:
 ```sh
-cd pyr2/src
+cd resipy/src
 python ui.py
 ```
-You can also try out the API on [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gl/hkex%2Fpyr2/stable?filepath=jupyter-notebook) or using:
+You can also try out the API on [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gl/hkex%2Fresipy/stable?filepath=jupyter-notebook) or using:
 ```sh
-cd pyr2/jupyter-notebook
+cd resipy/jupyter-notebook
 python -m notebook # or just 'jupyter notebook'
 ```
 
@@ -91,7 +91,7 @@ brew install wine
 ```
 If all is done with no errors, you are ready to run the GUI by: 
 ```
-cd pyr2/src
+cd resipy/src
 python ui.py
 ``` 
 You also can run any ```.exe``` files by this command:
@@ -107,9 +107,9 @@ If *wine* does not run properly on your Catalina machine, try [these instruction
 Feature request and bug report
 ----
 If there is a feature you would like to see in the API or the GUI or if there is a bug you want to report,
-please raise an [issue on Gitlab](https://gitlab.com/hkex/pyr2/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide example files and error log, related to your issue.
+please raise an [issue on Gitlab](https://gitlab.com/hkex/resipy/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide example files and error log, related to your issue.
 
-You can also have a look at the FAQ and list of known issues on the [wiki](https://gitlab.com/hkex/pyr2/-/wikis/home).
+You can also have a look at the FAQ and list of known issues on the [wiki](https://gitlab.com/hkex/resipy/-/wikis/home).
 
 Contributing
 ---------
