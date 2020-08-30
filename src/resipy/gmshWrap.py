@@ -47,7 +47,7 @@ def moving_average(array,N=3):
         out[i] = sum(array[a:b])/len(array[a:b])
     return out
     
-def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
+def find_dist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spacings 
     dist = np.zeros((len(elec_x),len(elec_x)))   
     x1 = np.array(elec_x)
     y1 = np.array(elec_y)
@@ -1354,13 +1354,14 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     
 #%% parse a .msh file
 def msh_parse_3d(file_path):
-    warnings.warn('msh_parse_3d is depreciated use msh_parse instead')
+    warnings.warn('msh_parse_3d is deprecated use msh_parse instead', DeprecationWarning)
     return msh_parse(file_path)
 
 #%% column mesh
-def column_mesh(electrodes, poly=None, z_lim= None, 
-                radius = None, file_path='column_mesh.geo', cl=-1, elemz=4):
-    """Make a prism mesh 
+def column_mesh(electrodes, poly=None, z_lim=None, radius=None,
+                file_path='column_mesh.geo', cl=-1, elemz=4):
+    """Make a prism mesh.
+    
     Parameters
     ------------
     electrodes: list of array likes
@@ -1507,11 +1508,303 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         
     fh.close()
     
+
+
+#%% Cylinder mesh using tetrahedra
+# TODO
+def cylinder_mesh(electrodes, poly=None, z_lim=None, radius=None, 
+                  file_path='cylinder_mesh.geo', cl=-1):
+    """Make a cylinder mesh using tetrahedra.
+    
+    Parameters
+    ------------
+    electrodes: list of array likes
+        First column/list is the x coordinates of electrode positions and so on ... 
+    poly: list, tuple, optional 
+        Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+        x and y coordinates, ie (poly_x, poly_y).
+    z_lim: list, tuple, optional 
+        Top and bottom z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        Radius of column.
+    file_path: string, optional 
+        Name of the generated gmsh file (can include file path also).
+    cl: float, optional
+        Characteristic length, essentially describes how big the nodes 
+        associated elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed. 
+    """
+    # add file extension if not specified already
+    if file_path[-4:] != '.geo':
+        file_path = file_path + '.geo'
+    
+    # extract electrodes
+    elec_x = electrodes[0]
+    elec_y = electrodes[1]
+    elec_z = electrodes[2]
+    #uni_z = np.unique(elec_z) # unique z values 
+    
+    if z_lim is None:
+        z_lim = [min(elec_z), max(elec_z)]
+
+    if radius is None:
+        radius = max(electrodes[0])
+        
+    if cl == -1:
+        dist_sort = np.sort(np.unique(find_dist(elec_x,elec_y,elec_z)))
+        cl = dist_sort[1]/8 # characteristic length is 1/8 the minimum electrode distance   
+    
+    num_elec = len(elec_z)
+
+    fh = open(file_path,'w')
+    fh.write("// ResIPy cylinder with tetrahedra\n")
+    # fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write("cl=%f;\n"%cl)
+    
+    x = []
+    y = [] # ignore repeated vertices 
+    
+    if poly is None:
+        fh.write("// Make a circle which is extruded\n")
+        fh.write("Point (1) = {0,0,%f,cl};\n"%(z_lim[0]))
+        x.append(0);y.append(0)
+        fh.write("Point (2) = {%f,0,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(radius);y.append(0)
+        fh.write("Point (3) = {0,%f,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(0);y.append(radius)
+        fh.write("Point (4) = {0,-%f,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(0);y.append(-radius)
+        fh.write("Point (5) = {-%f,0,%f,cl};\n"%(radius,z_lim[0]))
+        x.append(-radius);y.append(0)
+        fh.write("Circle (1) = {2,1,3};\n")
+        fh.write("Circle (2) = {3,1,4};\n")
+        fh.write("Circle (3) = {4,1,5};\n")
+        fh.write("Circle (4) = {5,1,2};\n")
+
+        fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
+        fh.write("Plane Surface(1) = {1};\n")
+        fh.write("Point {%i} In Surface {1};\n\n"%1)
+        edges = 3
+        pt_no = 6
+        
+        #work out which electrodes are inside or on the end of the column 
+        dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
+        inside = dist < radius 
+    else:
+        poly_x = poly[0]
+        poly_y = poly[1]
+        pt_no = 0
+        #make a node for each vertex in the polygon 
+        for i in range(len(poly_x)):
+            pt_no += 1
+            fh.write("Point (%i) = {%f,%f,%f,cl};//polygon point\n"%(pt_no,poly_x[i],poly_y[i],z_lim[0]))
+        # connect the nodes with lines 
+        ln_no = 0
+        for i in range(pt_no-1):
+            ln_no += 1
+            fh.write("Line (%i) = {%i,%i};//polygon line\n"%(ln_no,i+1,i+2))
+        ln_no+=1
+        fh.write("Line (%i) = {%i,%i};//closing line\n"%(ln_no,pt_no,1))
+        edges = ln_no
+        # form a line loop and surface
+        fh.write("Line Loop(1) = {")
+        [fh.write('%i,'%(i+1)) for i in range(ln_no-1)]
+        fh.write("%i};\n"%ln_no)
+        fh.write("Plane Surface(1) = {1};\n\n")
+        
+        #work out which electrodes are inside or on the end of the column 
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
+        
+    
+    if all(inside) == False:
+        fh.write("//Points inside the column\n")
+        x = []
+        y = [] # ignore repeated vertices 
+        for i in range(num_elec):
+            if inside[i] and elec_x[i] not in x and elec_y[i] not in y:
+                pt_no+=1
+                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],z_lim[0]))
+                fh.write("Point {%i} In Surface {1};\n"%pt_no)
+                x.append(elec_x[i])
+                y.append(elec_y[i])
+            
+    surface = 1
+    
+    if min(elec_z) < z_lim[0] or max(elec_z) > z_lim[1]:
+        fh.close()
+        raise ValueError ("Z coordinate of column electrodes is out of bounds")
+    
+    allz = np.append(elec_z, z_lim)
+    
+    uni_z = np.unique(allz)
+    
+    # #extrude surfaces 
+    # fh.write("//Extrude planes in between each electrode.\n") 
+    # seg = 0 # segment number 
+        
+    # for i in range(0,len(uni_z)-1):
+    #     #work out the amount to extrude 
+    #     diff = uni_z[i+1] - uni_z[i]    
+    #     seg += 1          
+    #     fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};'%(seg,diff,surface,elemz))
+    #     surface += edges + 1
+    #     if i==0:
+    #         fh.write('//Base of column\n')
+    #     elif i == len(uni_z)-2:
+    #         fh.write('//top of column\n')
+    #     else:
+    #         fh.write('\n')
+        
+    fh.write('Physical Volume(1) = {')
+    for i in range(seg-1):
+        fh.write('seg%i[1],'%(i+1))
+    fh.write('seg%i[1]};'%(seg))
+        
+    fh.close()
+
+
+#%% helper code (from ICL column)
+
+# radius = 6.5/2 # cm
+# angles = np.linspace(0, 2*np.pi, 13)[:-1] # rad
+# finer = 4 # CHANGE HERE (doesn't work with 3, don't know why)
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# # fig, ax = plt.subplots()
+# # ax.plot(celec[:,0], celec[:,1], 'ko')
+# # fig.show()
+# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+
+# # from resipy import meshTools as mt
+# # mesh = mt.prism_mesh(elec[:,0], elec[:,1], elec[:,2])
+# # mesh.write_dat(invdir + 'prism.dat')
+# # mesh.write_vtk(invdir + 'prism.vtk')
+# # strange node at one end
+
+# content = ''
+# content = content + 'cl = 0.5;\n'
+
+# c = 1 # entity count
+# # add electrodes
+# cpts = []
+# for i, pts in enumerate(elec):
+#     content += 'Point({:d}) = {{{:f}, {:f}, {:f}, cl}};\n'.format(c, *pts)
+#     cpts.append(c)
+#     c += 1
+
+
+# # add points for the circle
+# angles = np.linspace(0, 2*np.pi, 12*finer+1)[:-1]
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# stages = [47, 15.5, 0]
+# ringPerStage = [6, 2]
+# cstg = []
+# for stage in stages:
+#     tmp = []
+#     for i, a in enumerate(celec):
+#         content += 'Point({:d}) = {{{:f}, {:f}, {:f}, cl}};\n'.format(c, a[0], a[1], stage)
+#         tmp.append(c)
+#         c += 1
+#     tmp = tmp + [tmp[0]]
+#     cstg.append(tmp)
+
+# # horizontal lines
+# lhor = []
+# for a in cstg:
+#     tmp = []
+#     for i in range(12*finer):
+#          content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, a[i], a[i+1])
+#          tmp.append(c)
+#          c += 1
+#     tmp = tmp + [tmp[0]]
+#     lhor.append(tmp)
+
+
+# # vertical lines
+# lverAll = []
+# for l, ring in enumerate(ringPerStage):
+#     lver = []
+#     atop = cstg[l]
+#     abot = cstg[l+1]
+#     for i in range(12*finer):
+#         if i % finer == 0: # electrode line, let's connect
+#             b = int(i/finer + 1)
+#             offset = 0 if l == 0 else np.sum(np.array(ringPerStage)[:l])*12
+#             el = np.arange(offset + b, offset + b + ring*12, 12).astype(int).tolist()
+#             a = [atop[i]] + el + [abot[i]]
+#             tmp = []
+#             for j in range(len(a)-1):
+#                 content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, a[j], a[j+1])
+#                 tmp.append(c)
+#                 c += 1
+#             lver.append(tmp)
+#         else:
+#             content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, atop[i], abot[i])
+#             lver.append([c])
+#             c += 1
+#     lver = lver + [lver[0]]
+#     lverAll.append(lver)
+
+
+# # line loop
+# sver = []
+# for l, lver in enumerate(lverAll):
+#     ll = []
+#     ltop = lhor[l]
+#     lbot = lhor[l+1]
+#     for i in range(12*finer):
+#         a = str(lver[i][0]) if len(lver[i]) == 1 else ' ,'.join(np.array(lver[i]).astype(int).astype(str))
+#         b = str(-lver[i+1][0]) if len(lver[i+1]) == 1 else ' ,'.join((-np.array(lver[i+1]))[::-1].astype(int).astype(str))
+#         content += 'Line Loop({:d}) = {{{:d}, {:s}, {:d}, {:s}}};\n'.format(
+#             c, -ltop[i], a, lbot[i], b)
+#         ll.append(c)
+#         c += 1
+#     sver.append(ll)
+
+
+# # horizontal line loop
+# shor = []
+# for l in lhor:
+#     n = 12*finer
+#     content += 'Line Loop({:d}) = {{'.format(c) + ' ,'.join(np.array(l)[:-1].astype(int).astype(str)) + '};\n'
+#     shor.append(c)
+#     c += 1
+
+# # surface
+# slv = []
+# for i, ll in enumerate(sver):
+#     tmp = []
+#     for l in ll:
+#         content += 'Plane Surface({:d}) = {{{:d}}};\n'.format(c, l)
+#         tmp.append(c)
+#         c += 1
+#     slv.append(tmp)
+
+# slh = []
+# for i, l in enumerate(shor):
+#     content += 'Plane Surface({:d}) = {{{:d}}};\n'.format(c, l)
+#     slh.append(c)
+#     c += 1
+    
+# # surface loop and volume
+# for i in range(len(stages)-1):
+#     a = [slh[i]] + slv[i] + [slh[i+1]]
+#     content += 'Surface Loop({:d}) = {{'.format(c) + ' ,'.join(np.array(a).astype(str)) + '};\n'
+#     content += 'Volume({:d}) = {{{:d}}};'.format(i, c)
+#     c += 1
+    
+# print(content)
+
+# with open(invdir + 'mesh.geo', 'w') as f:
+#     f.write(content)
+
+    
     
 #%% Make an arbitary 2D shape 
-def mesh2d(electrodes, poly=None, origin = (0,0),
-                radius = None, file_path='2d_mesh.geo', cl=-1):
-    """Make generic 2d mesh. 
+def mesh2d(electrodes, poly=None, origin=(0,0), radius=None,
+           file_path='2d_mesh.geo', cl=-1):
+    """Make generic 2d mesh.
+    
     Parameters
     ------------
     electrodes: list of array likes

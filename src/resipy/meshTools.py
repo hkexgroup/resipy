@@ -375,7 +375,7 @@ class Mesh:
             self.moveElecNodes(elec_x,elec_y,elec_z,debug=False)
     
     def add_e_nodes(self, e_nodes):
-        warnings.warn('add_e_nodes is deprecaited: use setElecNode instead')
+        warnings.warn('add_e_nodes is deprecaited: use setElecNode instead', DeprecationWarning)
         self.setElecNode(e_nodes)
     
     #add some functions to allow adding some extra attributes to mesh 
@@ -447,7 +447,7 @@ class Mesh:
         return self.summary(flag=False) + self.showAvailAttr(flag=False)
             
     def add_attribute(self,values,key):
-        warnings.warn('add_attribute is depreciated, use addAttribute instead')
+        warnings.warn('add_attribute is depreciated, use addAttribute instead', DeprecationWarning)
         self.addAttribute(values, key)
         
     def addAttribute(self,values,key):
@@ -469,7 +469,7 @@ class Mesh:
         self.df[key]=values #allows us to add an attributes to each element.
         
     def show_avail_attr(self,flag=True):
-        warnings.warn("show_avail_attr is depreciated, use showAvailAttr instead")
+        warnings.warn("show_avail_attr is depreciated, use showAvailAttr instead", DeprecationWarning)
         self.showAvailAttr(flag)
         
     def showAvailAttr(self,flag=True):
@@ -1339,7 +1339,7 @@ class Mesh:
         self.node += t
         
     def trans_mesh(self,x,y,z):
-        warnings.warn("trans_mesh is depreciated, use transMesh instead")
+        warnings.warn("trans_mesh is depreciated, use transMesh instead", DeprecationWarning)
         self.transMesh(x, y, z)
         
     #%% mesh display 
@@ -2046,7 +2046,7 @@ class Mesh:
         
         #if prism mesh use that function instead 
         if self.ndims==2:
-            warnings.warn("Its reccomended to use mesh.show() for 2D meshes, results of 3D could be unstable")
+            warnings.warn("Its recommended to use mesh.show() for 2D meshes, results of 3D could be unstable")
         elif self.type2VertsNo() == 6: # use column mesh show instead 
             self.showPrismMesh(color_map = color_map, #displays prism mesh using matplotlib
                 color_bar = color_bar,
@@ -4288,7 +4288,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     file_name="mesh3d"
     if whole_space:#by default create survey with topography 
         print("Whole space problem")
-        raise Exception("Sorry whole space 3D problems are not implimented yet")
+        raise Exception("Sorry whole space 3D problems are not implemented yet")
         
     else:
         node_pos = gw.box_3d([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
@@ -4389,19 +4389,21 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     return mesh
 
 def tetra_mesh(*args):
-    warnings.warn('tetra_mesh is depreciated, use tetraMesh instead')
+    warnings.warn('tetra_mesh is depreciated, use tetraMesh instead', DeprecationWarning)
     tetraMesh(*args)
-    
+
+
 #%% column mesh 
-def prismMesh(elec_x,elec_y,elec_z, 
+def prismMesh(elec_x, elec_y, elec_z, 
                file_path='column_mesh.geo',
                keep_files=True,
                show_output=True, 
                path='exe', dump=print,
                handle=None, **kwargs):
-    """Make a prism mesh 
+    """Make a prism mesh.
+    
     Parameters
-    ------------
+    ----------
     elec_x: array like
         electrode x coordinates 
     elec_y: array like 
@@ -4503,7 +4505,7 @@ def prismMesh(elec_x,elec_y,elec_z,
     return mesh 
 
 def prism_mesh(*args):
-    warnings.warn('prism_mesh is depreciated, use prismMesh instead')
+    warnings.warn('prism_mesh is depreciated, use prismMesh instead', DeprecationWarning)
     prismMesh(*args)
     
 #%% import a custom mesh, you must know the node positions 
@@ -4561,7 +4563,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
     return mesh
 
 def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
-    warnings.warn('custom_mesh_import is depreciated, use readMesh instead')
+    warnings.warn('custom_mesh_import is depreciated, use readMesh instead', DeprecationWarning)
     mesh = readMesh(file_path, node_pos, order_nodes)
     return mesh
     
