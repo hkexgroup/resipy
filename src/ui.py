@@ -78,7 +78,7 @@ def errorMessage(etype, value, tb):
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
     msg.setText("<b>Critical error:</b>")
-    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p><br>''')
+    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/resipy/issues'>https://gitlab.com/hkex/resipy/issues</a></p><br>''')
     msg.setWindowTitle("Error!")
     msg.setDetailedText('%s' % (finalError))
     msg.setStandardButtons(QMessageBox.Retry)
@@ -5026,7 +5026,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cR3t_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/cR3t_manual.pdf')).toEncoded()).decode()
         helpLabel = QLabel( 
         '''
-        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">Documentation and the examples</a></p>
+        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/resipy/">Documentation and the examples</a></p>
         <p>Video tutorials: <a href="https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q">ResIPy on YouTube</a></p>
         <p>Read more on 2D resistivity inversion: <a href="%s">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="%s">R3t_readme.pdf</a></p>
         <p>Read more on 2D complex resistivity (IP) inversion: <a href="%s">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="%s">cR3t_readme.pdf</a></p>
@@ -5050,7 +5050,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             <p><b>Version: {:s}</b></p>
             <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p>
             <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p>
-            <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p>
+            <p><a href="https://gitlab.com/hkex/resipy/issues">https://gitlab.com/hkex/resipy/issues</a></p>
             <p>ResIPy uses 
                 <a href="{}">R2</a>,
                 <a href="{}">cR2</a>,
@@ -5614,7 +5614,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setIcon(QMessageBox.Information)
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
             msg.setInformativeText('''Please download the latest version of ResIPy at:\
-                                   <p><a href='https://gitlab.com/hkex/pyr2#downloads'>https://gitlab.com/hkex/pyr2</a></p>\
+                                   <p><a href='https://gitlab.com/hkex/resipy#downloads'>https://gitlab.com/hkex/resipy</a></p>\
                                    New updates:<br>\
                                    %s''' % newChanges)
             msg.setWindowTitle("New version available")
@@ -5625,7 +5625,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
-                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
+                webbrowser.open('https://gitlab.com/hkex/resipy#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     
     def checkWine(self): # check if wine is installed, on Unix system
         #check operating system
@@ -5666,7 +5666,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
 #                webbrowser.open('https://www.winehq.org/')
-                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+                webbrowser.open('https://gitlab.com/hkex/resipy#linux-and-mac-user')
 
     
 

@@ -84,7 +84,7 @@ def checkExe(dirname):
                 download = True
                 print('{:s} needs to be updated...'.format(exe), end='', flush=True)
         if download:
-            response = requests.get("https://gitlab.com/hkex/pyr2/-/raw/master/src/resipy/exe/" + exe)
+            response = requests.get("https://gitlab.com/hkex/resipy/-/raw/master/src/resipy/exe/" + exe)
             with open(fname, 'wb') as f:
                 f.write(response.content)
             print('done')
