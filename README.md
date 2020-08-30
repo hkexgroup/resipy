@@ -107,8 +107,9 @@ If *wine* does not run properly on your Catalina machine, try [these instruction
 Feature request and bug report
 ----
 If there is a feature you would like to see in the API or the GUI or if there is a bug you want to report,
-please raise an [issue on Gitlab](https://gitlab.com/hkex/pyr2/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide
-example files and error log, related to your issue.
+please raise an [issue on Gitlab](https://gitlab.com/hkex/pyr2/issues) describing it. We need to **be able to reproduce** the issue in order to fix it, so please provide example files and error log, related to your issue.
+
+You can also have a look at the FAQ and list of known issues on the [wiki](https://gitlab.com/hkex/pyr2/-/wikis/home).
 
 Contributing
 ---------
