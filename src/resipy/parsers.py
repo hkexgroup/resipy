@@ -165,9 +165,13 @@ def syscalParser(fname):#, spacing=None):
         # build electrode array
         elec = np.c_[val, np.zeros((len(val), 2))]
         # NOTE: remote electrode identification is done in R2.setElec()
-
-        # remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
-        #                         9999999, 999999, 99999, 9999, 999])
+        # but we notice that setting same number for remote (-99999) makes
+        # the pseudo-section of remote electrode survey nicer...
+        remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
+                                9999999, 999999, 99999, 9999, 999])
+        iremote = np.in1d(val, remoteFlags)
+        elec[iremote, 0] = -99999
+        
         # val = np.sort(np.unique(array.flatten()))
         # iremote = np.in1d(val, remoteFlags)        
         # remoteFreeArray = array.flatten()[~iremote]
