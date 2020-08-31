@@ -1092,7 +1092,7 @@ class Mesh:
         return nmesh
         
     # return a truncated mesh (for 3D)
-    def truncateMesh(self,xlim=None,ylim=None,zlim=None):
+    def truncateMesh(self, xlim=None, ylim=None, zlim=None):
         """Crop the mesh to a box of given limits, like how R3t behaves 
         when outputting inverted results. 
         
@@ -1698,6 +1698,8 @@ class Mesh:
         if iplot == True:
             return fig
     
+    
+    
     def draw(self, 
              attr=None,
              edge_color = 'k',
@@ -1938,6 +1940,7 @@ class Mesh:
         if use_pyvista and pyvista_installed:
             # if attr == 'region': 
             nmesh = self.copy() # this returns a mesh copy
+            nmesh = nmesh.truncateMesh(xlim, ylim, zlim) # truncating is the nly way to reduce the grid extent
             nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
@@ -1951,6 +1954,7 @@ class Mesh:
             # self.pvmesh[color_bar_title] = X
             
             # clip mesh to bounding box ... we crop the mesh (only way to reduce it's bounds for better viewing)
+            print('++++', xlim, ylim, zlim)
             self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         
             if edge_color is None or edge_color=='none' or edge_color=='None':

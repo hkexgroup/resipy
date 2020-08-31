@@ -155,37 +155,41 @@ def syscalParser(fname):#, spacing=None):
         # if spacing is None:    
         # for unregularly spaced array
         array = df[['a','b','m','n']].values
-        # arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        # if arrayMin != 0: # all surveys must start from x = 0
-        #     array -= arrayMin
-        # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-        # elecLabel = 1 + np.arange(len(val))
-        # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-        # df.loc[:,['a','b','m','n']] = newval
-        # elec = np.c_[val, np.zeros((len(val),2))]
-        remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
-                                9999999, 999999, 99999, 9999, 999])
-        iremote = np.in1d(array.flatten(), remoteFlags)
-        remoteFreeArray = array.flatten()[~iremote]
-        arraySorted = np.sort(np.unique(remoteFreeArray))
-        elecSpacing = arraySorted[1] - arraySorted[0]
+        
+        # get unique electrode positions and create ordered labels for them
+        val = np.sort(np.unique(array.flatten()))
+        elecLabel = 1 + np.arange(len(val))
+        newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+        df.loc[:,['a','b','m','n']] = newval # assign new label
+        
+        # build electrode array
+        elec = np.c_[val, np.zeros((len(val), 2))]
+        # NOTE: remote electrode identification is done in R2.setElec()
+
+        # remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
+        #                         9999999, 999999, 99999, 9999, 999])
+        # val = np.sort(np.unique(array.flatten()))
+        # iremote = np.in1d(val, remoteFlags)        
+        # remoteFreeArray = array.flatten()[~iremote]
+        # arraySorted = np.sort(np.unique(remoteFreeArray))
+        # elecSpacing = arraySorted[1] - arraySorted[0]
         # print('elecSpacing=', elecSpacing)
-        n = np.max(remoteFreeArray/elecSpacing).astype(int)
-        a = 0
-        if arraySorted[0] == 0:
-            n = n + 1
-            a = 1
-        if np.sum(iremote) > 0:
-            n = n + 1
-        for i in range(4):
-            ie = ~np.in1d(array[:,i], remoteFlags)
-            array[ie, i] = array[ie, i]/elecSpacing + a
-            array[~ie, i] = n
-        df.loc[:,['a','b','m','n']] = array.astype(int)
-        elec = np.zeros((n, 3))
-        elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
-        if np.sum(iremote) > 0:
-            elec[-1, 0] = -99999
+        # n = np.max(remoteFreeArray/elecSpacing).astype(int)
+        # a = 0
+        # if arraySorted[0] == 0:
+        #     n = n + 1
+        #     a = 1
+        # if np.sum(iremote) > 0:
+        #     n = n + 1
+        # for i in range(4):
+        #     ie = ~np.in1d(array[:,i], remoteFlags)
+        #     array[ie, i] = array[ie, i]/elecSpacing + a
+        #     array[~ie, i] = n
+        # df.loc[:,['a','b','m','n']] = array.astype(int)
+        # elec = np.zeros((n, 3))
+        # elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
+        # if np.sum(iremote) > 0:
+        #     elec[-1, 0] = -99999
         # else:
         #     # for regularly spaced array
         #     array = df[['a','b','m','n']].values
