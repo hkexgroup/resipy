@@ -1635,26 +1635,28 @@ def cylinder_mesh(electrodes, poly=None, z_lim=None, radius=None,
         fh.close()
         raise ValueError ("Z coordinate of column electrodes is out of bounds")
     
-    allz = np.append(elec_z, z_lim)
-    
+    # allz = np.append(elec_z, z_lim)
+    allz = z_lim
+    elemz = 1 # number of layer between rings
+
     uni_z = np.unique(allz)
     
-    # #extrude surfaces 
-    # fh.write("//Extrude planes in between each electrode.\n") 
-    # seg = 0 # segment number 
+    # extrude surfaces 
+    fh.write("//Extrude planes in between each electrode.\n") 
+    seg = 0 # segment number 
         
-    # for i in range(0,len(uni_z)-1):
-    #     #work out the amount to extrude 
-    #     diff = uni_z[i+1] - uni_z[i]    
-    #     seg += 1          
-    #     fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};'%(seg,diff,surface,elemz))
-    #     surface += edges + 1
-    #     if i==0:
-    #         fh.write('//Base of column\n')
-    #     elif i == len(uni_z)-2:
-    #         fh.write('//top of column\n')
-    #     else:
-    #         fh.write('\n')
+    for i in range(0,len(uni_z)-1):
+        # work out the amount to extrude 
+        diff = uni_z[i+1] - uni_z[i]    
+        seg += 1      
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};'%(seg,diff,surface,elemz))
+        surface += edges + 1
+        if i==0:
+            fh.write('//Base of column\n')
+        elif i == len(uni_z)-2:
+            fh.write('//top of column\n')
+        else:
+            fh.write('\n')
         
     fh.write('Physical Volume(1) = {')
     for i in range(seg-1):
@@ -1663,6 +1665,13 @@ def cylinder_mesh(electrodes, poly=None, z_lim=None, radius=None,
         
     fh.close()
 
+# test
+radius = 6.5/2 # cm
+angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+
+cylinder_mesh([elec[:,0], elec[:,1], elec[:,2]], file_path='/home/jkl/Downloads/mesh.geo')
 
 #%% helper code (from ICL column)
 
