@@ -182,6 +182,16 @@ k.showMesh()
 #k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 #k.createMesh()
 
+# 3D cylinder
+radius = 6.5/2 # cm
+angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+k = R2(typ='R3t')
+k.setElec(elec)
+k.createMesh('cylinder', zlim=[0, 47.5], cl=0.8)
+
+
 timings['methods-meshing'] = time.time() - tstart
 
 
