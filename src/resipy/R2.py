@@ -323,7 +323,7 @@ class R2(object): # R2 master class instanciated by the GUI
         if 'buried' not in elec.columns:
             elec['buried'] = False # all surface elec by default
         if 'label' not in elec.columns:
-            elec['label'] = (1 + np.arange(elec.shape[0])).astype(str) # all elec ordered and start at 1
+            elec['label'] = (1 + np.arange(elec.shape[0])).astype(str) # all elec ordered and start at 1            
         elec = elec.astype({'x':float, 'y':float, 'z':float, 'buried':bool, 'remote':bool, 'label':str})
         
         return elec
@@ -1664,7 +1664,7 @@ class R2(object): # R2 master class instanciated by the GUI
         elec_type = np.repeat('electrode',len(elec_x))
         elec_type[self.elec['buried'].values] = 'buried'
         elec_type[self.elec['remote'].values] = 'remote'
-        elecLabels = self.elec['label'].values
+        elecLabels = self.elec['label'].values.astype(str)
         
         # assign possible topography (surface)
         if surface is not None:
