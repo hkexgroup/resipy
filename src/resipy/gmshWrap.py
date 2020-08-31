@@ -1666,12 +1666,12 @@ def cylinder_mesh(electrodes, poly=None, z_lim=None, radius=None,
     fh.close()
 
 # test
-radius = 6.5/2 # cm
-angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
-celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
-elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+# radius = 6.5/2 # cm
+# angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
 
-cylinder_mesh([elec[:,0], elec[:,1], elec[:,2]], file_path='/home/jkl/Downloads/mesh.geo')
+# cylinder_mesh([elec[:,0], elec[:,1], elec[:,2]], file_path='/home/jkl/Downloads/mesh.geo')
 
 #%% helper code (from ICL column)
 
