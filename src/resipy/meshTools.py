@@ -4512,6 +4512,116 @@ def prism_mesh(*args):
     warnings.warn('prism_mesh is depreciated, use prismMesh instead', DeprecationWarning)
     prismMesh(*args)
     
+
+#%% cylinder mesh
+def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
+               cl=-1, finer=4,
+               keep_files=True,
+               show_output=True, 
+               path='exe', dump=print,
+               handle=None):
+    """Make a cylinder mesh.
+    
+    Parameters
+    ----------
+    elec : list of array_like or nx3 array
+        First column/list is the x coordinates of electrode positions and so on ... 
+    zlim : list, tuple, optional 
+        Bottom and top z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        Radius of column.
+    file_path : string, optional 
+        Name of the generated gmsh file (can include file path also).
+    cl : float, optional
+        Characteristic length, essentially describes how big the nodes 
+        associated elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed. 
+    finer : int, optional
+        Number of line between two consecutive electrodes to approximate the
+        circle shape.
+    handle : variable, optional
+        Will be assigned the output of 'Popen' in case the process needs to be
+        killed in the UI for instance.
+    """
+    gw.cylinder_mesh(elec, zlim=zlim, radius=radius, file_path=file_path,
+                     cl=cl, finer=finer)    
+    
+    # check directories 
+    if path == "exe":
+        ewd = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                path)
+    else:
+        ewd = path # points to the location of the .exe 
+        # else its assumed a custom directory has been given to the gmsh.exe 
+    
+    # handling gmsh
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
+        cmd_line = os.path.join(ewd, 'gmsh.exe') + ' ' + file_path + ' -3'
+    elif platform.system() == 'Darwin':
+            winePath = []
+            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            for stdout_line in iter(wine_path.stdout.readline, ''):
+                winePath.append(stdout_line)
+            if winePath != []:
+                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd + '/gmsh.exe', file_path, '-3']
+            else:
+                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_path, '-3']
+    else:
+        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
+            cmd_line = [ewd+'/gmsh_linux', file_path, '-3']
+        else: # fallback on wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_path, '-3']
+        
+    if show_output: 
+        try:
+            p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
+        except: # hotfix to deal with failing commits on gitlab's server. 
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_path, '-3'] # use .exe through wine instead
+            p = Popen(cmd_line, stdout=PIPE, shell=False)
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            dump(line.decode('utf-8'))
+    else:
+        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
+        p.communicate() # wait to finish
+
+    #convert into mesh.dat
+    mesh_info = gw.msh_parse(file_path=file_path.replace('.geo', '.msh')) # read in 3D mesh file
+
+    # merge fine with coarse regions
+    regions = np.array(mesh_info['parameters'])
+    for reg in np.unique(regions)[1:]:
+        ie = regions == reg
+        regions[ie] = reg - 1
+        
+    # create mesh object        
+    mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
+                mesh_info['node_y'],
+                mesh_info['node_z'],
+                np.array(mesh_info['node_data']).T,
+                mesh_info['cell_type'],
+                mesh_info['original_file_path'])
+    
+    mesh.addAttribute(regions, 'region')
+    mesh.moveElecNodes(elec[:,0], elec[:,1], elec[:,2])
+    
+    if keep_files is False: 
+        os.remove(file_path)
+        os.remove(file_path.replace('.geo', '.msh'))
+        
+    return mesh
+
+# test
+# radius = 6.5/2 # cm
+# angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+# mesh = cylinderMesh(elec, file_path='/home/jkl/Downloads/mesh_cylinder.geo',
+#                     zlim=[0, 47.5], cl=0.5)
+
+
 #%% import a custom mesh, you must know the node positions 
 def readMesh(file_path, node_pos=None, order_nodes=True):
     """ 

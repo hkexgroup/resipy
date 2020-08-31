@@ -1680,15 +1680,15 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     
     Parameters
     ------------
-    electrodes: list of array_like or nx3 array
+    electrodes : list of array_like or nx3 array
         First column/list is the x coordinates of electrode positions and so on ... 
-    zlim: list, tuple, optional 
+    zlim : list, tuple, optional 
         Bottom and top z coordinate of column, in the form (min(z),max(z))
     radius: float, optional 
         Radius of column.
-    file_path: string, optional 
+    file_path : string, optional 
         Name of the generated gmsh file (can include file path also).
-    cl: float, optional
+    cl : float, optional
         Characteristic length, essentially describes how big the nodes 
         associated elements will be. Usually no bigger than 5. If set as -1 (default)
         a characteristic length 1/4 the minimum electrode spacing is computed. 
