@@ -1593,7 +1593,7 @@ class R2(object): # R2 master class instanciated by the GUI
         typ : str, optional
             Type of mesh. Either 'quad' or 'trian' in the case of 2d surveys.
             By default, 'trian' is chosen for 2D and 'tetra' is used for 
-            3D surveys, but 'prism' can be used for column type experiments. 
+            3D surveys, but 'prism' or 'cylinder' (using tetra) can be used for column type experiments. 
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
@@ -1694,7 +1694,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
-        elif typ == 'trian' or typ == 'tetra' or typ=='prism':
+        else:
             geom_input = {}
 
             if surface is not None:
@@ -1747,7 +1747,14 @@ class R2(object): # R2 master class instanciated by the GUI
                                          handle=setMeshProc, **kwargs)
                     self.mproc = None
                     self.param['num_xz_poly'] = 0
-                    
+                if typ == 'cylinder':
+                    print('Creating cylinder mesh...', end='')
+                    mesh = mt.cylinderMesh(np.c_[elec_x, elec_y, elec_z],
+                                             path=os.path.join(self.apiPath, 'exe'),
+                                             cl=cl, dump=dump, show_output=show_output,
+                                             handle=setMeshProc, **kwargs)
+                    self.mproc = None
+                    self.param['num_xz_poly'] = 0
 
             # mesh refinement
             if (typ == 'trian') | (typ == 'tetra'):
