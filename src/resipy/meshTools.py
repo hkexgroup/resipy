@@ -3517,7 +3517,7 @@ def dat_import(file_path='mesh.dat', order_nodes=True):
     fid=open(file_path,'r')#open file
     #discover if the file is 2 or 3D 
     header = fid.readline().split()
-    if len(header)==2: # its a 2D mesh 
+    if len(header)==3: # its a 2D mesh 
         flag_3d = False
         npere = 3
     else:
