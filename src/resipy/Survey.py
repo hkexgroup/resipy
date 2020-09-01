@@ -2144,9 +2144,26 @@ class Survey(object):
         debug : bool, optional
             Print output to screen. Default is True.
         """
-        for e in elec:
-            i2keep = (self.df[['a','b','m','n']].values != str(e)).all(1)
-            self.filterData(i2keep)
+        ### old way, kinda slow ###
+        # for e in elec:
+        #     i2keep = (self.df[['a','b','m','n']].values != str(e)).all(1)
+        #     self.filterData(i2keep)
+        
+        array = self.df[['a','b','m','n']].values # get schedule 
+        arrayf = array.flatten() #flatten the array
+        probef = np.zeros(len(arrayf),dtype=int) # probes to see if electrode is found
+        if not isinstance(elec[0],str):#convert to string if not a string
+            elec = [str(e) for e in elec]
+        
+        for i in range(len(arrayf)):#iterate through schedule matrix
+            if arrayf[i] in elec:
+                probef[i] = 1
+        
+        probe = probef.reshape(array.shape)
+        check = np.sum(probe,axis=1) # keep where electrodes are not found
+        i2keep = check == 0 # so where 0 counts are 
+        self.filterData(i2keep) # send to filter data 
+
         if debug:
             numRemoved = np.sum(~i2keep)
             msgDump = '{:d} measurements removed!'.format(numRemoved)
