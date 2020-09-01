@@ -2872,7 +2872,6 @@ class R2(object): # R2 master class instanciated by the GUI
                     # zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
                 if cropMaxDepth and self.fmd is not None and zlim is None:
                     zlim[0] = self.elec[self.elec['remote']]['z'].min() - self.fmd # TODO not sure about that
-                print('//// zlim', zlim)
                 mesh.show(ax=ax, edge_color=edge_color,
                         attr=attr, color_map=color_map, clabel=clabel,
                         zlim=zlim, **kwargs)
@@ -3239,7 +3238,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.df['res0'] = np.ones(self.mesh.numel)*100 # set back as default
 
 
-    def computeAttribute(self, formula, name):
+    def computeAttribute(self, formula, name, dump=None):
         """Compute a new attribute for each meshResults.
         
         NOTE: this function present a security risk as it allows execution
@@ -3260,7 +3259,13 @@ class R2(object): # R2 master class instanciated by the GUI
             the entire string and single for indexing the dictionnary x['keyName'].
         name : str
             Name of the new attribute computed.
+        dump : function, optional
+            Function to write stdout.
         """
+        if dump is None:
+            def dump(x):
+                print(x, end='')
+                
         for i, m in enumerate(self.meshResults):
             cols = m.df.columns
             vals = [m.df[c].values for c in cols]
@@ -3268,8 +3273,9 @@ class R2(object): # R2 master class instanciated by the GUI
             # DANGER ZONE =================================
             try:
                 m.df[name] = eval(formula)
+                dump('{:s} computation successful on meshResults[{:d}]\n'.format(name, i))
             except Exception as e:
-                print('Error in meshResults[{:d}]:'.format(i), e)
+                dump('{:s} computation failed on meshResults[{:d}]: {:s}\n'.format(name, i, str(e)))
                 pass
             # DANGER ZONE =================================
             
