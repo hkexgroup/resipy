@@ -1593,7 +1593,7 @@ class R2(object): # R2 master class instanciated by the GUI
         typ : str, optional
             Type of mesh. Either 'quad' or 'trian' in the case of 2d surveys.
             By default, 'trian' is chosen for 2D and 'tetra' is used for 
-            3D surveys, but 'prism' can be used for column type experiments. 
+            3D surveys, but 'prism' or 'cylinder' (using tetra) can be used for column type experiments. 
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
@@ -1694,7 +1694,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 del self.param['regions']
             if 'num_regions' in self.param:
                 del self.param['num_regions']
-        elif typ == 'trian' or typ == 'tetra' or typ=='prism':
+        else:
             geom_input = {}
 
             if surface is not None:
@@ -1747,7 +1747,14 @@ class R2(object): # R2 master class instanciated by the GUI
                                          handle=setMeshProc, **kwargs)
                     self.mproc = None
                     self.param['num_xz_poly'] = 0
-                    
+                if typ == 'cylinder':
+                    print('Creating cylinder mesh...', end='')
+                    mesh = mt.cylinderMesh(np.c_[elec_x, elec_y, elec_z],
+                                             path=os.path.join(self.apiPath, 'exe'),
+                                             cl=cl, dump=dump, show_output=show_output,
+                                             handle=setMeshProc, **kwargs)
+                    self.mproc = None
+                    self.param['num_xz_poly'] = 0
 
             # mesh refinement
             if (typ == 'trian') | (typ == 'tetra'):
@@ -2857,13 +2864,14 @@ class R2(object): # R2 master class instanciated by the GUI
                     if clipContour:
                         self._clipContour(mesh.ax, cont.collections)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
-                if clipContour: 
+                if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
                 if zlim is None:
-                    zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
-                if cropMaxDepth and self.fmd is not None:
-                    zlim[0] = self.elec['z'].min() - self.fmd
+                    zlim = self.zlim
+                    # zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
+                if cropMaxDepth and self.fmd is not None and zlim is None:
+                    zlim[0] = self.elec[self.elec['remote']]['z'].min() - self.fmd # TODO not sure about that
                 mesh.show(ax=ax, edge_color=edge_color,
                         attr=attr, color_map=color_map, clabel=clabel,
                         zlim=zlim, **kwargs)
@@ -3228,6 +3236,49 @@ class R2(object): # R2 master class instanciated by the GUI
         """
         self.mesh.df['region'] = np.ones(self.mesh.numel)
         self.mesh.df['res0'] = np.ones(self.mesh.numel)*100 # set back as default
+
+
+    def computeAttribute(self, formula, name, dump=None):
+        """Compute a new attribute for each meshResults.
+        
+        NOTE: this function present a security risk as it allows execution
+        of python code inputed by the user. It should be used with caution.
+        
+        Parameters
+        ----------
+        formula : str
+            Formula as a string. All attribute already in the mesh object are
+            available from the x dictionary and can be sed as x['nameOfAttribute'].
+            e.g. : "1/x['Resistivity']" will compute the inverse of the 'Resistivity'
+            attribute if this attribute exists.
+            Operators available are addition (+), soustraction (-), division (/)
+            multiplication (*) and exponent (**). Parenthesis are also taken into account.
+            numpy function such as np.sqrt() or np.cos() are also available.
+            e.g. : "(np.sqrt(x['Resistivity']) + 100)*1000"
+            Note: use a mixture of double and single quote such as double for
+            the entire string and single for indexing the dictionnary x['keyName'].
+        name : str
+            Name of the new attribute computed.
+        dump : function, optional
+            Function to write stdout.
+        """
+        if dump is None:
+            def dump(x):
+                print(x, end='')
+                
+        for i, m in enumerate(self.meshResults):
+            cols = m.df.columns
+            vals = [m.df[c].values for c in cols]
+            x = dict(zip(cols, vals))
+            # DANGER ZONE =================================
+            try:
+                m.df[name] = eval(formula)
+                dump('{:s} computation successful on meshResults[{:d}]\n'.format(name, i))
+            except Exception as e:
+                dump('{:s} computation failed on meshResults[{:d}]: {:s}\n'.format(name, i, str(e)))
+                pass
+            # DANGER ZONE =================================
+            
 
 
     def createModel(self, ax=None, dump=None, typ='poly', addAction=None):
