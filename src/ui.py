@@ -4043,9 +4043,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invtabs = QTabWidget()
         logTab = QWidget()
         showTab = QWidget()
+        computeTab = QWidget()
         self.invtabs.addTab(logTab, 'Log')
         self.invtabs.addTab(showTab, 'Results')
+        self.invtabs.addTab(computeTab, 'Compute attribute')
         self.invtabs.setTabEnabled(1, False)
+        self.invtabs.setTabEnabled(2, False)
                 
         
         def frozeUI(val=True): # when inversion is running
@@ -4069,6 +4072,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.end = False # will be set to True if inversion successfull
             self.invtabs.setCurrentIndex(0) # log tab
             self.invtabs.setTabEnabled(1, False)
+            self.invtabs.setTabEnabled(2, False)
             
             # check if we kill or invert
             if self.invertBtn.text() == 'Invert':
@@ -4169,6 +4173,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 # try:
                 self.invtabs.setCurrentIndex(1) # show tab
                 self.invtabs.setTabEnabled(1, True)
+                self.invtabs.setTabEnabled(2, True)
                 if self.r2.typ[-1] == '2':
                     showStackedLayout.setCurrentIndex(0)
 #                    maxDepth = self.r2.fmd if self.cropBelowFmd.isChecked() else None
@@ -4701,10 +4706,54 @@ combination of multiple sequence is accepted as well as importing a custom seque
         show3DInvOptions(False)
         
         
+        
+        # subtab compute attribute
+        self.evalLabel = QLabel("You can use a formula to compute new attribute. "
+                                "Use x['attributeName'] to access current attribute. "
+                                "Once computed, go back to 'Results' tab to view the new attribute.")
+        self.evalLabel.setWordWrap(True)
+        self.evalEdit = QLineEdit()
+        self.evalEdit.setPlaceholderText("formula: e.g. 1/x['Resistivity']")
+        self.evalNewName = QLineEdit()
+        self.evalNewName.setPlaceholderText('New attribute name')
+        
+        def evalBtnFunc():
+            self.evalLog.clear()
+            self.r2.computeAttribute(formula=self.evalEdit.text(),
+                                     name=self.evalNewName.text(),
+                                     dump=evalLogFunc)
+            # udpate attribute combo box
+            index = self.surveyCombo.currentIndex()
+            self.attrCombo.clear()
+            attrs = self.r2.meshResults[index].df.keys()
+            c = 0
+            ci = 0
+            for i, attr in enumerate(attrs):
+                if attr not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
+                    self.attrCombo.addItem(attr)
+                    if attr == self.displayParams['attr']:
+                        ci = c
+                    c += 1
+            self.attrCombo.setCurrentIndex(ci)
+                
+        self.evalBtn = QPushButton('Compute')
+        self.evalBtn.clicked.connect(evalBtnFunc)
+        
+        def evalLogFunc(arg):
+           cursor = self.evalLog.textCursor()
+           cursor.movePosition(cursor.End)
+           cursor.insertText(arg)
+           self.evalLog.ensureCursorVisible()
+           QApplication.processEvents()
+        self.evalLog = QTextEdit()
+        self.evalLog.setReadOnly(True)
+        
+        
         # layout
         invLayout = QVBoxLayout()
         logLayout = QHBoxLayout()
         showLayout = QVBoxLayout()
+        computeLayout = QVBoxLayout()
         
         logLeftLayout = QVBoxLayout()
         logLeftLayout.addWidget(self.invertBtn)
@@ -4744,8 +4793,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
         showStackedLayout.addWidget(self.frame)
         showLayout.addLayout(showStackedLayout)
         
+        computeLayout.addWidget(self.evalLabel)
+        computeLayoutTop = QHBoxLayout()
+        computeLayoutTop.addWidget(self.evalEdit)
+        computeLayoutTop.addWidget(self.evalNewName)
+        computeLayoutTop.addWidget(self.evalBtn)
+        computeLayout.addLayout(computeLayoutTop)
+        computeLayout.addWidget(self.evalLog)
+        
         logTab.setLayout(logLayout)
         showTab.setLayout(showLayout)
+        computeTab.setLayout(computeLayout)
         
         invLayout.addWidget(self.invtabs)
         tabInversion.setLayout(invLayout)
