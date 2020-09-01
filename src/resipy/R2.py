@@ -2785,7 +2785,9 @@ class R2(object): # R2 master class instanciated by the GUI
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
-                    clipContour=True, **kwargs):
+                    clipContour=True, use_pyvista=True, background_color=(0.8,0.8,0.8),
+                    pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
+                    pvcontour=[], **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -2821,6 +2823,21 @@ class R2(object): # R2 master class instanciated by the GUI
             This doesn't have any effect if clipContour is False.
         clipContour : bool, optional
             If True, the contour of the area of interest will be clipped (default).
+        use_pyvista : bool, optional
+            (3D only) Use visual toolkit backend for displaying 3D mesh, note that pyvista
+            must be installed for this to work. 
+        background_color : tuple, optional 
+            (3D only) Background color assigned to pyvista plotter object when created. Not yet
+            supported for matplotlib axis handles. 
+        pvslices : tuple of list of float, optional
+            (3D only) Determine the X, Y, Z slices. e.g.: ([3], [], [-3, -4]) will add
+            a slice normal to X in 3 and two slices normal to Z in -3 and -4.
+        pvthreshold : list of two floats, optional
+            (3D only) Keep values between pvthreshold[0] and pvthreshold[1].
+        pvgrid : bool, optional
+            (3D only) Show grid or not.
+        pvcontour: list of float, optional
+            (3D only) Values of the isosurface to be plotted.
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -2874,7 +2891,9 @@ class R2(object): # R2 master class instanciated by the GUI
                     zlim[0] = self.elec[self.elec['remote']]['z'].min() - self.fmd # TODO not sure about that
                 mesh.show(ax=ax, edge_color=edge_color,
                         attr=attr, color_map=color_map, clabel=clabel,
-                        zlim=zlim, **kwargs)
+                        zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
+                        pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+                        pvcontour=pvcontour, **kwargs)
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
 
@@ -3686,7 +3705,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fname : str
             Path where to save the file.
         savetyp : str, optional
-            Saving format. To be determined in GUI. Default: Res2DInv (*.dat)
+            Saving format. To be determined in GUI. Default: Res2DInv (.dat)
         """
         elec = self.elec[['x','y','z']].values
         spacing = elec[1,0] - elec[0,0] # TODO (gb) not sure if this is needed
