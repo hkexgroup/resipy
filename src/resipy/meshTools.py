@@ -487,7 +487,7 @@ class Mesh:
             return out
     
     #%% mesh calculations 
-    def orderNodes(self,return_count=False):
+    def orderNodes(self, return_count=False):
         """Order mesh nodes in clockwise fashion 
         
         Parameters
@@ -583,6 +583,7 @@ class Mesh:
         self.connection = con_mat_fix
         self.cellCentres() # recompute them too
         self.addAttribute(paramFixed,'param')
+        
         
     def resetParam(self):
         """Reorder parameters into consective ascending order 
@@ -1122,39 +1123,28 @@ class Mesh:
                 ylim=[min(self.node[:,1]), max(self.node[:,1])]
         if zlim is None:
             zlim=[min(self.node[:,2]), max(self.node[:,2])]
-            
+        # why not truncate as well to electrode extent?
+        
         elm_x = self.elmCentre[:,0]
         elm_y = self.elmCentre[:,1]
         elm_z = self.elmCentre[:,2]
-        in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find inside of limits 
-        temp_con_mat = self.connection.copy() # temporary connection matrix which is just the elements inside the box
-        #con_mat=list(temp_con_mat[:,in_elem]) # truncate connection matrix
-        
-        
-        #new_attr = np.array(self.cell_attributes)
-        
-        elm_id = np.arange(self.numel)+1
-
-        #truncate the attribute table down to the inside elements
-        new_df = self.df[in_elem]
+        ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
+             (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
+             (elm_z > zlim[0]) & (elm_z < zlim[1])
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
+        nmesh.df = nmesh.df[ie].reset_index(drop=True)
+        nmesh.df['elm_id'] = 1 + np.arange(nmesh.df.shape[0])
+        nmesh.numel = nmesh.df.shape[0]
+        nmesh.elmCentre = self.elmCentre[ie,:]
+        nmesh.connection = nmesh.connection[ie,:]
         
-        nmesh.df = new_df
-        nmesh.numel = len(elm_id[in_elem])
-        #nmesh.cell_attributes = new_attr[in_elem]
-        nmesh.elm_id = elm_id[in_elem]
-        nmesh.elmCentre = self.elmCentre[in_elem,:]
-        
-        new_con_mat = temp_con_mat[in_elem,:]
-        nmesh.connection = new_con_mat     
-        
-        # nmesh.__rmexcessNodes() # remove the excess nodes 
+        nmesh.__rmexcessNodes() # remove the excess nodes 
             
         return nmesh # return truncated mesh 
     
     
-    def threshold(self,attr=None,vmin=None,vmax=None):
+    def threshold(self, attr=None, vmin=None, vmax=None):
         """Threshold the mesh to certian attribute values. 
         
         Parameters
@@ -1941,6 +1931,7 @@ class Mesh:
             # if attr == 'region': 
             nmesh = self.copy() # this returns a mesh copy
             nmesh = nmesh.truncateMesh(xlim, ylim, zlim) # truncating is the nly way to reduce the grid extent
+            X = nmesh.df[attr].values # NEEDED as truncating change element index
             nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')

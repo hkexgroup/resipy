@@ -2850,7 +2850,7 @@ class R2(object): # R2 master class instanciated by the GUI
                     if clipContour:
                         self._clipContour(mesh.ax, cont.collections)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
-                if clipContour: 
+                if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
                 if zlim is None:
