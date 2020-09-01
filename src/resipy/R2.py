@@ -1771,6 +1771,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
         self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
         self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory() # if negative then we need more RAM
+        self.mesh.iremote = self.elec['remote'].values
         
         # define zlim
         if surface is not None:
@@ -1917,6 +1918,7 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
+        self.mesh.iremote = self.elec['remote'].values
 
         name = 'mesh.dat'
         if self.typ == 'R3t' or self.typ == 'cR3t':
@@ -1935,20 +1937,32 @@ class R2(object): # R2 master class instanciated by the GUI
         
 
     def showMesh(self, ax=None, **kwargs):
-        """Display the mesh.
+        """Display the mesh and handles best default values. 
         """
+        def findminmax(a):
+            return (min(a),max(a))
         if self.mesh is None:
             raise Exception('Mesh undefined')
         else:
+            elec = self.elec[['x','y']].values
+            elec = elec[~self.elec['remote'].values,:]
             if 'zlim' not in kwargs.keys():
                 kwargs['zlim'] = self.zlim
-            if 'color_map' not in kwargs.keys():
+                
+            if 'xlim' not in kwargs.keys(): # best to use limits provided by R2 becuase it knows if electrodes are remote 
+                kwargs['xlim'] = findminmax(elec[:,0])
+            if 'ylim' not in kwargs.keys() and self.typ[-1] == 't':
+                kwargs['ylim'] = findminmax(elec[:,1])
+                
+            if 'color_map' not in kwargs.keys(): # pick a color map based on display type
                 if self.typ[-1] == 't':
                     kwargs['color_map'] = 'Greys'
                 else:
                     kwargs['color_map'] = 'gray'
+                    
             if 'attr' not in kwargs.keys():
-                kwargs['attr'] = 'region' # this will print regions
+                kwargs['attr'] = 'region' # this will show regions by default
+                
             if 'color_bar' not in kwargs.keys():
                 if np.unique(np.array(self.mesh.df['region'])).shape[0] > 1:
                     kwargs['color_bar'] = True # show colorbar for multiple regions

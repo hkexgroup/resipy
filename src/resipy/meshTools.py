@@ -366,6 +366,7 @@ class Mesh:
         """
         self.eNodes  = e_nodes
         self.elec = self.node[e_nodes,:]
+        self.iremote = np.array([False]*self.elec.shape[0],dtype=bool)
     
     def setElec(self,elec_x,elec_y,elec_z):
         if len(elec_x) != len(elec_y) or len(elec_x) != len(elec_z):
@@ -373,6 +374,7 @@ class Mesh:
         self.elec = np.array([elec_x,elec_y,elec_z]).T
         if self.eNodes is not None:
             self.moveElecNodes(elec_x,elec_y,elec_z,debug=False)
+        self.iremote = np.array([False]*self.elec.shape[0],dtype=bool)
     
     def add_e_nodes(self, e_nodes):
         warnings.warn('add_e_nodes is deprecaited: use setElecNode instead', DeprecationWarning)
@@ -1817,7 +1819,7 @@ class Mesh:
         ylim : tuple, optional
             Axis y limits as `(ymin, ymax)`. 
         zlim : tuple, optional
-            Axis z limits as `(ymin, ymax)`. 
+            Axis z limits as `(zmin, zmax)`. 
         ax : matplotlib axis handle, pvista plotter handle, optional
             Axis handle if preexisting (error will thrown up if not) figure is to be cast to.
             If using pyvista then then ax is the plotter the object. 
@@ -2031,7 +2033,7 @@ class Mesh:
              # then add the electrodes to the plot 
             if electrodes and self.elec is not None: #try add electrodes to figure if we have them 
                 try:
-                    points = self.elec.copy()
+                    points = self.elec.copy()[~iremote,:]
                     pvelec = pv.PolyData(points)
                     ax.add_mesh(pvelec, color=elec_color, point_size=10.,
                                 render_points_as_spheres=True)
@@ -4384,8 +4386,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     if len(rem_elec_idx)>0: 
         rem_node_bool = min(node_x) == node_x #& (min(node_y) == node_y) & (min(node_z) == node_z)
         rem_node = np.argwhere(rem_node_bool == True)
-        print(rem_elec_idx)
-        node_pos = np.insert(node_pos,np.array(rem_elec_idx)-1,[rem_node[0][0]]*len(rem_elec_idx),axis=0)
+        node_pos = np.insert(node_pos,np.array(rem_elec_idx),[rem_node[0][0]]*len(rem_elec_idx),axis=0)
         
     #add nodes to mesh
     mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
