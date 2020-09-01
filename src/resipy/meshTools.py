@@ -1945,7 +1945,6 @@ class Mesh:
             # self.pvmesh[color_bar_title] = X
             
             # clip mesh to bounding box ... we crop the mesh (only way to reduce it's bounds for better viewing)
-            print('++++', xlim, ylim, zlim)
             self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         
             if edge_color is None or edge_color=='none' or edge_color=='None':

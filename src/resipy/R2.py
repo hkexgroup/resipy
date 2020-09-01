@@ -2854,9 +2854,11 @@ class R2(object): # R2 master class instanciated by the GUI
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             else: # 3D case
                 if zlim is None:
-                    zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
-                if cropMaxDepth and self.fmd is not None:
-                    zlim[0] = self.elec['z'].min() - self.fmd
+                    zlim = self.zlim
+                    # zlim = [np.min(mesh.node[:,2]), np.max(mesh.node[:,2])]
+                if cropMaxDepth and self.fmd is not None and zlim is None:
+                    zlim[0] = self.elec[self.elec['remote']]['z'].min() - self.fmd # TODO not sure about that
+                print('//// zlim', zlim)
                 mesh.show(ax=ax, edge_color=edge_color,
                         attr=attr, color_map=color_map, clabel=clabel,
                         zlim=zlim, **kwargs)
