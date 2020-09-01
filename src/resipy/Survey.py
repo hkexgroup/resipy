@@ -1521,11 +1521,12 @@ class Survey(object):
         # compute midpoint position of AB and MN dipoles
         elecx = elecm[:,0]
         elecy = elecm[:,1]
+
         #CURRENT ELECTRODE MIDPOINTS 
         caddx = np.abs(elecx[array[:,0]]-elecx[array[:,1]])/2
         caddy = np.abs(elecy[array[:,0]]-elecy[array[:,1]])/2
         caddx[np.isinf(caddx)] = 0 
-        caddy[np.isinf(caddy)] = 0 
+        caddy[np.isinf(caddy)] = 0        
         cmiddlex = np.min([elecx[array[:,0]], elecx[array[:,1]]], axis=0) + caddx
         cmiddley = np.min([elecy[array[:,0]], elecy[array[:,1]]], axis=0) + caddy
         
@@ -1536,6 +1537,7 @@ class Survey(object):
         paddy[np.isinf(paddy)] = 0 
         pmiddlex = np.min([elecx[array[:,2]], elecx[array[:,3]]], axis=0) + paddx
         pmiddley = np.min([elecy[array[:,2]], elecy[array[:,3]]], axis=0) + paddy
+
         
         # for non-nested measurements
         xposNonNested  = np.min([cmiddlex, pmiddlex], axis=0) + np.abs(cmiddlex-pmiddlex)/2
@@ -1554,18 +1556,15 @@ class Survey(object):
             yposNested[iMNinAB] = pmiddley[iMNinAB]
             outerElec1[iMNinAB] = np.c_[elecx[array[iMNinAB,0]], elecy[array[iMNinAB,0]]]
             outerElec2[iMNinAB] = np.c_[elecx[array[iMNinAB,1]], elecy[array[iMNinAB,1]]]
-            # innerMid = np.c_[pmiddlex, pmiddley]
+
         if np.sum(iABinMN) > 0:
             xposNested[iABinMN] = cmiddlex[iABinMN]
             yposNested[iABinMN] = cmiddley[iABinMN]
             outerElec1[iABinMN] = np.c_[elecx[array[iABinMN,2]], elecy[array[iABinMN,2]]]
             outerElec2[iABinMN] = np.c_[elecx[array[iABinMN,3]], elecy[array[iABinMN,3]]]
-            # innerMid = np.c_[cmiddlex, cmiddley]
-        
+      
         innerMid = np.c_[pmiddlex, pmiddley] # always use potential dipole
         
-        # apdist = np.sqrt((elecx[array[:,0]]-pmiddlex)**2 + (elecy[array[:,0]]-pmiddley)**2)
-        # bpdist = np.sqrt((elecx[array[:,1]]-pmiddlex)**2 + (elecy[array[:,1]]-pmiddley)**2)
         apdist = np.sqrt(np.sum((outerElec1-innerMid)**2, axis=1))
         bpdist = np.sqrt(np.sum((outerElec2-innerMid)**2, axis=1))
         zposNested  = np.min([apdist, bpdist], axis=0)/3
@@ -1584,7 +1583,6 @@ class Survey(object):
         zpos[inested] = zposNested[inested]
         
         return xpos,ypos,zpos
-        
     
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
@@ -1671,6 +1669,7 @@ class Survey(object):
             return poly
             
         elec = self.elec[['x','y','z']].values # make electrode numpy array 
+        elec = elec[np.invert(self.elec['remote'].values),:] 
         
         if strIdx is not None: #add strings 
             if not isinstance(strIdx,list):
@@ -1755,11 +1754,14 @@ class Survey(object):
             vmin = np.nanmin(resist)
         if vmax is None:
             vmax = np.nanmax(resist)
+            
+        elecz = self.elec['z'].values
+        elecz = elecz[np.invert(self.elec['remote'].values)]
         
         dp_x,dp_y,dp_z = self._computePseudoDepth() # get dipole depths 
         #Nb pseudo depths are returned as positive 
         
-        points = np.array([dp_x,dp_y,-dp_z]).T # convert to 3xn matrix. 
+        points = np.array([dp_x,dp_y,min(elecz)-dp_z]).T # convert to 3xn matrix. 
         pvpont = pv.PolyData(points)
         pvpont[label] = resist
         
