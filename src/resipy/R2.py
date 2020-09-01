@@ -3225,6 +3225,42 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mesh.df['res0'] = np.ones(self.mesh.numel)*100 # set back as default
 
 
+    def computeAttribute(self, formula, name):
+        """Compute a new attribute for each meshResults.
+        
+        NOTE: this function present a security risk as it allows execution
+        of python code inputed by the user. It should be used with caution.
+        
+        Parameters
+        ----------
+        formula : str
+            Formula as a string. All attribute already in the mesh object are
+            available from the x dictionary and can be sed as x['nameOfAttribute'].
+            e.g. : "1/x['Resistivity']" will compute the inverse of the 'Resistivity'
+            attribute if this attribute exists.
+            Operators available are addition (+), soustraction (-), division (/)
+            multiplication (*) and exponent (**). Parenthesis are also taken into account.
+            numpy function such as np.sqrt() or np.cos() are also available.
+            e.g. : "(np.sqrt(x['Resistivity']) + 100)*1000"
+            Note: use a mixture of double and single quote such as double for
+            the entire string and single for indexing the dictionnary x['keyName'].
+        name : str
+            Name of the new attribute computed.
+        """
+        for i, m in enumerate(self.meshResults):
+            cols = m.df.columns
+            vals = [m.df[c].values for c in cols]
+            x = dict(zip(cols, vals))
+            # DANGER ZONE =================================
+            try:
+                m.df[name] = eval(formula)
+            except Exception as e:
+                print('Error in meshResults[{:d}]:'.format(i), e)
+                pass
+            # DANGER ZONE =================================
+            
+
+
     def createModel(self, ax=None, dump=None, typ='poly', addAction=None):
         """Interactive model creation for forward modelling.
 
