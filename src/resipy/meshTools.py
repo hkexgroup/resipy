@@ -1791,7 +1791,8 @@ class Mesh:
                 pvslices=([],[],[]),
                 pvthreshold=None,
                 pvgrid=True,
-                pvcontour=[]):
+                pvcontour=[],
+                pvshow=True):
         """
         Shows a 3D tetrahedral mesh. 
         
@@ -1841,8 +1842,11 @@ class Mesh:
             Keep values between pvthreshold[0] and pvthreshold[1].
         pvgrid : bool, optional
             Show grid or not.
-        pvcontour: list of float, optional
+        pvcontour : list of float, optional
             Values of the isosurface to be plotted.
+        pvshow : bool, optional
+            If `False`, that will prevent calling the `pyvista.Plotter.show()`.
+            This is useful in case of subplots.
 
         Returns
         -------
@@ -2028,7 +2032,8 @@ class Mesh:
                     print("Could not plot 3d electrodes, error = "+str(e))
             
             # show mesh
-            ax.show()
+            if pvshow:
+                ax.show()
             # NOTE: because we've truncated the copy of the mesh that pyvista
             # reads in, it should scale correctly in showMesh() even if the
             # mesh object represents the entire mesh with the coarse region.
