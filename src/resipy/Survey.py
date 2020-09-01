@@ -1953,10 +1953,6 @@ class Survey(object):
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
                     protocol.loc[:, c] = '1 ' + protocol[c]
-            # protocol.insert(1, 'sa', 1)
-            # protocol.insert(3, 'sb', 1)
-            # protocol.insert(5, 'sm', 1)
-            # protocol.insert(7, 'sn', 1)
         
         # write protocol.dat
         if outputname != '':
