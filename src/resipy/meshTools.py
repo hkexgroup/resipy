@@ -1285,10 +1285,7 @@ class Mesh:
         -------------
         look_up_mesh: class
             Another mesh class. 
-        
-        Notes
-        -------------
-        This can fail for  large meshes due to the size of matrices involved. 
+         
         """
         #assign coordinate arrays 
         x_old = look_up_mesh.elmCentre[:,0]
@@ -1306,10 +1303,10 @@ class Mesh:
                                             num_threads=ncores)
         elif self.ndims==2:
             i_new, idxes = interp.nearest(x_new,z_new,
-                                            x_old,z_old,i_old,
-                                            return_idx=True,
-                                            num_threads=ncores) 
-         
+                                          x_old,z_old,i_old,
+                                          return_idx=True,
+                                          num_threads=ncores) 
+                    
         #look up values from look up mesh     
         look_up_cache = look_up_mesh.df.copy()
         new_df = {}
@@ -1321,7 +1318,7 @@ class Mesh:
         for key in self.df.keys():
             if key not in look_up_cache.keys():
                 new_df[key] = self.df[key].values
-                
+        
         self.df = pd.DataFrame(new_df) # map indexes using dataframe 
             
     def transMesh(self,x,y,z):
