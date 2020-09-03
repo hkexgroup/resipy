@@ -4,3 +4,6 @@ pandas>=0.23
 scipy>=1.1.0
 requests
 psutil
+pyvista
+pyvistaqt
+
