@@ -1134,7 +1134,8 @@ class App(QMainWindow):
                 self.horizontalHeader().sortIndicatorChanged.connect(self.setAllBuried)
                 self.setHorizontalHeaderLabels(headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-                self.xyz = None 
+                self.useNarray = False
+                self.xyz = self.getTable()[['x','y','z']].values
 
             def addRow(self):
                 self.nrow += 1
@@ -1197,12 +1198,14 @@ class App(QMainWindow):
                 pdebug('elecTable.initTable():', tt)
                 self.clear() # this clears out the headers as well
                 self.nrow = tt.shape[0]
+                print(self.nrow)
                 if self.nrow > 10000: # set a hard cap on the number of rows displayed to avoid segmentation fault 
                     self.nrow = 10000
+                    self.useNarray = True # use the numpy data array to index the data 
                     pdebug('The maximum number of qt table entries have been exceeded, shown table is capped at 10000')
                 self.setRowCount(self.nrow)
                 self.setHorizontalHeaderLabels(self.headers)
-                self.setTable(tt[0:self.nrow,:])
+                self.setTable(tt[0:self.nrow])
                 self.setBuried()
             
             def setTable(self, tt, c0=0, r0=0):
@@ -2712,13 +2715,16 @@ class App(QMainWindow):
             if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            # surface = self.topoTable.getTable()[['x','y','z']].values
-            surface = self.topoTable.xyz
+            if self.topoTable.useNarray:
+                surface = self.topoTable.xyz
+            else:
+                surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
+            
             nnodes = nnodesSld.value()
             try:
                 fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
@@ -2764,14 +2770,17 @@ class App(QMainWindow):
                                          np.diff(self.r2.elec[~self.r2.elec['remote']]['z'].values[:2])**2))
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
             cl_factor = clFactorSld.value()
-            # surface = self.topoTable.getTable()[['x','y','z']].values
-            surface = self.topoTable.xyz
+            if self.topoTable.useNarray:
+                surface = self.topoTable.xyz
+            else:
+                surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             refine = 1 if refineTrianCheck.isChecked() else 0
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
+            
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
             pdebug('meshTrian(): fmd', fmd)
             pdebug('meshTrian(): elec:', self.r2.elec)
@@ -2819,9 +2828,12 @@ class App(QMainWindow):
 #            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
 #            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
-            # topo = self.topoTable.getTable()[['x','y','z']].values
-            topo = self.topoTable.xyz
+            if self.topoTable.useNarray:
+                topo = self.topoTable.xyz
+            else:
+                topo = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(topo[:,0])
+            
             if self.r2.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
@@ -4120,9 +4132,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     meshTrianFunc()
                 else:
                     elec = self.elecTable.getTable()
-                    # topo = self.topoTable.getTable()[['x','y','z']].values
-                    topo = self.topoTable.xyz
+                    if self.topoTable.useNarray:
+                        topo = self.topoTable.xyz      
+                    else:
+                        topo = self.topoTable.getTable()[['x','y','z']].values
                     inan = ~np.isnan(topo[:,0])
+
                     if self.r2.elec['x'].isna().sum() > 0:
                         self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                         self.invertBtn.setStyleSheet('background-color: green')
@@ -5294,8 +5309,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
     def topoInterpBtnFunc(self):
         dfelec = self.elecTable.getTable()
         elec = dfelec[['x','y','z']].values
-        # topo = self.topoTable.getTable()[['x','y','z']].values
-        topo = self.topoTable.xyz
+        if self.topoTable.useNarray:
+            topo = self.topoTable.xyz
+        else:
+            topo = self.topoTable.getTable()[['x','y','z']].values
         inan = ~np.isnan(elec[:,2])
         inan2 = ~np.isnan(topo[:,2])
         points = np.r_[elec[inan,:2], topo[inan2,:2]]
