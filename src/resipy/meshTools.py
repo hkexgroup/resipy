@@ -877,7 +877,7 @@ class Mesh:
         self.addAttribute(dist,'cell_distance')
         return dist
     
-    def extractSurface(self,return_idx =False, post_neigh_check=True): 
+    def extractSurface(self, return_idx =False, post_neigh_check=True): 
         """ Extract the surface of a triangle or tetrahedral mesh. Ouput of 
         function will depend on mesh type. 
         
@@ -1026,7 +1026,8 @@ class Mesh:
             nmesh.__rmexcessNodes() # remove excess nodes which are not used 
             
             if return_idx:
-                return nmesh, outelem[ikeep]
+                return nmesh, outelem[ikeep] 
+            # might cuase a bug where post_neigh_check == True
             else:
                 return nmesh
         
