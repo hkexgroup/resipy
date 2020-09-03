@@ -16,11 +16,7 @@ import resipy.meshTools as mt
 from resipy.Survey import Survey
 from resipy.R2 import R2, apiPath
 
-use_pyvista = True
-try:
-    import pyvista as pv
-except:
-    use_pyvista = False
+use_pyvista = False
 
 tstart = time.time()
 timings = {}
