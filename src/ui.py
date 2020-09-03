@@ -2688,7 +2688,7 @@ class App(QMainWindow):
             self.iDesign = True
             # read electrodes locations
             elec = self.elecTable.getTable()
-            if elec['x'].isna().sum() > 0:
+            if elec['x'].isnan().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             
