@@ -1479,7 +1479,7 @@ class Mesh:
         
         # decide which attribute to plot, we may decide to have other attritbutes! 
         keys = self.df.keys()
-        if attr not in keys:
+        if attr not in keys and not attr is None:
             attr = None
             warnings.warn('Chosen attribute not found in mesh class')
         if attr is None:
@@ -3338,6 +3338,35 @@ class Mesh:
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
         print('done.')
+        
+    def writeRindex(self,fname):
+        """Write out the neighbourhood matrix for R3t. 
+
+        Parameters
+        ----------
+        fname : str
+            Path to written file.
+        """
+        if self.type2VertsNo() == 6 or self.type2VertsNo()==8:#not a tetrahedra 3d mesh 
+            raise Exception("Sorry neighbour calculation not available yet with this mesh type")
+        elif self.type2VertsNo() == 4 and self.ndims==2:#then its a quad mesh 
+            raise Exception("Sorry neighbour calculation not available yet with this mesh type")
+         
+        dim = self.connection.shape[1]
+
+        if self.neigh_matrix is None: 
+            self.computeNeigh()
+        
+        neigh = self.neigh_matrix + 1
+        fh = open(fname,'w')
+        fh.write('%i\t%i\n'%(self.numel,dim+2))
+        for i in range(self.numel):
+            line = '{:d}'.format(i+1)
+            for j in range(dim):
+                line += '\t{:d}'.format(neigh[i,j])
+            line += '\t{:d}\n'.format(0)
+            fh.write(line)
+        fh.close()
     
 #%% import a vtk file 
 def vtk_import(file_path='mesh.vtk', order_nodes=True):
