@@ -499,12 +499,7 @@ k.elec2distance()
 k = R2(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-try: 
-    k.showPseudo(threed=True)
-except Exception as e:
-    print(e)
-    print('there was a problem with pyvista in test.py, falling back onto matplotlib display schemes')
-    
+k.showPseudo(threed=True, use_pyvista=use_pyvista)    
 k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
 
 k.createSequence()
