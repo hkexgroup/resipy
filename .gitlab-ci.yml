@@ -1,4 +1,4 @@
-image: python:3.7-stretch
+image: python:3.8-buster
 
 test:
   script:
