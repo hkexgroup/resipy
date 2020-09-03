@@ -285,12 +285,11 @@ class R2(object): # R2 master class instanciated by the GUI
         self.mproc = None # where the process for mesh building
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
         self.geom_input = {} # dictionnary used to create the mesh
-        
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
         self.fwdErrModel = False # is there is a impoforward modelling error already (due to the mesh)?
         self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
-
+        self.surfaceIdx = None # used to show plan view iterations of 3D inversions
 
     def setBorehole(self, val=False):
         """Set all surveys in borehole type if `True` is passed.
@@ -4078,28 +4077,18 @@ class R2(object): # R2 master class instanciated by the GUI
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
             x = pd.read_csv(os.path.join(self.dirname, fs[index]), delim_whitespace=True).values
+            if self.typ[-1]=='t': # if 3D get the iteration mesh 
+                if self.surfaceIdx is None: # no surface index
+                    self.iterMesh = mt.readMesh(os.path.join(self.dirname, fs[index]).replace('.dat','.vtk')) 
+                    _, self.surfaceIdx = self.iterMesh.extractSurface(return_idx=True) # get surface index 
+                x = x[self.surfaceIdx,:]
             if x.shape[0] > 0:
                 triang = tri.Triangulation(x[:,0], x[:,1])
                 if self.typ[0] == 'c' and modelDOI is False:
                     z = x[:,4]
                 else:
                     z = x[:,3] # modelDOI is always computed with R2 not cR2
-#                cax = ax.tricontourf(triang, z, extend='both')
-                
-#                if self.mesh.surface is not None:
-#                    xf, yf = self.mesh.surface[:,0], self.mesh.surface[:,1]
-#                    xc, yc, zc = x[:,0], x[:,1], z
-#                    zf = interp.nearest(xf, yf, xc, yc, zc) # interpolate before overiding xc and yc
-#                    xc = np.r_[xc, xf]
-#                    yc = np.r_[yc, yf]
-#                    zc = np.r_[zc, zf]
-#                    triang = tri.Triangulation(xc, yc) # build grid based on centroids
-#                    try:
-#                        triang.set_mask(~cropSurface(triang, self.mesh.surface[:,0], self.mesh.surface[:,1]))
-#                    except Exception as e:
-#                        print('Error in R2.showIter() for contouring: ', e)
-#                else:
-#                    zc = z.copy()
+
                 cax = ax.tricontourf(triang, z, extend='both')
                 if (self.typ == 'R2') or (self.typ == 'cR2'):
                     print('topot', self.topo)
