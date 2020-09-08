@@ -4871,9 +4871,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 index = self.invErrorIndex if index == 0 else index-1 # for apply to each (time-lapse or batch only)
                 plotInvError2(index)
-                if self.iBorehole is False:
+                if self.iBorehole is False and self.m3DRadio.isChecked() is False:
+                    self.errorGraphs.setTabEnabled(0, True)
+                    self.errorGraphs.setCurrentIndex(0)
                     plotInvError(index)
                     self.invErrorIndex = index
+                else:
+                    self.errorGraphs.setTabEnabled(0, False)
+                    self.errorGraphs.setCurrentIndex(1)
             except Exception as e:
                 print('Could not print error: ', e)
         self.invErrorCombo = QComboBox()
