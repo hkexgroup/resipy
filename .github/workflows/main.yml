@@ -106,12 +106,15 @@ jobs:
           cd src
           mkdir -p macdmg
           ./build-app.sh
-          cd ..
+          cd dist
+          zip -r ResIPy-macos.zip ResIPy.app
+          cd ../..
+          
 
       - uses: actions/upload-artifact@v2
         with:
           name: ResIPy-macos.app
-          path: ./src/dist/ResIPy-macos.app
+          path: ./src/dist/ResIPy-macos.zip
           
       - uses: actions/upload-artifact@v2
         with:
