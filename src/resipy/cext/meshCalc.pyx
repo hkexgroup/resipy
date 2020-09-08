@@ -526,9 +526,9 @@ def split_tri(long[:,:] connection, double[:,:] node):
     
         tmpi = i*4 # temporary index for indexing new connection matrix
         for j in range(4):
-            new_connectionv[tmpi+j,0] = n[remap[j,0]]
-            new_connectionv[tmpi+j,1] = n[remap[j,1]]
-            new_connectionv[tmpi+j,2] = n[remap[j,2]]
+            new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+            new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+            new_connectionv[tmpi+j,2] = n[remapv[j,2]]
             
     ### make new node matrix ### 
     cdef int added_nodes = len(idx)
@@ -655,10 +655,10 @@ def split_tetra(long[:,:] connection, double[:,:] node):
     
         tmpi = i*8 # temporary index for indexing new connection matrix
         for j in range(8):
-            new_connectionv[tmpi+j,0] = n[remap[j,0]]
-            new_connectionv[tmpi+j,1] = n[remap[j,1]]
-            new_connectionv[tmpi+j,2] = n[remap[j,2]]
-            new_connectionv[tmpi+j,3] = n[remap[j,3]]
+            new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+            new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+            new_connectionv[tmpi+j,2] = n[remapv[j,2]]
+            new_connectionv[tmpi+j,3] = n[remapv[j,3]]
             
     ### make new node matrix ### 
     cdef np.ndarray[double, ndim=2] node_out = np.zeros((num_nodes+added_nodes,3),dtype=float)
