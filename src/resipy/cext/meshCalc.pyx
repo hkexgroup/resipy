@@ -655,10 +655,10 @@ def split_tetra(long[:,:] connection, double[:,:] node):
     
         tmpi = i*8 # temporary index for indexing new connection matrix
         for j in range(8):
-            new_connectionv[tmpi+j,0] = n[remap[j,0]
-            new_connectionv[tmpi+j,1] = n[remap[j,1]
-            new_connectionv[tmpi+j,2] = n[remap[j,2]
-            new_connectionv[tmpi+j,3] = n[remap[j,3]
+            new_connectionv[tmpi+j,0] = n[remap[j,0]]
+            new_connectionv[tmpi+j,1] = n[remap[j,1]]
+            new_connectionv[tmpi+j,2] = n[remap[j,2]]
+            new_connectionv[tmpi+j,3] = n[remap[j,3]]
             
     ### make new node matrix ### 
     cdef np.ndarray[double, ndim=2] node_out = np.zeros((num_nodes+added_nodes,3),dtype=float)
