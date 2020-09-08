@@ -410,7 +410,7 @@ class Mesh:
             return 0
         
     def type2FaceNo(self):
-        """Converts vtk cell types into number of vertices each element has
+        """Converts vtk cell types into number of faces each element has
         """
         if int(self.cell_type[0])==5:#then elements are triangles
             return 1
@@ -617,7 +617,7 @@ class Mesh:
     
     def cellArea(self):
         """Compute the element areas, or in the case of 3D meshes compute the 
-        cell volumes. Not yet implimented. 
+        cell volumes. 
         """
         con_mat = self.connection
         elm_area=[0]*self.numel
@@ -2763,7 +2763,7 @@ class Mesh:
             self.df['depths'] = depth
             self.no_attributes += 1
             return depth
-        if self.ndims == 3: # use 2D interpolation
+        elif self.ndims == 3: # use 2D interpolation
             elm_x = np.array(self.elmCentre[:,0])
             elm_y = np.array(self.elmCentre[:,1])
             elm_z = np.array(self.elmCentre[:,2])  
