@@ -8315,7 +8315,7 @@ static PyObject *__pyx_pf_8meshCalc_12split_tri(CYTHON_UNUSED PyObject *__pyx_se
   __Pyx_memviewslice __pyx_v_a = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_b = { 0, 0, { 0 }, { 0 }, { 0 } };
   PyObject *__pyx_v_remap = 0;
-  CYTHON_UNUSED __Pyx_memviewslice __pyx_v_remapv = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_remapv = { 0, 0, { 0 }, { 0 }, { 0 } };
   PyObject *__pyx_v_unicl = 0;
   PyObject *__pyx_v_idx = 0;
   PyObject *__pyx_v_node_id = 0;
@@ -8420,13 +8420,13 @@ static PyObject *__pyx_pf_8meshCalc_12split_tri(CYTHON_UNUSED PyObject *__pyx_se
   Py_ssize_t __pyx_t_79;
   Py_ssize_t __pyx_t_80;
   Py_ssize_t __pyx_t_81;
-  PyArrayObject *__pyx_t_82 = NULL;
+  Py_ssize_t __pyx_t_82;
   Py_ssize_t __pyx_t_83;
   Py_ssize_t __pyx_t_84;
   Py_ssize_t __pyx_t_85;
   Py_ssize_t __pyx_t_86;
   Py_ssize_t __pyx_t_87;
-  Py_ssize_t __pyx_t_88;
+  PyArrayObject *__pyx_t_88 = NULL;
   Py_ssize_t __pyx_t_89;
   Py_ssize_t __pyx_t_90;
   Py_ssize_t __pyx_t_91;
@@ -8445,6 +8445,12 @@ static PyObject *__pyx_pf_8meshCalc_12split_tri(CYTHON_UNUSED PyObject *__pyx_se
   Py_ssize_t __pyx_t_104;
   Py_ssize_t __pyx_t_105;
   Py_ssize_t __pyx_t_106;
+  Py_ssize_t __pyx_t_107;
+  Py_ssize_t __pyx_t_108;
+  Py_ssize_t __pyx_t_109;
+  Py_ssize_t __pyx_t_110;
+  Py_ssize_t __pyx_t_111;
+  Py_ssize_t __pyx_t_112;
   __Pyx_RefNannySetupContext("split_tri", 0);
   __pyx_pybuffer_new_connection.pybuffer.buf = NULL;
   __pyx_pybuffer_new_connection.refcount = 0;
@@ -9778,7 +9784,7 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  * 
  *         tmpi = i*4 # temporary index for indexing new connection matrix             # <<<<<<<<<<<<<<
  *         for j in range(4):
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
  */
     __pyx_v_tmpi = (__pyx_v_i * 4);
 
@@ -9786,8 +9792,8 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  * 
  *         tmpi = i*4 # temporary index for indexing new connection matrix
  *         for j in range(4):             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
  */
     for (__pyx_t_18 = 0; __pyx_t_18 < 4; __pyx_t_18+=1) {
       __pyx_v_j = __pyx_t_18;
@@ -9795,83 +9801,44 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
       /* "meshCalc.pyx":529
  *         tmpi = i*4 # temporary index for indexing new connection matrix
  *         for j in range(4):
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]
  */
-      __pyx_t_14 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 529, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_14);
-      __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 529, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_GIVEREF(__pyx_t_14);
-      PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_14);
-      __Pyx_INCREF(__pyx_int_0);
-      __Pyx_GIVEREF(__pyx_int_0);
-      PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_int_0);
-      __pyx_t_14 = 0;
-      __pyx_t_14 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_4); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 529, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_14);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_14); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 529, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-      __pyx_t_73 = __pyx_t_13;
-      __pyx_t_74 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_75 = 0;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_74 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_75 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_73 * __pyx_v_n.strides[0]) )));
+      __pyx_t_73 = __pyx_v_j;
+      __pyx_t_74 = 0;
+      __pyx_t_75 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_73 * __pyx_v_remapv.strides[0]) ) + __pyx_t_74 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_76 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_77 = 0;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_76 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_77 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_75 * __pyx_v_n.strides[0]) )));
 
       /* "meshCalc.pyx":530
  *         for j in range(4):
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]
  * 
  */
-      __pyx_t_14 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 530, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_14);
-      __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 530, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_GIVEREF(__pyx_t_14);
-      PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_14);
-      __Pyx_INCREF(__pyx_int_1);
-      __Pyx_GIVEREF(__pyx_int_1);
-      PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_int_1);
-      __pyx_t_14 = 0;
-      __pyx_t_14 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_4); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 530, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_14);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_14); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 530, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-      __pyx_t_76 = __pyx_t_13;
-      __pyx_t_77 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_78 = 1;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_77 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_78 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_76 * __pyx_v_n.strides[0]) )));
+      __pyx_t_78 = __pyx_v_j;
+      __pyx_t_79 = 1;
+      __pyx_t_80 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_78 * __pyx_v_remapv.strides[0]) ) + __pyx_t_79 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_81 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_82 = 1;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_81 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_82 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_80 * __pyx_v_n.strides[0]) )));
 
       /* "meshCalc.pyx":531
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]             # <<<<<<<<<<<<<<
  * 
  *     ### make new node matrix ###
  */
-      __pyx_t_14 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 531, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_14);
-      __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 531, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_GIVEREF(__pyx_t_14);
-      PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_14);
-      __Pyx_INCREF(__pyx_int_2);
-      __Pyx_GIVEREF(__pyx_int_2);
-      PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_int_2);
-      __pyx_t_14 = 0;
-      __pyx_t_14 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_4); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 531, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_14);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_14); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 531, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-      __pyx_t_79 = __pyx_t_13;
-      __pyx_t_80 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_81 = 2;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_80 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_81 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_79 * __pyx_v_n.strides[0]) )));
+      __pyx_t_83 = __pyx_v_j;
+      __pyx_t_84 = 2;
+      __pyx_t_85 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_83 * __pyx_v_remapv.strides[0]) ) + __pyx_t_84 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_86 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_87 = 2;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_86 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_87 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_85 * __pyx_v_n.strides[0]) )));
     }
   }
 
@@ -9925,16 +9892,16 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
   __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   if (!(likely(((__pyx_t_2) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_2, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 535, __pyx_L1_error)
-  __pyx_t_82 = ((PyArrayObject *)__pyx_t_2);
+  __pyx_t_88 = ((PyArrayObject *)__pyx_t_2);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_node_out.rcbuffer->pybuffer, (PyObject*)__pyx_t_82, &__Pyx_TypeInfo_double, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_node_out.rcbuffer->pybuffer, (PyObject*)__pyx_t_88, &__Pyx_TypeInfo_double, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_node_out = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_node_out.rcbuffer->pybuffer.buf = NULL;
       __PYX_ERR(0, 535, __pyx_L1_error)
     } else {__pyx_pybuffernd_node_out.diminfo[0].strides = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_node_out.diminfo[0].shape = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_node_out.diminfo[1].strides = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_node_out.diminfo[1].shape = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.shape[1];
     }
   }
-  __pyx_t_82 = 0;
+  __pyx_t_88 = 0;
   __pyx_v_node_out = ((PyArrayObject *)__pyx_t_2);
   __pyx_t_2 = 0;
 
@@ -9969,10 +9936,10 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[i,1] = node_y[i]
  *         node_outv[i,2] = node_z[i]
  */
-    __pyx_t_83 = __pyx_v_i;
-    __pyx_t_84 = __pyx_v_i;
-    __pyx_t_85 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_84 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_85 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_x.data + __pyx_t_83 * __pyx_v_node_x.strides[0]) )));
+    __pyx_t_89 = __pyx_v_i;
+    __pyx_t_90 = __pyx_v_i;
+    __pyx_t_91 = 0;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_90 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_91 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_x.data + __pyx_t_89 * __pyx_v_node_x.strides[0]) )));
 
     /* "meshCalc.pyx":539
  *     for i in range(num_nodes):
@@ -9981,10 +9948,10 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[i,2] = node_z[i]
  *     for i in range(added_nodes):
  */
-    __pyx_t_86 = __pyx_v_i;
-    __pyx_t_87 = __pyx_v_i;
-    __pyx_t_88 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_87 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_88 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_y.data + __pyx_t_86 * __pyx_v_node_y.strides[0]) )));
+    __pyx_t_92 = __pyx_v_i;
+    __pyx_t_93 = __pyx_v_i;
+    __pyx_t_94 = 1;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_93 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_94 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_y.data + __pyx_t_92 * __pyx_v_node_y.strides[0]) )));
 
     /* "meshCalc.pyx":540
  *         node_outv[i,0] = node_x[i]
@@ -9993,10 +9960,10 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *     for i in range(added_nodes):
  *         j = i + num_nodes
  */
-    __pyx_t_89 = __pyx_v_i;
-    __pyx_t_90 = __pyx_v_i;
-    __pyx_t_91 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_90 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_91 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_z.data + __pyx_t_89 * __pyx_v_node_z.strides[0]) )));
+    __pyx_t_95 = __pyx_v_i;
+    __pyx_t_96 = __pyx_v_i;
+    __pyx_t_97 = 2;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_96 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_97 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_z.data + __pyx_t_95 * __pyx_v_node_z.strides[0]) )));
   }
 
   /* "meshCalc.pyx":541
@@ -10027,12 +9994,12 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[j,1] = new_nodev[idxa[i],1]
  *         node_outv[j,2] = new_nodev[idxa[i],2]
  */
-    __pyx_t_92 = __pyx_v_i;
-    __pyx_t_93 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_92, __pyx_pybuffernd_idxa.diminfo[0].strides));
-    __pyx_t_94 = 0;
-    __pyx_t_95 = __pyx_v_j;
-    __pyx_t_96 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_95 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_96 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_93 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_94 * __pyx_v_new_nodev.strides[1]) )));
+    __pyx_t_98 = __pyx_v_i;
+    __pyx_t_99 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_98, __pyx_pybuffernd_idxa.diminfo[0].strides));
+    __pyx_t_100 = 0;
+    __pyx_t_101 = __pyx_v_j;
+    __pyx_t_102 = 0;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_101 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_102 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_99 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_100 * __pyx_v_new_nodev.strides[1]) )));
 
     /* "meshCalc.pyx":544
  *         j = i + num_nodes
@@ -10041,12 +10008,12 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[j,2] = new_nodev[idxa[i],2]
  * 
  */
-    __pyx_t_97 = __pyx_v_i;
-    __pyx_t_98 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_97, __pyx_pybuffernd_idxa.diminfo[0].strides));
-    __pyx_t_99 = 1;
-    __pyx_t_100 = __pyx_v_j;
-    __pyx_t_101 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_100 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_101 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_98 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_99 * __pyx_v_new_nodev.strides[1]) )));
+    __pyx_t_103 = __pyx_v_i;
+    __pyx_t_104 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_103, __pyx_pybuffernd_idxa.diminfo[0].strides));
+    __pyx_t_105 = 1;
+    __pyx_t_106 = __pyx_v_j;
+    __pyx_t_107 = 1;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_106 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_107 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_104 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_105 * __pyx_v_new_nodev.strides[1]) )));
 
     /* "meshCalc.pyx":545
  *         node_outv[j,0] = new_nodev[idxa[i],0]
@@ -10055,12 +10022,12 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  * 
  *     return new_connection, node_out, numel*4, num_nodes + added_nodes
  */
-    __pyx_t_102 = __pyx_v_i;
-    __pyx_t_103 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_102, __pyx_pybuffernd_idxa.diminfo[0].strides));
-    __pyx_t_104 = 2;
-    __pyx_t_105 = __pyx_v_j;
-    __pyx_t_106 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_105 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_106 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_103 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_104 * __pyx_v_new_nodev.strides[1]) )));
+    __pyx_t_108 = __pyx_v_i;
+    __pyx_t_109 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_108, __pyx_pybuffernd_idxa.diminfo[0].strides));
+    __pyx_t_110 = 2;
+    __pyx_t_111 = __pyx_v_j;
+    __pyx_t_112 = 2;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_111 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_112 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_109 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_110 * __pyx_v_new_nodev.strides[1]) )));
   }
 
   /* "meshCalc.pyx":547
@@ -10269,7 +10236,7 @@ static PyObject *__pyx_pf_8meshCalc_14split_tetra(CYTHON_UNUSED PyObject *__pyx_
   __Pyx_memviewslice __pyx_v_a = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_b = { 0, 0, { 0 }, { 0 }, { 0 } };
   PyObject *__pyx_v_remap = 0;
-  CYTHON_UNUSED __Pyx_memviewslice __pyx_v_remapv = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_remapv = { 0, 0, { 0 }, { 0 }, { 0 } };
   PyObject *__pyx_v_unicl = 0;
   PyObject *__pyx_v_idx = 0;
   PyObject *__pyx_v_node_id = 0;
@@ -10381,7 +10348,7 @@ static PyObject *__pyx_pf_8meshCalc_14split_tetra(CYTHON_UNUSED PyObject *__pyx_
   Py_ssize_t __pyx_t_86;
   Py_ssize_t __pyx_t_87;
   Py_ssize_t __pyx_t_88;
-  PyArrayObject *__pyx_t_89 = NULL;
+  Py_ssize_t __pyx_t_89;
   Py_ssize_t __pyx_t_90;
   Py_ssize_t __pyx_t_91;
   Py_ssize_t __pyx_t_92;
@@ -10389,7 +10356,7 @@ static PyObject *__pyx_pf_8meshCalc_14split_tetra(CYTHON_UNUSED PyObject *__pyx_
   Py_ssize_t __pyx_t_94;
   Py_ssize_t __pyx_t_95;
   Py_ssize_t __pyx_t_96;
-  Py_ssize_t __pyx_t_97;
+  PyArrayObject *__pyx_t_97 = NULL;
   Py_ssize_t __pyx_t_98;
   Py_ssize_t __pyx_t_99;
   Py_ssize_t __pyx_t_100;
@@ -10406,6 +10373,14 @@ static PyObject *__pyx_pf_8meshCalc_14split_tetra(CYTHON_UNUSED PyObject *__pyx_
   Py_ssize_t __pyx_t_111;
   Py_ssize_t __pyx_t_112;
   Py_ssize_t __pyx_t_113;
+  Py_ssize_t __pyx_t_114;
+  Py_ssize_t __pyx_t_115;
+  Py_ssize_t __pyx_t_116;
+  Py_ssize_t __pyx_t_117;
+  Py_ssize_t __pyx_t_118;
+  Py_ssize_t __pyx_t_119;
+  Py_ssize_t __pyx_t_120;
+  Py_ssize_t __pyx_t_121;
   __Pyx_RefNannySetupContext("split_tetra", 0);
   __pyx_pybuffer_new_connection.pybuffer.buf = NULL;
   __pyx_pybuffer_new_connection.refcount = 0;
@@ -11883,7 +11858,7 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  * 
  *         tmpi = i*8 # temporary index for indexing new connection matrix             # <<<<<<<<<<<<<<
  *         for j in range(8):
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
  */
     __pyx_v_tmpi = (__pyx_v_i * 8);
 
@@ -11891,8 +11866,8 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  * 
  *         tmpi = i*8 # temporary index for indexing new connection matrix
  *         for j in range(8):             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
  */
     for (__pyx_t_22 = 0; __pyx_t_22 < 8; __pyx_t_22+=1) {
       __pyx_v_j = __pyx_t_22;
@@ -11900,110 +11875,58 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
       /* "meshCalc.pyx":658
  *         tmpi = i*8 # temporary index for indexing new connection matrix
  *         for j in range(8):
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]
  */
-      __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 658, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 658, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_15);
-      __Pyx_GIVEREF(__pyx_t_18);
-      PyTuple_SET_ITEM(__pyx_t_15, 0, __pyx_t_18);
-      __Pyx_INCREF(__pyx_int_0);
-      __Pyx_GIVEREF(__pyx_int_0);
-      PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_int_0);
-      __pyx_t_18 = 0;
-      __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_15); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 658, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_18); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 658, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-      __pyx_t_77 = __pyx_t_13;
-      __pyx_t_78 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_79 = 0;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_78 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_79 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_77 * __pyx_v_n.strides[0]) )));
+      __pyx_t_77 = __pyx_v_j;
+      __pyx_t_78 = 0;
+      __pyx_t_79 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_77 * __pyx_v_remapv.strides[0]) ) + __pyx_t_78 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_80 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_81 = 0;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_80 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_81 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_79 * __pyx_v_n.strides[0]) )));
 
       /* "meshCalc.pyx":659
  *         for j in range(8):
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]
- *             new_connectionv[tmpi+j,3] = n[remap[j,3]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]
+ *             new_connectionv[tmpi+j,3] = n[remapv[j,3]]
  */
-      __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 659, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 659, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_15);
-      __Pyx_GIVEREF(__pyx_t_18);
-      PyTuple_SET_ITEM(__pyx_t_15, 0, __pyx_t_18);
-      __Pyx_INCREF(__pyx_int_1);
-      __Pyx_GIVEREF(__pyx_int_1);
-      PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_int_1);
-      __pyx_t_18 = 0;
-      __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_15); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 659, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_18); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 659, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-      __pyx_t_80 = __pyx_t_13;
-      __pyx_t_81 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_82 = 1;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_81 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_82 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_80 * __pyx_v_n.strides[0]) )));
+      __pyx_t_82 = __pyx_v_j;
+      __pyx_t_83 = 1;
+      __pyx_t_84 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_82 * __pyx_v_remapv.strides[0]) ) + __pyx_t_83 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_85 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_86 = 1;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_85 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_86 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_84 * __pyx_v_n.strides[0]) )));
 
       /* "meshCalc.pyx":660
- *             new_connectionv[tmpi+j,0] = n[remap[j,0]]
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]             # <<<<<<<<<<<<<<
- *             new_connectionv[tmpi+j,3] = n[remap[j,3]]
+ *             new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,3] = n[remapv[j,3]]
  * 
  */
-      __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 660, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 660, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_15);
-      __Pyx_GIVEREF(__pyx_t_18);
-      PyTuple_SET_ITEM(__pyx_t_15, 0, __pyx_t_18);
-      __Pyx_INCREF(__pyx_int_2);
-      __Pyx_GIVEREF(__pyx_int_2);
-      PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_int_2);
-      __pyx_t_18 = 0;
-      __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_15); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 660, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_18); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 660, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-      __pyx_t_83 = __pyx_t_13;
-      __pyx_t_84 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_85 = 2;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_84 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_85 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_83 * __pyx_v_n.strides[0]) )));
+      __pyx_t_87 = __pyx_v_j;
+      __pyx_t_88 = 2;
+      __pyx_t_89 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_87 * __pyx_v_remapv.strides[0]) ) + __pyx_t_88 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_90 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_91 = 2;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_90 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_91 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_89 * __pyx_v_n.strides[0]) )));
 
       /* "meshCalc.pyx":661
- *             new_connectionv[tmpi+j,1] = n[remap[j,1]]
- *             new_connectionv[tmpi+j,2] = n[remap[j,2]]
- *             new_connectionv[tmpi+j,3] = n[remap[j,3]]             # <<<<<<<<<<<<<<
+ *             new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+ *             new_connectionv[tmpi+j,2] = n[remapv[j,2]]
+ *             new_connectionv[tmpi+j,3] = n[remapv[j,3]]             # <<<<<<<<<<<<<<
  * 
  *     ### make new node matrix ###
  */
-      __pyx_t_18 = __Pyx_PyInt_From_int(__pyx_v_j); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 661, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 661, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_15);
-      __Pyx_GIVEREF(__pyx_t_18);
-      PyTuple_SET_ITEM(__pyx_t_15, 0, __pyx_t_18);
-      __Pyx_INCREF(__pyx_int_3);
-      __Pyx_GIVEREF(__pyx_int_3);
-      PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_int_3);
-      __pyx_t_18 = 0;
-      __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_remap, __pyx_t_15); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 661, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_18);
-      __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
-      __pyx_t_13 = __Pyx_PyIndex_AsSsize_t(__pyx_t_18); if (unlikely((__pyx_t_13 == (Py_ssize_t)-1) && PyErr_Occurred())) __PYX_ERR(0, 661, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-      __pyx_t_86 = __pyx_t_13;
-      __pyx_t_87 = (__pyx_v_tmpi + __pyx_v_j);
-      __pyx_t_88 = 3;
-      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_87 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_88 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_86 * __pyx_v_n.strides[0]) )));
+      __pyx_t_92 = __pyx_v_j;
+      __pyx_t_93 = 3;
+      __pyx_t_94 = (*((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_remapv.data + __pyx_t_92 * __pyx_v_remapv.strides[0]) ) + __pyx_t_93 * __pyx_v_remapv.strides[1]) )));
+      __pyx_t_95 = (__pyx_v_tmpi + __pyx_v_j);
+      __pyx_t_96 = 3;
+      *((long *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_connectionv.data + __pyx_t_95 * __pyx_v_new_connectionv.strides[0]) ) + __pyx_t_96 * __pyx_v_new_connectionv.strides[1]) )) = (*((long *) ( /* dim=0 */ (__pyx_v_n.data + __pyx_t_94 * __pyx_v_n.strides[0]) )));
     }
   }
 
@@ -12043,16 +11966,16 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
   __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
   if (!(likely(((__pyx_t_17) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_17, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 664, __pyx_L1_error)
-  __pyx_t_89 = ((PyArrayObject *)__pyx_t_17);
+  __pyx_t_97 = ((PyArrayObject *)__pyx_t_17);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_node_out.rcbuffer->pybuffer, (PyObject*)__pyx_t_89, &__Pyx_TypeInfo_double, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_node_out.rcbuffer->pybuffer, (PyObject*)__pyx_t_97, &__Pyx_TypeInfo_double, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) {
       __pyx_v_node_out = ((PyArrayObject *)Py_None); __Pyx_INCREF(Py_None); __pyx_pybuffernd_node_out.rcbuffer->pybuffer.buf = NULL;
       __PYX_ERR(0, 664, __pyx_L1_error)
     } else {__pyx_pybuffernd_node_out.diminfo[0].strides = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_node_out.diminfo[0].shape = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_node_out.diminfo[1].strides = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_node_out.diminfo[1].shape = __pyx_pybuffernd_node_out.rcbuffer->pybuffer.shape[1];
     }
   }
-  __pyx_t_89 = 0;
+  __pyx_t_97 = 0;
   __pyx_v_node_out = ((PyArrayObject *)__pyx_t_17);
   __pyx_t_17 = 0;
 
@@ -12087,10 +12010,10 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[i,1] = node_y[i]
  *         node_outv[i,2] = node_z[i]
  */
-    __pyx_t_90 = __pyx_v_i;
-    __pyx_t_91 = __pyx_v_i;
-    __pyx_t_92 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_91 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_92 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_x.data + __pyx_t_90 * __pyx_v_node_x.strides[0]) )));
+    __pyx_t_98 = __pyx_v_i;
+    __pyx_t_99 = __pyx_v_i;
+    __pyx_t_100 = 0;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_99 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_100 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_x.data + __pyx_t_98 * __pyx_v_node_x.strides[0]) )));
 
     /* "meshCalc.pyx":668
  *     for i in range(num_nodes):
@@ -12099,10 +12022,10 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[i,2] = node_z[i]
  *     for i in range(added_nodes):
  */
-    __pyx_t_93 = __pyx_v_i;
-    __pyx_t_94 = __pyx_v_i;
-    __pyx_t_95 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_94 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_95 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_y.data + __pyx_t_93 * __pyx_v_node_y.strides[0]) )));
+    __pyx_t_101 = __pyx_v_i;
+    __pyx_t_102 = __pyx_v_i;
+    __pyx_t_103 = 1;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_102 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_103 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_y.data + __pyx_t_101 * __pyx_v_node_y.strides[0]) )));
 
     /* "meshCalc.pyx":669
  *         node_outv[i,0] = node_x[i]
@@ -12111,10 +12034,10 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *     for i in range(added_nodes):
  *         j = i + num_nodes
  */
-    __pyx_t_96 = __pyx_v_i;
-    __pyx_t_97 = __pyx_v_i;
-    __pyx_t_98 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_97 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_98 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_z.data + __pyx_t_96 * __pyx_v_node_z.strides[0]) )));
+    __pyx_t_104 = __pyx_v_i;
+    __pyx_t_105 = __pyx_v_i;
+    __pyx_t_106 = 2;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_105 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_106 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=0 */ (__pyx_v_node_z.data + __pyx_t_104 * __pyx_v_node_z.strides[0]) )));
   }
 
   /* "meshCalc.pyx":670
@@ -12145,12 +12068,12 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[j,1] = new_nodev[idxa[i],1]
  *         node_outv[j,2] = new_nodev[idxa[i],2]
  */
-    __pyx_t_99 = __pyx_v_i;
-    __pyx_t_100 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_99, __pyx_pybuffernd_idxa.diminfo[0].strides));
-    __pyx_t_101 = 0;
-    __pyx_t_102 = __pyx_v_j;
-    __pyx_t_103 = 0;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_102 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_103 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_100 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_101 * __pyx_v_new_nodev.strides[1]) )));
+    __pyx_t_107 = __pyx_v_i;
+    __pyx_t_108 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_107, __pyx_pybuffernd_idxa.diminfo[0].strides));
+    __pyx_t_109 = 0;
+    __pyx_t_110 = __pyx_v_j;
+    __pyx_t_111 = 0;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_110 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_111 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_108 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_109 * __pyx_v_new_nodev.strides[1]) )));
 
     /* "meshCalc.pyx":673
  *         j = i + num_nodes
@@ -12159,12 +12082,12 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  *         node_outv[j,2] = new_nodev[idxa[i],2]
  * 
  */
-    __pyx_t_104 = __pyx_v_i;
-    __pyx_t_105 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_104, __pyx_pybuffernd_idxa.diminfo[0].strides));
-    __pyx_t_106 = 1;
-    __pyx_t_107 = __pyx_v_j;
-    __pyx_t_108 = 1;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_107 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_108 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_105 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_106 * __pyx_v_new_nodev.strides[1]) )));
+    __pyx_t_112 = __pyx_v_i;
+    __pyx_t_113 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_112, __pyx_pybuffernd_idxa.diminfo[0].strides));
+    __pyx_t_114 = 1;
+    __pyx_t_115 = __pyx_v_j;
+    __pyx_t_116 = 1;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_115 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_116 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_113 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_114 * __pyx_v_new_nodev.strides[1]) )));
 
     /* "meshCalc.pyx":674
  *         node_outv[j,0] = new_nodev[idxa[i],0]
@@ -12173,12 +12096,12 @@ __pyx_t_2 = __pyx_memoryview_fromslice(__pyx_t_3, 1, (PyObject *(*)(char *)) __p
  * 
  *     return new_connection, node_out, numel*8, num_nodes + added_nodes
  */
-    __pyx_t_109 = __pyx_v_i;
-    __pyx_t_110 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_109, __pyx_pybuffernd_idxa.diminfo[0].strides));
-    __pyx_t_111 = 2;
-    __pyx_t_112 = __pyx_v_j;
-    __pyx_t_113 = 2;
-    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_112 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_113 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_110 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_111 * __pyx_v_new_nodev.strides[1]) )));
+    __pyx_t_117 = __pyx_v_i;
+    __pyx_t_118 = (*__Pyx_BufPtrStrided1d(long *, __pyx_pybuffernd_idxa.rcbuffer->pybuffer.buf, __pyx_t_117, __pyx_pybuffernd_idxa.diminfo[0].strides));
+    __pyx_t_119 = 2;
+    __pyx_t_120 = __pyx_v_j;
+    __pyx_t_121 = 2;
+    *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_node_outv.data + __pyx_t_120 * __pyx_v_node_outv.strides[0]) ) + __pyx_t_121 * __pyx_v_node_outv.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_new_nodev.data + __pyx_t_118 * __pyx_v_new_nodev.strides[0]) ) + __pyx_t_119 * __pyx_v_new_nodev.strides[1]) )));
   }
 
   /* "meshCalc.pyx":676
