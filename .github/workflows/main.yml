@@ -108,7 +108,7 @@ jobs:
           mkdir -p macdmg
           ./build-app.sh
           cd dist
-          zip -r ResIPy-macos.zip ResIPy.app
+          zip -r ResIPy-macos.zip ResIPy-macos.app
           cd ../..
           
 
