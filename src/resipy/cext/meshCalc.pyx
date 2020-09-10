@@ -189,10 +189,10 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int i, j, tid #thread indexing 
     cdef int numel = connection.shape[0]
     #face arrays 
-    cdef long[:,:] face1s = np.zeros((3,num_threads),dtype=int)
-    cdef long[:,:] face2s = np.zeros((3,num_threads),dtype=int)
-    cdef long[:,:] face3s = np.zeros((3,num_threads),dtype=int)
-    cdef long[:,:] face4s = np.zeros((3,num_threads),dtype=int)
+    cdef long[:] face1s = np.zeros(3,dtype=int)
+    cdef long[:] face2s = np.zeros(3,dtype=int)
+    cdef long[:] face3s = np.zeros(3,dtype=int)
+    cdef long[:] face4s = np.zeros(3,dtype=int)
     #cdef long[:,:] face np.zeros((4,num_threads),dtype=int)
     #combination array 
     cdef np.ndarray[long, ndim=2] tri_combo = np.zeros((numel,4),dtype=int,order='C') # allocate space for tri_combo 
@@ -203,23 +203,21 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int pad = len(str(num_node))
     
     #assign unique node combinations to each element edge, repeats pick out neighbours
-    #for i in range(numel):
-    for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
-        tid = openmp.omp_get_thread_num()
-        face1s[0,tid] = connection[i,1]; face1s[1,tid] = connection[i,2]; face1s[2,tid] = connection[i,3]
-        face2s[0,tid] = connection[i,0]; face2s[1,tid] = connection[i,3]; face2s[2,tid] = connection[i,2]
-        face3s[0,tid] = connection[i,0]; face3s[1,tid] = connection[i,1]; face3s[2,tid] = connection[i,3]
-        face4s[0,tid] = connection[i,0]; face4s[1,tid] = connection[i,1]; face4s[2,tid] = connection[i,2]
+    for i in range(numel):
+        face1s[0] = connection[i,1]; face1s[1] = connection[i,2]; face1s[2] = connection[i,3]
+        face2s[0] = connection[i,0]; face2s[1] = connection[i,3]; face2s[2] = connection[i,2]
+        face3s[0] = connection[i,0]; face3s[1] = connection[i,1]; face3s[2] = connection[i,3]
+        face4s[0] = connection[i,0]; face4s[1] = connection[i,1]; face4s[2] = connection[i,2]
         #sort face indexes 
-        sortInt(face1s[:,tid],3)
-        sortInt(face2s[:,tid],3)
-        sortInt(face3s[:,tid],3)
-        sortInt(face4s[:,tid],3)
+        sortInt(face1s,3)
+        sortInt(face2s,3)
+        sortInt(face3s,3)
+        sortInt(face4s,3)
         # assign each face an organised and unique code
-        tri_combov[i,0] = mergeInts(face1s[0,tid],face1s[1,tid],face1s[2,tid],pad) #face 1 
-        tri_combov[i,1] = mergeInts(face2s[0,tid],face2s[1,tid],face2s[2,tid],pad) #face 2 
-        tri_combov[i,2] = mergeInts(face3s[0,tid],face3s[1,tid],face3s[2,tid],pad) #face 3 
-        tri_combov[i,3] = mergeInts(face4s[0,tid],face4s[1,tid],face4s[2,tid],pad) #face 4
+        tri_combov[i,0] = mergeInts(face1s[0],face1s[1],face1s[2],pad) #face 1 
+        tri_combov[i,1] = mergeInts(face2s[0],face2s[1],face2s[2],pad) #face 2 
+        tri_combov[i,2] = mergeInts(face3s[0],face3s[1],face3s[2],pad) #face 3 
+        tri_combov[i,3] = mergeInts(face4s[0],face4s[1],face4s[2],pad) #face 4
 
     cdef np.ndarray[long, ndim=2] neigh = np.zeros((numel,4),dtype=int) # allocate space for neighbour matrix        
     cdef long[:,:] neighv = neigh  
@@ -232,8 +230,7 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef long[:] tri_sortv = tri_sort
     cdef int maxo = len(tri_sort)-1
 
-    cdef long[:] o = np.zeros(num_threads,dtype=int)
-    cdef long[:] idx = np.zeros(num_threads,dtype=int)
+    cdef long long o, idx
     #create lookup array 
     cdef np.ndarray[long, ndim=1] lookup = np.zeros((numel*4),dtype=int)
     for i in range(numel):
@@ -247,25 +244,24 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
   
     #loop is parallel becuase it can be intense
     for i in prange(numel,nogil=True,num_threads=num_threads,schedule='dynamic'):
-        tid = openmp.omp_get_thread_num()
         for j in range(4):
-            o[tid] = bisection_search(tri_sortv,tri_combov[i,j]) # only works on a sorted array
+            o = bisection_search(tri_sortv,tri_combov[i,j]) # only works on a sorted array
             #find the reference index
-            if lookup_idxv[o[tid]]==i:# then there are 2 options 
+            if lookup_idxv[o]==i:# then there are 2 options 
                 #1 ) the face in question is unique or
                 #2 ) the index is o+1 or o-1
-                if o[tid] != maxo and tri_sortv[o[tid]+1] == tri_combov[i,j]:
-                    o[tid] += 1
-                elif o[tid] !=0 and tri_sortv[o[tid]-1] == tri_combov[i,j]:
-                    o[tid] -= 1
+                if o != maxo and tri_sortv[o+1] == tri_combov[i,j]:
+                    o = o+1
+                elif o !=0 and tri_sortv[o-1] == tri_combov[i,j]:
+                    o = o-1
                 else: # unique face on edge of mesh 
-                    o[tid] = -1   
+                    o = -1   
             
-            if o[tid] == -1: 
-                idx[tid] = -1  
+            if o == -1: 
+                idx = -1  
             else:
-                idx[tid] = lookup_idxv[o[tid]]
-            neighv[i,j] = idx[tid]
+                idx = lookup_idxv[o]
+            neighv[i,j] = idx
     
     if return_tri_combo==1:
         return neigh,tri_combo
@@ -328,7 +324,7 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
             fconnectionv[i,j] = connection[fidx,nmap[fnumi,j]]
             #find missing node in future? 
         
-    return fconnection, idxa
+    return fconnection, idx
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -384,7 +380,7 @@ def neigh2d(long[:,:] connection, int return_tri_combo=1):
     cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
     cdef np.ndarray[long, ndim=1] tri_sort = tri_flatten[temp_idx] # sorted faces (forward direction)
     cdef int maxo = len(tri_sort)-1
-    cdef long long int o
+    cdef long long o
     cdef int idx
     
     cdef np.ndarray[long, ndim=1] lookup = np.zeros((numel*4),dtype=int)
@@ -479,6 +475,7 @@ def split_tri(long[:,:] connection, double[:,:] node):
                        [1, 4, 3],
                        [2, 5, 4],
                        [3, 4, 5]]
+    cdef long[:,:] remapv = np.asarray(remap,dtype=int)
     
     cdef list unicl, idx, node_id 
     
@@ -529,9 +526,9 @@ def split_tri(long[:,:] connection, double[:,:] node):
     
         tmpi = i*4 # temporary index for indexing new connection matrix
         for j in range(4):
-            new_connectionv[tmpi+j,0] = n[remap[j][0]]
-            new_connectionv[tmpi+j,1] = n[remap[j][1]]
-            new_connectionv[tmpi+j,2] = n[remap[j][2]]
+            new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+            new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+            new_connectionv[tmpi+j,2] = n[remapv[j,2]]
             
     ### make new node matrix ### 
     cdef int added_nodes = len(idx)
@@ -608,6 +605,7 @@ def split_tetra(long[:,:] connection, double[:,:] node):
                        [8, 5, 9, 6],
                        [4, 5, 6, 8],
                        [4, 1, 5, 8]]
+    cdef long[:,:] remapv = np.asarray(remap,dtype=int)
     
     cdef list unicl, idx, node_id 
     
@@ -657,10 +655,10 @@ def split_tetra(long[:,:] connection, double[:,:] node):
     
         tmpi = i*8 # temporary index for indexing new connection matrix
         for j in range(8):
-            new_connectionv[tmpi+j,0] = n[remap[j][0]]
-            new_connectionv[tmpi+j,1] = n[remap[j][1]]
-            new_connectionv[tmpi+j,2] = n[remap[j][2]]
-            new_connectionv[tmpi+j,3] = n[remap[j][3]]
+            new_connectionv[tmpi+j,0] = n[remapv[j,0]]
+            new_connectionv[tmpi+j,1] = n[remapv[j,1]]
+            new_connectionv[tmpi+j,2] = n[remapv[j,2]]
+            new_connectionv[tmpi+j,3] = n[remapv[j,3]]
             
     ### make new node matrix ### 
     cdef np.ndarray[double, ndim=2] node_out = np.zeros((num_nodes+added_nodes,3),dtype=float)
@@ -713,24 +711,13 @@ def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
     cdef np.ndarray[double, ndim=1] node_x = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
     cdef np.ndarray[double, ndim=1] node_y = np.asarray(node[:,1],dtype=float)
     cdef np.ndarray[double, ndim=1] node_z = np.asarray(node[:,2],dtype=float)
-    cdef double[:] node_xv = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
-    cdef double[:] node_yv = np.asarray(node[:,1],dtype=float)
-    cdef double[:] node_zv = np.asarray(node[:,2],dtype=float)
+    cdef double[:] nodex = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
+    cdef double[:] nodey = np.asarray(node[:,1],dtype=float)
+    cdef double[:] nodez = np.asarray(node[:,2],dtype=float)
 
     #looping variables 
-    cdef np.ndarray[double,ndim=3] v = np.zeros((3,3,num_threads),dtype=float) # matrix
-    cdef np.ndarray[double,ndim=2] v1 = np.zeros((3,num_threads)) # comparison vector 
-    cdef np.ndarray[double,ndim=2] v2 = np.zeros((3,num_threads))
-    cdef np.ndarray[double,ndim=2] v3 = np.zeros((3,num_threads))
-    cdef np.ndarray[double,ndim=2] S = np.zeros((3,num_threads))
-    #memory views of the above
-    cdef double[:,:,:] vv = v
-    cdef double[:,:] v1v = v1 
-    cdef double[:,:] v2v = v2 
-    cdef double[:,:] v3v = v3
-    cdef double[:,:] Sv = S 
+    cdef double v00,v01,v02,v10,v11,v12,v20,v21,v22,s0,s1,s2, N 
     
-    cdef double[:] N = np.zeros(num_threads,dtype=float)# orientation indicator 
     cdef np.ndarray[long, ndim=1] ccw = np.zeros(numel,dtype=int) # clockwise array 
     cdef long[:] ccwv = ccw #clockwise view
     cdef Py_ssize_t i 
@@ -741,30 +728,30 @@ def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
 
     #with nogil, parallel(num_threads=num_threads):
     for i in prange(numel,nogil=True,num_threads=num_threads,schedule='static'):
-        tid = openmp.omp_get_thread_num()
-        for k in range(3): # work out delta matrix 
-            vv[0,k,tid] = node_xv[connection[i,k+1]] - node_xv[connection[i,0]] 
-            vv[1,k,tid] = node_yv[connection[i,k+1]] - node_yv[connection[i,0]] 
-            vv[2,k,tid] = node_zv[connection[i,0]] - node_zv[connection[i,k+1]] 
-            
-        for k in range(3): #extract delta vectors 
-            v1v[k,tid] = vv[k,0,tid]
-            v2v[k,tid] = vv[k,1,tid]
-            v3v[k,tid] = vv[k,2,tid]
+        v00 = nodex[connection[i,1]] - nodex[connection[i,0]] 
+        v01 = nodex[connection[i,2]] - nodex[connection[i,0]] 
+        v02 = nodex[connection[i,3]] - nodex[connection[i,0]] 
+        v10 = nodey[connection[i,1]] - nodey[connection[i,0]] 
+        v11 = nodey[connection[i,2]] - nodey[connection[i,0]] 
+        v12 = nodey[connection[i,3]] - nodey[connection[i,0]] 
+        v20 = nodez[connection[i,0]] - nodez[connection[i,1]]
+        v21 = nodez[connection[i,0]] - nodez[connection[i,2]]
+        v22 = nodez[connection[i,0]] - nodez[connection[i,3]]
         
         #compute cross product
-        Sv[0,tid] = v1v[1,tid]*v2v[2,tid] - v1v[2,tid]*v2v[1,tid]
-        Sv[1,tid] = v1v[2,tid]*v2v[0,tid] - v1v[0,tid]*v2v[2,tid]
-        Sv[2,tid] = v1v[0,tid]*v2v[1,tid] - v1v[1,tid]*v2v[0,tid]
-        #compute dot product (gives orientation)
-        N[tid] = Sv[0,tid]*v3v[0,tid] + Sv[1,tid]*v3v[1,tid] + Sv[2,tid]*v3v[2,tid]
+        s0 = v01*v12 - v02*v11
+        s1 = v02*v10 - v00*v12
+        s2 = v00*v11 - v01*v10
         
-        if N[tid]>0: # then tetrahedra is clockwise 
+        #compute dot product (gives orientation)
+        N = s0*v20 + s1*v21 + s2*v22
+        
+        if N>0: # then tetrahedra is clockwise 
             countv[i] = 1
             conv[i,1] = connection[i,0]
             conv[i,0] = connection[i,1]
             ccwv[i] = 1
-        elif N[tid]<0: # then its counter clockwise 
+        elif N<0: # then its counter clockwise 
             conv[i,0] = connection[i,0]
             conv[i,1] = connection[i,1]
             ccwv[i] = 2
@@ -776,7 +763,7 @@ def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
         conv[i,3] = connection[i,3]
         
     for i in range(numel):
-        if ccw[i]==0:
+        if ccwv[i]==0:
             raise ValueError('Element %i has all colinear nodes, thus is poorly formed and can not be ordered'%ei)
     count_out = sum(count)
             
@@ -1024,3 +1011,122 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
                 ocheckv[i] = 1 
                 
     return ocheck
+
+def paramLookup(long[:] param, long[:,:] neigh):
+    
+    cdef int numel = param.shape[0]
+    cdef int nneigh = neigh.shape[1] # number of nieghbours 
+    cdef np.ndarray[long, ndim=2] out = np.zeros(neigh.shape,dtype=int)
+    cdef long[:,:] outv = out # memory view 
+    cdef int i,j #looping variables 
+    
+    for i in range(numel):
+        for j in range(nneigh):
+            outv[i,j] = param[neigh[i,j]]
+    return out
+
+#nsizeA and finite element conductance calculation
+def conductanceCall(long[:,:] connection, int numnp, int typ=0,
+                    int num_threads=1):
+    """Calculate the array size needed for the finite element conductance matrix
+    in R2 class codes 
+
+    Parameters
+    ----------
+    connection: numpy array 
+        mesh connection matrix.
+    node: numpy array
+        mesh node matrix.
+    typ: vtk cell type
+        DESCRIPTION. The default is 0. Will raise an error if takes an 
+        unexpected value. 
+
+    Returns
+    -------
+    nsizeA : int
+        Number of connected nodes + number of nodes
+
+    Note
+    -----
+    typ is 5 for triangle meshes, 8 or 9 for quads, 10 for tetrahedra, 13 for 
+    a prism. 
+    """
+    cdef int nmax = 60
+    cdef int numel = connection.shape[0]
+    cdef int nedges 
+    cdef int pad = len(str(numnp))
+    cdef long[:] a, b
+    cdef np.ndarray[long long, ndim=1] idx, counts, # unique counts and indices 
+    cdef np.ndarray[long long, ndim=1] uni, combof # uni segment combinations 
+    cdef np.ndarray[long, ndim=2] Nconnec = np.zeros((numnp,nmax),dtype=int) - 1
+    cdef long[:,:] Nconnecv = Nconnec
+
+    #determine number of edges 
+    if typ==5:#then elements are triangles
+        nedges = 3
+        a = np.asarray([0,1,2], dtype=int)
+        b = np.asarray([1,2,0], dtype=int)
+    elif typ==8 or typ==9:#elements are quads
+        nedges = 4
+        a = np.asarray([0,1,2,3], dtype=int)
+        b = np.asarray([1,2,3,0], dtype=int)
+    elif typ == 10:# elements are tetrahedra 
+        nedges = 6
+        a = np.asarray([0,1,2,3,3,3], dtype=int)
+        b = np.asarray([1,2,0,0,1,2], dtype=int)
+    elif typ == 13: # elements are 3d wedges 
+        nedges = 9
+        a = np.asarray([0,1,2, 3,4,5, 0,1,2], dtype=int)
+        b = np.asarray([1,2,0, 4,5,3, 3,4,5], dtype=int)
+    else: 
+        raise ValueError('Cell type argument does not match vtk cell types,', 
+                         'used with meshTools must be one of the following:',
+                         '5, 8, 9, 10 or 13')
+
+    #looping variables     
+    cdef long long[:,:] combo = np.zeros((numel,nedges),dtype=np.int64)
+    cdef long[:] nodes = np.zeros(2,dtype=int)
+    cdef int i,j,k
+    cdef long long merged 
+    cdef long na, nb, nid
+    
+    #find unique node combinations 
+    with nogil, parallel(num_threads=num_threads):
+        for i in prange(numel,schedule='dynamic', chunksize=1):
+            for j in range(nedges):
+                na = connection[i,a[j]]
+                nb = connection[i,b[j]] 
+                if na < nb:
+                    merged = mergeInt(na,nb,pad) # merge
+                else:
+                    merged = mergeInt(nb,na,pad) # merge
+                combo[i,j] = merged       
+                
+                #create the conductance matrix             
+                for k in range(nmax):
+                    nid= Nconnecv[na,k]
+                    if nid == -1: # then its not been assigned as a pair
+                        Nconnecv[na,k] = nb
+                        break # break out the loop 
+                    elif nid == nb: #its already been assigned 
+                        break # so break out 
+                    
+                for k in range(nmax):#same as above but for the inverse
+                    nid = Nconnecv[nb,k]
+                    if nid == -1:
+                        Nconnecv[nb,k] = na
+                        break
+                    elif nid == na:
+                        break
+
+    #pure python code 
+    combof = np.asarray(combo,dtype=np.int64).flatten()
+    uni, idx, counts = np.unique(combof, 
+                                 return_index=True, 
+                                 return_counts=True)
+    if max(counts) > 60: 
+        raise Exception('Too many connected nodes (>%i) check that mesh is not poorly formed.'%nmax)
+        
+    cdef int nsizeA = len(uni) + numnp # nsizeA can now be computed 
+    
+    return nsizeA, Nconnec
