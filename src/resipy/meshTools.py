@@ -2095,8 +2095,6 @@ class Mesh:
         if edge_color == None or edge_color=='none' or edge_color=='None':
             edge_color='face'#set the edge colours to the colours of the polygon patches
         
-
-
         tmesh = self.truncateMesh(xlim,ylim,zlim)
         
         # search through each element to see if it is on the edge of the mesh, 
@@ -2106,10 +2104,11 @@ class Mesh:
         tmesh.computeNeigh()
         fcon, idx = mc.faces3d(tmesh.connection, 
                                tmesh.neigh_matrix)
+        
 
-        node_x = self.node[:,0]
-        node_y = self.node[:,1]
-        node_z = self.node[:,2]
+        node_x = tmesh.node[:,0]
+        node_y = tmesh.node[:,1]
+        node_z = tmesh.node[:,2]
         
         face_list = [(0,0,0)]*fcon.shape[0]
         for i in range(fcon.shape[0]):
