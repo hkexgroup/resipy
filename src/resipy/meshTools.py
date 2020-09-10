@@ -2814,9 +2814,15 @@ class Mesh:
                 fid.write('%i %i %i 0 %i\n'%(self.numel,self.numnp,1,self.type2VertsNo()))
             else:
                 fid.write('%i %i %i\n'%(self.numel,self.numnp,idirichlet))
-            param = np.array(self.df['param'])
-
-            zone = np.array(self.df['zone'])
+            
+            try:
+                param = np.array(self.df['param'])
+            except:
+                param = np.arange(1,self.numel+1)
+            try:
+                zone = np.array(self.df['zones'])
+            except:
+                zone = np.ones(self.numel,dtype=int)
 
             #write out elements         
             no_verts = self.type2VertsNo()
@@ -2867,7 +2873,7 @@ class Mesh:
             
         # element parameters 
         param = np.array(self.df['param'])
-        zone = np.array(self.df['zone'])
+        zone = np.array(self.df['zones'])
          
         #compute neighbourhood matrix 
         if self.neigh_matrix is None:
@@ -3638,7 +3644,7 @@ def dat_import(file_path='mesh.dat', order_nodes=True):
                 cell_type = [cell_type],#according to vtk format
                 order_nodes = order_nodes)
     
-    mesh.addAttribute(zone,'zone')
+    mesh.addAttribute(zone,'zones')
     
     return mesh 
         
