@@ -1688,7 +1688,7 @@ class Survey(object):
     def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
                            background_color=(0.8,0.8,0.8), elec_color='k',
-                           strIdx=None):
+                           strIdx=None, magFlag=False):
         """Create a pseudo-section for 3D surface array.
         
         Parameters
@@ -1716,6 +1716,9 @@ class Survey(object):
         strIdx: list, optional 
             returned from R2.detectStrings method. Each entry in list is an 
             array like of ints defining an electrode string. 
+        magFlag: bool, optional
+            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            `False`, resistance values are given with correct polarity.
         """
         if not pyvista_installed:
             print('pyvista not installed, cannot show 3D pseudo section')
@@ -1739,6 +1742,9 @@ class Survey(object):
         # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
+        if magFlag: # 
+            self.checkTxSign()
+            
         if geom: # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
