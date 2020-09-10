@@ -3500,7 +3500,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 seqCreateFunc()
             except:
-                self.errorDump('Error in sequence generation! Use a cutom sequence instead.')
+                self.errorDump('Error in sequence generation! Use a custom sequence instead.')
                 return
             if len(self.r2.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
