@@ -333,9 +333,12 @@ class Mesh:
         mesh.df = self.df.copy()
         
         #electrode handling
-        mesh.eNodes = self.eNodes
-        if self.eNodes is not None:
-            mesh.setElecNode(self.eNodes)
+        try:
+            mesh.eNodes = self.eNodes
+            if self.eNodes is not None:
+                mesh.setElecNode(self.eNodes)
+        except:
+            pass
         mesh.iremote = self.iremote
         mesh.zone = self.zone
         
