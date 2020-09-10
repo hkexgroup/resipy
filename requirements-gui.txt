@@ -1,0 +1,10 @@
+numpy
+matplotlib==3.2.1
+pandas
+scipy
+requests
+psutil
+pyvista
+pyvistaqt
+PyQt5
+vtk==8.1.2
