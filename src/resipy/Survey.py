@@ -1587,7 +1587,7 @@ class Survey(object):
     
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
-                           vmin=None, vmax=None, column='resist'):
+                           vmin=None, vmax=None, column='resist', magFlag=False):
         """Create a pseudo-section for 2D given electrode positions.
         
         Parameters
@@ -1606,9 +1606,15 @@ class Survey(object):
             Minimum value for the colorbar.
         vmax : float, optional
             Maximum value for the colorbar.
+        magFlag: bool, optional
+            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            `False`, resistance values are given with correct polarity.
         """
         resist = self.df[column].values.copy()
         xpos, _, ypos = self._computePseudoDepth()
+        
+        if magFlag: # in case magnitude is provided
+            self.checkTxSign()
         
         if geom: # compute and applied geometric factor
             self.computeK()
@@ -1742,7 +1748,7 @@ class Survey(object):
         # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
-        if magFlag: # 
+        if magFlag: # for cR3t and its magnitude calculation
             self.checkTxSign()
             
         if geom: # compute and applied geometric factor

@@ -3534,7 +3534,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.r2.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
                                               magFlag=magFlag, strIdx=self.seqIdx)
                 self.fwdContour.setDisabled(True)#can't contour 3D data atm 
-                self.pseudoFrame.setVisible(True)
+                self.pseudoFramefwd.setVisible(True)
             else:
                 self.mwFwdPseudo.plot(partial(self.r2.surveys[0].showPseudo, magFlag=magFlag), aspect='auto')
                 
@@ -3547,7 +3547,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.mwFwdPseudoIP.hide()
                     self.pseudo3DplotterIP.clear() # clear all actors 
                     self.r2.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, strIdx=self.seqIdx)
-                    self.pseudoFrameIP.setVisible(True)
+                    self.pseudoFrameIPfwd.setVisible(True)
                 else:
                     self.mwFwdPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
                 
@@ -3560,20 +3560,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwFwdPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP.setVisible(False)
         if pvfound:
-            self.pseudoFrame = QFrame()
+            self.pseudoFramefwd = QFrame()
             vlayout = QVBoxLayout()
-            self.pseudo3Dplotter = QtInteractor(self.pseudoFrame)
+            self.pseudo3Dplotter = QtInteractor(self.pseudoFramefwd)
             vlayout.addWidget(self.pseudo3Dplotter.interactor)
-            self.pseudoFrame.setLayout(vlayout)
-            self.pseudoFrame.setVisible(False)
+            self.pseudoFramefwd.setLayout(vlayout)
+            self.pseudoFramefwd.setVisible(False)
             
             #IP 3D fwd pseudo section
-            self.pseudoFrameIP = QFrame()
+            self.pseudoFrameIPfwd = QFrame()
             vlayout = QVBoxLayout()
-            self.pseudo3DplotterIP = QtInteractor(self.pseudoFrameIP)
+            self.pseudo3DplotterIP = QtInteractor(self.pseudoFrameIPfwd)
             vlayout.addWidget(self.pseudo3DplotterIP.interactor)
-            self.pseudoFrameIP.setLayout(vlayout)
-            self.pseudoFrameIP.setVisible(False)
+            self.pseudoFrameIPfwd.setLayout(vlayout)
+            self.pseudoFrameIPfwd.setVisible(False)
 
         self.forwardLogText = QTextEdit()
         self.forwardLogText.setReadOnly(True)
@@ -3640,8 +3640,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if pvfound:
             pvFwdBottomWidget = QWidget()
             pvFwdBottomLayout = QHBoxLayout()
-            pvFwdBottomLayout.addWidget(self.pseudoFrame, 50)
-            pvFwdBottomLayout.addWidget(self.pseudoFrameIP, 50)
+            pvFwdBottomLayout.addWidget(self.pseudoFramefwd, 50)
+            pvFwdBottomLayout.addWidget(self.pseudoFrameIPfwd, 50)
             pvFwdBottomWidget.setLayout(pvFwdBottomLayout)
         
         forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
