@@ -3560,45 +3560,58 @@ class R2(object): # R2 master class instanciated by the GUI
               'schlum2': schlum2,
               'multigrad': multigrad,
               'custSeq': addCustSeq}
-        
-        if autoDS and seqIdx is None:
-            seqIdx = self.detectStrings(*kwargs)
 
-        if self.typ[-1] == 't': #its 3D 
-            #determine sequence index if not already given 
-            if seqIdx is None: #(not been set, so use electrode strings)
-                if not self.hasElecString():
-                    raise ValueError('Electrode strings have not been set')
-                else:
-                    seqIdx = self._seqIdxFromLabel()
-
-            elif type(seqIdx) != list: # check we have a list 
-                raise TypeError('Expected list type argument for seqIdx')
-            
-            #sequentially go through and create sequences for each electrode string 
-            qs = []
-            nseq = len(seqIdx) # number of sequences (ie num of lines strings)
-            for i in range(nseq):
-                nelec = len(seqIdx[i])
-                slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
-                for p in params:
-                    if p[0] == 'custSeq':
-                        try:
-                            qs.append(addCustSeq(p[1]))
-                        except Exception as e:
-                            print('error when importing custom sequence:', e)
+        if self.typ[-1] == 't': #its 3D
+            custSeq = False
+            for p in params:
+                if p[0] == 'custSeq':
+                    custSeq = True # we can't have custom sequence mixed with auto generated sequences in 3D - too complicated!
+                    print('Custom sequence detected. Skipping auto sequence generation...')
+                    sequence = addCustSeq(p[1]).astype(str)
+                    for i in range(sequence.shape[0]):
+                        for j in range(sequence.shape[1]):
+                            sequence[i,j] = '1 '+ str(sequence[i,j])
+                    break # only one custom sequence allowed
+                
+            if custSeq is False:
+                if autoDS and seqIdx is None: # find surface lines bearings
+                    seqIdx = self.detectStrings(*kwargs)
+                    
+                #determine sequence index if not already given 
+                if seqIdx is None: #(not been set, so use electrode strings)
+                    if not self.hasElecString():
+                        raise ValueError('Electrode strings have not been set')
                     else:
-                        pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
-                        str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
-                        qs.append(slabels[str_seq-1])
-                        
-            sequence = np.vstack(qs)
-            if not self.hasElecString():
-                # if it's 3D, we need the line number for the sequence 
-                # (so all electrode on line 1)
-                for i in range(sequence.shape[0]):
-                    for j in range(sequence.shape[1]):
-                        sequence[i,j] = '1 '+ sequence[i,j]
+                        seqIdx = self._seqIdxFromLabel()
+    
+                elif type(seqIdx) != list: # check we have a list 
+                    raise TypeError('Expected list type argument for seqIdx')
+                
+                #sequentially go through and create sequences for each electrode string
+                qs = []
+                nseq = len(seqIdx) # number of sequences (ie num of lines strings)
+                for i in range(nseq):
+                    nelec = len(seqIdx[i])
+                    slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
+                    for p in params:
+                        # if p[0] == 'custSeq':
+                        #     try:
+                        #         qs.append(addCustSeq(p[1]))
+                        #     except Exception as e:
+                        #         print('error when importing custom sequence:', e)
+                        # else:
+                            pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                            str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
+                            qs.append(slabels[str_seq-1])
+                            
+                sequence = np.vstack(qs)
+                if not self.hasElecString():
+                    # if it's 3D, we need the line number for the sequence 
+                    # (so all electrode on line 1)
+                    for i in range(sequence.shape[0]):
+                        for j in range(sequence.shape[1]):
+                            sequence[i,j] = '1 '+ sequence[i,j]
+   
                     
         else: #its 2D 
             nelec = self.elec.shape[0] 
