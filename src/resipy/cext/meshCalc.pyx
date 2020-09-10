@@ -115,31 +115,30 @@ cdef double fmin(double[:] arr) nogil: # import note: You need to pass the memor
     return tmp
 
 @cython.boundscheck(False)
-@cython.wraparound(False)
-cdef long tetra_signp(double[:] a, double[:] b, double [:] c, double[:] d,
-                      double[:,:] vv, double[:] v1v, double[:] v2v,
-                      double[:] v3v, double[:] Sv) nogil:
+@cython.wraparound(False)    
+cdef long tetra_signp(double[:] a, double[:] b, double [:] c,  double [:] d) nogil:
     #parrall nogil tetra sign code, but needs memory views passed to it 
-    cdef double N
-    cdef int k 
-
-    for k in range(3):
-        vv[k,0] = b[k] - a[k]
-        vv[k,1] = c[k] - a[k]
-        vv[k,2] = d[k] - a[k]
+    cdef double v00,v01,v02,v10,v11,v12,v20,v21,v22,s0,s1,s2, N 
     
-    for k in range(3): #extract delta vectors 
-        v1v[k] = vv[k,0]
-        v2v[k] = vv[k,1]
-        v3v[k] = vv[k,2]
+    #matrix entries 
+    v00 = b[0] - a[0] # x row
+    v01 = c[0] - a[0]
+    v02 = d[0] - a[0] 
+    v10 = b[1] - a[1] # y row 
+    v11 = c[1] - a[1] 
+    v12 = d[1] - a[1]
+    v20 = b[2] - a[2] # z row 
+    v21 = c[2] - a[2]
+    v22 = d[2] - a[2]
     
     #compute cross product
-    Sv[0] = v1v[1]*v2v[2] - v1v[2]*v2v[1]
-    Sv[1] = v1v[2]*v2v[0] - v1v[0]*v2v[2]
-    Sv[2] = v1v[0]*v2v[1] - v1v[1]*v2v[0]
+    s0 = v01*v12 - v02*v11
+    s1 = v02*v10 - v00*v12
+    s2 = v00*v11 - v01*v10
+    
     #compute dot product (gives orientation)
-    N = Sv[0]*v3v[0] + Sv[1]*v3v[1] + Sv[2]*v3v[2]
-        
+    N = s0*v20 + s1*v21 + s2*v22
+    
     if N>0:
         return 1 # points are clockwise
     elif N<0:
@@ -161,11 +160,11 @@ cdef void sortInt(long[:] arr, int n) nogil:
         arr[j + 1] = key 
     #return arr
 
-cdef long long int mergeInts(int a, int b, int c, int pad) nogil: # merge 3 ints 
+cdef long long mergeInts(int a, int b, int c, int pad) nogil: # merge 3 ints 
     cdef long long int x = a*10**pad + b # merge a and b
     return x*10**pad + c # merge c 
 
-cdef long long int mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
+cdef long long mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
     return a*10**pad + b # merge a and b
 
 @cython.boundscheck(False)    
@@ -324,7 +323,7 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
             fconnectionv[i,j] = connection[fidx,nmap[fnumi,j]]
             #find missing node in future? 
         
-    return fconnection, idx
+    return fconnection, idxa
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -943,89 +942,65 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
 
     #looping variables 
     cdef int i,j, tid
-    cdef double[:] bqz = np.zeros(num_threads)
-    cdef double[:,:] x = np.zeros((3,num_threads))
-    cdef double[:,:] y = np.zeros((3,num_threads))
-    cdef double[:,:] z = np.zeros((3,num_threads))
-    cdef double[:] xm = np.zeros(num_threads)
-    cdef double[:] ym = np.zeros(num_threads)
+    cdef double bqz, xx, yy, xm, ym
     
-    cdef double[:,:] q1 = np.zeros((3,num_threads))
-    cdef double[:,:] q2 = np.zeros((3,num_threads))
-    cdef double[:,:] p1 = np.zeros((3,num_threads))
-    cdef double[:,:] p2 = np.zeros((3,num_threads))
-    cdef double[:,:] p3 = np.zeros((3,num_threads))
+    cdef double[:,:] q0 = np.zeros((nfaces,3))#query points 
+    cdef double[:,:] q1 = np.zeros((nfaces,3))
+    cdef double[:,:] p0 = np.zeros((nfaces,3))
+    cdef double[:,:] p1 = np.zeros((nfaces,3))
+    cdef double[:,:] p2 = np.zeros((nfaces,3))
     
-    cdef long[:] s1 = np.zeros(num_threads,dtype=int)
-    cdef long[:] s2 = np.zeros(num_threads,dtype=int)
-    cdef long[:] s3 = np.zeros(num_threads,dtype=int)
-    cdef long[:] s4 = np.zeros(num_threads,dtype=int)
-    cdef long[:] s5 = np.zeros(num_threads,dtype=int)
-
-    #memory views for parallel sign calculation 
-    cdef double[:,:,:] vv = np.zeros((3,3,num_threads),dtype=float) # matrix
-    cdef double[:,:] v1v = np.zeros((3,num_threads)) # comparison vector 
-    cdef double[:,:] v2v = np.zeros((3,num_threads)) # comparison vector 
-    cdef double[:,:] v3v = np.zeros((3,num_threads)) # comparison vector 
-    cdef double[:,:] Sv = np.zeros((3,num_threads)) # cross product 
+    cdef long s1,s2,s3,s4,s5
     
-
-    # extract surface cells 
-    #with nogil, parallel(num_threads=num_threads):
-    for i in prange(nfaces,nogil=True,num_threads=num_threads,schedule='static'):
-        tid = openmp.omp_get_thread_num()
-        for j in range(3):
-            x[j,tid] = node_xv[fconnection[i,j]]
-            y[j,tid] = node_yv[fconnection[i,j]]
-            z[j,tid] = node_zv[fconnection[i,j]]
-        
-        xm[tid] = (x[0,tid] + x[1,tid] + x[2,tid])/3
-        ym[tid] = (y[0,tid] + y[1,tid] + y[2,tid])/3
-        
-        bqz[tid] = cellcentres[i,2]
-        q1[0,tid] = xm[tid]; q1[1,tid] = ym[tid]; q1[2,tid] = tqz # top query point 
-        q2[0,tid] = xm[tid]; q2[1,tid] = ym[tid]; q2[2,tid] = bqz[tid] #bottom query point 
-        
-        p1[0,tid] = x[0,tid]; p1[1,tid] = y[0,tid];  p1[2,tid] = z[0,tid]
-        p2[0,tid] = x[1,tid]; p2[1,tid] = y[1,tid];  p2[2,tid] = z[1,tid]
-        p3[0,tid] = x[2,tid]; p3[1,tid] = y[2,tid];  p3[2,tid] = z[2,tid]
-        
-        s1[tid] = tetra_signp(q1[:,tid],p1[:,tid],p2[:,tid],p3[:,tid],
-                              vv[:,:,tid], v1v[:,tid], v2v[:,tid],
-                              v3v[:,tid], Sv[:,tid])
-        s2[tid] = tetra_signp(q2[:,tid],p1[:,tid],p2[:,tid],p3[:,tid],
-                              vv[:,:,tid], v1v[:,tid], v2v[:,tid],
-                              v3v[:,tid], Sv[:,tid])
-        
-        if s1[tid] != s2[tid]:
-            s3[tid] = tetra_signp(q1[:,tid],q2[:,tid],p1[:,tid],p2[:,tid],
-                                  vv[:,:,tid], v1v[:,tid], v2v[:,tid],
-                                  v3v[:,tid], Sv[:,tid])
-            s4[tid] = tetra_signp(q1[:,tid],q2[:,tid],p2[:,tid],p3[:,tid],
-                                  vv[:,:,tid], v1v[:,tid], v2v[:,tid],
-                                  v3v[:,tid], Sv[:,tid])
-            s5[tid] = tetra_signp(q1[:,tid],q2[:,tid],p3[:,tid],p1[:,tid],
-                                  vv[:,:,tid], v1v[:,tid], v2v[:,tid],
-                                  v3v[:,tid], Sv[:,tid])
-            if s3[tid] == s4[tid] and s4[tid] == s5[tid]:
-                ocheckv[i] = 1 
+    #construct query arrays for each element and extract surface cells 
+    with nogil, parallel(num_threads=num_threads):
+        for i in prange(nfaces,schedule='dynamic', chunksize=1):
+            xx = 0
+            yy = 0 
+            for j in range(3):
+                xx = xx + node_xv[fconnection[i,j]]
+                yy = yy + node_yv[fconnection[i,j]]
+                
+            xm = xx/3 # x mid 
+            ym = yy/3 # y mid 
+            bqz = cellcentres[i,2] # zmid 
+            
+            q0[i,0] = xm
+            q0[i,1] = ym
+            q0[i,2] = tqz # top query point 
+            
+            q1[i,0] = xm
+            q1[i,1] = ym
+            q1[i,2] = bqz #bottom query point 
+            
+            p0[i,0] = node_xv[fconnection[i,0]] # corner 1 
+            p0[i,1] = node_yv[fconnection[i,0]]
+            p0[i,2] = node_zv[fconnection[i,0]]
+            
+            p1[i,0] = node_xv[fconnection[i,1]] # corner 2
+            p1[i,1] = node_yv[fconnection[i,1]]
+            p1[i,2] = node_zv[fconnection[i,1]]
+            
+            p2[i,0] = node_xv[fconnection[i,2]] # corner 3
+            p2[i,1] = node_yv[fconnection[i,2]]
+            p2[i,2] = node_zv[fconnection[i,2]]
+            
+            s1 = tetra_signp(q0[i,:],p0[i,:],p1[i,:],p2[i,:])
+            s2 = tetra_signp(q1[i,:],p0[i,:],p1[i,:],p2[i,:])
+            
+            if s1 != s2: # then query point is either side of the triangle so probe
+                s3 = tetra_signp(q0[i,:],q1[i,:],p0[i,:],p1[i,:])
+                s4 = tetra_signp(q0[i,:],q1[i,:],p1[i,:],p2[i,:])
+                s5 = tetra_signp(q0[i,:],q1[i,:],p2[i,:],p0[i,:])
+    
+                if s3 == s4 and s4 == s5:
+                    ocheckv[i] = 1 
                 
     return ocheck
 
-def paramLookup(long[:] param, long[:,:] neigh):
-    
-    cdef int numel = param.shape[0]
-    cdef int nneigh = neigh.shape[1] # number of nieghbours 
-    cdef np.ndarray[long, ndim=2] out = np.zeros(neigh.shape,dtype=int)
-    cdef long[:,:] outv = out # memory view 
-    cdef int i,j #looping variables 
-    
-    for i in range(numel):
-        for j in range(nneigh):
-            outv[i,j] = param[neigh[i,j]]
-    return out
-
 #nsizeA and finite element conductance calculation
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def conductanceCall(long[:,:] connection, int numnp, int typ=0,
                     int num_threads=1):
     """Calculate the array size needed for the finite element conductance matrix
@@ -1104,7 +1079,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
                 
                 #create the conductance matrix             
                 for k in range(nmax):
-                    nid= Nconnecv[na,k]
+                    nid = Nconnecv[na,k]
                     if nid == -1: # then its not been assigned as a pair
                         Nconnecv[na,k] = nb
                         break # break out the loop 
