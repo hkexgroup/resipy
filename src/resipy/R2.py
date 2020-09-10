@@ -288,6 +288,7 @@ class R2(object): # R2 master class instanciated by the GUI
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
         self.fwdErrModel = False # is there is a impoforward modelling error already (due to the mesh)?
+        self.custSeq = False # flag - True if of 3D custom sequence imported
         self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
         self.surfaceIdx = None # used to show plan view iterations of 3D inversions
 
@@ -3560,45 +3561,52 @@ class R2(object): # R2 master class instanciated by the GUI
               'schlum2': schlum2,
               'multigrad': multigrad,
               'custSeq': addCustSeq}
-        
-        if autoDS and seqIdx is None:
-            seqIdx = self.detectStrings(*kwargs)
 
-        if self.typ[-1] == 't': #its 3D 
-            #determine sequence index if not already given 
-            if seqIdx is None: #(not been set, so use electrode strings)
-                if not self.hasElecString():
-                    raise ValueError('Electrode strings have not been set')
-                else:
-                    seqIdx = self._seqIdxFromLabel()
-
-            elif type(seqIdx) != list: # check we have a list 
-                raise TypeError('Expected list type argument for seqIdx')
-            
-            #sequentially go through and create sequences for each electrode string 
-            qs = []
-            nseq = len(seqIdx) # number of sequences (ie num of lines strings)
-            for i in range(nseq):
-                nelec = len(seqIdx[i])
-                slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
-                for p in params:
-                    if p[0] == 'custSeq':
-                        try:
-                            qs.append(addCustSeq(p[1]))
-                        except Exception as e:
-                            print('error when importing custom sequence:', e)
+        if self.typ[-1] == 't': #its 3D
+            for p in params:
+                if p[0] == 'custSeq' and p[1] != '':
+                    self.custSeq = True # we can't have custom sequence mixed with auto generated sequences in 3D - too complicated!
+                    print('Custom sequence detected. Skipping auto sequence generation...')
+                    sequence = addCustSeq(p[1]).astype(str)
+                    for i in range(sequence.shape[0]):
+                        for j in range(sequence.shape[1]):
+                            sequence[i,j] = '1 '+ str(sequence[i,j])
+                    break # only one custom sequence allowed
+                
+            if self.custSeq is False:
+                if autoDS and seqIdx is None: # find surface lines bearings
+                    seqIdx = self.detectStrings(*kwargs)
+                    
+                #determine sequence index if not already given 
+                if seqIdx is None: #(not been set, so use electrode strings)
+                    if not self.hasElecString():
+                        raise ValueError('Electrode strings have not been set')
                     else:
-                        pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
-                        str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
-                        qs.append(slabels[str_seq-1])
-                        
-            sequence = np.vstack(qs)
-            if not self.hasElecString():
-                # if it's 3D, we need the line number for the sequence 
-                # (so all electrode on line 1)
-                for i in range(sequence.shape[0]):
-                    for j in range(sequence.shape[1]):
-                        sequence[i,j] = '1 '+ sequence[i,j]
+                        seqIdx = self._seqIdxFromLabel()
+    
+                elif type(seqIdx) != list: # check we have a list 
+                    raise TypeError('Expected list type argument for seqIdx')
+                
+                #sequentially go through and create sequences for each electrode string
+                qs = []
+                nseq = len(seqIdx) # number of sequences (ie num of lines strings)
+                for i in range(nseq):
+                    nelec = len(seqIdx[i])
+                    slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
+                    for p in params:
+                        if p[0] != 'custSeq': # not sure how to remove this from params
+                            pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
+                            str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
+                            qs.append(slabels[str_seq-1])
+                            
+                sequence = np.vstack(qs)
+                if not self.hasElecString():
+                    # if it's 3D, we need the line number for the sequence 
+                    # (so all electrode on line 1)
+                    for i in range(sequence.shape[0]):
+                        for j in range(sequence.shape[1]):
+                            sequence[i,j] = '1 '+ sequence[i,j]
+   
                     
         else: #its 2D 
             nelec = self.elec.shape[0] 
@@ -3780,6 +3788,13 @@ class R2(object): # R2 master class instanciated by the GUI
             self.mesh.dat(os.path.join(fwdDir, 'mesh3d.dat'))
             
         # write the forward .in file
+        if self.custSeq is True: # only in case of 3D custom sequence
+            # replacing labels with <1 elec_num> for simplicity - ignoring the initial self.elec['label'] values
+            ones = np.ones_like(self.elec['x'].values.astype(str))
+            newLabels = np.char.add(np.char.replace(ones, '1', '1 '), np.arange(1, len(ones)+1).astype(str))
+            self.elec['label'] = newLabels
+            self.param['node_elec'][0] = newLabels
+            
         dump('Writing .in file and mesh.dat... ')
         fparam = self.param.copy()
         fparam['job_type'] = 0
@@ -4720,7 +4735,7 @@ class R2(object): # R2 master class instanciated by the GUI
                 count += 1
         print("%i surveys removed as they had no measurements!"%count)
         
-    def _estimateMemory(self,dump=print,inverse=True,debug=False):
+    def _estimateMemory(self, dump=print, inverse=True, debug=False):
         """More accurate calculation of the amount of memory required
         to run a forward model or inversion. 
         

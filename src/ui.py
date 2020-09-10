@@ -930,6 +930,7 @@ class App(QMainWindow):
                 self.tabPreProcessing.setTabEnabled(3, False)
                 self.regionTable.setColumnHidden(1, True)
                 if self.r2.iForward == True:
+                    self.mwFwdPseudo.setVisible(True)
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
@@ -3374,6 +3375,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.labels[-1].setText('s=')
                     
             def remove(self):
+                if self.seq == 'custSeq':
+                    self.fname = ''
                 self.combo.deleteLater()
                 for w in self.fields:
                     w.deleteLater()
@@ -3382,8 +3385,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.rmBtn.deleteLater()
                 self.importBtn.deleteLater()
                 self.deleteLater()
-                if self.seq == 'custSeq':
-                    self.fname = ''
+                
             
             def getData(self):
                 if self.seq == 'custSeq':
@@ -3414,7 +3416,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum1': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
-           'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-'
+           'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-\n' \
+               'It is recommended to use a custom sequence in case of "unconventional surveys"'
             }
         
         arrayLabel = QLabel('Sequence help will be display here.')
@@ -3451,7 +3454,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 except:# Exception as e:
                     pass
 #                    print('object does not exist', e)
-            print('sequences = ', vals)
             return vals
 #        getDataBtn = QPushButton('Get Data')
 #        getDataBtn.clicked.connect(getDataBtnFunc)
@@ -3498,7 +3500,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 seqCreateFunc()
             except:
-                self.errorDump('Error in sequence generation')
+                self.errorDump('Error in sequence generation! Use a cutom sequence instead.')
                 return
             if len(self.r2.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
@@ -3525,8 +3527,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if pvfound and self.r2.typ[-1]=='t': # 3D pseudo-sections?
                 self.mwFwdPseudo.hide()
                 self.pseudo3Dplotter.clear() # clear all actors 
-                self.r2.surveys[0]._showPseudoSection3D(ax=self.pseudo3Dplotter,
-                                                        strIdx=self.seqIdx)
+                self.r2.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
+                                              strIdx=self.seqIdx)
                 self.fwdContour.setDisabled(True)#can't contour 3D data atm 
                 self.pseudoFrame.setVisible(True)
             else:
@@ -3537,7 +3539,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.tabs.setTabEnabled(5, True)
             # self.tabs.setTabEnabled(6, True)
             if self.r2.typ[0] == 'c':
-                self.mwFwdPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
+                if pvfound and self.r2.typ[-1]=='t':
+                    self.mwFwdPseudoIP.hide()
+                    self.pseudo3DplotterIP.clear() # clear all actors 
+                    self.r2.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, strIdx=self.seqIdx)
+                    self.pseudoFrameIP.setVisible(True)
+                else:
+                    self.mwFwdPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
                 
         self.forwardBtn = QPushButton('Forward Modelling')
         self.forwardBtn.setAutoDefault(True)
@@ -3554,6 +3562,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vlayout.addWidget(self.pseudo3Dplotter.interactor)
             self.pseudoFrame.setLayout(vlayout)
             self.pseudoFrame.setVisible(False)
+            
+            #IP 3D fwd pseudo section
+            self.pseudoFrameIP = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudo3DplotterIP = QtInteractor(self.pseudoFrameIP)
+            vlayout.addWidget(self.pseudo3DplotterIP.interactor)
+            self.pseudoFrameIP.setLayout(vlayout)
+            self.pseudoFrameIP.setVisible(False)
 
         self.forwardLogText = QTextEdit()
         self.forwardLogText.setReadOnly(True)
@@ -3565,6 +3581,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             QApplication.processEvents()
             if text == 'Forward modelling done.':
                 forwardOutputStack.setCurrentIndex(1) # switch to graph
+                if pvfound and self.r2.typ[-1]=='t':
+                    forwardOutputStack.setCurrentIndex(2)
                 
         def fwdContourFunc(state):
             if state == Qt.Checked:
@@ -3614,9 +3632,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudo)
         forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudoIP)
         self.mwFwdPseudoIP.hide()
+        
         if pvfound:
-            forwardPseudoLayoutBottom.addWidget(self.pseudoFrame)
-            #self.pseudoFrame.hide()
+            pvFwdBottomWidget = QWidget()
+            pvFwdBottomLayout = QHBoxLayout()
+            pvFwdBottomLayout.addWidget(self.pseudoFrame, 50)
+            pvFwdBottomLayout.addWidget(self.pseudoFrameIP, 50)
+            pvFwdBottomWidget.setLayout(pvFwdBottomLayout)
         
         forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
 
@@ -3626,6 +3648,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(self.forwardLogText)
         forwardOutputStack.addWidget(forwardPseudos)
+        forwardOutputStack.addWidget(pvFwdBottomWidget)
         forwardOutputStack.setCurrentIndex(0)
                 
         # general forward layout
@@ -5619,8 +5642,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.nbElecEdit.setEnabled(True)
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
+            if pvfound: # 3D pseudo-sections?
+                self.pseudo3Dplotter.clear()
+                self.pseudo3DplotterIP.clear()
             
-
         # inversion settings
         self.flux_type.setCurrentIndex(0)
         self.singular_type.setChecked(False)
