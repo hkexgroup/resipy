@@ -282,8 +282,12 @@ class Mesh:
         
         self.mesh_title = "2D_R2_mesh"
         self.no_attributes = 0
+        
+        #mesh calculations 
         self.neigh_matrix = None # neighbour matrix, not usually needed unless for 3d tetrahedra problems 
         self.tri_combo = None
+        self.NsizeA = None # Nconnec + numnp  
+        self.fconm = None # finite element conductance matrix
         
         #decide on number of dimensions
         if max(node_y) - min(node_y) < 1e-16 or max(node_z) - min(node_z) < 1e-16: # mesh is probably 2D 
@@ -723,6 +727,11 @@ class Mesh:
         else:
             return 
         
+    def computeNconnec(self):
+        cell_type = self.cell_type[0]
+        self.NsizeA, self.fconm = mc.conductanceCall(self.connection, self.numnp,
+                                                     cell_type,ncores)
+        
     def refine(self):
         """Refine the mesh into smaller elements 
         """
@@ -988,6 +997,7 @@ class Mesh:
         else:  ### Extract 3D faces of top of the mesh ###
             fcon, outelem = mc.faces3d(self.connection,
                                        neigh) # first get external faces 
+            # outelem = np.array(outelem)
             points = self.elmCentre[outelem]#get middle points of elements with external face 
                 
             # extract surface cells             
@@ -1035,7 +1045,6 @@ class Mesh:
                 return nmesh
         
     #%% Truncating the mesh 
-    
     def __rmexcessNodes(self):
         """ Remove any nodes are not inside the connection matrix
         """
@@ -1330,6 +1339,7 @@ class Mesh:
         """
         t = np.array([x,y,z]).T
         self.node += t
+        self.cellCentres()
         
     def trans_mesh(self,x,y,z):
         warnings.warn("trans_mesh is depreciated, use transMesh instead", DeprecationWarning)
@@ -2085,79 +2095,14 @@ class Mesh:
         if edge_color == None or edge_color=='none' or edge_color=='None':
             edge_color='face'#set the edge colours to the colours of the polygon patches
         
+
+
+        tmesh = self.truncateMesh(xlim,ylim,zlim)
+        
         # search through each element to see if it is on the edge of the mesh, 
         # this step is important as it is very expensive to plot anything in 3D using matplotlib 
         # triangles on the edge of the mesh will be used only once
-
-        ### start of old code ### 
-        # elm_x = self.elmCentre[:,0]
-        # elm_y = self.elmCentre[:,1]
-        # elm_z = self.elmCentre[:,2]
-        # in_elem = in_box(elm_x,elm_y,elm_z,xlim[1],xlim[0],ylim[1],ylim[0],zlim[1],zlim[0])#find elements veiwable in axis
-        # X = X[in_elem]#reassign X to elements inside the box limits 
-        # temp_con_mat = self.connection.copy() #temporary connection matrix which is just the elements inside the box
-        # con_mat=temp_con_mat[in_elem,:] # truncate elements
-        # inside_numel = len(con_mat[0])#number of inside elements 
-        # tri_combo = np.zeros((inside_numel,4),dtype='float64')
-                
-        # for i in range(inside_numel):
-        #     idx1 = con_mat[i][0]#extract indexes 
-        #     idx2 = con_mat[i][1]
-        #     idx3 = con_mat[i][2]
-        #     idx4 = con_mat[i][3]
-            
-        #     face1 = idx1*idx2*idx3 # assign each face a code
-        #     face2 = idx1*idx2*idx4
-        #     face3 = idx2*idx3*idx4
-        #     face4 = idx1*idx4*idx3
-
-        #     tri_combo[i,0] = face1#face 1 
-        #     tri_combo[i,1] = face2#face 2 
-        #     tri_combo[i,2] = face3#face 3 
-        #     tri_combo[i,3] = face4#face 4 
-            
-        # temp,index,counts = np.unique(tri_combo.flatten(),return_index=True,return_counts=True) # find the unique values 
-        # single_vals_idx = counts==1 # faces on edge of volume only appear once
-        # edge_element_idx = index[single_vals_idx]/4
-        # face_element_idx = np.floor(edge_element_idx)
-        # face_probe = edge_element_idx - np.floor(edge_element_idx)
         
-        # truncated_numel = len(face_element_idx)
-        # face_list = [0] * truncated_numel
-        # assign = [0] * truncated_numel # the number assigned to each face
-        # sensi = [0] * truncated_numel # the sensitivity assigned to each face
-        
-        # node_x = self.node[:,0]
-        # node_y = self.node[:,1]
-        # node_z = self.node[:,2]
-        
-        # for i in range(truncated_numel):
-        #     ref = int(face_element_idx[i])
-        #     idx1 = con_mat[ref][0]
-        #     idx2 = con_mat[ref][1]
-        #     idx3 = con_mat[ref][2]
-        #     idx4 = con_mat[ref][3]
-            
-        #     vert1 = (node_x[idx1], node_y[idx1], node_z[idx1])
-        #     vert2 = (node_x[idx2], node_y[idx2], node_z[idx2])
-        #     vert3 = (node_x[idx3], node_y[idx3], node_z[idx3])
-        #     vert4 = (node_x[idx4], node_y[idx4], node_z[idx4])
-            
-        #     if face_probe[i] == 0: #if single_val_idx. == 0 > face1
-        #         face_list[i] = (vert1,vert2,vert3)#face 1 
-        #     elif face_probe[i] == 0.25:#if single_val_idx. == 0.25 > face2
-        #         face_list[i] = (vert1,vert2,vert4)#face 2
-        #     elif face_probe[i] == 0.5:#if single_val_idx. == 0.5 > face3
-        #         face_list[i] = (vert2,vert3,vert4)#face 3 
-        #     elif face_probe[i] == 0.75:#if single_val_idx. == 0.75 > face4
-        #         face_list[i] = (vert1,vert4,vert3)#face 4
-            
-        #     assign[i] = X[ref]#get attribute value into assigned array
-        #     sensi[i] = S[ref]
-        
-        #### end of old code #### 
-        ### start of new code ### 
-        tmesh = self.truncateMesh(xlim,ylim,zlim)
         tmesh.computeNeigh()
         fcon, idx = mc.faces3d(tmesh.connection, 
                                tmesh.neigh_matrix)
@@ -2176,8 +2121,6 @@ class Mesh:
         
         assign = X[idx]
         sensi = S[idx]
-        
-        #### end of new code ####
           
         polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
         polly.set_alpha(alpha)#add some transparancy to the elements
@@ -2845,8 +2788,7 @@ class Mesh:
         self.dat(file_path)
         
     def dat(self, file_path='mesh.dat'):
-        """Write a mesh.dat kind of file for mesh input for R2. R2 takes a mesh
-        input file for triangular and quadrilateral meshes.
+        """Write a mesh.dat kind of file for mesh input for R2/R3t. 
         
         Parameters
         ----------
@@ -2874,7 +2816,7 @@ class Mesh:
                 fid.write('%i %i %i\n'%(self.numel,self.numnp,idirichlet))
             param = np.array(self.df['param'])
 
-            zone = np.array(self.df['zones'])
+            zone = np.array(self.df['zone'])
 
             #write out elements         
             no_verts = self.type2VertsNo()
@@ -2901,6 +2843,80 @@ class Mesh:
                               (ni_no,
                                node_x[i],
                                node_z[i]))
+                    
+    def datAdv(self, file_path='mesh.dat'):
+        """Write a mesh.dat kind of file for mesh input for R2/R3t. Advanced format
+        which includes the neighbourhood and conductance matrix. 
+        
+        Parameters
+        ----------
+        file_path : str, optional
+            Path to the file. By default 'mesh.dat' is saved in the working directory.
+        """
+        if not isinstance(file_path,str):
+            raise TypeError("Expected string argument for file_path")
+        if self.ndims == 2:
+            raise TypeError('Advanced mesh format not avialable with 2D meshes currently')
+            
+        # find furthest node from first electrode to be dirichlet node
+        xyz = self.node.copy() 
+        if self.eNodes  is not None:
+            idirichlet = np.argmax(np.sqrt(np.sum((xyz-xyz[self.eNodes [0],:])**2, axis=1)))
+        else:
+            idirichlet = self.numnp
+            
+        # element parameters 
+        param = np.array(self.df['param'])
+        zone = np.array(self.df['zone'])
+         
+        #compute neighbourhood matrix 
+        if self.neigh_matrix is None:
+            self.computeNeigh()
+        neigh = self.neigh_matrix.copy()
+        
+        #check if neigh parameters == element number 
+        if np.max(param) != self.numel:
+            neigh = param[neigh]
+        else:
+            neigh += 1 
+        
+        if self.NsizeA is None:
+            self.computeNconnec()
+        
+        NsizeA = self.NsizeA
+        fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
+        ### write data to mesh.dat kind of file ###
+        #open mesh.dat for input      
+        with open(file_path, 'w') as fid:
+            #write to mesh.dat total num of elements and nodes
+            if self.ndims == 3:
+                fid.write('%i\t%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),1,NsizeA)) # flags 
+            else:
+                fid.write('%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,1,NsizeA))
+            #write out elements         
+            no_verts = self.type2VertsNo()
+            for i in range(self.numel):
+                fid.write("%i\t"%(i+1)) # add element number 
+                [fid.write("%i\t"%(self.connection[i,k]+1)) for k in range(no_verts)] # connection matrix 
+                fid.write("%i\t%i\t"%(param[i],zone[i])) # parameter and zones 
+                [fid.write('%i\t'%neigh[i,k]) for k in range(neigh.shape[1])]#add neighbours 
+                fid.write('\n')#drop down a line 
+    
+            #now add nodes
+            if self.ndims == 3:
+                nidx = [0,1,2]
+            else:
+                nidx = [0,2]
+                
+            for i in range(self.numnp):
+                fid.write('{:16d}\t'.format(i+1)) # node number 
+                [fid.write('{:16.8f}\t'.format(self.node[i,k])) for k in nidx] # node coordinates 
+                [fid.write('{:16d}\t'.format(fconm[i,k])) for k in range(fconm.shape[1])] # add node connection matrix
+                fid.write('\n')#drop down a line 
+
+            if self.ndims==3: 
+                fid.write('{:d}'.format(idirichlet))
+                    
 
     def write_vtk(self, file_path="mesh.vtk", title=None, replace_nan=-9999):
         warnings.warn('write_vtk is depreciated, use vtk instead')
