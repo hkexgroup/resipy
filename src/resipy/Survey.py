@@ -172,6 +172,7 @@ class Survey(object):
                 elec, data = protocolParser(fname, fwd=True)
             elif ftype == 'forwardProtocolIP':
                 elec, data = protocolParser(fname, ip=True, fwd=True)
+                self.protocolIPFlag = True
             elif ftype == 'Sting':
                 elec, data = stingParser(fname)
             elif ftype == 'ABEM-Lund':
