@@ -3518,7 +3518,7 @@ class R2(object): # R2 master class instanciated by the GUI
         return seqIdx
         
     def createSequence(self, params=[('dpdp1', 1, 8)], seqIdx=None,
-                       autoDS=True, *kwargs):
+                       *kwargs):
         """Creates a forward modelling sequence, see examples below for usage.
 
         Parameters
@@ -3531,11 +3531,6 @@ class R2(object): # R2 master class instanciated by the GUI
             Each entry in list contains electrode indices (not label and string)
             for a given electrode string which is to be sequenced. The advantage
             of a list means that sequences can be of different lengths. 
-        autoDS: bool
-            Automatically attempt to detect electrode strings, if seqIdx is None,
-            else if False the program falls back on the strings documented in
-            the electrode labels of self.elec
-
         Examples
         --------
         >>> k = R2()
@@ -3573,16 +3568,14 @@ class R2(object): # R2 master class instanciated by the GUI
                             sequence[i,j] = '1 '+ str(sequence[i,j])
                     break # only one custom sequence allowed
                 
-            if self.custSeq is False:
-                if autoDS and seqIdx is None: # find surface lines bearings
-                    seqIdx = self.detectStrings(*kwargs)
-                    
+            if self.custSeq is False:                    
                 #determine sequence index if not already given 
                 if seqIdx is None: #(not been set, so use electrode strings)
-                    if not self.hasElecString():
-                        raise ValueError('Electrode strings have not been set')
+                    if not self.hasElecString():#then find it automatically 
+                        seqIdx = self.detectStrings(*kwargs)
+                        #raise ValueError('Electrode strings have not been set')
                     else:
-                        seqIdx = self._seqIdxFromLabel()
+                        seqIdx = self._seqIdxFromLabel()#use electrode strings 
     
                 elif type(seqIdx) != list: # check we have a list 
                     raise TypeError('Expected list type argument for seqIdx')
@@ -3629,6 +3622,11 @@ class R2(object): # R2 master class instanciated by the GUI
         self.sequence = sequence
         print('{:d} quadrupoles generated.'.format(self.sequence.shape[0]))
         return seqIdx
+    
+    def createSequenceXBH(self):
+        """Custom scheme for boreholes (not yet developed)
+        """
+        pass
 
 
     def saveSequence(self, fname=''):
