@@ -177,4 +177,4 @@ the latest release available.
 
 Zenodo project DOI: [![zenodo doi](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
 
-Coverage (part of the code covered by the CI test): [![coverage report](https://gitlab.com/hkex/pyr2/badges/master/coverage.svg)](https://gitlab.com/hkex/pyr2/-/commits/master)
+Coverage (part of the code covered by the CI test): [![coverage report](https://gitlab.com/hkex/resipy/badges/master/coverage.svg)](https://gitlab.com/hkex/resipy/-/commits/master)
