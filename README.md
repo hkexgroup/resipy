@@ -13,8 +13,8 @@ ResIPy aims to be
 Downloads
 ---------
 Version 3.0.0:<br>
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.0-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.0-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-macOS.dmg "wine is required - see below")
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-macOS.dmg "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.0-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-linux)
 
 Note for Windows users:
@@ -155,9 +155,9 @@ Below are the links to current and previous releases of ResIPy/pyR2. Note that p
 the latest release available.
 
 *Current stable release*:
-- v3.0.0
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.0-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.0-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-macOS.dmg "wine is required - see below")
+- v3.0.1
+[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-windows.exe)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-macOS.dmg "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.0-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
 
 *Past releases*:
