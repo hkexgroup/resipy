@@ -3633,8 +3633,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardPseudoLayout = QVBoxLayout()
         
         forwardPseudoLayoutBottom = QHBoxLayout()
-        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudo)
-        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudoIP)
+        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudo, 50)
+        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudoIP, 50)
         self.mwFwdPseudoIP.hide()
         
         if pvfound:
