@@ -15,7 +15,7 @@ Downloads
 Version 3.0.1:<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.0-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-linux)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-linux)
 
 Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
@@ -28,7 +28,7 @@ Notes for Mac and Linux users:
 Zip files:<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.1%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-windows.zip)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.1%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-macos.zip)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.0%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-linux.zip)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.1%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-linux.zip)
 
 
 What it can do
@@ -158,7 +158,7 @@ the latest release available.
 - v3.0.1
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.0-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.0/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-linux "Tested on Debian10 and Ubuntu18.04.2")
 
 *Past releases*:
 - v2.2.2
