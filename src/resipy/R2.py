@@ -3811,18 +3811,35 @@ class R2(object): # R2 master class instanciated by the GUI
         seq = self.sequence
 
         # let's check if IP that we have a positive geometric factor
-        if self.typ == 'cR2': # NOTE this doesn't work for borehole
-            elecpos = self.elec['x'].values # and works only for 2D
-            array = seq.copy()
-            apos = elecpos[array[:,0]-1]
-            bpos = elecpos[array[:,1]-1]
-            mpos = elecpos[array[:,2]-1]
-            npos = elecpos[array[:,3]-1]
-            AM = np.abs(apos-mpos)
-            BM = np.abs(bpos-mpos)
-            AN = np.abs(apos-npos)
-            BN = np.abs(bpos-npos)
+        if self.typ[0] == 'c': # NOTE this doesn't work for borehole
+            lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+            seqdf = pd.DataFrame(seq).rename(columns = {0:'a', 1:'b', 2:'m', 3:'n'})
+            array = seqdf[['a','b','m','n']].astype(str).replace(lookupDict).values.astype(int)
+            elec = self.elec[['x','y','z']].values.copy()
+            
+            aposx = elec[:,0][array[:,0]]
+            aposy = elec[:,1][array[:,0]]
+            aposz = elec[:,2][array[:,0]]
+            
+            bposx = elec[:,0][array[:,1]]
+            bposy = elec[:,1][array[:,1]]
+            bposz = elec[:,2][array[:,1]]
+            
+            mposx = elec[:,0][array[:,2]]
+            mposy = elec[:,1][array[:,2]]
+            mposz = elec[:,2][array[:,2]]
+            
+            nposx = elec[:,0][array[:,3]]
+            nposy = elec[:,1][array[:,3]]
+            nposz = elec[:,2][array[:,3]]
+            
+            AM = np.sqrt((aposx-mposx)**2 + (aposy-mposy)**2 + (aposz-mposz)**2)
+            BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
+            AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
+            BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
+            
             K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
+            
             ie = K < 0
             seq2 = seq.copy()
             seq[ie,2] = seq2[ie,3] # swap if K is < 0
