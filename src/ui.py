@@ -3524,19 +3524,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.calcAspectRatio() # doesn't work for 3D?
             
             ### pseudo section plotting! ###
-            magFlag = False
-            if self.r2.typ[0] == 'c' and self.r2.typ[-1] == 't': #cR3t spits mag values not resistance
-                magFlag = True
             if pvfound and self.r2.typ[-1] == 't': # 3D pseudo-sections?
                 self.mwFwdPseudo.hide()
                 self.pseudo3Dplotter.clear() # clear all actors
 
                 self.r2.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
-                                              magFlag=magFlag, strIdx=self.seqIdx)
+                                              strIdx=self.seqIdx)
                 self.fwdContour.setDisabled(True)#can't contour 3D data atm 
                 self.pseudoFramefwd.setVisible(True)
             else:
-                self.mwFwdPseudo.plot(partial(self.r2.surveys[0].showPseudo, magFlag=magFlag), aspect='auto')
+                self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
                 
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)
