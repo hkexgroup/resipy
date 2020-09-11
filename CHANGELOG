@@ -1,4 +1,5 @@
 v3.0.1
+------
 - Bug fix: zoning in mesh generation
 - Bug fix: custom sequence importation in 3D forward modeling
 - Bug fix: 3D borehole forward modeling
