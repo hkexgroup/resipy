@@ -73,19 +73,25 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
-IMPORTANT NOTE: *wine* is partially supported on macOS Catalina! Please try installing *wine* v5.x with below instructions first.
+**IMPORTANT NOTE**: *wine* is partially supported on macOS Catalina! Please try installing *wine* v5.x with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
-You first need to install ```wine``` through ```homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
+You first need to install ```wine``` through ```Homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
 Open "terminal" and install ```homebrew``` with:
 ```
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 ```
 Follow the instructions. (You may need to install [Command Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/))   
-Once the ```homebrew``` installation is successfully done, install ```xquartz``` by below command in terminal:
+Once the ```Homebrew``` installation is successfully done, install ```xquartz``` by below command in terminal:
 ```
 brew cask install xquartz
 ```
 Then install ```wine```:
+
+On macOS Catalina and above:
+```
+brew cask install --no-quarantine wine-stable
+```
+For older macOS versions:
 ```
 brew install wine
 ```
@@ -99,9 +105,7 @@ You also can run any ```.exe``` files by this command:
 wine /your example.exe file directory/example.exe
 ```
 
-**NOTE: the first time you're running ```wine``` it will need to be updated and that will take some time.
-
-If *wine* does not run properly on your Catalina machine, try [these instructions](https://apple.stackexchange.com/questions/373851/how-to-get-wine-working-on-catalina/376427#376427) instead.
+**NOTE**: the first time you're running ```wine``` it will need to be updated and that will take some time.
 
 
 Feature request and bug report
