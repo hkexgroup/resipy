@@ -191,6 +191,16 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
     fh.close()
 
+#%% check mac version for wine
+def getMacOSVersion():
+    OpSys=platform.system()    
+    if OpSys=='Darwin':
+        versionList = platform.mac_ver()[0].split('.')
+        macVersion = float(versionList[0] + '.' + versionList[1]) # not getting patch version so xx.xx only
+        if macVersion >= 10.15:
+            return True
+        else:
+            return False
         
 #%% create mesh object
 class Mesh:
@@ -4080,14 +4090,17 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
         cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -2'+' '+'nt %i'%ncores
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
             cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', '-2','-nt','%i'%ncores] # using linux version if avialable (can be more performant)
@@ -4350,14 +4363,17 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
         cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3 -nt %i'%ncores 
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', '-nt','%i'%ncores]
@@ -4503,14 +4519,17 @@ def prismMesh(elec_x, elec_y, elec_z,
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
         cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
@@ -4607,14 +4626,17 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
         cmd_line = os.path.join(ewd, 'gmsh.exe') + ' ' + file_path + ' -3'
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd + '/gmsh.exe', file_path, '-3']
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_path, '-3']
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd + '/gmsh.exe', file_path, '-3']
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_path, '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh_linux', file_path, '-3']
