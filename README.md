@@ -75,35 +75,30 @@ sudo pacman -S install wine # if using arch based distribution
 
 **IMPORTANT NOTE**: *wine* is partially supported on macOS Catalina! Please try installing *wine* v5.x with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
+
 You first need to install ```wine``` through ```Homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
-Open "terminal" and install ```homebrew``` with:
+
+Open "terminal" and install ```Homebrew``` by pasting below in your terminal:
 ```
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 ```
 Follow the instructions. (You may need to install [Command Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/))   
-Once the ```Homebrew``` installation is successfully done, install ```xquartz``` by below command in terminal:
+
+Once the ```Homebrew``` installation is successfully done, install ```xquartz``` by pasting below command in terminal:
 ```
 brew cask install xquartz
 ```
 Then install ```wine```:
 
-On macOS Catalina and above:
+On macOS Catalina and higher (paste below in terminal):
 ```
 brew cask install --no-quarantine wine-stable
 ```
-For older macOS versions:
+On *older* macOS versions (paste below in terminal):
 ```
 brew install wine
 ```
-If all is done with no errors, you are ready to run the GUI by: 
-```
-cd resipy/src
-python ui.py
-``` 
-You also can run any ```.exe``` files by this command:
-```
-wine /your example.exe file directory/example.exe
-```
+If all is done with no errors, you are ready to run ResIPy!
 
 **NOTE**: the first time you're running ```wine``` it will need to be updated and that will take some time.
 
