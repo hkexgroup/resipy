@@ -112,7 +112,7 @@ You can also have a look at the FAQ and list of known issues on the [wiki](https
 
 Contributing
 ---------
-If you wish to contribute to the code, please familiarize yourself with the ![guidelines](./CONTRIBUTING.md).
+If you wish to contribute to the code, please familiarize yourself with the [guidelines](./CONTRIBUTING.md).
 
 
 Citing ResIPy
