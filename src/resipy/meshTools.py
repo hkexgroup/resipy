@@ -2898,16 +2898,16 @@ class Mesh:
         if self.NsizeA is None:
             self.computeNconnec()
         
-        NsizeA = self.NsizeA
+        # NsizeA = self.NsizeA
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
         ### write data to mesh.dat kind of file ###
         #open mesh.dat for input      
         with open(file_path, 'w') as fid:
             #write to mesh.dat total num of elements and nodes
             if self.ndims == 3:
-                fid.write('%i\t%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),1,NsizeA)) # flags 
+                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),1)) # flags 
             else:
-                fid.write('%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,1,NsizeA))
+                fid.write('%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,1))
             #write out elements         
             no_verts = self.type2VertsNo()
             for i in range(self.numel):
