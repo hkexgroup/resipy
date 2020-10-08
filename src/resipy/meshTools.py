@@ -2883,21 +2883,25 @@ class Mesh:
         # element parameters 
         param = np.array(self.df['param'])
         zone = np.array(self.df['zones'])
-         
-        #compute neighbourhood matrix 
-        if self.neigh_matrix is None:
-            self.computeNeigh()
-        neigh = self.neigh_matrix.copy()
         
-        #check if neigh parameters == element number 
-        if np.max(param) != self.numel:
-            neigh = param[neigh]
-        else:
-            neigh += 1 
-        
-        if self.NsizeA is None:
-            self.computeNconnec()
-        
+        adv = True
+        adv_flag = 0 
+        if adv: #if advanced mode
+            adv_flag = 1
+            #compute neighbourhood matrix 
+            if self.neigh_matrix is None:
+                self.computeNeigh()
+            neigh = self.neigh_matrix.copy()
+            
+            #check if neigh parameters == element number 
+            if np.max(param) != self.numel:
+                neigh = param[neigh]
+            else:
+                neigh += 1 
+            
+            if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
+                self.computeNconnec()
+            
         # NsizeA = self.NsizeA
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
         ### write data to mesh.dat kind of file ###
@@ -2905,16 +2909,17 @@ class Mesh:
         with open(file_path, 'w') as fid:
             #write to mesh.dat total num of elements and nodes
             if self.ndims == 3:
-                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),1)) # flags 
+                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),adv_flag)) # flags 
             else:
-                fid.write('%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,1))
+                fid.write('%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,adv_flag))
             #write out elements         
             no_verts = self.type2VertsNo()
             for i in range(self.numel):
-                fid.write("%i\t"%(i+1)) # add element number 
-                [fid.write("%i\t"%(self.connection[i,k]+1)) for k in range(no_verts)] # connection matrix 
-                fid.write("%i\t%i\t"%(param[i],zone[i])) # parameter and zones 
-                [fid.write('%i\t'%neigh[i,k]) for k in range(neigh.shape[1])]#add neighbours 
+                fid.write("{:<16d} ".format(i+1)) # add element number 
+                [fid.write("{:<16d} ".format(self.connection[i,k]+1)) for k in range(no_verts)] # connection matrix 
+                fid.write("{:<16d} {:<16d} ".format(param[i],zone[i])) # parameter and zones 
+                if adv: # add neighbours in advanced mode
+                    [fid.write('{:<16d} '.format(neigh[i,k])) for k in range(neigh.shape[1])]#add neighbours 
                 fid.write('\n')#drop down a line 
     
             #now add nodes
@@ -2924,9 +2929,10 @@ class Mesh:
                 nidx = [0,2]
                 
             for i in range(self.numnp):
-                fid.write('{:16d}\t'.format(i+1)) # node number 
-                [fid.write('{:16.8f}\t'.format(self.node[i,k])) for k in nidx] # node coordinates 
-                [fid.write('{:16d}\t'.format(fconm[i,k])) for k in range(fconm.shape[1])] # add node connection matrix
+                fid.write('{:<16d} '.format(i+1)) # node number 
+                [fid.write('{:<16.8f} '.format(self.node[i,k])) for k in nidx] # node coordinates 
+                if adv: #add conductance matrix in advanced mode 
+                    [fid.write('{:<16d} '.format(fconm[i,k])) for k in range(fconm.shape[1])] 
                 fid.write('\n')#drop down a line 
 
             if self.ndims==3: 
