@@ -3,6 +3,7 @@ v3.0.2
 - Bug fix: design Mesh throwing ".isnan() attribute not found"
 - Bug fix: Xbh hot fix
 
+
 v3.0.1
 ------
 - Bug fix: zoning in mesh generation
