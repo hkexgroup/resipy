@@ -79,23 +79,23 @@ ResIPy cannot be run from within the dmg. You must drag it to a folder on your f
 You first need to install ```wine``` through ```Homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
 
 Open "terminal" and install ```Homebrew``` by pasting below in your terminal:
-```
+```sh
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 ```
 Follow the instructions. (You may need to install [Command Line Tools](http://osxdaily.com/2014/02/12/install-command-line-tools-mac-os-x/))   
 
 Once the ```Homebrew``` installation is successfully done, install ```xquartz``` by pasting below command in terminal:
-```
+```sh
 brew cask install xquartz
 ```
 Then install ```wine```:
 
 On macOS Catalina and higher (paste below in terminal):
-```
+```sh
 brew cask install --no-quarantine wine-stable
 ```
 On *older* macOS versions (paste below in terminal):
-```
+```sh
 brew install wine
 ```
 If all is done with no errors, you are ready to run ResIPy!
@@ -160,10 +160,6 @@ the latest release available.
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.2/ResIPy-linux)
 
 *Past releases*:
-- v3.0.1
-[![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.1-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-windows.exe)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.1-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.1-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.1/ResIPy-linux)
 - v2.2.2
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v2.2.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v2.2.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v2.2.2/ResIPy-macOS.dmg)
