@@ -778,6 +778,7 @@ class App(QMainWindow):
         def importDataRecipBtnFunc(): # import reciprocal file
             fnameRecip, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
+                self.loadingWidget('Loading data, please wait...', False)
                 self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
                 # if float(self.spacingEdit.text()) == -1:
                 #     spacing = None
@@ -802,6 +803,7 @@ class App(QMainWindow):
                 if self.r2.typ[0] == 'c':
                     self.plotPseudoIP()
                 self.plotManualFiltering()
+                self.loadingWidget(exitflag=True)
                 self.infoDump(fnameRecip + ' imported successfully')
         self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
         self.importDataRecipBtn.setAutoDefault(True)
