@@ -778,6 +778,7 @@ class App(QMainWindow):
         def importDataRecipBtnFunc(): # import reciprocal file
             fnameRecip, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
+                self.loadingWidget('Loading data, please wait...', False)
                 self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
                 # if float(self.spacingEdit.text()) == -1:
                 #     spacing = None
@@ -802,6 +803,7 @@ class App(QMainWindow):
                 if self.r2.typ[0] == 'c':
                     self.plotPseudoIP()
                 self.plotManualFiltering()
+                self.loadingWidget(exitflag=True)
                 self.infoDump(fnameRecip + ' imported successfully')
         self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
         self.importDataRecipBtn.setAutoDefault(True)
@@ -2689,7 +2691,7 @@ class App(QMainWindow):
             self.iDesign = True
             # read electrodes locations
             elec = self.elecTable.getTable()
-            if elec['x'].isnan().sum() > 0:
+            if elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             
@@ -3524,19 +3526,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.calcAspectRatio() # doesn't work for 3D?
             
             ### pseudo section plotting! ###
-            magFlag = False
-            if self.r2.typ[0] == 'c' and self.r2.typ[-1] == 't': #cR3t spits mag values not resistance
-                magFlag = True
             if pvfound and self.r2.typ[-1] == 't': # 3D pseudo-sections?
                 self.mwFwdPseudo.hide()
                 self.pseudo3Dplotter.clear() # clear all actors
 
                 self.r2.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
-                                              magFlag=magFlag, strIdx=self.seqIdx)
+                                              strIdx=self.seqIdx)
                 self.fwdContour.setDisabled(True)#can't contour 3D data atm 
                 self.pseudoFramefwd.setVisible(True)
             else:
-                self.mwFwdPseudo.plot(partial(self.r2.surveys[0].showPseudo, magFlag=magFlag), aspect='auto')
+                self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
                 
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)

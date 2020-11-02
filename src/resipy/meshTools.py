@@ -191,6 +191,16 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
     fh.close()
 
+#%% check mac version for wine
+def getMacOSVersion():
+    OpSys=platform.system()    
+    if OpSys=='Darwin':
+        versionList = platform.mac_ver()[0].split('.')
+        macVersion = float(versionList[0] + '.' + versionList[1]) # not getting patch version so xx.xx only
+        if macVersion >= 10.15:
+            return True
+        else:
+            return False
         
 #%% create mesh object
 class Mesh:
@@ -2874,38 +2884,43 @@ class Mesh:
         # element parameters 
         param = np.array(self.df['param'])
         zone = np.array(self.df['zones'])
-         
-        #compute neighbourhood matrix 
-        if self.neigh_matrix is None:
-            self.computeNeigh()
-        neigh = self.neigh_matrix.copy()
         
-        #check if neigh parameters == element number 
-        if np.max(param) != self.numel:
-            neigh = param[neigh]
-        else:
-            neigh += 1 
-        
-        if self.NsizeA is None:
-            self.computeNconnec()
-        
-        NsizeA = self.NsizeA
+        adv = True
+        adv_flag = 0 
+        if adv: #if advanced mode
+            adv_flag = 1
+            #compute neighbourhood matrix 
+            if self.neigh_matrix is None:
+                self.computeNeigh()
+            neigh = self.neigh_matrix.copy()
+            
+            #check if neigh parameters == element number 
+            if np.max(param) != self.numel:
+                neigh = param[neigh]
+            else:
+                neigh += 1 
+            
+            if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
+                self.computeNconnec()
+            
+        # NsizeA = self.NsizeA
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
         ### write data to mesh.dat kind of file ###
         #open mesh.dat for input      
         with open(file_path, 'w') as fid:
             #write to mesh.dat total num of elements and nodes
             if self.ndims == 3:
-                fid.write('%i\t%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),1,NsizeA)) # flags 
+                fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),adv_flag)) # flags 
             else:
-                fid.write('%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,1,NsizeA))
+                fid.write('%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,adv_flag))
             #write out elements         
             no_verts = self.type2VertsNo()
             for i in range(self.numel):
-                fid.write("%i\t"%(i+1)) # add element number 
-                [fid.write("%i\t"%(self.connection[i,k]+1)) for k in range(no_verts)] # connection matrix 
-                fid.write("%i\t%i\t"%(param[i],zone[i])) # parameter and zones 
-                [fid.write('%i\t'%neigh[i,k]) for k in range(neigh.shape[1])]#add neighbours 
+                fid.write("{:<16d} ".format(i+1)) # add element number 
+                [fid.write("{:<16d} ".format(self.connection[i,k]+1)) for k in range(no_verts)] # connection matrix 
+                fid.write("{:<16d} {:<16d} ".format(param[i],zone[i])) # parameter and zones 
+                if adv: # add neighbours in advanced mode
+                    [fid.write('{:<16d} '.format(neigh[i,k])) for k in range(neigh.shape[1])]#add neighbours 
                 fid.write('\n')#drop down a line 
     
             #now add nodes
@@ -2915,9 +2930,10 @@ class Mesh:
                 nidx = [0,2]
                 
             for i in range(self.numnp):
-                fid.write('{:16d}\t'.format(i+1)) # node number 
-                [fid.write('{:16.8f}\t'.format(self.node[i,k])) for k in nidx] # node coordinates 
-                [fid.write('{:16d}\t'.format(fconm[i,k])) for k in range(fconm.shape[1])] # add node connection matrix
+                fid.write('{:<16d} '.format(i+1)) # node number 
+                [fid.write('{:<16.8f} '.format(self.node[i,k])) for k in nidx] # node coordinates 
+                if adv: #add conductance matrix in advanced mode 
+                    [fid.write('{:<16d} '.format(fconm[i,k])) for k in range(fconm.shape[1])] 
                 fid.write('\n')#drop down a line 
 
             if self.ndims==3: 
@@ -4234,14 +4250,17 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
         cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -2'+' '+'nt %i'%ncores
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
             cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', '-2','-nt','%i'%ncores] # using linux version if avialable (can be more performant)
@@ -4504,14 +4523,17 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
         cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3 -nt %i'%ncores 
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', '-nt','%i'%ncores]
@@ -4657,14 +4679,17 @@ def prismMesh(elec_x, elec_y, elec_z,
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
         cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
@@ -4761,14 +4786,17 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
 #        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
         cmd_line = os.path.join(ewd, 'gmsh.exe') + ' ' + file_path + ' -3'
     elif platform.system() == 'Darwin':
-            winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-            for stdout_line in iter(wine_path.stdout.readline, ''):
-                winePath.append(stdout_line)
-            if winePath != []:
-                cmd_line = ['%s' % (winePath[0].strip('\n')), ewd + '/gmsh.exe', file_path, '-3']
-            else:
-                cmd_line = ['/usr/local/bin/wine', ewd+'/gmsh.exe', file_path, '-3']
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd + '/gmsh.exe', file_path, '-3']
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_path, '-3']
     else:
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
             cmd_line = [ewd+'/gmsh_linux', file_path, '-3']
