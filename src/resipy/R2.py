@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '3.0.0' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.0.2' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -118,6 +118,16 @@ def getSysStat():
     ram_usage = ram[2]
     return cpu_speed, cpu_usage, ram_avail, ram_usage 
 
+def getMacOSVersion():
+    OpSys=platform.system()    
+    if OpSys=='Darwin':
+        versionList = platform.mac_ver()[0].split('.')
+        macVersion = float(versionList[0] + '.' + versionList[1]) # not getting patch version so xx.xx only
+        if macVersion >= 10.15:
+            return True
+        else:
+            return False
+        
 def systemCheck(dump=print):
     """Performs a simple diagnostic of the system, no input commands needed. System
     info is printed to screen, number of CPUs, memory and OS. This check is 
@@ -183,14 +193,17 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
                 
     elif OpSys=='Darwin':
         try: 
+            winetxt = 'wine'
+            if getMacOSVersion():
+                winetxt = 'wine64' 
             winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
             else:
-                is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
             wineVersion = []
             for stdout_line in iter(is_wine.stdout.readline, ""):
                 wineVersion.append(stdout_line)
@@ -2259,14 +2272,17 @@ class R2(object): # R2 master class instanciated by the GUI
             if OS == 'Windows':
                 cmd = [exePath]
             elif OS == 'Darwin':
+                winetxt = 'wine'
+                if getMacOSVersion():
+                    winetxt = 'wine64'
                 winePath = []
-                wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+                wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
                 for stdout_line in iter(wine_path.stdout.readline, ''):
                     winePath.append(stdout_line)
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = ['/usr/local/bin/wine', exePath]
+                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
             else:
                 cmd = ['wine',exePath]
     
@@ -2391,14 +2407,17 @@ class R2(object): # R2 master class instanciated by the GUI
         if OS == 'Windows':
             cmd = [exePath]
         elif OS == 'Darwin':
+            winetxt = 'wine'
+            if getMacOSVersion():
+                winetxt = 'wine64'
             winePath = []
-            wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+            wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
             for stdout_line in iter(wine_path.stdout.readline, ''):
                 winePath.append(stdout_line)
             if winePath != []:
                 cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = ['/usr/local/bin/wine', exePath]
+                cmd = ['/usr/local/bin/%s' % winetxt, exePath]
         else:
             cmd = ['wine',exePath]
 
@@ -4107,7 +4126,7 @@ class R2(object): # R2 master class instanciated by the GUI
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
             x = pd.read_csv(os.path.join(self.dirname, fs[index]), delim_whitespace=True).values
-            if self.typ[-1]=='t': # if 3D get the iteration mesh 
+            if self.typ[-1]=='t' and self.elec['buried'].sum()==0: # if 3D get the iteration mesh - and no buried electrodes [HOT FIX] #TODO: extract 3D xbh top surface
                 if self.surfaceIdx is None: # no surface index
                     self.iterMesh = mt.readMesh(os.path.join(self.dirname, fs[index]).replace('.dat','.vtk')) 
                     _, self.surfaceIdx = self.iterMesh.extractSurface(return_idx=True) # get surface index 
