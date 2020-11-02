@@ -373,7 +373,6 @@ def neigh2d(long[:,:] connection, int return_tri_combo=1):
     cdef long[:,:] neighv = neigh             
     
     #using binary search and sorted arrays for efficient index lookup 
-    #cdef list tri_list = tri_combo[0] + tri_combo[1] + tri_combo[2] + tri_combo[3] #all faces together 
     cdef np.ndarray[long, ndim=1] tri_flatten = tri_combo.T.flatten()
 	
     cdef np.ndarray[long, ndim=1] temp_idx = np.argsort(tri_flatten).astype(int,order='C') # sorted indexes  (pure python code)
