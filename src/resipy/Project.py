@@ -255,8 +255,8 @@ def cdist(a):
 
 
 
-#%% main R2 class
-class R2(object): # R2 master class instanciated by the GUI
+#%% main Project class (called 'R2' in previous versions)
+class Project(object): # Project master class instanciated by the GUI
     """Master class to handle all processing around the inversion codes.
 
     Parameters
@@ -4940,6 +4940,13 @@ class R2(object): # R2 master class instanciated by the GUI
             raise TypeError('Expected ncores as an int, but got %s'%str(type(ncores)))
         mt.ncores = ncores
 
+        
+# for backward compatibility, retain the main class called R2
+class R2(Project):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        
 #%% deprecated funcions
 
     def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None, **kwargs): # pragma: no cover
