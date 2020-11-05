@@ -4125,7 +4125,7 @@ class R2(object): # R2 master class instanciated by the GUI
 
         fs = sorted(fs)
         if len(fs) > 1: # the last file is always open and not filled with data
-            x = pd.read_csv(os.path.join(self.dirname, fs[index]), delim_whitespace=True).values
+            x = pd.read_csv(os.path.join(self.dirname, fs[index]), header=None, delim_whitespace=True).values
             if self.typ[-1]=='t' and self.elec['buried'].sum()==0: # if 3D get the iteration mesh - and no buried electrodes [HOT FIX] #TODO: extract 3D xbh top surface
                 if self.surfaceIdx is None: # no surface index
                     self.iterMesh = mt.readMesh(os.path.join(self.dirname, fs[index]).replace('.dat','.vtk')) 
