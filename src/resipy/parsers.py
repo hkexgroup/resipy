@@ -1574,29 +1574,31 @@ def bertParser(fname):
         line += 1
     
     elec_list = []
-    elecLocs0 = re.findall(numStr, dump[line])
+    elecLocs0 = re.findall(numStr, dump[line].split('#')[0]) # ".split('#')" for getting rid of comments 
     elecLocs_line = elecLocs0.copy()
     while len(elecLocs_line) == len(elecLocs0):
-        elecLocs_line = re.findall(numStr, dump[line])
+        elecLine_input_raw = dump[line].split('#')[0] # getting rid of comments 
+        elecLocs_line = re.findall(numStr, elecLine_input_raw)
         elec_list.append(elecLocs_line)
         line += 1
     
     elec = np.array(elec_list[:-1]).astype(float)
     
-    if elec.shape[1] != 3: # we have xz format so conver into xyz
+    if elec.shape[1] < 3: # we have xz format so conver into xyz
         elec = np.c_[elec[:,0], np.zeros(len(elec)), elec[:,1]]
     
-    vals = re.findall(numStr, dump[line])
+    vals = re.findall(numStr, dump[line].split('#')[0])
     while len(vals) < 4: # finding the data line
         line += 1
-        vals = re.findall(numStr, dump[line])
+        data_input_raw = dump[line].split('#')[0] # getting rid of comments 
+        vals = re.findall(numStr, data_input_raw)
     
     headers = re.findall(r'[A-Za-z]+', dump[line-1]) # for finding data types
 
-    topo_check_vals = len(re.findall(numStr, dump[line])) # TODO: is topography included without any flags?
+    topo_check_vals = len(re.findall(numStr, dump[line].split('#')[0])) # TODO: is topography included without any flags?
     df_list = []
     for val in dump[line:]: # reding data
-        vals = re.findall(numStr, val)
+        vals = re.findall(numStr, val.split('#')[0])
         if len(vals) != len(headers): # for end of data flags
             break
         df_list.append(vals)
