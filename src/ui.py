@@ -72,7 +72,9 @@ def errorMessage(etype, value, tb):
     traceback.print_exception(etype, value, tb)
     print('ERROR end.')
     errorMsg = traceback.format_exception(etype, value, tb,limit=None, chain=True)
-    finalError =''
+    finalError ='Build: %s\n' % ResIPy_version # adding ResIPy version and system info to the error
+    for key in sysinfo: # adding system info to the error
+        finalError += str(key) + ': ' + str(sysinfo[key]) + '\n'
     for errs in errorMsg:
         finalError += errs
     msg = QMessageBox()
@@ -5112,6 +5114,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>The "Phase Filtering" tab is only enable for IP data and allows precise filtering of IP data (range filtering, removing of nested measuremetns, DCA, ...).</li>
            <li>The "Resistance Error Model" tab allows to fit a power-law or linear error model to resistance data.</li>
            <li>The "Phase Error Model" tab allows to fit a power-law or parabolic error model to phase data.</li>
+           <br>**<b>NOTE:</b> Error modeling tabs will be disabled if there are no reciprocal measurements in the imported dataset
            </ul></li></p>
            <p><li>In the "<b>Mesh</b>" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
            region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li></p>
@@ -5130,6 +5133,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>Select the axes to edit (usually "<i>Distance [m] - Elevation [m]</i>):
            <ul><li>The axes limits/labels and plot title  can be changed in the "Axes" tab.</li>
            <li>The marker size and line width can be changed in the "Curves" tab.</li></ul>
+           </ul>
+           <p><b>Output files</b> (Inversion/modeling results):</p>
+           <ul>
+           <li>Always select a <i>Working directory</i> (in the <i>Importing > Data</i> tab), so you do not lose your inversion/modeling results.
+           <li>Data in X Y Z format is saved in <i>f001_res.dat</i> for inversions and <i>*_forward.dat</i> (*R2/cR2/R3t/cR3t) for forward models.
+           <li>For more on output files of ResIPy, <u>please read the readme files of R2/cR2/R3t/cR3t (links below)</u>.
+           </ul>
+           <p><b>Reporting an issue</b>:</p>
+           <ul>
+           <li>Please make sure you include the full error (copy the whole error details) when reporting it on our <a href="https://gitlab.com/hkex/resipy/issues">GitLab page</a>.
+           <li>Including examples that cause the error in the report will be very helpful to debug the software.
            </ul>
            ''')
         # local manuals
@@ -5176,7 +5190,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 <a href="https://pandas.pydata.org/">pandas</a>,
                 <a href="https://matplotlib.org/">matplotlib</a>,
                 <a href="https://scipy.org/index.html">scipy</a>,
-                <a href="https://pypi.org/project/PyQt5/">PyQt5</a>.
+                <a href="https://pypi.org/project/PyQt5/">PyQt5</a>,
+                <a href="https://pypi.org/project/pyvista/">PyVista</a>.
             </p>
             <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
             <p>Contributors: Pedro Concha, Michael Tso</p>
