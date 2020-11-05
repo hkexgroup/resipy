@@ -1695,7 +1695,8 @@ class Mesh:
                     x = x[~self.iremote, :]
                 ax.plot(x[:,0], x[:,2], 'ko', markersize=4)
             except AttributeError:
-                print("no electrodes in mesh object to plot")
+                # print("no electrodes in mesh object to plot")
+                pass
 
         # adding interactive display when mouse-over
         centroids = np.array([self.elmCentre[:,0], self.elmCentre[:,2]]).T
@@ -3379,6 +3380,45 @@ class Mesh:
         fh.close()
         print('done.')
         
+    def saveMesh(self, fname, ftype=None):
+        """Save mesh into a file. Avaialble formats are .dat, .vtk and .node
+
+        Parameters
+        ----------
+        fname : TYPE
+            DESCRIPTION.
+        """
+        if not isinstance(fname,str):
+            raise TypeError('fname needs to be a string!')
+        
+        #determine file type 
+        atypes = ['dat','node','vtk','csv']
+        if ftype is None:#guess
+            for a in atypes:
+                if fname.endswith('.' + a):
+                    ftype = a
+                    break
+        else:
+            ftype = 'dat'
+        
+        if ftype not in atypes:
+            raise NameError('Unregocnised mesh file format, avaialable types are %s'%str(atypes))
+        
+        #add extension if not already there 
+        if not fname.endswith('.'+ftype):
+            fname = fname + '.' + ftype
+            
+        #call save file function 
+        if ftype == 'dat':
+            self.dat(fname)
+        elif ftype == 'vtk':
+            self.vtk(fname)
+        elif ftype == 'csv':
+            self.toCSV(fname)
+        elif ftype == 'node':
+            self.exportTetgenMesh(fname)
+        
+        
     def writeRindex(self,fname):
         """Write out the neighbourhood matrix for R3t. 
 
@@ -3433,10 +3473,21 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     #print("importing vtk mesh file into python workspace...")
     #read in header info and perform checks to make sure things are as expected
     vtk_ver=fid.readline().strip()#read first line
-    if vtk_ver.find('vtk')==-1:
+    
+    if vtk_ver.find('vtk')==-1:#version handling 
         raise ImportError("Unexpected file type... ")
     elif vtk_ver.find('3.0')==-1:#not the development version for this code
-        print("Warning: vtk manipulation code was developed for vtk datafile version 3.0, unexpected behaviour may occur in resulting mesh")
+        warnings.warn("Warning: vtk manipulation code was developed for vtk datafile version 3.0, unexpected behaviour may occur in resulting mesh")
+        if vtk_ver.find('4') > -1:
+            try:
+                # print('Looks like the file is legacy format 4, attempting to import data with newer parser...',end='')
+                mesh = vtk_import_fmt4(file_path,order_nodes)
+                # print('Success')
+                return mesh
+            except:
+                # print('Failed')
+                pass
+    
     title=fid.readline().strip()#read line 2
     format_type=fid.readline().strip()#read line 3
     if format_type=='BINARY':
@@ -3569,6 +3620,109 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
             mesh.add_sensitivity(mesh.df['Sensitivity_map(log10)'])
     except:
         pass 
+    
+    mesh.mesh_title = title
+    return mesh
+
+def vtk_import_fmt4(file_path,order_nodes=True):
+    """Vtk importer for newer format (not fully validated)
+    """
+    if os.path.getsize(file_path)==0: # So that people dont ask me why you cant read in an empty file, throw up this error. 
+        raise ImportError("Provided mesh file is empty! Check that (c)R2/3t code has run correctly!")
+    #open the selected file for reading
+    fid = open(file_path,'r')
+    
+    dump = fid.readlines()
+    title = dump[1].strip()
+    fid.close()
+    
+    d = {} # cache of element attributes 
+    sid = {}
+    #read in header info and perform checks to make sure things are as expected
+    for i,line in enumerate(dump):
+        if "BINARY" in line:
+            raise ImportError("expected ASCII type file format, not binary")
+        if "POINTS" in line:
+            l = line.split()
+            numnp = int(l[1])        
+            node_start = i
+        if "POLYGONS" in line:
+            l = line.split()
+            numel = int(l[1])        
+            if numel == 0:
+                raise ImportError("No elements in vtk file to import!")
+            elem_start = i
+        if 'FIELD' in line:
+            fIEld_id = i 
+            
+    for i,line in enumerate(dump):
+        if "double" in line and i >  fIEld_id:
+            l = line.split()
+            d[l[0]] = []
+            sid[l[0]] = i+1
+            
+    #now read in node data
+    node = np.zeros((numnp,3),dtype=float)
+    c = 0
+    li = node_start+1
+    while c < numnp:
+        line = [float(x) for x in dump[li].split()]
+        j=0
+        i=0
+        while j < len(line):
+            node[c,i] = line[j]
+            i+=1
+            if i == 3:
+                i=0#reset
+                c+=1
+            j+=1
+        li+=1
+        
+    #now read in element data
+    li = elem_start+1
+    line = [int(x) for x in dump[li].split()]
+    npere = line[0]
+    kx = np.zeros((numel,npere),dtype=float)
+    
+    for i in range(numel):
+        line = [int(x) for x in dump[li].split()]
+        for j in range(npere):
+            kx[i,j] = line[j+1]
+        li+=1
+        
+    #cell attributes
+    for i,key in enumerate(d.keys()):
+        li = sid[key]
+        while len(d[key]) < numel:
+            line = [float(x) for x in dump[li].split()]
+            d[key] += line
+            c += len(line)
+            li+=1
+            
+    if all(node[:,1]==0) and npere==4:#quad mesh 
+        cell_type = [9]*numel
+    elif npere ==4:
+        cell_type = [10]*numel
+    elif npere == 3:
+        cell_type = [5]*numel
+    elif npere == 6:
+        cell_type = [13]*numel
+    elif npere == 8:
+        cell_type = [11]*numel 
+    else:
+        raise ImportError('Unsupported cell type in vtk file')
+                
+    mesh = Mesh(node[:,0],#x coordinates of nodes 
+                node[:,1],#y coordinates of nodes
+                node[:,2],#z coordinates of nodes 
+                kx,#nodes of element vertices
+                cell_type,#according to vtk format
+                file_path,
+                order_nodes) 
+    
+    #add attributes / cell parameters 
+    for key in d.keys():
+        mesh.df[key] = np.array(d[key])
     
     mesh.mesh_title = title
     return mesh
