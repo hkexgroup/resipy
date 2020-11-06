@@ -722,21 +722,16 @@ class Mesh:
             
     def computeNeigh(self): # fix me 
         """Compute element neighbour matrix
-        """
-        if self.type2VertsNo() == 6 or self.type2VertsNo()==8:#not a tetrahedra 3d mesh 
-            raise Exception("Sorry neighbour calculation not available yet with this mesh type")
-        elif self.type2VertsNo() == 4 and self.ndims==2:#then its a quad mesh 
-            raise Exception("Sorry neighbour calculation not available yet with this mesh type")
-         
-        dim = self.connection.shape[1]
+        """            
+        if self.ndims == 2: #2d mesh 
+            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1)
+        elif self.ndims == 3: #3d mesh 
+            if self.type2VertsNo() == 4:# tetra mesh 
+                self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
+            elif self.type2VertsNo() == 6:  # prism mesh 
+                self.neigh_matrix, self.tri_combo = mc.neighPrism(self.connection,1,ncores)
 
-        if dim == 4:
-            self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
-        elif dim == 3:
-            self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1) # works for 3D triangles as well 
-        else:
-            return 
-        
+
     def computeNconnec(self):
         cell_type = self.cell_type[0]
         self.NsizeA, self.fconm = mc.conductanceCall(self.connection, self.numnp,
@@ -781,7 +776,7 @@ class Mesh:
                 return
                     
         (new_con_mat, new_node,
-         nnum_elms, nnum_nodes) = mc.split_tri(self.connection, self.node)
+         nnum_elms, nnum_nodes) = mc.splitTri(self.connection, self.node)
              
         
         nmesh = self.copy() 
@@ -822,7 +817,7 @@ class Mesh:
                 return
         
         (new_con_mat, new_node,
-         nnum_elms, nnum_nodes) = mc.split_tetra(self.connection, self.node)
+         nnum_elms, nnum_nodes) = mc.splitTetra(self.connection, self.node)
          
         nmesh = self.copy() 
         nmesh.connection = new_con_mat
@@ -2319,85 +2314,21 @@ class Mesh:
             
         #construct patches 
         #print('constructing patches')
-        S = [0]*self.numel 
+        S = np.array([0]*self.numel) 
         if sens:
             try:
                 S = self.sensitivities
             except AttributeError:
                 sens = False
                 print('no sensitivities to plot')
-                
-        con_mat = self.connection # just plotting top and bottom parts of elements 
-        combo = np.zeros((self.numel,5),dtype='float64')
         
-        for i in range(self.numel):
-            idx1 = con_mat[i][0]
-            idx2 = con_mat[i][1]
-            idx3 = con_mat[i][2]
-            idx4 = con_mat[i][3]
-            idx5 = con_mat[i][4]
-            idx6 = con_mat[i][5]
-            
-            #assign each face a code 
-            fc1 = int(str(idx1)+str(idx2)+str(idx3))#face code 1 
-            fc2 = int(str(idx4)+str(idx5)+str(idx6))#face code 2 
-            fc3 = int(str(idx1)+str(idx2)+str(idx5)+str(idx4))#face code 3
-            fc4 = int(str(idx2)+str(idx3)+str(idx6)+str(idx5))#face code 4 
-            fc5 = int(str(idx1)+str(idx3)+str(idx6)+str(idx4))#face code 5
-            
-            combo[i,0] = fc1
-            combo[i,1] = fc2
-            combo[i,2] = fc3
-            combo[i,3] = fc4
-            combo[i,4] = fc5
-            
-        #return combo
-        temp,index,counts = np.unique(combo.flatten(),return_index=True,return_counts=True) 
-        single_vals_idx = counts==1 # faces on edge of volume only appear once
-        edge_element_idx = index[single_vals_idx]/5
-        face_element_idx = np.floor(edge_element_idx)
-        face_probe = edge_element_idx - np.floor(edge_element_idx)
-        face_probe = np.round(face_probe,1) # round to nearest 1 decimal 
-        
-        
-        truncated_numel = len(face_element_idx)
-        face_list = [()] * truncated_numel
-        assign = [0] * truncated_numel # the number assigned to each face
-        sensi = [0] * truncated_numel # the sensitivity assigned to each face
-        
-        node_x = self.node[:,0]
-        node_y = self.node[:,1]
-        node_z = self.node[:,2]
-        
-            
-        for i in range(truncated_numel):
-            ref = int(face_element_idx[i])
-            idx1 = con_mat[ref][0]
-            idx2 = con_mat[ref][1]
-            idx3 = con_mat[ref][2]
-            idx4 = con_mat[ref][3]
-            idx5 = con_mat[ref][4]
-            idx6 = con_mat[ref][5]
-            vert1 = (node_x[idx1], node_y[idx1], node_z[idx1])
-            vert2 = (node_x[idx2], node_y[idx2], node_z[idx2])
-            vert3 = (node_x[idx3], node_y[idx3], node_z[idx3])
-            vert4 = (node_x[idx4], node_y[idx4], node_z[idx4])
-            vert5 = (node_x[idx5], node_y[idx5], node_z[idx5])
-            vert6 = (node_x[idx6], node_y[idx6], node_z[idx6])
-            
-            if face_probe[i] == 0: #if single_val_idx. == 0 > face1
-                face_list[i] = (vert1,vert2,vert3)#face 1 
-            elif face_probe[i] == 0.2:#if single_val_idx. == 0.2 > face2
-                face_list[i] = (vert4,vert5,vert6)#face 2
-            elif face_probe[i] == 0.4:#if single_val_idx. == 0.4 > face3
-                face_list[i] = (vert1,vert2,vert5,vert4)#face 3 
-            elif face_probe[i] == 0.6:#if single_val_idx. == 0.6 > face4
-                face_list[i] = (vert2,vert3,vert6,vert5)#face 4
-            elif face_probe[i] == 0.8:#if single_val_idx. == 0.8 > face5
-                face_list[i] = (vert1,vert3,vert6,vert4)
-                
-            sensi[i] = S[ref]
-            assign[i] = X[ref]
+        #call cython code             
+        if self.neigh_matrix is None:
+            self.computeNeigh()
+        neigh = self.neigh_matrix
+        face_list, idx = mc.facesPrism(self.connection, self.node, neigh)
+        sensi = S[idx]
+        assign = X[idx]
             
         #add patches to 3D figure 
         polly = Poly3DCollection(face_list,linewidth=0.5) # make 3D polygon collection
@@ -2415,7 +2346,6 @@ class Mesh:
             
         polly.set_cmap(color_map) # set color map 
         polly.set_clim(vmin=vmin, vmax=vmax) # reset the maximum limits of the color map 
-#        ax.add_collection3d(polly, zs='z')#blit polygons to axis 
         ax.add_collection3d(polly, zs=0, zdir='z') # for matplotlib > 3.0.2
         self.cax = polly
         
@@ -2443,6 +2373,7 @@ class Mesh:
                 print("could not plot 3d electrodes, error = "+str(e))
                 
         print('Mesh plotted in %6.5f seconds'%(time.time()-t0))
+        
         
     #%% 3D selection (designed to be used with the UI only really)
     def _select3Dsurface(self):
