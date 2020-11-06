@@ -1,6 +1,8 @@
-numpy>=1.14
-matplotlib==3.0.3
-pandas>=0.23
-scipy>=1.1.0
+numpy
+matplotlib
+pandas
+scipy
 requests
 psutil
+pyvista
+

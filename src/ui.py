@@ -30,7 +30,7 @@ import threading
 import traceback
 
 # COMMENT below is using UI automatic testing
-# from resipy.R2 import ResIPy_version
+# from resipy.Project import ResIPy_version
 # import matplotlib
 # matplotlib.use('Qt5Agg')
 # from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -52,7 +52,7 @@ import traceback
 #except:
 #    pvfound = False
 #    print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
-# from resipy.R2 import R2
+# from resipy.Project import R2
 # from resipy.r2help import r2help
 
 
@@ -72,13 +72,15 @@ def errorMessage(etype, value, tb):
     traceback.print_exception(etype, value, tb)
     print('ERROR end.')
     errorMsg = traceback.format_exception(etype, value, tb,limit=None, chain=True)
-    finalError =''
+    finalError ='Build: %s\n' % ResIPy_version # adding ResIPy version and system info to the error
+    for key in sysinfo: # adding system info to the error
+        finalError += str(key) + ': ' + str(sysinfo[key]) + '\n'
     for errs in errorMsg:
         finalError += errs
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
     msg.setText("<b>Critical error:</b>")
-    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/pyr2/issues'>https://gitlab.com/hkex/pyr2/issues</a></p><br>''')
+    msg.setInformativeText('''Please see the detailed error below.<br>You can report the errors at:<p><a href='https://gitlab.com/hkex/resipy/issues'>https://gitlab.com/hkex/resipy/issues</a></p><br>''')
     msg.setWindowTitle("Error!")
     msg.setDetailedText('%s' % (finalError))
     msg.setStandardButtons(QMessageBox.Retry)
@@ -272,8 +274,8 @@ class App(QMainWindow):
         self.setGeometry(100,100,1100,600)
         self.newwd = os.path.join(bundle_dir, 'resipy')
 
-        # UI attributes (sync with self.r2 attributes when instantiated)
-        self.r2 = None
+        # UI attributes (sync with self.project attributes when instantiated)
+        self.project = None
         self.typ = 'R2'
         self.parser = None
         self.fname = None
@@ -285,7 +287,8 @@ class App(QMainWindow):
         self.iCropping = True # by default crop the mesh
         self.num_xz_poly = None # to store the values
         self.tempElec = None # place holder to compare the new electrode agains
-
+        self.clip = None # to store the clipped mesh for 3D forward
+        
         if frozen == 'not':
             self.datadir = os.path.join(bundle_dir, './examples')
         else:
@@ -323,20 +326,24 @@ class App(QMainWindow):
         def dimSurvey():
             if self.m2DRadio.isChecked():
                 self.typ = self.typ.replace('3t','2')
-                if self.r2 is not None:
-                    self.r2.typ = self.r2.typ.replace('3t','2')
+                if self.project is not None:
+                    self.project.typ = self.project.typ.replace('3t','2')
                 # importing tab
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.setColumnHidden(2, True)
-                if self.r2 is not None:
-                    if self.r2.elec is not None:
-                        self.elecTable.initTable(self.r2.elec)
-                self.elecDyEdit.setEnabled(False)
-                self.fwdRadio.setEnabled(True)
-                self.fwdRadio.setChecked(False)
+                self.regular3DCheck.setChecked(False)
+                if self.project is not None:
+                    if self.project.elec is not None:
+                        self.elecTable.initTable(self.project.elec)
+                self.elecLineEdit.setEnabled(False)
+                self.elecLineSpacingEdit.setEnabled(False)
+                self.elecLineEdit.setText('1')
                 self.boreholeCheck.setChecked(False)
                 self.boreholeCheck.setEnabled(True)
                 self.regular3DCheck.setVisible(False)
+                self.pParams['threed'] = False
+                self.pParamsIP['threed'] = False
+                self.pseudoLayout.setCurrentIndex(0)
                 # self.ipCheck.setEnabled(True)
                 
                 #Pre-processing tab
@@ -347,7 +354,7 @@ class App(QMainWindow):
                 self.tabPreProcessing.setTabEnabled(0, True)
                 self.mwManualFiltering.show()
                 try:
-                    if not self.r2.surveys[0].df.empty:
+                    if not self.project.surveys[0].df.empty:
                         self.tabs.setTabEnabled(1, True)
                 except:
                     pass
@@ -360,10 +367,14 @@ class App(QMainWindow):
                 instructionLabel.setVisible(True)
                 self.meshAspectBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
-
+                instructionLabel3D.setVisible(False)
+                self.select3DRegionBtn.setVisible(False)
+                self.add3DRegionBtn.setVisible(False)
+                self.fin3DRegionBtn.setVisible(False)
+                
                 # inversion settings
                 show3DOptions(False)
-                if self.r2 is not None:
+                if self.project is not None:
                     showIpOptions(self.typ[0] == 'c')
 
                 # inversion tab
@@ -373,22 +384,25 @@ class App(QMainWindow):
                 show3DInvOptions(False)
             else:
                 self.typ = self.typ.replace('2','3t')
-                if self.r2 is not None:
-                    self.r2.typ = self.r2.typ.replace('2', '3t')
+                if self.project is not None:
+                    self.project.typ = self.project.typ.replace('2', '3t')
 
                 # importing tab
-                self.fwdRadio.setChecked(False)
-                self.fwdRadio.setEnabled(False)
+                self.elecLineEdit.setEnabled(True)
+                self.elecLineSpacingEdit.setEnabled(True)
                 self.elecTable.setColumnHidden(2, False)
                 self.topoTable.setColumnHidden(2, False)
-                if self.r2 is not None:
-                    if self.r2.elec is not None:
-                        self.elecTable.initTable(self.r2.elec)
-                self.elecDyEdit.setEnabled(True)
+                if self.project is not None:
+                    if self.project.elec is not None:
+                        self.elecTable.initTable(self.project.elec)
                 self.invRadio.setChecked(True)
-                self.boreholeCheck.setChecked(True) # to disable pseudo-section
+                # self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
                 self.regular3DCheck.setVisible(True)
+                self.pParams['threed'] = True
+                self.pParamsIP['threed'] = True
+                if pvfound:
+                    self.pseudoLayout.setCurrentIndex(1)
                 # self.ipCheck.setEnabled(False) # TODO disabling cR3t for now
                 
                 #Pre-processing tab
@@ -397,7 +411,7 @@ class App(QMainWindow):
                 self.mwManualFiltering.hide() # manual filtering pseudo section is not optimized for 3D
                 
                 try:
-                    if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                    if all(self.project.surveys[0].df['irecip'].values == 0) is False:
                         self.recipErrorBottomTabs.setCurrentIndex(1)
                 except:
                     pass
@@ -410,10 +424,14 @@ class App(QMainWindow):
                 instructionLabel.setVisible(False)
                 self.meshAspectBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
+                instructionLabel3D.setVisible(True)
+                self.select3DRegionBtn.setVisible(True)
+                self.add3DRegionBtn.setVisible(True)
+                self.fin3DRegionBtn.setVisible(True)
 
                 # inversion settings
                 show3DOptions(True)
-                if self.r2 is not None:
+                if self.project is not None:
                     showIpOptions(self.typ[0] == 'c')
 
                 # inversion tab
@@ -421,6 +439,13 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
+            try: # to force update the pseudo sections
+                if self.project is not None:
+                    self.plotPseudo()
+                    if self.project.typ[0] == 'c':
+                        self.plotPseudoIP()
+            except:
+                pass
 
         self.m2DRadio = QRadioButton('2D')
         self.m2DRadio.setChecked(True)
@@ -453,7 +478,7 @@ class App(QMainWindow):
         def timeLapseCheckFunc(state):
             if state == Qt.Checked:
                 self.iTimeLapse = True
-                if self.r2 is not None: # if there is already an R2 object
+                if self.project is not None: # if there is already an R2 object
                     self.restartFunc()
                     self.reg_mode.setCurrentIndex(2)
                 self.importDataBtn.setText('Import multiple datasets')
@@ -463,7 +488,7 @@ class App(QMainWindow):
                 self.batchCheck.setEnabled(False)
             else:
                 self.iTimeLapse = False
-                if self.r2 is not None:
+                if self.project is not None:
                     self.restartFunc()
                     self.reg_mode.setCurrentIndex(0)
                 self.importDataBtn.setText('Import Data')
@@ -478,7 +503,7 @@ class App(QMainWindow):
         def batchCheckFunc(state):
             if state == Qt.Checked:
                 self.iBatch = True
-                if self.r2 is not None:
+                if self.project is not None:
                     self.restartFunc()
                 self.importDataBtn.setText('Import multiple datasets')
                 self.importDataBtn.clicked.disconnect()
@@ -486,7 +511,7 @@ class App(QMainWindow):
                 self.timeLapseCheck.setEnabled(False)
             else:
                 self.iBatch = False
-                if self.r2 is not None:
+                if self.project is not None:
                     self.restartFunc()
                 self.importDataBtn.setText('Import Data')
                 self.importDataBtn.clicked.disconnect()
@@ -500,13 +525,13 @@ class App(QMainWindow):
             if state == Qt.Checked:
                 self.iBorehole = True
                 self.errorGraphs.setTabEnabled(0, False)
-                if self.r2 is not None:
-                    self.r2.setBorehole(True)
+                if self.project is not None:
+                    self.project.setBorehole(True)
             else:
                 self.iBorehole = False
                 self.errorGraphs.setTabEnabled(0, True)
-                if self.r2 is not None:
-                    self.r2.setBorehole(False)
+                if self.project is not None:
+                    self.project.setBorehole(False)
             try:
                 if self.fname is not None:
                         self.plotPseudo()
@@ -593,8 +618,8 @@ class App(QMainWindow):
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose Working Directory')
             if fdir != '':
                 self.newwd = fdir
-                if self.r2 is not None:
-                    self.r2.setwd(fdir)
+                if self.project is not None:
+                    self.project.setwd(fdir)
                 print('Working directory = ', fdir)
                 self.wdBtn.setText(os.path.basename(self.newwd))
         self.wdBtn = QPushButton('Working directory:' + os.path.basename(self.newwd))
@@ -679,21 +704,21 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fdir)
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
-                    if self.r2.iBatch is False:
+                    if self.project.iBatch is False:
                         if len(fnames) < 2:
                             self.errorDump('at least two files needed for timelapse.')
                             return
-                        self.r2.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
+                        self.project.createTimeLapseSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.ipCheck.setEnabled(False) # TODO enable IP for timelapse
                         self.infoDump('Time-lapse survey created.')
                     else:
-                        self.r2.createBatchSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
+                        self.project.createBatchSurvey(fnames, ftype=self.ftype, dump=self.infoDump)
                         self.ipCheck.setEnabled(True)
                         self.infoDump('Batch survey created.')
                     self.fnamesCombo.clear()
                     self.psContourCheck.setEnabled(True)
                     
-                    for s in self.r2.surveys:
+                    for s in self.project.surveys:
                         self.fnamesCombo.addItem(s.name)
                         self.errFitPlotIndexList.append(0)
                         self.iperrFitPlotIndexList.append(0)
@@ -702,13 +727,11 @@ class App(QMainWindow):
                     self.fnamesCombo.show()
                     self.fnamesComboLabel.show()
                     self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
-                    self.loadingWidget(exitflag=True)
-                    self.plotPseudo()
-                    self.elecTable.initTable(self.r2.elec)
+                    self.elecTable.initTable(self.project.elec)
                     self.tabImporting.setTabEnabled(1,True)
                     self.invNowBtn.setEnabled(True)
-                    self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
-                    if all(self.r2.surveys[0].df['irecip'].values == 0):
+                    self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                    if all(self.project.surveys[0].df['irecip'].values == 0):
                         self.recipOrNoRecipShow(recipPresence=False)
                     else:
                         self.recipOrNoRecipShow(recipPresence=True)
@@ -717,11 +740,13 @@ class App(QMainWindow):
                         self.plotError()
                         self.errHist()
                     self.plotManualFiltering()
+                    self.plotPseudo()
+                    self.loadingWidget(exitflag=True)
                     self.activateTabs(True)
-                    if 'dev' in self.r2.surveys[0].df.columns:
+                    if 'dev' in self.project.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
-                    if 'ip' in self.r2.surveys[0].df.columns and self.iTimeLapse is False:
-                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                    if 'ip' in self.project.surveys[0].df.columns and self.iTimeLapse is False:
+                        if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
                         if self.ftype == 'Syscal':
                             self.dcaButton.setEnabled(True)
@@ -755,13 +780,14 @@ class App(QMainWindow):
         def importDataRecipBtnFunc(): # import reciprocal file
             fnameRecip, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
+                self.loadingWidget('Loading data, please wait...', False)
                 self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
                 # if float(self.spacingEdit.text()) == -1:
                 #     spacing = None
                 # else:
                 #     spacing = float(self.spacingEdit.text())
-                self.r2.addData(fname=fnameRecip, ftype=self.ftype, parser=self.parser)
-                if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                self.project.addData(fname=fnameRecip, ftype=self.ftype, parser=self.parser)
+                if all(self.project.surveys[0].df['irecip'].values == 0) is False:
                     self.recipOrNoRecipShow(recipPresence = True)
                     self.filterAttrCombo.addItem('Reciprocal Error')
                     self.tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
@@ -776,9 +802,10 @@ class App(QMainWindow):
                     if self.m3DRadio.isChecked():
                         self.recipErrorBottomTabs.setCurrentIndex(1)
                 self.plotPseudo()
-                if self.r2.typ[0] == 'c':
+                if self.project.typ[0] == 'c':
                     self.plotPseudoIP()
                 self.plotManualFiltering()
+                self.loadingWidget(exitflag=True)
                 self.infoDump(fnameRecip + ' imported successfully')
         self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
         self.importDataRecipBtn.setAutoDefault(True)
@@ -805,13 +832,13 @@ class App(QMainWindow):
                 val = float(self.lineSpacing.text())
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
-                    self.r2.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    self.project.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
                     self.infoDump('3D survey from regular 2D lines created.')
                     self.ipCheck.setEnabled(True)
                     self.psContourCheck.setEnabled(True)
                     self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     # self.calcAspectRatio()
-                    if 'magErr' in self.r2.surveys[0].df.columns:
+                    if 'magErr' in self.project.surveys[0].df.columns:
                         self.a_wgt.setText('0.0')
                         self.b_wgt.setText('0.0')
                     self.recipOrNoRecipShow(recipPresence = True)
@@ -820,9 +847,9 @@ class App(QMainWindow):
                     self.plotError()
                     self.errHist()
                     self.plotManualFiltering()
-                    self.elecTable.initTable(self.r2.elec)
+                    self.elecTable.initTable(self.project.elec)
                     self.tabImporting.setTabEnabled(1,True)
-                    if all(self.r2.surveys[0].df['irecip'].values == 0): # enabling some filtering capacities
+                    if all(self.project.surveys[0].df['irecip'].values == 0): # enabling some filtering capacities
                         self.recipOrNoRecipShow(recipPresence=False)
                     else:
                         self.recipOrNoRecipShow(recipPresence=True)
@@ -830,10 +857,10 @@ class App(QMainWindow):
                         self.filterAttrCombo.addItem('Reciprocal Error')
                         self.plotError()
                         self.errHist()
-                    if 'dev' in self.r2.surveys[0].df.columns:
+                    if 'dev' in self.project.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
-                    if 'ip' in self.r2.surveys[0].df.columns:
-                        if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                    if 'ip' in self.project.surveys[0].df.columns:
+                        if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
                         if self.ftype == 'Syscal':
                             self.dcaButton.setEnabled(True)
@@ -842,11 +869,11 @@ class App(QMainWindow):
                     self.plotPseudo()
                     self.invNowBtn.setEnabled(True)
                     self.activateTabs(True)
-                    self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
-                    self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2])[0]))
+                    self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                    self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
                     self.fnamesCombo.hide()
                     self.fnamesComboLabel.hide()
-                    if np.isnan(self.r2.elec[['x','y','z']].values).any():
+                    if np.isnan(self.project.elec[['x','y','z']].values).any():
                         self.topoInterpBtnFunc()
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
@@ -871,44 +898,47 @@ class App(QMainWindow):
 
         def ipCheckFunc(state):
             if state  == Qt.Checked:
-                self.r2.typ = 'c' + self.r2.typ
+                self.project.typ = 'c' + self.project.typ
                 self.typ = 'c' + self.typ
                 showIpOptions(True)
                 [p.setVisible(True) for p in [self.pvminIPLabel, self.pvminIP, self.pvmaxIPLabel, self.pvmaxIP]]
 #                self.timeLapseCheck.setEnabled(False)
-                if self.r2.iForward == True:
+                if self.project.iForward == True:
                     self.mwFwdPseudoIP.setVisible(True)
                     self.noiseLabelIP.show()
                     self.noiseEditIP.show()
                 else:
                     self.mwPseudoIP.setVisible(True)
+                    self.pseudoFrameIP.setVisible(True)
                     self.plotPseudoIP()
                     self.tabPreProcessing.setTabEnabled(1, True)
-                    if all(self.r2.surveys[0].df['irecip'].values == 0) is False:
+                    if all(self.project.surveys[0].df['irecip'].values == 0) is False:
                         phaseplotError()
                         self.tabPreProcessing.setTabEnabled(3, True) # no reciprocity = no IP error model
                         self.recipFiltBtn.setEnabled(True)
                     heatRaw()
-    #                self.r2.surveys[0].filterDataIP_plot = self.r2.surveys[0].filterDataIP_plotOrig
-                    self.r2.surveys[0].filterDataIP = self.r2.surveys[0].df
+    #                self.project.surveys[0].filterDataIP_plot = self.project.surveys[0].filterDataIP_plotOrig
+                    self.project.surveys[0].filterDataIP = self.project.surveys[0].df
                     heatFilter()
                 self.regionTable.setColumnHidden(1, False)
 
             else:
-                self.r2.typ = self.r2.typ[1:]
+                self.project.typ = self.project.typ[1:]
                 self.typ = self.typ[1:]
                 showIpOptions(False)
                 [p.setVisible(False) for p in [self.pvminIPLabel, self.pvminIP, self.pvmaxIPLabel, self.pvmaxIP]]
 #                self.timeLapseCheck.setEnabled(True)
                 self.mwPseudoIP.setVisible(False)
+                self.pseudoFrameIP.setVisible(False)
                 self.tabPreProcessing.setTabEnabled(1, False)
                 self.tabPreProcessing.setTabEnabled(3, False)
                 self.regionTable.setColumnHidden(1, True)
-                if self.r2.iForward == True:
+                if self.project.iForward == True:
+                    self.mwFwdPseudo.setVisible(True)
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
-            pdebug('ipCheckFunc: mode=', self.r2.typ)
+            pdebug('ipCheckFunc: mode=', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
         self.ipCheck.stateChanged.connect(ipCheckFunc)
@@ -922,7 +952,7 @@ class App(QMainWindow):
             self.pParams['index'] = index
             self.pParamsIP['index'] = index
             self.plotPseudo()
-            if self.r2.typ[0] == 'c':
+            if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
                 self.dcaProgress.setValue(0)
 
@@ -940,7 +970,7 @@ class App(QMainWindow):
                 self.pParams['contour'] = False
                 self.pParamsIP['contour'] = False
             self.plotPseudo()
-            if self.r2.typ[0] == 'c':
+            if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
         
         # display options for pseudo-sections
@@ -969,16 +999,16 @@ class App(QMainWindow):
         self.pvmaxIP.setValidator(QDoubleValidator())
         self.pvmaxIP.setVisible(False)
         
-        self.pParams = {'index':0, 'vmin':None, 'vmax':None}
-        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None}
+        self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False}
+        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False}
         def prescaleBtnFunc():
-            if self.r2 is not None:
+            if self.project is not None:
                 self.pParams['vmin'] = float(self.pvmin.text()) if self.pvmin.text() != '' else None
                 self.pParams['vmax'] = float(self.pvmax.text()) if self.pvmax.text() != '' else None
                 self.pParamsIP['vmin'] = float(self.pvminIP.text()) if self.pvminIP.text() != '' else None
                 self.pParamsIP['vmax'] = float(self.pvmaxIP.text()) if self.pvmaxIP.text() != '' else None    
                 self.plotPseudo()
-                if self.r2.typ[0] == 'c':
+                if self.project.typ[0] == 'c':
                     self.plotPseudoIP()
             QApplication.processEvents()
         self.prescaleBtn = QPushButton('Apply')
@@ -1001,16 +1031,26 @@ class App(QMainWindow):
         self.tabImporting.currentChanged.connect(logImportTab)
         self.tabs.currentChanged.connect(logTab)
 
+        if pvfound:
+            self.pseudoFrame = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudoPlotter = QtInteractor(self.pseudoFrame)
+            vlayout.addWidget(self.pseudoPlotter.interactor)
+            self.pseudoFrame.setLayout(vlayout)
         self.mwPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
-
+        
+        if pvfound:
+            self.pseudoFrameIP = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudoPlotterIP = QtInteractor(self.pseudoFrameIP)
+            vlayout.addWidget(self.pseudoPlotterIP.interactor)
+            self.pseudoFrameIP.setLayout(vlayout)
+            self.pseudoFrameIP.setVisible(False)
         self.mwPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwPseudoIP.setVisible(False)
 
-
-
         # layout
         hbox1 = QHBoxLayout()
-#        hbox1.addWidget(restartBtn)
         hbox1.addWidget(dimGroup)
         hbox1.addWidget(self.titleLabel)
         hbox1.addWidget(self.titleEdit)
@@ -1060,10 +1100,21 @@ class App(QMainWindow):
         metaLayout.addLayout(hbox5)
         tabImportingDataLayout.addLayout(metaLayout, 40)
 
-        pseudoLayout = QHBoxLayout()
-        pseudoLayout.addWidget(self.mwPseudo, 50)
-        pseudoLayout.addWidget(self.mwPseudoIP, 50)
-        tabImportingDataLayout.addLayout(pseudoLayout, 60)
+        self.pseudoLayout = QStackedLayout()
+        mwLayoutWidget = QWidget()
+        mwLayout = QHBoxLayout()
+        mwLayout.addWidget(self.mwPseudo, 50)
+        mwLayout.addWidget(self.mwPseudoIP, 50)
+        mwLayoutWidget.setLayout(mwLayout)
+        self.pseudoLayout.addWidget(mwLayoutWidget)
+        if pvfound:
+            pvLayoutWidget = QWidget()
+            pvLayout = QHBoxLayout()
+            pvLayout.addWidget(self.pseudoFrame, 50)
+            pvLayout.addWidget(self.pseudoFrameIP, 50)
+            pvLayoutWidget.setLayout(pvLayout)
+            self.pseudoLayout.addWidget(pvLayoutWidget)
+        tabImportingDataLayout.addLayout(self.pseudoLayout, 60)
         self.tabImportingData.setLayout(tabImportingDataLayout)
 
 
@@ -1088,6 +1139,8 @@ class App(QMainWindow):
                 self.horizontalHeader().sortIndicatorChanged.connect(self.setAllBuried)
                 self.setHorizontalHeaderLabels(headers)
                 self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+                self.useNarray = False
+                self.xyz = self.getTable()[['x','y','z']].values
 
             def addRow(self):
                 self.nrow += 1
@@ -1149,10 +1202,15 @@ class App(QMainWindow):
             def initTable(self, tt):
                 pdebug('elecTable.initTable():', tt)
                 self.clear() # this clears out the headers as well
-                self.setRowCount(tt.shape[0])
-                self.setHorizontalHeaderLabels(self.headers)
                 self.nrow = tt.shape[0]
-                self.setTable(tt)
+                print(self.nrow)
+                if self.nrow > 10000: # set a hard cap on the number of rows displayed to avoid segmentation fault 
+                    self.nrow = 10000
+                    self.useNarray = True # use the numpy data array to index the data 
+                    pdebug('The maximum number of qt table entries have been exceeded, shown table is capped at 10000')
+                self.setRowCount(self.nrow)
+                self.setHorizontalHeaderLabels(self.headers)
+                self.setTable(tt[0:self.nrow])
                 self.setBuried()
             
             def setTable(self, tt, c0=0, r0=0):
@@ -1208,7 +1266,7 @@ class App(QMainWindow):
                     pdebug('elecTable.readTable: header provided')
                 df = pd.read_csv(fname, header=header)
                 newcols = [a.lower() for a in df.columns]
-                df = df.rename(dict(zip(df.columns, newcols)))
+                df = df.rename(columns = dict(zip(df.columns, newcols)))
                 
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
@@ -1253,6 +1311,7 @@ class App(QMainWindow):
                     df2.insert(0, 'label', df['label'].values)
                 
                 pdebug('elecTable.readTable():\n', df2.head())
+                self.xyz = df2[['x','y','z']].values # just the xyz numpy array, called when creating meshes 
                 tt = df2.values
                 if nbElec is not None:
                     if tt.shape[0] < nbElec:
@@ -1295,33 +1354,46 @@ class App(QMainWindow):
         self.nbElecLabel = QLabel('Number of electrodes:')
         
         self.elecDxLabel = QLabel('X spacing:')
-        self.elecDxEdit = QLineEdit('0.0')
+        self.elecDxEdit = QLineEdit('1.0')
         self.elecDxEdit.setValidator(QDoubleValidator())
-
-        self.elecDyEditLabel = QLabel('Y spacing:')        
-        self.elecDyEdit = QLineEdit('0.0')
-        self.elecDyEdit.setValidator(QDoubleValidator())
-        self.elecDyEdit.setEnabled(False)
 
         self.elecDzLabel = QLabel('Z spacing:')
         self.elecDzEdit = QLineEdit('0.0')
         self.elecDzEdit.setValidator(QDoubleValidator())
+        
+        self.elecLineLabel = QLabel('Nb Lines:')
+        self.elecLineEdit = QLineEdit('1')
+        self.elecLineEdit.setValidator(QIntValidator())
+        self.elecLineEdit.setEnabled(False)
+        
+        self.elecLineSpacingLabel = QLabel('Line spacing:')
+        self.elecLineSpacingEdit = QLineEdit('2')
+        self.elecLineSpacingEdit.setValidator(QDoubleValidator())
+        self.elecLineSpacingEdit.setEnabled(False)
 
         def elecGenButtonFunc():
-            nbElec = int(self.nbElecEdit.text())
+            nb = int(self.nbElecEdit.text())
             dx = float(self.elecDxEdit.text())
-            dy = float(self.elecDyEdit.text())
             dz = float(self.elecDzEdit.text())
-            df = pd.DataFrame()
-            if self.r2.iForward:
-                df['label'] = 1 + np.arange(nbElec) # label
-                df['label'] = df['label'].astype(int).astype(str)
-            else:
-                df['label'] = self.r2.elec['label'].values
-            df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
-            df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
-            df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
-            self.elecTable.initTable(df)
+            nline = int(self.elecLineEdit.text())
+            lineSpacing = float(self.elecLineSpacingEdit.text())
+            
+            # df = pd.DataFrame()
+            # if self.project.iForward: # if we are in forward mode, we overwrite the
+            # # electrode labels, otherwise, we keep them and just fill
+            #     df['label'] = 1 + np.arange(nbElec) # label
+            #     df['label'] = df['label'].astype(int).astype(str)
+            # else:
+            #     df['label'] = self.project.elec['label'].values
+            # df['x'] = np.linspace(0.0, (nbElec-1)*dx, nbElec)
+            # df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
+            # df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
+            
+            # try:
+            self.project.generateElec(nb, dx, dz, nline, lineSpacing)
+            self.elecTable.initTable(self.project.elec)
+            # except Exception as e:
+            #     self.errorDump(e)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -1363,10 +1435,12 @@ class App(QMainWindow):
         elecGenLayout.addWidget(self.nbElecEdit)
         elecGenLayout.addWidget(self.elecDxLabel)
         elecGenLayout.addWidget(self.elecDxEdit)
-        elecGenLayout.addWidget(self.elecDyEditLabel)
-        elecGenLayout.addWidget(self.elecDyEdit)
         elecGenLayout.addWidget(self.elecDzLabel)
         elecGenLayout.addWidget(self.elecDzEdit)
+        elecGenLayout.addWidget(self.elecLineLabel)
+        elecGenLayout.addWidget(self.elecLineEdit)
+        elecGenLayout.addWidget(self.elecLineSpacingLabel)
+        elecGenLayout.addWidget(self.elecLineSpacingEdit)
         elecGenLayout.addWidget(self.elecGenButton)
         topoLayout.addWidget(self.elecLabel)
         topoLayout.addLayout(elecGenLayout)
@@ -1481,8 +1555,6 @@ class App(QMainWindow):
         self.phaseLabel = QLabel('Phase/Chargeability Error:')
         
         
-#        elecSpacingLabel = QLabel('Electrode spacing')
-
 #        boxesLabels = [self.aBoxLabel, bBoxLabel, mBoxLabel, nBoxLabel, vpBoxLabel, InBoxLabel, resistBoxLabel, ipStartBoxLabel,
 #                 ipEndBoxLabel, chargeabilityBoxLabel, phaseBoxLabel]#, elecSpacingLabel]
         boxesLabels = [self.aBoxLabel, self.bBoxLabel, self.mBoxLabel, 
@@ -1672,7 +1744,7 @@ class App(QMainWindow):
             elec, df = parserFunc(self.fnameManual)
             pdebug('custom parserFunc: shapes = ', elec.shape, df.shape)
 
-            if (self.r2.iTimeLapse is False) & (self.r2.iBatch is False):
+            if (self.project.iTimeLapse is False) & (self.project.iBatch is False):
                 self.importFile(self.fnameManual)
             self.ftypeCombo.setCurrentIndex(11)
             self.tabImporting.setCurrentIndex(0)
@@ -1749,24 +1821,24 @@ class App(QMainWindow):
             try:
                 # compute index of the survey displayed (index == 0 if applyToEach)
                 index = 0 if self.recipErrDataIndex < 0 else self.recipErrDataIndex
-                numElecRemoved = np.sum(self.r2.surveys[index].eselect)
+                numElecRemoved = np.sum(self.project.surveys[index].eselect)
                 # don't need filterElec as the selected points are in iselect anyway
                 numSelectRemoved = 0
-                if self.r2.iBatch or self.r2.iTimeLapse:
+                if self.project.iBatch or self.project.iTimeLapse:
                     if not self.recipErrApplyToAll:
-                        numSelectRemoved += self.r2.surveys[index].filterData(~self.r2.surveys[index].iselect)
+                        numSelectRemoved += self.project.surveys[index].filterData(~self.project.surveys[index].iselect)
                     else:
-                        s = self.r2.surveys[index] # index should be 0 as we select on the 1st survey only
+                        s = self.project.surveys[index] # index should be 0 as we select on the 1st survey only
                         quads = s.df[s.iselect][['a','b','m','n']].values
-                        numSelectRemoved += self.r2._filterSimilarQuad(quads) # this will remove the same quads to all surveys
+                        numSelectRemoved += self.project._filterSimilarQuad(quads) # this will remove the same quads to all surveys
                 else:
-                    numSelectRemoved += self.r2.surveys[0].filterData(~self.r2.surveys[0].iselect)
+                    numSelectRemoved += self.project.surveys[0].filterData(~self.project.surveys[0].iselect)
                 if self.recipErrorInputLine.text() != '':
                     percent = float(self.recipErrorInputLine.text())
                     if self.filterAttrCombo.currentText() == 'Reciprocal Error':
-                        numRecipRemoved = self.r2.filterRecip(index=self.recipErrDataIndex, percent=percent)
+                        numRecipRemoved = self.project.filterRecip(index=self.recipErrDataIndex, percent=percent)
                     elif self.filterAttrCombo.currentText() == 'Stacking Error (Dev.)':
-                        numRecipRemoved = self.r2.filterStack(index=self.recipErrDataIndex, percent=percent)
+                        numRecipRemoved = self.project.filterStack(index=self.recipErrDataIndex, percent=percent)
                     if numElecRemoved != 0:
                         self.infoDump("%i measurements with greater than %3.1f%% %s, \
                                  %i selected electrodes and %i measurements removed!" % (numRecipRemoved,percent,self.filterAttrCombo.currentText(),numElecRemoved,numSelectRemoved))
@@ -1780,16 +1852,16 @@ class App(QMainWindow):
                         vmin = float(self.rhoRangeMinInput.text()) if self.rhoRangeMinInput.text() != '' else None
                         vmax = float(self.rhoRangeMaxInput.text()) if self.rhoRangeMaxInput.text() != '' else None
                         if self.filterAttrCombo.currentText() == 'Transfer Resistance':
-                            numRhoRangeRemoved = self.r2.filterTransferRes(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
+                            numRhoRangeRemoved = self.project.filterTransferRes(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
                         elif self.filterAttrCombo.currentText() == 'App. Resistivity':
-                            numRhoRangeRemoved = self.r2.filterAppResist(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
+                            numRhoRangeRemoved = self.project.filterAppResist(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
                         rhoRangeText = '%i measurements outside of the range and ' % numRhoRangeRemoved
                     if numElecRemoved != 0:
                         self.infoDump("%s%i selected electrodes and %i measurements removed!" % (rhoRangeText, numElecRemoved, numSelectRemoved))
                     else:
                         self.infoDump("%s%i selected measurements removed!" % (rhoRangeText, numSelectRemoved))
                 if self.ipCheck.checkState() == Qt.Checked:
-                    for s in self.r2.surveys:
+                    for s in self.project.surveys:
                         s.dfPhaseReset = s.df
                         s.filterDataIP = s.df
                     heatFilter()
@@ -1810,23 +1882,23 @@ class App(QMainWindow):
             pdebug('resetRecipFilter()')
             numRestored = 0
             if self.recipErrApplyToAll:
-                for s in self.r2.surveys:
+                for s in self.project.surveys:
                     numRestored += len(s.dfReset) - len(s.df)
                     s.df = s.dfReset.copy()
             else:
-                numRestored = len(self.r2.surveys[self.recipErrDataIndex].dfReset) - len(self.r2.surveys[self.recipErrDataIndex].df)
-                self.r2.surveys[self.recipErrDataIndex].df = self.r2.surveys[self.recipErrDataIndex].dfReset.copy()
+                numRestored = len(self.project.surveys[self.recipErrDataIndex].dfReset) - len(self.project.surveys[self.recipErrDataIndex].df)
+                self.project.surveys[self.recipErrDataIndex].df = self.project.surveys[self.recipErrDataIndex].dfReset.copy()
             if self.recipErrorInputLine.text() != '':
                 self.errHist(self.recipErrDataIndex)
                 self.recipErrorInputLine.setText('')
             if self.ipCheck.checkState() == Qt.Checked:
                 if self.recipErrApplyToAll:
-                    for s in self.r2.surveys:
+                    for s in self.project.surveys:
                         s.dfPhaseReset = s.dfReset.copy()
                         s.filterDataIP = s.dfReset.copy()
                 else:
-                    self.r2.surveys[self.recipErrDataIndex].dfPhaseReset = self.r2.surveys[self.recipErrDataIndex].dfReset.copy()
-                    self.r2.surveys[self.recipErrDataIndex].filterDataIP = self.r2.surveys[self.recipErrDataIndex].dfReset.copy()
+                    self.project.surveys[self.recipErrDataIndex].dfPhaseReset = self.project.surveys[self.recipErrDataIndex].dfReset.copy()
+                    self.project.surveys[self.recipErrDataIndex].filterDataIP = self.project.surveys[self.recipErrDataIndex].dfReset.copy()
                 heatFilter()
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
@@ -1894,15 +1966,15 @@ class App(QMainWindow):
         def recipErrorUnpairedFunc():
             pdebug('recipErrorUnpairedFunc()')
             index = -1 if self.recipErrDataIndex < 0 else self.recipErrDataIndex
-            numRemoved = self.r2.filterUnpaired(index=index)
+            numRemoved = self.project.filterUnpaired(index=index)
             if self.ipCheck.checkState() == Qt.Checked:
                 if self.recipErrApplyToAll:
-                    for s in self.r2.surveys:
+                    for s in self.project.surveys:
                         s.dfPhaseReset = s.dfReset.copy()
                         s.filterDataIP = s.dfReset.copy()
                 else:
-                    self.r2.surveys[self.recipErrDataIndex].dfPhaseReset = self.r2.surveys[self.recipErrDataIndex].dfReset.copy()
-                    self.r2.surveys[self.recipErrDataIndex].filterDataIP = self.r2.surveys[self.recipErrDataIndex].dfReset.copy()
+                    self.project.surveys[self.recipErrDataIndex].dfPhaseReset = self.project.surveys[self.recipErrDataIndex].dfReset.copy()
+                    self.project.surveys[self.recipErrDataIndex].filterDataIP = self.project.surveys[self.recipErrDataIndex].dfReset.copy()
                 heatFilter()
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
@@ -1934,13 +2006,13 @@ class App(QMainWindow):
                                                          'E4D survey file (*.srv)') # can add Protocol (*.dat) and so on
             if fname != '':
                 # elec = self.elecTable.getTable() # getting the topography info
-                self.r2.param['lineTitle'] = self.titleEdit.text()
-                # if not (self.r2.iBatch or self.r2.iTimeLapse):
+                self.project.param['lineTitle'] = self.titleEdit.text()
+                # if not (self.project.iBatch or self.project.iTimeLapse):
                     # spacing = float(self.elecDxEdit.text())
                 # else:
                     # spacing = None
-                # self.r2.saveFilteredData(fname, elec, savetyp, spacing=spacing)
-                self.r2.saveFilteredData(fname, savetyp) # elec is already known to self.r2 because of self.updateElec()
+                # self.project.saveFilteredData(fname, elec, savetyp, spacing=spacing)
+                self.project.saveFilteredData(fname, savetyp) # elec is already known to self.project because of self.updateElec()
 
         self.recipErrorSaveBtn = QPushButton('Save data')
         self.recipErrorSaveBtn.setStyleSheet("color: green")
@@ -2042,7 +2114,7 @@ class App(QMainWindow):
                 self.phaseFiltDataIndex = -1
             elif index > 0:
                 self.phaseFiltDataIndex = index-1
-            if self.r2.surveys != []:
+            if self.project.surveys != []:
                 heatRaw()
                 heatFilter()
         
@@ -2054,25 +2126,25 @@ class App(QMainWindow):
         phasefiltlayout.addLayout(phaseLabelLayout)
 
         def phirange():
-            self.r2.filterRangeIP(self.phaseFiltDataIndex,
+            self.project.filterRangeIP(self.phaseFiltDataIndex,
                                   float(self.phivminEdit.text()),
                                   float(self.phivmaxEdit.text()))
             heatFilter()
 
         def removerecip():
-            self.r2.filterRecipIP(self.phaseFiltDataIndex)
+            self.project.filterRecipIP(self.phaseFiltDataIndex)
             heatFilter()
 
         def removenested():
-            self.r2.filterNested(self.phaseFiltDataIndex)
+            self.project.filterNested(self.phaseFiltDataIndex)
             heatFilter()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
-                for s in self.r2.surveys:
+                for s in self.project.surveys:
                     s.kFactor = float(self.phiConvFactor.text())
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
+                self.project.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
             heatFilter()
             heatRaw()
 
@@ -2139,13 +2211,13 @@ class App(QMainWindow):
 
         def filt_reset():
             if self.phaseFiltDataIndex == -1:
-                for s in self.r2.surveys:
+                for s in self.project.surveys:
                     s.filterDataIP = s.dfPhaseReset.copy()
                     s.df = s.dfPhaseReset.copy()
                 self.infoDump('Phase filters are now reset for all datasets!')
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].filterDataIP = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
-                self.r2.surveys[self.phaseFiltDataIndex].df = self.r2.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
+                self.project.surveys[self.phaseFiltDataIndex].filterDataIP = self.project.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
+                self.project.surveys[self.phaseFiltDataIndex].df = self.project.surveys[self.phaseFiltDataIndex].dfPhaseReset.copy()
                 self.infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             self.dcaProgress.setValue(0)
@@ -2153,18 +2225,18 @@ class App(QMainWindow):
 
         def phiCbarRange():
             if self.phaseFiltDataIndex == -1:
-                for s in self.r2.surveys:
+                for s in self.project.surveys:
                     s.phiCbarmin = float(phiCbarminEdit.text())
                     s.phiCbarMax = float(phiCbarMaxEdit.text())
             else:
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
-                self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
+                self.project.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
+                self.project.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
             heatFilter()
             heatRaw()
 
         def phiCbarDataRange():
             if self.phaseFiltDataIndex == -1:
-                for s in self.r2.surveys:
+                for s in self.project.surveys:
                     minDataIP = np.min(s.dfOrigin['ip'])
                     maxDataIP = np.max(s.dfOrigin['ip'])
                     if self.ftype == 'ProtocolIP':
@@ -2174,14 +2246,14 @@ class App(QMainWindow):
                         s.phiCbarmin = minDataIP
                         s.phiCbarMax = maxDataIP
             else:
-                minDataIP = np.min(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
-                maxDataIP = np.max(self.r2.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+                minDataIP = np.min(self.project.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
+                maxDataIP = np.max(self.project.surveys[self.phaseFiltDataIndex].dfOrigin['ip'])
                 if self.ftype == 'ProtocolIP':
-                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
-                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
+                    self.project.surveys[self.phaseFiltDataIndex].phiCbarmin = -maxDataIP
+                    self.project.surveys[self.phaseFiltDataIndex].phiCbarMax = -minDataIP
                 else:
-                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
-                    self.r2.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
+                    self.project.surveys[self.phaseFiltDataIndex].phiCbarmin = minDataIP
+                    self.project.surveys[self.phaseFiltDataIndex].phiCbarMax = maxDataIP
             heatFilter()
             heatRaw()
 
@@ -2244,8 +2316,8 @@ class App(QMainWindow):
                 index = 0
             else:
                 index = self.phaseFiltDataIndex
-            self.r2.surveys[index].filt_typ = 'Raw'
-            raw_hmp.setCallback(self.r2.showHeatmap)
+            self.project.surveys[index].filt_typ = 'Raw'
+            raw_hmp.setCallback(self.project.showHeatmap)
             raw_hmp.replot(index=index)
 
         def heatFilter():
@@ -2253,8 +2325,8 @@ class App(QMainWindow):
                 index = 0
             else:
                 index = self.phaseFiltDataIndex
-            self.r2.surveys[index].filt_typ = 'Filtered'
-            filt_hmp.setCallback(self.r2.showHeatmap)
+            self.project.surveys[index].filt_typ = 'Filtered'
+            filt_hmp.setCallback(self.project.showHeatmap)
             filt_hmp.replot(index=index)
 
         raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -2270,9 +2342,9 @@ class App(QMainWindow):
         def dcaFiltering():
             try:
                 self.dcaButton.setEnabled(False) # prevent multiple clicks!
-                if len(self.r2.surveys) > 1 and self.phaseFiltDataIndex == -1: # well, DCA is long!!
-                    self.infoDump('DCA will run %s times. Please be patient!' % len(self.r2.surveys))
-                self.r2.filterDCA(index=self.phaseFiltDataIndex, dump=dcaDump)
+                if len(self.project.surveys) > 1 and self.phaseFiltDataIndex == -1: # well, DCA is long!!
+                    self.infoDump('DCA will run %s times. Please be patient!' % len(self.project.surveys))
+                self.project.filterDCA(index=self.phaseFiltDataIndex, dump=dcaDump)
                 heatFilter()
                 self.dcaButton.setEnabled(True)
             except:
@@ -2347,7 +2419,7 @@ class App(QMainWindow):
         self.mwFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
         def errFitTypeFunc(index):
-            if len(self.r2.surveys) == 0:
+            if len(self.project.surveys) == 0:
                 return
             if index != 0:
                 if self.errFitDataIndex == -1:
@@ -2360,21 +2432,21 @@ class App(QMainWindow):
                 else:
                     self.plotError(0)
             elif index == 1:
-                self.mwFitError.setCallback(self.r2.fitErrorLin)
+                self.mwFitError.setCallback(self.project.fitErrorLin)
                 self.mwFitError.replot(index=self.errFitDataIndex)
-                self.r2.err = True
+                self.project.err = True
             elif index == 2:
-                self.mwFitError.setCallback(self.r2.fitErrorPwl)
+                self.mwFitError.setCallback(self.project.fitErrorPwl)
                 self.mwFitError.replot(index=self.errFitDataIndex)
-                self.r2.err = True
+                self.project.err = True
             elif index == 3:
-                self.mwFitError.setCallback(self.r2.fitErrorLME)
+                self.mwFitError.setCallback(self.project.fitErrorLME)
                 self.mwFitError.replot(index=self.errFitDataIndex)
-                self.r2.err = True
+                self.project.err = True
                 
             # record the type of fit for each survey
             if self.errFitDataIndex == -1: # same model for each
-                self.errFitPlotIndexList = [index]*len(self.r2.surveys)
+                self.errFitPlotIndexList = [index]*len(self.project.surveys)
             elif self.errFitDataIndex == -2: # same fit from bigSurvey apply on all
                 pass
             elif self.errFitDataIndex >= 0:
@@ -2405,7 +2477,7 @@ class App(QMainWindow):
         def saveErrBtnFunc():
             fname, _ = QFileDialog.getSaveFileName(self.tabImportingData,'Save error data file', self.datadir, 'Comma Separated Values (*.csv)')
             if fname != '':
-                self.r2.saveErrorData(fname)                
+                self.project.saveErrorData(fname)                
         saveErrBtn = QPushButton('Save Error Data')
         saveErrBtn.setStyleSheet("color: green")
         saveErrBtn.setFixedWidth(150)
@@ -2474,14 +2546,14 @@ class App(QMainWindow):
         self.mwIPFitError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
 
         def phaseplotError(index=0):
-            if len(self.r2.surveys) == 0:
+            if len(self.project.surveys) == 0:
                 return
-            self.mwIPFitError.setCallback(self.r2.showErrorIP)
+            self.mwIPFitError.setCallback(self.project.showErrorIP)
             self.mwIPFitError.replot(index=index)
-            self.r2.err = False
+            self.project.err = False
 
         def iperrFitTypeFunc(index):
-            if len(self.r2.surveys) == 0:
+            if len(self.project.surveys) == 0:
                 return
             if index != 0:
                 if self.iperrFitDataIndex == -1:
@@ -2494,17 +2566,17 @@ class App(QMainWindow):
                 else:
                     phaseplotError(0)
             elif index == 1:
-                self.mwIPFitError.setCallback(self.r2.fitErrorPwlIP)
+                self.mwIPFitError.setCallback(self.project.fitErrorPwlIP)
                 self.mwIPFitError.replot(index=self.iperrFitDataIndex)
-                self.r2.err = True
+                self.project.err = True
             elif index == 2:
-                self.mwIPFitError.setCallback(self.r2.fitErrorParabolaIP)
+                self.mwIPFitError.setCallback(self.project.fitErrorParabolaIP)
                 self.mwIPFitError.replot(index=self.iperrFitDataIndex)
-                self.r2.err = True
+                self.project.err = True
                 
             # record the type of fit for each survey
             if self.iperrFitDataIndex == -1: # same model for each
-                self.iperrFitPlotIndexList = [index]*len(self.r2.surveys)
+                self.iperrFitPlotIndexList = [index]*len(self.project.surveys)
             elif self.iperrFitDataIndex == -2: # same fit from bigSurvey apply on all
                 pass
             elif self.iperrFitDataIndex >= 0:
@@ -2570,7 +2642,7 @@ class App(QMainWindow):
             for comboboxe in comboboxes[2:]: # only for error modelling
                 comboboxe.addItem('Combined Fit')
             
-            for s in self.r2.surveys:
+            for s in self.project.surveys:
                 for comboboxe in comboboxes:
                     comboboxe.addItem(s.name)
             
@@ -2610,7 +2682,7 @@ class App(QMainWindow):
                 self.regionTable.reset()
                 self.iDesign is False
             def func(ax):
-                self.r2.createModel(ax=ax, addAction=self.regionTable.addRow)
+                self.project.createModel(ax=ax, addAction=self.regionTable.addRow)
             # self.calcAspectRatio()
             self.mwMesh.plot(func, aspect=aspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
@@ -2628,7 +2700,7 @@ class App(QMainWindow):
             # plot the interactive model
             self.regionTable.reset()
             def func(ax):
-                self.r2.designModel(ax=ax, addAction=self.regionTable.addRow)
+                self.project.designModel(ax=ax, addAction=self.regionTable.addRow)
             self.mwMesh.plot(func, aspect = self.plotAspect)
             self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
             self.mwMesh.canvas.setFocus() # set focus on the canvas
@@ -2645,24 +2717,28 @@ class App(QMainWindow):
             self.cropBelowFmd.setEnabled(True)
             self.regionTable.reset()
             elec = self.elecTable.getTable()
-            if self.r2.elec['x'].isna().sum() > 0:
+            if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            surface = self.topoTable.getTable()[['x','y','z']].values
+            if self.topoTable.useNarray:
+                surface = self.topoTable.xyz
+            else:
+                surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
+            
             nnodes = nnodesSld.value()
             try:
                 fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-                self.r2.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
+                self.project.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
                 self.scale.setVisible(False)
                 self.scaleLabel.setVisible(False)
                 meshOutputStack.setCurrentIndex(1)
                 replotMesh()
-                if self.r2.param['reqMemory'] <= 0: # RAM requirement
+                if self.project.param['reqMemory'] <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
                     ramRequiredLabel.show()
                 else:
@@ -2675,10 +2751,10 @@ class App(QMainWindow):
         self.meshQuad.setToolTip('Generate quadrilateral mesh.')
 
         def meshTrianFunc():
-            if self.r2.mproc is not None:
+            if self.project.mproc is not None:
                 print('killing')
-                self.r2.mproc.kill()
-                self.r2.mproc = None
+                self.project.mproc.kill()
+                self.project.mproc = None
                 meshOutputStack.setCurrentIndex(1)
                 self.meshTrianBtn.setText('Triangular Mesh')
                 self.meshTrianBtn.setStyleSheet('background-color:orange')
@@ -2689,29 +2765,33 @@ class App(QMainWindow):
 #            self.cropBelowFmd.setChecked(True)
             self.cropBelowFmd.setEnabled(True)
             elec = self.elecTable.getTable()
-            if self.r2.elec['x'].isna().sum() > 0:
+            if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
-            elecSpacing = np.sqrt(np.sum(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2])**2 +
-                                         np.diff(self.r2.elec[~self.r2.elec['remote']]['z'].values[:2])**2))
+            elecSpacing = np.sqrt(np.sum(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])**2 +
+                                         np.diff(self.project.elec[~self.project.elec['remote']]['z'].values[:2])**2))
             cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
             cl_factor = clFactorSld.value()
-            surface = self.topoTable.getTable()[['x','y','z']].values
+            if self.topoTable.useNarray:
+                surface = self.topoTable.xyz
+            else:
+                surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
             refine = 1 if refineTrianCheck.isChecked() else 0
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
+            
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
             pdebug('meshTrian(): fmd', fmd)
-            pdebug('meshTrian(): elec:', self.r2.elec)
+            pdebug('meshTrian(): elec:', self.project.elec)
             pdebug('meshTrian(): surface:', surface)
             try:
-                self.r2.createModelMesh(surface=surface,
+                self.project.createModelMesh(surface=surface,
                                         cl=cl, cl_factor=cl_factor, show_output=True,
                                         dump=meshLogTextFunc, refine=refine, fmd=fmd)
                 # if self.iForward is False:
@@ -2720,7 +2800,7 @@ class App(QMainWindow):
                 self.scale.setVisible(True)
                 self.scaleLabel.setVisible(True)
                 meshOutputStack.setCurrentIndex(1)
-                if self.r2.param['reqMemory'] <= 0: # RAM requirement
+                if self.project.param['reqMemory'] <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
                     ramRequiredLabel.show()
                 else:
@@ -2739,10 +2819,10 @@ class App(QMainWindow):
 
 
         def meshTetraFunc():
-            if self.r2.mproc is not None:
+            if self.project.mproc is not None:
                 print('killing')
-                self.r2.mproc.kill()
-                self.r2.mproc = None
+                self.project.mproc.kill()
+                self.project.mproc = None
                 meshOutputStack.setCurrentIndex(1)
                 self.meshTetraBtn.setText('Tetrahedral Mesh')
                 self.meshTetraBtn.setStyleSheet('background-color:orange')
@@ -2753,9 +2833,13 @@ class App(QMainWindow):
 #            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
 #            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
-            topo = self.topoTable.getTable()[['x','y','z']].values
+            if self.topoTable.useNarray:
+                topo = self.topoTable.xyz
+            else:
+                topo = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(topo[:,0])
-            if self.r2.elec['x'].isna().sum() > 0:
+            
+            if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
@@ -2775,16 +2859,16 @@ class App(QMainWindow):
             
             fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
             try:
-                self.r2.createMesh(typ='tetra', surface=topo, fmd=fmd,
+                self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
                                    cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
                                    cln_factor=cln_factor, refine=refine, show_output=True)
                 if pvfound:
-                    mesh3Dplotter.clear() # clear all actors 
-                    self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                    self.mesh3Dplotter.clear() # clear all actors 
+                    self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                 else:
-                    self.mwMesh3D.plot(self.r2.showMesh, threed=True)
+                    self.mwMesh3D.plot(self.project.showMesh, threed=True)
                 meshOutputStack.setCurrentIndex(2)
-                if self.r2.param['reqMemory'] <= 0: # RAM requirement
+                if self.project.param['reqMemory'] <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
                     ramRequiredLabel.show()
                 else:
@@ -2882,26 +2966,26 @@ class App(QMainWindow):
         def saveMeshVtkBtnFunc():
             fname, _ = QFileDialog.getSaveFileName(tabMesh, 'Open File', self.datadir)
             if fname != '':
-                self.r2.saveMeshVtk(fname)
+                self.project.saveMeshVtk(fname)
                 self.infoDump('Mesh saved to {:s}'.format(fname))
         saveMeshVtkBtn = QPushButton('Save Mesh as .vtk')
         saveMeshVtkBtn.clicked.connect(saveMeshVtkBtnFunc)
 
         def importCustomMeshFunc():
             elec = self.elecTable.getTable()
-            if self.r2.elec['x'].isna().sum() > 0:
+            if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
-                    self.r2.importMesh(fname)
+                    self.project.importMesh(fname)
                     print('mesh imported ... now displaying ... ')
                     if pvfound:
-                        mesh3Dplotter.clear() # clear all actors 
-                        self.r2.showMesh(ax=mesh3Dplotter, color_map='Greys', color_bar=False)
+                        self.mesh3Dplotter.clear() # clear all actors 
+                        self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                     else:
-                        self.mwMesh3D.plot(self.r2.showMesh, threed=True)
+                        self.mwMesh3D.plot(self.project.showMesh, threed=True)
                     meshOutputStack.setCurrentIndex(2)
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
@@ -2913,25 +2997,26 @@ class App(QMainWindow):
         importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
         importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         importCustomMeshLabel2.setWordWrap(True)
+        
         def importCustomMeshFunc2():
             print('using importCustomMeshFunc2')
             elec = self.elecTable.getTable()
-            if self.r2.elec['x'].isna().sum() > 0:
+            if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir)
             if fname != '':
                 try:
-                    self.r2.importMesh(fname, mesh_type='trian')
-                    if (self.r2.typ == 'R3t') or (self.r2.typ == 'cR3t'):
-                        self.mwMesh.plot(self.r2.showMesh, threed=True)
+                    self.project.importMesh(fname, mesh_type='trian')
+                    if (self.project.typ == 'R3t') or (self.project.typ == 'cR3t'):
+                        self.mwMesh.plot(self.project.showMesh, threed=True)
                         meshOutputStack.setCurrentIndex(2)
                         print('NO WAY THIS CAN HAPPEN!')
                     else:
                         replotMesh()
                         meshOutputStack.setCurrentIndex(1)
                     self.regionTable.reset()
-                    for i in range(len(np.unique(self.r2.mesh.df['region']))-1):
+                    for i in range(len(np.unique(self.project.mesh.df['region']))-1):
                         self.regionTable.addRow()
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
@@ -2950,11 +3035,42 @@ class App(QMainWindow):
         self.meshAspectBtn.setChecked(True)
         self.meshAspectBtn.stateChanged.connect(meshAspectBtnFunc)
 
+        def select3DRegionBtnFunc():
+            self.mesh3Dplotter.clear() # clear all actors 
+            self.clip = self.project.mesh.pick3Dbox(ax=self.mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
+            self.select3DRegionBtn.setDisabled(True) # so button can't be clicked again 
+            self.add3DRegionBtn.setDisabled(False)
+            self.fin3DRegionBtn.setDisabled(False)
+        self.select3DRegionBtn = QPushButton('(1) Region Mode')
+        self.select3DRegionBtn.clicked.connect(select3DRegionBtnFunc)
+        self.select3DRegionBtn.setVisible(False)
+
+        def add3DRegionBtnFunc():
+            clipped_mesh = self.project.mesh.addRegion3D(self.clip)
+            self.regionTable.addRow()
+            # self.mesh3Dplotter.clear() 
+            clipped_mesh.show(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+        self.add3DRegionBtn = QPushButton('(2) Add region')
+        self.add3DRegionBtn.clicked.connect(add3DRegionBtnFunc)
+        self.add3DRegionBtn.setVisible(False)
+        self.add3DRegionBtn.setDisabled(True)#start disabled 
+        
+        def fin3DRegionBtnFunc():#finish region selection mode 
+            self.mesh3Dplotter.clear() # clear all actors 
+            self.project.showMesh(ax=self.mesh3Dplotter, color_map='Spectral', attr='region', color_bar=True)
+            self.select3DRegionBtn.setDisabled(False) #enable select region mode button again 
+            self.add3DRegionBtn.setDisabled(True)
+            self.fin3DRegionBtn.setDisabled(True)
+        self.fin3DRegionBtn = QPushButton('(3) Exit mode')
+        self.fin3DRegionBtn.clicked.connect(fin3DRegionBtnFunc)
+        self.fin3DRegionBtn.setVisible(False)
+        self.fin3DRegionBtn.setDisabled(True)#start disabled 
+            
         def resetMeshBtnFunc():
             self.regionTable.reset()
             self.mwMesh.clear()
-            self.r2.mesh = None
-            self.r2.geom_input = {}
+            self.project.mesh = None
+            self.project.geom_input = {}
         self.resetMeshBtn = QPushButton('Reset Mesh')
         self.resetMeshBtn.setStyleSheet("color: red")
         self.resetMeshBtn.setFixedWidth(150)
@@ -3020,14 +3136,21 @@ class App(QMainWindow):
             ' no smoothing at the boundaries) and fix the region value for '
             'triangular mesh only.')
         instructionLabel.setWordWrap(True)
+        
+        instructionLabel3D = QLabel('Click on "Region Mode" to interactively'
+            ' define a region in 3D using the box. When done, hit the "Add Region"'
+            ' button to confirm. You can then specify different values in the '
+            ' table on the side. Recreate a mesh to erase all regions.')
+        instructionLabel3D.setWordWrap(True)
+        instructionLabel3D.setVisible(False)
 
         self.mwMesh = MatplotlibWidget(navi=True, itight=False)
         self.mwMesh3D = MatplotlibWidget(threed=True, navi=True)
         if pvfound:
             self.meshFrame = QFrame()
             vlayout = QVBoxLayout()
-            mesh3Dplotter = QtInteractor(self.meshFrame)
-            vlayout.addWidget(mesh3Dplotter.interactor)
+            self.mesh3Dplotter = QtInteractor(self.meshFrame)
+            vlayout.addWidget(self.mesh3Dplotter.interactor)
             self.meshFrame.setLayout(vlayout)
             self.mwMesh3D.setVisible(False)
 
@@ -3125,8 +3248,13 @@ class App(QMainWindow):
 
         instructionLayout = QHBoxLayout()
         instructionLayout.addWidget(instructionLabel, 86)
+        instructionLayout.addWidget(instructionLabel3D, 86)
         instructionLayout.addWidget(self.meshAspectBtn, 7)
         instructionLayout.addWidget(self.resetMeshBtn, 7)
+        ## for 3D forward modelling / region selection 
+        instructionLayout.addWidget(self.select3DRegionBtn, 7)
+        instructionLayout.addWidget(self.add3DRegionBtn, 7)
+        instructionLayout.addWidget(self.fin3DRegionBtn, 7)
         meshLayout.addLayout(instructionLayout)
         
         # for RAM issue
@@ -3140,8 +3268,7 @@ class App(QMainWindow):
 
         meshPlot = QWidget()
         meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(self.mwMesh, 70)
-        meshPlotLayout.addLayout(regionLayout, 30)
+        meshPlotLayout.addWidget(self.mwMesh)
         meshPlot.setLayout(meshPlotLayout)
 
         meshPlot3D = QWidget()
@@ -3157,7 +3284,11 @@ class App(QMainWindow):
         meshOutputStack.addWidget(meshPlot3D)
         meshOutputStack.setCurrentIndex(0)
 
-        meshLayout.addLayout(meshOutputStack, 1)
+        meshSubLayout = QHBoxLayout()
+        meshSubLayout.addLayout(meshOutputStack, 70)
+        meshSubLayout.addLayout(regionLayout, 30)
+        
+        meshLayout.addLayout(meshSubLayout, 1)
 
         tabMesh.setLayout(meshLayout)
 
@@ -3248,6 +3379,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.labels[-1].setText('s=')
                     
             def remove(self):
+                if self.seq == 'custSeq':
+                    self.fname = ''
                 self.combo.deleteLater()
                 for w in self.fields:
                     w.deleteLater()
@@ -3256,8 +3389,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.rmBtn.deleteLater()
                 self.importBtn.deleteLater()
                 self.deleteLater()
-                if self.seq == 'custSeq':
-                    self.fname = ''
+                
             
             def getData(self):
                 if self.seq == 'custSeq':
@@ -3288,7 +3420,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
            'wenner': '<img height=140 src="%s">' % Wenner,
            'schlum1': '<img height=140 src="%s">' % Schlum,
            'multigrad': '<img height=140 src="%s">' % Gradient,
-           'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-'
+           'custSeq': 'Use the button to import a custom CSV file (with headers)\ncolumn1: C+, column2: C-, column3: P+, column4: P-\n' \
+               'It is recommended to use a custom sequence in case of "unconventional surveys"'
             }
         
         arrayLabel = QLabel('Sequence help will be display here.')
@@ -3325,21 +3458,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 except:# Exception as e:
                     pass
 #                    print('object does not exist', e)
-            print('sequences = ', vals)
             return vals
 #        getDataBtn = QPushButton('Get Data')
 #        getDataBtn.clicked.connect(getDataBtnFunc)
         
         def seqCreateFunc():
-            if self.r2.elec is None:
+            if self.project.elec is None:
                 self.errorDump('Input electrode positions in the "Electrodes (XYZ/Topo)" tab first.')
                 return
             params = getDataBtnFunc()
             if len(params) == 0:
                 raise ValueError('You must specify at least one sequence.')
                 return
-            self.r2.createSequence(params=params)
-            self.seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.r2.sequence)))
+            self.seqIdx = self.project.createSequence(params=params)
+            self.seqOutputLabel.setText('{:d} quadrupoles in total'.format(len(self.project.sequence)))
 
         self.seqOutputLabel = QLabel('')
         
@@ -3359,22 +3491,22 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def saveSeqBtnFunc():
             fname, _ = QFileDialog.getSaveFileName(self.tabImportingData,'Save File', self.datadir, 'Comma Separated Values (*.csv)')
             if fname != '':
-                self.r2.saveSequence(fname)
+                self.project.saveSequence(fname)
         self.saveSeqBtn = QPushButton('Save Sequence')
         self.saveSeqBtn.setToolTip('This will save the sequence of the fwd modeling. Output data is already saved in <i>fwd</i> folder in the <i>working directory</i>.')
         self.saveSeqBtn.clicked.connect(saveSeqBtnFunc)
 
         # add a forward button
         def forwardBtnFunc():
-            if self.r2.mesh is None: # we need to create mesh to assign starting resistivity
+            if self.project.mesh is None: # we need to create mesh to assign starting resistivity
                 self.errorDump('Please specify a mesh and an initial model first.')
                 return
             try:
                 seqCreateFunc()
             except:
-                self.errorDump('Error in sequence generation')
+                self.errorDump('Error in sequence generation! Use a custom sequence instead.')
                 return
-            if len(self.r2.sequence) == 0:
+            if len(self.project.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return
             forwardOutputStack.setCurrentIndex(0)
@@ -3385,21 +3517,41 @@ combination of multiple sequence is accepted as well as importing a custom seque
             x, phase0, zones, fixed = self.regionTable.getTable()
             regid = np.arange(len(x)) + 1 # region 0 doesn't exist
             pdebug('forwardBtnFunc(): with {:d} regions'.format(len(x)))
-            self.r2.setStartingRes(dict(zip(regid, x)),
+            self.project.setStartingRes(dict(zip(regid, x)),
                                    dict(zip(regid, zones)),
                                    dict(zip(regid, fixed)),
                                    dict(zip(regid, phase0)))
             noise = float(self.noiseEdit.text())
             noiseIP = float(self.noiseEditIP.text())
-            self.r2.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
-            self.calcAspectRatio()
-            self.mwFwdPseudo.plot(self.r2.surveys[0].showPseudo, aspect='auto')
+            self.project.forward(noise=noise, noiseIP=noiseIP, iplot=False, dump=forwardLogTextFunc)
+            if self.project.typ[-1] == '2':
+                self.calcAspectRatio() # doesn't work for 3D?
+            
+            ### pseudo section plotting! ###
+            if pvfound and self.project.typ[-1] == 't': # 3D pseudo-sections?
+                self.mwFwdPseudo.hide()
+                self.pseudo3Dplotter.clear() # clear all actors
+
+                self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
+                                              strIdx=self.seqIdx)
+                self.fwdContour.setDisabled(True)#can't contour 3D data atm 
+                self.pseudoFramefwd.setVisible(True)
+            else:
+                self.mwFwdPseudo.plot(self.project.surveys[0].showPseudo, aspect='auto')
+                
             self.fwdContour.setVisible(True)
             self.tabs.setTabEnabled(4, True)
             self.tabs.setTabEnabled(5, True)
             # self.tabs.setTabEnabled(6, True)
-            if self.r2.typ[0] == 'c':
-                self.mwFwdPseudoIP.plot(self.r2.surveys[0].showPseudoIP, aspect='auto')
+            if self.project.typ[0] == 'c':
+                if pvfound and self.project.typ[-1]=='t':
+                    self.mwFwdPseudoIP.hide()
+                    self.pseudo3DplotterIP.clear() # clear all actors 
+                    self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, strIdx=self.seqIdx)
+                    self.pseudoFrameIPfwd.setVisible(True)
+                else:
+                    self.mwFwdPseudoIP.plot(self.project.surveys[0].showPseudoIP, aspect='auto')
+                
         self.forwardBtn = QPushButton('Forward Modelling')
         self.forwardBtn.setAutoDefault(True)
         self.forwardBtn.clicked.connect(forwardBtnFunc)
@@ -3408,6 +3560,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwFwdPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP.setVisible(False)
+        if pvfound:
+            self.pseudoFramefwd = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudo3Dplotter = QtInteractor(self.pseudoFramefwd)
+            vlayout.addWidget(self.pseudo3Dplotter.interactor)
+            self.pseudoFramefwd.setLayout(vlayout)
+            self.pseudoFramefwd.setVisible(False)
+            
+            #IP 3D fwd pseudo section
+            self.pseudoFrameIPfwd = QFrame()
+            vlayout = QVBoxLayout()
+            self.pseudo3DplotterIP = QtInteractor(self.pseudoFrameIPfwd)
+            vlayout.addWidget(self.pseudo3DplotterIP.interactor)
+            self.pseudoFrameIPfwd.setLayout(vlayout)
+            self.pseudoFrameIPfwd.setVisible(False)
 
         self.forwardLogText = QTextEdit()
         self.forwardLogText.setReadOnly(True)
@@ -3419,6 +3586,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             QApplication.processEvents()
             if text == 'Forward modelling done.':
                 forwardOutputStack.setCurrentIndex(1) # switch to graph
+                if pvfound and self.project.typ[-1]=='t':
+                    forwardOutputStack.setCurrentIndex(2)
                 
         def fwdContourFunc(state):
             if state == Qt.Checked:
@@ -3426,15 +3595,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 contour = False
                 
-            self.mwFwdPseudo.setCallback(self.r2.surveys[0].showPseudo)
+            self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
             self.mwFwdPseudo.replot(aspect='auto', contour=contour)
-            if self.r2.typ[0] == 'c':
-                self.mwFwdPseudoIP.setCallback(self.r2.surveys[0].showPseudoIP)
+            if self.project.typ[0] == 'c':
+                self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
                 self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
         
         self.fwdContour = QCheckBox('Contour')
         self.fwdContour.stateChanged.connect(fwdContourFunc)
         self.fwdContour.setVisible(False)
+
 
         # layout
         forwardLayout = QVBoxLayout()
@@ -3464,9 +3634,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardPseudoLayout = QVBoxLayout()
         
         forwardPseudoLayoutBottom = QHBoxLayout()
-        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudo)
-        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudoIP)
+        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudo, 50)
+        forwardPseudoLayoutBottom.addWidget(self.mwFwdPseudoIP, 50)
         self.mwFwdPseudoIP.hide()
+        
+        if pvfound:
+            pvFwdBottomWidget = QWidget()
+            pvFwdBottomLayout = QHBoxLayout()
+            pvFwdBottomLayout.addWidget(self.pseudoFramefwd, 50)
+            pvFwdBottomLayout.addWidget(self.pseudoFrameIPfwd, 50)
+            pvFwdBottomWidget.setLayout(pvFwdBottomLayout)
         
         forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
 
@@ -3476,6 +3653,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(self.forwardLogText)
         forwardOutputStack.addWidget(forwardPseudos)
+        forwardOutputStack.addWidget(pvFwdBottomWidget)
         forwardOutputStack.setCurrentIndex(0)
                 
         # general forward layout
@@ -3488,6 +3666,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         fwdTopWidget.setStyleSheet("QWidget#fwdTopWidget {border:1px solid rgb(185,185,185)}")
         fwdTopWidget.setLayout(forwardLayout)
         
+        #bottom part 
         fwdBottomWidget = QWidget()
         fwdBottomWidget.setObjectName('fwdBottomWidget')
         fwdBottomWidget.setStyleSheet("QWidget#fwdBottomWidget {border:1px solid rgb(185,185,185)}")
@@ -3551,8 +3730,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.inv_type.setCurrentIndex(1)
                 [o.setVisible(False) for o in settingsIP]
                 [o.setVisible(True) for o in settingsDC]
-            if self.r2.iForward is False and len(self.r2.surveys) >= 1:
-                if 'magErr' in self.r2.surveys[0].df.columns:
+            if self.project.iForward is False and len(self.project.surveys) >= 1:
+                if 'magErr' in self.project.surveys[0].df.columns:
                     self.a_wgt.setText('0.0')
                     self.b_wgt.setText('0.0')
 
@@ -3595,16 +3774,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def notCroppingFunc(state):
             if state == Qt.Checked:
                 self.iCropping = False
-                if 'num_xz_poly' in self.r2.param:
-                    self.num_xz_poly = self.r2.param['num_xz_poly'] # store value
-                elif 'num_xy_poly' in self.r2.param:
-                    self.num_xz_poly = self.r2.param['num_xy_poly'] # store value
+                if 'num_xz_poly' in self.project.param:
+                    self.num_xz_poly = self.project.param['num_xz_poly'] # store value
+                elif 'num_xy_poly' in self.project.param:
+                    self.num_xz_poly = self.project.param['num_xy_poly'] # store value
             else:
                 self.iCropping = True # default
-                if ('num_xz_poly' in self.r2.param) and (self.num_xz_poly is not None):
-                    self.r2.param['num_xz_poly'] = self.num_xz_poly # restore value
-                elif ('num_xy_poly' in self.r2.param) and (self.num_xz_poly is not None):
-                    self.r2.param['num_xy_poly'] = self.num_xz_poly # restore value
+                if ('num_xz_poly' in self.project.param) and (self.num_xz_poly is not None):
+                    self.project.param['num_xz_poly'] = self.num_xz_poly # restore value
+                elif ('num_xy_poly' in self.project.param) and (self.num_xz_poly is not None):
+                    self.project.param['num_xy_poly'] = self.num_xz_poly # restore value
         self.notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
         self.notCroppingLabel.linkActivated.connect(showHelpAdv)
         self.notCropping = QCheckBox()
@@ -3634,9 +3813,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def checkTxSignFunc(state):
             if state == Qt.Checked:
-                self.r2.param['checkTxSign'] = True
+                self.project.param['checkTxSign'] = True
             else:
-                self.r2.param['checkTxSign'] = False
+                self.project.param['checkTxSign'] = False
         self.checkTxSignLabel = QLabel('<a href="txSign">Resistance polarity check</a>')
         self.checkTxSignLabel.linkActivated.connect(showHelpAdv)
         self.checkTxSign = QCheckBox()
@@ -3645,9 +3824,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def flux_typeFunc(index):
             if index == 0:
-                self.r2.param['flux_type'] = 3
+                self.project.param['flux_type'] = 3
             else:
-                self.r2.param['flux_type'] = 2
+                self.project.param['flux_type'] = 2
         self.flux_typeLabel = QLabel('<a href="flux_type">Flux Type</a>')
         self.flux_typeLabel.linkActivated.connect(showHelp)
         self.flux_type = QComboBox()
@@ -3658,9 +3837,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def singular_typeFunc(state):
             if state == Qt.Checked:
-                self.r2.param['singular_type'] = 1
+                self.project.param['singular_type'] = 1
             else:
-                self.r2.param['singular_type'] = 0
+                self.project.param['singular_type'] = 0
         self.singular_typeLabel = QLabel('<a href="singular_type">Remove Singularity</a>')
         self.singular_typeLabel.linkActivated.connect(showHelp)
         self.singular_type = QCheckBox()
@@ -3668,7 +3847,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm.addRow(self.singular_typeLabel, self.singular_type)
 
         def res_matrixFunc(index):
-            self.r2.param['res_matrix'] = index
+            self.project.param['res_matrix'] = index
         self.res_matrixLabel = QLabel('<a href="res_matrix">Value for <code>res_matrix</code><a/>')
         self.res_matrixLabel.linkActivated.connect(showHelpAdv)
         self.res_matrix = QComboBox()
@@ -3681,7 +3860,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm.addRow(self.res_matrixLabel, self.res_matrix)
 
         def scaleFunc():
-            self.r2.param['scale'] = float(self.scale.text())
+            self.project.param['scale'] = float(self.scale.text())
         self.scaleLabel = QLabel('<a href="scale"> Scale for triangular mesh</a>')
         self.scaleLabel.linkActivated.connect(showHelp)
         self.scaleLabel.setVisible(False)
@@ -3693,7 +3872,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.scaleLabel, self.scale)
 
         def patch_size_xFunc():
-            self.r2.param['patch_size_x'] = int(self.patch_size_x.text())
+            self.project.param['patch_size_x'] = int(self.patch_size_x.text())
         self.patch_size_xLabel = QLabel('<a href="patch">Patch size x<a/>:')
         self.patch_size_xLabel.linkActivated.connect(showHelpAdv)
         self.patch_size_x = QLineEdit()
@@ -3703,7 +3882,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm.addRow(self.patch_size_xLabel, self.patch_size_x)
 
         def patch_size_yFunc():
-            self.r2.param['patch_size_y'] = int(self.patch_size_y.text())
+            self.project.param['patch_size_y'] = int(self.patch_size_y.text())
         self.patch_size_yLabel = QLabel('<a href="patch">Patch size y<a/>:')
         self.patch_size_yLabel.linkActivated.connect(showHelpAdv)
         self.patch_size_y = QLineEdit()
@@ -3715,7 +3894,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.inv_typeVisible = []
         def inv_typeFunc(arg):
             index = int(self.inv_type.currentText()[-2])
-            self.r2.param['inverse_type'] = index
+            self.project.param['inverse_type'] = index
             opts = [self.data_typeLabel, self.data_type,
                     self.reg_modeLabel, self.reg_mode,
                     self.toleranceLabel, self.tolerance,
@@ -3744,7 +3923,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.inv_typeLabel, self.inv_type)
 
         def target_decreaseFunc():
-            self.r2.param['target_decrease'] = float(self.target_decrease.text())
+            self.project.param['target_decrease'] = float(self.target_decrease.text())
         self.target_decreaseLabel = QLabel('<a href="target_decrease">Target decrease</a>:')
         self.target_decreaseLabel.linkActivated.connect(showHelp)
         self.target_decrease = QLineEdit()
@@ -3755,7 +3934,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
 
         def data_typeFunc(index):
-            self.r2.param['data_type'] = index
+            self.project.param['data_type'] = index
         self.data_typeLabel = QLabel('<a href="data_type">Data type</a>:')
         self.data_typeLabel.linkActivated.connect(showHelp)
         self.data_type = QComboBox()
@@ -3766,7 +3945,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.data_typeLabel, self.data_type)
 
         def reg_modeFunc(index):
-            self.r2.param['reg_mode'] = index
+            self.project.param['reg_mode'] = index
         self.reg_modeLabel = QLabel('<a href="reg_mode">Regularization mode</a>:')
         self.reg_modeLabel.linkActivated.connect(showHelp)
         self.reg_mode = QComboBox()
@@ -3777,7 +3956,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.reg_modeLabel, self.reg_mode)
 
         def toleranceFunc():
-            self.r2.param['tolerance'] = float(self.tolerance.text())
+            self.project.param['tolerance'] = float(self.tolerance.text())
         self.toleranceLabel = QLabel('<a href="tolerance">Value for tolerance</a>:')
         self.toleranceLabel.linkActivated.connect(showHelp)
         self.tolerance = QLineEdit()
@@ -3787,7 +3966,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.toleranceLabel, self.tolerance)
 
         def max_iterationsFunc():
-            self.r2.param['max_iter'] = int(self.max_iterations.text())
+            self.project.param['max_iter'] = int(self.max_iterations.text())
         self.max_iterationsLabel = QLabel('<a href="max_iterations">Maximum number of iterations</a>:')
         self.max_iterationsLabel.linkActivated.connect(showHelp)
         self.max_iterations = QLineEdit()
@@ -3797,7 +3976,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.max_iterationsLabel, self.max_iterations)
 
         def error_modFunc(index):
-            self.r2.param['error_mod'] = index
+            self.project.param['error_mod'] = index
         self.error_modLabel = QLabel('<a href="error_mod">Update the weights</a>:')
         self.error_modLabel.linkActivated.connect(showHelpAdv)
         self.error_mod = QComboBox()
@@ -3809,7 +3988,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm.addRow(self.error_modLabel, self.error_mod)
 
         def alpha_anisoFunc():
-            self.r2.param['alpha_aniso'] = float(self.alpha_aniso.text())
+            self.project.param['alpha_aniso'] = float(self.alpha_aniso.text())
         self.alpha_anisoLabel = QLabel('<a href="alpha_aniso">Value for <code>alpha_aniso</code></a>:')
         self.alpha_anisoLabel.linkActivated.connect(showHelpAdv)
         self.alpha_aniso = QLineEdit()
@@ -3819,7 +3998,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         advForm.addRow(self.alpha_anisoLabel, self.alpha_aniso)
 
         def alpha_sFunc():
-            self.r2.param['alpha_s'] = float(alpha_s.text())
+            self.project.param['alpha_s'] = float(alpha_s.text())
         alpha_sLabel = QLabel('<a href="alpha_s"><code>alpha_s</code></a>:')
         alpha_sLabel.linkActivated.connect(showHelpAdv)
         alpha_s = QLineEdit()
@@ -3831,7 +4010,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         alpha_s.setVisible(False)
 
         def min_errorFunc():
-            self.r2.param['min_error'] = float(self.min_error.text())
+            self.project.param['min_error'] = float(self.min_error.text())
         self.min_errorLabel = QLabel('<a href="errorParam"><code>min_error</code></a>:')
         self.min_errorLabel.linkActivated.connect(showHelp)
         self.min_errorLabel.setVisible(False)
@@ -3842,7 +4021,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.min_errorLabel, self.min_error)
 
         def a_wgtFunc():
-            self.r2.param['a_wgt'] = float(self.a_wgt.text())
+            self.project.param['a_wgt'] = float(self.a_wgt.text())
         self.a_wgtLabel = QLabel('<a href="errorParam"><code>a_wgt</code></a>:')
         self.a_wgtLabel.linkActivated.connect(showHelp)
         self.a_wgt = QLineEdit()
@@ -3852,7 +4031,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.a_wgtLabel, self.a_wgt)
 
         def b_wgtFunc():
-            self.r2.param['b_wgt'] = float(self.b_wgt.text())
+            self.project.param['b_wgt'] = float(self.b_wgt.text())
         self.b_wgtLabel = QLabel('<a href="errorParam"><code>b_wgt</code></a>:')
         self.b_wgtLabel.linkActivated.connect(showHelp)
         self.b_wgt = QLineEdit()
@@ -3862,7 +4041,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.b_wgtLabel, self.b_wgt)
 
         def rho_minFunc():
-            self.r2.param['rho_min'] = float(self.rho_min.text())
+            self.project.param['rho_min'] = float(self.rho_min.text())
         self.rho_minLabel = QLabel('<a href="rho_max">Minimum apparent resistivity</a>:')
         self.rho_minLabel.linkActivated.connect(showHelp)
         self.rho_min = QLineEdit()
@@ -3872,7 +4051,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invForm.addRow(self.rho_minLabel, self.rho_min)
 
         def rho_maxFunc():
-            self.r2.param['rho_max'] = float(self.rho_max.text())
+            self.project.param['rho_max'] = float(self.rho_max.text())
         self.rho_maxLabel = QLabel('<a href="rho_max">Maximum apparent resistivity</a>:')
         self.rho_maxLabel.linkActivated.connect(showHelp)
         self.rho_max = QLineEdit()
@@ -3912,9 +4091,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invtabs = QTabWidget()
         logTab = QWidget()
         showTab = QWidget()
+        computeTab = QWidget()
         self.invtabs.addTab(logTab, 'Log')
         self.invtabs.addTab(showTab, 'Results')
+        self.invtabs.addTab(computeTab, 'Compute attribute')
         self.invtabs.setTabEnabled(1, False)
+        self.invtabs.setTabEnabled(2, False)
                 
         
         def frozeUI(val=True): # when inversion is running
@@ -3938,6 +4120,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.end = False # will be set to True if inversion successfull
             self.invtabs.setCurrentIndex(0) # log tab
             self.invtabs.setTabEnabled(1, False)
+            self.invtabs.setTabEnabled(2, False)
             
             # check if we kill or invert
             if self.invertBtn.text() == 'Invert':
@@ -3947,8 +4130,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 print('killing...', end='')
                 # self.loadingWidget('Killing in progress...')
-                if self.r2.proc is not None:
-                    self.r2.proc.kill()
+                if self.project.proc is not None:
+                    self.project.proc.kill()
                 print('done')
                 self.invertBtn.setStyleSheet('background-color: green')
                 self.invertBtn.setText('Invert')
@@ -3971,15 +4154,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.inversionOutput = ''
             
             # create default mesh is not specified
-            if self.r2.mesh is None:
+            if self.project.mesh is None:
                 logTextFunc('Creating the mesh... ')
-                if (self.r2.typ == 'R2') | (self.r2.typ == 'cR2'):
+                if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
                     meshTrianFunc()
                 else:
                     elec = self.elecTable.getTable()
-                    topo = self.topoTable.getTable()[['x','y','z']].values
+                    if self.topoTable.useNarray:
+                        topo = self.topoTable.xyz      
+                    else:
+                        topo = self.topoTable.getTable()[['x','y','z']].values
                     inan = ~np.isnan(topo[:,0])
-                    if self.r2.elec['x'].isna().sum() > 0:
+
+                    if self.project.elec['x'].isna().sum() > 0:
                         self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                         self.invertBtn.setStyleSheet('background-color: green')
                         self.invertBtn.setText('Invert')
@@ -3997,38 +4184,39 @@ combination of multiple sequence is accepted as well as importing a custom seque
             # don't crop the mesh if that's what we've chosen
             if self.iCropping is True:
                 if self.num_xz_poly is not None:
-                    self.r2.param['num_xz_poly'] = self.num_xz_poly
-                    self.r2.param['num_xy_poly'] = self.num_xz_poly
+                    self.project.param['num_xz_poly'] = self.num_xz_poly
+                    self.project.param['num_xy_poly'] = self.num_xz_poly
             else:
-                self.r2.param['num_xz_poly'] = 0
-                self.r2.param['num_xy_poly'] = 0
+                self.project.param['num_xz_poly'] = 0
+                self.project.param['num_xy_poly'] = 0
             
             # set initial model
             x, phase0, zones, fixed = self.regionTable.getTable()
             regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
-            self.r2.setStartingRes(dict(zip(regid, x)),
+            self.project.setStartingRes(dict(zip(regid, x)),
                                    dict(zip(regid, zones)),
                                    dict(zip(regid, fixed)),
                                    dict(zip(regid, phase0)))
 
             # invert
             # TODO run inversion in different thread to not block the UI
-            self.r2.invert(iplot=False, dump=logTextFunc,
+            self.project.invert(iplot=False, dump=logTextFunc,
                            modErr=self.modErrCheck.isChecked(),
                            parallel=self.parallelCheck.isChecked(),
                            modelDOI=self.modelDOICheck.isChecked())
 
             # replace the log by the R2.out
-            with open(os.path.join(self.r2.dirname, self.r2.typ + '.out'),'r') as f:
+            with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
                 text = f.read()
             self.logText.setText(text)
-            self.r2.proc = None
+            self.project.proc = None
             
             # check if we don't have a fatal error
-            if 'FATAL' in text:
+            if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
                 self.end = False
+                self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
             
-            if any(self.r2.mesh.df['param'] == 0): # if fixed element are present, the mesh
+            if any(self.project.mesh.df['param'] == 0): # if fixed element are present, the mesh
             # will be sorted, meaning we need to replot it
                 self.mwMesh.replot()
             
@@ -4037,27 +4225,28 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 # try:
                 self.invtabs.setCurrentIndex(1) # show tab
                 self.invtabs.setTabEnabled(1, True)
-                if self.r2.typ[-1] == '2':
+                self.invtabs.setTabEnabled(2, True)
+                if self.project.typ[-1] == '2':
                     showStackedLayout.setCurrentIndex(0)
-#                    maxDepth = self.r2.fmd if self.cropBelowFmd.isChecked() else None
-                    self.mwInv.setCallback(partial(self.r2.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))
+#                    maxDepth = self.project.fmd if self.cropBelowFmd.isChecked() else None
+                    self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))
                 else:
                     showStackedLayout.setCurrentIndex(1)
                 
-                if self.r2.typ == 'R2' or self.r2.typ == 'R3t':
+                if self.project.typ == 'R2' or self.project.typ == 'R3t':
                     self.displayParams['attr'] = 'Resistivity(log10)'
                 else:
                     self.displayParams['attr'] = 'Sigma_real(log10)'
                 self.surveyCombo.clear()
-                for m in self.r2.meshResults:
+                for m in self.project.meshResults:
                     self.surveyCombo.addItem(m.mesh_title)
                 index = 0
-                if self.r2.iForward: # display the inverted not the initial
+                if self.project.iForward: # display the inverted not the initial
                     self.surveyCombo.setCurrentIndex(1)
                     index = 1
                     self.displayParams['index'] = 1
                 self.attrCombo.clear()
-                attrs = self.r2.meshResults[index].df.keys()
+                attrs = self.project.meshResults[index].df.keys()
                 c = 0
                 ci = 0
                 for i, attr in enumerate(attrs):
@@ -4117,13 +4306,25 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.pindex = self.pindex + 1
                 if a[0] == 'End':
                     self.end = True
-                if a[0] == 'Iteration':
+                if self.iBatch and self.parallelCheck.isChecked(): # parallel inversion of batch surveys doesn't show "End" rather a "x/x" format 
+                    try:
+                        spla0 = a[0].split('/')
+                        if spla0[0] == spla0[-1]:
+                            self.end = True
+                    except:
+                        pass
+                if a[0] == 'Iteration': # if initial RMS shows solution then this will be "FATAL:" instead
                     if self.typ[-1] == 't':
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
                         cropMaxDepth = self.cropBelowFmd.isChecked()
-                    self.mwIter.plot(partial(self.r2.showIter, modelDOI=self.modelDOICheck.isChecked(), 
-                                             cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
+                    self.mwIter.plot(partial(self.project.showIter, modelDOI=self.modelDOICheck.isChecked(), 
+                                              cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
+                if a[0] == 'FATAL:':
+#                    self.invertBtn.animateClick()
+                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+#                    raise ValueError('*** Error weights too high! lower a_wgt and b_wgt or choose an error model. ***')
+                    
             return newFlag
 
         def plotRMS(ax):
@@ -4206,7 +4407,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             pvgrid = self.displayParams['pvgrid']
             pvcontour = self.displayParams['pvcontour']
             aspect = self.displayParams['aspect']
-            if self.r2.typ[-1] == '2':
+            if self.project.typ[-1] == '2':
                 self.mwInv.replot(threed=False, aspect=aspect,
                                   index=index, edge_color=edge_color,
                                   contour=contour, sens=sens, attr=attr,
@@ -4216,15 +4417,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 # mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                       # vmin=vmin, vmax=vmax, color_map=cmap)
                 
-                # if self.r2.iTimeLapse and index == 0:
-                    # fname = os.path.join(self.r2.dirname, 'f001.vtk')
+                # if self.project.iTimeLapse and index == 0:
+                    # fname = os.path.join(self.project.dirname, 'f001.vtk')
                 # else:
-                    # fname = os.path.join(self.r2.dirname, 'f{:03d}.vtk'.format(index+1))
+                    # fname = os.path.join(self.project.dirname, 'f{:03d}.vtk'.format(index+1))
                 # m = pv.read(fname)
                 
                 self.vtkWidget.clear()
                 self.vtkWidget.clear_plane_widgets()
-                # self.r2.meshResults[index].show3D(ax=self.vtkWidget, attr=attr,
+                # self.project.meshResults[index].show3D(ax=self.vtkWidget, attr=attr,
                 #                                   edge_color=edge_color, vmin=vmin,
                 #                                   vmax=vmax, color_map=cmap,
                 #                                   background_color=(0.8,0.8,0.8),
@@ -4233,7 +4434,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 #                                   pvgrid=pvgrid,
                 #                                   pvcontour=pvcontour)
             
-                self.r2.showResults(index=index, ax=self.vtkWidget, attr=attr,
+                self.project.showResults(index=index, ax=self.vtkWidget, attr=attr,
                                                   edge_color=edge_color, vmin=vmin,
                                                   vmax=vmax, color_map=cmap,
                                                   background_color=(0.8,0.8,0.8),
@@ -4258,7 +4459,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # change survey
         def surveyComboFunc(index):
             self.displayParams['index'] = index
-            attrs = list(self.r2.meshResults[index].df.keys())
+            attrs = list(self.project.meshResults[index].df.keys())
             attr0 = str(self.attrCombo.currentText())
             ci = 0
             c = -1
@@ -4291,7 +4492,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             resetAttributeSpecificSettings()
             self.displayParams['attr'] = str(self.attrCombo.currentText())
             if self.displayParams['attr'] == 'Sigma_imag(log10)':
-                sigma_imag_vals = self.r2.meshResults[self.displayParams['index']].df['Sigma_imag(log10)']
+                sigma_imag_vals = self.project.meshResults[self.displayParams['index']].df['Sigma_imag(log10)']
                 if any(val == 0 for val in sigma_imag_vals):
                     if all(val == 0 for val in sigma_imag_vals):
                         pass
@@ -4321,7 +4522,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmin = None if vmin == '' else float(vmin)
             self.displayParams['vmin'] = vmin
             self.displayParams['vmax'] = vmax
-            if (self.contourCheck.isChecked() is True) or (self.r2.typ[-1] != '2'):
+            if (self.contourCheck.isChecked() is True) or (self.project.typ[-1] != '2'):
                 replotSection()
             else:
                 self.mwInv.setMinMax(vmin=vmin, vmax=vmax)
@@ -4429,7 +4630,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def saveBtnFunc():
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
             if fdir != '':
-                if self.r2.typ[-1] == '2':
+                if self.project.typ[-1] == '2':
                     edge_color = self.displayParams['edge_color']
                     sens = self.displayParams['sens']
                     sensPrc = self.displayParams['sensPrc']
@@ -4438,12 +4639,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     vmin = self.displayParams['vmin']
                     vmax = self.displayParams['vmax']
                     cmap = self.displayParams['cmap']
-                    self.r2.saveInvPlots(outputdir=fdir, edge_color=edge_color,
+                    self.project.saveInvPlots(outputdir=fdir, edge_color=edge_color,
                                        contour=contour, sens=sens, attr=attr,
                                        vmin=vmin, vmax=vmax, color_map=cmap,
                                        sensPrc=sensPrc)
-                self.r2.saveVtks(fdir)
-            self.r2.saveData(fdir)
+                self.project.saveVtks(fdir)
+            self.project.saveData(fdir)
             self.infoDump('All graphs saved successfully in the working directory.')
         self.saveBtn = QPushButton('Save Data')
         self.saveBtn.clicked.connect(saveBtnFunc)
@@ -4514,7 +4715,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
         def pvgridCheckFunc(state):
             self.displayParams['pvgrid'] = self.pvgridCheck.isChecked()
-            replotSection()
+            try:
+                replotSection()
+            except:
+                pass
         self.pvgridCheck = QCheckBox('Grid')
         self.pvgridCheck.stateChanged.connect(pvgridCheckFunc)
             
@@ -4554,10 +4758,54 @@ combination of multiple sequence is accepted as well as importing a custom seque
         show3DInvOptions(False)
         
         
+        
+        # subtab compute attribute
+        self.evalLabel = QLabel("You can use a formula to compute new attribute. "
+                                "Use x['attributeName'] to access current attribute. "
+                                "Once computed, go back to 'Results' tab to view the new attribute.")
+        self.evalLabel.setWordWrap(True)
+        self.evalEdit = QLineEdit()
+        self.evalEdit.setPlaceholderText("formula: e.g. 1/x['Resistivity']")
+        self.evalNewName = QLineEdit()
+        self.evalNewName.setPlaceholderText('New attribute name')
+        
+        def evalBtnFunc():
+            self.evalLog.clear()
+            self.project.computeAttribute(formula=self.evalEdit.text(),
+                                     name=self.evalNewName.text(),
+                                     dump=evalLogFunc)
+            # udpate attribute combo box
+            index = self.surveyCombo.currentIndex()
+            self.attrCombo.clear()
+            attrs = self.project.meshResults[index].df.keys()
+            c = 0
+            ci = 0
+            for i, attr in enumerate(attrs):
+                if attr not in ['param', 'region', 'zone', 'elm_id', 'cellType', 'X', 'Y', 'Z']:
+                    self.attrCombo.addItem(attr)
+                    if attr == self.displayParams['attr']:
+                        ci = c
+                    c += 1
+            self.attrCombo.setCurrentIndex(ci)
+                
+        self.evalBtn = QPushButton('Compute')
+        self.evalBtn.clicked.connect(evalBtnFunc)
+        
+        def evalLogFunc(arg):
+           cursor = self.evalLog.textCursor()
+           cursor.movePosition(cursor.End)
+           cursor.insertText(arg)
+           self.evalLog.ensureCursorVisible()
+           QApplication.processEvents()
+        self.evalLog = QTextEdit()
+        self.evalLog.setReadOnly(True)
+        
+        
         # layout
         invLayout = QVBoxLayout()
         logLayout = QHBoxLayout()
         showLayout = QVBoxLayout()
+        computeLayout = QVBoxLayout()
         
         logLeftLayout = QVBoxLayout()
         logLeftLayout.addWidget(self.invertBtn)
@@ -4597,8 +4845,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
         showStackedLayout.addWidget(self.frame)
         showLayout.addLayout(showStackedLayout)
         
+        computeLayout.addWidget(self.evalLabel)
+        computeLayoutTop = QHBoxLayout()
+        computeLayoutTop.addWidget(self.evalEdit)
+        computeLayoutTop.addWidget(self.evalNewName)
+        computeLayoutTop.addWidget(self.evalBtn)
+        computeLayout.addLayout(computeLayoutTop)
+        computeLayout.addWidget(self.evalLog)
+        
         logTab.setLayout(logLayout)
         showTab.setLayout(showLayout)
+        computeTab.setLayout(computeLayout)
         
         invLayout.addWidget(self.invtabs)
         tabInversion.setLayout(invLayout)
@@ -4618,7 +4875,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invPseudoErrLabel = QLabel('Select datapoints on the pseudo section to remove.')
         
         def prepareInvError():
-            names = [s.name for s in self.r2.surveys]
+            names = [s.name for s in self.project.surveys]
             if len(names) > 1:
                 self.invErrorComboLabel.show()
                 self.invErrorCombo.show()
@@ -4626,7 +4883,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.invErrorComboLabel.hide()
                 self.invErrorCombo.hide()
                 
-            if self.r2.iTimeLapse:
+            if self.project.iTimeLapse:
                 names[0] = names[0] + ' (Ref)'
                 
             # self.invErrorCombo.disconnect()
@@ -4642,9 +4899,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             try:
                 index = self.invErrorIndex if index == 0 else index-1 # for apply to each (time-lapse or batch only)
                 plotInvError2(index)
-                if self.iBorehole is False:
+                if self.iBorehole is False and self.m3DRadio.isChecked() is False:
+                    self.errorGraphs.setTabEnabled(0, True)
+                    self.errorGraphs.setCurrentIndex(0)
                     plotInvError(index)
                     self.invErrorIndex = index
+                else:
+                    self.errorGraphs.setTabEnabled(0, False)
+                    self.errorGraphs.setCurrentIndex(1)
             except Exception as e:
                 print('Could not print error: ', e)
         self.invErrorCombo = QComboBox()
@@ -4667,7 +4929,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 index = self.invErrorIndex
             vminVal = self.rangeInvErrorMinInput.text()
             vmaxVal = self.rangeInvErrorMaxInput.text()
-            self.r2.filterInvError(index=index, 
+            self.project.filterInvError(index=index, 
                                    vmin=float(vminVal) if vminVal != '' else None, 
                                    vmax=float(vmaxVal) if vmaxVal != '' else None)
             plotInvError(self.invErrorIndex)
@@ -4675,10 +4937,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
         def resetInvErrorFilter():
             if self.invErrorCombo.currentIndex() == 0: # apply to each
-                for s in self.r2.surveys:
+                for s in self.project.surveys:
                     s.df = s.dfInvErrOutputOrigin.copy()
             else:
-                self.r2.surveys[self.invErrorIndex].df = self.r2.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
+                self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
             plotInvError(self.invErrorIndex)
@@ -4711,20 +4973,20 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def plotInvError(index=0):
             pdebug('plotInvError()')
-            self.mwInvError.setCallback(self.r2.showPseudoInvError)
+            self.mwInvError.setCallback(self.project.showPseudoInvError)
             self.mwInvError.replot(index=index)
 
         self.mwInvError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         
         def invErrorFiltFunc():
             try:
-                i2remove = self.r2.surveys[self.invErrorIndex].iselect
-                if not all(self.r2.surveys[self.invErrorIndex].df['irecip'].values == 0): 
+                i2remove = self.project.surveys[self.invErrorIndex].iselect
+                if not all(self.project.surveys[self.invErrorIndex].df['irecip'].values == 0): 
                     # as the selection is only done on normal dataset, reciprocal pair should be removed too
-                    recipPaires = self.r2.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
-                    ie = np.isin(self.r2.surveys[self.invErrorIndex].df['irecip'].values, recipPaires[recipPaires != 0]) 
+                    recipPaires = self.project.surveys[self.invErrorIndex].df[i2remove]['irecip'].values*-1
+                    ie = np.isin(self.project.surveys[self.invErrorIndex].df['irecip'].values, recipPaires[recipPaires != 0]) 
                     i2remove = i2remove + ie
-                self.r2.surveys[self.invErrorIndex].filterData(~i2remove)
+                self.project.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
             except:
@@ -4747,7 +5009,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def plotInvError2(index=0):
             pdebug('plotInvError2()')
-            self.mwInvError2.setCallback(self.r2.showInvError)
+            self.mwInvError2.setCallback(self.project.showInvError)
             self.mwInvError2.replot(index=index)
         self.mwInvError2 = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
@@ -4838,7 +5100,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>Modify the default working directory if you want to keep the outputed files afterwards.</li>
            <li>Select the file type. You can choose "Custom" if you file type is not available and you will be redirected to the custom parser tab.</li>
            <ul><li>Note: Syscal files must be exported as 'Spreadsheet' files with .csv format (comma separators) from Prosys.</li>
-           <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</ul></li>
+           <li>Note: Res2DInv files are mostly supported, but it is recommended to change them in "General Array" format if your file is not recognized.</li>
            <li>Note: Res3DInv files are only supported in general 4 electrode format.</ul></li>
            <ul>
            <li>If your survey has topography, you can import it in the "Electrodes(XZY/Topo)" tab.</li>
@@ -4852,6 +5114,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>The "Phase Filtering" tab is only enable for IP data and allows precise filtering of IP data (range filtering, removing of nested measuremetns, DCA, ...).</li>
            <li>The "Resistance Error Model" tab allows to fit a power-law or linear error model to resistance data.</li>
            <li>The "Phase Error Model" tab allows to fit a power-law or parabolic error model to phase data.</li>
+           <br>**<b>NOTE:</b> Error modeling tabs will be disabled if there are no reciprocal measurements in the imported dataset
            </ul></li></p>
            <p><li>In the "<b>Mesh</b>" tab you can create a quadrilateral or triangular mesh (2D) or a tetrahedral mesh (3D). For 2D mesh you can specify different\
            region of given resistivity/phase and if they need to be fixed or not during inversion. For forward modelling this mesh serves as the initial model.</li></p>
@@ -4871,6 +5134,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <ul><li>The axes limits/labels and plot title  can be changed in the "Axes" tab.</li>
            <li>The marker size and line width can be changed in the "Curves" tab.</li></ul>
            </ul>
+           <p><b>Output files</b> (Inversion/modeling results):</p>
+           <ul>
+           <li>Always select a <i>Working directory</i> (in the <i>Importing > Data</i> tab), so you do not lose your inversion/modeling results.
+           <li>Data in X Y Z format is saved in <i>f001_res.dat</i> for inversions and <i>*_forward.dat</i> (*R2/cR2/R3t/cR3t) for forward models.
+           <li>For more on output files of ResIPy, <u>please read the readme files of R2/cR2/R3t/cR3t (links below)</u>.
+           </ul>
+           <p><b>Reporting an issue</b>:</p>
+           <ul>
+           <li>Please make sure you include the full error (copy the whole error details) when reporting it on our <a href="https://gitlab.com/hkex/resipy/issues">GitLab page</a>.
+           <li>Including examples that cause the error in the report will be very helpful to debug the software.
+           </ul>
            ''')
         # local manuals
         R2_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/R2_manual.pdf')).toEncoded()).decode()
@@ -4879,7 +5153,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cR3t_help = bytearray(QUrl.fromLocalFile(resource_path('resipy/exe/cR3t_manual.pdf')).toEncoded()).decode()
         helpLabel = QLabel( 
         '''
-        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/pyr2/">https://hkex.gitlab.io/pyr2</a></p>
+        <p>More help for ResIPy: <a href="https://hkex.gitlab.io/resipy/">Documentation and the examples</a></p>
+        <p>Video tutorials: <a href="https://www.youtube.com/channel/UCkg2drwtfaVAo_Tuyeg_z5Q">ResIPy on YouTube</a></p>
         <p>Read more on 2D resistivity inversion: <a href="%s">R2_readme.pdf</a> | Read more on 3D resistivity inversion: <a href="%s">R3t_readme.pdf</a></p>
         <p>Read more on 2D complex resistivity (IP) inversion: <a href="%s">cR2_readme.pdf</a> | Read more on 3D complex resistivity (IP) inversion: <a href="%s">cR3t_readme.pdf</a></p>
         '''% (R2_help,R3t_help, cR2_help, cR3t_help))
@@ -4902,7 +5177,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             <p><b>Version: {:s}</b></p>
             <p><i>ResIPy is a free and open source software for inversion and modeling of geoelectrical data (Resistivity and IP)</i></p>
             <p>If you encouter any issues or would like to submit a feature request, please raise an issue on our gitlab repository at:</p>
-            <p><a href="https://gitlab.com/hkex/pyr2/issues">https://gitlab.com/hkex/pyr2/issues</a></p>
+            <p><a href="https://gitlab.com/hkex/resipy/issues">https://gitlab.com/hkex/resipy/issues</a></p>
             <p>ResIPy uses 
                 <a href="{}">R2</a>,
                 <a href="{}">cR2</a>,
@@ -4915,7 +5190,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 <a href="https://pandas.pydata.org/">pandas</a>,
                 <a href="https://matplotlib.org/">matplotlib</a>,
                 <a href="https://scipy.org/index.html">scipy</a>,
-                <a href="https://pypi.org/project/PyQt5/">PyQt5</a>.
+                <a href="https://pypi.org/project/PyQt5/">PyQt5</a>,
+                <a href="https://pypi.org/project/pyvista/">PyVista</a>.
             </p>
             <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
             <p>Contributors: Pedro Concha, Michael Tso</p>
@@ -4995,17 +5271,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if OS != 'Linux':
             if exitflag == False:
                 self.loadingDialogTxtWidget.setText(msgtxt)
-                self.loadingDialog.show()
-                QApplication.processEvents()
-            
+                self.loadingDialog.show()            
             else:
-                self.loadingDialog.accept()  
+                self.loadingDialog.accept() 
+            QApplication.processEvents()
             
     def calcAspectRatio(self): # for calculating aspect ratio of long surveys
-        if self.r2.fmd is None:
-            self.r2.computeFineMeshDepth()
-        surLength = np.abs(self.r2.param['xz_poly_table'][0,0] - self.r2.param['xz_poly_table'][1,0])
-        surDepth = np.abs(self.r2.param['xz_poly_table'][-1,1] - self.r2.param['xz_poly_table'][-2,1])
+        if self.project.fmd is None:
+            self.project.computeFineMeshDepth()
+        surLength = np.abs(self.project.param['xz_poly_table'][0,0] - self.project.param['xz_poly_table'][1,0])
+        surDepth = np.abs(self.project.param['xz_poly_table'][-1,1] - self.project.param['xz_poly_table'][-2,1])
         aspectRatio = surLength/surDepth
         if not 0.2 < aspectRatio < 5: # make sure not to get narrow plots (max aspect ratio is 5 or 1/5)
             self.plotAspect = 'auto'
@@ -5049,11 +5324,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 'Stacking Error (Dev.)': 'dev'}
         attr = dico[attrText]
         pdebug('plotManualFiltering() with attr={:s} and index={:d}'.format(attr, index))
-        if attr not in self.r2.surveys[index].df.columns:
+        if attr not in self.project.surveys[index].df.columns:
             self.errorDump('Attribute {:s} not found for survey.'.format(attrText))
             return
         try:
-            self.mwManualFiltering.setCallback(self.r2.filterManual)
+            self.mwManualFiltering.setCallback(self.project.filterManual)
             self.mwManualFiltering.replot(index=index, attr=attr)
         except ValueError as e:
             self.errorDump(e)
@@ -5061,32 +5336,35 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
     def errHist(self, index=0):
         pdebug('errHist()')
-        if all(self.r2.surveys[index].df['irecip'].values == 0) is False:
+        if all(self.project.surveys[index].df['irecip'].values == 0) is False:
             if self.iBatch or self.iTimeLapse:
-                self.mwRecipError.setCallback(self.r2.showErrorDist)
+                self.mwRecipError.setCallback(self.project.showErrorDist)
                 self.mwRecipError.replot(index=index)
             else: 
-                self.mwRecipError.plot(self.r2.showErrorDist)
+                self.mwRecipError.plot(self.project.showErrorDist)
         else:
             pass
     
     def plotError(self, index=0):
-        if len(self.r2.surveys) == 0:
+        if len(self.project.surveys) == 0:
             return
-        self.mwFitError.setCallback(self.r2.showError)
+        self.mwFitError.setCallback(self.project.showError)
         self.mwFitError.replot(index=index)
-        self.r2.err = False
+        self.project.err = False
         
     def topoInterpBtnFunc(self):
         dfelec = self.elecTable.getTable()
         elec = dfelec[['x','y','z']].values
-        topo = self.topoTable.getTable()[['x','y','z']].values
+        if self.topoTable.useNarray:
+            topo = self.topoTable.xyz
+        else:
+            topo = self.topoTable.getTable()[['x','y','z']].values
         inan = ~np.isnan(elec[:,2])
         inan2 = ~np.isnan(topo[:,2])
         points = np.r_[elec[inan,:2], topo[inan2,:2]]
         values = np.r_[elec[inan,2], topo[inan2,2]]
         xi = elec[~inan,:2]
-        if self.r2.typ[-1] == '2':
+        if self.project.typ[-1] == '2':
             if points.shape[0] < 2:
                 self.errorDump('No enough known points for interpolation. Need at least two.')
                 return
@@ -5110,29 +5388,40 @@ combination of multiple sequence is accepted as well as importing a custom seque
             elec = self.elecTable.getTable()
             if self.tempElec is None or np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
                 self.tempElec = elec
-                self.r2.setElec(elec)
-                self.r2.mesh = None
+                self.project.setElec(elec)
+                self.project.mesh = None
                 self.mwMesh.clear()
-                if len(self.r2.surveys) > 0:
+                if len(self.project.surveys) > 0:
                     self.plotPseudo()
                     self.plotManualFiltering()
-                    if self.r2.typ[0] == 'c':
+                    if self.project.typ[0] == 'c':
                         self.plotPseudoIP()
         except Exception as e:
             self.errorDump('Error updating pseudosection: ' + str(e))
     
     def plotPseudo(self):
         pdebug('plotPseudo()')
-        self.mwPseudo.setCallback(self.r2.showPseudo)
-        if (self.r2.typ == 'R3t') | (self.r2.typ == 'cR3t'):
-            self.mwPseudo.replot(aspect='auto', **self.pParams)
+        if (pvfound 
+            & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
+            & (self.boreholeCheck.isChecked() is False)):
+            self.pseudoPlotter.clear()
+            self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams)
         else:
+            self.mwPseudo.setCallback(self.project.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
+        QApplication.processEvents()
     
     def plotPseudoIP(self):
         pdebug('plotPseudoIP()')
-        self.mwPseudoIP.setCallback(self.r2.showPseudoIP)
-        self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
+        if (pvfound 
+            & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
+            & (self.boreholeCheck.isChecked() is False)):
+            self.pseudoPlotterIP.clear()
+            self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP)
+        else:
+            self.mwPseudoIP.setCallback(self.project.showPseudoIP)
+            self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
+        QApplication.processEvents()
 
     def activateTabs(self, val=True):
         if self.iForward is False:
@@ -5144,7 +5433,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             # try:
             if self.m3DRadio.isChecked():
                 self.mwManualFiltering.hide()
-                # if len(self.r2.surveys) > 0 and all(self.r2.surveys[0].df['irecip'].values == 0):
+                # if len(self.project.surveys) > 0 and all(self.project.surveys[0].df['irecip'].values == 0):
                 #     self.tabs.setTabEnabled(1, False)
                 #     self.tabPreProcessing.setTabEnabled(0, False)
                 # else:
@@ -5186,30 +5475,29 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
     def importFile(self, fname):
         pdebug('importFile:', fname)
-        if len(self.r2.surveys) > 0:
-            self.r2.surveys = []
+        if len(self.project.surveys) > 0:
+            self.project.surveys = []
         try:                
             self.loadingWidget('Loading data, please wait...', False) # for large datasets
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(True)
             self.fname = fname
-            self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
             if float(self.spacingEdit.text()) == -1:
                 spacing = None
             else:
                 spacing = float(self.spacingEdit.text())
             try:
-                self.r2.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                      parser=self.parser)
                 # self.calcAspectRatio()
-                if 'magErr' in self.r2.surveys[0].df.columns:
+                if 'magErr' in self.project.surveys[0].df.columns:
                     self.a_wgt.setText('0.0')
                     self.b_wgt.setText('0.0')
             except:
                 self.errorDump('File is not recognized.')
                 pass
             pdebug('importFile: setting up UI')
-            if np.sum(self.r2.surveys[0].df['irecip'].values != 0) < 2:
+            if np.sum(self.project.surveys[0].df['irecip'].values != 0) < 2:
                 # we need more than a single reciprocal to fit error model and so
                 self.importDataRecipBtn.show()
                 self.recipOrNoRecipShow(recipPresence = False)
@@ -5220,36 +5508,37 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.filterAttrCombo.addItem('Reciprocal Error')
                 self.plotError()
                 self.errHist()
-            if 'dev' in self.r2.surveys[0].df.columns:
+            if 'dev' in self.project.surveys[0].df.columns:
                 self.filterAttrCombo.addItem('Stacking Error (Dev.)')
                 
-            if self.r2.elec['remote'].sum() > 0:
+            if self.project.elec['remote'].sum() > 0:
                 self.meshQuadGroup.setEnabled(False)
             else:
                 self.meshQuadGroup.setEnabled(True)
             if self.boreholeCheck.isChecked() is True:
-                self.r2.setBorehole(True)
+                self.project.setBorehole(True)
             else:
-                self.r2.setBorehole(False)
+                self.project.setBorehole(False)
             self.plotManualFiltering()
-            self.elecTable.initTable(self.r2.elec)
+            self.elecTable.initTable(self.project.elec)
             self.tabImporting.setTabEnabled(1,True)
-            if 'ip' in self.r2.surveys[0].df.columns:
-                if np.sum(self.r2.surveys[0].df['ip'].values) > 0 or np.sum(self.r2.surveys[0].df['ip'].values) < 0: # np.sum(self.r2.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+            if 'ip' in self.project.surveys[0].df.columns:
+                if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                     self.ipCheck.setChecked(True)
                 if self.ftype == 'Syscal':
                     self.dcaButton.setEnabled(True)
                     self.dcaProgress.setEnabled(True)
-            if np.isnan(self.r2.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
+            if np.isnan(self.project.elec[['x','y','z']].values).any(): # for users who import messed up topography files (res2dinv mostly)
                 self.topoInterpBtnFunc()
                 self.updateElec()
             self.plotPseudo()
             self.loadingWidget(exitflag=True) #close the loading widget
+            self.importDataBtn.setText(os.path.basename(self.fname) + ' (Press to change)')
             self.infoDump(fname + ' imported successfully')
             self.invNowBtn.setEnabled(True)
             self.activateTabs(True)
-            self.nbElecEdit.setText(str(self.r2.elec.shape[0]))
-            self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.r2.elec[~self.r2.elec['remote']]['x'].values[:2]))[0]))
+            self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+            self.elecDxEdit.setText('{:.2f}'.format(np.abs(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2]))[0]))
             self.fnamesCombo.hide()
             self.fnamesComboLabel.hide()
         except Exception as e:
@@ -5261,16 +5550,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
     def restartFunc(self):
         pdebug('restartFunc: creating new R2 object')
-        self.r2 = R2(self.newwd, typ=self.typ) # create new R2 instance
+        self.project = Project(self.newwd, typ=self.typ) # create new R2 instance
         '''actually we don't really need to instanciate a new object each
         time but it's safe otherwise we would have to reset all attributes
         , delete all surveys and clear parameters
         '''
         # reinitiate flags
-        self.r2.iBatch = self.iBatch
-        self.r2.setBorehole(self.iBorehole)
-        self.r2.iTimeLapse = self.iTimeLapse
-        self.r2.iForward = self.iForward
+        self.project.iBatch = self.iBatch
+        self.project.setBorehole(self.iBorehole)
+        self.project.iTimeLapse = self.iTimeLapse
+        self.project.iForward = self.iForward
         if self.iTimeLapse is True:
             self.reg_mode.setCurrentIndex(2)
         else:
@@ -5280,7 +5569,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # importing
         self.parser = None
         self.plotAspect = 'equal'
-        self.wdBtn.setText('Working directory:' + os.path.basename(self.r2.dirname))
+        self.wdBtn.setText('Working directory:' + os.path.basename(self.project.dirname))
         self.importDataBtn.setText('Import Data')
         self.ipCheck.setChecked(False)
         self.ipCheck.setEnabled(False)
@@ -5290,6 +5579,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.psContourCheck.setEnabled(False)
         self.tabImporting.setTabEnabled(1, False)
         self.mwPseudo.clear() # clearing figure
+        if pvfound:
+            self.pseudoPlotter.clear()
         self.tempElec = None
         self.elecTable.initTable(np.array([['',''],['','']]))
         self.topoTable.initTable(np.array([['',''],['','']]))
@@ -5348,6 +5639,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwMesh.clear()
         self.meshLogText.clear()
         self.regionTable.reset()
+        if pvfound:
+            self.mesh3Dplotter.clear()
         
         #forward model
         self.mwFwdPseudo.clear()
@@ -5367,8 +5660,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.nbElecEdit.setEnabled(True)
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
+            if pvfound: # 3D pseudo-sections?
+                self.pseudo3Dplotter.clear()
+                self.pseudo3DplotterIP.clear()
             
-
         # inversion settings
         self.flux_type.setCurrentIndex(0)
         self.singular_type.setChecked(False)
@@ -5452,7 +5747,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setIcon(QMessageBox.Information)
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
             msg.setInformativeText('''Please download the latest version of ResIPy at:\
-                                   <p><a href='https://gitlab.com/hkex/pyr2#downloads'>https://gitlab.com/hkex/pyr2</a></p>\
+                                   <p><a href='https://gitlab.com/hkex/resipy#downloads'>https://gitlab.com/hkex/resipy</a></p>\
                                    New updates:<br>\
                                    %s''' % newChanges)
             msg.setWindowTitle("New version available")
@@ -5463,7 +5758,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
-                webbrowser.open('https://gitlab.com/hkex/pyr2#gui-for-r2-family-code') # can add download link, when we have a direct dl link
+                webbrowser.open('https://gitlab.com/hkex/resipy#gui-for-r2-family-code') # can add download link, when we have a direct dl link
     
     def checkWine(self): # check if wine is installed, on Unix system
         #check operating system
@@ -5503,8 +5798,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
-                webbrowser.open('https://www.winehq.org/')
-#                webbrowser.open('https://gitlab.com/hkex/pyr2#linux-and-mac-user')
+#                webbrowser.open('https://www.winehq.org/')
+                webbrowser.open('https://gitlab.com/hkex/resipy#linux-and-mac-user')
 
     
 
@@ -5525,7 +5820,7 @@ if __name__ == '__main__':
     progressBar.setMaximum(10)
     progressBar.setGeometry(100, splash_pix.height() - 50, splash_pix.width() - 200, 20)
 
-    from resipy.R2 import ResIPy_version, sysinfo
+    from resipy import ResIPy_version, sysinfo
     global sysinfo
     splash.show()
     splash.showMessage("Loading libraries", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
@@ -5574,7 +5869,7 @@ if __name__ == '__main__':
         pvfound = False
         print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
 
-    from resipy.R2 import R2
+    from resipy import Project
     from resipy.r2help import r2help
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)

@@ -13,8 +13,10 @@ import pandas as pd
 import time
 import matplotlib.pyplot as plt
 import resipy.meshTools as mt
-from resipy.Survey import Survey
-from resipy.R2 import R2, apiPath
+from resipy import Project, Survey
+from resipy.Project import apiPath
+
+use_pyvista = False
 
 tstart = time.time()
 timings = {}
@@ -25,7 +27,7 @@ testdir = 'examples/'
 
 print('======================= GENERAL METHOD TESTS =====================')
 #%% testing all importing features
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv', ftype='Syscal')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
 k.createSurvey(testdir + 'dc-2d/syscal-normal-only.csv', ftype='Syscal')
@@ -49,17 +51,17 @@ k.createSurvey(testdir + 'parser/BERT_2D_topo.ohm', ftype='BERT')
 k.createSurvey(testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
 
 # electrode import
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv', ftype='Syscal')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
 
 # remote detection
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d-pole-dipole/syscal.csv', ftype='Syscal')
 k.showPseudo(vmax=20)
 
 # 3D survey from 2D parallel lines
-k = R2(typ='R3t')
+k = Project(typ='R3t')
 k.create3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=2,
                  zigzag=False, name='mergedSurvey', ftype='Syscal')
 
@@ -67,7 +69,7 @@ timings['methods-importing'] = time.time() - tstart
 
 
 #%% filtering
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'ip-2d/syscal.csv')
 k.filterDummy()
 k.filterUnpaired() # will remove dummy but can remove more as well
@@ -85,7 +87,7 @@ k.filterTransferRes(vmin=-20, vmax=20)
 k.filterZeroMeasSurveys() # remove surveys with 0 measurements (not sure it's used)
 k.filterNegative() # all Tx are negative
 
-k = R2()
+k = Project(typ='R2')
 k.createBatchSurvey(testdir + 'ip-2d-timelapse-syscal/')
 k.filterRecipIP(index=-1)
 k.filterRecipIP(index=-2)
@@ -94,7 +96,7 @@ timings['methods-filtering'] = time.time() - tstart
 
 
 #%% error modelling
-k = R2(typ='cR2')
+k = Project(typ='cR2')
 k.createBatchSurvey(testdir + 'ip-2d-timelapse-syscal/')
 
 k.err = True
@@ -142,36 +144,55 @@ timings['methods-error-modelling'] = time.time() - tstart
 
 
 #%% mesh generation (will be tested in the cases)
+plt.close('all')
 # 2D flat
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d/syscal.csv')
-k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
-k.createMesh('trian', refine=1)
+#k.createMesh('quad', surface=np.array([[0, 0, 1], [3, 0, 1]]))
+k.createMesh('trian')
+k.mesh.computeNeigh()
+rmesh = k.mesh.refine()
+#k.mesh.connection = k.mesh.connection.astype(np.int_)
+#idx = np.argsort(t) 
 
 # 2D topo
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
 k.createMesh('quad')
+k.showMesh()
 k.createMesh('trian')
+k.showMesh()
+k.createMesh('trian',refine=1)
+k.showMesh()
 
 # 2D borehole (see example)
 
 # 3D flat
-#k = R2(typ='R3t') # tested in cases
+#k = Project(typ='R3t') # tested in cases
 #k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 #k.createMesh()
 
 # 3D topo
-#k = R2(typ='R3t')
+#k = Project(typ='R3t')
 #k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 #k.createMesh()
+
+# 3D cylinder
+radius = 6.5/2 # cm
+angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+k = Project(typ='R3t')
+k.setElec(elec)
+k.createMesh('cylinder', zlim=[0, 47.5], cl=0.8)
+
 
 timings['methods-meshing'] = time.time() - tstart
 
 
 #%% display (will be tested in the cases)
-# k = R2()
+# k = Project(typ='R2')
 # k.createTimeLapseSurvey(testdir + 'dc-2d-timelapse/data')
 # k.invert(parallel=True)
 # k.showPseudo(0)
@@ -189,7 +210,7 @@ timings['methods-meshing'] = time.time() - tstart
 # k.showResults()
 #k.showSlice() # in 3D cases
 
-# k = R2() # IP specific
+# k = Project(typ='R2') # IP specific
 # k.createSurvey(testdir + 'ip-2d/syscal.csv')
 # k.showPseudoIP()
 # #k.showHeatmap() # must have k.surveys[0].filt_typ = 'Raw' or 'Filtered # TODO fix this @Sina
@@ -210,7 +231,7 @@ print('=================================== cases test =======================')
 plt.close('all')
 print('-------------Testing simple 2D inversion ------------')
 t0 = time.time()
-k = R2(apiPath + '/invdir/test2d/', typ='R2')
+k = Project(apiPath + '/invdir/test2d/', typ='R2')
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv', ftype='Syscal')
 k.setTitle('Test 2D')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
@@ -221,7 +242,10 @@ k.filterManual(attr='resError')
 k.showPseudo(contour=True)
 k.createMesh(typ='quad', elemx=4)
 k.showMesh()
-k.createMesh(typ='trian', cl=0.1, cl_factor=5)
+xz = [[0,2,4,6],[29.20,29.0,28.5,27.75]]
+geom_input={'boundary1':xz}
+k.createMesh(typ='trian', cl=0.1, cl_factor=5,geom_input=geom_input)
+# mesh = mt.triMesh(k.elec['x'].values,k.elec['z'].values,geom_input=geom_input)
 k.showMesh()
 
 #k.fitErrorLin()
@@ -251,7 +275,7 @@ timings['dc-2d-topo'] = time.time() - t0
 plt.close('all')
 print('-------------Testing borehole------------')
 t0 = time.time()
-k = R2()
+k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d-borehole/protocol.dat', ftype='ProtocolDC')
 #df = pd.read_csv(testdir + 'dc-2d-borehole/elec.csv')
 #k.setElec(df.values[:,:3])
@@ -273,13 +297,13 @@ timings['dc-2d-borehole'] = time.time() - t0
 plt.close('all')
 print('-------------Testing IP ------------')
 t0 = time.time()
-k = R2(typ='cR2')
+k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/syscal.csv', ftype='Syscal')
 k.showHeatmap()
 k.showErrorIP()
 k.filterDCA()
 k.filterManual()
-k = R2(typ='cR2')
+k = Project(typ='cR2')
 k.createSurvey(testdir + 'ip-2d/protocol.dat', ftype='ProtocolIP')
 k.showPseudoIP()
 print('k')
@@ -299,7 +323,7 @@ timings['ip-2d-topo'] = time.time() - t0
 plt.close('all')
 print('-------------Testing Time-lapse in // ------------')
 t0 = time.time()
-k = R2(apiPath + '/invdir/test2d-timelapse/')
+k = Project(apiPath + '/invdir/test2d-timelapse/')
 k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
                          testdir + 'dc-2d-timelapse/data/17051601.csv',
                          testdir + 'dc-2d-timelapse/data/17040301.csv'])
@@ -326,7 +350,7 @@ k.showInvError()
 k.showPseudoInvError()
 k.saveInvPlots(attr='difference(percent)')
 
-k2 = R2(apiPath + '/invdir/t/')
+k2 = Project(apiPath + '/invdir/t/')
 k2.loadResults(k.dirname)
 k2.showResults()
 print('elapsed: {:.4}s'.format(time.time() - t0))
@@ -337,7 +361,7 @@ timings['dc-2d-timelapse'] = time.time() - t0
 plt.close('all')
 print('-------------Testing Batch Inversion ------------')
 t0 = time.time()
-k = R2()
+k = Project(typ='R2')
 k.createTimeLapseSurvey(testdir + 'dc-2d-timelapse/data')
 for s in k.surveys:
     print(s)
@@ -364,7 +388,7 @@ timings['dc-2d-batch'] = time.time() - t0
 plt.close('all')
 print('-------------Testing Forward DC Modelling ------------')
 t0 = time.time()
-k = R2(typ='R2')
+k = Project(typ='R2')
 k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.designModel(fmd=3) # interactive GUI function
 k.geom_input={'polygon1':[[3, 3.5, 3.5, 3],[-0.5, -0.5, -1, -1]]}
@@ -415,7 +439,7 @@ timings['dc-2d-forward'] = time.time() - t0
 plt.close('all')
 print('-------------Testing Forward IP Modelling ------------')
 t0 = time.time()
-k = R2(typ='cR2')
+k = Project(typ='cR2')
 k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
 k.createMesh(typ='trian')
 #
@@ -443,7 +467,7 @@ timings['ip-2d-forward'] = time.time() - t0
 #plt.close('all')
 #print('-------------Testing Buried Electrodes in Fixed River ------------')
 #t0 = time.time()
-#k = R2()
+#k = Project(typ='R2')
 #k.createSurvey(testdir + 'dc-2d-river/protocol.dat', ftype='ProtocolDC')
 ## following lines will add electrode position, surface points and specify if electrodes are buried or not. Similar steps are done in the GUI in (a), (b), (c)
 #x = np.genfromtxt(testdir + 'dc-2d-river/elec.csv', delimiter=',')
@@ -466,20 +490,22 @@ timings['ip-2d-forward'] = time.time() - t0
 plt.close('all')
 print('-------------Testing 3D inversion ------------')
 t0 = time.time()
-k = R2(typ='R3t')
+k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.typ = 'R2'
 k.elec2distance()
 
-k = R2(typ='R3t')
+k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
+# k.showPseudo(threed=True) # only tested in pyvista setup   
 k.createMesh(cl=1.5)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
-#k.mesh.write_vtk('resipy/test/mesh3D.vtk',title='3D mesh with flat surface')
+
+k.createSequence()
 #k.err = True
 k.invert(modErr=True)
-k.showResults()
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -488,21 +514,22 @@ k.showInvError()
 k.saveMeshVtk()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
-
-
+#timeit k.mesh.orderNodes()
+#print(k.mesh)
 
 #%% 3D testing importing and exporting a mesh 
 plt.close('all')
 print('-------------Testing 3D inversion with custom mesh ------------')
 t0 = time.time()
-k = R2(typ='R3t')
+k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 k.importMesh(testdir + 'mesh/coarse3D.vtk')
-k.mesh.refine() # test refining mesh 
+rmesh = k.mesh.refine() # test refining mesh 
 k.addFlatError()
 k.invert()
-k.showResults() 
+
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
 k.showSlice(axis='y')
@@ -518,14 +545,16 @@ timings['dc-3d-import-mesh'] = time.time() - t0
 plt.close('all')
 print('-------------Testing 3D IP inversion ------------')
 t0 = time.time()
-k = R2(typ='cR3t')
+k = Project(typ='cR3t')
 k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
 k.createMesh(cl=5)
-k.showMesh()
+k.showMesh(use_pyvista=use_pyvista)
+
 k.invert()
-k.showResults()
+
+k.showResults(use_pyvista=use_pyvista)
 k.showSlice(index=0)
 k.showSlice(axis='z')
 k.showSlice(axis='x')
@@ -538,36 +567,65 @@ timings['ip-3d'] = time.time() - t0
 print('----------- Testing 3D Column inversion -----------')
 t0 = time.time()
 
-k = R2(typ='R3t') # create R2 class
+k = Project(typ='R3t') # create R2 class
 k.importElec(testdir + 'dc-3d-column/elec.csv') # import electrodes 
 k.createMesh(typ='prism',cl=0.1,elemz=2)
+
+#assign regions of resistivity 
 a = k.mesh.elmCentre
 idx = (a[:,1]<0.45) & (a[:,1]>-0.45) & (a[:,0]<0.45) & (a[:,0]>-0.45) # set a zone of different resistivity 
 res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
 k.setRefModel(res0) # set parameters for forward model 
-k.showMesh(attr='res0',color_map='jet')
-k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)]) # create a sequence 
+
+k.showMesh(attr='res0',color_map='jet',use_pyvista=use_pyvista)
+
+#create a forward modelling sequence, bit awkward at the moment because strings need to be picked individually
+xs = [0,0,1,-1]
+ys = [-1,1,0,0]
+zs = np.unique(k.elec['z'].values)
+seqIdx = []
+for i in range(4): # makes down column strings
+    sb = (k.elec['x'] == xs[i]) & (k.elec['y'] == ys[i]) # bool on string
+    si = [] # index on string
+    for j in range(len(sb)):
+        if sb[j]:
+            si.append(j)
+    seqIdx.append(si)
+for i in range(len(zs)):
+    sb = (k.elec['z'] == zs[i]) # bool on string
+    si = [] # index on string
+    for j in range(len(sb)):
+        if sb[j]:
+            si.append(j)
+    seqIdx.append(si)
+    
+
+k.createSequence(params=[('dpdp1',1,1),('dpdp1',2,1)], seqIdx=seqIdx) # create a sequence 
 k.forward() # do forward model 
 
 k.setRefModel(np.ones_like(res0)*100) # reset reference model 
 k.invert() # invert the problem 
-k.showResults(index=1, use_pyvista=False) #show result 
+k.showResults(index=1, use_pyvista=use_pyvista) #show result 
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
 
+#%% test timelapse 3D -- takes a long time
+k = Project(typ='R3t')
+k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
+k.createMesh()
+k.invert()
+
+k.showResults(index=0,use_pyvista=use_pyvista)
+k.showResults(index=1,use_pyvista=use_pyvista)
+
+t0 = time.time()
+k.mesh.orderNodes()
+t1 = time.time() - t0
 
 #%% print final summary information 
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
-
-#%% test timelapse 3D -- takes a long time
-k = R2(typ='R3t')
-k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
-k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
-k.createMesh()
-k.invert()
-k.showResults(index=0)
-k.showResults(index=1)

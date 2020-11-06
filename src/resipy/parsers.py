@@ -155,37 +155,45 @@ def syscalParser(fname):#, spacing=None):
         # if spacing is None:    
         # for unregularly spaced array
         array = df[['a','b','m','n']].values
-        # arrayMin = np.min(np.unique(np.sort(array.flatten())))
-        # if arrayMin != 0: # all surveys must start from x = 0
-        #     array -= arrayMin
-        # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-        # elecLabel = 1 + np.arange(len(val))
-        # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-        # df.loc[:,['a','b','m','n']] = newval
-        # elec = np.c_[val, np.zeros((len(val),2))]
+        
+        # get unique electrode positions and create ordered labels for them
+        val = np.sort(np.unique(array.flatten()))
+        elecLabel = 1 + np.arange(len(val))
+        newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+        df.loc[:,['a','b','m','n']] = newval # assign new label
+        
+        # build electrode array
+        elec = np.c_[val, np.zeros((len(val), 2))]
+        # NOTE: remote electrode identification is done in R2.setElec()
+        # but we notice that setting same number for remote (-99999) makes
+        # the pseudo-section of remote electrode survey nicer...
         remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
                                 9999999, 999999, 99999, 9999, 999])
-        iremote = np.in1d(array.flatten(), remoteFlags)
-        remoteFreeArray = array.flatten()[~iremote]
-        arraySorted = np.sort(np.unique(remoteFreeArray))
-        elecSpacing = arraySorted[1] - arraySorted[0]
+        iremote = np.in1d(val, remoteFlags)
+        elec[iremote, 0] = -99999
+        
+        # val = np.sort(np.unique(array.flatten()))
+        # iremote = np.in1d(val, remoteFlags)        
+        # remoteFreeArray = array.flatten()[~iremote]
+        # arraySorted = np.sort(np.unique(remoteFreeArray))
+        # elecSpacing = arraySorted[1] - arraySorted[0]
         # print('elecSpacing=', elecSpacing)
-        n = np.max(remoteFreeArray/elecSpacing).astype(int)
-        a = 0
-        if arraySorted[0] == 0:
-            n = n + 1
-            a = 1
-        if np.sum(iremote) > 0:
-            n = n + 1
-        for i in range(4):
-            ie = ~np.in1d(array[:,i], remoteFlags)
-            array[ie, i] = array[ie, i]/elecSpacing + a
-            array[~ie, i] = n
-        df.loc[:,['a','b','m','n']] = array.astype(int)
-        elec = np.zeros((n, 3))
-        elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
-        if np.sum(iremote) > 0:
-            elec[-1, 0] = -99999
+        # n = np.max(remoteFreeArray/elecSpacing).astype(int)
+        # a = 0
+        # if arraySorted[0] == 0:
+        #     n = n + 1
+        #     a = 1
+        # if np.sum(iremote) > 0:
+        #     n = n + 1
+        # for i in range(4):
+        #     ie = ~np.in1d(array[:,i], remoteFlags)
+        #     array[ie, i] = array[ie, i]/elecSpacing + a
+        #     array[~ie, i] = n
+        # df.loc[:,['a','b','m','n']] = array.astype(int)
+        # elec = np.zeros((n, 3))
+        # elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
+        # if np.sum(iremote) > 0:
+        #     elec[-1, 0] = -99999
         # else:
         #     # for regularly spaced array
         #     array = df[['a','b','m','n']].values
@@ -1566,29 +1574,31 @@ def bertParser(fname):
         line += 1
     
     elec_list = []
-    elecLocs0 = re.findall(numStr, dump[line])
+    elecLocs0 = re.findall(numStr, dump[line].split('#')[0]) # ".split('#')" for getting rid of comments 
     elecLocs_line = elecLocs0.copy()
     while len(elecLocs_line) == len(elecLocs0):
-        elecLocs_line = re.findall(numStr, dump[line])
+        elecLine_input_raw = dump[line].split('#')[0] # getting rid of comments 
+        elecLocs_line = re.findall(numStr, elecLine_input_raw)
         elec_list.append(elecLocs_line)
         line += 1
     
     elec = np.array(elec_list[:-1]).astype(float)
     
-    if elec.shape[1] != 3: # we have xz format so conver into xyz
+    if elec.shape[1] < 3: # we have xz format so conver into xyz
         elec = np.c_[elec[:,0], np.zeros(len(elec)), elec[:,1]]
     
-    vals = re.findall(numStr, dump[line])
+    vals = re.findall(numStr, dump[line].split('#')[0])
     while len(vals) < 4: # finding the data line
         line += 1
-        vals = re.findall(numStr, dump[line])
+        data_input_raw = dump[line].split('#')[0] # getting rid of comments 
+        vals = re.findall(numStr, data_input_raw)
     
     headers = re.findall(r'[A-Za-z]+', dump[line-1]) # for finding data types
 
-    topo_check_vals = len(re.findall(numStr, dump[line])) # TODO: is topography included without any flags?
+    topo_check_vals = len(re.findall(numStr, dump[line].split('#')[0])) # TODO: is topography included without any flags?
     df_list = []
     for val in dump[line:]: # reding data
-        vals = re.findall(numStr, val)
+        vals = re.findall(numStr, val.split('#')[0])
         if len(vals) != len(headers): # for end of data flags
             break
         df_list.append(vals)

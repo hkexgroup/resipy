@@ -206,45 +206,6 @@ def check_tetra(x,y,z):
         return 0 # something dogdey has happened as all points are on the same plane 
     
 
-def check_tetra2(x, y, z): # TODO vectorized version
-    """Check if 4 points in a tetrahedra are ordered counter clocwise
-    Parameters
-    -----------
-    x : array like 
-        x coordinates of tetrahedral cell, 4 by N array. 
-    y : array like 
-        y coordinates of tetrahedral cell, 4 by N array. 
-    z : array like 
-        z coordinates of tetrahedral cell, 4 by N array.
-    
-    Returns
-    -------
-    An array with:
-        0 if coplanar
-        1 if clockwise
-        2 if counter clockwise
-    """
-
-    p = np.array([z for z in zip(x,y,z)]) # list of [x, y, z] points coords
-    print(p)
-    S = np.cross(p[1] - p[0], p[2] - p[0])
-    N = np.dot(S, p[0] - p[3])
-    
-    if N>0:
-        return 1 # points are clockwise
-    elif N<0:
-        return 2 # points are counter clockwise
-    else:
-        return 0 # something dogdey has happened as all points are on the same plane 
-
-# a = np.random.randn(4,3)
-# b = np.random.randn(4,3)
-# x = a[:,0]
-# y = a[:,1]
-# z = a[:,2]
-# check_tetra2(x, y, z)
-
-
 #check order of 4 points  
 def order_quad(x,y,raycast=100000):
     """Order 4 points in a quad 
@@ -639,6 +600,13 @@ def idw(xnew, ynew, xknown, yknown, zknown, power=2, radius = 10000, extrapolate
         z coordinates at xnew and ynew. 
         
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     znew = np.zeros_like(xnew)
     znew.fill(np.nan)
     for i,(x,y) in enumerate(zip(xnew, ynew)):
@@ -696,6 +664,13 @@ def triangulate(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     znew: numpy array
         z coordinates at xnew and ynew.  
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     #error checking 
     if len(xnew) != len(ynew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
@@ -732,7 +707,8 @@ def triangulate(xnew, ynew, xknown, yknown, zknown, extrapolate=True):
     
 
 #%% pure nearest neighbour interpolation
-def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False): 
+def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False,
+            num_threads=2): 
     """Nearest neighbour lookup using scipy.spatial.cKDTree
     Suitable where dense known coordinates occur.ie. in the case of a DEM.  
     
@@ -757,6 +733,13 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False):
         z coordinates at xnew and ynew.  
         
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     #error checking 
     if len(xnew) != len(ynew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
@@ -766,8 +749,8 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False):
     pknown = np.array([xknown,yknown]).T # known points 
     pnew = np.array([xnew,ynew]).T # new points 
 
-    tree = cKDTree(pnew)#tree object 
-    dist,idx = tree.query(pknown)# map known points to new points 
+    tree = cKDTree(pknown)#tree object 
+    dist,idx = tree.query(pnew,n_jobs=num_threads)# map known points to new points 
     
     if return_idx:
         return zknown[idx], idx
@@ -775,7 +758,8 @@ def nearest(xnew, ynew, xknown, yknown, zknown, return_idx=False):
         return zknown[idx]
 
 #%% nearest neighbour interpolation in 3D 
-def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
+def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False,
+              num_threads=2):
     """Nearest neighbour lookup using scipy.spatial.cKDTree
     
     Parameters
@@ -803,6 +787,13 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
         extrapolated values at (xnew ynew znew) coordinates 
         
     """
+    
+    if type(xnew) != 'numpy.ndarray':xnew = np.array(xnew)
+    if type(ynew) != 'numpy.ndarray':ynew = np.array(ynew)
+    if type(xknown) != 'numpy.ndarray':xknown = np.array(xknown)
+    if type(yknown) != 'numpy.ndarray':yknown = np.array(yknown)
+    if type(zknown) != 'numpy.ndarray':zknown = np.array(zknown)
+    
     #error checking 
     if len(xnew) != len(ynew) or len(xnew) != len(znew):
         raise ValueError('Mismatch in interpolated coordinate array lengths')
@@ -812,11 +803,97 @@ def nearest3d(xnew,ynew,znew,xknown, yknown, zknown, iknown, return_idx=False):
     pknown = np.array([xknown,yknown,zknown]).T # known points 
     pnew = np.array([xnew,ynew,znew]).T # new points 
     tree = cKDTree(pknown)#tree object 
-    dist,idx = tree.query(pnew)# map known points to new points 
-
+    dist,idx = tree.query(pnew,n_jobs=num_threads)# map known points to new points 
     
     if return_idx:
         return iknown[idx], idx
     else: 
         return iknown[idx]
 
+#%% National grid handling (needed for accurate interpolation)
+def rotGridData(ngx, ngy, x0=None, y0=None, rotAngle=0):
+    """ Rotate National grid coordinates into local coordinates. 
+    
+    Parameters
+    ------------
+    ngx: array like 
+        Easting in National grid
+    ngy: array like
+        Northing in National grid
+    x0: int, float, optional
+        Initial easting
+    y0: int, float, optional
+        Initial northing
+    rotAngle:
+        Rotation angle (in degrees)
+    
+    Returns 
+    ------------   
+    rotx: array like
+        Local x coordinate 
+    roty: array like 
+        Local Y coordinate 
+    """
+    if len(ngx) != len(ngy):
+        raise ValueError('Got arrays of 2 different lengths in rotGridData')
+        
+    rotx = np.zeros(len(ngx))
+    roty = np.zeros(len(ngx))
+    
+    if x0 is None:
+        x0 = min(ngx)
+    if y0 is None:
+        y0 = min(ngy)
+        
+    rotAngle = np.deg2rad(rotAngle) # convert to radians for calculations 
+
+    for i in range(len(ngx)):
+        trans_x = ngx[i] - x0
+        trans_y = ngy[i] - y0
+        rotx[i] = trans_x*np.cos(rotAngle) - trans_y*np.sin(rotAngle)
+        roty[i] = trans_x*np.sin(rotAngle) + trans_y*np.cos(rotAngle) 
+        
+    return rotx,roty
+
+def invRotGridData(local_x, local_y, x0, y0, rotAngle=0):
+    """ Rotate local coordinates back into National Grid
+    Parameters
+    ------------
+    local_x: array like 
+        Local X array 
+    local_y: array like
+        Local Y array 
+    x0: int, float, 
+        Initial easting. Same as 
+    y0: int, float, 
+        Initial northing
+    rotAngle:
+        Rotation angle (in radians)
+    
+    Returns 
+    ------------   
+    rotx: array like
+        Rotated coordinate in National grid 
+    roty: array like 
+        Rotated coordinate in National grid 
+    """
+    if len(local_x) != len(local_y):
+        raise ValueError('Got arrays of 2 different lengths in invRotGridData')
+    rotx = np.zeros(len(local_x))
+    roty = np.zeros(len(local_y))
+    
+    rotAngle = np.deg2rad(rotAngle) # convert to radians for calculations 
+    for i in range(len(local_x)):
+        col1 = np.array((np.cos(rotAngle),np.sin(rotAngle)))
+        col2 = np.array((-np.sin(rotAngle),np.cos(rotAngle)))
+        col1.shape=(2,1)
+        col2.shape=(2,1)
+        G = np.matrix(np.concatenate((col1,col2),axis=1)) 
+        d = np.array([local_x[i], local_y[i]])
+        d.shape = (2,1)
+        mod = ((G.T * G)**-1) * G.T * d 
+        t = mod.A
+        rotx[i] = t[0][0]+ x0
+        roty[i] = t[1][0]+ y0
+        
+    return rotx,roty
