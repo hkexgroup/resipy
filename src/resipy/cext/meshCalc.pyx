@@ -646,7 +646,7 @@ def splitTri(long[:,:] connection, double[:,:] node):
     cdef long[:,:] new_connectionv = new_connection # memory view 
 
     cdef np.ndarray[double, ndim=2] new_node = np.zeros((numel*3,3), dtype=float)
-    cdef np.ndarray[long, ndim=1] new_node_idx = np.zeros(numel*3, dtype=int)
+    cdef np.ndarray[long long, ndim=1] new_node_idx = np.zeros(numel*3, dtype=np.int64)
     cdef np.ndarray[long, ndim=1] og_el_id = np.zeros(numel*3,dtype=int)
     cdef double[:,:] new_nodev = new_node
     cdef long[:] og_el_idv = og_el_id 
@@ -689,9 +689,13 @@ def splitTri(long[:,:] connection, double[:,:] node):
             og_el_idv[tmpi+j] = i
     
     ### find unique node configs # ###   
-    cdef np.ndarray[long, ndim=1] idxa, unicl, node_id
-    unicl,idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
-    node_id = np.arange(len(unicl)) + num_nodes 
+    # cdef list unicl, idx
+    # unicl, idx = unique(list(new_node_idx)) # unique and ordered node configs 
+    # cdef long[:] idxa = np.asarray(idx, dtype=int)
+    # cdef long[:] uniclv = np.asarray(unicl,dtype=int)
+    cdef np.ndarray[long long, ndim=1] idxa, unicl
+    unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
+    cdef long[:] node_id = np.arange(len(unicl)) + num_nodes 
     
     ### map back to elements #### 
     for i in range(numel):
@@ -767,7 +771,7 @@ def splitTetra(long[:,:] connection, double[:,:] node):
     cdef long[:,:] new_connectionv = new_connection
 
     cdef np.ndarray[double, ndim=2] new_node = np.zeros((numel*6,3),dtype=float) # used to reference already computed node centres
-    cdef np.ndarray[long, ndim=1] new_node_idx = np.zeros(numel*6,dtype=int)
+    cdef np.ndarray[long long, ndim=1] new_node_idx = np.zeros(numel*6,dtype=np.int64)
    
     cdef np.ndarray[long, ndim=1] og_el_id = np.zeros(numel*6,dtype=int)
     cdef double[:,:] new_nodev = new_node
@@ -814,11 +818,13 @@ def splitTetra(long[:,:] connection, double[:,:] node):
             og_el_idv[tmpi+j] = i
     
     ### find unique node configs # ###       
-    
-    cdef np.ndarray[long, ndim=1] idx, unicl
-    unicl,idx = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
+    # cdef list unicl, idx
+    # unicl, idx = unique(list(new_node_idx)) # unique and ordered node configs 
+    cdef np.ndarray[long long, ndim=1] idxa, unicl
+    unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
     cdef long[:] node_id = np.arange(len(unicl)) + num_nodes 
-    cdef long[:] idxa = idx 
+    # cdef long[:] idxa = np.asarray(idx,dtype=int) 
+    # cdef long[:] uniclv = np.asarray(unicl,dtype=int)
     
     ### map back to elements #### 
     for i in range(numel):
