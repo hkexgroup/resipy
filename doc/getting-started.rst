@@ -12,25 +12,25 @@ ResIPy aims to process geoeletrical data (DC and IP). It provides a python appli
 
 The same processing can be achieved with the python API::
 
-    from resipy import R2
-    k = R2()
+    from resipy import Project
+    k = Project(typ='R2')
     k.createSurvey('examples/dc-2d/syscal.csv')
     k.invert() # invert measurements
     k.showResults() # display inverted pseudo-section
 
-More examples are available in the Galley of examples.
+More examples are available in the Gallery of examples.
 
 
 Installation
 ------------
 
-The easiest way is to download one of our standalone executable from gitlab
+The easiest way is to download one of our standalone executable from gitlab (https://gitlab.com/hkex/resipy).
 
 
 Clone the gitlab repository and run from source::
 
-    git clone https://gitlab.com/hkex/pyr2
-    cd pyr2/src
+    git clone https://gitlab.com/hkex/resipy
+    cd resipy/src
     python ui.py
     
 Alternatively you can install the API part of the module (so no GUI) from pypi using pip::
