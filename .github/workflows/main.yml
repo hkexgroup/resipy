@@ -1,0 +1,124 @@
+# This is a basic workflow to help you get started with Actions
+
+name: One script to build them all
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  workflow_dispatch
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          cat apt.txt | xargs sudo apt-get install
+          cd ..
+          pip3 install virtualenv
+          python3 -m virtualenv -p python3 pyenv
+          source pyenv/bin/activate
+          cd resipy
+          pip3 install setuptools==49.0.0
+          pip3 install -r requirements-gui.txt
+          pip3 install pyinstaller
+
+      - name: Run build
+        run: |
+          cd src
+          ./build.sh
+          find ./
+          cd ..
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ResIPy-linux.zip
+          path: ./src/dist/ResIPy-linux.zip
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ResIPy-linux
+          path: ./src/dist/ResIPy-linux
+          
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Set up environment
+        run: |
+          cd ..
+          pip install virtualenv
+          python -m virtualenv -p python pyenv
+          pyenv\Scripts\activate
+          cd resipy
+          pip install setuptools==49.0.0
+          pip install -r requirements-gui.txt
+          pip install pyinstaller
+
+      - name: Run build
+        run: |
+          cd src
+          dir
+          .\build.bat
+          cd ..
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ResIPy-windows.zip
+          path: ./src/dist/ResIPy-windows.zip
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ResIPy-windows.exe
+          path: ./src/dist/ResIPy-windows.exe
+          
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Set up environment
+        run: |
+          brew reinstall python@3.7
+          cd ..
+          /usr/local/opt/python@3.7/bin/python3 -m pip install virtualenv
+          /usr/local/opt/python@3.7/bin/python3 -m virtualenv -p /usr/local/opt/python@3.7/bin/python3 pyenv
+          source pyenv/bin/activate
+          cd resipy
+          pip3 install setuptools==49.0.0
+          pip3 install -r requirements-gui.txt
+          pip3 install pyinstaller
+
+      - name: Run build
+        run: |
+          cd src
+          mkdir -p macdmg
+          ./build-app.sh
+          cd dist
+          zip -r ResIPy-macos.zip ResIPy-macos.app
+          cd ../..
+          
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ResIPy-macos.app
+          path: ./src/dist/ResIPy-macos.zip
+          
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ResIPy-macos.dmg
+          path: ./src/dist/ResIPy-macos.dmg
+      

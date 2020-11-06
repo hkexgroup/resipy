@@ -1,9 +1,9 @@
-API documentation
-=================
+API reference
+=============
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-.. automodule:: resipy.R2
+.. automodule:: resipy.Project
    :members:
 .. automodule:: resipy.Survey
    :members:

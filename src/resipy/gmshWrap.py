@@ -1,9 +1,8 @@
 # GMSH WRAPPER FUNCTIONS
 """
 Created on Tue Apr 10 14:32:14 2018 in python 3.6.5
-Wrapper for creating 2d and 3d triangular meshes with gmsh and converting it 
-into a mesh.dat format for R2 and R3t. The program tri_mesh () expects a directory "exe"
-to be within the api (or working) directory with a gmsh.exe inside it. 
+Wrapper for creating 2d and 3d triangular mesh scripts for gmsh and 
+parsing meshes into a python environment. 
 
 @author: jimmy Boyd - jamyd91@bgs.ac.uk
 """
@@ -11,7 +10,7 @@ to be within the api (or working) directory with a gmsh.exe inside it.
 import os, warnings
 #general 3rd party libraries
 import numpy as np
-import resipy.geomTools as iip
+import matplotlib.path as mpath
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -48,7 +47,7 @@ def moving_average(array,N=3):
         out[i] = sum(array[a:b])/len(array[a:b])
     return out
     
-def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
+def find_dist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spacings 
     dist = np.zeros((len(elec_x),len(elec_x)))   
     x1 = np.array(elec_x)
     y1 = np.array(elec_y)
@@ -119,7 +118,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         currently the code expects a 'surface' and 'electrode' key for surface points and electrodes.
         the first borehole string should be given the key 'borehole1' and so on. The code stops
         searching for more keys when it cant find the next numeric key. Same concept goes for adding boundaries
-        and polygons to the mesh. See below example:
+        and polygons to the mesh. A boundary is a 1D line which is considered to span the fine mesh region,
+        and a polygon is a discrete shape within the fine mesh region. See below example for format:
             
             geom_input = {'surface': [surf_x,surf_z],
               'boundary1':[bound1x,bound1y],
@@ -304,7 +304,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     tot_pnts=0#setup a rolling total for points numbering
     sur_pnt_cache=[] # surface points cache 
     for i in range(len(x_pts)):
-        tot_pnts=tot_pnts+1
+        tot_pnts+=1
         fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],0,z_pts[i],flag_sort[i]))
         sur_pnt_cache.append(tot_pnts)
     
@@ -330,37 +330,94 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     x_base = np.linspace(x_pts[0],x_pts[-1],int(len(x_pts)/div))
     z_base = np.interp(x_base,x_pts,z_pts) - abs(fmd)
     
-    # check that the depth lowermost point of the fine mesh region doesnt intersect the surface
-    if np.max(z_base) > np.min(electrodes[1]):
-        warnings.warn("The depth of investigation is above the the minium z coordinate of electrodes, mesh could be buggy!", Warning)   
-    
     basal_pnt_cache = []
     for i in range(len(x_base)):
-        tot_pnts=tot_pnts+1
+        tot_pnts += 1
         fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//%s\n"%(tot_pnts,x_base[i],0,z_base[i],cl_factor,
                  'base of smoothed mesh region'))
         basal_pnt_cache.append(tot_pnts)
     
-    fh.write("//make a polygon by defining lines between points just made.\n")
+    fh.write("//make lines between base of fine mesh region points\n")
     basal_ln_cache=[]
     for i in range(len(x_base)-1):
-        tot_lins=tot_lins+1
+        tot_lins += 1
         fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,basal_pnt_cache[i],basal_pnt_cache[i+1]))
         basal_ln_cache.append(tot_lins)
     
-    fh.write("//Add lines at the end points of each of the fine mesh region.\n")
-    tot_lins=tot_lins+1;# add to the number of lines rolling total 
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[0],basal_pnt_cache[0]))#line from first point on surface to depth
-    tot_lins=tot_lins+1
-    fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,sur_pnt_cache[-1],basal_pnt_cache[-1]))#line going bottom to last electrode point
-    end_ln_cache=[tot_lins-1,tot_lins]
+    fh.write("\n//Adding boundaries\n") # boundaries which stretch across the mesh
+    count = 0   
+    end_pt_l = [sur_pnt_cache[0]]
+    end_pt_r = [sur_pnt_cache[-1]]
+    blines = [] # boundary line cache 
+    m = (cl_factor-1)/abs(fmd)
+    while True:
+        count += 1        
+        key = 'boundary'+str(count)
+        if key in geom_input.keys():
+            bdx = np.array(geom_input[key][0])
+            bdz = np.array(geom_input[key][1])
+
+            #filtx = (bdx > x_pts[0]) & (bdx < x_pts[-1]) # filter out points beyond x bounds? 
+
+            pt_idx = [0] * (len(bdx)+2)
+            # interpolate right and left boundary points 
+            x_end = np.array([x_pts[0],x_pts[-1]])
+            z_end = np.interp(x_end,bdx,bdz)
+            bdx = np.append(bdx,x_end)
+            bdz = np.append(bdz,z_end)
+            zdepth = np.abs(np.interp(bdx,x_pts,z_pts) - bdz)
+            clb = zdepth*m + 1 # boundary characteristic length 
+            
+            sortid = np.argsort(bdx)
+            bdx = bdx[sortid] # reassign to sorted arrays by x coordinate 
+            bdz = bdz[sortid] # reassign to sorted arrays by x coordinate 
+            
+            
+            fh.write("// vertices for boundary line %i\n"%count)
+            for k in range(len(bdx)):
+                tot_pnts += 1 
+                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//boundary vertex \n"%(tot_pnts,bdx[k],0,bdz[k],clb[k]))
+                pt_idx[k] = tot_pnts
+            fh.write("// lines for boundary line %i\n"%count)
+            line_idx = []
+            end_pt_l.append(pt_idx[0])
+            end_pt_r.append(pt_idx[-1])
+            
+            for i in range(len(pt_idx)-1):
+                idx = pt_idx[i]
+                tot_lins += 1
+                fh.write("Line (%i) = {%i,%i};\n"%(tot_lins,idx,idx+1))
+                blines.append(tot_lins)
+                
+        else:
+            fh.write("//end of boundaries.\n")
+            dump('%i boundary(ies) added to input file'%(count-1))
+            break  
+        
+    end_pt_l.append(basal_pnt_cache[0])
+    end_pt_r.append(basal_pnt_cache[-1])
+    end_ln_l = []
+    end_ln_r = []
+    
+    #add left and rightmost lines to close off the fine mesh region
+    fh.write("//Add lines at leftmost side of fine mesh region.\n")
+    for i in range(len(end_pt_l)-1):
+        tot_lins=tot_lins+1;# add to the number of lines rolling total 
+        fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,end_pt_l[i],end_pt_l[i+1]))#line from first point on surface to depth
+        end_ln_l.append(tot_lins)
+    
+    fh.write("//Add lines at rightmost side of fine mesh region.\n")
+    for i in range(len(end_pt_r)-1):
+        tot_lins=tot_lins+1;# add to the number of lines rolling total 
+        fh.write("Line(%i) = {%i,%i};\n"%(tot_lins,end_pt_r[i],end_pt_r[i+1]))#line from first point on surface to depth
+        end_ln_r.append(tot_lins)
+
     
     #compile line numbers into a line loop.
     fh.write("//compile lines into a line loop for a mesh surface/region.\n")
     sur_ln_cache_flipped = list(np.flipud(np.array(sur_ln_cache))*-1)
-    fine_msh_loop = [end_ln_cache[0]] + basal_ln_cache + [-1*end_ln_cache[1]] + sur_ln_cache_flipped
+    fine_msh_loop = end_ln_l + basal_ln_cache + [end_ln_r[i]*-1 for i in range(len(end_ln_r))] + sur_ln_cache_flipped
     fh.write("Line Loop(1) = {%s};\n"%str(fine_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
-#    fh.write("Plane Surface(1) = {1};//Fine mesh region surface\n")
     
     #now extend boundaries beyond flanks of survey area (so generate your Neummon boundary)
     fh.write("\n//Background region (Neumann boundary) points\n")
@@ -399,7 +456,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("//Add line loops and plane surfaces for the Neumann region\n")
     #now add background region line loop (cos this be made more efficent?)
     basal_ln_cache_flipped = list(np.flipud(np.array(basal_ln_cache))*-1)
-    coarse_msh_loop = n_ln_cache + [end_ln_cache[1]] + basal_ln_cache_flipped + [-1*end_ln_cache[0]]
+    coarse_msh_loop = n_ln_cache + end_ln_r + basal_ln_cache_flipped + [end_ln_l[i]*-1 for i in range(len(end_ln_l))]
     fh.write("Line Loop(2) = {%s};\n"%str(coarse_msh_loop).strip('[').strip(']')) # line loop for fine mesh region 
     fh.write("Plane Surface(1) = {1, 2};//Coarse mesh region surface\n")
     
@@ -449,7 +506,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 fh.write("Line (%i) = {%i,%i};//borehole %i segment\n"%(no_lin,idx,idx+1,count))
                 line_idx.append(no_lin)
             
-            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
+            fh.write("Line{%s} In Surface{2};\n"%str(line_idx).strip('[').strip(']'))
     
     no_plane = 1 # number of plane surfaces so far (actually two)
     fh.write("\n//Adding polygons\n")
@@ -503,6 +560,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("\n//Make a physical surface\n")
     fh.write("Physical Surface(1) = {%i, 1};\n"%no_plane)
     
+    if len(blines)>0:#add boundary lines if present 
+        fh.write("Line{%s} In Surface{2};//boundary lines\n"%str(blines).strip('[').strip(']'))
     
     #add buried electrodes? (added after as we need Surface 1 to be defined)       
     if bu_flag:
@@ -540,37 +599,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
         fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
         fh.write('//End of remote electrodes.\n')
-        
-    
-    fh.write("\n//Adding boundaries\n")
-    count = 0   
-    while True:
-        count += 1        
-        key = 'boundary'+str(count)
-        
-        if key in geom_input.keys():
-            bdx = geom_input[key][0]
-            bdz = geom_input[key][1]
-            bdy = [0]*len(bdx)
-            pt_idx = [0] *len(bdx)
-            fh.write("// vertices for boundary line %i\n"%count)
-            for k in range(len(bdx)):
-                no_pts += 1 
-                fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//boundary vertex \n"%(no_pts,bdx[k],bdy[k],bdz[k]))
-                pt_idx[k] = no_pts
-            fh.write("//put lines between each vertex\n")
-            line_idx = []
-            for i in range(len(pt_idx)-1):
-                idx = pt_idx[i]
-                no_lin += 1
-                fh.write("Line (%i) = {%i,%i};\n"%(no_lin,idx,idx+1))
-                line_idx.append(no_lin)
-            fh.write("Line{%s} In Surface{1};\n"%str(line_idx).strip('[').strip(']'))
-                
-        else:
-            fh.write("//end of boundaries.\n")
-            dump('%i boundary(ies) added to input file'%(count-1))
-            break              
                     
     fh.write("\n//End gmsh script\n")
     fh.close()
@@ -655,19 +683,38 @@ def msh_parse(file_path,debug=True):
     nodey=[0]*no_nodes
     nodez=[0]*no_nodes
     #read in node information
-    node_idx = 1
-    for i in range(node_start, node_end):
-        line_info=dump[i].split()
-        #convert string info into floats
-        line=[float(k) for k in line_info]
-        previous_node = node_idx 
-        node_idx = int(line[0])
-        if not node_idx < previous_node: # else then its some weird flag used by gmsh, ignore
+    if gmshV == 3:
+        for i in range(node_start, node_end):
+            line_info=dump[i].split()
+            #convert string info into floats
+            line=[float(k) for k in line_info]
+            node_idx = int(line[0])
             node_num[node_idx-1]=node_idx
             nodex[node_idx-1]=line[1]
             nodey[node_idx-1]=line[2]
             nodez[node_idx-1]=line[3]
-    
+    else:
+        c = 0
+        i = node_start
+        while c <  no_nodes:
+            line_info=dump[i].split()
+            line = [int(k) for k in line_info] # entity line 
+            ent = line[-1] #number of nodes to follow
+            ent_start = i #starting line 
+            for j in range(ent):
+                #print(i+j)
+                line_info=dump[ent_start+1+j].split()
+                #convert string info into floats
+                line = [float(k) for k in line_info]
+                node_idx = int(line[0])
+                node_num[node_idx-1]=node_idx
+                nodex[node_idx-1]=line[1]
+                nodey[node_idx-1]=line[2]
+                nodez[node_idx-1]=line[3]
+                c+=1
+                i+=1   
+            i+=1
+        
     #### read in elements 
     # find where the elements start 
     for i, line in enumerate(dump):
@@ -691,24 +738,8 @@ def msh_parse(file_path,debug=True):
         if gmshV == 3:
             elm_type.append(int(line[1]))
         else:
-            elm_type.append(len(line) - 1)
-    
-    #if using gmsh version 4.x filter out the flag lines 
-    if gmshV == 4:
-        flagline = []
-        flagidx = []
-        flaglines = int(dump[element_start-1].split()[0])
-    
-        line = dump[element_start].split()
-        flagline.append(dump[element_start])
-        flagidx.append(element_start)
-        skip = int(line[-1])
-        for i in range(flaglines-1): 
-            line = dump[element_start+skip+1].split()
-            flagline.append(dump[element_start+skip+1])
-            flagidx.append(element_start+skip+1)
-            skip = int(line[-1])
-    
+            elm_type.append(len(line)-1)
+            
     if gmshV == 3:
         lookin4 = [2,4,6] # number of cell nodes we are looking for 
     else:
@@ -738,34 +769,50 @@ def msh_parse(file_path,debug=True):
     stream('Reading connection matrix...')
         
     phys = 0
-    for i in range(element_start,element_end):
-        splitted = dump[i].split()
-        line=[int(k) for k in splitted]
-        if gmshV == 3: 
+    if gmshV == 3:#parse elements for older gmsh file type 
+        for i in range(element_start,element_end):
+            splitted = dump[i].split()
+            line=[int(k) for k in splitted]
             elmV = line[1]
             if npere == 3:
                 elmV+=1 # in this format the flag for triangle elements is 2 so add 1
-            st = 5
-        else:
-            elmV = len(line) - 1
-            st = 1
-            if i in flagidx:
-                phys += 1 # physical entity incriments with flag lines 
-                elmV = -1 # then ignore this line as it's a flag
-        
-        #convert string info into floats and cache data
-        if npere == elmV:
-            nat_elm_num.append(line[0])
-            elm_type.append(line[1]) 
-            if gmshV == 4:
-                phys_entity.append(phys)
-            else:
+            #convert string info into ints and cache data
+            if npere == elmV:#if line contains number of element vertices we want
+                nat_elm_num.append(line[0])
+                elm_type.append(line[1]) 
                 phys_entity.append(line[4]) 
-            
-            for j in range(npere):
-                con_matrix[j].append(line[st+j]-1)
-        else:
-            ignored_elements += 1
+                for j in range(npere):
+                    con_matrix[j].append(line[5+j]-1)
+            else:
+                ignored_elements += 1
+    else: #newer gmsh parser
+        c = 0
+        i = element_start
+        while i < element_end:
+            #read in flag line 
+            splitted = dump[i].split()
+            line=[int(k) for k in splitted]
+            nef = line[3] # number of elements to follow 
+            elmV = line[2] # number of element vertices 
+            phys = line[0] # physical entity 
+            if npere == 3:
+                elmV+=1 # in this format the flag for triangle elements is 2 so add 1
+            if npere == elmV:
+                nef_start = i + 1
+                for j in range(nef):
+                    splitted = dump[nef_start+j].split()
+                    line=[int(k) for k in splitted]
+                    nat_elm_num.append(line[0])
+                    # elm_type.append(line[1]) 
+                    phys_entity.append(phys) 
+                    for k in range(npere):
+                        con_matrix[k].append(line[1+k]-1)
+                    c+=1
+                    i+=1 
+                i+=1
+            else:
+                ignored_elements += nef
+                i += nef+1
             
     stream("ignoring %i elements in the mesh file, as they are not required for R2/R3t"%ignored_elements)
     
@@ -1307,13 +1354,14 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     
 #%% parse a .msh file
 def msh_parse_3d(file_path):
-    warnings.warn('msh_parse_3d is depreciated use msh_parse instead')
+    warnings.warn('msh_parse_3d is deprecated use msh_parse instead', DeprecationWarning)
     return msh_parse(file_path)
 
 #%% column mesh
-def column_mesh(electrodes, poly=None, z_lim= None, 
-                radius = None, file_path='column_mesh.geo', cl=-1, elemz=4):
-    """Make a prism mesh 
+def column_mesh(electrodes, poly=None, z_lim=None, radius=None,
+                file_path='column_mesh.geo', cl=-1, elemz=4):
+    """Make a prism mesh.
+    
     Parameters
     ------------
     electrodes: list of array likes
@@ -1411,7 +1459,8 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         fh.write("Plane Surface(1) = {1};\n\n")
         
         #work out which electrodes are inside or on the end of the column 
-        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
         
     
     if all(inside) == False:
@@ -1459,11 +1508,353 @@ def column_mesh(electrodes, poly=None, z_lim= None,
         
     fh.close()
     
+
+
+#%% Cylinder mesh using tetrahedra
+# def cylinder_mesh(electrodes, poly=None, z_lim=None, radius=None, 
+#                   file_path='cylinder_mesh.geo', cl=-1):
+#     """Make a cylinder mesh using tetrahedra.
+    
+#     Parameters
+#     ------------
+#     electrodes: list of array likes
+#         First column/list is the x coordinates of electrode positions and so on ... 
+#     poly: list, tuple, optional 
+#         Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+#         x and y coordinates, ie (poly_x, poly_y).
+#     z_lim: list, tuple, optional 
+#         Top and bottom z coordinate of column, in the form (min(z),max(z))
+#     radius: float, optional 
+#         Radius of column.
+#     file_path: string, optional 
+#         Name of the generated gmsh file (can include file path also).
+#     cl: float, optional
+#         Characteristic length, essentially describes how big the nodes 
+#         associated elements will be. Usually no bigger than 5. If set as -1 (default)
+#         a characteristic length 1/4 the minimum electrode spacing is computed. 
+#     """
+#     # add file extension if not specified already
+#     if file_path[-4:] != '.geo':
+#         file_path = file_path + '.geo'
+    
+#     # extract electrodes
+#     elec_x = electrodes[0]
+#     elec_y = electrodes[1]
+#     elec_z = electrodes[2]
+#     #uni_z = np.unique(elec_z) # unique z values 
+    
+#     if z_lim is None:
+#         z_lim = [min(elec_z), max(elec_z)]
+
+#     if radius is None:
+#         radius = max(electrodes[0])
+        
+#     if cl == -1:
+#         dist_sort = np.sort(np.unique(find_dist(elec_x,elec_y,elec_z)))
+#         cl = dist_sort[1]/8 # characteristic length is 1/8 the minimum electrode distance   
+    
+#     num_elec = len(elec_z)
+
+#     fh = open(file_path,'w')
+#     fh.write("// ResIPy cylinder with tetrahedra\n")
+#     # fh.write('SetFactory("OpenCASCADE");\n')
+#     fh.write("cl=%f;\n"%cl)
+    
+#     x = []
+#     y = [] # ignore repeated vertices 
+    
+#     if poly is None:
+#         fh.write("// Make a circle which is extruded\n")
+#         fh.write("Point (1) = {0,0,%f,cl};\n"%(z_lim[0]))
+#         x.append(0);y.append(0)
+#         fh.write("Point (2) = {%f,0,%f,cl};\n"%(radius,z_lim[0]))
+#         x.append(radius);y.append(0)
+#         fh.write("Point (3) = {0,%f,%f,cl};\n"%(radius,z_lim[0]))
+#         x.append(0);y.append(radius)
+#         fh.write("Point (4) = {0,-%f,%f,cl};\n"%(radius,z_lim[0]))
+#         x.append(0);y.append(-radius)
+#         fh.write("Point (5) = {-%f,0,%f,cl};\n"%(radius,z_lim[0]))
+#         x.append(-radius);y.append(0)
+#         fh.write("Circle (1) = {2,1,3};\n")
+#         fh.write("Circle (2) = {3,1,4};\n")
+#         fh.write("Circle (3) = {4,1,5};\n")
+#         fh.write("Circle (4) = {5,1,2};\n")
+
+#         fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
+#         fh.write("Plane Surface(1) = {1};\n")
+#         fh.write("Point {%i} In Surface {1};\n\n"%1)
+#         edges = 3
+#         pt_no = 6
+        
+#         #work out which electrodes are inside or on the end of the column 
+#         dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
+#         inside = dist < radius 
+#     else:
+#         poly_x = poly[0]
+#         poly_y = poly[1]
+#         pt_no = 0
+#         #make a node for each vertex in the polygon 
+#         for i in range(len(poly_x)):
+#             pt_no += 1
+#             fh.write("Point (%i) = {%f,%f,%f,cl};//polygon point\n"%(pt_no,poly_x[i],poly_y[i],z_lim[0]))
+#         # connect the nodes with lines 
+#         ln_no = 0
+#         for i in range(pt_no-1):
+#             ln_no += 1
+#             fh.write("Line (%i) = {%i,%i};//polygon line\n"%(ln_no,i+1,i+2))
+#         ln_no+=1
+#         fh.write("Line (%i) = {%i,%i};//closing line\n"%(ln_no,pt_no,1))
+#         edges = ln_no
+#         # form a line loop and surface
+#         fh.write("Line Loop(1) = {")
+#         [fh.write('%i,'%(i+1)) for i in range(ln_no-1)]
+#         fh.write("%i};\n"%ln_no)
+#         fh.write("Plane Surface(1) = {1};\n\n")
+        
+#         #work out which electrodes are inside or on the end of the column 
+#         path = mpath.Path(np.array(poly[0],poly[1]).T)
+#         inside = path.contains_points(np.array([elec_x,elec_y]).T)
+        
+    
+#     if all(inside) == False:
+#         fh.write("//Points inside the column\n")
+#         x = []
+#         y = [] # ignore repeated vertices 
+#         for i in range(num_elec):
+#             if inside[i] and elec_x[i] not in x and elec_y[i] not in y:
+#                 pt_no+=1
+#                 fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],z_lim[0]))
+#                 fh.write("Point {%i} In Surface {1};\n"%pt_no)
+#                 x.append(elec_x[i])
+#                 y.append(elec_y[i])
+            
+#     surface = 1
+    
+#     if min(elec_z) < z_lim[0] or max(elec_z) > z_lim[1]:
+#         fh.close()
+#         raise ValueError ("Z coordinate of column electrodes is out of bounds")
+    
+#     # allz = np.append(elec_z, z_lim)
+#     allz = z_lim
+#     elemz = 1 # number of layer between rings
+
+#     uni_z = np.unique(allz)
+    
+#     # extrude surfaces 
+#     fh.write("//Extrude planes in between each electrode.\n") 
+#     seg = 0 # segment number 
+        
+#     for i in range(0,len(uni_z)-1):
+#         # work out the amount to extrude 
+#         diff = uni_z[i+1] - uni_z[i]    
+#         seg += 1      
+#         fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i}; Recombine;};'%(seg,diff,surface,elemz))
+#         surface += edges + 1
+#         if i==0:
+#             fh.write('//Base of column\n')
+#         elif i == len(uni_z)-2:
+#             fh.write('//top of column\n')
+#         else:
+#             fh.write('\n')
+        
+#     fh.write('Physical Volume(1) = {')
+#     for i in range(seg-1):
+#         fh.write('seg%i[1],'%(i+1))
+#     fh.write('seg%i[1]};'%(seg))
+        
+#     fh.close()
+
+# test
+# radius = 6.5/2 # cm
+# angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+
+# cylinder_mesh([elec[:,0], elec[:,1], elec[:,2]], file_path='/home/jkl/Downloads/mesh.geo')
+
+#%% helper code (from ICL column)
+
+def cylinder_mesh(electrodes, zlim=None, radius=None, 
+                  file_path='cylinder_mesh.geo', cl=-1, finer=4):
+    """Make a cylinder mesh using tetrahedra.
+    
+    Parameters
+    ------------
+    electrodes : list of array_like or nx3 array
+        First column/list is the x coordinates of electrode positions and so on ... 
+    zlim : list, tuple, optional 
+        Bottom and top z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        Radius of column.
+    file_path : string, optional 
+        Name of the generated gmsh file (can include file path also).
+    cl : float, optional
+        Characteristic length, essentially describes how big the nodes 
+        associated elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed. 
+    finer : int, optional
+        Number of line between two consecutive electrodes to approximate the
+        circle shape.
+    """
+    if isinstance(electrodes, list):
+        elec = np.array(electrodes).T
+    else:
+        elec = electrodes
+    
+    # compute distance matrix (useful for inferring cl and radius)
+    def cdist(a):
+        z = np.array([complex(x[0], x[1]) for x in a])
+        return np.abs(z[...,np.newaxis]-z)
+
+    uz = np.unique(elec[:,2])
+    ie = elec[:,2] == uz[0]
+    dist = cdist(elec[ie,:2]).flatten()
+    
+    content = ''
+    
+    # characteristic length
+    if cl == -1:
+        cl = np.min(dist[dist > 0])/3
+    content = content + 'cl = {:f};\n'.format(cl)
+    
+    c = 1 # entity count
+    # add electrodes
+    content += '// Electrodes locations\n'
+    cpts = []
+    for i, pts in enumerate(elec):
+        content += 'Point({:d}) = {{{:f}, {:f}, {:f}, cl}};\n'.format(c, *pts)
+        cpts.append(c)
+        c += 1
+    
+    # add file extension if not specified already
+    if file_path[-4:] != '.geo':
+        file_path = file_path + '.geo'
+        
+    # add points for the circle
+    if radius is None:
+        radius = np.max(dist)/2
+        
+    if zlim is None:
+        zlim = [np.max(elec[:,2], np.min(elec[:,2]))]
+        
+    angles = np.linspace(0, 2*np.pi, 12*finer+1)[:-1]
+    celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+    stages = [np.max(zlim), np.min(zlim)]
+    ringPerStage = [len(np.unique(elec[:,2]))]
+    
+    cstg = []
+    for stage in stages:
+        tmp = []
+        for i, a in enumerate(celec):
+            content += 'Point({:d}) = {{{:f}, {:f}, {:f}, cl}};\n'.format(c, a[0], a[1], stage)
+            tmp.append(c)
+            c += 1
+        tmp = tmp + [tmp[0]]
+        cstg.append(tmp)
+    
+    # horizontal lines
+    lhor = []
+    for a in cstg:
+        tmp = []
+        for i in range(12*finer):
+              content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, a[i], a[i+1])
+              tmp.append(c)
+              c += 1
+        tmp = tmp + [tmp[0]]
+        lhor.append(tmp)
+    
+    # vertical lines
+    lverAll = []
+    for l, ring in enumerate(ringPerStage):
+        lver = []
+        atop = cstg[l]
+        abot = cstg[l+1]
+        for i in range(12*finer):
+            if i % finer == 0: # electrode line, let's connect
+                b = int(i/finer + 1)
+                offset = 0 if l == 0 else np.sum(np.array(ringPerStage)[:l])*12
+                el = np.arange(offset + b, offset + b + ring*12, 12).astype(int).tolist()
+                a = [atop[i]] + el + [abot[i]]
+                tmp = []
+                for j in range(len(a)-1):
+                    content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, a[j], a[j+1])
+                    tmp.append(c)
+                    c += 1
+                lver.append(tmp)
+            else:
+                content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, atop[i], abot[i])
+                lver.append([c])
+                c += 1
+        lver = lver + [lver[0]]
+        lverAll.append(lver)
+    
+    # line loop
+    sver = []
+    for l, lver in enumerate(lverAll):
+        ll = []
+        ltop = lhor[l]
+        lbot = lhor[l+1]
+        for i in range(12*finer):
+            a = str(lver[i][0]) if len(lver[i]) == 1 else ' ,'.join(np.array(lver[i]).astype(int).astype(str))
+            b = str(-lver[i+1][0]) if len(lver[i+1]) == 1 else ' ,'.join((-np.array(lver[i+1]))[::-1].astype(int).astype(str))
+            content += 'Line Loop({:d}) = {{{:d}, {:s}, {:d}, {:s}}};\n'.format(
+                c, -ltop[i], a, lbot[i], b)
+            ll.append(c)
+            c += 1
+        sver.append(ll)
+    
+    # horizontal line loop
+    shor = []
+    for l in lhor:
+        # n = 12*finer
+        content += 'Line Loop({:d}) = {{'.format(c) + ' ,'.join(np.array(l)[:-1].astype(int).astype(str)) + '};\n'
+        shor.append(c)
+        c += 1
+    
+    # surface
+    slv = []
+    for i, ll in enumerate(sver):
+        tmp = []
+        for l in ll:
+            content += 'Plane Surface({:d}) = {{{:d}}};\n'.format(c, l)
+            tmp.append(c)
+            c += 1
+        slv.append(tmp)
+    
+    slh = []
+    for i, l in enumerate(shor):
+        content += 'Plane Surface({:d}) = {{{:d}}};\n'.format(c, l)
+        slh.append(c)
+        c += 1
+        
+    # surface loop and volume
+    for i in range(len(stages)-1):
+        a = [slh[i]] + slv[i] + [slh[i+1]]
+        content += 'Surface Loop({:d}) = {{'.format(c) + ' ,'.join(np.array(a).astype(str)) + '};\n'
+        content += 'Volume({:d}) = {{{:d}}};'.format(i, c)
+        c += 1
+        
+    # write content to file
+    with open(file_path, 'w') as f:
+        f.write(content)
+
+
+# test
+# radius = 6.5/2 # cm
+# angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+
+# cylinder_mesh(elec, file_path='/home/jkl/Downloads/mesh_cylinder.geo',
+#               zlim=[0, 47.5])
+
+
     
 #%% Make an arbitary 2D shape 
-def mesh2d(electrodes, poly=None, origin = (0,0),
-                radius = None, file_path='2d_mesh.geo', cl=-1):
-    """Make generic 2d mesh. 
+def mesh2d(electrodes, poly=None, origin=(0,0), radius=None,
+           file_path='2d_mesh.geo', cl=-1):
+    """Make generic 2d mesh.
+    
     Parameters
     ------------
     electrodes: list of array likes
@@ -1551,7 +1942,8 @@ def mesh2d(electrodes, poly=None, origin = (0,0),
         fh.write("Plane Surface(1) = {1};\n\n")
         
         #work out which electrodes are inside or on the end of the column 
-        inside = iip.isinpolygon(np.array(elec_x),np.array(elec_y),poly)
+        path = mpath.Path(np.array(poly[0],poly[1]).T)
+        inside = path.contains_points(np.array([elec_x,elec_y]).T)
         x = poly_x
         y = poly_y
     

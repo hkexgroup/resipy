@@ -29,6 +29,10 @@ warnings.simplefilter('default', category=DeprecationWarning)
 
 try:#import pyvista if avaiable
     import pyvista as pv
+    try:
+        from pyvistaqt import BackgroundPlotter # newer version
+    except:
+        from pyvista import BackgroundPlotter # older version
     pyvista_installed = True
 except ModuleNotFoundError:
     pyvista_installed = False
@@ -168,6 +172,7 @@ class Survey(object):
                 elec, data = protocolParser(fname, fwd=True)
             elif ftype == 'forwardProtocolIP':
                 elec, data = protocolParser(fname, ip=True, fwd=True)
+                self.protocolIPFlag = True
             elif ftype == 'Sting':
                 elec, data = stingParser(fname)
             elif ftype == 'ABEM-Lund':
@@ -274,6 +279,24 @@ class Survey(object):
         out = "Survey class with {:d} measurements and {:d} electrodes".format(
             self.df.shape[0], self.elec.shape[0])
         return out
+    
+    def hasElecString(self):
+        """Determine if a electrode strings are present in the electrode labels 
+
+        Returns
+        -------
+        bool
+            True if strings present in electrode label
+        """
+        df = self.elec
+        if 'label' not in df.keys():
+            return False
+        else:
+            label = df['label']
+            for l in label:
+                if len(l.split()) == 1:
+                    return False
+        return True
         
     
     def checkTxSign(self):
@@ -722,6 +745,7 @@ class Survey(object):
     
     def filterInvError(self, vmin=None, vmax=None, debug=False):
         """Filter measurements by inversion error. 
+        
         Parameters
         -----------
         vmin : float, optional
@@ -1125,7 +1149,6 @@ class Survey(object):
             ne=ns+binsize-1
             bins[i,0] = error_input['recipMean'].iloc[ns:ne].mean()
             bins[i,1] = error_input['recipError'].iloc[ns:ne].mean()
-        np.savetxt(os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','lin-error-bins.txt'), bins)
         # coefs = polyfit(bins[:,0], bins[:,1], 1)
         slope, intercept, r_value, p_value, std_err = linregress(bins[:,0], bins[:,1])
         coefs = [slope, intercept]
@@ -1406,7 +1429,7 @@ class Survey(object):
         if bx is False and threed is False:
             self._showPseudoSection(ax=ax, **kwargs)
         elif bx is False and threed is True:
-            self.showPseudoSection3D(ax=ax, **kwargs)
+            self._showPseudoSection3D(ax=ax, **kwargs)
         else:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1415,13 +1438,15 @@ class Survey(object):
             ax.set_ylabel('Transfer Resistance [Ohm]')
 
 
-    def showPseudoIP(self, ax=None, bx=None, **kwargs):
+    def showPseudoIP(self, ax=None, bx=None, threed=False, **kwargs):
         """Plot pseudo section if 2D survey or just quadrupoles phase otherwise.
         """
         if bx is None:
             bx = self.iBorehole
-        if bx is False:
+        if bx is False and threed is False:
             self._showPseudoSectionIP(ax=ax, **kwargs)
+        elif bx is False and threed is True:
+            self._showPseudoSection3D(ax=ax, column='ip', geom=False, **kwargs)
         else:
             if ax is None:
                 fig, ax = plt.subplots()
@@ -1464,8 +1489,105 @@ class Survey(object):
         self.df['K'] = K
         
         
+    def _computePseudoDepth(self):
+        """Compute pseudo-depths.
+        
+        Returns
+        -------
+        xpos, ypos, zpos all arrays containing position of the pseudo-section.
+        """
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0]))) 
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
+            
+        ### first determine if measurements are nested ###
+        #find mid points of AB 
+        AB = (elecm[array[:,0]] + elecm[array[:,1]]) / 2 # mid points of AB 
+        MN = (elecm[array[:,2]] + elecm[array[:,3]]) / 2 # mid points of MN 
+        ABrad = np.sqrt(np.sum((elecm[array[:,0]] - AB)**2,axis=1)) # radius of AB circle 
+        MNrad = np.sqrt(np.sum((elecm[array[:,2]] - MN)**2,axis=1)) # radius of MN circle 
+        
+        Amn = np.sqrt(np.sum((elecm[array[:,0]] - MN)**2,axis=1)) # distance of A to mid point of MN 
+        Bmn = np.sqrt(np.sum((elecm[array[:,1]] - MN)**2,axis=1)) # distance of B to mid point of MN 
+        Nab = np.sqrt(np.sum((elecm[array[:,2]] - AB)**2,axis=1)) # distance of N to mid point of AB 
+        Mab = np.sqrt(np.sum((elecm[array[:,3]] - AB)**2,axis=1)) # distance of M to mid point of AB
+        
+        iABinMN = (Amn < MNrad) & (Bmn < MNrad)
+        iMNinAB = (Nab < ABrad) & (Mab < ABrad)
+        inested = iABinMN | iMNinAB #if AB encompasses MN or MN encompasses AB 
+                       
+        # so it will never be taken as minimium
+        elecm[self.elec['remote'].values,:] = np.inf
+        
+        # compute midpoint position of AB and MN dipoles
+        elecx = elecm[:,0]
+        elecy = elecm[:,1]
+
+        #CURRENT ELECTRODE MIDPOINTS 
+        caddx = np.abs(elecx[array[:,0]]-elecx[array[:,1]])/2
+        caddy = np.abs(elecy[array[:,0]]-elecy[array[:,1]])/2
+        caddx[np.isinf(caddx)] = 0 
+        caddy[np.isinf(caddy)] = 0        
+        cmiddlex = np.min([elecx[array[:,0]], elecx[array[:,1]]], axis=0) + caddx
+        cmiddley = np.min([elecy[array[:,0]], elecy[array[:,1]]], axis=0) + caddy
+        
+        #POTENTIAL ELECTRODE MIDPOINTS
+        paddx = np.abs(elecx[array[:,2]]-elecx[array[:,3]])/2
+        paddy = np.abs(elecy[array[:,2]]-elecy[array[:,3]])/2
+        paddx[np.isinf(paddx)] = 0 
+        paddy[np.isinf(paddy)] = 0 
+        pmiddlex = np.min([elecx[array[:,2]], elecx[array[:,3]]], axis=0) + paddx
+        pmiddley = np.min([elecy[array[:,2]], elecy[array[:,3]]], axis=0) + paddy
+
+        
+        # for non-nested measurements
+        xposNonNested  = np.min([cmiddlex, pmiddlex], axis=0) + np.abs(cmiddlex-pmiddlex)/2
+        yposNonNested  = np.min([cmiddley, pmiddley], axis=0) + np.abs(cmiddley-pmiddley)/2
+        pcdist = np.sqrt((cmiddlex-pmiddlex)**2 + (cmiddley-pmiddley)**2)
+        zposNonNested = np.sqrt(2)/2*pcdist
+        
+        # for nested measurements use formula of Dalhin 2006
+        xposNested = np.zeros(len(pmiddlex))
+        yposNested = np.zeros(len(pmiddlex))
+        outerElec1 = np.zeros((len(pmiddlex), 2)) # position of one electrode of outer dipole
+        outerElec2 = np.zeros((len(pmiddlex), 2)) # position of one electrode of outer dipole
+        # innerMid = np.zeros((len(pmiddlex), 2)) # middle of inner dipole
+        if np.sum(iMNinAB) > 0:
+            xposNested[iMNinAB] = pmiddlex[iMNinAB]
+            yposNested[iMNinAB] = pmiddley[iMNinAB]
+            outerElec1[iMNinAB] = np.c_[elecx[array[iMNinAB,0]], elecy[array[iMNinAB,0]]]
+            outerElec2[iMNinAB] = np.c_[elecx[array[iMNinAB,1]], elecy[array[iMNinAB,1]]]
+
+        if np.sum(iABinMN) > 0:
+            xposNested[iABinMN] = cmiddlex[iABinMN]
+            yposNested[iABinMN] = cmiddley[iABinMN]
+            outerElec1[iABinMN] = np.c_[elecx[array[iABinMN,2]], elecy[array[iABinMN,2]]]
+            outerElec2[iABinMN] = np.c_[elecx[array[iABinMN,3]], elecy[array[iABinMN,3]]]
+      
+        innerMid = np.c_[pmiddlex, pmiddley] # always use potential dipole
+        
+        apdist = np.sqrt(np.sum((outerElec1-innerMid)**2, axis=1))
+        bpdist = np.sqrt(np.sum((outerElec2-innerMid)**2, axis=1))
+        zposNested  = np.min([apdist, bpdist], axis=0)/3
+        
+        xpos = np.zeros_like(pmiddlex)
+        ypos = np.zeros_like(pmiddlex)
+        zpos = np.zeros_like(pmiddlex)
+        
+        xpos[~inested] = xposNonNested[~inested]
+        xpos[inested] = xposNested[inested]
+        
+        ypos[~inested] = yposNonNested[~inested]
+        ypos[inested] = yposNested[inested]
+        
+        zpos[~inested] = zposNonNested[~inested]
+        zpos[inested] = zposNested[inested]
+        
+        return xpos,ypos,zpos
+    
+        
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
-                           vmin=None, vmax=None, column='resist'):
+                           vmin=None, vmax=None, column='resist', magFlag=False):
         """Create a pseudo-section for 2D given electrode positions.
         
         Parameters
@@ -1484,57 +1606,26 @@ class Survey(object):
             Minimum value for the colorbar.
         vmax : float, optional
             Maximum value for the colorbar.
+        magFlag: bool, optional
+            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            `False`, resistance values are given with correct polarity.
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
-        elecpos = self.elec['x'].values.copy() # we don't want the x values become np.inf in remote situation as it'll mess up future computeK()
         resist = self.df[column].values.copy()
+        xpos, _, ypos = self._computePseudoDepth()
+        
+        if magFlag: # in case magnitude is provided
+            self.checkTxSign()
         
         if geom: # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
-
-        # sorting the array in case of Wenner measurements (just for plotting)
-        # array = np.sort(array, axis=1) # for better presentation
-        
-        # Finding fully nested measurements
-        pos = elecpos[array]
-        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
-                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
         
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
         else:
             label = r'$\rho_a$ [$\Omega.m$]'
-                       
-        elecpos[self.elec['remote'].values] = np.inf # so it will never be taken as minimium
-        
-        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-
-        # for non-nested measurements
-        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # for nested measurements
-        xposNested = pmiddle
-        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
-        
-        xpos = np.zeros_like(pmiddle)
-        ypos = np.zeros_like(pmiddle)
-        
-        xpos[~inested] = xposNonNested[~inested]
-        xpos[inested] = xposNested[inested]
-        
-        ypos[~inested] = yposNonNested[~inested]
-        ypos[inested] = yposNested[inested] 
-
+                               
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -1551,7 +1642,7 @@ class Survey(object):
             if vmax is None:
                 vmax = np.max(resist)
             levels = np.linspace(vmin, vmax, 13)
-            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels = levels, extend = 'both')
+            plotPsRes = ax.tricontourf(xpos, ypos, resist, levels=levels, extend='both')
             fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
         
         ax.invert_yaxis() # to remove negative sign in y axis    
@@ -1560,17 +1651,56 @@ class Survey(object):
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
             return fig
+    
+    def _showElecStrings3D(self,ax=None,strIdx=None, 
+                           background_color=(0.8,0.8,0.8),
+                           elec_color='k'):
+        if ax is None: # make a plotter object if not already given 
+            ax = pv.Plotter()
+            ax.background_color = background_color
+        else: # check the ax argument is for pyvista not matplotlib 
+            typ_str = str(type(ax))
+            if typ_str.find('pyvista') == -1:
+                raise Exception('Error plotting with pyvista, expected a pyvista plotter object but got %s instead'%typ_str)
+            ax.set_background(background_color)
+            
+        def lines_from_points(points):
+            """Given an array of points, make a line set, 
+            https://docs.pyvista.org/examples/00-load/create-spline.html"""
+            poly = pv.PolyData()
+            poly.points = points
+            cells = np.full((len(points)-1, 3), 2, dtype=np.int_)
+            cells[:, 1] = np.arange(0, len(points)-1, dtype=np.int_)
+            cells[:, 2] = np.arange(1, len(points), dtype=np.int_)
+            poly.lines = cells
+            return poly
+            
+        elec = self.elec[['x','y','z']].values # make electrode numpy array 
+        elec = elec[np.invert(self.elec['remote'].values),:] 
+        
+        if strIdx is not None: #add strings 
+            if not isinstance(strIdx,list):
+                raise TypeError('strIdx variable is not a list')
+            for s in strIdx:
+                line = lines_from_points(elec[s])
+                tube = line.tube(radius=0.1)
+                ax.add_mesh(tube,smooth_shading=True,color=(0.5,0.5,0.5))
+        
+        pvelec = pv.PolyData(elec)
+        ax.add_mesh(pvelec, color=elec_color, point_size=10.,
+                    render_points_as_spheres=True)
         
         
-    def showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
+    def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
-                           background_color=(0.8,0.8,0.8), elec_color='k'):
+                           background_color=(0.8,0.8,0.8), elec_color='k',
+                           strIdx=None, magFlag=False):
         """Create a pseudo-section for 3D surface array.
         
         Parameters
         ----------
         ax : matplotlib.Axes, optional
-            If specified, the plot will be plotted agains this axis.
+            If specified, the plot will be plotted against this axis.
         contour : bool, optional
             If `True`, contour will be plotted. Otherwise, only dots. Warning
             this is unstable. 
@@ -1584,74 +1714,67 @@ class Survey(object):
             Minimum value for the colorbar.
         vmax : float, optional
             Maximum value for the colorbar.
+        background_color: tuple, optional 
+            background color for pyvista plotter object
+        elec_color: tuple, string, optional
+            color identifier for pyvista plotter object, determines color of 
+            electrode points if they can be plotted. 
+        strIdx: list, optional 
+            returned from R2.detectStrings method. Each entry in list is an 
+            array like of ints defining an electrode string. 
+        magFlag: bool, optional
+            If `True` then Tx resistance sign will be checked assuming a flat surface survey.
+            `False`, resistance values are given with correct polarity.
         """
         if not pyvista_installed:
-            print('pyvista not installed, cannot show 3D psuedo section')
-            return 
+            print('pyvista not installed, cannot show 3D pseudo section')
+            return
+
+            
+        #TODO contour is not working!
+        if contour:
+            contour = False
             
         if ax is None: # make a plotter object if not already given 
-            ax = pv.BackgroundPlotter()
+            # ax = BackgroundPlotter()
+            ax = pv.Plotter()
             ax.background_color = background_color
         else: # check the ax argument is for pyvista not matplotlib 
             typ_str = str(type(ax))
             if typ_str.find('pyvista') == -1:
-                raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
+                raise Exception('Error plotting with pyvista, expected a pyvista plotter object but got %s instead'%typ_str)
             ax.set_background(background_color)
             
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
-        elec = self.elec[['x','y','z']].values
+        # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
         
+        if magFlag: # for cR3t and its magnitude calculation
+            self.checkTxSign()
+            
         if geom: # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
-
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
-            
+        
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
-            label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
+            label = 'log10(Apparent Resistivity) [Ohm.m]'
+        elif column == 'ip':
+            label = 'Phase [mrad]'
         else:
-            label = r'$\rho_a$ [$\Omega.m$]'
+            label = 'Apparent Resistivity [Ohm.m]'
 
         if vmin is None:
-            vmin = np.min(resist)
+            vmin = np.nanmin(resist)
         if vmax is None:
-            vmax = np.max(resist)
-        
-        if self.elec['remote'].sum() > 0: # how to deal with remote electrodes?!! 
-            raise Exception('Remote electrodes not currently supported for 3D pseudo sections')
-        #     elec = elec[self.iremote!=True,:] # ignore the 
+            vmax = np.nanmax(resist)
             
-        #might be a better way to do this than looping, for example caculating the euclidian matrix (can be RAM limiting)
-        #or use SciPy's KDTree
-        def find_dist(elec_x,elec_y,elec_z): # find maximum and minimum electrode spacings 
-            dist = np.zeros((len(elec_x),len(elec_x)))   
-            x1 = np.array(elec_x)
-            y1 = np.array(elec_y)
-            z1 = np.array(elec_z)
-            for i in range(len(elec_x)):
-                x2 = elec_x[i]
-                y2 = elec_y[i]
-                z2 = elec_z[i]
-                dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
-            return dist.flatten() # array of all electrode distances 
+        elecz = self.elec['z'].values
+        elecz = elecz[np.invert(self.elec['remote'].values)]
         
-        #loop to work out the 3D setup of the apparent resistivity measurements 
-        nmeas = array.shape[0]
-        dp_x = np.zeros(nmeas)
-        dp_y = np.zeros(nmeas)
-        dp_z = np.zeros(nmeas)
-        for i in range(nmeas):
-            dp_elec = elec[array[i]-1,:]
-            dp_dist = np.max(find_dist(dp_elec[:,0], dp_elec[:,1], dp_elec[:,2]))
-            dp_x[i] = np.mean(dp_elec[:,0])
-            dp_y[i] = np.mean(dp_elec[:,1])
-            dp_z[i] = np.mean(dp_elec[:,2]) - dp_dist/2
+        dp_x,dp_y,dp_z = self._computePseudoDepth() # get dipole depths 
+        #Nb pseudo depths are returned as positive 
         
-        points = np.array([dp_x,dp_y,dp_z]).T
+        points = np.array([dp_x,dp_y,min(elecz)-dp_z]).T # convert to 3xn matrix. 
         pvpont = pv.PolyData(points)
         pvpont[label] = resist
         
@@ -1669,8 +1792,11 @@ class Survey(object):
         else:
             warnings.warn('3D contours are currently not stable!')
             ax.add_mesh(pvpont.outline())
-            levels = np.linspace(vmin, vmax, 13)
-            contrmesh = pvpont.contour(levels,scaler=resist)
+            levels = np.linspace(vmin, vmax, 13)[1:-1]
+            contrmesh = pvpont.contour(isosurfaces=levels)
+            #TODO somehow this does create an empty mesh
+            print(levels)
+            print(contrmesh)
             ax.add_mesh(contrmesh,
                         #cmap=color_map, #matplotlib colormap 
                         clim=[vmin,vmax], #color bar limits 
@@ -1682,12 +1808,13 @@ class Survey(object):
                                          'label_font_size':14})
                                  
         try:
-            pvelec = pv.PolyData(elec)
-            ax.add_mesh(pvelec, color=elec_color, point_size=10.,
-                        render_points_as_spheres=True)
-        except AttributeError as e:
+            self._showElecStrings3D(ax=ax, strIdx = strIdx, 
+                                    background_color=background_color,
+                                    elec_color=elec_color)
+        except Exception as e:
             print("Could not plot 3d electrodes, error = "+str(e))
-        
+            
+        ax.show_grid(color='k')
         ax.show()
 
     
@@ -1710,12 +1837,8 @@ class Survey(object):
         fig : matplotlib figure
             If `ax` is not specified, the method returns a figure.
         """
-        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
-        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecpos = self.elec['x'].values.copy()
-        
-        # sorting the array in case of Wenner measurements (just for plotting)
-        array = np.sort(array, axis=1) # for better presentation
+        xpos, _, ypos = self._computePseudoDepth()
         
         if self.protocolIPFlag == True:
             ip = self.df['ip'].values
@@ -1724,42 +1847,6 @@ class Survey(object):
 
         label = r'$\phi$ [mrad]'
         
-
-        # sorting the array in case of Wenner measurements (just for plotting)
-        # array = np.sort(array, axis=1) # for better presentation
-        
-        # Finding fully nested measurements
-        pos = elecpos[array]
-        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
-                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
-        
-        elecpos[self.elec['remote']] = np.inf
-            
-        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        cadd[np.isinf(cadd)] = 0 # they are inf because of our remote
-        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-        
-        # for non-nested measurements
-        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # for nested measurements
-        xposNested = pmiddle
-        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
-        
-        xpos = np.zeros_like(pmiddle)
-        ypos = np.zeros_like(pmiddle)
-        
-        xpos[~inested] = xposNonNested[~inested]
-        xpos[inested] = xposNested[inested]
-        
-        ypos[~inested] = yposNonNested[~inested]
-        ypos[inested] = yposNested[inested]
-
         if ax is None:
             fig, ax = plt.subplots()
         else:
@@ -1858,7 +1945,7 @@ class Survey(object):
             if np.sum(np.isnan(df['resError'])) == 0: # no NaN inside
                 protocol['resError'] = df['resError'].values
                 if errTot == True: # we want to add modelling error to that
-                    print('Using total error')
+                    # print('Using total error')
                     if 'modErr' not in df.columns:
                         raise ValueError('ERROR : you must specify a modelling error')
                     else: # if present, compute geometric mean of the errors
@@ -1879,10 +1966,6 @@ class Survey(object):
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
                     protocol.loc[:, c] = '1 ' + protocol[c]
-            # protocol.insert(1, 'sa', 1)
-            # protocol.insert(3, 'sb', 1)
-            # protocol.insert(5, 'sm', 1)
-            # protocol.insert(7, 'sn', 1)
         
         # write protocol.dat
         if outputname != '':
@@ -1926,7 +2009,7 @@ class Survey(object):
         ax : matplotlib axis, optional
             If specified, the graph is plotted along the axis.
         log : bool, optional
-            If `True``then all data will be log transformed.
+            If `True` then all data will be log transformed.
         label : str, optional
             Label of the colorbar. If None, will be given from the 'attr' argument.
         vmin : float, optional
@@ -1968,46 +2051,13 @@ class Survey(object):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
         
-        elecpos = self.elec['x'].values.copy()
-        
-        # Finding fully nested measurements
-        pos = elecpos[array]
-        inested = ((pos[:,2] > pos[:,0]) & (pos[:,2] < pos[:,1]) &
-                    (pos[:,3] > pos[:,0]) & (pos[:,3] < pos[:,1]))
-        
+        elecpos = self.elec['x'].values.copy()        
         elecpos[self.elec['remote']] = np.inf # so it will never be taken as minimium
-
+        xpos, _, ypos = self._computePseudoDepth()
         self.eselect = np.zeros(len(elecpos), dtype=bool)
         
         if log:
             val = np.sign(val)*np.log10(np.abs(val))
-
-        # array = np.sort(array, axis=1) # need to sort the array to make good wenner pseudo section
-        
-        cadd = np.abs(elecpos[array[:,0]]-elecpos[array[:,1]])/2
-        cadd[np.isinf(cadd)] = 0 # they are nan because of our remote
-        cmiddle = np.min([elecpos[array[:,0]], elecpos[array[:,1]]], axis=0) + cadd
-        
-        padd = np.abs(elecpos[array[:,2]]-elecpos[array[:,3]])/2
-        padd[np.isinf(padd)] = 0
-        pmiddle = np.min([elecpos[array[:,2]], elecpos[array[:,3]]], axis=0) + padd
-        
-        # for non-nested measurements
-        xposNonNested  = np.min([cmiddle, pmiddle], axis=0) + np.abs(cmiddle-pmiddle)/2
-        yposNonNested = np.sqrt(2)/2*np.abs(cmiddle-pmiddle)
-        
-        # for nested measurements
-        xposNested = pmiddle
-        yposNested  = np.min([np.abs(pmiddle - elecpos[array[:,0]]), np.abs(elecpos[array[:,1]] - pmiddle)], axis=0)/3
-        
-        xpos = np.zeros_like(pmiddle)
-        ypos = np.zeros_like(pmiddle)
-        
-        xpos[~inested] = xposNonNested[~inested]
-        xpos[inested] = xposNested[inested]
-        
-        ypos[~inested] = yposNonNested[~inested]
-        ypos[inested] = yposNested[inested]
         
         def onpick(event):
             if lines[event.artist] == 'data':
@@ -2103,9 +2153,26 @@ class Survey(object):
         debug : bool, optional
             Print output to screen. Default is True.
         """
-        for e in elec:
-            i2keep = (self.df[['a','b','m','n']].values != str(e)).all(1)
-            self.filterData(i2keep)
+        ### old way, kinda slow ###
+        # for e in elec:
+        #     i2keep = (self.df[['a','b','m','n']].values != str(e)).all(1)
+        #     self.filterData(i2keep)
+        
+        array = self.df[['a','b','m','n']].values # get schedule 
+        arrayf = array.flatten() #flatten the array
+        probef = np.zeros(len(arrayf),dtype=int) # probes to see if electrode is found
+        if not isinstance(elec[0],str):#convert to string if not a string
+            elec = [str(e) for e in elec]
+        
+        for i in range(len(arrayf)):#iterate through schedule matrix
+            if arrayf[i] in elec:
+                probef[i] = 1
+        
+        probe = probef.reshape(array.shape)
+        check = np.sum(probe,axis=1) # keep where electrodes are not found
+        i2keep = check == 0 # so where 0 counts are 
+        self.filterData(i2keep) # send to filter data 
+
         if debug:
             numRemoved = np.sum(~i2keep)
             msgDump = '{:d} measurements removed!'.format(numRemoved)
@@ -2115,6 +2182,7 @@ class Survey(object):
     
     def filterAppResist(self, vmin=None, vmax=None, debug=True):
         """Filter measurements by apparent resistivity for surface surveys 
+        
         Parameters
         -----------
         vmin : float, optional
@@ -2141,8 +2209,11 @@ class Survey(object):
             print(msgDump)
             return numRemoved
     
+    
+    
     def filterTransferRes(self, vmin=None, vmax=None, debug=True):
         """Filter measurements by transfer resistance. 
+        
         Parameters
         -----------
         vmin : float, optional
@@ -2393,8 +2464,7 @@ class Survey(object):
             new_elec[put_back,2] =  z_sorted[i]
     
         self.elec.loc[:, ['x','y','z']] = new_elec
-        
-        
+    
     def addPerError(self,pnct=2.5): # pragma: no cover
         """Add a flat percentage error to resistivity data.
         

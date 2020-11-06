@@ -44,12 +44,12 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="resipy",
-    version="2.2.2", # CHANGE HERE
+    version="3.0.3", # CHANGE HERE
     author="HKEx",
     description="API for resistivity and IP inversion/modelling around R2 codes",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.com/hkex/pyr2",
+    url="https://gitlab.com/hkex/resipy",
     packages=setuptools.find_packages(),
     install_requires=['numpy','matplotlib','pandas','scipy','requests','psutil'],
     include_package_data=True,

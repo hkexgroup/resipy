@@ -1,3 +1,26 @@
+v3.0.2
+------
+- Bug fix: design Mesh throwing ".isnan() attribute not found"
+- Bug fix: Xbh hot fix
+
+
+v3.0.1
+------
+- Bug fix: zoning in mesh generation
+- Bug fix: custom sequence importation in 3D forward modeling
+- Bug fix: 3D borehole forward modeling
+- Bug fix: 3D IP forward modeling
+
+
+v3.0.0
+------
+- 3D forward modeling in the GUI
+- Ability to define custom-equation maps
+- 3D pseudo section visualization
+- Support for 3D remote electrodes (pole-pole/dipole)
+- Minor bug fixes
+
+
 v2.2.2
 ------
 - Add 3D interactive plotting capabilities by the use of pyvista (mesh and inversion plots).
