@@ -1030,14 +1030,12 @@ class Mesh:
             
             if post_neigh_check: 
                 # remove faces without 3 nieghbours 
-                nmesh.computeNeigh()
-                nneigh = nmesh.neigh_matrix
+                nneigh = mc.neigh2d(nmesh.connection,0)
                 ikeep2 = np.min(nneigh,axis=1) > -1
                 nmesh = nmesh.filterIdx(ikeep2)
                 
                 # remove faces with 1 or less neighbours 
-                nmesh.computeNeigh()
-                nneigh = nmesh.neigh_matrix
+                nneigh = mc.neigh2d(nmesh.connection,0)
                 ikeep3 = np.count_nonzero(nneigh+1,axis=1) > 1
                 nmesh = nmesh.filterIdx(ikeep3) 
               

@@ -2,7 +2,8 @@
 # this file is used by pyinstaller to generate a zip file that would 
 # then be uncompressed by the splashScreen.spec
 # nb needs to be a python 3.7 environment for the final executable to work 
-import platform, os
+import platform, os, sys
+sys.setrecursionlimit(5000)
 block_cipher = None
 
 OS = platform.system()
