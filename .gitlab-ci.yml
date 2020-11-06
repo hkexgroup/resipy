@@ -8,7 +8,7 @@ test:
   - pip install coverage
   - cd src
   - coverage run --source=resipy test.py
-  - coverage report --include=resipy/R2.py,resipy/Survey.py
+  - coverage report --include=resipy/Project.py,resipy/Survey.py
   
 pages:
   script:
