@@ -3327,8 +3327,6 @@ class Mesh:
                 if fname.endswith('.' + a):
                     ftype = a
                     break
-        else:
-            ftype = 'dat'
         
         if ftype not in atypes:
             raise NameError('Unregocnised mesh file format, avaialable types are %s'%str(atypes))
