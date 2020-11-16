@@ -3805,10 +3805,10 @@ def tetgen_import(file_path, order_nodes=True):
     fh = open(file_path2,'r')# read in element file  
     header = fh.readline() # read in header line 
     numel = int(header.split()[0]) # number of elements 
-    #meshes so its always going to be 4. 
+    npere = int(header.split()[1])
     
     
-    node_map = ([0]*numel,[0]*numel,[0]*numel,[0]*numel)
+    node_map = np.zeros((numel,npere),dtype=int)
     #np.array([[0]*numel]*npere,dtype=int) # connection matrix mapping elements onto nodes 
     elm_no = [0]*numel # element number / index 
     zone = [0]*numel # mesh zone 
@@ -3817,16 +3817,15 @@ def tetgen_import(file_path, order_nodes=True):
         line = fh.readline().split()#read in line data
         elm_no[i] = int(line[0])
         zone[i] = int(line[-1])
-        node_map[0][i]=int(line[1])-1
-        node_map[1][i]=int(line[2])-1
-        node_map[2][i]=int(line[3])-1
-        node_map[3][i]=int(line[4])-1
-    
+        
+        for j in range(npere):
+            node_map[i,j]=int(line[j+1])-1
+
     #create mesh instance 
     mesh = Mesh(node_x = node_x,#x coordinates of nodes 
                 node_y = node_y,#y coordinates of nodes
                 node_z = node_z,#z coordinates of nodes 
-                node_data=np.array(node_map).T,#nodes of element vertices
+                node_data=node_map,#nodes of element vertices
                 cell_type = [10],#according to vtk format
                 original_file_path = file_path,
                 order_nodes = order_nodes)
