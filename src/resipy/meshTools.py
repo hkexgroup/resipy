@@ -2660,6 +2660,48 @@ class Mesh:
             self.df['depths'] = depth # add cell depths to attribute cache
             self.no_attributes += 1
             return depth
+        
+    #%% Gradients 
+    def downslopeID(self,attr='Resistivity'):
+        """
+        Get the index of 'downslope' elements for a given attribute. 
+
+        Parameters
+        ----------
+        attr : string, optional
+            Key inside of mesh dataframe. The default is 'Resistivity'.
+
+        Returns
+        -------
+        idx : nd array 
+            Indices of downslope elements. 
+        """
+        
+        #get neighbour matrix  
+        if self.neigh_matrix is None:
+            self.computeElmDepth()
+        neigh = self.neigh_matrix
+        
+        Z = self.df[attr].values
+        
+        #find the steepest gradient for each neighbour 
+        Zcomp = np.zeros(3)
+        idx = np.zeros(self.numel,dtype=int)
+        for i in range(neigh.shape[0]):
+            for j in range(neigh.shape[1]):
+                ni = neigh[i,j]
+                if ni != -1:
+                    Zcomp[j] = Z[i] - Z[ni]
+            #where most postive the Z value is downslope
+            arg = np.argmax(Zcomp)
+            idx[i] = neigh[i,arg]
+            
+            #filter out instances where downslopeID is actually upslope  
+            check = Z[i] - Z[idx[i]]
+            if check < 0:
+                idx[i] = -1 # minus means no downslope cell (like edge cases )
+        
+        return idx 
     
     #%% electrode movements         
     def moveElecNodes(self, new_x, new_y, new_z, debug=True):
@@ -3820,13 +3862,16 @@ def tetgen_import(file_path, order_nodes=True):
         
         for j in range(npere):
             node_map[i,j]=int(line[j+1])-1
+    ct = 10        
+    if npere==3:
+        ct = 5
 
     #create mesh instance 
     mesh = Mesh(node_x = node_x,#x coordinates of nodes 
                 node_y = node_y,#y coordinates of nodes
                 node_z = node_z,#z coordinates of nodes 
                 node_data=node_map,#nodes of element vertices
-                cell_type = [10],#according to vtk format
+                cell_type = [ct],#according to vtk format
                 original_file_path = file_path,
                 order_nodes = order_nodes)
     

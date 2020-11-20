@@ -4189,6 +4189,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 self.project.param['num_xz_poly'] = 0
                 self.project.param['num_xy_poly'] = 0
+                self.project.param['zmin'] = np.inf 
+                self.project.param['zmax'] = np.inf 
             
             # set initial model
             x, phase0, zones, fixed = self.regionTable.getTable()
