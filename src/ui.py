@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame, 
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
     QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, QAction, QButtonGroup, QListWidget, QShortcut)
-from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor#, QKeySequence
+from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor, QPalette#, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
@@ -5810,6 +5810,28 @@ if __name__ == '__main__':
     catchErrors()
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+    #### test dark theme UI #############
+    dark_palette = QPalette()
+    dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.WindowText, Qt.white)
+    dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
+    dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ToolTipBase, QColor(25, 25, 25))
+    dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+    dark_palette.setColor(QPalette.Text, Qt.white)
+    dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ButtonText, Qt.white)
+    dark_palette.setColor(QPalette.BrightText, Qt.red)
+    dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.HighlightedText, QColor(35, 35, 35))
+    dark_palette.setColor(QPalette.Active, QPalette.Button, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, Qt.darkGray)
+    dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, Qt.darkGray)
+    dark_palette.setColor(QPalette.Disabled, QPalette.Text, Qt.darkGray)
+    dark_palette.setColor(QPalette.Disabled, QPalette.Light, QColor(53, 53, 53))
+    app.setPalette(dark_palette)
+    #################################
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
     
     splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
@@ -5834,6 +5856,9 @@ if __name__ == '__main__':
 
     import matplotlib
     matplotlib.use('Qt5Agg')
+    #### test dark theme plots #############
+    matplotlib.style.use('dark_background')
+    #################################
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
