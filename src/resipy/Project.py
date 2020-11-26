@@ -436,7 +436,7 @@ class Project(object): # Project master class instanciated by the GUI
         # electrode positions for one line
         elec = np.zeros((nb, 3))
         elec[:,0] = np.linspace(0, (nb-1)*dx, nb)
-        elec[:,1] = np.linspace(0, (nb-1)*dz, nb)
+        elec[:,2] = np.linspace(0, (nb-1)*dz, nb)
         
         # specific 2D or 3D additions and building dfelec
         if (self.typ == 'R2') | (self.typ == 'cR2'):
