@@ -273,7 +273,6 @@ class Project(object): # Project master class instanciated by the GUI
             dirname = os.path.join(self.apiPath)
         else:
             dirname = os.path.abspath(dirname)
-
         print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
         self.elec = None # will be assigned when creating a survey
@@ -305,6 +304,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
         self.surfaceIdx = None # used to show plan view iterations of 3D inversions
 
+            
     def setBorehole(self, val=False):
         """Set all surveys in borehole type if `True` is passed.
         """
@@ -1922,7 +1922,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         # checking
         if len(np.unique(e_nodes)) < len(e_nodes):
-            raise ValueError('Some electrodes are positionned on the same nodes !')
+            raise ValueError('Some electrodes are positionned on the same nodes : e_nodes=' + str(e_nodes))
         
         # make regions continuous
         regions = self.mesh.df['region']
@@ -4638,13 +4638,17 @@ class Project(object): # Project master class instanciated by the GUI
         # create an index for the values inside of the zone of interest
         # needed as the reference survey is not cropped by default
         inside = np.ones(self.meshResults[0].numel, dtype=bool)
-        if self.param['num_xz_poly'] > 0:
+        if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+            pname = 'num_xy_poly'
+        else:
+            pname = 'num_xz_poly'
+        if self.param[pname] > 0:
             meshx = np.array(self.meshResults[0].elmCentre[:,0])
             meshy = np.array(self.meshResults[0].elmCentre[:,1])
             meshz = np.array(self.meshResults[0].elmCentre[:,2])
             # poly = (self.param['xz_poly_table'][:,0],
                     # self.param['xz_poly_table'][:,1])
-            path = mpath.Path(self.param['xz_poly_table'])
+            path = mpath.Path(self.param[pname])
 
             if self.typ[-2]=='3':
                 # inside1 = iip.isinpolygon(meshx, meshy, poly)
