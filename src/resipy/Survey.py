@@ -199,7 +199,6 @@ class Survey(object):
         if 'magErr' in self.df.columns:
             self.df['resError'] = self.df['magErr'].copy()
         else:
-            #pass
             self.df['resError'] = np.nan
         if 'phiErr' in self.df.columns:
             self.df['phaseError'] = self.df['phiErr'].copy()
@@ -244,41 +243,64 @@ class Survey(object):
         
             
     @classmethod
-    def fromDataframe(cls, df, elec):
+    def fromDataframe(cls, df, dfelec):
         """Create a survey class from pandas dataframe.
         
         Parameters
         ----------
         df : pandas.DataFrame
             Pandas dataframe.
-        elec : numpy.ndarray
-            A nx3 numpy array witht the XYZ electrodes positions.
+        dfelec : pandas.DataFrame
+            Pandas dataframe for electrodes.
             
         Returns
         -------
-        s_svy : Survey
+        survey : Survey
             An instance of the Survey class.
         """
-        surrogate_file = 'examples/dc-2d/protocol.dat'
-        path2resipy = os.path.realpath(__file__).replace('\\src\resipy\\',surrogate_file)
-        path = path2resipy # map to the protocol test file
-        s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
-        s_svy.df = df
-        dfelec = pd.DataFrame(elec, columns=['x','y','z'])
-        dfelec['remote'] = False
-        dfelec['buried'] = False
-        dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
-        s_svy.elec = dfelec
-        s_svy.ndata = 1#len(data)
-        s_svy.computeReciprocal()
-        s_svy.filterDefault()
-        return s_svy
+        surrogateFile = '/src/examples/dc-2d/protocol.dat' # tricky
+        path = os.path.realpath(__file__).replace(
+            '\\src\resipy\\Survey.py', surrogateFile).replace(
+            '/src/resipy/Survey.py', surrogateFile)
+        survey = cls(fname=path, ftype='ProtocolDC') #surrogate survey
+        survey.df = df
+        if 'remote' not in dfelec.columns:
+            dfelec['remote'] = False
+        if 'buried' not in dfelec.columns:
+            dfelec['buried'] = False
+        if 'label' not in dfelec.columns:
+            dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
+        survey.elec = dfelec
+        survey.ndata = df.shape[0]
+        survey.computeReciprocal()
+        survey.filterDefault()
+        survey.dfReset = survey.df.copy()
+        survey.dfPhaseReset = survey.df.copy()
+        
+        return survey
+    
+    
+    
+    def _saveSurvey(self):
+        """Save survey.
+        """
+        pass
+    
+    
+    
+    def _loadSurvey(self, df, elec):
+        """Load back a survey given its internal df and electrode df.
+        """
+        pass
+    
     
     
     def __str__(self):
         out = "Survey class with {:d} measurements and {:d} electrodes".format(
             self.df.shape[0], self.elec.shape[0])
         return out
+    
+    
     
     def hasElecString(self):
         """Determine if a electrode strings are present in the electrode labels 
