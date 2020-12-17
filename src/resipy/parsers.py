@@ -266,8 +266,32 @@ def protocolParser(fname, ip=False, fwd=False):
     IP 3D         11
     IP 3D + err   13
     IP 3D + fwd   12
+    
+    format:
+    R2   :5,7,7,7,7,20,15
+    cR2  :4,4,4,4,4,16,14,16
+    R3t  :5,7,4,7,4,7,4,7,4,20,15
+    cR3t :5,7,4,7,4,7,4,7,4,20,15,15
     """
-    x = np.genfromtxt(fname, skip_header=1) # we don't know if it's tab or white-space
+    try:
+        # this should work in most cases when there is no large numbers
+        # that mask the space between columns
+        x = np.genfromtxt(fname, skip_header=1) # we don't know if it's tab or white-space
+    except Exception as e: # if no space between columns (because of big numbers or so, we fall back)
+        # more robust but not flexible to other format, this case should only be met in fwd
+        # we hope to be able to determine ncols from genfromtxt()
+        a = np.genfromtxt(fname, skip_header=1, max_rows=2)
+        threed = a.shape[1] >= 10
+        if threed is False and ip is False: # 2D DC
+            x = pd.read_fwf(fname, skiprows=1, header=None, widths=[5,7,7,7,7,20,15]).values
+        elif threed is False and ip is True: # 2D IP
+            x = pd.read_fwf(fname, skiprows=1, header=None, widths=[4,4,4,4,4,16,14,16]).values
+        elif threed is True and ip is False: # 3D DC
+            x = pd.read_fwf(fname, skiprows=1, header=None, widths=[5,7,4,7,4,7,4,7,4,20,15]).values
+        elif threed is True and ip is True: # 3D IP
+            x = pd.read_fwf(fname, skiprows=1, header=None, widths=[5,7,4,7,4,7,4,7,4,20,15,15]).values
+        else:
+            raise ValueError('protocolParser Error:', e)
     if len(x.shape) == 1: # a single quadrupole
         x = x[None,:]
     if fwd:
