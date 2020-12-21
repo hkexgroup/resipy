@@ -2853,9 +2853,12 @@ class Mesh:
             idirichlet = self.numnp
             
         # element parameters 
-        param = np.array(self.df['param'])
-        zone = np.array(self.df['zones'])
-        
+        param = np.asarray(self.df['param'],dtype=int)
+        try: 
+            zone = np.asarray(self.df['zones'],dtype=int)
+        except:
+            zone = np.ones(self.numel,dtype=int)
+            
         adv = True
         adv_flag = 0 
         if adv: #if advanced mode
@@ -3718,9 +3721,12 @@ def dat_import(file_path='mesh.dat', order_nodes=True):
     if len(header)==3: # its a 2D mesh 
         flag_3d = False
         npere = 3
-    else:
+    elif len(header)==5:#old mesh format (e.g. R3t 1.8)
         flag_3d = True
         npere = int(header[-1])
+    else:
+        flag_3d = True#newer mesh format (R3t v2.02)
+        npere = int(header[-2])
     numel = int(header[0]) # number of elements 
     numnp = int(header[1]) # number of nodes 
     #now read in element data
@@ -4139,6 +4145,7 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
         the list references the type of electrode: 
         - 'electrode' = surface electrode coordinate, will be used to construct the topography in the mesh
         - 'buried' = buried electrode, placed the mesh surface
+        - 'remote' = remote electrode (not actually placed in the mesh)
         - 'borehole' = borehole electrode, electrodes will be placed in the mesh with a line connecting them. 
         borehole numbering starts at 1 and ascends numerically by 1.  
     geom_input : dict, optional
