@@ -20,7 +20,7 @@ from scipy.linalg import lstsq
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser, bertParser)
+                     srvParser, bertParser, dasParser)
 from resipy.DCA import DCA
 
 # show the deprecation warnings
@@ -147,7 +147,7 @@ class Survey(object):
                       DeprecationWarning)
             
         avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
 
         
         if parser is not None:
@@ -185,6 +185,8 @@ class Survey(object):
                 elec ,data = srvParser(fname)
             elif ftype == 'BERT':
                 elec, data = bertParser(fname)
+            elif ftype == 'DAS-1':
+                elec, data = dasParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -240,8 +242,8 @@ class Survey(object):
         self.computeReciprocal()
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
-        
-            
+       
+     
     @classmethod
     def fromDataframe(cls, df, dfelec):
         """Create a survey class from pandas dataframe.
@@ -258,10 +260,18 @@ class Survey(object):
         survey : Survey
             An instance of the Survey class.
         """
-        surrogateFile = '/src/examples/dc-2d/protocol.dat' # tricky
-        path = os.path.realpath(__file__).replace(
-            '\\src\resipy\\Survey.py', surrogateFile).replace(
-            '/src/resipy/Survey.py', surrogateFile)
+        
+        def resource_path(relative_path): # a better method to get relative path of files
+            if hasattr(sys, '_MEIPASS'):
+                return os.path.join(sys._MEIPASS, relative_path)
+            return os.path.join(os.path.abspath("."), relative_path)
+        path = resource_path('examples/dc-2d/protocol.dat')        
+        
+        # surrogateFile = '/src/examples/dc-2d/protocol.dat' # tricky
+        # path = os.path.realpath(__file__).replace(
+        #     '\\src\resipy\\Survey.py', surrogateFile).replace(
+        #     '/src/resipy/Survey.py', surrogateFile)
+
         survey = cls(fname=path, ftype='ProtocolDC') #surrogate survey
         survey.df = df
         if 'remote' not in dfelec.columns:
@@ -433,6 +443,8 @@ class Survey(object):
                 elec ,data = srvParser(fname)
             elif ftype == 'BERT':
                 elec, data = bertParser(fname)
+            elif ftype == 'DAS-1':
+                elec, data = dasParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         
@@ -1251,14 +1263,14 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(df)) + '\n')
             with open(outputname, 'a') as f:
-                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e')
+                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e', line_terminator='\n')
 
         outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(self.df)) + '\n')
             with open(outputname, 'a') as f:
-                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
+                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'], line_terminator='\n')
                 
         try:        
             if (OS == 'Windows') and (rpath is None):
@@ -1994,7 +2006,7 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                protocol.to_csv(f, sep='\t', header=False, index=False)
+                protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
         
         return protocol
         

@@ -811,6 +811,9 @@ class App(QMainWindow):
                 self.ftype = 'E4D'
                 self.fformat = 'srv (*.srv *.SRV)'
             elif index == 11:
+                self.ftype = 'DAS-1'
+                self.fformat = 'Data (*.dat *.data *.DAT *.DATA *.txt)'
+            elif index == 12:
                 self.ftype = 'Custom'
                 self.tabImporting.setCurrentIndex(2) # switch to the custom parser
             else:
@@ -829,6 +832,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('ARES (beta)')
         self.ftypeCombo.addItem('BERT')
         self.ftypeCombo.addItem('E4D')
+        self.ftypeCombo.addItem('DAS-1')
         self.ftypeCombo.addItem('Custom')
         self.ftypeCombo.activated.connect(ftypeComboFunc)
         self.ftypeCombo.setFixedWidth(150)
@@ -1908,7 +1912,7 @@ class App(QMainWindow):
 
             if (self.project.iTimeLapse is False) & (self.project.iBatch is False):
                 self.importFile(self.fnameManual)
-            self.ftypeCombo.setCurrentIndex(11)
+            self.ftypeCombo.setCurrentIndex(12)
             self.tabImporting.setCurrentIndex(0)
 
         self.importBtn = QPushButton('Import Dataset')
