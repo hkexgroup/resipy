@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import os 
 import re
+import io
+
 
 #%% function to compute geometric factor - Jamyd91
 def geom_fac(C1,C2,P1,P2):
@@ -273,6 +275,7 @@ def protocolParser(fname, ip=False, fwd=False):
     R3t  :5,7,4,7,4,7,4,7,4,20,15
     cR3t :5,7,4,7,4,7,4,7,4,20,15,15
     """
+    # method 1: np.genfromtxt and fallback to pd.read_fwf
     try:
         # this should work in most cases when there is no large numbers
         # that mask the space between columns
@@ -292,6 +295,20 @@ def protocolParser(fname, ip=False, fwd=False):
             x = pd.read_fwf(fname, skiprows=1, header=None, widths=[5,7,4,7,4,7,4,7,4,20,15,15]).values
         else:
             raise ValueError('protocolParser Error:', e)
+    
+    # method 2: regex (more flexible but cannot fallback to fwf)
+    # below gets all numbers possible regardless of spacing or delimiter
+    # with open(fname, "r") as f:
+    #     dump = f.readlines()
+    # nline = len(dump)
+    # numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
+    # numMeas = int(re.findall(numStr, dump[0])[0]) # number of measurements
+    # data_list = []
+    # for val in dump[1:numMeas+1]: # reding data
+    #     vals = re.findall(numStr, val)
+    #     data_list.append(vals)
+    # x = np.array(data_list).astype(float) # getting the data array
+    
     if len(x.shape) == 1: # a single quadrupole
         x = x[None,:]
     if fwd:
@@ -1731,3 +1748,105 @@ def srvParser(fname):
     df = df[['a','b','m','n','Rho','dev','ip','resist','magErr']] # reorder columns to be consistent with the syscal parser
     
     return elec, df 
+
+#%% DAS-1 parser
+def dasParser(fname):
+    with open(fname, "r") as f:
+        dump_raw = f.readlines()
+    line = 0
+    numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
+    
+    # cleaning data from "out of range" measurements
+    dump = [val for val in dump_raw if 'out of range' not in val]
+    cleanData = ''.join(dump) # remove lines without data
+    
+    # getting electrode locations and creating dfelec
+    elec_lineNum_s = [i+2 for i in range(len(dump)) if '#elec_start' in dump[i]] # assuming headers !Cbl# El# Elec-X  Elec-Y  Elec-Z  Terrn-Z  Type  El.Num
+    elec_lineNum_e = [i for i in range(len(dump)) if '#elec_end' in dump[i]]
+    nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
+    dfElec_raw = pd.read_csv(io.StringIO(cleanData), delim_whitespace=True, skiprows=elec_lineNum_s[0], 
+                             nrows=nrows, index_col=False, header=None)
+    elecNum = dfElec_raw.iloc[:,0].str.split(',', expand=True).astype(int).astype(str)
+    elecLabel = elecNum[0].str.cat(elecNum[1], sep=' ')
+    dfelec = pd.DataFrame()
+    dfelec['label'] = elecLabel.copy()
+    dfelec[['x', 'y', 'z']] = dfElec_raw.iloc[:,1:4]
+    dfelec['buried'] = False
+    dfelec['remote'] = False
+    
+    # remote electrodes?
+    remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                9999999, 999999, 99999] # values asssociated with remote electrodes
+    iremote = np.in1d(dfelec['x'].values, remote_flags)
+    iremote = np.isinf(dfelec[['x','y','z']].values).any(1) | iremote
+    dfelec.loc[:, 'remote'] = iremote
+    
+    # getting data and creating df
+    df_lineNum_s = [i+3 for i in range(len(dump)) if '#data_start' in dump[i]] # assuming headers exist
+    df_lineNum_e = [i for i in range(len(dump)) if '#data_end' in dump[i]]
+    nrowsdf = df_lineNum_e[0] - df_lineNum_s[0]
+    
+    df_list = []
+    for val in dump[df_lineNum_s[0]:df_lineNum_e[0]]: # reding data from mixed separated numbers!
+        vals = re.findall(numStr, val)
+        df_list.append(vals)
+    df_raw = pd.DataFrame(np.array(df_list).astype(float))
+    
+    # 2D or 3D? 2D will have only one line in line numbers for A, B, M or N
+    flagD = '3D' if np.mean(df_raw.iloc[:,1]) != df_raw.iloc[0,1] else '2D'
+    
+    # find data cols from file headers
+    resCol = int([val.split()[-1] for val in dump if 'data_res_col' in val][0]) - 1 # -1 for python numbering
+    devCol = int([val.split()[-1] for val in dump if 'data_std_res_col' in val][0]) - 1 
+    ipCol = int([val.split()[-1] for val in dump if 'data_ip_wind_col' in val][0]) - 1 # this may become problematic if no IP in data
+    
+    # df_raw = pd.read_csv(io.StringIO(cleanData), delim_whitespace=True, skiprows=df_lineNum_s[0], nrows=nrowsdf, index_col=False, header=None)
+    
+    df = pd.DataFrame()
+    arrHeader = ['a', 'b', 'm', 'n']
+    
+    #2D array
+    if flagD == '2D':
+        lineNumber = int(df_raw.iloc[0,1]) # DAS-1 can have random line numners and must mach with available electrodes
+        elecLNum = elecNum[0].astype(int)
+        selectElecs = elecLNum[elecLNum == lineNumber].index.values # selected elec indecis 
+        dfelec = dfelec.iloc[selectElecs,:].reset_index(drop=True)
+        
+        # may need convert 3D XYZ into 2D!!
+        if np.mean(dfelec['x']) == dfelec['x'][0]:
+            dfelec['x'] = dfelec['y'].values.copy()
+            dfelec['y'] = 0
+        
+        # sorting needed
+        dfelec = dfelec.sort_values('x').reset_index(drop=True)
+        dfelec = dfelec[['x', 'y', 'z']].values # it's easier for 2D to skip labels, etc.
+        
+        # array
+        for x in enumerate(arrHeader):
+            df[x[1]] = df_raw.iloc[:,(x[0]+1)*2].astype(int).copy()
+        
+    #3D array
+    elif flagD == '3D':
+        # getting correct lines from elec table!
+        lines = np.unique(df_raw.iloc[:,1].values)
+        elecLNum = elecNum[0].astype(int)
+        dfelec_selected = []
+        for lineNumber in lines:
+            selectElecs = elecLNum[elecLNum == lineNumber].index.values # selected elec indecis 
+            dfelec_selected.append(dfelec.iloc[selectElecs,:])
+        
+        dfelec = pd.concat(dfelec_selected).reset_index(drop=True) # recreating dfelec
+            
+        for x in enumerate(arrHeader):
+            left = df_raw.iloc[:,(x[0]*2)+1].astype(int).astype(str) # creating protocol-like labels
+            right = df_raw.iloc[:,(x[0]+1)*2].astype(int).astype(str)
+            df[x[1]] = left.str.cat(right, sep=' ')
+        
+    # data
+    df['resist'] = df_raw[resCol].values
+    df['dev'] = df_raw[devCol].values
+    df['ip'] = df_raw[ipCol].values if ipCol > 1 else 0
+    
+    return dfelec, df
+    
+    
