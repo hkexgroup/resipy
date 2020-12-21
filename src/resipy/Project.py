@@ -655,14 +655,14 @@ class Project(object): # Project master class instanciated by the GUI
         # add files to it
         if self.mesh is not None:
             self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
-        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False)
+        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False, line_terminator='\n')
         c = 0
         if self.iForward:
             c = 1
         for i, survey in enumerate(self.surveys):
             f = os.path.join(savedir, 'survey{:d}'.format(i))
-            survey.df.to_csv(f + '-df.csv', index=False)
-            survey.elec.to_csv(f + '-elec.csv', index=False)
+            survey.df.to_csv(f + '-df.csv', index=False, line_terminator='\n')
+            survey.elec.to_csv(f + '-elec.csv', index=False, line_terminator='\n')
             if (c+i < len(self.meshResults)):
                 self.meshResults[c + i].vtk(f + '.vtk')
 
@@ -2329,7 +2329,7 @@ class Project(object): # Project master class instanciated by the GUI
                     s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
                 else:
                     content = content + str(protocol.shape[0]) + '\n'
-                    content = content + protocol.to_csv(sep='\t', header=False, index=False)
+                    content = content + protocol.to_csv(sep='\t', header=False, index=False, line_terminator='\n')
 
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
@@ -2356,7 +2356,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # been populated when the files has been imported
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot, threed=threed)
                 content = content + str(len(df)) + '\n'
-                content = content + df.to_csv(sep='\t', header=False, index=False)
+                content = content + df.to_csv(sep='\t', header=False, index=False, line_terminator='\n')
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
@@ -2476,7 +2476,7 @@ class Project(object): # Project master class instanciated by the GUI
         for s, df in zip(surveys, dfs):
             outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
             files.append(outputname)
-            df.to_csv(outputname, sep='\t', header=False, index=False)
+            df.to_csv(outputname, sep='\t', header=False, index=False, line_terminator='\n')
             # header with line count already included
 
         # if iMoveElec is True, writing different R2.in
@@ -3181,7 +3181,7 @@ class Project(object): # Project master class instanciated by the GUI
 
                 with open(outputname, 'w') as f:
                     f.write('{:d}\n'.format(df['level_0'].values[0]))
-                    df2.to_csv(f, sep='\t', header=False, index=False)
+                    df2.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
                 # header with line count already included
             
             fnames = [os.path.join(invdir, 'ref', 'protocol.dat')] + files
@@ -3778,7 +3778,7 @@ class Project(object): # Project master class instanciated by the GUI
         """
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname, index=False)
+            df.to_csv(fname, index=False, line_terminator='\n')
             
 
     def importElec(self, fname=''):
@@ -3838,7 +3838,7 @@ class Project(object): # Project master class instanciated by the GUI
         dff = dff.rename(columns = {'resist':'Resistance [ohm]', 'recipError':'Resistance_err [ohm]',
                                     'resError':'Fit Resistance_err [ohm]','phase':'Phase [mRad]',
                                     'reci_IP_err':'Phase_err [mRad]','phaseError':'Fit Phase_err [mRad]'})
-        dff.to_csv(fname, index=False)
+        dff.to_csv(fname, index=False, line_terminator='\n')
 
 
     def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
@@ -3990,7 +3990,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False)
+            protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
         dump('done!\n')
 
         # fun the inversion
@@ -4182,7 +4182,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False)
+            protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
 
         # run the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
