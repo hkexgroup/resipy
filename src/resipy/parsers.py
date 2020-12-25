@@ -1598,6 +1598,7 @@ def bertParser(fname):
     f = open(fname, "r")
     
     dump = f.readlines()
+    f.close()
     line = 0
     
     # skip comment lines
@@ -1746,6 +1747,7 @@ def srvParser(fname):
     data_dict['ip']=[0]*nmeas
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist','magErr']] # reorder columns to be consistent with the syscal parser
+    fh.close()
     
     return elec, df 
 
@@ -1753,7 +1755,7 @@ def srvParser(fname):
 def dasParser(fname):
     with open(fname, "r") as f:
         dump_raw = f.readlines()
-    line = 0
+
     numStr = r'[-+]?\d*\.\d*[eE]?[-+]?\d+|\d+' # all posible numbering formats
     
     # cleaning data from "out of range" measurements
@@ -1784,7 +1786,6 @@ def dasParser(fname):
     # getting data and creating df
     df_lineNum_s = [i+3 for i in range(len(dump)) if '#data_start' in dump[i]] # assuming headers exist
     df_lineNum_e = [i for i in range(len(dump)) if '#data_end' in dump[i]]
-    nrowsdf = df_lineNum_e[0] - df_lineNum_s[0]
     
     df_list = []
     for val in dump[df_lineNum_s[0]:df_lineNum_e[0]]: # reding data from mixed separated numbers!
@@ -1799,9 +1800,7 @@ def dasParser(fname):
     resCol = int([val.split()[-1] for val in dump if 'data_res_col' in val][0]) - 1 # -1 for python numbering
     devCol = int([val.split()[-1] for val in dump if 'data_std_res_col' in val][0]) - 1 
     ipCol = int([val.split()[-1] for val in dump if 'data_ip_wind_col' in val][0]) - 1 # this may become problematic if no IP in data
-    
-    # df_raw = pd.read_csv(io.StringIO(cleanData), delim_whitespace=True, skiprows=df_lineNum_s[0], nrows=nrowsdf, index_col=False, header=None)
-    
+        
     df = pd.DataFrame()
     arrHeader = ['a', 'b', 'm', 'n']
     
