@@ -273,7 +273,6 @@ class Project(object): # Project master class instanciated by the GUI
             dirname = os.path.join(self.apiPath)
         else:
             dirname = os.path.abspath(dirname)
-
         print('Working directory is:', dirname)
         self.setwd(dirname) # working directory (for the datas)
         self.elec = None # will be assigned when creating a survey
@@ -305,6 +304,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
         self.surfaceIdx = None # used to show plan view iterations of 3D inversions
 
+            
     def setBorehole(self, val=False):
         """Set all surveys in borehole type if `True` is passed.
         """
@@ -640,7 +640,11 @@ class Project(object): # Project master class instanciated by the GUI
         ResIPy format (.resipy) for future importation.
         """
         from zipfile import ZipFile, ZipInfo
-
+        import json
+        
+        if fname[-7:] != '.resipy':
+            fname = fname + '.resipy'
+        
         # create save directory
         name = os.path.basename(fname)
         savedir = os.path.join(self.dirname, name)
@@ -649,29 +653,83 @@ class Project(object): # Project master class instanciated by the GUI
         os.mkdir(savedir)
         
         # add files to it
-        self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
-        self.elec.to_csv(os.path.join(savedir, 'elec.csv'))
+        if self.mesh is not None:
+            self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
+        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False, line_terminator='\n')
+        c = 0
+        if self.iForward:
+            c = 1
         for i, survey in enumerate(self.surveys):
             f = os.path.join(savedir, 'survey{:d}'.format(i))
-            survey.df.to_csv(f + '-df.csv', index=False)
-            survey.elec.to_csv(f + '-elec.csv')
-            self.meshResults[i].vtk(f + '.vtk')
+            survey.df.to_csv(f + '-df.csv', index=False, line_terminator='\n')
+            survey.elec.to_csv(f + '-elec.csv', index=False, line_terminator='\n')
+            if (c+i < len(self.meshResults)):
+                self.meshResults[c + i].vtk(f + '.vtk')
 
-        # TODO add flags (borehole, timelapse)
-        # TODO add all param
+        settings = {'surveysInfo': self.surveysInfo,
+                    'topo': self.topo.values.tolist() if self.topo is not None else None,
+                    'typ': self.typ,
+                    'err': self.err,
+                    'iBorehole': self.iBorehole,
+                    'iTimeLapse': self.iTimeLapse,
+                    'iBatch': self.iBatch,
+                    'sequence': self.sequence.tolist() if self.sequence is not None else None,
+                    'resist0': list(self.resist0) if self.resist0 is not None else None,
+                    'iForward': self.iForward,
+                    'fmd': self.fmd,
+                    'zlim': self.zlim,
+                    'geom_input': self.geom_input, # need to make list of array?
+                    'referenceMdl': self.referenceMdl,
+                    'fwdErrModel': self.fwdErrModel,
+                    'custSeq': self.custSeq,
+                    'errTyp': self.errTyp,
+                    'surfaceIdx': self.surfaceIdx.tolist() if self.surfaceIdx is not None else None
+                   }
+        with open(os.path.join(savedir, 'settings.json'), 'w') as f:
+            f.write(json.dumps(settings))
+        
+        # param as numpy array
+        keys = ['num_regions', 'res0File', 'num_xz_poly', 'a_wgt', 'b_wgt',
+              'lineTitle', 'job_type', 'flux_type', 'singular_type',
+              'res_matrix', 'scale', 'regions', 'patch_x', 'patch_z',
+              'inverse_type', 'target_decrease', 'qual_ratio', 'data_type',
+              'reg_mode', 'tolerance', 'max_iter', 'error_mod', 'alpha_aniso',
+              'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type']
+        sparams = {}
+        for key in keys:
+            if key in self.param.keys():
+                sparams[key] = self.param[key]
+        if 'node_elec' in self.param:
+            sparams['node_elec'] = [self.param['node_elec'][0].tolist(),
+                                    self.param['node_elec'][1].tolist()]
+        if 'xz_poly_table' in self.param:
+            sparams['xz_poly_table'] = self.param['xz_poly_table'].tolist()
+        if 'xy_poly_table' in self.param:
+            sparams['xy_poly_table'] = self.param['xy_poly_table'].tolist()
+        with open(os.path.join(savedir, 'params.json'), 'w') as f:
+            f.write(json.dumps(sparams))
         
         # zip the directory, move it and clean
-        with ZipFile(fname + '.resipy', 'w') as fz:
+        with ZipFile(fname, 'w') as fz:
             for file in os.listdir(savedir):
                 fz.write(os.path.join(savedir, file), file)
         shutil.rmtree(savedir)
+        
+        # TODO maybe add a self.uiParams = {} for UI specific parameters?
+
         
         
         
     def loadProject(self, fname):
         """Load data from project file.
+        
+        Parameters
+        ----------
+        fname : str
+            Path where the file will be saved.
         """
         from zipfile import ZipFile, ZipInfo
+        import json
         
         # create save directory
         name = os.path.basename(fname).replace('.resipy','')
@@ -685,14 +743,70 @@ class Project(object): # Project master class instanciated by the GUI
             fz.extractall(savedir)
             
         # read files an reconstruct Survey objects
-        fs = [f for f in os.listdir(savedir) if f[:6] == 'survey']
-        meshResults = []
-        for i in range(len(fs)//2):
+        self.meshResults = []
+        self.surveys = []
+        for i in range(100000): # don't think that someone will store so many
             f = os.path.join(savedir, 'survey{:d}'.format(i))
-            df = pd.read_csv(f + '-df.csv')
-            elec = pd.read_csv(f + '-elec.csv').values
-            meshResults.append(mt.vtk_import(f + '.vtk'))
-                
+            if os.path.exists(f + '-df.csv'):
+                df = pd.read_csv(f + '-df.csv')
+                for c in ['a','b','m','n']:
+                    df[c] = df[c].astype(str)
+                dfelec = pd.read_csv(f + '-elec.csv')
+                dfelec['label'] = dfelec['label'].astype(str)
+                self.surveys.append(Survey.fromDataframe(df, dfelec)) 
+                elec = dfelec[~dfelec['remote']][['x','y','z']].values
+                if os.path.exists(f + '.vtk'):
+                    mesh = mt.vtk_import(f + '.vtk')
+                    mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
+                    self.meshResults.append(mesh)
+        self.elec = pd.read_csv(os.path.join(savedir, 'elec.csv'))
+        self.elec['label'] = self.elec['label'].astype(str)
+        if os.path.exists(os.path.join(savedir, 'mesh.vtk')):
+            self.importMesh(os.path.join(savedir, 'mesh.vtk')) # better
+#         self.mesh = mt.vtk_import(os.path.join(savedir, 'mesh.vtk'))
+        
+        # read flags and settings
+        with open(os.path.join(savedir, 'settings.json'), 'r') as f:
+            settings = json.load(f)
+        self.surveysInfo = settings['surveysInfo']
+        self.topo = pd.DataFrame(settings['topo'], columns=['x','y','z']) if settings['topo'] is not None else None
+        self.typ = settings['typ']
+        self.err = settings['err']
+        self.iBorehole = settings['iBorehole']
+        self.iTimeLapse = settings['iTimeLapse']
+        self.iBatch = settings['iBatch']
+        self.sequence = np.array(settings['sequence']) if settings['sequence'] is not None else None
+        self.resist0 = settings['resist0']
+        self.iForward = settings['iForward']
+        self.fmd = settings['fmd']
+        self.zlim = settings['zlim']
+        if self.iForward and self.mesh is not None:
+            self.meshResults = [self.mesh] + self.meshResults
+        try:
+            self.geom_input = settings['geom_input'] # might failed if numpy array inside
+        except:
+            print('could not import geom_input')
+        self.referenceMdl = settings['referenceMdl']
+        self.fwdErrModel = settings['fwdErrModel']
+        self.custSeq = settings['custSeq']
+        self.errTyp = settings['errTyp']
+        self.surfaceIdx = settings['surfaceIdx']
+            
+        # read parameters
+        with open(os.path.join(savedir, 'params.json'), 'r') as f:
+            sparams = json.load(f)
+        if 'xz_poly_table' in sparams:
+            sparams['xz_poly_table'] = np.array(sparams['xz_poly_table'])
+        if 'xy_poly_table' in sparams:
+            sparams['xy_poly_table'] = np.array(sparams['xy_poly_table'])
+        sparams['mesh'] = self.mesh
+        if 'node_elec' in sparams:
+            sparams['node_elec'][0] = np.array(sparams['node_elec'][0])
+            sparams['node_elec'][1] = np.array(sparams['node_elec'][1]).astype(int)
+        self.param = sparams
+        
+            
+            
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
                      parser=None, debug=True):
@@ -1922,7 +2036,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         # checking
         if len(np.unique(e_nodes)) < len(e_nodes):
-            raise ValueError('Some electrodes are positionned on the same nodes !')
+            raise ValueError('Some electrodes are positionned on the same nodes : e_nodes=' + str(e_nodes))
         
         # make regions continuous
         regions = self.mesh.df['region']
@@ -1934,10 +2048,16 @@ class Project(object): # Project master class instanciated by the GUI
         self.param['num_regions'] = 0
         self.param['res0File'] = 'res0.dat'
         numel = self.mesh.numel
-        self.mesh.addAttribute(np.ones(numel)*res0, 'res0') # default starting resisivity [Ohm.m]
-        self.mesh.addAttribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
-        self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
-        self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
+        if 'res0' not in self.mesh.df.columns:
+            self.mesh.df['res0'] = np.ones(numel)*res0 # default starting resisivity [Ohm.m]
+        if 'phase0' not in self.mesh.df.columns:
+            self.mesh.df['phase0'] = np.ones(numel)*0 # default starting phase [mrad]
+        if 'zones' not in self.mesh.df.columns:
+            self.mesh.df['zones'] = np.ones(numel, dtype=int)
+        else:
+            self.mesh.df['zones'] = self.mesh.df['zones'].astype(int) # for some reason read as float
+        if 'iter' not in self.mesh.df.columns:
+            self.mesh.df['iter'] = np.zeros(numel, dtype=float)
         self.mesh.iremote = self.elec['remote'].values
 
         name = 'mesh.dat'
@@ -2209,7 +2329,7 @@ class Project(object): # Project master class instanciated by the GUI
                     s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
                 else:
                     content = content + str(protocol.shape[0]) + '\n'
-                    content = content + protocol.to_csv(sep='\t', header=False, index=False)
+                    content = content + protocol.to_csv(sep='\t', header=False, index=False, line_terminator='\n')
 
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
@@ -2236,7 +2356,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # been populated when the files has been imported
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot, threed=threed)
                 content = content + str(len(df)) + '\n'
-                content = content + df.to_csv(sep='\t', header=False, index=False)
+                content = content + df.to_csv(sep='\t', header=False, index=False, line_terminator='\n')
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
@@ -2356,7 +2476,7 @@ class Project(object): # Project master class instanciated by the GUI
         for s, df in zip(surveys, dfs):
             outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
             files.append(outputname)
-            df.to_csv(outputname, sep='\t', header=False, index=False)
+            df.to_csv(outputname, sep='\t', header=False, index=False, line_terminator='\n')
             # header with line count already included
 
         # if iMoveElec is True, writing different R2.in
@@ -3061,7 +3181,7 @@ class Project(object): # Project master class instanciated by the GUI
 
                 with open(outputname, 'w') as f:
                     f.write('{:d}\n'.format(df['level_0'].values[0]))
-                    df2.to_csv(f, sep='\t', header=False, index=False)
+                    df2.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
                 # header with line count already included
             
             fnames = [os.path.join(invdir, 'ref', 'protocol.dat')] + files
@@ -3658,7 +3778,7 @@ class Project(object): # Project master class instanciated by the GUI
         """
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname, index=False)
+            df.to_csv(fname, index=False, line_terminator='\n')
             
 
     def importElec(self, fname=''):
@@ -3718,7 +3838,7 @@ class Project(object): # Project master class instanciated by the GUI
         dff = dff.rename(columns = {'resist':'Resistance [ohm]', 'recipError':'Resistance_err [ohm]',
                                     'resError':'Fit Resistance_err [ohm]','phase':'Phase [mRad]',
                                     'reci_IP_err':'Phase_err [mRad]','phaseError':'Fit Phase_err [mRad]'})
-        dff.to_csv(fname, index=False)
+        dff.to_csv(fname, index=False, line_terminator='\n')
 
 
     def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
@@ -3870,7 +3990,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False)
+            protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
         dump('done!\n')
 
         # fun the inversion
@@ -4062,7 +4182,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False)
+            protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
 
         # run the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
@@ -4638,13 +4758,17 @@ class Project(object): # Project master class instanciated by the GUI
         # create an index for the values inside of the zone of interest
         # needed as the reference survey is not cropped by default
         inside = np.ones(self.meshResults[0].numel, dtype=bool)
-        if self.param['num_xz_poly'] > 0:
+        if (self.typ == 'R3t') or (self.typ == 'cR3t'):
+            pname = 'num_xy_poly'
+        else:
+            pname = 'num_xz_poly'
+        if self.param[pname] > 0:
             meshx = np.array(self.meshResults[0].elmCentre[:,0])
             meshy = np.array(self.meshResults[0].elmCentre[:,1])
             meshz = np.array(self.meshResults[0].elmCentre[:,2])
             # poly = (self.param['xz_poly_table'][:,0],
                     # self.param['xz_poly_table'][:,1])
-            path = mpath.Path(self.param['xz_poly_table'])
+            path = mpath.Path(self.param[pname])
 
             if self.typ[-2]=='3':
                 # inside1 = iip.isinpolygon(meshx, meshy, poly)

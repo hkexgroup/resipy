@@ -20,7 +20,7 @@ from scipy.linalg import lstsq
 from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      primeParserTab, protocolParser,
                      stingParser, ericParser, lippmannParser, aresParser,
-                     srvParser, bertParser)
+                     srvParser, bertParser, dasParser)
 from resipy.DCA import DCA
 
 # show the deprecation warnings
@@ -147,7 +147,7 @@ class Survey(object):
                       DeprecationWarning)
             
         avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT']# add parser types here! 
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
 
         
         if parser is not None:
@@ -185,6 +185,8 @@ class Survey(object):
                 elec ,data = srvParser(fname)
             elif ftype == 'BERT':
                 elec, data = bertParser(fname)
+            elif ftype == 'DAS-1':
+                elec, data = dasParser(fname)
     #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
     #            pass # manual set up
     #            print('Manual set up, no data will be imported')
@@ -199,7 +201,6 @@ class Survey(object):
         if 'magErr' in self.df.columns:
             self.df['resError'] = self.df['magErr'].copy()
         else:
-            #pass
             self.df['resError'] = np.nan
         if 'phiErr' in self.df.columns:
             self.df['phaseError'] = self.df['phiErr'].copy()
@@ -241,44 +242,75 @@ class Survey(object):
         self.computeReciprocal()
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
-        
-            
+       
+     
     @classmethod
-    def fromDataframe(cls, df, elec):
+    def fromDataframe(cls, df, dfelec):
         """Create a survey class from pandas dataframe.
         
         Parameters
         ----------
         df : pandas.DataFrame
             Pandas dataframe.
-        elec : numpy.ndarray
-            A nx3 numpy array witht the XYZ electrodes positions.
+        dfelec : pandas.DataFrame
+            Pandas dataframe for electrodes.
             
         Returns
         -------
-        s_svy : Survey
+        survey : Survey
             An instance of the Survey class.
         """
-        surrogate_file = 'examples/dc-2d/protocol.dat'
-        path2resipy = os.path.realpath(__file__).replace('\\src\resipy\\',surrogate_file)
-        path = path2resipy # map to the protocol test file
-        s_svy = cls(fname = path, ftype='Protocol')#surrogate survey
-        s_svy.df = df
-        dfelec = pd.DataFrame(elec, columns=['x','y','z'])
-        dfelec['remote'] = False
-        dfelec['buried'] = False
-        dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
-        s_svy.elec = dfelec
-        s_svy.ndata = 1#len(data)
-        s_svy.computeReciprocal()
-        s_svy.filterDefault()
-        return s_svy
+        
+        def resource_path(relative_path): # a better method to get relative path of files
+            if hasattr(sys, '_MEIPASS'):
+                return os.path.join(sys._MEIPASS, relative_path)
+            return os.path.join(os.path.abspath("."), relative_path)
+        path = resource_path('examples/dc-2d/protocol.dat')        
+        
+        # surrogateFile = '/src/examples/dc-2d/protocol.dat' # tricky
+        # path = os.path.realpath(__file__).replace(
+        #     '\\src\resipy\\Survey.py', surrogateFile).replace(
+        #     '/src/resipy/Survey.py', surrogateFile)
+
+        survey = cls(fname=path, ftype='ProtocolDC') #surrogate survey
+        survey.df = df
+        if 'remote' not in dfelec.columns:
+            dfelec['remote'] = False
+        if 'buried' not in dfelec.columns:
+            dfelec['buried'] = False
+        if 'label' not in dfelec.columns:
+            dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
+        survey.elec = dfelec
+        survey.ndata = df.shape[0]
+        survey.computeReciprocal()
+        survey.filterDefault()
+        survey.dfReset = survey.df.copy()
+        survey.dfPhaseReset = survey.df.copy()
+        
+        return survey
+    
+    
+    
+    def _saveSurvey(self):
+        """Save survey.
+        """
+        pass
+    
+    
+    
+    def _loadSurvey(self, df, elec):
+        """Load back a survey given its internal df and electrode df.
+        """
+        pass
+    
     
     
     def __str__(self):
         out = "Survey class with {:d} measurements and {:d} electrodes".format(
             self.df.shape[0], self.elec.shape[0])
         return out
+    
+    
     
     def hasElecString(self):
         """Determine if a electrode strings are present in the electrode labels 
@@ -411,6 +443,8 @@ class Survey(object):
                 elec ,data = srvParser(fname)
             elif ftype == 'BERT':
                 elec, data = bertParser(fname)
+            elif ftype == 'DAS-1':
+                elec, data = dasParser(fname)
             else:
                 raise Exception('Sorry this file type is not implemented yet')
         
@@ -1229,14 +1263,14 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(df)) + '\n')
             with open(outputname, 'a') as f:
-                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e')
+                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e', line_terminator='\n')
 
         outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(self.df)) + '\n')
             with open(outputname, 'a') as f:
-                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
+                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'], line_terminator='\n')
                 
         try:        
             if (OS == 'Windows') and (rpath is None):
@@ -1972,7 +2006,7 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                protocol.to_csv(f, sep='\t', header=False, index=False)
+                protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
         
         return protocol
         
