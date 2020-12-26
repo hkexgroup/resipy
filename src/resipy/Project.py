@@ -303,6 +303,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.custSeq = False # flag - True if of 3D custom sequence imported
         self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
         self.surfaceIdx = None # used to show plan view iterations of 3D inversions
+        self.darkMode = False # If true, electrodes wil be plotted in white, else black
 
             
     def setBorehole(self, val=False):
@@ -1178,9 +1179,9 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 s.iselect = np.zeros(s.df.shape[0], dtype=bool)
                 s.eselect = np.zeros(len(s.elec), dtype=bool)
-            self.surveys[0].filterManual(ax=ax, **kwargs)
+            self.surveys[0].filterManual(ax=ax, darkMode=self.darkMode, **kwargs)
         else:
-            self.surveys[index].filterManual(ax=ax, **kwargs)
+            self.surveys[index].filterManual(ax=ax, darkMode=self.darkMode, **kwargs)
 
 
     def filterDummy(self, index=-1):
@@ -2111,7 +2112,7 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     kwargs['color_bar'] = False
         
-            self.mesh.show(ax=ax, **kwargs)
+            self.mesh.show(ax=ax, darkMode=self.darkMode, **kwargs)
             
     def refineMesh(self):
         self.mesh = self.mesh.refine()
@@ -2993,7 +2994,7 @@ class Project(object): # Project master class instanciated by the GUI
             if self.typ[-1] == '2': # 2D case
                 if zlim is None:
                     zlim = self.zlim
-                mesh.show(ax=ax, edge_color=edge_color,
+                mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
                             attr=attr, sens=sens, color_map=color_map,
                             zlim=zlim, clabel=clabel, contour=contour, **kwargs)
                 if doi is True: # DOI based on Oldenburg and Li
@@ -3482,7 +3483,7 @@ class Project(object): # Project master class instanciated by the GUI
             if addAction is not None:
                 addAction()
         self.mesh.atribute_title = 'Regions'
-        self.mesh.show(attr='region', ax=ax, zlim=self.zlim)
+        self.mesh.show(attr='region', ax=ax, zlim=self.zlim, darkMode=self.darkMode)
         # we need to assign a selector to self otherwise it's not used
         self.selector = SelectPoints(ax, self.mesh.elmCentre[:,[0,2]],
                                      typ=typ, callback=callback)
@@ -3528,7 +3529,8 @@ class Project(object): # Project master class instanciated by the GUI
             fig = ax.figure
 
         self.geom_input = {}
-        ax.plot(self.elec['x'], self.elec['z'], 'o', label='electrode')
+        elecColor = 'ko' if self.darkMode is False else 'wo'
+        ax.plot(self.elec['x'], self.elec['z'], elecColor, label='electrode')
         ax.set_ylim([np.min(self.elec['z']) - self.fmd, np.max(self.elec['z'])])
         ax.set_xlim(np.min(self.elec['x']), np.max(self.elec['x']))
         ax.set_xlabel('Distance [m]')
@@ -4232,6 +4234,8 @@ class Project(object): # Project master class instanciated by the GUI
         modelDOI : bool, optional
             As modelDOI() is always computed using R2 (not cR2), this tells the
             method to look for an R2 looking iteration file.
+        cropMaxDepth : bool, optional
+            if True, below max depth will be cropped
         """
         if ax is None:
             fig, ax = plt.subplots()
@@ -4276,7 +4280,8 @@ class Project(object): # Project master class instanciated by the GUI
                     ylabel = 'Elevation [m]'
                     ylim = self.zlim
                     
-                ax.plot(elec[:,0], yelec, 'o', markersize=4)
+                elecColor = 'ko' if self.darkMode is False else 'wo'
+                ax.plot(elec[:,0], yelec, elecColor, markersize=4)
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel(ylabel)
@@ -4403,7 +4408,7 @@ class Project(object): # Project master class instanciated by the GUI
             If `True`, the electrodes are displayed and can be used for filtering.
         """
         self.surveys[index].filterManual(attr='resInvError', vmin=vmin, vmax=vmax,
-                    ax=ax, log=False, label='Normalised Error', elec=elec)
+                    ax=ax, log=False, label='Normalised Error', elec=elec, darkMode=self.darkMode)
 
 
 
