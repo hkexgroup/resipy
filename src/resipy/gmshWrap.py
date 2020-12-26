@@ -218,7 +218,13 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
 
     #catch buried electrode special cases 
     if bh_flag or bu_flag: # special case 
-        distances = find_dist(electrodes[0], [0]*len(electrodes[0]), electrodes[1])
+        tmp_x = np.array(electrodes[0])
+        tmp_y = np.zeros_like(tmp_x)
+        tmp_z = np.array(electrodes[1])
+        idx = np.ones_like(tmp_x,dtype=bool)
+        if len(rem_idx)>0:
+            idx[rem_idx] = False
+        distances = find_dist(tmp_x[idx], tmp_y[idx], tmp_z[idx])
         dist_sort = np.unique(distances)
         elecspacing = dist_sort[1]
         if max(topo_x)-min(topo_x) < elecspacing and len(topo_x) != 1: # they have the same x coordinate 
@@ -591,7 +597,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             no_pts += 1
             remote_x = x_pts[0]-flank + 10*np.random.rand()
             remote_z = b_max_depth  + 10*np.random.rand()
-            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl2};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cln};//remote electrode\n"%(no_pts,remote_x,0,remote_z))
             e_pt_idx[k] = no_pts
             elec_x_cache = np.append(elec_x_cache,electrodes[0][rem_idx[k]])
             elec_z_cache = np.append(elec_z_cache,electrodes[1][rem_idx[k]])

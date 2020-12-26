@@ -91,7 +91,11 @@ def calc(invdir):
     R = readRm(os.path.join(invdir,'f001_R.dat'), jsize, rsize)
     
     #construct A and b on GPU 
-    alpha = getAlpha(os.path.join(invdir,'R2.out'))
+    files = os.listdir(invdir)
+    for f in files:
+        if f.endswith('.out'):
+            alpha = getAlpha(os.path.join(invdir,f))
+            break
     S = cp.matmul(cp.matmul(J.T,Wd.T), cp.matmul(Wd,J))
     A = S + alpha*R #Form A (Menke et al, 2015)
     
@@ -107,8 +111,8 @@ def calc(invdir):
     mempool.free_all_blocks()
     
     # retrieve outputs as numpy arrays 
-    covar = np.diagonal(np.sqrt(Cm.get()))
-    remat = np.diagonal(np.sqrt(ResM.get()))
+    covar = np.diagonal(Cm.get())
+    remat = np.diagonal(ResM.get())
     
     #finally clear memory once again 
     Cm = None

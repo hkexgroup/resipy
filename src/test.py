@@ -49,6 +49,13 @@ k.createSurvey(testdir + 'parser/Lippmann_3.tx0', ftype='Lippmann')
 k.createSurvey(testdir + 'parser/syscal-new-format.csv', ftype='Syscal')
 k.createSurvey(testdir + 'parser/BERT_2D_topo.ohm', ftype='BERT')
 k.createSurvey(testdir + 'parser/BERT_IP_2D.dat', ftype='BERT')
+k.createSurvey(testdir + 'parser/DAS-1_2D_DC.data', ftype='DAS-1')
+k.createSurvey(testdir + 'parser/DAS-1_3D_IPDC.data', ftype='DAS-1')
+k.createSurvey(testdir + 'parser/protocolForward/R2_forward.dat', ftype='ProtocolDC')
+k.createSurvey(testdir + 'parser/protocolForward/cR2_forward.dat', ftype='ProtocolIP')
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'parser/protocolForward/R3t_forward.dat', ftype='ProtocolDC')
+k.createSurvey(testdir + 'parser/protocolForward/cR3t_forward.dat', ftype='ProtocolIP')
 
 # electrode import
 k = Project(typ='R2')
