@@ -17,6 +17,7 @@ if OS == 'Windows':
 #%%
 class Settings(object):
     def __init__(self):
+        """Populate self.param for specific settings"""
         self.param = {} # Dict of settings
 
     
@@ -118,8 +119,7 @@ class Settings(object):
 
         except WindowsError:
             return None 
-        
-        
+         
         
     def genLocalSetting(self):
         """saves settings on windows, MacOS and Linux"""
@@ -146,7 +146,6 @@ class Settings(object):
             pass
 
     
-    
     def retLocalSetting(self):
         """retrieves local settings file and prepares settings"""
         
@@ -171,4 +170,3 @@ class Settings(object):
         except:
             print('Local settings not found!')
             return None
-        
