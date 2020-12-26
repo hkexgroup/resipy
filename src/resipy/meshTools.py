@@ -1403,6 +1403,7 @@ class Mesh:
              sensPrc = None,
              maxDepth = None,
              aspect = 'equal',
+             darkMode = False,
              **kwargs):
         """ Displays a 2d mesh and attribute.
         
@@ -1448,6 +1449,8 @@ class Mesh:
             defines the aspect ratio of the plot.
             'equal' locks the aspect ratio.
             'auto', aspect ratio is define by plotting area.
+        darkMode : bool, optional
+            If True, electrodes will be plotted in white, else black
         
         Returns
         -------
@@ -1686,7 +1689,8 @@ class Mesh:
                 x = self.elec.copy()
                 if self.iremote is not None: # it's None for quad mesh
                     x = x[~self.iremote, :]
-                ax.plot(x[:,0], x[:,2], 'o', markersize=4)
+                elecColor = 'ko' if darkMode is False else 'wo'
+                ax.plot(x[:,0], x[:,2], elecColor, markersize=4)
             except AttributeError:
                 # print("no electrodes in mesh object to plot")
                 pass

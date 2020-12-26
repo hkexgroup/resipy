@@ -29,7 +29,6 @@ class Settings(object):
         """
         if self.param == {}: # adding default dark mode setting
             self.param = {'dark':False}
-        print('self.param[dark]', self.param['dark'])
         return '\n'.join('{}:{}'.format(str(key), str(value)) for key, value in self.param.items())
     
     
