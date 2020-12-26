@@ -18,9 +18,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame, 
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
-    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser, qApp)#, QAction, QButtonGroup, QListWidget, QShortcut)
+    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, qApp, QAction, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor, QPalette#, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl, QProcess#, QSize
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess#, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
@@ -6178,7 +6178,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
 
 if __name__ == '__main__':
-    catchErrors()    
+    catchErrors()
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
@@ -6214,14 +6214,9 @@ if __name__ == '__main__':
             app.setPalette(dark_palette)
             # dark theme matplotlib plots
             matplotlib.style.use('dark_background')
-            
-            # darkMode = True
-        # else:
-            # darkMode = False
     else:
         print('Generating local settings file...')
         resipySettings.genLocalSetting()
-        # darkMode = False
 
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
     
