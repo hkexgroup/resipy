@@ -2104,9 +2104,9 @@ class Survey(object):
         ax.set_xticklabels(elecNumber[::5])
         
         if elec:
-            caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+            caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), 'o', picker=5)
         else:
-            caxElec, = ax2.plot([], [], 'ko')
+            caxElec, = ax2.plot([], [], 'o')
         
         cax = ax2.scatter(xpos, ypos, c=val, marker='o', picker=5, vmin=vmin,
                          vmax=vmax)
