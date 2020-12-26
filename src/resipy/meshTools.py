@@ -1686,7 +1686,7 @@ class Mesh:
                 x = self.elec.copy()
                 if self.iremote is not None: # it's None for quad mesh
                     x = x[~self.iremote, :]
-                ax.plot(x[:,0], x[:,2], 'ko', markersize=4)
+                ax.plot(x[:,0], x[:,2], 'o', markersize=4)
             except AttributeError:
                 # print("no electrodes in mesh object to plot")
                 pass

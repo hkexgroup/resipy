@@ -3241,7 +3241,7 @@ class App(QMainWindow):
         meshTetraLayout.addLayout(meshOptionTetraLayout)
         meshTetraLayout.addWidget(self.meshTetraBtn)
         meshTetraGroup.setLayout(meshTetraLayout)
-        meshChoiceLayout.addWidget(meshTetraGroup)
+        meshChoiceLayout.addWidget(meshTetraGroup, 1)
         meshTetraGroup.setHidden(True)
 
         meshLayout.addLayout(meshChoiceLayout, 0)

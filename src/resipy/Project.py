@@ -3408,7 +3408,7 @@ class Project(object): # Project master class instanciated by the GUI
             fig = ax.figure
 
         self.geom_input = {}
-        ax.plot(self.elec['x'], self.elec['z'], 'ko', label='electrode')
+        ax.plot(self.elec['x'], self.elec['z'], 'o', label='electrode')
         ax.set_ylim([np.min(self.elec['z']) - self.fmd, np.max(self.elec['z'])])
         ax.set_xlim(np.min(self.elec['x']), np.max(self.elec['x']))
         ax.set_xlabel('Distance [m]')
@@ -4156,7 +4156,7 @@ class Project(object): # Project master class instanciated by the GUI
                     ylabel = 'Elevation [m]'
                     ylim = self.zlim
                     
-                ax.plot(elec[:,0], yelec, 'ko', markersize=4)
+                ax.plot(elec[:,0], yelec, 'o', markersize=4)
                 ax.set_aspect('equal')
                 ax.set_xlabel('Distance [m]')
                 ax.set_ylabel(ylabel)
@@ -4330,7 +4330,7 @@ class Project(object): # Project master class instanciated by the GUI
         baseline = (0,0)
         ax.plot((1,measurement_no[-1]),y_pos_limit,'r--')
         ax.plot((1,measurement_no[-1]),y_neg_limit,'r--')
-        ax.plot((1,measurement_no[-1]),baseline,'k--')
+        ax.plot((1,measurement_no[-1]),baseline,'--')
 
 
     def filterInvError(self, index=-1, vmin=None, vmax=None):
