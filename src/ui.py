@@ -6166,6 +6166,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Question)
         msg.setText('''<b>Restart ResIPy to change the theme?</b>''')
+        msg.setWindowTitle('Restart?')
         bttnY = msg.addButton(QMessageBox.Yes)
         bttnY.setText('Restart')
         bttnN = msg.addButton(QMessageBox.No)
