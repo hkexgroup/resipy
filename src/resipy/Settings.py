@@ -29,7 +29,7 @@ class Settings(object):
         string of settings value to be stored locally
         """
         if self.param != {}:
-            return '\n'.join('{}:{}'.format(str(key), str(value)) for key, value in self.param.items())
+            return '\n'.join('{} = {}'.format(str(key), str(value)) for key, value in self.param.items())
     
     
     def readSetting(self, settings):
@@ -42,8 +42,8 @@ class Settings(object):
         """
         settingList = settings.split('\n')
         for val in settingList:
-            key = val.split(':')[0]
-            value = val.split(':')[-1]
+            key = val.split(' = ')[0]
+            value = val.split(' = ')[-1]
             self.param[key] = value
             
     

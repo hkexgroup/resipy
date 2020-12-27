@@ -6176,7 +6176,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if msg.clickedButton() == bttnY:
             if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Wiidows/Linux frozen package only
                 exe_path = resipySettings.param['exe_path']
-                p = Popen(exe_path, shell=False, stdout=None, stdin=None)
+                Popen([exe_path], shell=False, stdout=None, stdin=None)
                 sys.exit()
             else:
                 os.execl(sys.executable, sys.executable, *sys.argv)

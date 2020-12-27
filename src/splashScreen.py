@@ -7,11 +7,14 @@ from PyQt5.QtCore import Qt
 from zipfile import ZipFile, ZipInfo
 from subprocess import Popen, PIPE
 import os, sys, shutil, platform, time 
+from os.path import expanduser
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
 QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
 ctime = time.time()
-OS = platform.system()           
+OS = platform.system()     
+if OS == 'Windows':
+    import winreg      
 
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -54,12 +57,76 @@ https://stackoverflow.com/questions/39296101/python-zipfile-removes-execute-perm
 by default zipfile does not umpack any binary bit to say executable or not
 Below is a way to do it
 """
-# Windows/Linux bundle workaround for restarting the app
-from resipy.Settings import Settings
+# Windows/Linux bundle workaround for restarting the app and saving splash settings
+class SplashSettings(object):
+    def __init__(self):
+        """For help see resipy.Settings()"""
+        self.param = {} # Dict of settings
+    def setSetting(self):
+        if self.param != {}:
+            return '\n'.join('{} = {}'.format(str(key), str(value)) for key, value in self.param.items())
+    def readSetting(self, settings):
+        settingList = settings.split('\n')
+        for val in settingList:
+            key = val.split(' = ')[0]
+            value = val.split(' = ')[-1]
+            self.param[key] = value
+    # for windows only
+    def setReg(self, name, value, REG_PATH=r'SOFTWARE\ResIPy'):
+        try:
+            winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, REG_PATH, 0)
+            registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_PATH, 0, 
+                                           winreg.KEY_WRITE)
+            winreg.SetValueEx(registry_key, name, 0, winreg.REG_SZ, value)
+            winreg.CloseKey(registry_key)
+        except WindowsError:
+            return None
+    def getReg(self, name, REG_PATH=r'SOFTWARE\ResIPy'):
+        try:
+            registry_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_PATH, 0)
+            value, regtype = winreg.QueryValueEx(registry_key, name)
+            winreg.CloseKey(registry_key)
+            return value
+        except WindowsError:
+            return None     
+    # for all OS platforms
+    def genLocalSetting(self):
+        try:
+            settingRaw = self.setSetting()
+            if OS == 'Windows':
+                self.setReg('settings', settingRaw)             
+            elif OS == 'Darwin':
+                userDir = expanduser('~/Library/Preferences/')
+                with open(os.path.join(userDir,'com.resipy.plist'), 'w') as settings_file:
+                    settings_file.write(settingRaw)
+            elif OS == 'Linux':
+                userDir = expanduser('~/.local/share/')
+                with open(os.path.join(userDir,'resipy.stt'), 'w') as settings_file:
+                    settings_file.write(settingRaw)            
+        except:
+            pass
+    def retLocalSetting(self):
+        try:
+            if OS == 'Windows':
+                settingRaw = self.getReg('settings')
+            elif OS == 'Darwin':
+                userDir = expanduser('~/Library/Preferences/')
+                with open(os.path.join(userDir,'com.resipy.plist'), 'r') as settings_file:
+                    settingRaw = settings_file.read()
+            elif OS == 'Linux':
+                userDir = expanduser('~/.local/share/')
+                with open(os.path.join(userDir,'resipy.stt'), 'r') as settings_file:
+                    settingRaw = settings_file.read()
+            self.readSetting(settingRaw)
+            return True
+        except:
+            return None
+
+
 if frozen == 'ever so': # only for frozen packages we need this
-    settings = Settings()
-    localSettings = settings.retLocalSetting() # in case there are settings in there already
-    settings.param['exe_path'] = sys.executable
+    settings = SplashSettings()
+    settings.retLocalSetting() # in case there are settings in there already
+    settings.param['exe_path'] = os.path.abspath(sys.executable)
     settings.param['frozen'] = True
     settings.genLocalSetting()
 
@@ -184,6 +251,13 @@ if __name__ == "__main__":
         p = Popen(os.path.join(appDir, 'ResIPy.exe'), shell=False, stdout=None, stdin=None) # this works now as well !
         p.communicate() # block and wait for the main program to finish
     # this last one doesn't work on linux WHEN COMPILED and I don't know why
+    
+    
+    # clearing splash screen settings in case file is relocated/updated/etc.
+    settings.retLocalSetting() # in case there are settings in there already
+    del settings.param['exe_path']
+    del settings.param['frozen']
+    settings.genLocalSetting()
     
     print('splashScreen is exiting')
     sys.exit(0) # send the SIGTERM signal -> works
