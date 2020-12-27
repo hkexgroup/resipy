@@ -303,7 +303,11 @@ class App(QMainWindow):
         
         #%% message bar below the UI for info and error message
         self.timer = QTimer() # a better method to get rid of expired messages in status bar
-        self.errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
+        if resipySettings.param['dark'] == 'True':
+            initErrMsgColor = 'white'
+        else:
+            initErrMsgColor = 'black'
+        self.errorLabel = QLabel('<i style="color:%s">Error messages will be displayed here</i>' % initErrMsgColor)
         QApplication.processEvents()
 
 
@@ -5469,7 +5473,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.close()
             
     def timeOut(self, timeStamp):
-        self.errorLabel.setText('<i style="color:black">['+timeStamp+']: </i>')
+        if resipySettings.param['dark'] == 'True':
+            timeStmpCol = 'white'
+        else:
+            timeStmpCol = 'black'
+        self.errorLabel.setText(('<i style="color:%s">[' % timeStmpCol) +timeStamp+']: </i>')
         
     def errorDump(self, text, flag=1):
         text = str(text)
@@ -5478,7 +5486,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             col = 'red'
             pdebug('errorDump:', text)
         else:
-            col = 'black'
+            if resipySettings.param['dark'] == 'True':
+                col = 'white'
+            else:
+                col = 'black'
             pdebug('infoDump:', text)
         self.errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         self.timer.timeout.connect(partial(self.timeOut, timeStamp))
