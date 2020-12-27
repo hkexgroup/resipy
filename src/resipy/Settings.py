@@ -28,9 +28,8 @@ class Settings(object):
         -------
         string of settings value to be stored locally
         """
-        if self.param == {}: # adding default dark mode setting
-            self.param = {'dark':False}
-        return '\n'.join('{}:{}'.format(str(key), str(value)) for key, value in self.param.items())
+        if self.param != {}:
+            return '\n'.join('{}:{}'.format(str(key), str(value)) for key, value in self.param.items())
     
     
     def readSetting(self, settings):
@@ -141,7 +140,7 @@ class Settings(object):
             print('Local settings saved!')
             
         except:
-            print('System admin error - restricted access') # expect the unexpected!
+            print('ERROR!') # expect the unexpected!
             print('!! SETTINGS NOT SAVED !!')
             pass
 

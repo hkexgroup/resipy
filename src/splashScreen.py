@@ -54,6 +54,14 @@ https://stackoverflow.com/questions/39296101/python-zipfile-removes-execute-perm
 by default zipfile does not umpack any binary bit to say executable or not
 Below is a way to do it
 """
+# Windows/Linux bundle workaround for restarting the app
+from resipy.Settings import Settings
+if frozen == 'ever so': # only for frozen packages we need this
+    settings = Settings()
+    localSettings = settings.retLocalSetting() # in case there are settings in there already
+    settings.param['exe_path'] = sys.executable
+    settings.param['frozen'] = True
+    settings.genLocalSetting()
 
 class MySplashScreen(QSplashScreen):
     def __init__(self, animation, flags):
