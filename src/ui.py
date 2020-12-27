@@ -6174,7 +6174,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         msg.setDefaultButton(bttnN)
         msg.exec_()
         if msg.clickedButton() == bttnY:
-            os.execl(sys.executable, sys.executable, *sys.argv)
+            if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Wiidows/Linux frozen package only
+                exe_path = resipySettings.param['exe_path']
+                p = Popen(exe_path, shell=False, stdout=None, stdin=None)
+                sys.exit()
+            else:
+                os.execl(sys.executable, sys.executable, *sys.argv)
 
 
 if __name__ == '__main__':
@@ -6190,32 +6195,38 @@ if __name__ == '__main__':
     resipySettings = Settings()
     localSettings = resipySettings.retLocalSetting()
     if localSettings != None: # dark mode is selected?
-        if resipySettings.param['dark'] == 'True':
-            # dark theme GUI
-            dark_palette = QPalette()
-            dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.WindowText, Qt.white)
-            dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
-            dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.ToolTipBase, QColor(25, 25, 25))
-            dark_palette.setColor(QPalette.ToolTipText, Qt.white)
-            dark_palette.setColor(QPalette.Text, Qt.white)
-            dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.ButtonText, Qt.white)
-            dark_palette.setColor(QPalette.BrightText, Qt.red)
-            dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-            dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-            dark_palette.setColor(QPalette.HighlightedText, QColor(35, 35, 35))
-            dark_palette.setColor(QPalette.Active, QPalette.Button, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, Qt.darkGray)
-            dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, Qt.darkGray)
-            dark_palette.setColor(QPalette.Disabled, QPalette.Text, Qt.darkGray)
-            dark_palette.setColor(QPalette.Disabled, QPalette.Light, QColor(53, 53, 53))
-            app.setPalette(dark_palette)
-            # dark theme matplotlib plots
-            matplotlib.style.use('dark_background')
+        if 'dark' in resipySettings.param.keys():
+            if resipySettings.param['dark'] == 'True':
+                # dark theme GUI
+                dark_palette = QPalette()
+                dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.WindowText, Qt.white)
+                dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
+                dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.ToolTipBase, QColor(25, 25, 25))
+                dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+                dark_palette.setColor(QPalette.Text, Qt.white)
+                dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.ButtonText, Qt.white)
+                dark_palette.setColor(QPalette.BrightText, Qt.red)
+                dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+                dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+                dark_palette.setColor(QPalette.HighlightedText, QColor(35, 35, 35))
+                dark_palette.setColor(QPalette.Active, QPalette.Button, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, Qt.darkGray)
+                dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, Qt.darkGray)
+                dark_palette.setColor(QPalette.Disabled, QPalette.Text, Qt.darkGray)
+                dark_palette.setColor(QPalette.Disabled, QPalette.Light, QColor(53, 53, 53))
+                app.setPalette(dark_palette)
+                # dark theme matplotlib plots
+                matplotlib.style.use('dark_background')
+        else:
+            resipySettings.param['dark'] = False
+            resipySettings.genLocalSetting()
+            
     else:
         print('Generating local settings file...')
+        resipySettings.param['dark'] = False
         resipySettings.genLocalSetting()
 
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
