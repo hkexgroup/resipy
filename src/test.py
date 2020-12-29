@@ -543,7 +543,7 @@ k.showSlice(axis='y')
 #mesh calculations 
 k.mesh.exportTetgenMesh(testdir + 'mesh/tetgen_test')
 smesh = k.mesh.extractSurface() # this test mesh.computeNiegh as well 
-tmesh = k.meshResults[0].threshold(attr='Resistivity',vmin=20,vmax=100)
+tmesh = k.meshResults[0].threshold(attr='Resistivity(ohm.m)',vmin=20,vmax=100)
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-import-mesh'] = time.time() - t0
 
@@ -619,6 +619,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
 
 #%% test timelapse 3D -- takes a long time
+t0 = time.time()
 k = Project(typ='R3t')
 k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
@@ -628,9 +629,9 @@ k.invert()
 k.showResults(index=0,use_pyvista=use_pyvista)
 k.showResults(index=1,use_pyvista=use_pyvista)
 
-t0 = time.time()
 k.mesh.orderNodes()
-t1 = time.time() - t0
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-3d-timelapse'] = time.time() - t0
 
 #%% print final summary information 
 for key in timings.keys():

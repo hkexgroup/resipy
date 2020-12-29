@@ -227,6 +227,7 @@ def write3Din(param, dirname, typ='R3t'):
             'lineTitle':'My beautiful 3D survey',
             'job_type':1, # inversion by default
             'singular_type':0,
+            'res_matrix':1,
             'num_regions':1,
             'resis':100.0, # default resistivity for regions Ohm.m
             'phase':-2, #default phase for regions mrad
@@ -268,8 +269,8 @@ def write3Din(param, dirname, typ='R3t'):
                 
     content = ''
     content = content + '{}\n\n'.format(param['lineTitle'])
-    content = content + '{}\t{}\t<< job_type, singularity_type\n\n'.format(
-            param['job_type'], param['singular_type'])
+    content = content + '{}\t{}\t{}\t<< job_type, singularity_type, res_matrix\n\n'.format(
+            param['job_type'], param['singular_type'],param['res_matrix'])
 
     # parameters specific to inversion
     content = content + '{}\t<< num_regions\n'.format(param['num_regions'])
