@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame, 
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
-    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, qApp, QAction, QButtonGroup, QListWidget, QShortcut)
+    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser, QAction, QMenu)#, qApp, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor, QPalette#, QKeySequence
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess#, QSize
 from PyQt5.QtCore import Qt
@@ -321,10 +321,10 @@ class App(QMainWindow):
         tabImportingDataLayout = QVBoxLayout()
         
         # restart a new project
-        self.restartBtn = QPushButton('Restart')
-        self.restartBtn.setAutoDefault(True)
-        self.restartBtn.clicked.connect(self.restartFunc)
-        self.restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
+        # self.restartBtn = QPushButton('Restart')
+        # self.restartBtn.setAutoDefault(True)
+        # self.restartBtn.clicked.connect(self.restartFunc)
+        # self.restartBtn.setToolTip('Press to reset all tabs and start a new survey.')
         
         # saving project
         def saveProjectBtnFunc():
@@ -333,9 +333,9 @@ class App(QMainWindow):
             if fname != '':
                 self.project.saveProject(fname)
                 self.infoDump('Project successfully saved.')
-        self.saveProjectBtn = QPushButton('Save Project')
-        self.saveProjectBtn.setToolTip('Save files and results to load them again in ResIPy later.')
-        self.saveProjectBtn.clicked.connect(saveProjectBtnFunc)
+        # self.saveProjectBtn = QPushButton('Save Project')
+        # self.saveProjectBtn.setToolTip('Save files and results to load them again in ResIPy later.')
+        # self.saveProjectBtn.clicked.connect(saveProjectBtnFunc)
         
         # loading project
         def loadProjectBtnFunc():
@@ -462,9 +462,20 @@ class App(QMainWindow):
                 # write log and let the world knows!
                 self.writeLog('k.loadProject("{:s}")'.format(fname))
                 self.infoDump('Project successfully loaded.')
-        self.loadProjectBtn = QPushButton('Load Project')
-        self.loadProjectBtn.setToolTip('Select .resipy to load in ResIPy.')
-        self.loadProjectBtn.clicked.connect(loadProjectBtnFunc)
+        # self.loadProjectBtn = QPushButton('Load Project')
+        # self.loadProjectBtn.setToolTip('Select .resipy to load in ResIPy.')
+        # self.loadProjectBtn.clicked.connect(loadProjectBtnFunc)
+        
+        # instead, let's make a hamburger menu in the top right corner
+        self.hamMenu = QMenu()
+        self.hamMenu.addAction('Load Project', loadProjectBtnFunc)
+        self.hamMenu.addAction('Save Project', saveProjectBtnFunc)
+        self.hamMenu.addAction('Restart Project', self.restartFunc)
+        themeMode = 'Light theme' if resipySettings.param['dark'] == 'True' else 'Dark theme'
+        self.hamMenu.addAction(themeMode, self.darkModeFunc)
+        self.hamBtn = QPushButton('Options')
+        self.tabs.setCornerWidget(self.hamBtn, Qt.TopRightCorner)        
+        self.hamBtn.setMenu(self.hamMenu)
         
         
         def dimSurvey():
@@ -1220,9 +1231,9 @@ class App(QMainWindow):
         hbox1.addWidget(self.titleEdit)
         hbox1.addWidget(self.dateLabel)
         hbox1.addWidget(self.dateEdit)
-        hbox1.addWidget(self.saveProjectBtn)
-        hbox1.addWidget(self.loadProjectBtn)
-        hbox1.addWidget(self.restartBtn)
+        # hbox1.addWidget(self.saveProjectBtn)
+        # hbox1.addWidget(self.loadProjectBtn)
+        # hbox1.addWidget(self.restartBtn)
 
         hbox2 = QHBoxLayout()
         hbox2.addWidget(dimInvGroup)
@@ -5403,33 +5414,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         infoLayout.addWidget(aboutText, 0)
-        
-        darkModeSettingLayout = QHBoxLayout()
-        darkModeSettingLayout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        darkModeSettingToolTip = 'Toggle between dark and light theme mode'
-        
-        darkModeSettingLabel = QLabel('Dark Mode:')
-        darkModeSettingLabel.setToolTip(darkModeSettingToolTip)
-        darkModeSettingLayout.addWidget(darkModeSettingLabel)
-        
-        self.darkModeSettingON = QRadioButton('ON')
-        self.darkModeSettingON.clicked.connect(self.darkModeFunc)
-        self.darkModeSettingON.setToolTip(darkModeSettingToolTip)
-        darkModeSettingLayout.addWidget(self.darkModeSettingON)
-        
-        self.darkModeSettingOFF = QRadioButton('OFF')
-        self.darkModeSettingOFF.clicked.connect(self.darkModeFunc)
-        self.darkModeSettingOFF.setToolTip(darkModeSettingToolTip)
-        darkModeSettingLayout.addWidget(self.darkModeSettingOFF)
-        
-        if resipySettings.param['dark'] == 'True':
-            self.darkModeSettingON.setChecked(True)
-            self.darkModeSettingOFF.setChecked(False)
-        else:
-            self.darkModeSettingON.setChecked(False)
-            self.darkModeSettingOFF.setChecked(True)
-            
-        infoLayout.addLayout(darkModeSettingLayout, 1)
 
         tabAbout.setLayout(infoLayout)
 
@@ -6165,15 +6149,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 webbrowser.open('https://gitlab.com/hkex/resipy#linux-and-mac-user')
     
     def darkModeFunc(self):
-        if self.darkModeSettingON.isChecked():
-            self.darkModeSettingOFF.setChecked(False)
-            resipySettings.param['dark'] = True
-        else:
-            self.darkModeSettingON.setChecked(False)
-            resipySettings.param['dark'] = False
-        
-        resipySettings.genLocalSetting()
-        
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Question)
         msg.setText('''<b>Restart ResIPy to change the theme?</b>''')
@@ -6185,6 +6160,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         msg.setDefaultButton(bttnN)
         msg.exec_()
         if msg.clickedButton() == bttnY:
+            if resipySettings.param['dark'] == 'True':
+                resipySettings.param['dark'] = 'False'
+            else:
+                resipySettings.param['dark'] = 'True'
+                
+            resipySettings.genLocalSetting()
+            
             if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Wiidows/Linux frozen package only
                 exe_path = resipySettings.param['exe_path']
                 Popen([exe_path], shell=False, stdout=None, stdin=None)
