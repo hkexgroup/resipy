@@ -71,9 +71,9 @@ class SelectPoints(object):
         self.polyAxes = axbutton.figure.add_axes([0.35, 0.91, 0.1, 0.08]) # just to put the buttons out of legend's way
         self.rectAxes = axbutton.figure.add_axes([0.45, 0.91, 0.1, 0.08])
         self.lineAxes = axbutton.figure.add_axes([0.55, 0.91, 0.1, 0.08])
-        self.polyButton = Button(self.polyAxes, 'Poly')
-        self.rectButton = Button(self.rectAxes, 'Rect')
-        self.lineButton = Button(self.lineAxes, 'Line')
+        self.polyButton = Button(self.polyAxes, 'Poly', hovercolor='#206ece', color='#338eff')
+        self.rectButton = Button(self.rectAxes, 'Rect', hovercolor='#206ece', color='#338eff')
+        self.lineButton = Button(self.lineAxes, 'Line', hovercolor='#206ece', color='#338eff')
             
         
     def connect(self):

@@ -703,7 +703,7 @@ class Survey(object):
         parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
         KDEfit = gaussian_kde(errMax)
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
-        ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'k',label="KDE fit")
+        ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'blue',label="KDE fit")
         ax.set_xlim(-1*(int(errPercent)),int(errPercent))
         ax.set_xlabel('Error [%]')
         ax.set_ylabel('Probability')
@@ -2030,7 +2030,7 @@ class Survey(object):
         
     
     def filterManual(self, attr='app', ax=None, log=False,
-                     label=None, vmin=None, vmax=None, elec=True):
+                     label=None, vmin=None, vmax=None, elec=True, darkMode=False):
         """Manually filters the data visually. The points manually selected are
         flagged in the `Survey.iselect` vector and can subsequently be removed
         by calling `Survey.filterData(~Survey.iselect)`.
@@ -2052,6 +2052,8 @@ class Survey(object):
             Maximum value.
         elec : bool, optional
             If `True`, the electrodes are shown and can be used for filtering.
+        darkMode : bool, optional
+            If true, electrodes wil be plotted in white, else black
         """
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
         array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
@@ -2137,10 +2139,11 @@ class Survey(object):
         ax.set_xticks(elecpos[::5])
         ax.set_xticklabels(elecNumber[::5])
         
+        elecColor = 'ko' if darkMode is False else 'wo'
         if elec:
-            caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), 'ko', picker=5)
+            caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), elecColor, picker=5)
         else:
-            caxElec, = ax2.plot([], [], 'ko')
+            caxElec, = ax2.plot([], [], elecColor)
         
         cax = ax2.scatter(xpos, ypos, c=val, marker='o', picker=5, vmin=vmin,
                          vmax=vmax)
