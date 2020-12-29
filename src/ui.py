@@ -18,9 +18,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame, 
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
-    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, QAction, QButtonGroup, QListWidget, QShortcut)
-from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor#, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess, QSize
+    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser)#, qApp, QAction, QButtonGroup, QListWidget, QShortcut)
+from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor, QPalette#, QKeySequence
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess#, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
@@ -258,7 +258,6 @@ class MatplotlibWidget(QWidget):
 
 #%% Main class
 class App(QMainWindow):
-
     def __init__(self, parent=None):
         super().__init__()
         # do the checks for wine and updates in seperate thread
@@ -304,7 +303,11 @@ class App(QMainWindow):
         
         #%% message bar below the UI for info and error message
         self.timer = QTimer() # a better method to get rid of expired messages in status bar
-        self.errorLabel = QLabel('<i style="color:black">Error messages will be displayed here</i>')
+        if resipySettings.param['dark'] == 'True':
+            initErrMsgColor = 'white'
+        else:
+            initErrMsgColor = 'black'
+        self.errorLabel = QLabel('<i style="color:%s">Error messages will be displayed here</i>' % initErrMsgColor)
         QApplication.processEvents()
 
 
@@ -3457,7 +3460,7 @@ class App(QMainWindow):
         meshTetraLayout.addLayout(meshOptionTetraLayout)
         meshTetraLayout.addWidget(self.meshTetraBtn)
         meshTetraGroup.setLayout(meshTetraLayout)
-        meshChoiceLayout.addWidget(meshTetraGroup)
+        meshChoiceLayout.addWidget(meshTetraGroup, 1)
         meshTetraGroup.setHidden(True)
 
         meshLayout.addLayout(meshChoiceLayout, 0)
@@ -3822,7 +3825,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 
             self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
             self.mwFwdPseudo.replot(aspect='auto', contour=contour)
-            self.writeLog('k.showPseudo(contour={:s})'.format(contour))
+            self.writeLog('k.showPseudo(contour={:s})'.format(str(contour)))
             if self.project.typ[0] == 'c':
                 self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
                 self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
@@ -5399,7 +5402,34 @@ combination of multiple sequence is accepted as well as importing a custom seque
         aboutText.setOpenExternalLinks(True)
         aboutText.setWordWrap(True)
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        infoLayout.addWidget(aboutText)
+        infoLayout.addWidget(aboutText, 0)
+        
+        darkModeSettingLayout = QHBoxLayout()
+        darkModeSettingLayout.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        darkModeSettingToolTip = 'Toggle between dark and light theme mode'
+        
+        darkModeSettingLabel = QLabel('Dark Mode:')
+        darkModeSettingLabel.setToolTip(darkModeSettingToolTip)
+        darkModeSettingLayout.addWidget(darkModeSettingLabel)
+        
+        self.darkModeSettingON = QRadioButton('ON')
+        self.darkModeSettingON.clicked.connect(self.darkModeFunc)
+        self.darkModeSettingON.setToolTip(darkModeSettingToolTip)
+        darkModeSettingLayout.addWidget(self.darkModeSettingON)
+        
+        self.darkModeSettingOFF = QRadioButton('OFF')
+        self.darkModeSettingOFF.clicked.connect(self.darkModeFunc)
+        self.darkModeSettingOFF.setToolTip(darkModeSettingToolTip)
+        darkModeSettingLayout.addWidget(self.darkModeSettingOFF)
+        
+        if resipySettings.param['dark'] == 'True':
+            self.darkModeSettingON.setChecked(True)
+            self.darkModeSettingOFF.setChecked(False)
+        else:
+            self.darkModeSettingON.setChecked(False)
+            self.darkModeSettingOFF.setChecked(True)
+            
+        infoLayout.addLayout(darkModeSettingLayout, 1)
 
         tabAbout.setLayout(infoLayout)
 
@@ -5443,7 +5473,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.close()
             
     def timeOut(self, timeStamp):
-        self.errorLabel.setText('<i style="color:black">['+timeStamp+']: </i>')
+        if resipySettings.param['dark'] == 'True':
+            timeStmpCol = 'white'
+        else:
+            timeStmpCol = 'black'
+        self.errorLabel.setText(('<i style="color:%s">[' % timeStmpCol) +timeStamp+']: </i>')
         
     def errorDump(self, text, flag=1):
         text = str(text)
@@ -5452,7 +5486,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             col = 'red'
             pdebug('errorDump:', text)
         else:
-            col = 'black'
+            if resipySettings.param['dark'] == 'True':
+                col = 'white'
+            else:
+                col = 'black'
             pdebug('infoDump:', text)
         self.errorLabel.setText('<i style="color:'+col+'">['+timeStamp+']: '+text+'</i>')
         self.timer.timeout.connect(partial(self.timeOut, timeStamp))
@@ -5768,6 +5805,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
     def restartFunc(self):
         pdebug('restartFunc: creating new R2 object')
         self.project = Project(self.newwd, typ=self.typ) # create new R2 instance
+        self.project.darkMode = eval(resipySettings.param['dark']) # set matplotlib theme
         self.writeLog('from resipy import Project')
         self.writeLog('k = Project("{:s}", typ="{:s}")'.format(self.newwd, self.typ))
         '''actually we don't really need to instanciate a new object each
@@ -6124,16 +6162,84 @@ combination of multiple sequence is accepted as well as importing a custom seque
             msg.setDefaultButton(bttnUpY)
             msg.exec_()
             if msg.clickedButton() == bttnUpY:
-#                webbrowser.open('https://www.winehq.org/')
                 webbrowser.open('https://gitlab.com/hkex/resipy#linux-and-mac-user')
-
     
+    def darkModeFunc(self):
+        if self.darkModeSettingON.isChecked():
+            self.darkModeSettingOFF.setChecked(False)
+            resipySettings.param['dark'] = True
+        else:
+            self.darkModeSettingON.setChecked(False)
+            resipySettings.param['dark'] = False
+        
+        resipySettings.genLocalSetting()
+        
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setText('''<b>Restart ResIPy to change the theme?</b>''')
+        msg.setWindowTitle('Restart?')
+        bttnY = msg.addButton(QMessageBox.Yes)
+        bttnY.setText('Restart')
+        bttnN = msg.addButton(QMessageBox.No)
+        bttnN.setText('Cancel')
+        msg.setDefaultButton(bttnN)
+        msg.exec_()
+        if msg.clickedButton() == bttnY:
+            if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Wiidows/Linux frozen package only
+                exe_path = resipySettings.param['exe_path']
+                Popen([exe_path], shell=False, stdout=None, stdin=None)
+                sys.exit()
+            else:
+                os.execl(sys.executable, sys.executable, *sys.argv)
 
 
 if __name__ == '__main__':
     catchErrors()
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+    
+    import matplotlib # for dark mode should be imported here
+    matplotlib.use('Qt5Agg')
+    
+    # loading settings
+    from resipy.Settings import Settings
+    resipySettings = Settings()
+    localSettings = resipySettings.retLocalSetting()
+    if localSettings != None: # dark mode is selected?
+        if 'dark' in resipySettings.param.keys():
+            if resipySettings.param['dark'] == 'True':
+                # dark theme GUI
+                dark_palette = QPalette()
+                dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.WindowText, Qt.white)
+                dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
+                dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.ToolTipBase, QColor(25, 25, 25))
+                dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+                dark_palette.setColor(QPalette.Text, Qt.white)
+                dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.ButtonText, Qt.white)
+                dark_palette.setColor(QPalette.BrightText, Qt.red)
+                dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+                dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+                dark_palette.setColor(QPalette.HighlightedText, QColor(35, 35, 35))
+                dark_palette.setColor(QPalette.Active, QPalette.Button, QColor(53, 53, 53))
+                dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, Qt.darkGray)
+                dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, Qt.darkGray)
+                dark_palette.setColor(QPalette.Disabled, QPalette.Text, Qt.darkGray)
+                dark_palette.setColor(QPalette.Disabled, QPalette.Light, QColor(53, 53, 53))
+                app.setPalette(dark_palette)
+                # dark theme matplotlib plots
+                matplotlib.style.use('dark_background')
+        else:
+            resipySettings.param['dark'] = False
+            resipySettings.genLocalSetting()
+            
+    else:
+        print('Generating local settings file...')
+        resipySettings.param['dark'] = False
+        resipySettings.genLocalSetting()
+
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
     
     splash_pix = QPixmap(os.path.join(bundle_dir, 'loadingLogo.png'))
@@ -6155,9 +6261,7 @@ if __name__ == '__main__':
     # in this section all import are made except the one for pyQt
     progressBar.setValue(1)
     app.processEvents()
-
-    import matplotlib
-    matplotlib.use('Qt5Agg')
+    
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
     from matplotlib.figure import Figure
@@ -6194,7 +6298,7 @@ if __name__ == '__main__':
     except:
         pvfound = False
         print('WARNING: pyvista not found, 3D plotting capabilities will be limited.')
-
+    
     from resipy import Project
     from resipy.r2help import r2help
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
@@ -6204,5 +6308,4 @@ if __name__ == '__main__':
     ex = App()
     ex.show()
     splash.hide() # hiding the splash screen when finished
-    
     sys.exit(app.exec_())
