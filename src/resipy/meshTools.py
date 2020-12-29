@@ -2863,7 +2863,7 @@ class Mesh:
         except:
             zone = np.ones(self.numel,dtype=int)
             
-        adv = True
+        adv = True # hard coded ... advanced format always true for now
         adv_flag = 0 
         if adv: #if advanced mode
             adv_flag = 1
@@ -3729,7 +3729,7 @@ def dat_import(file_path='mesh.dat', order_nodes=True):
         flag_3d = True
         npere = int(header[-1])
     else:
-        flag_3d = True#newer mesh format (R3t v2.02)
+        flag_3d = True#newer mesh format (R3t v2.20)
         npere = int(header[-2])
     numel = int(header[0]) # number of elements 
     numnp = int(header[1]) # number of nodes 
