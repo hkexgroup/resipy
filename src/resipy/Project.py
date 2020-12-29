@@ -67,9 +67,9 @@ def checkSHA1(fname):
 def checkExe(dirname):
     exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
     hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
-              'b483d7001b57e148453b33412d614dd95e71db21',
-              '3fda8d15377974b10cafa5b32398d6e2d2e40345',
-              # '577c02cf87bcd2d64cccff14919d607e79ff761a',
+              'a4c5b76d8328e1733670be669492cadfa104146a',
+              '9337435f018264771470d5d4312908b0d1242af1',
+              # '4aad36d5333ddf163c46bab9d3c2a799aa48716e',
               # '91bd6e5fcb01a11d241456479c203624d0e681ed'
               ]
     for i, exe in enumerate(exes):
@@ -90,8 +90,12 @@ def checkExe(dirname):
             print('done')
         else:
             print('{:s} found and up to date.'.format(exe))
-                
-checkExe(os.path.join(apiPath, 'exe'))
+
+# the below failed if no internet connection so let's put it in try/except                
+try:
+    checkExe(os.path.join(apiPath, 'exe'))
+except Exception as e:
+    pass
             
 #%% system check
 def getSysStat():
@@ -2061,11 +2065,10 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh.df['iter'] = np.zeros(numel, dtype=float)
         self.mesh.iremote = self.elec['remote'].values
 
-        name = 'mesh.dat'
         if self.typ == 'R3t' or self.typ == 'cR3t':
-            name = 'mesh3d.dat'
-        file_path = os.path.join(self.dirname, name)
-        self.mesh.dat(file_path)
+            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'))
+        else:
+            self.mesh.dat(os.path.join(self.dirname, 'mesh.dat'))
 
         # define zlim
         if self.fmd is None:
@@ -2190,10 +2193,10 @@ class Project(object): # Project master class instanciated by the GUI
         ifixed = np.array(self.mesh.df['param']) == 0
         if np.sum(ifixed) > 0: # fixed element need to be at the end
             self.mesh.orderElem()
-        name = 'mesh.dat'
-        if (typ == 'R3t') | (typ == 'cR3t'):
-            name = 'mesh3d.dat'
-        self.mesh.dat(os.path.join(self.dirname, name))
+        if typ == 'R3t' or typ == 'cR3t':
+            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'))
+        else:
+            self.mesh.dat(os.path.join(self.dirname, 'mesh.dat'))
         
         # write the res0.dat needed for starting resistivity
         if self.iForward is True: # we will invert results from forward
@@ -3924,7 +3927,7 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.mesh.dat(os.path.join(fwdDir, 'mesh.dat'))
         else:
-            self.mesh.dat(os.path.join(fwdDir, 'mesh3d.dat'))
+            self.mesh.datAdv(os.path.join(fwdDir, 'mesh3d.dat'))
             
         # write the forward .in file
         if self.custSeq is True: # only in case of 3D custom sequence
@@ -4147,15 +4150,19 @@ class Project(object): # Project master class instanciated by the GUI
             if (self.typ == 'R2') | (self.typ == 'cR2'):
                 n = 2
                 name = 'mesh.dat'
+                file_path = os.path.join(fwdDir, name)
+                mesh.dat(file_path)
             else:
                 n = 3
                 name = 'mesh3d.dat'
+                file_path = os.path.join(fwdDir, name)
+                mesh.datAdv(file_path) # use advanced mesh format if 3D 
+            #make starting resistivity file 
             resFile = np.zeros((centroids.shape[0],n+1)) # centroid x, y, z, res0
             resFile[:,-1] = 100
             np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
                        fmt='%.3f')
-            file_path = os.path.join(fwdDir, name)
-            mesh.dat(file_path)
+
             if node_elec is not None: # then we need to overwrite it
                 fparam['node_elec'] = node_elec
             fparam['num_regions'] = 0
