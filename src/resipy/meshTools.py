@@ -1492,6 +1492,7 @@ class Mesh:
              vmin=vmin,
              vmax=vmax,
              attr=attr,
+             darkMode=darkMode,
              **kwargs) # show 3D mesh instead 
             return # exit 2D mesh show function 
             
@@ -1814,7 +1815,8 @@ class Mesh:
                 pvthreshold=None,
                 pvgrid=True,
                 pvcontour=[],
-                pvshow=True):
+                pvshow=True,
+                darkMode=False):
         """
         Shows a 3D tetrahedral mesh. 
         
@@ -1869,6 +1871,8 @@ class Mesh:
         pvshow : bool, optional
             If `False`, that will prevent calling the `pyvista.Plotter.show()`.
             This is useful in case of subplots.
+        darkmode: bool, optional
+            Alters coloring of pyvista plot for a darker appearance  
 
         Returns
         -------
@@ -1932,6 +1936,7 @@ class Mesh:
                     ylim = [min(elecy), max(elecy)]            
         except (AttributeError,TypeError): #if no electrodes present use the node limits 
             pass
+        
         if xlim == None: # if still none use the node limits 
             xlim = [min(self.node[:,0])-1, max(self.node[:,0])+1]
         if ylim == None:
@@ -2001,10 +2006,17 @@ class Mesh:
             if len(pvcontour) > 0:
                 self.pvmesh = self.pvmesh.cell_data_to_point_data()
                 self.pvmesh = self.pvmesh.contour(isosurfaces=pvcontour)
+                
+            # set colors for dark mode 
+            tcolor = 'k'
+            if darkMode:
+                tcolor = 'w'
+                elec_color = 'w'
+                ax.set_background((0.2,0.2,0.2))
             
             # show grid
             if pvgrid:
-                ax.show_grid(color='k')
+                ax.show_grid(color=tcolor)
             
             # plot slices or entire mesh
             if np.sum([len(a) for a in pvslices]) > 0: # we have slices
@@ -2025,7 +2037,7 @@ class Mesh:
                                             show_scalar_bar=color_bar,
                                             show_edges=edges,
                                             opacity=alpha,
-                                            scalar_bar_args={'color':'k'})
+                                            scalar_bar_args={'color':tcolor})
                             else:
                                 print('empty mesh')
             else:        
@@ -2036,7 +2048,7 @@ class Mesh:
                                 show_scalar_bar=color_bar,#plot the color bar? 
                                 show_edges=edges, #show edges
                                 opacity=alpha,
-                                scalar_bar_args={'color':'k',# 'interactive':True,
+                                scalar_bar_args={'color':tcolor,# 'interactive':True,
                                                  'vertical':False,
                                                  'title_font_size':16,
                                                  'label_font_size':14})
