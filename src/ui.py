@@ -939,7 +939,6 @@ class App(QMainWindow):
                 self.restartFunc()
                 self.datadir = os.path.dirname(fname)
                 self.importFile(fname)
-                self.loadingWidget(exitflag=True) #close the loading widget
                 self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
                 self.infoDump(fname + ' imported successfully')
                 self.invNowBtn.setEnabled(True)
@@ -1106,7 +1105,6 @@ class App(QMainWindow):
 #                self.timeLapseCheck.setEnabled(True)
                 self.mwPseudoIP.setVisible(False)
                 self.pseudoFrameIP.setVisible(False)
-                self.mwInvErrorIP.setVisible(False)
                 self.tabPreProcessing.setTabEnabled(1, False)
                 self.tabPreProcessing.setTabEnabled(3, False)
                 self.regionTable.setColumnHidden(1, True)
@@ -5183,6 +5181,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def plotInvError(index=0):
             pdebug('plotInvError()')
+            self.mwInvErrorIP.setVisible(False) # let's show/hide it each time we invert
             self.mwInvError.setCallback(self.project.showPseudoInvError)
             self.mwInvError.replot(index=index)
             self.writeLog('k.showPseudoInvError(index={:d})'.format(index))
@@ -5749,6 +5748,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.errorDump('File is not recognized.')
                 pass
             self.settingUI()
+            self.loadingWidget(exitflag=True)
         except Exception as e:
             self.loadingWidget(exitflag=True)
             pdebug('importFile: ERROR:', e)
