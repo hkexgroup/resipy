@@ -1064,7 +1064,7 @@ class App(QMainWindow):
             self.tabs.setCurrentIndex(5) # jump to inversion tab
             self.invertBtn.animateClick() # invert
         self.invNowBtn = QPushButton('Invert')
-        self.invNowBtn.setStyleSheet('background-color: green')
+        self.invNowBtn.setStyleSheet('background-color: green; color:black')
         self.invNowBtn.setFixedWidth(150)
         self.invNowBtn.setAutoDefault(True)
         self.invNowBtn.clicked.connect(invNowBtnFunc)
@@ -2969,11 +2969,11 @@ class App(QMainWindow):
                 self.project.mproc = None
                 meshOutputStack.setCurrentIndex(1)
                 self.meshTrianBtn.setText('Triangular Mesh')
-                self.meshTrianBtn.setStyleSheet('background-color:orange')
+                self.meshTrianBtn.setStyleSheet('background-color:orange; color:black')
                 return
             else:
                 self.meshTrianBtn.setText('Kill')
-                self.meshTrianBtn.setStyleSheet('background-color:red')
+                self.meshTrianBtn.setStyleSheet('background-color:red; color:black')
 #            self.cropBelowFmd.setChecked(True)
             self.cropBelowFmd.setEnabled(True)
             elec = self.elecTable.getTable()
@@ -3024,14 +3024,14 @@ class App(QMainWindow):
             except Exception:
                 pass # caused by killing the mesh process
             self.meshTrianBtn.setText('Triangular Mesh')
-            self.meshTrianBtn.setStyleSheet('background-color:orange')
+            self.meshTrianBtn.setStyleSheet('background-color:orange; color:black')
             replotMesh()
         self.meshTrianBtn = QPushButton('Triangular Mesh')
         self.meshTrianBtn.setAutoDefault(True)
         self.meshTrianBtn.setFocus()
         self.meshTrianBtn.clicked.connect(meshTrianFunc)
         self.meshTrianBtn.setToolTip('Generate triangular mesh.')
-        self.meshTrianBtn.setStyleSheet('background-color:orange')
+        self.meshTrianBtn.setStyleSheet('background-color:orange; color:black')
 
 
         def meshTetraFunc():
@@ -3041,11 +3041,11 @@ class App(QMainWindow):
                 self.project.mproc = None
                 meshOutputStack.setCurrentIndex(1)
                 self.meshTetraBtn.setText('Tetrahedral Mesh')
-                self.meshTetraBtn.setStyleSheet('background-color:orange')
+                self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
                 return
             else:
                 self.meshTetraBtn.setText('Kill')
-                self.meshTetraBtn.setStyleSheet('background-color:red')
+                self.meshTetraBtn.setStyleSheet('background-color:red; color:black')
 #            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
 #            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
@@ -3096,13 +3096,13 @@ class App(QMainWindow):
 #             except Exception:
 #                 pass # caused by killing the mesh process
             self.meshTetraBtn.setText('Tetrahedral Mesh')
-            self.meshTetraBtn.setStyleSheet('background-color:orange')
+            self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
 
         self.meshTetraBtn = QPushButton('Tetrahedral Mesh')
         self.meshTetraBtn.setAutoDefault(True)
         self.meshTetraBtn.clicked.connect(meshTetraFunc)
         self.meshTetraBtn.setToolTip('Generate tetrahedral mesh.')
-        self.meshTetraBtn.setStyleSheet('background-color:orange')
+        self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
 
 
         # additional options for quadrilateral mesh
@@ -3795,7 +3795,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.forwardBtn = QPushButton('Forward Modelling')
         self.forwardBtn.setAutoDefault(True)
         self.forwardBtn.clicked.connect(forwardBtnFunc)
-        self.forwardBtn.setStyleSheet('background-color: green')
+        self.forwardBtn.setStyleSheet('background-color: green; color:black')
 
         self.mwFwdPseudo = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwFwdPseudoIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -4405,7 +4405,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
             # check if we kill or invert
             if self.invertBtn.text() == 'Invert':
-                self.invertBtn.setStyleSheet('background-color: red')
+                self.invertBtn.setStyleSheet('background-color:red; color:black')
                 self.invertBtn.setText('Kill')
                 frozeUI(True)
             else:
@@ -4414,7 +4414,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if self.project.proc is not None:
                     self.project.proc.kill()
                 print('done')
-                self.invertBtn.setStyleSheet('background-color: green')
+                self.invertBtn.setStyleSheet('background-color:green; color:black')
                 self.invertBtn.setText('Invert')
                 # self.loadingWidget(exitflag=True)
                 frozeUI(False)
@@ -4449,13 +4449,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                     if self.project.elec['x'].isna().sum() > 0:
                         self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
-                        self.invertBtn.setStyleSheet('background-color: green')
+                        self.invertBtn.setStyleSheet('background-color: green; color:black')
                         self.invertBtn.setText('Invert')
                         frozeUI(False)
                         return
                     elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
                         self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
-                        self.invertBtn.setStyleSheet('background-color: green')
+                        self.invertBtn.setStyleSheet('background-color:green; color:black')
                         self.invertBtn.setText('Invert')
                         frozeUI(False)
                         return
@@ -4523,7 +4523,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.errorDump(e)
                     pass
             self.invertBtn.setText('Invert')
-            self.invertBtn.setStyleSheet('background-color: green')
+            self.invertBtn.setStyleSheet('background-color:green; color:black')
             frozeUI(False)
             
         self.invertBtn = QPushButton('Invert')
@@ -5222,7 +5222,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invErrorReinvertBtn = QPushButton('Invert')
         self.invErrorReinvertBtn.setFixedWidth(150)
         self.invErrorReinvertBtn.clicked.connect(invErrorReinvert)
-        self.invErrorReinvertBtn.setStyleSheet('background-color: green')
+        self.invErrorReinvertBtn.setStyleSheet('background-color:green; color:black')
       
 
         def plotInvError2(index=0):
