@@ -6167,15 +6167,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 webbrowser.open('https://gitlab.com/hkex/resipy#linux-and-mac-user')
     
     def restartGUI(self):
-        try:
-            if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Windows/Linux frozen package only
-                exe_path = resipySettings.param['exe_path']
-                Popen([exe_path], shell=False, stdout=None, stdin=None)
-                sys.exit()
-            else:
-                os.execl(sys.executable, sys.executable, *sys.argv)
-        except:
-            self.errorDump('Could not restart ResIPy, try manually closing and reopening!!')
+        if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Windows/Linux frozen package only
+            exe_path = resipySettings.param['exe_path']
+            Popen([exe_path], shell=False, stdout=None, stdin=None)
+            sys.exit()
+        else:
+            os.execl(sys.executable, sys.executable, *sys.argv)
     
     def darkModeFunc(self):
         msg = QMessageBox()
