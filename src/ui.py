@@ -5185,8 +5185,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwInvError.setCallback(self.project.showPseudoInvError)
             self.mwInvError.replot(index=index)
             self.writeLog('k.showPseudoInvError(index={:d})'.format(index))
+            if self.project.typ[0] == 'c':
+                self.mwInvErrorIP.setVisible(True)
+                self.mwInvErrorIP.setCallback(self.project.showPseudoInvErrorIP)
+                self.mwInvErrorIP.replot(index=index)
+                self.writeLog('k.showPseudoInvErrorIP(index={:d})'.format(index))
+            
 
         self.mwInvError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        self.mwInvErrorIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
+        self.mwInvErrorIP.setVisible(False)
         
         def invErrorFiltFunc():
             try:
@@ -5271,12 +5279,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorTopLayoutR = QHBoxLayout()
         invErrorTopLayoutR.setAlignment(Qt.AlignRight)
         invErrorTopLayoutR.addWidget(self.invErrorFilterBtn)
-        # invErrorTopLayoutR.addWidget(self.invErrorReinvertBtn)
+
         invErrorTopLayout.addLayout(invErrorTopLayoutR)
         
         invErrorLayout.addLayout(invErrorTopLayout, 0)
         
-        invErrorLayout.addWidget(self.mwInvError, Qt.AlignCenter)
+        invErrorPlotLayout = QHBoxLayout()
+        invErrorPlotLayout.addWidget(self.mwInvError, 50)
+        invErrorPlotLayout.addWidget(self.mwInvErrorIP, 50)
+        
+        invErrorLayout.addLayout(invErrorPlotLayout, 1)
         invError.setLayout(invErrorLayout)
 
         invError2 = QWidget()
@@ -5959,6 +5971,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwInv.clear()
         self.tabs.setTabEnabled(6, False) # there is no post-processing after a reset!
         self.mwInvError.clear()
+        self.mwInvErrorIP.clear()
+        self.mwInvErrorIP.setVisible(False)
         self.mwInvError2.clear()
         self.rangeInvErrorMinInput.setText('')
         self.rangeInvErrorMaxInput.setText('')
