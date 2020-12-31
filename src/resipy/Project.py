@@ -4434,7 +4434,7 @@ class Project(object): # Project master class instanciated by the GUI
             Max value.
         """
         self.surveys[index].filterManual(attr='phaseInvMisfit', vmin=vmin, vmax=vmax,
-                    ax=ax, log=False, label='Phase misfit', darkMode=self.darkMode)
+                    ax=ax, log=False, label='Phase misfit [mrad]', darkMode=self.darkMode)
         
 
     def showInvError(self, index=0, ax=None):
