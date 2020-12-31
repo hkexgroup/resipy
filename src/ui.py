@@ -1086,7 +1086,6 @@ class App(QMainWindow):
                 else:
                     self.mwPseudoIP.setVisible(True)
                     self.pseudoFrameIP.setVisible(True)
-                    self.mwInvErrorIP.setVisible(True)
                     self.plotPseudoIP()
                     self.tabPreProcessing.setTabEnabled(1, True)
                     if all(self.project.surveys[0].df['irecip'].values == 0) is False:
@@ -5188,6 +5187,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwInvError.replot(index=index)
             self.writeLog('k.showPseudoInvError(index={:d})'.format(index))
             if self.project.typ[0] == 'c':
+                self.mwInvErrorIP.setVisible(True)
                 self.mwInvErrorIP.setCallback(self.project.showPseudoInvErrorIP)
                 self.mwInvErrorIP.replot(index=index)
                 self.writeLog('k.showPseudoInvErrorIP(index={:d})'.format(index))
