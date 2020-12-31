@@ -467,15 +467,16 @@ class App(QMainWindow):
         # self.loadProjectBtn.clicked.connect(loadProjectBtnFunc)
         
         # instead, let's make a hamburger menu in the top right corner
-        self.hamMenu = QMenu()
-        self.hamMenu.addAction('Load Project', loadProjectBtnFunc)
-        self.hamMenu.addAction('Save Project', saveProjectBtnFunc)
-        self.hamMenu.addAction('Restart Project', self.restartFunc)
+        self.optionMenu = QMenu()
+        self.optionMenu.addAction('Load Project', loadProjectBtnFunc)
+        self.optionMenu.addAction('Save Project', saveProjectBtnFunc)
+        self.optionMenu.addAction('Restart Project', self.restartFunc)
         themeMode = 'Light theme' if resipySettings.param['dark'] == 'True' else 'Dark theme'
-        self.hamMenu.addAction(themeMode, self.darkModeFunc)
+        self.optionMenu.addAction(themeMode, self.darkModeFunc)
+        self.optionMenu.addAction('Restart ResIPy', self.restartGUI)
         self.hamBtn = QPushButton('Options')
         self.tabs.setCornerWidget(self.hamBtn, Qt.TopRightCorner)        
-        self.hamBtn.setMenu(self.hamMenu)
+        self.hamBtn.setMenu(self.optionMenu)
         
         
         def dimSurvey():
@@ -6151,6 +6152,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if msg.clickedButton() == bttnUpY:
                 webbrowser.open('https://gitlab.com/hkex/resipy#linux-and-mac-user')
     
+    def restartGUI(self):
+        if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Wiidows/Linux frozen package only
+            exe_path = resipySettings.param['exe_path']
+            Popen([exe_path], shell=False, stdout=None, stdin=None)
+            sys.exit()
+        else:
+            os.execl(sys.executable, sys.executable, *sys.argv)
+    
     def darkModeFunc(self):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Question)
@@ -6169,13 +6178,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 resipySettings.param['dark'] = 'True'
                 
             resipySettings.genLocalSetting()
-            
-            if 'frozen' in resipySettings.param.keys() and resipySettings.param['frozen'] == 'True': # Wiidows/Linux frozen package only
-                exe_path = resipySettings.param['exe_path']
-                Popen([exe_path], shell=False, stdout=None, stdin=None)
-                sys.exit()
-            else:
-                os.execl(sys.executable, sys.executable, *sys.argv)
+            self.restartGUI()
 
 
 if __name__ == '__main__':
