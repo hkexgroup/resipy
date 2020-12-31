@@ -3267,7 +3267,7 @@ class App(QMainWindow):
 
         def select3DRegionBtnFunc():
             self.mesh3Dplotter.clear() # clear all actors 
-            self.clip = self.project.mesh.pick3Dbox(ax=self.mesh3Dplotter) #extracts the surface and plots transparent boxed mesh
+            self.clip = self.project.mesh.pick3Dbox(ax=self.mesh3Dplotter, darkMode=eval(resipySettings.param['dark'])) #extracts the surface and plots transparent boxed mesh
             self.select3DRegionBtn.setDisabled(True) # so button can't be clicked again 
             self.add3DRegionBtn.setDisabled(False)
             self.fin3DRegionBtn.setDisabled(False)
@@ -3279,7 +3279,7 @@ class App(QMainWindow):
             clipped_mesh = self.project.mesh.addRegion3D(self.clip)
             self.regionTable.addRow()
             # self.mesh3Dplotter.clear() 
-            clipped_mesh.show(ax=self.mesh3Dplotter, attr='region', color_bar=True)
+            clipped_mesh.show(ax=self.mesh3Dplotter, attr='region', color_bar=True, darkMode=eval(resipySettings.param['dark']))
         self.add3DRegionBtn = QPushButton('(2) Add region')
         self.add3DRegionBtn.clicked.connect(add3DRegionBtnFunc)
         self.add3DRegionBtn.setVisible(False)
@@ -3772,7 +3772,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.pseudo3Dplotter.clear() # clear all actors
 
                 self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
-                                              strIdx=self.seqIdx)
+                                              strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
                 self.fwdContour.setDisabled(True)#can't contour 3D data atm 
                 self.pseudoFramefwd.setVisible(True)
             else:
@@ -3786,7 +3786,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if pvfound and self.project.typ[-1]=='t':
                     self.mwFwdPseudoIP.hide()
                     self.pseudo3DplotterIP.clear() # clear all actors 
-                    self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, strIdx=self.seqIdx)
+                    self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, 
+                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
                     self.pseudoFrameIPfwd.setVisible(True)
                 else:
                     self.mwFwdPseudoIP.plot(self.project.surveys[0].showPseudoIP, aspect='auto')
@@ -3840,7 +3841,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.project.typ[0] == 'c':
                 self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
                 self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
-                self.writeLog('k.showPseudoIP(contour={:s})'.format(contour))
+                self.writeLog('k.showPseudoIP(contour={:s})'.format(str(contour)))
         
         self.fwdContour = QCheckBox('Contour')
         self.fwdContour.stateChanged.connect(fwdContourFunc)
@@ -4023,10 +4024,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iCropping = True # default
                 if ('num_xz_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xz_poly'] = self.num_xz_poly # restore value
-                    self.writeLog('k.param["num_xz_poly"] = {:s}'.format(self.num_xz_poly))
+                    self.writeLog('k.param["num_xz_poly"] = {:s}'.format(str(self.num_xz_poly)))
                 elif ('num_xy_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xy_poly'] = self.num_xz_poly # restore value
-                    self.writeLog('k.param["num_xy_poly"] = {:s}'.format(self.num_xy_poly))
+                    self.writeLog('k.param["num_xy_poly"] = {:s}'.format(str(self.num_xy_poly)))
         self.notCroppingLabel = QLabel('<a href="notCropping">Do not crop the output</a>')
         self.notCroppingLabel.linkActivated.connect(showHelpAdv)
         self.notCropping = QCheckBox()
@@ -5640,7 +5641,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotter.clear()
-            self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams)
+            self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams, 
+                                    darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudo.setCallback(self.project.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
@@ -5653,7 +5655,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotterIP.clear()
-            self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP)
+            self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP, 
+                                      darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudoIP.setCallback(self.project.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)

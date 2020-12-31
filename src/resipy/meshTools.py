@@ -2011,7 +2011,7 @@ class Mesh:
             tcolor = 'k'
             if darkMode:
                 tcolor = 'w'
-                elec_color = 'w'
+                # elec_color = 'w'
                 ax.set_background((0.2,0.2,0.2))
             
             # show grid
@@ -2020,7 +2020,7 @@ class Mesh:
             
             # plot slices or entire mesh
             if np.sum([len(a) for a in pvslices]) > 0: # we have slices
-                ax.add_mesh(self.pvmesh.outline(), color='k')
+                ax.add_mesh(self.pvmesh.outline(), color=tcolor)
                 for i, ss in enumerate(pvslices): # X, Y then Z slice
                     normal = np.zeros(3)
                     normal[i] = 1
@@ -2408,7 +2408,7 @@ class Mesh:
                 tmesh = self.copy()
             return tmesh.extractSurface()
         
-    def pick3Dbox(self,ax=None,xlim=None,ylim=None,zlim=None,electrodes=True):
+    def pick3Dbox(self,ax=None,xlim=None,ylim=None,zlim=None,electrodes=True, darkMode=False):
         """Pick out regions on the mesh using the box widget (intended for 3D
         forward modelling)
 
@@ -2426,6 +2426,8 @@ class Mesh:
         electrodes : bool, optional
             If True the electrodes are also plotted on the mesh. The 
             default is True.
+        darkmode: bool, optional
+            Alters coloring of pyvista plot for a darker appearance 
 
         Raises
         ------
@@ -2478,8 +2480,8 @@ class Mesh:
         # surface mesh
         if self.surfaceMesh is None: # do this to avoid recomputing surface mesh
             self.surfaceMesh = self._select3Dsurface() # surface of mesh 
-        self.surfaceMesh .show3D(ax=ax,color_map='Greys', color_bar=False,
-                     edge_color=None, alpha=0.8)
+        self.surfaceMesh.show3D(ax=ax,color_map='Greys', color_bar=False,
+                     edge_color=None, alpha=0.8, darkMode=darkMode)
         
         # pyvista mesh
         folder = tempfile.TemporaryDirectory()

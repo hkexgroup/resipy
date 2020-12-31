@@ -1728,7 +1728,7 @@ class Survey(object):
     def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
                            background_color=(0.8,0.8,0.8), elec_color='k',
-                           strIdx=None, magFlag=False):
+                           strIdx=None, magFlag=False, darkMode=False):
         """Create a pseudo-section for 3D surface array.
         
         Parameters
@@ -1759,6 +1759,9 @@ class Survey(object):
         magFlag: bool, optional
             If `True` then Tx resistance sign will be checked assuming a flat surface survey.
             `False`, resistance values are given with correct polarity.
+        darkmode: bool, optional
+            Alters coloring of pyvista plot for a darker appearance
+            
         """
         if not pyvista_installed:
             print('pyvista not installed, cannot show 3D pseudo section')
@@ -1768,6 +1771,13 @@ class Survey(object):
         #TODO contour is not working!
         if contour:
             contour = False
+        
+        # set colors for dark mode 
+        tcolor = 'k'
+        if darkMode:
+            tcolor = 'w'
+            elec_color = 'w'
+            background_color = (0.2,0.2,0.2)
             
         if ax is None: # make a plotter object if not already given 
             # ax = BackgroundPlotter()
@@ -1819,7 +1829,7 @@ class Survey(object):
                         clim=[vmin,vmax], #color bar limits 
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,
-                        scalar_bar_args={'color':'k',# 'interactive':True,
+                        scalar_bar_args={'color':tcolor,# 'interactive':True,
                                          'vertical':False,
                                          'title_font_size':16,
                                          'label_font_size':14})
@@ -1836,7 +1846,7 @@ class Survey(object):
                         clim=[vmin,vmax], #color bar limits 
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,
-                        scalar_bar_args={'color':'k',# 'interactive':True,
+                        scalar_bar_args={'color':tcolor,# 'interactive':True,
                                          'vertical':False,
                                          'title_font_size':16,
                                          'label_font_size':14})
@@ -1848,7 +1858,7 @@ class Survey(object):
         except Exception as e:
             print("Could not plot 3d electrodes, error = "+str(e))
             
-        ax.show_grid(color='k')
+        ax.show_grid(color=tcolor)
         ax.show()
 
     
