@@ -1086,6 +1086,7 @@ class App(QMainWindow):
                 else:
                     self.mwPseudoIP.setVisible(True)
                     self.pseudoFrameIP.setVisible(True)
+                    self.mwInvErrorIP.setVisible(True)
                     self.plotPseudoIP()
                     self.tabPreProcessing.setTabEnabled(1, True)
                     if all(self.project.surveys[0].df['irecip'].values == 0) is False:
@@ -1106,6 +1107,7 @@ class App(QMainWindow):
 #                self.timeLapseCheck.setEnabled(True)
                 self.mwPseudoIP.setVisible(False)
                 self.pseudoFrameIP.setVisible(False)
+                self.mwInvErrorIP.setVisible(False)
                 self.tabPreProcessing.setTabEnabled(1, False)
                 self.tabPreProcessing.setTabEnabled(3, False)
                 self.regionTable.setColumnHidden(1, True)
@@ -5186,7 +5188,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.mwInvError.replot(index=index)
             self.writeLog('k.showPseudoInvError(index={:d})'.format(index))
             if self.project.typ[0] == 'c':
-                self.mwInvErrorIP.setVisible(True)
                 self.mwInvErrorIP.setCallback(self.project.showPseudoInvErrorIP)
                 self.mwInvErrorIP.replot(index=index)
                 self.writeLog('k.showPseudoInvErrorIP(index={:d})'.format(index))
@@ -5972,7 +5973,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.tabs.setTabEnabled(6, False) # there is no post-processing after a reset!
         self.mwInvError.clear()
         self.mwInvErrorIP.clear()
-        self.mwInvErrorIP.setVisible(False)
         self.mwInvError2.clear()
         self.rangeInvErrorMinInput.setText('')
         self.rangeInvErrorMaxInput.setText('')
