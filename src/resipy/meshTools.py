@@ -1149,7 +1149,7 @@ class Mesh:
         ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
              (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
              (elm_z > zlim[0]) & (elm_z < zlim[1])
-        
+                     
         nmesh = self.copy() # make a new mesh object with fewer elements 
         nmesh.df = nmesh.df[ie].reset_index(drop=True)
         nmesh.df['elm_id'] = 1 + np.arange(nmesh.df.shape[0])
