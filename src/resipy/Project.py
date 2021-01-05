@@ -2937,7 +2937,8 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         index : int, optional
             Index of the inverted section (mainly in the case of time-lapse
-            inversion)
+            inversion). If index == -1, then all 2D survey will be plotted
+            on a 3D grid.
         ax : matplotlib axis, optional
             If specified, the inverted graph will be plotted agains `ax`.
         edge_color : str, optional
@@ -2994,7 +2995,7 @@ class Project(object): # Project master class instanciated by the GUI
             print('Attribute not found, revert to {:s}'.format(attr))
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
-            if self.typ[-1] == '2': # 2D case
+            if self.typ[-1] == '2' and index != -1: # 2D case
                 if zlim is None:
                     zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
@@ -3026,6 +3027,34 @@ class Project(object): # Project master class instanciated by the GUI
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
+            elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys
+                try:
+                    import pyvista as pv
+                except Exception as e:
+                    print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
+                    return
+                if ax is None:
+                    ax = pv.Plotter()
+                kwargs['pvshow'] = False # don't invoke show after each mesh added
+                # check if all Y columns are identicql
+                maty = np.c_[[m.elec[:,1] for m in self.meshResults]].T
+                a = False
+                if any([len(t) == 1 for t in np.unique(maty, axis=1)]):
+                    a = True
+                    kwargs['ylim'] = [-1, len(self.meshResults)*1+1] # *1 because 1 m spacing by default
+                else:
+                    kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
+                for i, mesh in enumerate(self.meshResults):
+                    if a:
+                        mesh.elec[:,1] = i+1 # artificially separate them by 1 m (maybe make it variable of survey length?)
+                        mesh.node[:,1] = i+1
+                    mesh.ndims = 3 # overwrite dimension to use show3D() method
+                    mesh.show(ax=ax, edge_color=edge_color,
+                        attr=attr, color_map=color_map, clabel=clabel,
+                        zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
+                        pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+                        pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
+                ax.show() # call plotter.show()
             else: # 3D case
                 if zlim is None:
                     zlim = self.zlim
@@ -3037,6 +3066,7 @@ class Project(object): # Project master class instanciated by the GUI
                         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
                         pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
                         pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
+                
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
 
