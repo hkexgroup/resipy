@@ -3045,7 +3045,8 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
                 for i, mesh in enumerate(self.meshResults):
-                    if a:
+                    if a is True:
+                        # NOTE: this modification will stay in future survey
                         mesh.elec[:,1] = i+1 # artificially separate them by 1 m (maybe make it variable of survey length?)
                         mesh.node[:,1] = i+1
                     mesh.ndims = 3 # overwrite dimension to use show3D() method

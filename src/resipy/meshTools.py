@@ -1889,6 +1889,7 @@ class Mesh:
         
         Plotting sensitivies using sens=True is not reccomended. The matplotlib renderer has trouble with it. 
         """
+        print('+++', self.node[:,1])
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
         
