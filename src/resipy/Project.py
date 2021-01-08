@@ -758,7 +758,7 @@ class Project(object): # Project master class instanciated by the GUI
                     df[c] = df[c].astype(str)
                 dfelec = pd.read_csv(f + '-elec.csv')
                 dfelec['label'] = dfelec['label'].astype(str)
-                self.surveys.append(Survey.fromDataframe(df, dfelec)) 
+                self.surveys.append(Survey(df=df, elec=dfelec)) 
                 elec = dfelec[~dfelec['remote']][['x','y','z']].values
                 if os.path.exists(f + '.vtk'):
                     mesh = mt.vtk_import(f + '.vtk')
