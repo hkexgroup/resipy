@@ -9,6 +9,7 @@ ResIPy_version = '3.0.3' # ResIPy version (semantic versionning in use)
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
+import multiprocessing
 
 # used to download the binaries
 import requests
@@ -1043,6 +1044,205 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
+        
+
+
+#################################################################
+
+    def create3DGrid(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
+                       name=None, parser=None):
+        """Create a 3D grid based on 2D surveys.
+        
+        Parameters
+        ----------
+        fname : list of str
+            List of 2D filenames in the right order for the grid or directory
+            name (the files will be sorted alphabetically in this last case).
+        lineSpacing : float, optional
+            Spacing in meter between each line.
+        zigzag : bool, optional
+            If `True` then one survey out of two will be flipped.
+            #TODO not implemented yet
+        ftype : str, optional
+            Type of the survey to choose which parser to use.
+        name : str, optional
+            Name of the merged 3D survey.
+        """
+        if isinstance(fname, list): # it's a list of filename
+            fnames = fname
+        else: # it's a directory and we import all the files inside
+            if os.path.isdir(fname):
+                fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
+                # this filter out hidden file as well
+            else:
+                raise ValueError('fname should be a directory path or a list of filenames')
+
+        surveys = []
+        for fname in fnames:
+            surveys.append(Survey(fname, ftype=ftype, parser=parser))
+        
+
+        # build global electrodes
+        elecList = []
+        for i, s in enumerate(surveys):
+            e = s.elec.copy()
+            e.loc[:, 'y'] = i*lineSpacing
+            prefix = '{:d} '.format(i+1)
+            e.loc[:, 'label'] = prefix + e['label']
+            elecList.append(e)
+        elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
+    
+        self.elec = None
+        self.setElec(elec)
+        self.setBorehole(self.iBorehole)
+
+
+    def split3DGrid(self):
+        """Split self.elec to available lines based on 'label' 
+        
+        Returns
+        -------
+        elecList : list of dataframes
+            List of electrodes dataframes - each df can have a 3D like XYZ.
+        """
+        
+        elec = self.elec.copy()
+        elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
+        elecGroups = elec.groupby('lineNum')
+        elecList = [elecGroups.get_group(x) for x in elecGroups.groups]
+        
+        return elecList
+    
+    
+    def create2DLines(self, elecList=None):
+        """Create a list of 2D electrode XYZ/topo where only x & z are variable and y=0.
+            Simply, rotating an array of XY locations on x, y = 0 pivot to have all y values equal to zero
+        
+        Parameters
+        ----------
+        elecList : list of dataframes, optional
+            List of electrodes dataframes - each df can have a 3D like XYZ.
+        
+        Returns
+        -------
+        elecList : list of dataframes
+            List of electrodes dataframes - each df will have 2D like XYZ (rotated to have y=0).
+        """
+        
+        if elecList is None:
+            elecList = self.split3DGrid()
+            
+        for elecdf in elecList:
+            # transforming line to start from x, y = 0
+            elecdf['x'] = elecdf['x'] - elecdf.loc[0,'x']
+            elecdf['y'] = elecdf['y'] - elecdf.loc[0,'y']
+            
+            delx = elecdf['x'].max() - elecdf['x'].min()
+            dely = elecdf['y'].max() - elecdf['y'].min()
+            rotangle = np.arctan(np.abs((dely)/(delx)))
+            if elecdf['y'].values[0] > elecdf['y'].values[-1]: # CCW rotation needed
+                rotangle *= -1
+            # rotation     
+            rotmat = np.array([[np.cos(rotangle), np.sin(rotangle)], 
+                               [-np.sin(rotangle), np.cos(rotangle)]])
+            xy = np.array([elecdf['x'].values, elecdf['y'].values])
+            newmat = np.dot(rotmat, xy).T
+            
+            elecdf['x'] = newmat[:,0].copy()
+            elecdf['y'] = 0 # to make sure we don't end up with super small values
+                        
+        return elecList
+    
+# to create multiple meshes, we need multiple WDs and elecdfs 
+
+    def createMultiMesh(self, elecList=None, **kwargs):
+        
+        elecList = self.create2DLines(elecList)
+        
+        dirlist = []
+        for elecdf, i in zip(elecList, range(len(elecList))):
+            directory = os.path.join(self.dirname, 'line{:d}'.format(i))
+            os.mkdir(directory) # making separate inversion diectories
+            dirlist.append(directory) # needed for later
+            # self.runMultiProject(elec=elecdf, dirname=directory, invtyp=self.typ, **kwargs) # non-parallel meshing
+            kwargs['elec'] = elecdf
+            kwargs['dirname'] = directory
+            kwargs['invtyp'] = self.typ
+            p = multiprocessing.Process(target=self.runMultiProject, kwargs=kwargs)
+            p.start()
+
+    
+    @classmethod
+    def runMultiProject(cls, elec, dirname, invtyp='R2', typ='default', buried=None, surface=None, cl_factor=2,
+                        cl=-1, dump=None, res0=100, show_output=False, fmd=None,
+                        remote=None, refine=0, **kwargs):
+        """Use Project.createMesh() multiple times from available 2D lines
+        
+        Parameters
+        ----------
+        elec : dataframe
+            dataframe of electrodes - must have 2D like XYZ (rotated to have y=0).
+        dirname : str
+            directory where 2D line will be dealt with (meshing, inversion, etc.)
+        invtyp : str
+            'R2' - inverting 2D resistivity
+            'cR2' - inverting 2D induced polarization
+        typ : str, optional
+            Type of mesh. Either 'quad' or 'trian' in the case of 2d surveys.
+            By default, 'trian' is chosen for 2D and 'tetra' is used for 
+            3D surveys, but 'prism' or 'cylinder' (using tetra) can be used for column type experiments. 
+        buried : numpy.array, optional
+            Boolean array of electrodes that are buried. Should be the same
+            length as `R2.elec`
+        surface : numpy.array, optional
+            Array with two or three columns x, y (optional) and elevation for
+            additional surface points.
+        cl_factor : float, optional
+            Characteristic length factor. Only used for triangular mesh to allow
+            mesh to be refined close the electrodes and then expand.
+        cl : float, optional
+            Characteristic length that define the mesh size around the
+            electrodes.
+        dump : function, optional
+            Function to which pass the output during mesh generation. `print()`
+             is the default.
+        res0 : float, optional
+            Starting resistivity for mesh elements.
+        show_output : bool, optional
+            If `True`, the output of gmsh will be shown on screen.
+        fmd : float, optional
+            Depth of fine region specifies as a positive number relative to the mesh surface.
+        remote : bool, optional
+            Boolean array of electrodes that are remote (ie not real). Should be the same
+            length as `R2.elec`.
+        refine : int, optional
+            Number times the mesh will be refined. Refinement split the triangles
+            or the tetrahedra but keep the same number of parameter for the inversion.
+            This helps having a more accurate forward response and a faster inversion
+            (as the number of elements does not increase). Only available for
+            triangles or tetrahedral mesh.
+        kwargs : -
+            Keyword arguments to be passed to mesh generation schemes
+        """
+        
+        ProjInstance = cls(dirname=dirname, typ=invtyp)
+        ProjInstance.dirname = dirname
+        shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
+        ProjInstance.elec = elec
+        ProjInstance.createMesh(typ=typ, buried=buried, surface=surface, cl_factor=cl_factor,
+                                cl=cl, dump=dump, res0=res0, show_output=show_output, fmd=fmd,
+                                remote=remote, refine=refine, **kwargs)
+    
+# should de-grid 2D lines into line with variable x and y=0 -- DONE in create2DLines
+# should create mesh (inputs must go into class method) and run inversion 
+
+
+
+
+#################################################################
+
+
+
         
 
 
