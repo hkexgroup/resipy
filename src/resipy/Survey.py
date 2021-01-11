@@ -2508,7 +2508,7 @@ class Survey(object):
         for i in range(len(z)):
             put_back = idx[i] # index to where to the value back again
             new_elec[put_back,0] = x_abs[i]
-            new_elec[put_back,2] =  z_sorted[i]
+            new_elec[put_back,2] = z_sorted[i]
     
         self.elec.loc[:, ['x','y','z']] = new_elec
     
@@ -2586,6 +2586,7 @@ class Survey(object):
                     df['recipMean'][i],
                     df['resError'][i])
             fh.write(line)
+        fh.close()
 
 #%% deprecated methods
     def basicFilter(self): # pragma: no cover
