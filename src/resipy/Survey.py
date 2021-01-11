@@ -114,6 +114,13 @@ class Survey(object):
     ftype : str
         Type of the data file. This setting is not read if a `parser` is
         not `None`.
+    df : pandas.DataFrame, optional
+        Pandas dataframe with 'a','b','m','n' columns as string and at least a column
+        'resist' as float. Can be provided alternatively to fname.
+    elec : pandas.DataFrame, optional
+        Pandas dataframe with 'x','y','z','buried','remote' columns.
+        'x','y','z' as float, 'buried' and 'remote' as bool. Should be provided
+        alternatively to fname.
     name : str
         A personal name for the survey.
     spacing : float, optional
@@ -128,181 +135,187 @@ class Survey(object):
         reciprocal. Note that if none of the quadrupoles have reciprocal
         they will all be kept anyway.
     """
-    def __init__(self, fname, ftype='', name='', spacing=None, parser=None, keepAll=True, debug=True):
-        self.elec = pd.DataFrame()
-        self.df = pd.DataFrame()
-        if name == '':
-            name = os.path.basename(os.path.splitext(fname)[0])
-        self.name = name
+    def __init__(self, fname=None, ftype='', df=None, elec=None, name='',
+                 spacing=None, parser=None, keepAll=True, debug=True):
+        
+        # set default attributes
         self.iBorehole = False # True is it's a borehole
-        self.protocolIPFlag = False
-        self.kFactor = 1
+        self.protocolIPFlag = False # True if the file to be parsed is a Protocol file with IP
+        self.kFactor = 1 # factor to convert between chargeability (mV/mV) and phase (mrad)
         self.errorModel = None # function instantiated after fitting an error model with reciprocal errors
         self.phaseErrorModel = None # idem for IP
         self.iselect = None # use in filterManual()
         self.eselect = None # idem
         self.debug = debug # plotting all information message by default
-        if spacing is not None:
-            warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
-                      DeprecationWarning)
-            
-        avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
-
-        
-        if parser is not None:
-            elec, data = parser(fname)
-        else:
-            if ftype == 'Syscal':
-                elec, data = syscalParser(fname)
-                self.kFactor = 1.2
-            elif ftype =='ProtocolDC':
-                elec, data = protocolParser(fname, ip=False)
-            elif ftype == 'ResInv':
-                elec, data = resInvParser(fname)
-            elif ftype == 'BGS Prime':
-#                try:
-#                    elec, data = primeParser(fname)
-#                except:
-                elec, data = primeParserTab(fname)
-            elif ftype == 'ProtocolIP':
-                elec, data = protocolParser(fname, ip=True)
-                self.protocolIPFlag = True
-            elif ftype == 'forwardProtocolDC':
-                elec, data = protocolParser(fname, fwd=True)
-            elif ftype == 'forwardProtocolIP':
-                elec, data = protocolParser(fname, ip=True, fwd=True)
-                self.protocolIPFlag = True
-            elif ftype == 'Sting':
-                elec, data = stingParser(fname)
-            elif ftype == 'ABEM-Lund':
-                elec, data = ericParser(fname)
-            elif ftype == 'Lippmann':
-                elec, data = lippmannParser(fname)
-            elif ftype == 'ARES':
-                elec ,data = aresParser(fname)
-            elif ftype == 'E4D':
-                elec ,data = srvParser(fname)
-            elif ftype == 'BERT':
-                elec, data = bertParser(fname)
-            elif ftype == 'DAS-1':
-                elec, data = dasParser(fname)
-    #        elif (ftype == '') & (fname == '') & (elec is not None) and (data is not None):
-    #            pass # manual set up
-    #            print('Manual set up, no data will be imported')
-            else:
-                print("Unrecognised ftype, available types are :",avail_ftypes )
-                raise Exception('Sorry this file type is not implemented yet')
-
-        
-        self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
-        
-        # add error measured to the error columns (so they can be used if no error model are fitted)
-        if 'magErr' in self.df.columns:
-            self.df['resError'] = self.df['magErr'].copy()
-        else:
-            self.df['resError'] = np.nan
-        if 'phiErr' in self.df.columns:
-            self.df['phaseError'] = self.df['phiErr'].copy()
-        else:
-            self.df['phaseError'] = np.nan
-            
-        self.dfOrigin = self.df.copy() # unmodified
-        if type(elec) == np.ndarray: # TODO for temporary stability
-            dfelec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
-            dfelec['remote'] = False
-            dfelec['buried'] = False
-            dfelec['label'] = (1 + np.arange(dfelec.shape[0])).astype(str)
-        else:
-            dfelec = elec
-        self.elec = dfelec
-        
-        self.ndata = self.df.shape[0]
         self.phiCbarmin = 0
         self.phiCbarMax = 25
         self.filt_typ = 'Raw'
         self.cbar = True
         self.filterDataIP = pd.DataFrame()
+        
+        # check arguments
+        if name == '':
+            if fname is not None:
+                name = os.path.basename(os.path.splitext(fname)[0])
+            else:
+                name = 'Survey'
+        self.name = name
+        
+        if spacing is not None:
+            warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
+                      DeprecationWarning)
+        
+        # parsing data to form main dataframe and electrode array
+        if fname is not None:
+            avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
+                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
+            if parser is not None:
+                elec, data = parser(fname)
+            else:
+                if ftype == 'Syscal':
+                    elec, data = syscalParser(fname)
+                    self.kFactor = 1.2
+                elif ftype =='ProtocolDC':
+                    elec, data = protocolParser(fname, ip=False)
+                elif ftype == 'ResInv':
+                    elec, data = resInvParser(fname)
+                elif ftype == 'BGS Prime':
+                    elec, data = primeParserTab(fname)
+                elif ftype == 'ProtocolIP':
+                    elec, data = protocolParser(fname, ip=True)
+                    self.protocolIPFlag = True
+                elif ftype == 'forwardProtocolDC':
+                    elec, data = protocolParser(fname, fwd=True)
+                elif ftype == 'forwardProtocolIP':
+                    elec, data = protocolParser(fname, ip=True, fwd=True)
+                    self.protocolIPFlag = True
+                elif ftype == 'Sting':
+                    elec, data = stingParser(fname)
+                elif ftype == 'ABEM-Lund':
+                    elec, data = ericParser(fname)
+                elif ftype == 'Lippmann':
+                    elec, data = lippmannParser(fname)
+                elif ftype == 'ARES':
+                    elec ,data = aresParser(fname)
+                elif ftype == 'E4D':
+                    elec ,data = srvParser(fname)
+                elif ftype == 'BERT':
+                    elec, data = bertParser(fname)
+                elif ftype == 'DAS-1':
+                    elec, data = dasParser(fname)
+                else:
+                    print("Unrecognised ftype, available types are :",avail_ftypes )
+                    raise Exception('Sorry this file type is not implemented yet')
+        
+            # assign dataframe and check the types of a,b,m,n (all labels must be string)
+            self.df = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
+            self.ndata = self.df.shape[0]
 
-        if ftype == 'BGS Prime':
-            self.checkTxSign()
-        if ftype == 'Syscal':
-            if np.all(self.df['vp'] >= 0):
+            # add error measured to the error columns (so they can be used if no error model are fitted)
+            if 'magErr' in self.df.columns:
+                self.df['resError'] = self.df['magErr'].copy()
+            else:
+                self.df['resError'] = np.nan
+            if 'phiErr' in self.df.columns:
+                self.df['phaseError'] = self.df['phiErr'].copy()
+            else:
+                self.df['phaseError'] = np.nan
+            
+            # set electrode dataframe
+            if type(elec) == np.ndarray: # TODO for temporary stability
+                self.elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
+                self.elec['remote'] = False
+                self.elec['buried'] = False
+                self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
+            else:
+                self.elec = elec
+            
+            # check if voltage is signed for specific formats
+            if ftype == 'BGS Prime':
                 self.checkTxSign()
+            if ftype == 'Syscal':
+                if np.all(self.df['vp'] >= 0):
+                    self.checkTxSign()
 
-        # convert apparent resistivity to resistance and vice versa
-        self.computeK()
-        if 'resist' in self.df.columns:
-            self.df['app'] = self.df['K']*self.df['resist']
-        elif 'app' in self.df.columns:
-            self.df['resist'] = self.df['app']/self.df['K']
+            # convert apparent resistivity to resistance and vice versa
+            self.computeK()
+            if 'resist' in self.df.columns:
+                self.df['app'] = self.df['K']*self.df['resist']
+            elif 'app' in self.df.columns:
+                self.df['resist'] = self.df['app']/self.df['K']
+            
+        # we provide df and elec dataframes
+        elif df is not None and elec is not None:
+            self.df = df # assuming dataframe is already well formatted
+            self.ndata = self.df.shape[0]
+
+            # check elec dataframe
+            if 'remote' not in elec.columns:
+                elec['remote'] = False
+            if 'buried' not in elec.columns:
+                elec['buried'] = False
+            if 'label' not in elec.columns:
+                elec['label'] = np.arange(dfelec.shape[0]).astype(str)
+            self.elec = elec
+        
+        else:
+            raise ValueError('No fname supplied, no df and elec supplied. Returned.')
+            return
         
         # apply basic filtering
         self.filterDefault()
-        self.computeReciprocal()
+        self.computeReciprocal() # compute reciprocals
+        
+        # create backup copies
         self.dfReset = self.df.copy()
         self.dfPhaseReset = self.df.copy()
+        self.dfOrigin = self.df.copy()
        
      
-    @classmethod
-    def fromDataframe(cls, df, dfelec):
-        """Create a survey class from pandas dataframe.
+#     @classmethod
+#     def fromDataframe(cls, df, dfelec):
+#         """Create a survey class from pandas dataframe.
         
-        Parameters
-        ----------
-        df : pandas.DataFrame
-            Pandas dataframe.
-        dfelec : pandas.DataFrame
-            Pandas dataframe for electrodes.
+#         Parameters
+#         ----------
+#         df : pandas.DataFrame
+#             Pandas dataframe.
+#         dfelec : pandas.DataFrame
+#             Pandas dataframe for electrodes.
             
-        Returns
-        -------
-        survey : Survey
-            An instance of the Survey class.
-        """
+#         Returns
+#         -------
+#         survey : Survey
+#             An instance of the Survey class.
+#         """
         
-        def resource_path(relative_path): # a better method to get relative path of files
-            if hasattr(sys, '_MEIPASS'):
-                return os.path.join(sys._MEIPASS, relative_path)
-            return os.path.join(os.path.abspath("."), relative_path)
-        path = resource_path('examples/dc-2d/protocol.dat')        
+#         def resource_path(relative_path): # a better method to get relative path of files
+#             if hasattr(sys, '_MEIPASS'):
+#                 return os.path.join(sys._MEIPASS, relative_path)
+#             return os.path.join(os.path.abspath("."), relative_path)
+#         path = resource_path('examples/dc-2d/protocol.dat')        
         
-        # surrogateFile = '/src/examples/dc-2d/protocol.dat' # tricky
-        # path = os.path.realpath(__file__).replace(
-        #     '\\src\resipy\\Survey.py', surrogateFile).replace(
-        #     '/src/resipy/Survey.py', surrogateFile)
+#         # surrogateFile = '/src/examples/dc-2d/protocol.dat' # tricky
+#         # path = os.path.realpath(__file__).replace(
+#         #     '\\src\resipy\\Survey.py', surrogateFile).replace(
+#         #     '/src/resipy/Survey.py', surrogateFile)
 
-        survey = cls(fname=path, ftype='ProtocolDC') #surrogate survey
-        survey.df = df
-        if 'remote' not in dfelec.columns:
-            dfelec['remote'] = False
-        if 'buried' not in dfelec.columns:
-            dfelec['buried'] = False
-        if 'label' not in dfelec.columns:
-            dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
-        survey.elec = dfelec
-        survey.ndata = df.shape[0]
-        survey.computeReciprocal()
-        survey.filterDefault()
-        survey.dfReset = survey.df.copy()
-        survey.dfPhaseReset = survey.df.copy()
+#         survey = cls(fname=path, ftype='ProtocolDC') #surrogate survey
+#         survey.df = df
+#         if 'remote' not in dfelec.columns:
+#             dfelec['remote'] = False
+#         if 'buried' not in dfelec.columns:
+#             dfelec['buried'] = False
+#         if 'label' not in dfelec.columns:
+#             dfelec['label'] = np.arange(dfelec.shape[0]).astype(str)
+#         survey.elec = dfelec
+#         survey.ndata = df.shape[0]
+#         survey.computeReciprocal()
+#         survey.filterDefault()
+#         survey.dfReset = survey.df.copy()
+#         survey.dfPhaseReset = survey.df.copy()
         
-        return survey
-    
-    
-    
-    def _saveSurvey(self):
-        """Save survey.
-        """
-        pass
-    
-    
-    
-    def _loadSurvey(self, df, elec):
-        """Load back a survey given its internal df and electrode df.
-        """
-        pass
-    
+#         return survey
     
     
     def __str__(self):
