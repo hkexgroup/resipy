@@ -293,6 +293,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.iTimeLapse = False # to enable timelapse inversion
         self.iBatch = False # to enable batch inversion
         self.meshResults = [] # contains vtk mesh object of inverted section
+        self.projs = [] # contains Instances of Project for pseudo 3D inversion from 2D lines
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -1049,9 +1050,9 @@ class Project(object): # Project master class instanciated by the GUI
 
 #################################################################
 
-    def create3DGrid(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
+    def createPseudo3D(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
                        name=None, parser=None):
-        """Create a 3D grid based on 2D surveys.
+        """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
         
         Parameters
         ----------
@@ -1095,7 +1096,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
-
+        
 
     def split3DGrid(self):
         """Split self.elec to available lines based on 'label' 
@@ -1153,85 +1154,69 @@ class Project(object): # Project master class instanciated by the GUI
                         
         return elecList
     
-# to create multiple meshes, we need multiple WDs and elecdfs 
-
-    def createMultiMesh(self, elecList=None, **kwargs):
-        
-        elecList = self.create2DLines(elecList)
-        
-        dirlist = []
-        for elecdf, i in zip(elecList, range(len(elecList))):
-            directory = os.path.join(self.dirname, 'line{:d}'.format(i))
-            os.mkdir(directory) # making separate inversion diectories
-            dirlist.append(directory) # needed for later
-            # self.runMultiProject(elec=elecdf, dirname=directory, invtyp=self.typ, **kwargs) # non-parallel meshing
-            kwargs['elec'] = elecdf
-            kwargs['dirname'] = directory
-            kwargs['invtyp'] = self.typ
-            p = multiprocessing.Process(target=self.runMultiProject, kwargs=kwargs)
-            p.start()
-
     
-    @classmethod
-    def runMultiProject(cls, elec, dirname, invtyp='R2', typ='default', buried=None, surface=None, cl_factor=2,
-                        cl=-1, dump=None, res0=100, show_output=False, fmd=None,
-                        remote=None, refine=0, **kwargs):
-        """Use Project.createMesh() multiple times from available 2D lines
+    def createMultiProjects(self):
+        pass
+    
+    
+    def createMultiMesh(self, elecList=None, **kwargs):
+        """Create multiple meshes from avalable Projects in self.projs.
         
         Parameters
         ----------
-        elec : dataframe
-            dataframe of electrodes - must have 2D like XYZ (rotated to have y=0).
+        elecList : list of dataframes
+            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        kwargs : -
+            Keyword arguments to be passed to mesh generation schemes
+        """
+        
+        elecList = self.create2DLines(elecList)
+        
+        dirList = []
+        for elecdf, i in zip(elecList, range(len(elecList))):
+            directory = os.path.join(self.dirname, 'line{:d}'.format(i))
+            os.mkdir(directory) # making separate inversion diectories
+            dirList.append(directory) # needed for later
+            proj = self.runMultiProject(dirname=directory, invtyp=self.typ, **kwargs) # non-parallel meshing
+            self.projs.append(proj) # appending projects list for later use of meshing and inversion
+            proj.elec = elecdf
+            proj.createMesh(**kwargs)
+        
+            ########## FOR PARALLEL #####
+            # kwargs['elec'] = elecdf
+            # kwargs['dirname'] = directory
+            # kwargs['invtyp'] = self.typ
+            # p = multiprocessing.Process(target=self.runMultiProject, kwargs=kwargs)
+            # p.start()
+            #############################
+    
+    
+    def moveMesh(self, meshList=None):
+        """Translate"""
+        pass
+    
+    
+    @classmethod
+    def runMultiProject(cls, dirname, invtyp='R2'):
+        """Create Project instances multiple times for future use of meshing and inversion.
+        
+        Parameters
+        ----------
         dirname : str
             directory where 2D line will be dealt with (meshing, inversion, etc.)
         invtyp : str
             'R2' - inverting 2D resistivity
             'cR2' - inverting 2D induced polarization
-        typ : str, optional
-            Type of mesh. Either 'quad' or 'trian' in the case of 2d surveys.
-            By default, 'trian' is chosen for 2D and 'tetra' is used for 
-            3D surveys, but 'prism' or 'cylinder' (using tetra) can be used for column type experiments. 
-        buried : numpy.array, optional
-            Boolean array of electrodes that are buried. Should be the same
-            length as `R2.elec`
-        surface : numpy.array, optional
-            Array with two or three columns x, y (optional) and elevation for
-            additional surface points.
-        cl_factor : float, optional
-            Characteristic length factor. Only used for triangular mesh to allow
-            mesh to be refined close the electrodes and then expand.
-        cl : float, optional
-            Characteristic length that define the mesh size around the
-            electrodes.
-        dump : function, optional
-            Function to which pass the output during mesh generation. `print()`
-             is the default.
-        res0 : float, optional
-            Starting resistivity for mesh elements.
-        show_output : bool, optional
-            If `True`, the output of gmsh will be shown on screen.
-        fmd : float, optional
-            Depth of fine region specifies as a positive number relative to the mesh surface.
-        remote : bool, optional
-            Boolean array of electrodes that are remote (ie not real). Should be the same
-            length as `R2.elec`.
-        refine : int, optional
-            Number times the mesh will be refined. Refinement split the triangles
-            or the tetrahedra but keep the same number of parameter for the inversion.
-            This helps having a more accurate forward response and a faster inversion
-            (as the number of elements does not increase). Only available for
-            triangles or tetrahedral mesh.
-        kwargs : -
-            Keyword arguments to be passed to mesh generation schemes
-        """
         
+        Returns
+        -------
+        ProjInstance : Instance of Project class
+        """
+
         ProjInstance = cls(dirname=dirname, typ=invtyp)
         ProjInstance.dirname = dirname
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
-        ProjInstance.elec = elec
-        ProjInstance.createMesh(typ=typ, buried=buried, surface=surface, cl_factor=cl_factor,
-                                cl=cl, dump=dump, res0=res0, show_output=show_output, fmd=fmd,
-                                remote=remote, refine=refine, **kwargs)
+        return ProjInstance
     
 # should de-grid 2D lines into line with variable x and y=0 -- DONE in create2DLines
 # should create mesh (inputs must go into class method) and run inversion 
