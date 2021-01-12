@@ -72,6 +72,12 @@ k = Project(typ='R3t')
 k.create3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=2,
                  zigzag=False, name='mergedSurvey', ftype='Syscal')
 
+# 3D survey from 2D perpendicular line with one common elec
+k = Project(typ='R3t')
+k.create3DSurvey(testdir + 'dc-3d-pseudo3d-synthetic/data', lineSpacing=1,
+                 zigzag=False, name='mergedSurvey', ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-pseudo3d-synthetic/lines-elec.csv')
+
 timings['methods-importing'] = time.time() - tstart
 
 
