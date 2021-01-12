@@ -2601,7 +2601,7 @@ class App(QMainWindow):
                 self.errFitDataIndex = index - 2
                 self.plotError(index-2)
                 self.errFitType.setCurrentIndex(self.errFitPlotIndexList[index-2])
-                self.errFitTypeFunc(self.errFitPlotIndexList[index-2])
+                errFitTypeFunc(self.errFitPlotIndexList[index-2])
         self.errFitfnamesCombo = QComboBox()
         self.errFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.errFitfnamesCombo.setMinimumWidth(150)
@@ -2741,7 +2741,7 @@ class App(QMainWindow):
                 self.iperrFitDataIndex = index-2
                 phaseplotError(index-2)
                 self.iperrFitType.setCurrentIndex(self.iperrFitPlotIndexList[index-2])
-                self.iperrFitTypeFunc(self.iperrFitPlotIndexList[index-2])
+                iperrFitTypeFunc(self.iperrFitPlotIndexList[index-2])
         self.iperrFitfnamesCombo = QComboBox()
         self.iperrFitfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.iperrFitfnamesCombo.setMinimumWidth(150)

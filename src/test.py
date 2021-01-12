@@ -72,6 +72,12 @@ k = Project(typ='R3t')
 k.create3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=2,
                  zigzag=False, name='mergedSurvey', ftype='Syscal')
 
+# 3D survey from 2D perpendicular line with one common elec
+k = Project(typ='R3t')
+k.create3DSurvey(testdir + 'dc-3d-pseudo3d-synthetic/data', lineSpacing=1,
+                 zigzag=False, name='mergedSurvey', ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-pseudo3d-synthetic/lines-elec.csv')
+
 timings['methods-importing'] = time.time() - tstart
 
 
@@ -637,3 +643,5 @@ timings['dc-3d-timelapse'] = time.time() - t0
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
 print('total time running the test = {:.4f}s'.format(time.time() - tstart))
+
+
