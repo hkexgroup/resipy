@@ -1066,7 +1066,14 @@ class Project(object): # Project master class instanciated by the GUI
             surveys.append(Survey(fname, ftype=ftype, parser=parser))
         survey0 = surveys[0]
         
-
+        # check this is a regular grid (actually unregular grid works too
+        # as we create one mesh for all)
+        # nelec = survey0.elec.shape[0]
+        # for s in surveys:
+        #     if s.elec.shape[0] != nelec:
+        #         raise ValueError('Survey {:s} has {:d} electrodes while the first survey has {:d}.'
+        #                          'All surveys should have the same number of electrodes.'.format(s.name, s.elec.shape[0], nelec))
+        
         # build global electrodes and merged dataframe
         elec = []
         dfs = []
