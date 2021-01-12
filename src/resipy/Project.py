@@ -1050,52 +1050,58 @@ class Project(object): # Project master class instanciated by the GUI
 
 #################################################################
 
-    def createPseudo3D(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
-                       name=None, parser=None):
-        """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
+    # def createPseudo3D(self, dirname, lineSpacing=1, zigzag=False, ftype='Syscal',
+    #                    name=None, parser=None, **kwargs):
+    #     """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
         
-        Parameters
-        ----------
-        fname : list of str
-            List of 2D filenames in the right order for the grid or directory
-            name (the files will be sorted alphabetically in this last case).
-        lineSpacing : float, optional
-            Spacing in meter between each line.
-        zigzag : bool, optional
-            If `True` then one survey out of two will be flipped.
-            #TODO not implemented yet
-        ftype : str, optional
-            Type of the survey to choose which parser to use.
-        name : str, optional
-            Name of the merged 3D survey.
-        """
-        if isinstance(fname, list): # it's a list of filename
-            fnames = fname
-        else: # it's a directory and we import all the files inside
-            if os.path.isdir(fname):
-                fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
-                # this filter out hidden file as well
-            else:
-                raise ValueError('fname should be a directory path or a list of filenames')
-
-        surveys = []
-        for fname in fnames:
-            surveys.append(Survey(fname, ftype=ftype, parser=parser))
+    #     Parameters
+    #     ----------
+    #     fname : list of str
+    #         List of 2D filenames in the right order for the grid or directory
+    #         name (the files will be sorted alphabetically in this last case).
+    #     lineSpacing : float, optional
+    #         Spacing in meter between each line.
+    #     zigzag : bool, optional
+    #         If `True` then one survey out of two will be flipped.
+    #         #TODO not implemented yet
+    #     ftype : str, optional
+    #         Type of the survey to choose which parser to use.
+    #     name : str, optional
+    #         Name of the merged 3D survey.
+    #     """
+    #     if isinstance(fname, list): # it's a list of filename
+    #         fnames = fname
+    #     else: # it's a directory and we import all the files inside
+    #         if os.path.isdir(fname):
+    #             fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
+    #             # this filter out hidden file as well
+    #         else:
+    #             raise ValueError('fname should be a directory path or a list of filenames')
         
-
-        # build global electrodes
-        elecList = []
-        for i, s in enumerate(surveys):
-            e = s.elec.copy()
-            e.loc[:, 'y'] = i*lineSpacing
-            prefix = '{:d} '.format(i+1)
-            e.loc[:, 'label'] = prefix + e['label']
-            elecList.append(e)
-        elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
+    #     self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs)
     
-        self.elec = None
-        self.setElec(elec)
-        self.setBorehole(self.iBorehole)
+    #     surveys = []
+    #     for i, fname in enumerate(fnames):
+    #         surveys.append(Survey(fname, ftype=ftype, parser=parser))
+    #         directory = os.path.join(self.dirname, 'line{:d}'.format(i))
+    #         os.mkdir(directory) # making separate inversion diectories
+    #         proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+    #         self.projs.append(proj) # appending projects list for later use of meshing and inversion
+        
+
+    #     # build global electrodes
+    #     elecList = []
+    #     for i, s in enumerate(surveys):
+    #         e = s.elec.copy()
+    #         e.loc[:, 'y'] = i*lineSpacing
+    #         prefix = '{:d} '.format(i+1)
+    #         e.loc[:, 'label'] = prefix + e['label']
+    #         elecList.append(e)
+    #     elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
+    
+    #     self.elec = None
+    #     self.setElec(elec)
+    #     self.setBorehole(self.iBorehole)
         
 
     def split3DGrid(self):
@@ -1172,13 +1178,13 @@ class Project(object): # Project master class instanciated by the GUI
         
         elecList = self.create2DLines(elecList)
         
-        dirList = []
-        for elecdf, i in zip(elecList, range(len(elecList))):
-            directory = os.path.join(self.dirname, 'line{:d}'.format(i))
-            os.mkdir(directory) # making separate inversion diectories
-            dirList.append(directory) # needed for later
-            proj = self.runMultiProject(dirname=directory, invtyp=self.typ, **kwargs) # non-parallel meshing
-            self.projs.append(proj) # appending projects list for later use of meshing and inversion
+        # dirList = []
+        for elecdf, proj in zip(elecList, self.projs):
+            # directory = os.path.join(self.dirname, 'line{:d}'.format(i))
+            # os.mkdir(directory) # making separate inversion diectories
+            # dirList.append(directory) # needed for later
+            # proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            # self.projs.append(proj) # appending projects list for later use of meshing and inversion
             proj.elec = elecdf
             proj.createMesh(**kwargs)
         
