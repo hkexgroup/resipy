@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '3.0.3' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.1.1' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time # python standard libs
@@ -400,6 +400,10 @@ class Project(object): # Project master class instanciated by the GUI
                 self.elec = elec
                 for s in self.surveys:
                     s.elec = elec
+            
+            # check for shared electrodes (between lines) or duplicated
+            self._checkElecDuplicate()
+        
         else:
             #some error checking
             try:
@@ -417,7 +421,49 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             
+    
+    def _checkElecDuplicate(self):
+        """Check for duplicated electrodes positions and merge them
+        to the same label in this case. Useful for 3D survey from 2D lines,
+        if multiple lines shared have electrodes in common.
+        """
+        # from: https://stackoverflow.com/questions/46629518/find-indices-of-duplicate-rows-in-pandas-dataframe
+        elec = self.elec.copy()
+        df = elec[['x','y','z']].copy()
+        iunique = df.duplicated(keep=False)
+        if np.sum(iunique) > 0:
+            print('merging electrodes positionned at the same location.')
+            df = df[iunique]
+            dups = df.groupby(list(df)).apply(lambda x: tuple(x.index)).tolist()
             
+            for dup in dups:
+                dico = {}
+                label2keep = elec.loc[dup[0], 'label']
+                for i, index in enumerate(dup[1:]):
+                    label = elec.loc[index,'label'] # label of duplicated electrodes
+                    dico[label] = label2keep
+                    # check through elec for each survey                        
+                    for survey in self.surveys:
+                        if label2keep in survey.elec['label'].values:
+                            # if the label2keep is present, just remove the duplicate
+                             i2keep = survey.elec['label'] != label
+                             survey.elec = survey.elec[i2keep].reset_index(drop=True)
+                        else: # if not just renamed its label
+                            survey.elec = survey.elec.replace(to_replace=dico)
+                # and we replace (not remove) the label by the label of the first 
+                # occurence of the duplicated electrode
+                for survey in self.surveys:
+                    survey.df = survey.df.replace(to_replace=dico)
+                    
+                # finally we remove duplicates from the Project instance itself
+                if label2keep in self.elec['label'].values:
+                    # if the label2keep is present, just remove the duplicate
+                     i2keep = self.elec['label'] != label
+                     self.elec = self.elec[i2keep].reset_index(drop=True)
+                else: # if not just renamed its label
+                    self.elec = self.elec.replace(to_replace=dico)
+                
+                
             
     def generateElec(self, nb=24, dx=0.5, dz=0, nline=1, lineSpacing=2):
         """Generate electrodes positions for 2D and 3D surveys.
@@ -760,7 +806,7 @@ class Project(object): # Project master class instanciated by the GUI
                     df[c] = df[c].astype(str)
                 dfelec = pd.read_csv(f + '-elec.csv')
                 dfelec['label'] = dfelec['label'].astype(str)
-                self.surveys.append(Survey.fromDataframe(df, dfelec)) 
+                self.surveys.append(Survey(df=df, elec=dfelec)) 
                 elec = dfelec[~dfelec['remote']][['x','y','z']].values
                 if os.path.exists(f + '.vtk'):
                     mesh = mt.vtk_import(f + '.vtk')
@@ -999,6 +1045,12 @@ class Project(object): # Project master class instanciated by the GUI
             Type of the survey to choose which parser to use.
         name : str, optional
             Name of the merged 3D survey.
+            
+        Note
+        ----
+        If one electrode has similar position between multiple lines (shared
+        electrode), ResIPy will keep online one position of the electrode
+        and share its label accross the lines.
         """
         if isinstance(fname, list): # it's a list of filename
             fnames = fname
@@ -1014,12 +1066,7 @@ class Project(object): # Project master class instanciated by the GUI
             surveys.append(Survey(fname, ftype=ftype, parser=parser))
         survey0 = surveys[0]
         
-        # check this is a regular grid
-        # nelec = survey0.elec.shape[0]
-        # for s in surveys:
-        #     if s.elec.shape[0] != nelec:
-        #         raise ValueError('Survey {:s} has {:d} electrodes while the first survey has {:d}.'
-        #                          'All surveys should have the same number of electrodes.'.format(s.name, s.elec.shape[0], nelec))
+
         # build global electrodes and merged dataframe
         elec = []
         dfs = []
