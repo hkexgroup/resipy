@@ -10,6 +10,7 @@ import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
 import multiprocessing
+from copy import deepcopy
 
 # used to download the binaries
 import requests
@@ -862,7 +863,7 @@ class Project(object): # Project master class instanciated by the GUI
             
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
-                     parser=None, debug=True):
+                     parser=None, debug=True, **kwargs):
         """Read electrodes and quadrupoles data and return 
         a survey object.
 
@@ -882,8 +883,9 @@ class Project(object): # Project master class instanciated by the GUI
         debug : bool, optional
             If True, information about the reciprocal measurements, default 
             filtering, etc. will be displayed.
+        **kwargs: Keyword arguments to be passed to Survey()
         """
-        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug, **kwargs))
         self.surveysInfo.append(info)
         self.setBorehole(self.iBorehole)
 
@@ -1104,59 +1106,63 @@ class Project(object): # Project master class instanciated by the GUI
 
 #################################################################
 
-    # def createPseudo3D(self, dirname, lineSpacing=1, zigzag=False, ftype='Syscal',
-    #                    name=None, parser=None, **kwargs):
-    #     """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
+    def preparePseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
+        """Prepare a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
+            THIS WILL NEED CORRECT ELECTRODE LAYOUT - DONE IN self.createPseudo3DSurvey()
         
-    #     Parameters
-    #     ----------
-    #     fname : list of str
-    #         List of 2D filenames in the right order for the grid or directory
-    #         name (the files will be sorted alphabetically in this last case).
-    #     lineSpacing : float, optional
-    #         Spacing in meter between each line.
-    #     zigzag : bool, optional
-    #         If `True` then one survey out of two will be flipped.
-    #         #TODO not implemented yet
-    #     ftype : str, optional
-    #         Type of the survey to choose which parser to use.
-    #     name : str, optional
-    #         Name of the merged 3D survey.
-    #     """
-    #     if isinstance(fname, list): # it's a list of filename
-    #         fnames = fname
-    #     else: # it's a directory and we import all the files inside
-    #         if os.path.isdir(fname):
-    #             fnames = [os.path.join(fname, f) for f in np.sort(os.listdir(fname)) if f[0] != '.']
-    #             # this filter out hidden file as well
-    #         else:
-    #             raise ValueError('fname should be a directory path or a list of filenames')
+        Parameters
+        ----------
+        dirname : list of str
+            List of 2D filenames in the right order for the grid or directory
+            name (the files will be sorted alphabetically in this last case).
+        lineSpacing : float, optional
+            Spacing in meter between each line.
+        ftype : str, optional
+            Type of the survey to choose which parser to use.
+        kwargs : -
+            Keyword arguments to be passed to self.createBatchSurvey()
+        """
         
-    #     self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs)
+        self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs)
     
-    #     surveys = []
-    #     for i, fname in enumerate(fnames):
-    #         surveys.append(Survey(fname, ftype=ftype, parser=parser))
-    #         directory = os.path.join(self.dirname, 'line{:d}'.format(i))
-    #         os.mkdir(directory) # making separate inversion diectories
-    #         proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
-    #         self.projs.append(proj) # appending projects list for later use of meshing and inversion
-        
-
-    #     # build global electrodes
-    #     elecList = []
-    #     for i, s in enumerate(surveys):
-    #         e = s.elec.copy()
-    #         e.loc[:, 'y'] = i*lineSpacing
-    #         prefix = '{:d} '.format(i+1)
-    #         e.loc[:, 'label'] = prefix + e['label']
-    #         elecList.append(e)
-    #     elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
+        elecList = []
+        for i, s in enumerate(self.surveys):
+            e = s.elec.copy()
+            e.loc[:, 'y'] = i*lineSpacing
+            prefix = '{:d} '.format(i+1)
+            e.loc[:, 'label'] = prefix + e['label']
+            elecList.append(e)
+            directory = os.path.join(self.dirname, 'line{:d}'.format(i))
+            os.mkdir(directory) # making separate inversion diectories
+            proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            self.projs.append(proj) # appending projects list for later use of meshing and inversion
+        elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
     
-    #     self.elec = None
-    #     self.setElec(elec)
-    #     self.setBorehole(self.iBorehole)
+        self.elec = None
+        self.setElec(elec) # create initial electrodes df - to be populated later
+        self.setBorehole(self.iBorehole)
         
+        
+    def createPseudo3DSurvey(self, elecList=None, **kwargs):
+        """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
+            ALL 2D LINES MUST HAVE PURE x LATERAL DISTANCE (y=0).
+        
+        Parameters
+        ----------
+        elecList : list of dataframes
+            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        kwargs : -
+            Keyword arguments to be passed to createSurvey()
+        """
+        if self.projs == []:
+            raise ValueError('Survey needs to be prepared first! use Project.preparePseudo3DSurvey()')
+            
+        elecList = self.create2DLines(elecList)
+        
+        for elecdf, proj, survey in zip(elecList, self.projs, self.surveys):
+            survey.elec = elecdf.copy()
+            proj.createSurvey(fname=None, df=survey.df, elec=elecdf, **kwargs)
+                
 
     def split3DGrid(self):
         """Split self.elec to available lines based on 'label' 
@@ -1170,7 +1176,11 @@ class Project(object): # Project master class instanciated by the GUI
         elec = self.elec.copy()
         elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
         elecGroups = elec.groupby('lineNum')
-        elecList = [elecGroups.get_group(x) for x in elecGroups.groups]
+        elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
+        elecList = []
+        for elecdf in elecdfs:
+            elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
+            elecList.append(elecdf)
         
         return elecList
     
@@ -1195,12 +1205,13 @@ class Project(object): # Project master class instanciated by the GUI
             
         for elecdf in elecList:
             # transforming line to start from x, y = 0
-            elecdf['x'] = elecdf['x'] - elecdf.loc[0,'x']
-            elecdf['y'] = elecdf['y'] - elecdf.loc[0,'y']
+            elecdf['x'] = elecdf['x'].values - elecdf['x'].iloc[0]
+            elecdf['y'] = elecdf['y'].values - elecdf['y'].iloc[0]
             
             delx = elecdf['x'].max() - elecdf['x'].min()
             dely = elecdf['y'].max() - elecdf['y'].min()
-            rotangle = np.arctan(np.abs((dely)/(delx)))
+            f = np.inf if delx == 0 else np.abs((dely)/(delx))
+            rotangle = np.arctan(f)
             if elecdf['y'].values[0] > elecdf['y'].values[-1]: # CCW rotation needed
                 rotangle *= -1
             # rotation     
@@ -1215,44 +1226,103 @@ class Project(object): # Project master class instanciated by the GUI
         return elecList
     
     
-    def createMultiProjects(self):
-        pass
-    
-    
-    def createMultiMesh(self, elecList=None, **kwargs):
+    def createMultiMesh(self, **kwargs):
         """Create multiple meshes from avalable Projects in self.projs.
         
         Parameters
         ----------
-        elecList : list of dataframes
-            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
         """
-        
-        elecList = self.create2DLines(elecList)
-        
-        # dirList = []
-        for elecdf, proj in zip(elecList, self.projs):
-            # directory = os.path.join(self.dirname, 'line{:d}'.format(i))
-            # os.mkdir(directory) # making separate inversion diectories
-            # dirList.append(directory) # needed for later
-            # proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
-            # self.projs.append(proj) # appending projects list for later use of meshing and inversion
-            proj.elec = elecdf
+                
+        for proj in self.projs:
             proj.createMesh(**kwargs)
         
             ########## FOR PARALLEL #####
-            # kwargs['elec'] = elecdf
-            # kwargs['dirname'] = directory
-            # kwargs['invtyp'] = self.typ
             # p = multiprocessing.Process(target=self.runMultiProject, kwargs=kwargs)
             # p.start()
             #############################
     
     
-    def moveMesh(self, meshList=None):
-        """Translate"""
+    def _moveMesh(self, meshObject, elecLocal, elecGrid):
+        """Move mesh object to a certain place in the grid.
+        
+        Parameters
+        ----------
+        meshObject : class object
+            Mesh class object.
+        elecLocal: dataframe
+            dataframe of electrodes on local 2D grid (i.e., y = 0)
+        elecGrid: dataframe
+            dataframe of electrodes on 3D grid (i.e., y != 0)
+        
+        Returns
+        -------
+        mesh : class object
+            Copy of moved Mesh class object.
+        """
+        
+        mesh = deepcopy(meshObject) # to preserve unmoved meshes for later use 
+        xLocal = elecLocal['x'].copy().values
+        xGrid = elecGrid['x'].copy().values
+        yLocal = elecLocal['y'].copy().values
+        yGrid = elecGrid['y'].copy().values
+
+        if np.all(xGrid == xGrid[0]): # line is vertical x is constant
+            mesh.elec[:,0] = np.ones_like(xLocal) * xGrid[0]
+            mesh.elec[:,1] = xLocal + yGrid[0]
+            mesh.node[:,0] = np.ones_like(mesh.node[:,0]) + xGrid[0]
+            mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
+        
+        elif np.all(yGrid == yGrid[0]): # line is horizontal y is constant
+            mesh.elec[:,0] = xLocal + xGrid[0]
+            mesh.elec[:,1] = np.ones_like(xLocal) * yGrid[0]
+            mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
+            mesh.node[:,1] = np.ones_like(mesh.node[:,1]) + yGrid[0]
+            
+        else: 
+            mx = np.polyfit(xLocal,xGrid,1)
+            my = np.polyfit(xGrid, yGrid,1)
+            mesh.elec[:,0] = mx[0] * xLocal + mx[1]
+            mesh.elec[:,1] = my[0] * xGrid + my[1]
+            mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
+            mesh.node[:,1] = my[0] * mesh.node[:,1] + my[1]
+
+        return mesh   
+    
+    
+    def showPseudo3DMesh(self, ax=None, index=0, edge_color='none', attr='',
+                    sens=True, color_map='viridis', zlim=None, clabel=None,
+                    doi=False, doiSens=False, contour=False, cropMaxDepth=True,
+                    clipContour=True, use_pyvista=True, background_color=(0.8,0.8,0.8),
+                    pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
+                    pvcontour=[],**kwargs):
+        # self.testmeshlist =[]
+        # try:
+        #     import pyvista as pv
+        # except Exception as e:
+        #     print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
+        #     return
+        # if ax is None:
+        #     ax = pv.Plotter()
+        # kwargs['pvshow'] = False # don't invoke show after each mesh added
+        
+        # elecList = self.split3DGrid()        
+        # meshList = []
+        # for proj, elecdf in zip(self.projs, elecList):
+        #     meshList.append(self._moveMesh(proj.mesh, proj.elec, elecdf))
+        # self.testmeshlist = meshList.copy()
+        # maty = np.c_[[mesh.elec[:,1] for mesh in meshList]].T
+
+        # kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
+        # for i, mesh in enumerate(meshList):
+        #     mesh.ndims = 3 # overwrite dimension to use show3D() method
+        #     mesh.show(ax=ax, edge_color=edge_color,
+        #         attr=attr, color_map=color_map, clabel=clabel,
+        #         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
+        #         pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+        #         pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
+        # ax.show() # call plotter.show()
         pass
     
     
