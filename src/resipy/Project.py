@@ -1265,20 +1265,20 @@ class Project(object): # Project master class instanciated by the GUI
         mesh = deepcopy(meshObject) # to preserve unmoved meshes for later use 
         xLocal = elecLocal['x'].copy().values
         xGrid = elecGrid['x'].copy().values
-        yLocal = elecLocal['y'].copy().values
+        # yLocal = elecLocal['y'].copy().values # not needed for 2D
         yGrid = elecGrid['y'].copy().values
 
-        if np.all(xGrid == xGrid[0]): # line is vertical x is constant
+        if np.all(xGrid == xGrid[0]): # line is vertical - x is constant
             mesh.elec[:,0] = np.ones_like(xLocal) * xGrid[0]
             mesh.elec[:,1] = xLocal + yGrid[0]
-            mesh.node[:,0] = np.ones_like(mesh.node[:,0]) + xGrid[0]
             mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
-        
-        elif np.all(yGrid == yGrid[0]): # line is horizontal y is constant
+            mesh.node[:,0] = np.zeros_like(mesh.node[:,0]) + xGrid[0]
+
+        elif np.all(yGrid == yGrid[0]): # line is horizontal - y is constant
             mesh.elec[:,0] = xLocal + xGrid[0]
             mesh.elec[:,1] = np.ones_like(xLocal) * yGrid[0]
             mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
-            mesh.node[:,1] = np.ones_like(mesh.node[:,1]) + yGrid[0]
+            mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
             
         else: 
             mx = np.polyfit(xLocal,xGrid,1)
@@ -1286,43 +1286,37 @@ class Project(object): # Project master class instanciated by the GUI
             mesh.elec[:,0] = mx[0] * xLocal + mx[1]
             mesh.elec[:,1] = my[0] * xGrid + my[1]
             mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
-            mesh.node[:,1] = my[0] * mesh.node[:,1] + my[1]
+            mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
 
         return mesh   
     
     
-    def showPseudo3DMesh(self, ax=None, index=0, edge_color='none', attr='',
-                    sens=True, color_map='viridis', zlim=None, clabel=None,
-                    doi=False, doiSens=False, contour=False, cropMaxDepth=True,
-                    clipContour=True, use_pyvista=True, background_color=(0.8,0.8,0.8),
-                    pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
-                    pvcontour=[],**kwargs):
-        # self.testmeshlist =[]
-        # try:
-        #     import pyvista as pv
-        # except Exception as e:
-        #     print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
-        #     return
-        # if ax is None:
-        #     ax = pv.Plotter()
-        # kwargs['pvshow'] = False # don't invoke show after each mesh added
+    def showPseudo3DMesh(self, ax=None, color_map='Greys', color_bar=False, **kwargs):
+        try:
+            import pyvista as pv
+        except Exception as e:
+            print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
+            return
+        if ax is None:
+            ax = pv.Plotter()
+        kwargs['pvshow'] = False # don't invoke show after each mesh added
         
-        # elecList = self.split3DGrid()        
-        # meshList = []
-        # for proj, elecdf in zip(self.projs, elecList):
-        #     meshList.append(self._moveMesh(proj.mesh, proj.elec, elecdf))
-        # self.testmeshlist = meshList.copy()
-        # maty = np.c_[[mesh.elec[:,1] for mesh in meshList]].T
-
-        # kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
-        # for i, mesh in enumerate(meshList):
-        #     mesh.ndims = 3 # overwrite dimension to use show3D() method
-        #     mesh.show(ax=ax, edge_color=edge_color,
-        #         attr=attr, color_map=color_map, clabel=clabel,
-        #         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
-        #         pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
-        #         pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
-        # ax.show() # call plotter.show()
+        elecList = self.split3DGrid()  # split the electrodes to lines in 3D space      
+        meshList = []
+        for proj, elecdf in zip(self.projs, elecList):
+            meshList.append(self._moveMesh(proj.mesh, proj.elec, elecdf))
+            
+        matx = np.c_[[mesh.elec[:,0] for mesh in meshList]].T
+        kwargs['xlim'] = [np.min(matx)-1, np.max(matx)+1]
+        maty = np.c_[[mesh.elec[:,1] for mesh in meshList]].T
+        kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
+        matz = np.c_[[mesh.elec[:,2] for mesh in meshList]].T
+        kwargs['zlim'] = [np.min(matz)-1, np.max(matz)+1]
+        
+        for mesh in meshList:
+            mesh.ndims = 3 # overwrite dimension to use show3D() method
+            mesh.show(ax=ax, color_map=color_map, color_bar=color_bar, darkMode=self.darkMode, **kwargs)
+        ax.show() # call plotter.show()
         pass
     
     
