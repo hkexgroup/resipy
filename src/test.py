@@ -639,6 +639,21 @@ k.mesh.orderNodes()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-timelapse'] = time.time() - t0
 
+#%% test pseudo 3D inversion
+k = Project(typ='R2')
+k.preparePseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=2,
+                 ftype='Syscal')
+# totating middle electrodes line here
+rotmat = np.array([[np.cos(0.6), np.sin(0.6)], 
+                   [-np.sin(0.6), np.cos(0.6)]])
+xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
+newmat = np.dot(rotmat, xy).T
+k.elec.loc[24:47,'x'] = newmat[:,0].copy() + 2
+k.elec.loc[24:47,'y'] = newmat[:,1].copy() - 1
+
+k.createPseudo3DSurvey()
+k.createMultiMesh()
+k.showPseudo3DMesh()
 #%% print final summary information 
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
