@@ -4038,7 +4038,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cropBelowFmdLabel.linkActivated.connect(showHelpAdv)
         self.cropBelowFmd = QCheckBox()
         self.cropBelowFmd.setChecked(True)
-        self.cropBelowFmd.stateChanged.connect(notCroppingFunc)
+        # not connected but read when calling displayInvertedResults()
         advForm.addRow(cropBelowFmdLabel, self.cropBelowFmd)
 
         def modelDOIFunc(status):
@@ -6001,7 +6001,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                               index=index, edge_color=edge_color,
                               contour=contour, sens=sens, attr=attr,
                               vmin=vmin, vmax=vmax, color_map=cmap, 
-                              sensPrc=sensPrc, doi=doi, doiSens=doiSens)
+                              sensPrc=sensPrc, doi=doi, doiSens=doiSens,
+                              cropMaxDepth=self.cropBelowFmd.isChecked())
             self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
                           ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
                           'vmax={:s}, color_map="{:s}", sensPrc={:.2f}, doi={:s},'
