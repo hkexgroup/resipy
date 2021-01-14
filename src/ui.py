@@ -5756,11 +5756,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.tempElec = elec
                 elecList = None
                 if self.pseudo3DCheck.isChecked():
-                    elecList = self.project.split3DGrid(elec.copy())
+                    elecList = self.project.split3DGrid(elec.copy()) # splitting lines
                     self.project.pseudo3DSurvey.elec = pd.concat(elecList, axis=0, ignore_index=True)
-                    print(self.project.pseudo3DSurvey.elec)
-                    elecList = self.project.create2DLines(elecList)
-
+                    elecList = self.project.create2DLines(elecList) # convert to horizontal 2D lines
                 self.project.setElec(elec, elecList)
                 self.writeLog('#k.setElec(elec)')
                 # TODO don't know how to write to log this
