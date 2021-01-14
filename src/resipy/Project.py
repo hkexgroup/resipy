@@ -295,6 +295,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.iBatch = False # to enable batch inversion
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.projs = [] # contains Instances of Project for pseudo 3D inversion from 2D lines
+        self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined - for visualization of pseudo sections 
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -349,7 +350,30 @@ class Project(object): # Project master class instanciated by the GUI
         
         return elec
     
+    
+    def _findRemote(self, elec):
+        """Flag remote electrodes.
+        
+        Parameters
+        ----------
+        elec : dataframe
+            contains the electrodes information
+            
+        Returns
+        -------
+        elec : dataframe
+            remote flag added to electrodes
+        """
+        remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                    9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        iremote = np.in1d(elec['x'].values, remote_flags)
+        iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
+        elec.loc[:, 'remote'] = iremote
+        if np.sum(iremote) > 0:
+            print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
+        return elec
 
+    
     def setElec(self, elec, elecList=None):
         """Set electrodes. Automatically identified remote electrode.
 
@@ -390,14 +414,7 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 ok = True # first assignement of electrodes
             if ok:
-                # identification remote electrode
-                remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                            9999999, 999999, 99999] # values asssociated with remote electrodes
-                iremote = np.in1d(elec['x'].values, remote_flags)
-                iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
-                elec.loc[:, 'remote'] = iremote
-                if np.sum(iremote) > 0:
-                    print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
+                elec = self._findRemote(elec) # identification of remote electrode
                 self.elec = elec
                 for s in self.surveys:
                     s.elec = elec
@@ -413,12 +430,13 @@ class Project(object): # Project master class instanciated by the GUI
                     raise ValueError("The number of electrode matrices must match the number of surveys")
             except AttributeError:
                 raise AttributeError("No Survey attribute assocaited with R2 class, make sure you create a survey first")
-
-            initElec = elecList[0]
-            self.elec = self._num2elec(np.zeros((len(initElec),3)))
+            
+            if self.elec is None:
+                initElec = elecList[0]
+                self.elec = self._num2elec(np.zeros((len(initElec),3)))
             for i, survey in enumerate(self.surveys):
-                survey.elec = self._num2elec(elecList[i])
-        
+                survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
+
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             
@@ -1097,14 +1115,19 @@ class Project(object): # Project master class instanciated by the GUI
         survey0.dfReset = dfm # for reseting filters on res
         survey0.dfPhaseReset = dfm # for reseting filters on IP
         survey0.name = '3Dfrom2Dlines' if name is None else name
-        self.surveys= [survey0]
+        self.surveys = [survey0]
         self.elec = None
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
         
 
 
+
+
+
 #################################################################
+
+
 
     def preparePseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
         """Prepare a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
@@ -1126,18 +1149,23 @@ class Project(object): # Project master class instanciated by the GUI
         self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs)
     
         elecList = []
+        dfList = []
         for i, s in enumerate(self.surveys):
             e = s.elec.copy()
             e.loc[:, 'y'] = i*lineSpacing
             prefix = '{:d} '.format(i+1)
             e.loc[:, 'label'] = prefix + e['label']
             elecList.append(e)
+            s.df.loc[:,['a','b','m','n']] = prefix + s.df[['a','b','m','n']]
+            dfList.append(s.df)
             directory = os.path.join(self.dirname, 'line{:d}'.format(i))
             os.mkdir(directory) # making separate inversion diectories
             proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
         elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
-    
+        dfm = pd.concat(dfList, axis=0, sort=False).reset_index(drop=True)
+        
+        self.pseudo3DSurvey = Survey(fname=None, df=dfm, elec=elec)
         self.elec = None
         self.setElec(elec) # create initial electrodes df - to be populated later
         self.setBorehole(self.iBorehole)
@@ -1164,22 +1192,30 @@ class Project(object): # Project master class instanciated by the GUI
             proj.createSurvey(fname=None, df=survey.df, elec=elecdf, **kwargs)
                 
 
-    def split3DGrid(self):
+    def split3DGrid(self, elec=None):
         """Split self.elec to available lines based on 'label' 
+        
+        
+        Parameters
+        ----------
+        elec : dataframe
+            Contains the electrodes information. "label" column must be provided and
+            have "<line number> <electrode number>" format.
         
         Returns
         -------
         elecList : list of dataframes
             List of electrodes dataframes - each df can have a 3D like XYZ.
         """
-        
-        elec = self.elec.copy()
+        if elec is None:
+            elec = self.elec.copy()
         elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
         elecGroups = elec.groupby('lineNum')
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
         elecList = []
         for elecdf in elecdfs:
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
+            elecdf = self._findRemote(elecdf)
             elecList.append(elecdf)
         
         return elecList
@@ -1238,13 +1274,22 @@ class Project(object): # Project master class instanciated by the GUI
         for proj in self.projs:
             proj.createMesh(**kwargs)
         
-            ########## FOR PARALLEL #####
+            ########## FOR PARALLEL MESHING #####
             # p = multiprocessing.Process(target=self.runMultiProject, kwargs=kwargs)
             # p.start()
+            # p.join()
             #############################
     
     
-    def _moveMesh(self, meshObject, elecLocal, elecGrid):
+    def pseudo3DDataProcessing(self):
+        """Populated data (dfs data) of each proj in self.projs with processed data from self.surveys.
+            Assuming data cleanings are done in the main class/GUI.
+        """
+        for s, proj in zip(self.surveys, self.projs):
+            proj.surveys[0].df = s.df.copy()
+    
+    
+    def _moveMesh(self, meshObject, elecLocal, elecGrid): # probably better to go to meshTools
         """Move mesh object to a certain place in the grid.
         
         Parameters
@@ -1292,20 +1337,34 @@ class Project(object): # Project master class instanciated by the GUI
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', color_bar=False, **kwargs):
+        """Show 2D meshes in 3D view
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        color_map : str, optional
+            Name of the colormap to be used.
+        color_bar : Boolean, optional 
+            `True` to plot colorbar.
+        kwargs : -
+            Keyword arguments to be passed to Mesh.show() class.
+        """
         try:
             import pyvista as pv
         except Exception as e:
             print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
             return
+        
         if ax is None:
             ax = pv.Plotter()
+            
         kwargs['pvshow'] = False # don't invoke show after each mesh added
-        
         elecList = self.split3DGrid()  # split the electrodes to lines in 3D space      
         meshList = []
         for proj, elecdf in zip(self.projs, elecList):
             meshList.append(self._moveMesh(proj.mesh, proj.elec, elecdf))
-            
+        # x, y, z limits    
         matx = np.c_[[mesh.elec[:,0] for mesh in meshList]].T
         kwargs['xlim'] = [np.min(matx)-1, np.max(matx)+1]
         maty = np.c_[[mesh.elec[:,1] for mesh in meshList]].T
@@ -1317,7 +1376,6 @@ class Project(object): # Project master class instanciated by the GUI
             mesh.ndims = 3 # overwrite dimension to use show3D() method
             mesh.show(ax=ax, color_map=color_map, color_bar=color_bar, darkMode=self.darkMode, **kwargs)
         ax.show() # call plotter.show()
-        pass
     
     
     @classmethod
@@ -1342,8 +1400,7 @@ class Project(object): # Project master class instanciated by the GUI
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
         return ProjInstance
     
-# should de-grid 2D lines into line with variable x and y=0 -- DONE in create2DLines
-# should create mesh (inputs must go into class method) and run inversion 
+
 
 
 

@@ -489,6 +489,11 @@ class App(QMainWindow):
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.setColumnHidden(2, True)
                 self.regular3DCheck.setChecked(False)
+                self.pseudo3DCheck.setVisible(True)
+                if pvfound:
+                    self.pseudo3DCheck.setEnabled(True)
+                else:
+                    self.pseudo3DCheck.setEnabled(False)
                 if self.project is not None:
                     if self.project.elec is not None:
                         self.elecTable.initTable(self.project.elec)
@@ -557,6 +562,8 @@ class App(QMainWindow):
                 # self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
                 self.regular3DCheck.setVisible(True)
+                self.pseudo3DCheck.setChecked(False)
+                self.pseudo3DCheck.setVisible(False)
                 self.pParams['threed'] = True
                 self.pParamsIP['threed'] = True
                 if pvfound:
@@ -694,26 +701,71 @@ class App(QMainWindow):
                     self.writeLog('k.setBorehole(False)')
             try:
                 if self.fname is not None:
-                        self.plotPseudo()
-                        self.plotPseudoIP()
+                    self.plotPseudo()
+                    self.plotPseudoIP()
             except:
                 pass
         self.boreholeCheck = QCheckBox('Unconventional Survey')
         self.boreholeCheck.stateChanged.connect(boreholeCheckFunc)
         self.boreholeCheck.setToolTip('Check if you have an unconventional survey (e.g. boreholes).\nThis will just change the pseudo-section.')
 
-        def regular3DFunc(state):
+        def pseudo3DFunc(state):
             if state == Qt.Checked:
                 self.lineSpacing.setVisible(True)
                 self.lineSpacingLabel.setVisible(True)
                 self.create3DBtn.setVisible(True)
+                self.create3DBtn.clicked.disconnect()
+                self.create3DBtn.clicked.connect(createPseudo3DFunc)
                 self.importDataBtn.setVisible(False)
+                # self.regular3DCheck.setChecked(False)
+                self.batchCheck.setChecked(True)
+                self.batchCheck.setEnabled(False)
+                self.pseudoLayout.setCurrentIndex(1)
+                self.elecLineEdit.setEnabled(True)
+                self.elecLineSpacingEdit.setEnabled(True)
+                self.elecTable.setColumnHidden(2, False)
+                self.topoTable.hide()
+            # elif self.regular3DCheck.isChecked():
+            #     self.batchCheck.setChecked(False)
             else:
                 self.lineSpacing.setVisible(False)
                 self.lineSpacingLabel.setVisible(False)
                 self.create3DBtn.setVisible(False)
                 self.importDataBtn.setVisible(True)
-        self.regular3DCheck = QCheckBox('3D survey from regular 2D lines')
+                self.batchCheck.setChecked(False)
+                self.batchCheck.setEnabled(True)
+                self.pseudoLayout.setCurrentIndex(0)
+                self.elecLineEdit.setEnabled(False)
+                self.elecLineSpacingEdit.setEnabled(False)
+                self.elecTable.setColumnHidden(2, True)
+                self.topoTable.show()
+        self.pseudo3DCheck = QCheckBox('Pseudo 3D survey from 2D lines')
+        self.pseudo3DCheck.setToolTip('Arange 2D lines in a 3D grid. ResIPy will assume batch 2D surveys are imported.\n'
+                                      'Electrodes can be manually set in "Electrodes (XYZ/Topo)" tab.\n\n'
+                                      'IMPORTANT: electrode labels MUST be imported and have "<line number> <electrode number>" format.')
+        self.pseudo3DCheck.stateChanged.connect(pseudo3DFunc)
+        if pvfound is False: # We can't (don't want to) have this feature without pyvista!!
+            self.pseudo3DCheck.setEnabled(False)
+        
+        def regular3DFunc(state):
+            if state == Qt.Checked:
+                self.lineSpacing.setVisible(True)
+                self.lineSpacingLabel.setVisible(True)
+                self.create3DBtn.setVisible(True)
+                self.create3DBtn.clicked.disconnect()
+                self.create3DBtn.clicked.connect(create3DFunc)
+                self.importDataBtn.setVisible(False)
+                # self.pseudo3DCheck.setChecked(False)
+                # self.pseudo3DCheck.setVisible(False)
+            # elif self.pseudo3DCheck.isChecked():
+            #     pass
+            else:
+                self.lineSpacing.setVisible(False)
+                self.lineSpacingLabel.setVisible(False)
+                self.create3DBtn.setVisible(False)
+                self.importDataBtn.setVisible(True)
+        self.regular3DCheck = QCheckBox('3D survey from 2D lines')
+        self.regular3DCheck.setToolTip('3D inversion from 2D lines - electrodes can be manually set in "Electrodes (XYZ/Topo)" tab')
         self.regular3DCheck.stateChanged.connect(regular3DFunc)
         self.regular3DCheck.setVisible(False)
         
@@ -861,7 +913,7 @@ class App(QMainWindow):
 
         def getdir():
             fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)
-#            fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
+            # fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
             
             if fnames != []:
                 fdir = os.path.dirname(fnames[0])
@@ -995,8 +1047,8 @@ class App(QMainWindow):
         self.lineSpacingLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.lineSpacingLabel.setVisible(False)
         self.lineSpacingLabel.setFixedWidth(120)
-
-        def create3DFunc():
+        
+        def createPseudo3DFunc():
             fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)            
             if fnames != []:
                 fdir = os.path.dirname(fnames[0])
@@ -1005,13 +1057,79 @@ class App(QMainWindow):
                 val = float(self.lineSpacing.text())
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
+                    self.project.preparePseudo3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    self.writeLog('k.preparePseudo3DSurvey({:s}, lineSpacing={:s}, ftype="{:s}", parser={:s})'.format(
+                        str(fnames), str(val), self.ftype, str(self.parser)))
+                    self.infoDump('Pseudo 3D survey from 2D lines created.')
+                    self.ipCheck.setEnabled(True)
+                    self.psContourCheck.setEnabled(True)
+                    self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
+                    if 'magErr' in self.project.pseudo3DSurvey.df.columns:
+                        self.a_wgt.setText('0.0')
+                        self.b_wgt.setText('0.0')
+                    self.importDataRecipBtn.hide()
+                    self.fnamesCombo.clear()
+                    self.psContourCheck.setEnabled(True)
+                    for s in self.project.surveys:
+                        self.fnamesCombo.addItem(s.name)
+                        self.errFitPlotIndexList.append(0)
+                        self.iperrFitPlotIndexList.append(0)
+                    self.errorCombosShow(True)
+                    errorCombosFill(self.prepFnamesComboboxes)
+                    self.fnamesCombo.show()
+                    self.fnamesComboLabel.show()
+                    self.elecTable.initTable(self.project.elec)
+                    self.tabImporting.setTabEnabled(1,True)
+                    if all(self.project.pseudo3DSurvey.df['irecip'].values == 0): # enabling some filtering capacities
+                        self.recipOrNoRecipShow(recipPresence=False)
+                    else:
+                        self.recipOrNoRecipShow(recipPresence=True)
+                        self.tabPreProcessing.setTabEnabled(2, True)
+                        self.filterAttrCombo.addItem('Reciprocal Error')
+                        self.plotError()
+                        self.errHist()
+                    self.plotManualFiltering()
+                    if 'dev' in self.project.pseudo3DSurvey.df.columns:
+                        self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                    if 'ip' in self.project.pseudo3DSurvey.df.columns:
+                        if np.sum(self.project.pseudo3DSurvey.df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            self.ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            self.dcaButton.setEnabled(True)
+                            self.dcaProgress.setEnabled(True)               
+                    self.loadingWidget(exitflag=True)
+                    self.plotPseudo()
+                    self.invNowBtn.setEnabled(True)
+                    self.activateTabs(True)
+                    self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                    self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+                    self.fnamesCombo.hide()
+                    self.fnamesComboLabel.hide()
+                    if np.isnan(self.project.elec[['x','y','z']].values).any():
+                        self.topoInterpBtnFunc()
+                except Exception as e:
+                    self.loadingWidget(exitflag=True)
+                    print('Error in createPseudo3DFunc(): ', e)
+                    self.errorDump('File format is not recognized or not all files have similar format!')
+            
+        
+        def create3DFunc():
+            fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)            
+            if fnames != []:
+                fdir = os.path.dirname(fnames[0])
+                self.restartFunc()
+                self.datadir = os.path.dirname(fdir)
+                val = float(self.lineSpacing.text())
+                
+                try:
+                    self.loadingWidget('Loading data, please wait...', False)
                     self.project.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
                     self.writeLog('k.create3DSurvey({:s}, lineSpacing={:s}, ftype="{:s}", parser={:s})'.format(
                         str(fnames), str(val), self.ftype, str(self.parser)))
                     self.infoDump('3D survey from regular 2D lines created.')
                     self.ipCheck.setEnabled(True)
                     self.psContourCheck.setEnabled(True)
-                    self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
+                    self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     # self.calcAspectRatio()
                     if 'magErr' in self.project.surveys[0].df.columns:
                         self.a_wgt.setText('0.0')
@@ -1053,7 +1171,7 @@ class App(QMainWindow):
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
                     print('Error in create3DFunc(): ', e)
-                    self.errorDump('File format is not recognized or not all files go the same number of electrodes')
+                    self.errorDump('File format is not recognized or not all files have similar format!')
         
         self.create3DBtn = QPushButton('Select 2D lines')
         self.create3DBtn.clicked.connect(create3DFunc)
@@ -1240,6 +1358,7 @@ class App(QMainWindow):
         hbox2.addWidget(self.timeLapseCheck)
         hbox2.addWidget(self.batchCheck)
         hbox2.addWidget(self.boreholeCheck)
+        hbox2.addWidget(self.pseudo3DCheck)
         hbox2.addWidget(self.regular3DCheck)
 
         hbox4 = QHBoxLayout()
@@ -5635,7 +5754,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             elec = self.elecTable.getTable()
             if self.tempElec is None or np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
                 self.tempElec = elec
-                self.project.setElec(elec)
+                elecList = None
+                if self.pseudo3DCheck.isChecked():
+                    elecList = self.project.split3DGrid(elec.copy())
+                    self.project.pseudo3DSurvey.elec = pd.concat(elecList, axis=0, ignore_index=True)
+                    print(self.project.pseudo3DSurvey.elec)
+                    elecList = self.project.create2DLines(elecList)
+
+                self.project.setElec(elec, elecList)
                 self.writeLog('#k.setElec(elec)')
                 # TODO don't know how to write to log this
                 self.project.mesh = None
@@ -5655,7 +5781,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotter.clear()
             self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams, 
-                                    darkMode=eval(resipySettings.param['dark']))
+                                        darkMode=eval(resipySettings.param['dark']))
+        elif self.pseudo3DCheck.isChecked():
+            self.pseudoPlotter.clear()
+            self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],
+                                                   vmax=self.pParams['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudo.setCallback(self.project.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
@@ -5669,7 +5799,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotterIP.clear()
             self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP, 
-                                      darkMode=eval(resipySettings.param['dark']))
+                                          darkMode=eval(resipySettings.param['dark']))
+        elif self.pseudo3DCheck.isChecked():
+            self.pseudoPlotterIP.clear()
+            self.project.pseudo3DSurvey.showPseudoIP(ax=self.pseudoPlotterIP, threed=True, vmin=self.pParamsIP['vmin'],
+                                                   vmax=self.pParamsIP['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudoIP.setCallback(self.project.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
