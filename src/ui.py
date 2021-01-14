@@ -149,6 +149,8 @@ class MatplotlibWidget(QWidget):
         else:
             axes = figure.get_axes()
         self.figure = figure
+        if resipySettings.param['dark'] == 'True':
+            self.figure.set_facecolor((0.2,0.2,0.2))
         self.axis = axes
         self.xlim = None
         self.ylim = None
