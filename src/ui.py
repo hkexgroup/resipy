@@ -732,9 +732,16 @@ class App(QMainWindow):
                 self.elecLineSpacingEdit.setEnabled(True)
                 self.elecTable.setColumnHidden(2, False)
                 self.topoTable.hide() # we can't add extra topo points in here, we don't know which mesh they belong to
+                self.regionTable.hide() # we can't add regions at this level - future: set/design/create individual 2D meshes then create a pseudo 3D mesh
                 self.topoBtn.hide()
                 self.topoAddRowBtn.hide()
                 self.elecLabelTextP2 = '<br><b>IMPORTANT:</b> Labels <b>Must</b> be defined in <b><font color="red">"Line Number [space] Electrode Number"</font></b> format.'
+                self.importCustomMeshBtn2.setEnabled(False)
+                self.resetMeshBtn.hide()
+                instructionLabel.hide()
+                self.meshAspectBtn.hide()
+                meshSubLayout.setStretch(0,100)
+                meshSubLayout.setStretch(1,0)
                 meshOutputStack.setCurrentIndex(2)
             
             else:
@@ -751,15 +758,23 @@ class App(QMainWindow):
                 self.elecLineSpacingEdit.setEnabled(False)
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.show()
+                self.regionTable.show()
                 self.topoBtn.show()
                 self.topoAddRowBtn.show()
                 self.elecLabelTextP2 = ''
+                self.importCustomMeshBtn2.setEnabled(True)
+                self.resetMeshBtn.show()
+                instructionLabel.show()
+                self.meshAspectBtn.show()
+                meshSubLayout.setStretch(0,70)
+                meshSubLayout.setStretch(1,30)
                 meshOutputStack.setCurrentIndex(1)
             self.elecLabel.setText(self.elecLabelTextP1 + self.elecLabelTextP2)
                 
         self.pseudo3DCheck = QCheckBox('Pseudo 3D inversion from 2D lines')
         self.pseudo3DCheck.setToolTip('Arrange 2D inversion lines in a 3D grid. ResIPy will assume batch 2D surveys are imported.\n'
-                                      'Electrodes can be manually set in "Electrodes (XYZ/Topo)" tab.\n\n'
+                                      'Electrodes can be manually set in "Electrodes (XYZ/Topo)" tab.\n'
+                                      '***beta*** some ResIPy features may not work properly.\n\n'
                                       'IMPORTANT: electrode labels MUST be imported and have "<line number> <electrode number>" format.')
         self.pseudo3DCheck.stateChanged.connect(pseudo3DFunc)
         if pvfound is False: # We can't (don't want to) have this feature without pyvista!!
@@ -4654,10 +4669,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             modErr=self.modErrCheck.isChecked()
             parallel=self.parallelCheck.isChecked()
             modelDOI=self.modelDOICheck.isChecked()
-            self.project.invert(iplot=False, dump=logTextFunc,
-                                modErr=modErr, parallel=parallel, modelDOI=modelDOI)
-            self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
-                str(modErr), str(parallel), str(modelDOI)))
+            if self.pseudo3DCheck.isChecked():
+                self.project.invertPseudo3D(iplot=False, dump=logTextFunc)
+            else:
+                self.project.invert(iplot=False, dump=logTextFunc,
+                                    modErr=modErr, parallel=parallel, modelDOI=modelDOI)
+                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
+                    str(modErr), str(parallel), str(modelDOI)))
             
             # replace the log by the R2.out
             with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
@@ -5799,10 +5817,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.tempElec = elec
                 elecList = None
                 if self.pseudo3DCheck.isChecked():
-                    elecList = self.project.split3DGrid(elec.copy()) # splitting lines
+                    elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
                     self.project.pseudo3DSurvey.elec = pd.concat(elecList, axis=0, ignore_index=True)
-                    self.project.updatePseudo3DSurvey(elecList)
-                    elecList = self.project.create2DLines(elecList) # convert to horizontal 2D lines
+                    self.project.updatePseudo3DSurvey()#elecList)
+                    elecList = self.project.create2DLines()#elecList) # convert to horizontal 2D lines
                 
                 self.project.setElec(elec, elecList)
                 self.writeLog('#k.setElec(elec)')

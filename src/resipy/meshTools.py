@@ -1099,7 +1099,7 @@ class Mesh:
         nmesh = self.copy()
         nmesh.elmCentre = ec 
         nmesh.connection = self.connection[i2keep,:]
-        nmesh.elm_id = np.arrange(1,self.numel+1)[i2keep]
+        nmesh.elm_id = np.arange(1,self.numel+1)[i2keep]
         #nmesh.cell_attributes = np.array(self.cell_attributes)[i2keep]
         
         df = self.df.copy()
@@ -1126,7 +1126,7 @@ class Mesh:
             
         Returns
         ------------
-        mesh: Class
+        nmesh: Class
             New instance of mesh class which is truncated 
         """
         if self.elec is not None:
