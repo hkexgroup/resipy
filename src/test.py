@@ -641,18 +641,20 @@ timings['dc-3d-timelapse'] = time.time() - t0
 
 #%% test pseudo 3D inversion
 k = Project(typ='R2')
-k.preparePseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
+k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
                  ftype='Syscal')
 # rotating middle electrodes line here
-rotmat = np.array([[np.cos(0.6), np.sin(0.6)], 
-                   [-np.sin(0.6), np.cos(0.6)]])
+rotmat = np.array([[np.cos(0.2), np.sin(0.2)], 
+                   [-np.sin(0.2), np.cos(0.2)]])
 xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
 newmat = np.dot(rotmat, xy).T
-k.elec.loc[24:47,'x'] = newmat[:,0].copy() + 2
-k.elec.loc[24:47,'y'] = newmat[:,1].copy() - 1
-
-k.createPseudo3DSurvey()
-k.createMultiMesh()
+elecTemp = k.elec.copy()
+elecTemp.loc[24:47,'x'] = newmat[:,0].copy()*0.6 + 2
+elecTemp.loc[24:47,'y'] = newmat[:,1].copy()*2 - 1
+elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
+k.pseudo3DSurvey.elec = elecTemp.copy()
+k.updatePseudo3DSurvey()
+k.createMultiMesh(typ='trian')
 # k.showPseudo3DMesh() # only works with pyvista - thus commented for test
 #%% print final summary information 
 for key in timings.keys():

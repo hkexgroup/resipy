@@ -9,8 +9,7 @@ ResIPy_version = '3.1.1' # ResIPy version (semantic versionning in use)
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
-import multiprocessing
-from copy import deepcopy
+# import multiprocessing
 
 # used to download the binaries
 import requests
@@ -295,7 +294,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.iBatch = False # to enable batch inversion
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.projs = [] # contains Instances of Project for pseudo 3D inversion from 2D lines
-        self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined - for visualization of pseudo sections 
+        self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -1129,8 +1128,8 @@ class Project(object): # Project master class instanciated by the GUI
 
 
 
-    def preparePseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
-        """Prepare a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
+    def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
+        """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
             THIS WILL NEED CORRECT ELECTRODE LAYOUT - DONE IN self.createPseudo3DSurvey()
         
         Parameters
@@ -1143,7 +1142,7 @@ class Project(object): # Project master class instanciated by the GUI
         ftype : str, optional
             Type of the survey to choose which parser to use.
         kwargs : -
-            Keyword arguments to be passed to self.createBatchSurvey()
+            Keyword arguments to be passed to Project.createBatchSurvey()
         """
         
         self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs)
@@ -1160,7 +1159,11 @@ class Project(object): # Project master class instanciated by the GUI
             dfList.append(s.df)
             directory = os.path.join(self.dirname, 'line{:d}'.format(i))
             os.mkdir(directory) # making separate inversion diectories
-            proj = self.runMultiProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            proj = self.createProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            try:
+                proj.createSurvey(fname=None, df=s.df, elec=e, **kwargs)
+            except:
+                pass
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
         elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
         dfm = pd.concat(dfList, axis=0, sort=False).reset_index(drop=True)
@@ -1170,27 +1173,30 @@ class Project(object): # Project master class instanciated by the GUI
         self.setElec(elec) # create initial electrodes df - to be populated later
         self.setBorehole(self.iBorehole)
         
+    
+    def setPseudo3DSurveyElec(self, elec, elecList):
+        pass
         
-    def createPseudo3DSurvey(self, elecList=None, **kwargs):
-        """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
-            ALL 2D LINES MUST HAVE PURE x LATERAL DISTANCE (y=0).
+    
+    def updatePseudo3DSurvey(self, elecList=None):
+        """Update a pseudo 3D survey based on 2D surveys. 
+            Cleaned data, updated electrodes will be inserted in each survey.
         
         Parameters
         ----------
         elecList : list of dataframes
             List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
-        kwargs : -
-            Keyword arguments to be passed to createSurvey()
         """
         if self.projs == []:
-            raise ValueError('Survey needs to be prepared first! use Project.preparePseudo3DSurvey()')
+            raise ValueError('Survey needs to be created first! use Project.createPseudo3DSurvey()')
             
         elecList = self.create2DLines(elecList)
-        
+
         for elecdf, proj, survey in zip(elecList, self.projs, self.surveys):
             survey.elec = elecdf.copy()
-            proj.createSurvey(fname=None, df=survey.df, elec=elecdf, **kwargs)
-                
+            proj.setElec(elecdf.copy())
+            proj.surveys[0].df = survey.df.copy()               
+
 
     def split3DGrid(self, elec=None):
         """Split self.elec to available lines based on 'label' 
@@ -1207,8 +1213,12 @@ class Project(object): # Project master class instanciated by the GUI
         elecList : list of dataframes
             List of electrodes dataframes - each df can have a 3D like XYZ.
         """
+        
         if elec is None:
-            elec = self.elec.copy()
+            if self.pseudo3DSurvey is not None:
+               elec =  self.pseudo3DSurvey.elec.copy()
+            else:
+               elec = self.elec.copy()
         elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
         elecGroups = elec.groupby('lineNum')
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
@@ -1275,18 +1285,10 @@ class Project(object): # Project master class instanciated by the GUI
             proj.createMesh(**kwargs)
         
             ########## FOR PARALLEL MESHING #####
-            # p = multiprocessing.Process(target=self.runMultiProject, kwargs=kwargs)
+            # p = multiprocessing.Process(target=self.createProject, kwargs=kwargs)
             # p.start()
             # p.join()
             #############################
-    
-    
-    def pseudo3DDataProcessing(self):
-        """Populated data (dfs data) of each proj in self.projs with processed data from self.surveys.
-            Assuming data cleanings are done in the main class/GUI.
-        """
-        for s, proj in zip(self.surveys, self.projs):
-            proj.surveys[0].df = s.df.copy()
     
     
     def _moveMesh(self, meshObject, elecLocal, elecGrid): # probably better to go to meshTools
@@ -1307,7 +1309,7 @@ class Project(object): # Project master class instanciated by the GUI
             Copy of moved Mesh class object.
         """
         
-        mesh = deepcopy(meshObject) # to preserve unmoved meshes for later use 
+        mesh = meshObject.copy() # to preserve unmoved meshes for later use
         xLocal = elecLocal['x'].copy().values
         xGrid = elecGrid['x'].copy().values
         # yLocal = elecLocal['y'].copy().values # not needed for 2D
@@ -1350,37 +1352,119 @@ class Project(object): # Project master class instanciated by the GUI
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
+        def findminmax(a):
+            mina = min(a) if min(a) != 0 else -1
+            maxa = max(a) if max(a) != 0 else +1
+            if mina == maxa:
+                mina -= 1
+                maxa += 1
+            return [mina, maxa]
+        
         try:
             import pyvista as pv
-        except Exception as e:
-            print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
+        except Exception:
+            print('ERROR: pyvista is needed to show pseudo 3D meshes. Use pip install pyvista')
             return
         
         if ax is None:
             ax = pv.Plotter()
             
         kwargs['pvshow'] = False # don't invoke show after each mesh added
-        elecList = self.split3DGrid()  # split the electrodes to lines in 3D space      
-        meshList = []
-        for proj, elecdf in zip(self.projs, elecList):
-            meshList.append(self._moveMesh(proj.mesh, proj.elec, elecdf))
-        # x, y, z limits    
-        matx = np.c_[[mesh.elec[:,0] for mesh in meshList]].T
-        kwargs['xlim'] = [np.min(matx)-1, np.max(matx)+1]
-        maty = np.c_[[mesh.elec[:,1] for mesh in meshList]].T
-        kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
-        matz = np.c_[[mesh.elec[:,2] for mesh in meshList]].T
-        kwargs['zlim'] = [np.min(matz)-1, np.max(matz)+1]
+        elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
+                
+        elec = []
+        for elecdf in elecList: # removing remote electrodes from 3D grid
+            elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
         
-        for mesh in meshList:
+        matx = np.c_[[elecarr[:,0] for elecarr in elec]].T
+        # kwargs['xlim'] = [np.min(matx)-1, np.max(matx)+1]
+        xlimi = [np.min(matx)-1, np.max(matx)+1]
+        maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
+        # kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
+        ylimi = [np.min(maty)-1, np.max(maty)+1]
+        for proj, elecdf in zip(self.projs, elecList):
+            if proj.mesh is None:
+                print('Mesh undefined for this project!')
+                continue
+            mesh = self._moveMesh(proj.mesh, proj.elec, elecdf)
+            elec = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
+            xlim = findminmax(elec[:,0])
+            ylim = findminmax(elec[:,1])
+            xlim = xlim if xlim[1] > xlimi[1] else xlimi
+            ylim = ylim if ylim[1] > ylimi[1] else ylimi
+            zlim = proj.zlim
             mesh.ndims = 3 # overwrite dimension to use show3D() method
-            mesh.show(ax=ax, color_map=color_map, color_bar=color_bar, darkMode=self.darkMode, **kwargs)
+            mesh.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
+                      ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
+
         ax.show() # call plotter.show()
     
     
+    def showPseudo3DInversion(self, ax=None, **kwargs):
+        """Show 2D Inversions in 3D view
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        color_map : str, optional
+            Name of the colormap to be used.
+        color_bar : Boolean, optional 
+            `True` to plot colorbar.
+        kwargs : -
+            Keyword arguments to be passed to Mesh.show() class.
+        """
+        def findminmax(a):
+            mina = min(a) if min(a) != 0 else -1
+            maxa = max(a) if max(a) != 0 else +1
+            if mina == maxa:
+                mina -= 1
+                maxa += 1
+            return [mina, maxa]
+        
+        try:
+            import pyvista as pv
+        except Exception:
+            print('ERROR: pyvista is needed to show pseudo 3D inversions. Use pip install pyvista')
+            return
+        
+        if ax is None:
+            ax = pv.Plotter()
+            
+        kwargs['pvshow'] = False # don't invoke show after each mesh added
+        elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
+                
+        elec = []
+        for elecdf in elecList: # removing remote electrodes from 3D grid
+            elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
+        
+        matx = np.c_[[elecarr[:,0] for elecarr in elec]].T
+        # kwargs['xlim'] = [np.min(matx)-1, np.max(matx)+1]
+        xlimi = [np.min(matx)-1, np.max(matx)+1]
+        maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
+        # kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
+        ylimi = [np.min(maty)-1, np.max(maty)+1]
+        for proj, elecdf in zip(self.projs, elecList):
+            if proj.meshResults[0] is None:
+                print('Mesh undefined for this project!')
+                continue
+            mesh = self._moveMesh(proj.meshResults[0], proj.elec, elecdf)
+            elec = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
+            xlim = findminmax(elec[:,0])
+            ylim = findminmax(elec[:,1])
+            xlim = xlim if xlim[1] > xlimi[1] else xlimi
+            ylim = ylim if ylim[1] > ylimi[1] else ylimi
+            zlim = proj.zlim
+            mesh.ndims = 3 # overwrite dimension to use show3D() method
+            mesh.show(ax=ax, ylim=ylim, xlim=xlim, zlim=zlim, **kwargs)
+            # mesh.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
+            #           ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
+
+        ax.show() # call plotter.show()
+    
     @classmethod
-    def runMultiProject(cls, dirname, invtyp='R2'):
-        """Create Project instances multiple times for future use of meshing and inversion.
+    def createProject(cls, dirname, invtyp='R2'):
+        """Create a Project instance for future use of meshing and inversion.
         
         Parameters
         ----------
@@ -2059,6 +2143,8 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D survey:
             if (len(self.surveys) > 0) & (self.iForward == False):
                 lookupDict = dict(zip(dfelec['label'], np.arange(dfelec.shape[0])))
+                self.lookupTest = lookupDict
+                self.elecbTest = elec
                 array = self.surveys[0].df[['a','b','m','n']].replace(lookupDict).values.copy().astype(int) # strings don't have max/min
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
                 self.fmd = (1/3)*maxDist
@@ -3394,34 +3480,31 @@ class Project(object): # Project master class instanciated by the GUI
                 if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys
-                try:
-                    import pyvista as pv
-                except Exception as e:
-                    print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
-                    return
-                if ax is None:
-                    ax = pv.Plotter()
-                kwargs['pvshow'] = False # don't invoke show after each mesh added
-                # check if all Y columns are identicql
-                maty = np.c_[[m.elec[:,1] for m in self.meshResults]].T
-                a = False
-                if any([len(t) == 1 for t in np.unique(maty, axis=1)]):
-                    a = True
-                    kwargs['ylim'] = [-1, len(self.meshResults)*1+1] # *1 because 1 m spacing by default
-                else:
-                    kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
-                for i, mesh in enumerate(self.meshResults):
-                    if a is True:
-                        # NOTE: this modification will stay in future survey
-                        mesh.elec[:,1] = i+1 # artificially separate them by 1 m (maybe make it variable of survey length?)
-                        mesh.node[:,1] = i+1
-                    mesh.ndims = 3 # overwrite dimension to use show3D() method
-                    mesh.show(ax=ax, edge_color=edge_color,
-                        attr=attr, color_map=color_map, clabel=clabel,
-                        zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
-                        pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
-                        pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
-                ax.show() # call plotter.show()
+                # try:
+                #     import pyvista as pv
+                # except Exception as e:
+                #     print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
+                #     return
+                # if ax is None:
+                #     ax = pv.Plotter()
+                # kwargs['pvshow'] = False # don't invoke show after each mesh added
+                # # check if all Y columns are identicql
+                # maty = np.c_[[m.elec[:,1] for m in self.meshResults]].T
+                # a = False
+                # if any([len(t) == 1 for t in np.unique(maty, axis=1)]):
+                #     a = True
+                #     kwargs['ylim'] = [-1, len(self.meshResults)*1+1] # *1 because 1 m spacing by default
+                # else:
+                #     kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
+                for mesh, proj in zip(self.meshResults, self.projs):
+                    proj.meshResults[0] = mesh.copy()
+                # mesh.ndims = 3 # overwrite dimension to use show3D() method
+                self.showPseudo3DInversion(edge_color=edge_color,
+                    attr=attr, color_map=color_map, clabel=clabel,
+                    zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
+                    pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+                    pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
+                # ax.show() # call plotter.show()
             else: # 3D case
                 if zlim is None:
                     zlim = self.zlim
