@@ -649,13 +649,16 @@ rotmat = np.array([[np.cos(0.2), np.sin(0.2)],
 xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
 newmat = np.dot(rotmat, xy).T
 elecTemp = k.elec.copy()
+elecTemp.loc[0:23, 'y'] = 1
 elecTemp.loc[24:47,'x'] = newmat[:,0].copy()*0.6 + 2
 elecTemp.loc[24:47,'y'] = newmat[:,1].copy()*2 - 1
 elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
 k.pseudo3DSurvey.elec = elecTemp.copy()
 k.updatePseudo3DSurvey()
 k.createMultiMesh(typ='trian')
-# k.showPseudo3DMesh() # only works with pyvista - thus commented for test
+# k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
+k.invertPseudo3D()
+# k.showResults(index=-1) # only works with pyvista - thus commented for test
 #%% print final summary information 
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
