@@ -1107,7 +1107,7 @@ class Mesh:
         del nmesh.df['index']
         nmesh.numel = np.sum(i2keep)
         
-        nmesh.__rmexcessNodes         
+        nmesh.__rmexcessNodes()         
         return nmesh
         
     # return a truncated mesh (for 3D)
@@ -1889,7 +1889,7 @@ class Mesh:
         
         Plotting sensitivies using sens=True is not reccomended. The matplotlib renderer has trouble with it. 
         """
-        print('+++', self.node[:,1])
+        # print('+++', self.node[:,1])
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
         
