@@ -1088,63 +1088,63 @@ class App(QMainWindow):
                 self.restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 val = float(self.lineSpacing.text())
-                # try:
-                self.loadingWidget('Loading data, please wait...', False)
-                self.project.createPseudo3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
-                self.writeLog('k.createPseudo3DSurvey({:s}, lineSpacing={:s}, ftype="{:s}", parser={:s})'.format(
-                    str(fnames), str(val), self.ftype, str(self.parser)))
-                self.infoDump('Pseudo 3D survey from 2D lines created.')
-                self.ipCheck.setEnabled(True)
-                self.psContourCheck.setEnabled(True)
-                self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
-                if 'magErr' in self.project.pseudo3DSurvey.df.columns:
-                    self.a_wgt.setText('0.0')
-                    self.b_wgt.setText('0.0')
-                self.importDataRecipBtn.hide()
-                self.fnamesCombo.clear()
-                self.psContourCheck.setEnabled(True)
-                for s in self.project.surveys:
-                    self.fnamesCombo.addItem(s.name)
-                    self.errFitPlotIndexList.append(0)
-                    self.iperrFitPlotIndexList.append(0)
-                self.errorCombosShow(True)
-                errorCombosFill(self.prepFnamesComboboxes)
-                self.fnamesCombo.show()
-                self.fnamesComboLabel.show()
-                self.elecTable.initTable(self.project.elec)
-                self.tabImporting.setTabEnabled(1,True)
-                if all(self.project.pseudo3DSurvey.df['irecip'].values == 0): # enabling some filtering capacities
-                    self.recipOrNoRecipShow(recipPresence=False)
-                else:
-                    self.recipOrNoRecipShow(recipPresence=True)
-                    self.tabPreProcessing.setTabEnabled(2, True)
-                    self.filterAttrCombo.addItem('Reciprocal Error')
-                    self.plotError()
-                    self.errHist()
-                self.plotManualFiltering()
-                if 'dev' in self.project.pseudo3DSurvey.df.columns:
-                    self.filterAttrCombo.addItem('Stacking Error (Dev.)')
-                if 'ip' in self.project.pseudo3DSurvey.df.columns:
-                    if np.sum(self.project.pseudo3DSurvey.df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
-                        self.ipCheck.setChecked(True)
-                    if self.ftype == 'Syscal':
-                        self.dcaButton.setEnabled(True)
-                        self.dcaProgress.setEnabled(True)               
-                self.loadingWidget(exitflag=True)
-                self.plotPseudo()
-                self.invNowBtn.setEnabled(True)
-                self.activateTabs(True)
-                self.nbElecEdit.setText(str(self.project.elec.shape[0]))
-                self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
-                self.fnamesCombo.hide()
-                self.fnamesComboLabel.hide()
-                self.updateElec()
-                if np.isnan(self.project.elec[['x','y','z']].values).any():
-                    self.topoInterpBtnFunc()
-                # except Exception as e:
-                #     self.loadingWidget(exitflag=True)
-                #     print('Error in createPseudo3DFunc(): ', e)
-                #     self.errorDump('File format is not recognized or not all files have similar format!')
+                try:
+                    self.loadingWidget('Loading data, please wait...', False)
+                    self.project.createPseudo3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    self.writeLog('k.createPseudo3DSurvey({:s}, lineSpacing={:s}, ftype="{:s}", parser={:s})'.format(
+                        str(fnames), str(val), self.ftype, str(self.parser)))
+                    self.infoDump('Pseudo 3D survey from 2D lines created.')
+                    self.ipCheck.setEnabled(True)
+                    self.psContourCheck.setEnabled(True)
+                    self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
+                    if 'magErr' in self.project.pseudo3DSurvey.df.columns:
+                        self.a_wgt.setText('0.0')
+                        self.b_wgt.setText('0.0')
+                    self.importDataRecipBtn.hide()
+                    self.fnamesCombo.clear()
+                    self.psContourCheck.setEnabled(True)
+                    for s in self.project.surveys:
+                        self.fnamesCombo.addItem(s.name)
+                        self.errFitPlotIndexList.append(0)
+                        self.iperrFitPlotIndexList.append(0)
+                    self.errorCombosShow(True)
+                    errorCombosFill(self.prepFnamesComboboxes)
+                    self.fnamesCombo.show()
+                    self.fnamesComboLabel.show()
+                    self.elecTable.initTable(self.project.elec)
+                    self.tabImporting.setTabEnabled(1,True)
+                    if all(self.project.pseudo3DSurvey.df['irecip'].values == 0): # enabling some filtering capacities
+                        self.recipOrNoRecipShow(recipPresence=False)
+                    else:
+                        self.recipOrNoRecipShow(recipPresence=True)
+                        self.tabPreProcessing.setTabEnabled(2, True)
+                        self.filterAttrCombo.addItem('Reciprocal Error')
+                        self.plotError()
+                        self.errHist()
+                    self.plotManualFiltering()
+                    if 'dev' in self.project.pseudo3DSurvey.df.columns:
+                        self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                    if 'ip' in self.project.pseudo3DSurvey.df.columns:
+                        if np.sum(self.project.pseudo3DSurvey.df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            self.ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            self.dcaButton.setEnabled(True)
+                            self.dcaProgress.setEnabled(True)               
+                    self.loadingWidget(exitflag=True)
+                    self.plotPseudo()
+                    self.invNowBtn.setEnabled(True)
+                    self.activateTabs(True)
+                    self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                    self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+                    self.fnamesCombo.hide()
+                    self.fnamesComboLabel.hide()
+                    self.updateElec()
+                    if np.isnan(self.project.elec[['x','y','z']].values).any():
+                        self.topoInterpBtnFunc()
+                except Exception as e:
+                    self.loadingWidget(exitflag=True)
+                    print('Error in createPseudo3DFunc(): ', e)
+                    self.errorDump('File format is not recognized or not all files have similar format!')
             
         
         def create3DFunc():
@@ -1722,13 +1722,13 @@ class App(QMainWindow):
             # df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
             # df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
             
-            # try:
-            self.project.generateElec(nb, dx, dz, nline, lineSpacing)
-            self.writeLog('k.generateElec(nb={:s},dx={:s},dz={:s},nline={:s},lineSpacing={:s})'.format(
-            str(nb), str(dx), str(dz), str(nline), str(lineSpacing)))
-            self.elecTable.initTable(self.project.elec)
-            # except Exception as e:
-            #     self.errorDump(e)
+            try:
+                self.project.generateElec(nb, dx, dz, nline, lineSpacing)
+                self.writeLog('k.generateElec(nb={:s},dx={:s},dz={:s},nline={:s},lineSpacing={:s})'.format(
+                str(nb), str(dx), str(dz), str(nline), str(lineSpacing)))
+                self.elecTable.initTable(self.project.elec)
+            except Exception as e:
+                self.errorDump(e)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -4671,26 +4671,40 @@ combination of multiple sequence is accepted as well as importing a custom seque
             modelDOI=self.modelDOICheck.isChecked()
             if self.pseudo3DCheck.isChecked():
                 self.project.invertPseudo3D(iplot=False, dump=logTextFunc)
+                
+                ####### TODO: write a func and put it in invertPseudo3D()
+                # replace the log by the R2.out
+                with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
+                    text = f.read()
+                self.logText.setText(text)
+                self.project.proc = None
+                
+                # check if we don't have a fatal error
+                if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
+                    self.end = False
+                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+                ########
+                
             else:
                 self.project.invert(iplot=False, dump=logTextFunc,
                                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
                 self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
                     str(modErr), str(parallel), str(modelDOI)))
             
-            # replace the log by the R2.out
-            with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
-                text = f.read()
-            self.logText.setText(text)
-            self.project.proc = None
-            
-            # check if we don't have a fatal error
-            if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
-                self.end = False
-                self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
-            
-            if any(self.project.mesh.df['param'] == 0): # if fixed element are present, the mesh
-            # will be sorted, meaning we need to replot it
-                self.mwMesh.replot()
+                # replace the log by the R2.out
+                with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
+                    text = f.read()
+                self.logText.setText(text)
+                self.project.proc = None
+                
+                # check if we don't have a fatal error
+                if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
+                    self.end = False
+                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+                
+                if any(self.project.mesh.df['param'] == 0): # if fixed element are present, the mesh
+                # will be sorted, meaning we need to replot it
+                    self.mwMesh.replot()
             
             # show results
             if self.end is True:
@@ -6191,7 +6205,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pvgrid = self.displayParams['pvgrid']
         pvcontour = self.displayParams['pvcontour']
         aspect = self.displayParams['aspect']
-        if self.project.typ[-1] == '2':
+        if self.project.typ[-1] == '2' and self.pseudo3DCheck.isChecked() is False:
             self.mwInv.replot(threed=False, aspect=aspect,
                               index=index, edge_color=edge_color,
                               contour=contour, sens=sens, attr=attr,
@@ -6223,6 +6237,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
             #                                   pvthreshold=pvthreshold,
             #                                   pvgrid=pvgrid,
             #                                   pvcontour=pvcontour)
+            
+            if self.project.pseudo3DSurvey is not None: # pseudo 3D survey
+                index = -1
 
             self.project.showResults(index=index, ax=self.vtkWidget, attr=attr,
                                               edge_color=edge_color, vmin=vmin,
@@ -6243,7 +6260,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invtabs.setCurrentIndex(1) # show tab
         self.invtabs.setTabEnabled(1, True)
         self.invtabs.setTabEnabled(2, True)
-        if self.project.typ[-1] == '2':
+        if self.project.typ[-1] == '2' and self.pseudo3DCheck.isChecked() is False:
             self.showStackedLayout.setCurrentIndex(0)
 #                    maxDepth = self.project.fmd if self.cropBelowFmd.isChecked() else None
             self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))

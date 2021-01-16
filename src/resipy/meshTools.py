@@ -27,6 +27,7 @@ import matplotlib.path as mpath
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import cKDTree
+from copy import deepcopy
 #import R2gui API packages 
 import resipy.gmshWrap as gw
 from resipy.sliceMesh import sliceMesh # mesh slicing function
@@ -334,27 +335,29 @@ class Mesh:
     def copy(self):
         """Return a copy of mesh object. 
         """
-        mesh = Mesh(self.node[:,0],
-                    self.node[:,1],
-                    self.node[:,2],
-                    self.connection,
-                    self.cell_type,
-                    self.originalFilePath,
-                    order_nodes=False,# should be already ordered
-                    compute_centre=False,# should be already computed 
-                    check2D=False)# should be already computed 
-        mesh.elmCentre = self.elmCentre
-        mesh.df = self.df.copy()
+        mesh = deepcopy(self) # better way!
         
-        #electrode handling
-        try:
-            mesh.eNodes = self.eNodes
-            if self.eNodes is not None:
-                mesh.setElecNode(self.eNodes)
-        except:
-            pass
-        mesh.iremote = self.iremote
-        mesh.zone = self.zone
+        # mesh = Mesh(self.node[:,0],
+        #             self.node[:,1],
+        #             self.node[:,2],
+        #             self.connection,
+        #             self.cell_type,
+        #             self.originalFilePath,
+        #             order_nodes=False,# should be already ordered
+        #             compute_centre=False,# should be already computed 
+        #             check2D=False)# should be already computed 
+        # mesh.elmCentre = self.elmCentre
+        # mesh.df = self.df.copy()
+        
+        # #electrode handling
+        # try:
+        #     mesh.eNodes = self.eNodes
+        #     if self.eNodes is not None:
+        #         mesh.setElecNode(self.eNodes)
+        # except:
+        #     pass
+        # mesh.iremote = self.iremote
+        # mesh.zone = self.zone
         
         return mesh 
     
