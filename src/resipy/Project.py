@@ -1149,7 +1149,6 @@ class Project(object): # Project master class instanciated by the GUI
     
         elecList = []
         dfList = []
-        self.sdfTest = []
         for i, s in enumerate(self.surveys):
             directory = os.path.join(self.dirname, 'line{:d}'.format(i))
             os.mkdir(directory) # making separate inversion diectories
@@ -2130,8 +2129,6 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'): # 2D survey:
             if (len(self.surveys) > 0) & (self.iForward == False):
                 lookupDict = dict(zip(dfelec['label'], np.arange(dfelec.shape[0])))
-                self.lookupTest = lookupDict
-                self.elecbTest = elec
                 array = self.surveys[0].df[['a','b','m','n']].replace(lookupDict).values.copy().astype(int) # strings don't have max/min
                 maxDist = np.max(np.abs(elec[array[:,0]-np.min(array[:,0]),0] - elec[array[:,2]-np.min(array[:,2]),0])) # max dipole separation
                 self.fmd = (1/3)*maxDist
