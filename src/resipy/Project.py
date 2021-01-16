@@ -9,7 +9,6 @@ ResIPy_version = '3.1.1' # ResIPy version (semantic versionning in use)
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
-from copy import deepcopy
 # import multiprocessing
 
 # used to download the binaries
@@ -1290,7 +1289,7 @@ class Project(object): # Project master class instanciated by the GUI
         for proj in self.projs:
             proj.createMesh(**kwargs)
         
-            ########## FOR PARALLEL MESHING #####
+            ########## FOR PARALLEL MESHING ##### Although meshing is pretty fast anyway!
             # p = multiprocessing.Process(target=self.createProject, kwargs=kwargs)
             # p.start()
             # p.join()
@@ -1315,7 +1314,7 @@ class Project(object): # Project master class instanciated by the GUI
             Copy of moved Mesh class object.
         """
         
-        mesh = deepcopy(meshObject) # to preserve unmoved meshes for later use - for some reason Mesh.copy() returns None here!!
+        mesh = meshObject.copy() # to preserve unmoved meshes for later use
         xLocal = elecLocal['x'].copy().values
         xGrid = elecGrid['x'].copy().values
         yGrid = elecGrid['y'].copy().values
@@ -1342,7 +1341,7 @@ class Project(object): # Project master class instanciated by the GUI
         return mesh   
     
     
-    def showPseudo3DMesh(self, ax=None, color_map='Greys', 
+    def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
                          cropMesh=True, color_bar=False, **kwargs):
         """Show 2D meshes in 3D view
         
@@ -1374,10 +1373,14 @@ class Project(object): # Project master class instanciated by the GUI
             print('ERROR: pyvista is needed to show pseudo 3D meshes. Use pip install pyvista')
             return
         
+        if meshList is None:
+            meshList = [p.mesh.copy() for p in self.projs]
+        
         if ax is None:
             ax = pv.Plotter()
             
         kwargs['pvshow'] = False # don't invoke show after each mesh added
+        
         elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
                 
         elec = []
@@ -1385,15 +1388,14 @@ class Project(object): # Project master class instanciated by the GUI
             elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
         
         matx = np.c_[[elecarr[:,0] for elecarr in elec]].T
-        xlimi = findminmax(matx)#[np.min(matx)-1, np.max(matx)+1]
+        xlimi = findminmax(matx)
         maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
-        ylimi = findminmax(maty)#[np.min(maty)-1, np.max(maty)+1]
-        for proj, elecdf in zip(self.projs, elecList):
-            if proj.mesh is None:
+        ylimi = findminmax(maty)
+        for proj, elecdf, mesh in zip(self.projs, elecList, meshList):
+            if mesh is None:
                 print('Mesh undefined for this project!')
                 continue
             
-            mesh = deepcopy(proj.mesh) # don't mess with projects meshes! - Mesh.copy() returns None randomly
             if cropMesh:
                 emin = mesh.elec[np.argmin(mesh.elec[:,0][~mesh.iremote])]
                 emax = mesh.elec[np.argmax(mesh.elec[:,0][~mesh.iremote])]
@@ -1421,88 +1423,32 @@ class Project(object): # Project master class instanciated by the GUI
         ax.show() # call plotter.show()
     
     def invertPseudo3D(self, **kwargs):
-        """Run non-parallel inversion - modofocations needed"""
+        """Run non-parallel inversion - modifications needed
         
+        Parameters
+        ----------
+        kwargs : -
+            Keyword arguments to be passed to invert().
+        """
         for proj in self.projs:
             proj.invert(**kwargs)
-            self.meshResults.append(proj.meshResults[0])
+            self.meshResults.append(proj.meshResults[0].copy())
 
     
-    # def showPseudo3DInversion(self, ax=None, cropMesh=False, **kwargs):
-    def showPseudo3DInversion(self, **kwargs):
+    def showPseudo3DResults(self, **kwargs):
         """Show 2D Inversions in 3D view
         
         Parameters
         ----------
-        ax : matplotlib axis, optional
-            If specified, graph will be plotted on the given axis.
-        cropMesh : bool, optional
-            If True, 2D mesh will be bound to electrodes and zlim.
-            
         kwargs : -
-            Keyword arguments to be passed to Mesh.show() class.
+            Keyword arguments to be passed to showPseudo3DMesh().
         """
-        self.showPseudo3DMesh(color_bar=True, cropMesh=False, **kwargs)
-        # def findminmax(a):
-        #     mina = np.min(a) if np.min(a) != 0 else -1
-        #     maxa = np.max(a) if np.max(a) != 0 else +1
-        #     if mina == maxa:
-        #         mina -= 1
-        #         maxa += 1
-        #     return [mina, maxa]
-        # try:
-        #     import pyvista as pv
-        # except Exception:
-        #     print('ERROR: pyvista is needed to show pseudo 3D inversions. Use pip install pyvista')
-        #     return
+        if self.meshResults == []:
+            meshResults = [p.meshResults[0].copy() for p in self.projs]
+        else:
+            meshResults = self.meshResults.copy()
+        self.showPseudo3DMesh(color_bar=True, cropMesh=False, meshList=meshResults, **kwargs)
         
-        # if ax is None:
-        #     ax = pv.Plotter()
-            
-        # kwargs['pvshow'] = False # don't invoke show after each mesh added
-        # elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
-                
-        # elec = []
-        # for elecdf in elecList: # removing remote electrodes from 3D grid
-        #     elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
-        
-        # matx = np.c_[[elecarr[:,0] for elecarr in elec]].T
-        # xlimi = findminmax(matx)#[np.min(matx)-1, np.max(matx)+1]
-        # maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
-        # ylimi = findminmax(maty)#[np.min(maty)-1, np.max(maty)+1]
-        # for proj, elecdf in zip(self.projs, elecList):
-        #     if proj.mesh is None:
-        #         print('Mesh undefined for this project!')
-        #         continue
-            
-        #     mesh = deepcopy(proj.meshResults[0]) # don't mess with projects meshes! - Mesh.copy() returns None randomly
-        #     if cropMesh:
-        #         emin = mesh.elec[np.argmin(mesh.elec[:,0][~mesh.iremote])]
-        #         emax = mesh.elec[np.argmax(mesh.elec[:,0][~mesh.iremote])]
-        #         zbot = proj.zlim[0]
-        #         polyline = np.array([[emin[0], emin[2]],
-        #                              [emax[0], emax[2]],
-        #                              [emax[0], zbot],
-        #                              [emin[0], zbot],
-        #                              [emin[0], emin[2]]])
-        #         mesh = mesh.crop(polyline)
-                
-        #     meshMoved = self._moveMesh(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
-
-        #     elec = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
-        #     xlim = findminmax(elec[:,0])
-        #     ylim = findminmax(elec[:,1])
-        #     xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
-        #     ylim[0] = ylim[0] if ylim[0] < ylimi[0] else ylimi[0]
-        #     xlim[1] = xlim[1] if xlim[1] > xlimi[1] else xlimi[1]
-        #     ylim[1] = ylim[1] if ylim[1] > ylimi[1] else ylimi[1]
-        #     zlim = proj.zlim
-        #     meshMoved.ndims = 3 # overwrite dimension to use show3D() method
-        #     meshMoved.show(ax=ax, ylim=ylim, xlim=xlim, zlim=zlim, **kwargs)
-        #     # mesh.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
-        #     #           ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
-
-        # ax.show() # call plotter.show()
     
     @classmethod
     def createProject(cls, dirname, invtyp='R2'):
@@ -1520,7 +1466,6 @@ class Project(object): # Project master class instanciated by the GUI
         -------
         ProjInstance : Instance of Project class
         """
-
         ProjInstance = cls(dirname=dirname, typ=invtyp)
         ProjInstance.dirname = dirname
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
@@ -3522,31 +3467,11 @@ class Project(object): # Project master class instanciated by the GUI
                 if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys
-                # try:
-                #     import pyvista as pv
-                # except Exception as e:
-                #     print('ERROR: pyvista is needed to use index == -1; pip install pyvista')
-                #     return
-                # if ax is None:
-                #     ax = pv.Plotter()
-                # kwargs['pvshow'] = False # don't invoke show after each mesh added
-                # # check if all Y columns are identicql
-                # maty = np.c_[[m.elec[:,1] for m in self.meshResults]].T
-                # a = False
-                # if any([len(t) == 1 for t in np.unique(maty, axis=1)]):
-                #     a = True
-                #     kwargs['ylim'] = [-1, len(self.meshResults)*1+1] # *1 because 1 m spacing by default
-                # else:
-                #     kwargs['ylim'] = [np.min(maty)-1, np.max(maty)+1]
-                # for meshResult, proj in zip(self.meshResults, self.projs):
-                #     proj.meshResults[0] = meshResult.copy()
-                # mesh.ndims = 3 # overwrite dimension to use show3D() method
-                self.showPseudo3DInversion(edge_color=edge_color,
+                self.showPseudo3DResults(edge_color=edge_color,
                     attr=attr, color_map=color_map, clabel=clabel,
                     use_pyvista=use_pyvista, background_color=background_color,
                     pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
                     pvcontour=pvcontour, **kwargs)
-                # ax.show() # call plotter.show()
             else: # 3D case
                 if zlim is None:
                     zlim = self.zlim
