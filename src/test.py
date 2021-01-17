@@ -657,7 +657,7 @@ k.pseudo3DSurvey.elec = elecTemp.copy()
 k.updatePseudo3DSurvey()
 k.createMultiMesh(typ='trian')
 # k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
-k.invertPseudo3D()
+k.invertPseudo3D(runParallel=True)
 # k.showResults(index=-1) # only works with pyvista - thus commented for test
 #%% print final summary information 
 for key in timings.keys():
