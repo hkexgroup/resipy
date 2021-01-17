@@ -9,6 +9,7 @@ ResIPy_version = '3.1.1' # ResIPy version (semantic versionning in use)
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
+from copy import deepcopy
 # import multiprocessing
 
 # used to download the binaries
@@ -294,6 +295,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.iBatch = False # to enable batch inversion
         self.meshResults = [] # contains vtk mesh object of inverted section
         self.projs = [] # contains Instances of Project for pseudo 3D inversion from 2D lines
+        self.projectPseudo3D = None # updates iteratively - for showing pseudo 3D inversion iterations, killing, etc.
+        self.pseudo3DBreakFlag = False # flag to cancel inversions in a chain (pseudo3D only)
         self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
@@ -1118,15 +1121,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
-        
 
-
-
-
-
-#################################################################
-
-
+##################### Handling Pseudo 3D     BEGIN     ############################
 
     def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
         """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
@@ -1145,29 +1141,24 @@ class Project(object): # Project master class instanciated by the GUI
             Keyword arguments to be passed to Project.createBatchSurvey()
         """
         
-        self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs)
+        self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs) # We need surveys in the master Project for data procesing (error modeling, etc.)
     
         elecList = []
         dfList = []
         for i, s in enumerate(self.surveys):
-            directory = os.path.join(self.dirname, 'line{:d}'.format(i))
+            directory = os.path.join(self.dirname, s.name)
             os.mkdir(directory) # making separate inversion diectories
             proj = self.createProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
-            proj.createSurvey(fname=None, df=s.df, elec=s.elec, **kwargs)
+            proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec, **kwargs)
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
-            
             e = s.elec.copy()
             e.loc[:, 'y'] = i*lineSpacing
             prefix = '{:d} '.format(i+1)
             e.loc[:, 'label'] = prefix + e['label']
             elecList.append(e)
             df = s.df.copy()
-            # s.df.loc[:,['a','b','m','n']] = prefix + s.df[['a','b','m','n']]
             df.loc[:,['a','b','m','n']] = prefix + df[['a','b','m','n']]
-            
-            # dfList.append(s.df)
             dfList.append(df)
-            
             
         elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
         dfm = pd.concat(dfList, axis=0, sort=False).reset_index(drop=True)
@@ -1284,60 +1275,15 @@ class Project(object): # Project master class instanciated by the GUI
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
         """
-        self.mesh = 'Not None' # just to stop creating a mesh from actual project
         for proj in self.projs:
             proj.createMesh(**kwargs)
+            self.mesh = proj.mesh # just to have a populated mesh in master Project!
         
             ########## FOR PARALLEL MESHING ##### Although meshing is pretty fast anyway!
             # p = multiprocessing.Process(target=self.createProject, kwargs=kwargs)
             # p.start()
             # p.join()
-            #############################
-    
-    
-    def _moveMesh(self, meshObject, elecLocal, elecGrid): # probably better to go to meshTools
-        """Move mesh object to a certain place in the grid.
-        
-        Parameters
-        ----------
-        meshObject : class object
-            Mesh class object.
-        elecLocal: dataframe
-            dataframe of electrodes on local 2D grid (i.e., y = 0)
-        elecGrid: dataframe
-            dataframe of electrodes on 3D grid (i.e., y != 0)
-        
-        Returns
-        -------
-        mesh : class object
-            Copy of moved Mesh class object.
-        """
-        
-        mesh = meshObject.copy() # to preserve unmoved meshes for later use
-        xLocal = elecLocal['x'].copy().values
-        xGrid = elecGrid['x'].copy().values
-        yGrid = elecGrid['y'].copy().values
-        if np.all(xGrid == xGrid[0]): # line is vertical - x is constant
-            mesh.elec[:,0] = np.ones_like(xLocal) * xGrid[0]
-            mesh.elec[:,1] = xLocal + yGrid[0]
-            mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
-            mesh.node[:,0] = np.zeros_like(mesh.node[:,0]) + xGrid[0]
-
-        elif np.all(yGrid == yGrid[0]): # line is horizontal - y is constant
-            mesh.elec[:,0] = xLocal + xGrid[0]
-            mesh.elec[:,1] = np.ones_like(xLocal) * yGrid[0]
-            mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
-            mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
-            
-        else: 
-            mx = np.polyfit(xLocal,xGrid,1)
-            my = np.polyfit(xGrid, yGrid,1)
-            mesh.elec[:,0] = mx[0] * xLocal + mx[1]
-            mesh.elec[:,1] = my[0] * xGrid + my[1]
-            mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
-            mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
-
-        return mesh   
+            #############################   
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
@@ -1350,6 +1296,8 @@ class Project(object): # Project master class instanciated by the GUI
             If specified, graph will be plotted on the given axis.
         color_map : str, optional
             Name of the colormap to be used.
+        meshList : list of Mesh classes
+            If not None, pseudo 3D meshes will be plotted by default.
         cropMesh : bool, optional
             If True, 2D mesh will be bound to electrodes and zlim.
         color_bar : Boolean, optional 
@@ -1373,7 +1321,7 @@ class Project(object): # Project master class instanciated by the GUI
             return
         
         if meshList is None:
-            meshList = [p.mesh.copy() for p in self.projs]
+            meshList = [deepcopy(p.mesh) for p in self.projs]
         
         if ax is None:
             ax = pv.Plotter()
@@ -1405,12 +1353,17 @@ class Project(object): # Project master class instanciated by the GUI
                                      [emin[0], zbot],
                                      [emin[0], emin[2]]])
                 mesh = mesh.crop(polyline)
+                limits = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
+            else:
+                limits = np.c_[mesh.node[:,0], mesh.node[:,1]]
                 
-            meshMoved = self._moveMesh(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
+            meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
 
-            elec = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
-            xlim = findminmax(elec[:,0])
-            ylim = findminmax(elec[:,1])
+            # elec = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
+            # xlim = findminmax(elec[:,0])
+            # ylim = findminmax(elec[:,1])
+            xlim = findminmax(limits[:,0])
+            ylim = findminmax(limits[:,1])
             xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
             ylim[0] = ylim[0] if ylim[0] < ylimi[0] else ylimi[0]
             xlim[1] = xlim[1] if xlim[1] > xlimi[1] else xlimi[1]
@@ -1421,32 +1374,78 @@ class Project(object): # Project master class instanciated by the GUI
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
         ax.show() # call plotter.show()
     
-    def invertPseudo3D(self, **kwargs):
+    
+    def _setPseudo3DParam(self, targetProjParams):
+        """Set params from master Project to a target Project.
+            IMPORTANT: some params (e.g., mesh, reg0, etc. are excluded)
+        
+        Parameters
+        ----------
+        targetProjParams : dict
+            Target Project instance params
+        
+        Returns
+        -------
+        targetProjParams : dict
+            Target Project instance params are set from self (master Project)
+        """
+        keys = ['num_xz_poly', 'num_xy_poly','a_wgt', 'b_wgt', 'lineTitle', 'job_type',  
+                'flux_type', 'singular_type', 'res_matrix', 'scale', 'patch_x', 'patch_z',
+                'inverse_type', 'target_decrease', 'qual_ratio', 'data_type', 'zmin', 'zmax',
+                'reg_mode', 'tolerance', 'max_iter', 'error_mod', 'alpha_aniso',
+                'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type']
+        
+        for key in keys:
+            if key in self.param.keys():
+                targetProjParams[key] = self.param[key]
+        if 'node_elec' in self.param:
+            targetProjParams['node_elec'] = [self.param['node_elec'][0].tolist(),
+                                    self.param['node_elec'][1].tolist()]
+        if 'xz_poly_table' in self.param:
+            targetProjParams['xz_poly_table'] = self.param['xz_poly_table'].tolist()
+        if 'xy_poly_table' in self.param:
+            targetProjParams['xy_poly_table'] = self.param['xy_poly_table'].tolist()
+        
+        return targetProjParams
+    
+    
+    def invertPseudo3D(self, invLog=None, **kwargs):
         """Run non-parallel inversion - modifications needed
         
         Parameters
         ----------
+        invLog : function, optional
+            Passes project inversion outputs.
         kwargs : -
             Keyword arguments to be passed to invert().
         """
-        for proj in self.projs:
-            proj.invert(**kwargs)
-            self.meshResults.append(proj.meshResults[0].copy())
+        self.meshResults = [] # clean meshResults list
+        for proj, survey in zip(self.projs, self.surveys):
+            proj.param = self._setPseudo3DParam(proj.param) 
+            self.projectPseudo3D = proj # we want to be able to kill it in the UI
+            if self.pseudo3DBreakFlag is True: # TODO: why kill is not working?
+                break
+            self.projectPseudo3D.invert(**kwargs)
+            if invLog is not None:
+                invLog(self.projectPseudo3D.dirname, self.projectPseudo3D.typ)
+            
+            self.meshResults.append(deepcopy(self.projectPseudo3D.meshResults[0]))
+            survey.df = self.projectPseudo3D.surveys[0].df.copy() # to populate inversion error outputs
+            survey.dfInvErrOutputOrigin = survey.df.copy()
 
     
-    def showPseudo3DResults(self, **kwargs):
+    def showPseudo3DResults(self, cropMesh=False, **kwargs):
         """Show 2D Inversions in 3D view
         
         Parameters
         ----------
+        cropMesh : bool, optional
+            If True, 2D mesh will be bound to electrodes and zlim.
         kwargs : -
             Keyword arguments to be passed to showPseudo3DMesh().
         """
-        if self.meshResults == []:
-            meshResults = [p.meshResults[0].copy() for p in self.projs]
-        else:
-            meshResults = self.meshResults.copy()
-        self.showPseudo3DMesh(color_bar=True, cropMesh=False, meshList=meshResults, **kwargs)
+        meshResults = [deepcopy(p.meshResults[0]) for p in self.projs]
+        self.showPseudo3DMesh(color_bar=True, cropMesh=cropMesh, meshList=meshResults, **kwargs)
         
     
     @classmethod
@@ -1469,18 +1468,8 @@ class Project(object): # Project master class instanciated by the GUI
         ProjInstance.dirname = dirname
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
         return ProjInstance
-    
 
-
-
-
-
-#################################################################
-
-
-
-        
-
+##################### Handling Pseudo 3D     END     ############################
 
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
@@ -3433,7 +3422,10 @@ class Project(object): # Project master class instanciated by the GUI
             mesh = self.meshResults[index]
             if self.typ[-1] == '2' and index != -1: # 2D case
                 if zlim is None:
-                    zlim = self.zlim
+                    if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
+                        zlim = self.projs[index].zlim
+                    else:
+                        zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
                             attr=attr, sens=sens, color_map=color_map,
                             zlim=zlim, clabel=clabel, contour=contour, **kwargs)
@@ -3463,8 +3455,8 @@ class Project(object): # Project master class instanciated by the GUI
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
-            elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys
-                self.showPseudo3DResults(edge_color=edge_color,
+            elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys (pseudo 3D)
+                self.showPseudo3DResults(ax=ax, edge_color=edge_color,
                     attr=attr, color_map=color_map, clabel=clabel,
                     use_pyvista=use_pyvista, background_color=background_color,
                     pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
