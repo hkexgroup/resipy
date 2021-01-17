@@ -1409,29 +1409,146 @@ class Project(object): # Project master class instanciated by the GUI
         return targetProjParams
     
     
-    def invertPseudo3D(self, invLog=None, **kwargs):
+    def invertPseudo3D(self, invLog=None, runParallel=False, **kwargs):
         """Run non-parallel inversion - modifications needed
         
         Parameters
         ----------
         invLog : function, optional
             Passes project inversion outputs.
+        runParallel : bool
+            if True, inversions will run in parallel based on number of CPU cores.
         kwargs : -
             Keyword arguments to be passed to invert().
         """
+        # kill management
+        self.procs = []
+        class ProcsManagement(object): # little class to handle the kill
+            def __init__(self, r2object):
+                self.r2 = r2object
+                self.killFlag = False
+            def kill(self):
+                self.killFlag = True
+                print('killing...')
+                self.r2.irunParallel2 = False # this will end the infinite loop
+                procs = self.r2.procs # and kill the running processes
+                for p in procs:
+                    p.terminate()
+                print('all done!')
+        self.proc = ProcsManagement(self)
+                
         self.meshResults = [] # clean meshResults list
-        for proj, survey in zip(self.projs, self.surveys):
-            proj.param = self._setPseudo3DParam(proj.param) 
-            self.projectPseudo3D = proj # we want to be able to kill it in the UI
-            if self.pseudo3DBreakFlag is True: # TODO: why kill is not working?
-                break
-            self.projectPseudo3D.invert(**kwargs)
-            if invLog is not None:
-                invLog(self.projectPseudo3D.dirname, self.projectPseudo3D.typ)
+        for proj in self.projs: # preparing inversion params
+            proj.param = self._setPseudo3DParam(proj.param)
+        
+        if runParallel is False: # non-parallel inversion
+            for proj in self.projs:
+                self.projectPseudo3D = proj # get functions for UI
+                proj.invert(**kwargs)
+                self.procs.append(proj.proc)
+                if self.proc.killFlag is True:
+                    break
+                if invLog is not None:
+                    invLog(proj.dirname, proj.typ)
             
-            self.meshResults.append(deepcopy(self.projectPseudo3D.meshResults[0]))
-            survey.df = self.projectPseudo3D.surveys[0].df.copy() # to populate inversion error outputs
-            survey.dfInvErrOutputOrigin = survey.df.copy()
+        else: # parallel inversion
+            if invLog is None:
+                def invLog(x):
+                    print(x, end='')
+            
+            # create R2.exe path
+            exeName = self.typ + '.exe'
+            exePath = os.path.join(self.apiPath, 'exe', exeName)
+    
+            # create .in and protocol.dat files
+            wds = []
+            for proj in self.projs:
+                wds.append(proj.dirname)
+                invLog('Writing .in file and protocol.dat... ')
+                proj.write2in() # R2.in
+                proj.write2protocol() # protocol.dat
+                invLog('done!\n')
+            wds2 = wds.copy()
+    
+            # create workers directory
+            ncoresAvailable = ncores = systemCheck()['core_count']
+            if ncores is None:
+                ncores = ncoresAvailable
+            else:
+                if ncores > ncoresAvailable:
+                    raise ValueError('Number of cores larger than available')
+    
+            if OS == 'Windows':
+                cmd = [exePath]
+            elif OS == 'Darwin':
+                winetxt = 'wine'
+                if getMacOSVersion():
+                    winetxt = 'wine64'
+                winePath = []
+                wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)
+                for stdout_line in iter(wine_path.stdout.readline, ''):
+                    winePath.append(stdout_line)
+                if winePath != []:
+                    cmd = ['%s' % (winePath[0].strip('\n')), exePath]
+                else:
+                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+            else:
+                cmd = ['wine',exePath]
+    
+            if OS == 'Windows':
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
+            # run them all in parallel as child processes
+            invLog('----------- PARALLEL INVERSION BEGINS ----------')
+            def dumpOutput(out):
+                for line in iter(out.readline, ''):
+                    invLog(line.rstrip() + '\n')
+                out.close()
+    
+            # create essential attribute
+            self.irunParallel2 = True
+    
+            # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
+            # In an infinite loop, will run an number of process (according to the number of cores)
+            # the loop will check when they finish and start new ones.
+            def done(p):
+                return p.poll() is not None
+
+            c = 0
+            invLog('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
+            while self.irunParallel2:
+                while wds and len(self.procs) < ncores:
+                    wd = wds.pop()
+                    if OS == 'Windows':
+                        p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    else:
+                        p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True)
+                    self.procs.append(p)
+    
+                for p in self.procs:
+                    if done(p):
+                        self.procs.remove(p)
+                        c = c+1
+                        # TODO get RMS and iteration number here ?
+                        invLog('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
+    
+                if not self.procs and not wds:
+                    invLog('\n')
+                    break
+                else:
+                    time.sleep(0.05)
+ 
+        if self.proc.killFlag is False: # make sure we haven't killed the processes
+            for proj, survey in zip(self.projs, self.surveys):
+                if runParallel:
+                    proj.getInvError()
+                    proj.getResults()
+                self.meshResults.append(deepcopy(proj.meshResults[0]))
+                survey.df = proj.surveys[0].df.copy() # to populate inversion error outputs
+                survey.dfInvErrOutputOrigin = survey.df.copy()
+
+        print('----------- END OF INVERSION IN // ----------')
 
     
     def showPseudo3DResults(self, cropMesh=False, **kwargs):

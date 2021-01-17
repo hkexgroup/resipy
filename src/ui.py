@@ -1112,16 +1112,12 @@ class App(QMainWindow):
                         self.a_wgt.setText('0.0')
                         self.b_wgt.setText('0.0')
                     self.importDataRecipBtn.hide()
-                    self.fnamesCombo.clear()
                     self.psContourCheck.setEnabled(True)
                     for s in self.project.surveys:
-                        self.fnamesCombo.addItem(s.name)
                         self.errFitPlotIndexList.append(0)
                         self.iperrFitPlotIndexList.append(0)
                     self.errorCombosShow(True)
                     errorCombosFill(self.prepFnamesComboboxes)
-                    self.fnamesCombo.show()
-                    self.fnamesComboLabel.show()
                     self.elecTable.initTable(self.project.elec)
                     self.tabImporting.setTabEnabled(1,True)
                     if all(self.project.pseudo3DSurvey.df['irecip'].values == 0): # enabling some filtering capacities
@@ -1141,15 +1137,13 @@ class App(QMainWindow):
                         if self.ftype == 'Syscal':
                             self.dcaButton.setEnabled(True)
                             self.dcaProgress.setEnabled(True)               
-                    self.loadingWidget(exitflag=True)
-                    self.plotPseudo()
-                    self.invNowBtn.setEnabled(True)
-                    self.activateTabs(True)
                     self.nbElecEdit.setText(str(self.project.elec.shape[0]))
                     self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
-                    self.fnamesCombo.hide()
-                    self.fnamesComboLabel.hide()
+                    self.loadingWidget(exitflag=True)
+                    self.invNowBtn.setEnabled(True)
+                    self.activateTabs(True)
                     self.updateElec()
+                    self.plotPseudo()
                     if np.isnan(self.project.elec[['x','y','z']].values).any():
                         self.topoInterpBtnFunc()
                 except Exception as e:
@@ -4616,13 +4610,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 print('killing...', end='')
                 # self.loadingWidget('Killing in progress...')
-                if self.pseudo3DCheck.isChecked():
-                    if self.project.projectPseudo3D.proc is not None:
-                        self.project.pseudo3DBreakFlag = True
-                        self.project.projectPseudo3D.proc.kill()
-                else:
-                    if self.project.proc is not None:
-                        self.project.proc.kill()
+                if self.project.proc is not None:
+                    self.project.proc.kill()
                 print('done')
                 self.invertBtn.setStyleSheet('background-color:green; color:black')
                 self.invertBtn.setText('Invert')
@@ -4688,11 +4677,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 def pseudo3DInvLog(dirname, typ):
                     with open(os.path.join(dirname, typ + '.out'),'r') as f:
                         self.pseudo3DInvtext += f.read() + '\n'
+                        
+                invLog = pseudo3DInvLog if self.parallelCheck.isChecked() is False else logTextFunc # handling dump
             
-                self.project.invertPseudo3D(iplot=False, dump=logTextFunc, invLog=pseudo3DInvLog)
+                self.project.invertPseudo3D(iplot=False, runParallel=self.parallelCheck.isChecked(),
+                                            dump=logTextFunc, invLog=invLog)
             
                 self.logText.setText(self.pseudo3DInvtext)
-                self.project.projectPseudo3D.proc = None
+                if self.project.proc.killFlag is True: # make sure everything stops now!
+                    self.end = False
                 
             else: # regular single Project (2D or 3D)
                 # set initial model
@@ -6247,14 +6240,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.doiSensCheck.setEnabled(False)
             self.contourCheck.setChecked(False)
             self.contourCheck.setEnabled(False)
-            self.aspectCheck.setChecked(False)
             self.aspectCheck.setEnabled(False)
             self.sensWidget.setEnabled(False)
         else:
             self.doiSensCheck.setEnabled(True)
             self.contourCheck.setEnabled(True)
             self.aspectCheck.setEnabled(True)
-            self.aspectCheck.setChecked(True)
             self.sensWidget.setEnabled(True)
     
     
