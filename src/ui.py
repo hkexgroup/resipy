@@ -546,6 +546,10 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(True)
                 self.sensWidget.setVisible(True)
                 show3DInvOptions(False)
+                
+                # post-processing
+                self.errorGraphs.setTabEnabled(0, True)
+                self.errorGraphs.setCurrentIndex(0)
             else:
                 self.typ = self.typ.replace('2','3t')
                 if self.project is not None:
@@ -606,6 +610,10 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
+                
+                # post-processing
+                self.errorGraphs.setTabEnabled(0, False)
+                self.errorGraphs.setCurrentIndex(1)
             try: # to force update the pseudo sections
                 if self.project is not None:
                     self.plotPseudo()
@@ -1088,6 +1096,9 @@ class App(QMainWindow):
                 self.restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 val = float(self.lineSpacing.text())
+                if len(fnames) <= 1:
+                    self.errorDump('More than one dataset is needed!')
+                    return
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
                     self.project.createPseudo3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
@@ -2214,6 +2225,9 @@ class App(QMainWindow):
                 self.plotManualFiltering(self.recipErrDataIndex)
                 self.errFitType.setCurrentIndex(0)
                 self.plotError()
+                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                    self.project.updatePseudo3DSurvey()
+
             except ValueError as e:
                 if self.ipCheck.checkState() != Qt.Checked:
                     self.errorDump(e)
@@ -2245,6 +2259,10 @@ class App(QMainWindow):
                 heatFilter()
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
+                
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
+                
             self.errHist(self.recipErrDataIndex)
             self.plotManualFiltering(self.recipErrDataIndex)
             self.errFitType.setCurrentIndex(0)
@@ -2327,6 +2345,9 @@ class App(QMainWindow):
             self.errFitType.setCurrentIndex(0)
             self.plotError()
             self.infoDump('%i unpaired quadrupoles removed!' % numRemoved)
+            
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
 
         self.recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         self.recipErrorUnpairedBtn.setFixedWidth(150)
@@ -2477,16 +2498,22 @@ class App(QMainWindow):
             self.writeLog('k.filterRangeIP(index={:d}, vmin={:.2f}, vmax={:.2f})'.format(
                 self.phaseFiltDataIndex, vmin, vmax))
             heatFilter()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
 
         def removerecip():
             self.project.filterRecipIP(self.phaseFiltDataIndex)
             self.writeLog('k.filterRecipIP(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
 
         def removenested():
             self.project.filterNested(self.phaseFiltDataIndex)
             self.writeLog('k.filterNested(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
@@ -2496,6 +2523,8 @@ class App(QMainWindow):
                 self.project.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
             heatFilter()
             heatRaw()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
 
         phitoplayout = QHBoxLayout()
         phitoplayoutL = QHBoxLayout()
@@ -2570,6 +2599,8 @@ class App(QMainWindow):
                 self.infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             self.dcaProgress.setValue(0)
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
             
 
         def phiCbarRange():
@@ -2699,6 +2730,8 @@ class App(QMainWindow):
                 self.writeLog('k.filterDCA(index={:d})'.format(self.phaseFiltDataIndex))
                 heatFilter()
                 self.dcaButton.setEnabled(True)
+                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                    self.project.updatePseudo3DSurvey()
             except:
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
@@ -3029,7 +3062,6 @@ class App(QMainWindow):
         self.tabs.addTab(tabMesh, 'Mesh')
         self.tabs.setTabEnabled(2, False)
         
-        
         fmdToolTip = 'Boundary depth (meters) below which the coarse (or background) mesh starts.\n'\
                      'Default = 2/3 max dipole length.'
         fmdLabel = QLabel('Fine/Coarse\nboundary depth')
@@ -3044,11 +3076,8 @@ class App(QMainWindow):
         
         def replotMesh(aspect='equal'):
             if self.pseudo3DCheck.isChecked(): # for pseudo 3D inversion
-                # try:
                 self.mesh3Dplotter.clear() # clear all actors 
                 self.project.showPseudo3DMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-                # except:
-                #     pass
                 meshOutputStack.setCurrentIndex(2)
             else: # 2D mesh
                 if self.iDesign is False:
@@ -4587,8 +4616,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 print('killing...', end='')
                 # self.loadingWidget('Killing in progress...')
-                if self.project.proc is not None:
-                    self.project.proc.kill()
+                if self.pseudo3DCheck.isChecked():
+                    if self.project.projectPseudo3D.proc is not None:
+                        self.project.pseudo3DBreakFlag = True
+                        self.project.projectPseudo3D.proc.kill()
+                else:
+                    if self.project.proc is not None:
+                        self.project.proc.kill()
                 print('done')
                 self.invertBtn.setStyleSheet('background-color:green; color:black')
                 self.invertBtn.setText('Invert')
@@ -4649,43 +4683,39 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.param['zmin'] = np.inf 
                 self.project.param['zmax'] = np.inf 
             
-            # set initial model
-            x, phase0, zones, fixed = self.regionTable.getTable()
-            regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
-            self.project.setStartingRes(dict(zip(regid, x)),
-                                   dict(zip(regid, zones)),
-                                   dict(zip(regid, fixed)),
-                                   dict(zip(regid, phase0)))
-            self.writeLog('k.setStartingRes(regionValues={:s}, zoneValues={:s},'
-                          ' fixedValues={:s}, ipValues={:s}) '
-                          '# define region manually using k.addRegion()'.format(
-                            str(dict(zip(regid, x))),
-                            str(dict(zip(regid, zones))),
-                            str(dict(zip(regid, fixed))),
-                            str(dict(zip(regid, phase0)))))
-
-            # invert
-            # TODO run inversion in different thread to not block the UI
-            modErr=self.modErrCheck.isChecked()
-            parallel=self.parallelCheck.isChecked()
-            modelDOI=self.modelDOICheck.isChecked()
-            if self.pseudo3DCheck.isChecked():
-                self.project.invertPseudo3D(iplot=False, dump=logTextFunc)
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.pseudo3DInvtext = ''
+                def pseudo3DInvLog(dirname, typ):
+                    with open(os.path.join(dirname, typ + '.out'),'r') as f:
+                        self.pseudo3DInvtext += f.read() + '\n'
+            
+                self.project.invertPseudo3D(iplot=False, dump=logTextFunc, invLog=pseudo3DInvLog)
+            
+                self.logText.setText(self.pseudo3DInvtext)
+                self.project.projectPseudo3D.proc = None
                 
-                ####### TODO: write a func and put it in invertPseudo3D()
-                # replace the log by the R2.out
-                with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
-                    text = f.read()
-                self.logText.setText(text)
-                self.project.proc = None
-                
-                # check if we don't have a fatal error
-                if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
-                    self.end = False
-                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
-                ########
-                
-            else:
+            else: # regular single Project (2D or 3D)
+                # set initial model
+                x, phase0, zones, fixed = self.regionTable.getTable()
+                regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
+                self.project.setStartingRes(dict(zip(regid, x)),
+                                       dict(zip(regid, zones)),
+                                       dict(zip(regid, fixed)),
+                                       dict(zip(regid, phase0)))
+                self.writeLog('k.setStartingRes(regionValues={:s}, zoneValues={:s},'
+                              ' fixedValues={:s}, ipValues={:s}) '
+                              '# define region manually using k.addRegion()'.format(
+                                str(dict(zip(regid, x))),
+                                str(dict(zip(regid, zones))),
+                                str(dict(zip(regid, fixed))),
+                                str(dict(zip(regid, phase0)))))
+    
+                # invert
+                # TODO run inversion in different thread to not block the UI
+                modErr=self.modErrCheck.isChecked()
+                parallel=self.parallelCheck.isChecked()
+                modelDOI=self.modelDOICheck.isChecked()
+            
                 self.project.invert(iplot=False, dump=logTextFunc,
                                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
                 self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
@@ -4734,6 +4764,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.inversionOutput = ''
         self.end = False
 
+        
         def parseRMS(tt):
             newFlag = False
             a = tt.split()
@@ -4765,8 +4796,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
                         cropMaxDepth = self.cropBelowFmd.isChecked()
-                    self.mwIter.plot(partial(self.project.showIter, modelDOI=self.modelDOICheck.isChecked(), 
-                                              cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
+                    if self.pseudo3DCheck.isChecked():
+                        showIter = self.project.projectPseudo3D.showIter
+                    else:
+                        showIter = self.project.showIter
+                        
+                    self.mwIter.plot(partial(showIter, modelDOI=self.modelDOICheck.isChecked(),
+                                             cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
                 if a[0] == 'FATAL:':
 #                    self.invertBtn.animateClick()
                     self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
@@ -4849,6 +4885,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         # change survey
         def surveyComboFunc(index):
+            if self.pseudo3DCheck.isChecked():
+                if index == 0:
+                    self.showStackedLayout.setCurrentIndex(1)
+                else:
+                    self.showStackedLayout.setCurrentIndex(0)
+                    index -= 1 # first graph is pseudo 3D
             self.displayParams['index'] = index
             attrs = list(self.project.meshResults[index].df.keys())
             attr0 = str(self.attrCombo.currentText())
@@ -4916,7 +4958,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if (self.contourCheck.isChecked() is True) or (self.project.typ[-1] != '2'):
                 self.replotSection()
             else:
-                self.mwInv.setMinMax(vmin=vmin, vmax=vmax)
+                if self.pseudo3DCheck.isChecked() and self.surveyCombo.currentIndex() == 0:
+                    self.replotSection()
+                else:
+                    self.mwInv.setMinMax(vmin=vmin, vmax=vmax)
         self.vMinMaxBtn = QPushButton('Apply')
         self.vMinMaxBtn.setAutoDefault(True)
         self.vMinMaxBtn.clicked.connect(vMinMaxBtnFunc)
@@ -5299,12 +5344,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 plotInvError2(index)
                 if self.iBorehole is False and self.m3DRadio.isChecked() is False:
                     self.errorGraphs.setTabEnabled(0, True)
-                    self.errorGraphs.setCurrentIndex(0)
+                    # self.errorGraphs.setCurrentIndex(0)
                     plotInvError(index)
                     self.invErrorIndex = index
                 else:
                     self.errorGraphs.setTabEnabled(0, False)
-                    self.errorGraphs.setCurrentIndex(1)
+                    # self.errorGraphs.setCurrentIndex(1)
             except Exception as e:
                 print('Could not print error: ', e)
         self.invErrorCombo = QComboBox()
@@ -5331,7 +5376,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmax = float(vmaxVal) if vmaxVal != '' else None
             self.project.filterInvError(index=index, vmin=vmin, vmax=vmax)
             self.writeLog('k.filterInvError(index={:d}, vmin={}, vmax={})'.format(
-            index, str(vmin), str(vmax)))      
+            index, str(vmin), str(vmax)))    
+            
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
             
             plotInvError(self.invErrorIndex)
             plotInvError2(self.invErrorIndex)
@@ -5342,6 +5390,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     s.df = s.dfInvErrOutputOrigin.copy()
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
+            
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project.updatePseudo3DSurvey()
+            
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
             plotInvError(self.invErrorIndex)
@@ -5400,6 +5452,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
+                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                    self.project.updatePseudo3DSurvey()
             except:
                 self.errorDump('Error plotting error graphs.')
                 pass
@@ -6187,6 +6241,23 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.rangeInvErrorMaxInput.setText('')
 
         
+    def disableOptionsPseudo3D(self, flag):
+        if flag:
+            self.doiSensCheck.setChecked(False)
+            self.doiSensCheck.setEnabled(False)
+            self.contourCheck.setChecked(False)
+            self.contourCheck.setEnabled(False)
+            self.aspectCheck.setChecked(False)
+            self.aspectCheck.setEnabled(False)
+            self.sensWidget.setEnabled(False)
+        else:
+            self.doiSensCheck.setEnabled(True)
+            self.contourCheck.setEnabled(True)
+            self.aspectCheck.setEnabled(True)
+            self.aspectCheck.setChecked(True)
+            self.sensWidget.setEnabled(True)
+    
+    
     def replotSection(self): # main plotting function
         pdebug('replotSection() with', self.displayParams)
         index = self.displayParams['index']
@@ -6205,18 +6276,28 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pvgrid = self.displayParams['pvgrid']
         pvcontour = self.displayParams['pvcontour']
         aspect = self.displayParams['aspect']
-        if self.project.typ[-1] == '2' and self.pseudo3DCheck.isChecked() is False:
-            self.mwInv.replot(threed=False, aspect=aspect,
-                              index=index, edge_color=edge_color,
-                              contour=contour, sens=sens, attr=attr,
-                              vmin=vmin, vmax=vmax, color_map=cmap, 
-                              sensPrc=sensPrc, doi=doi, doiSens=doiSens)
-            self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
-                          ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
-                          'vmax={:s}, color_map="{:s}", sensPrc={:.2f}, doi={:s},'
-                          ' doiSens={:s})'.format(index, edge_color, str(contour),
-                            str(sens), attr, str(vmin), str(vmax), cmap, sensPrc, str(doi),
-                                                 str(doiSens)))
+        if self.project.typ[-1] == '2':
+            if self.pseudo3DCheck.isChecked() and self.surveyCombo.currentIndex() == 0:
+                self.disableOptionsPseudo3D(True)
+                self.vtkWidget.clear()
+                self.vtkWidget.clear_plane_widgets()
+                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr,
+                                                  edge_color=edge_color, vmin=vmin,
+                                                  vmax=vmax, color_map=cmap, pvgrid=True,
+                                                  background_color=(0.8,0.8,0.8))
+            else:
+                self.disableOptionsPseudo3D(False)
+                self.mwInv.replot(threed=False, aspect=aspect,
+                                  index=index, edge_color=edge_color,
+                                  contour=contour, sens=sens, attr=attr,
+                                  vmin=vmin, vmax=vmax, color_map=cmap, 
+                                  sensPrc=sensPrc, doi=doi, doiSens=doiSens)
+                self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
+                              ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
+                              'vmax={:s}, color_map="{:s}", sensPrc={:.2f}, doi={:s},'
+                              ' doiSens={:s})'.format(index, edge_color, str(contour),
+                                str(sens), attr, str(vmin), str(vmax), cmap, sensPrc, str(doi),
+                                                     str(doiSens)))
         else:
             # mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                   # vmin=vmin, vmax=vmax, color_map=cmap)
@@ -6237,9 +6318,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             #                                   pvthreshold=pvthreshold,
             #                                   pvgrid=pvgrid,
             #                                   pvcontour=pvcontour)
-            
-            if self.project.pseudo3DSurvey is not None: # pseudo 3D survey
-                index = -1
 
             self.project.showResults(index=index, ax=self.vtkWidget, attr=attr,
                                               edge_color=edge_color, vmin=vmin,
@@ -6260,8 +6338,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invtabs.setCurrentIndex(1) # show tab
         self.invtabs.setTabEnabled(1, True)
         self.invtabs.setTabEnabled(2, True)
-        if self.project.typ[-1] == '2' and self.pseudo3DCheck.isChecked() is False:
-            self.showStackedLayout.setCurrentIndex(0)
+        if self.project.typ[-1] == '2':
+            if self.pseudo3DCheck.isChecked():
+                self.showStackedLayout.setCurrentIndex(1)
+            else:
+                self.showStackedLayout.setCurrentIndex(0)
 #                    maxDepth = self.project.fmd if self.cropBelowFmd.isChecked() else None
             self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))
         else:
@@ -6271,6 +6352,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.displayParams['attr'] = 'Sigma_real(log10)'
         self.surveyCombo.clear()
+        if self.pseudo3DCheck.isChecked():
+            self.surveyCombo.addItem('Pseudo 3D display')
         for m in self.project.meshResults:
             self.surveyCombo.addItem(m.mesh_title)
         index = 0
