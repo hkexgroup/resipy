@@ -98,7 +98,22 @@ try:
     checkExe(os.path.join(apiPath, 'exe'))
 except Exception as e:
     pass
-            
+
+
+# little class for managing multiple processes (for parallel inversion)
+class ProcsManagement(object): # little class to handle the kill
+    def __init__(self, r2object):
+        self.r2 = r2object
+        self.killFlag = False
+    def kill(self):
+        self.killFlag = True
+        print('killing...')
+        self.r2.irunParallel2 = False # this will end the infinite loop
+        procs = self.r2.procs # and kill the running processes
+        for p in procs:
+            p.terminate()
+        print('all done!')
+        
 #%% system check
 def getSysStat():
     """Return processor speed and usage, and free RAM and usage. 
@@ -1148,7 +1163,7 @@ class Project(object): # Project master class instanciated by the GUI
         for i, s in enumerate(self.surveys):
             directory = os.path.join(self.dirname, s.name)
             os.mkdir(directory) # making separate inversion diectories
-            proj = self.createProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            proj = self._createProjects4Pseudo3D(dirname=directory, invtyp=self.typ) # non-parallel meshing
             proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec, **kwargs)
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
             e = s.elec.copy()
@@ -1181,7 +1196,7 @@ class Project(object): # Project master class instanciated by the GUI
         if self.projs == []:
             raise ValueError('Survey needs to be created first! use Project.createPseudo3DSurvey()')
             
-        elecList = self.create2DLines(elecList)
+        elecList = self._create2DLines(elecList)
 
         for elecdf, proj, survey in zip(elecList, self.projs, self.surveys):
             survey.elec = elecdf.copy()
@@ -1226,7 +1241,7 @@ class Project(object): # Project master class instanciated by the GUI
         return elecList
     
     
-    def create2DLines(self, elecList=None):
+    def _create2DLines(self, elecList=None):
         """Create a list of 2D electrode XYZ/topo where only x & z are variable and y=0.
             Simply, rotating an array of XY locations on x, y = 0 pivot to have all y values equal to zero
         
@@ -1280,7 +1295,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh = proj.mesh # just to have a populated mesh in master Project!
         
             ########## FOR PARALLEL MESHING ##### Although meshing is pretty fast anyway!
-            # p = multiprocessing.Process(target=self.createProject, kwargs=kwargs)
+            # p = multiprocessing.Process(target=self._createProjects4Pseudo3D, kwargs=kwargs)
             # p.start()
             # p.join()
             #############################   
@@ -1420,18 +1435,6 @@ class Project(object): # Project master class instanciated by the GUI
         """
         # kill management
         self.procs = []
-        class ProcsManagement(object): # little class to handle the kill
-            def __init__(self, r2object):
-                self.r2 = r2object
-                self.killFlag = False
-            def kill(self):
-                self.killFlag = True
-                print('killing...')
-                self.r2.irunParallel2 = False # this will end the infinite loop
-                procs = self.r2.procs # and kill the running processes
-                for p in procs:
-                    p.terminate()
-                print('all done!')
         self.proc = ProcsManagement(self)
                 
         self.meshResults = [] # clean meshResults list
@@ -1563,7 +1566,7 @@ class Project(object): # Project master class instanciated by the GUI
         
     
     @classmethod
-    def createProject(cls, dirname, invtyp='R2'):
+    def _createProjects4Pseudo3D(cls, dirname, invtyp='R2'):
         """Create a Project instance for future use of meshing and inversion.
         
         Parameters
@@ -3128,17 +3131,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.procs = []
 
         # kill management
-        class ProcsManagement(object): # little class to handle the kill
-            def __init__(self, r2object):
-                self.r2 = r2object
-            def kill(self):
-                print('killing...')
-                self.r2.irunParallel2 = False # this will end the infinite loop
-                procs = self.r2.procs # and kill the running processes
-                for p in procs:
-                    p.terminate()
-                print('all done!')
-
         self.proc = ProcsManagement(self)
 
         # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
