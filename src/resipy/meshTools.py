@@ -27,6 +27,8 @@ import matplotlib.path as mpath
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import cKDTree
+from copy import deepcopy
+
 #import R2gui API packages 
 import resipy.gmshWrap as gw
 from resipy.sliceMesh import sliceMesh # mesh slicing function
@@ -334,6 +336,8 @@ class Mesh:
     def copy(self):
         """Return a copy of mesh object. 
         """
+        # mesh = deepcopy(self) # not always working! below too not always working!!!
+        
         mesh = Mesh(self.node[:,0],
                     self.node[:,1],
                     self.node[:,2],
@@ -1099,7 +1103,7 @@ class Mesh:
         nmesh = self.copy()
         nmesh.elmCentre = ec 
         nmesh.connection = self.connection[i2keep,:]
-        nmesh.elm_id = np.arrange(1,self.numel+1)[i2keep]
+        nmesh.elm_id = np.arange(1,self.numel+1)[i2keep]
         #nmesh.cell_attributes = np.array(self.cell_attributes)[i2keep]
         
         df = self.df.copy()
@@ -1107,7 +1111,7 @@ class Mesh:
         del nmesh.df['index']
         nmesh.numel = np.sum(i2keep)
         
-        nmesh.__rmexcessNodes         
+        nmesh.__rmexcessNodes()         
         return nmesh
         
     # return a truncated mesh (for 3D)
@@ -1126,7 +1130,7 @@ class Mesh:
             
         Returns
         ------------
-        mesh: Class
+        nmesh: Class
             New instance of mesh class which is truncated 
         """
         if self.elec is not None:
@@ -1149,7 +1153,7 @@ class Mesh:
         ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
              (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
              (elm_z > zlim[0]) & (elm_z < zlim[1])
-        
+                     
         nmesh = self.copy() # make a new mesh object with fewer elements 
         nmesh.df = nmesh.df[ie].reset_index(drop=True)
         nmesh.df['elm_id'] = 1 + np.arange(nmesh.df.shape[0])
@@ -1891,6 +1895,7 @@ class Mesh:
         
         Plotting sensitivies using sens=True is not reccomended. The matplotlib renderer has trouble with it. 
         """
+        # print('+++', self.node[:,1])
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
         
@@ -3439,7 +3444,50 @@ class Mesh:
             line += '\t{:d}\n'.format(0)
             fh.write(line)
         fh.close()
+#%%  Moving mesh
+def moveMesh2D(meshObject, elecLocal, elecGrid): # probably better to go to meshTools
+    """Move mesh object to a certain place on the grid.
+        X, Y only. No Z relocation.
     
+    Parameters
+    ----------
+    meshObject : class object
+        Mesh class object.
+    elecLocal: dataframe
+        dataframe of electrodes on local 2D grid (i.e., y = 0)
+    elecGrid: dataframe
+        dataframe of electrodes on 3D grid (i.e., y != 0)
+    
+    Returns
+    -------
+    mesh : class object
+        Copy of moved Mesh class object.
+    """
+    mesh = deepcopy(meshObject) # Mesh.copy() not working here! not sure why!
+    xLocal = elecLocal['x'].copy().values
+    xGrid = elecGrid['x'].copy().values
+    yGrid = elecGrid['y'].copy().values
+    if np.all(xGrid == xGrid[0]): # line is vertical - x is constant
+        mesh.elec[:,0] = np.ones_like(xLocal) * xGrid[0]
+        mesh.elec[:,1] = xLocal + yGrid[0]
+        mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
+        mesh.node[:,0] = np.zeros_like(mesh.node[:,0]) + xGrid[0]
+
+    elif np.all(yGrid == yGrid[0]): # line is horizontal - y is constant
+        mesh.elec[:,0] = xLocal + xGrid[0]
+        mesh.elec[:,1] = np.ones_like(xLocal) * yGrid[0]
+        mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
+        mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
+        
+    else: 
+        mx = np.polyfit(xLocal,xGrid,1)
+        my = np.polyfit(xGrid, yGrid,1)
+        mesh.elec[:,0] = mx[0] * xLocal + mx[1]
+        mesh.elec[:,1] = my[0] * xGrid + my[1]
+        mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
+        mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
+
+    return mesh   
 #%% import a vtk file 
 def vtk_import(file_path='mesh.vtk', order_nodes=True):
     """
