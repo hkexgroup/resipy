@@ -1279,7 +1279,8 @@ class Project(object): # Project master class instanciated by the GUI
         elecGroups = elec.groupby('lineNum')
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
         elecList = []
-        for elecdf in elecdfs:
+        for elecdfRaw in elecdfs:
+            elecdf = elecdfRaw.copy().reset_index(drop=True) # void pandas setting with copy warning annoying error
             if changeLabel:
                 elecdf['label'] = elecdf['elecNum'].values # it's 2D so let's get rid of line numbers in labels
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
