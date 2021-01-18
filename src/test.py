@@ -659,7 +659,7 @@ elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
 k.pseudo3DSurvey.elec = elecTemp.copy()
 k.updatePseudo3DSurvey()
 k.createMultiMesh(typ='trian')
-# k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
+# meshMerged = k.showPseudo3DMesh(cropMesh=True,return_mesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)
 # k.showResults(index=-1) # only works with pyvista - thus commented for test
 print('elapsed: {:.4}s'.format(time.time() - t0))

@@ -1302,7 +1302,8 @@ class Project(object): # Project master class instanciated by the GUI
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
-                         cropMesh=True, color_bar=False, **kwargs):
+                         cropMesh=True, color_bar=False, return_mesh = False,
+                         **kwargs):
         """Show 2D meshes in 3D view
         
         Parameters
@@ -1317,6 +1318,8 @@ class Project(object): # Project master class instanciated by the GUI
             If True, 2D mesh will be bound to electrodes and zlim.
         color_bar : Boolean, optional 
             `True` to plot colorbar.
+        return_mesh: bool, optional
+            if True method returns a merged mesh. 
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
@@ -1353,6 +1356,9 @@ class Project(object): # Project master class instanciated by the GUI
         xlimi = findminmax(matx)
         maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
         ylimi = findminmax(maty)
+        if return_mesh:
+            meshOutList = []
+            
         for proj, elecdf, mesh in zip(self.projs, elecList, meshList):
             if mesh is None:
                 print('Mesh undefined for this project!')
@@ -1384,7 +1390,14 @@ class Project(object): # Project master class instanciated by the GUI
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
+            if return_mesh:
+                meshOutList.append(meshMoved)
         ax.show() # call plotter.show()
+        
+        if return_mesh:
+            meshMerged = mt.mergeMeshes(meshOutList)
+            meshMerged.ndims = 3
+            return meshMerged
     
     
     def _setPseudo3DParam(self, targetProjParams):
