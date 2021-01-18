@@ -1530,7 +1530,7 @@ class Mesh:
         
         # if no dimensions are given then set the plot limits to edge of mesh
         try: 
-            elec_x = self.elec[:,0].copy()[~iremote]
+            elec_x = self.elec[:,0][~iremote]
             if xlim==None:
                 xlim=[min(elec_x),max(elec_x)]
             if zlim==None:
@@ -1934,10 +1934,10 @@ class Mesh:
                     iremote = np.array([False]*nelec,dtype=bool)
                     
                 if xlim == None:
-                    elecx = self.elec[:,0].copy()[~iremote]
+                    elecx = self.elec[:,0][~iremote]
                     xlim = [min(elecx), max(elecx)]
                 if ylim == None:
-                    elecy = self.elec[:,1].copy()[~iremote]
+                    elecy = self.elec[:,1][~iremote]
                     ylim = [min(elecy), max(elecy)]            
         except (AttributeError,TypeError): #if no electrodes present use the node limits 
             pass
@@ -2463,8 +2463,8 @@ class Mesh:
                 else:
                     nelec = self.elec.shape[0]
                     iremote = np.array([False]*nelec,dtype=bool)
-                elecx = self.elec[:,0].copy()[~iremote]
-                elecy = self.elec[:,1].copy()[~iremote]
+                elecx = self.elec[:,0][~iremote]
+                elecy = self.elec[:,1][~iremote]
                 dx = max(elecx) - min(elecx)
                 dy = max(elecy) - min(elecy)
                 d = np.sqrt(dx**2 + dy**2)

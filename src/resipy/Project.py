@@ -1344,8 +1344,8 @@ class Project(object): # Project master class instanciated by the GUI
                 continue
             
             if cropMesh:
-                emin = mesh.elec.copy()[np.argmin(mesh.elec[:,0].copy()[~mesh.iremote])]
-                emax = mesh.elec.copy()[np.argmax(mesh.elec[:,0].copy()[~mesh.iremote])]
+                emin = mesh.elec[np.argmin(mesh.elec[:,0][~mesh.iremote])]
+                emax = mesh.elec[np.argmax(mesh.elec[:,0][~mesh.iremote])]
                 zbot = proj.zlim[0]
                 polyline = np.array([[emin[0], emin[2]],
                                      [emax[0], emax[2]],
