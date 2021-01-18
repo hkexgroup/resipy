@@ -751,8 +751,8 @@ class Project(object): # Project master class instanciated by the GUI
             if key in self.param.keys():
                 sparams[key] = self.param[key]
         if 'node_elec' in self.param:
-            sparams['node_elec'] = [list(self.param['node_elec'][0]),
-                                    list(self.param['node_elec'][1])]
+            sparams['node_elec'] = [self.param['node_elec'][0].tolist(),
+                                    self.param['node_elec'][1].tolist()]
         if 'xz_poly_table' in self.param:
             sparams['xz_poly_table'] = self.param['xz_poly_table'].tolist()
         if 'xy_poly_table' in self.param:
