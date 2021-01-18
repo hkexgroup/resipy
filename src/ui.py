@@ -2222,7 +2222,7 @@ class App(QMainWindow):
                 self.errFitType.setCurrentIndex(0)
                 self.plotError()
                 if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                    self.project.updatePseudo3DSurvey()
+                    self.project._updatePseudo3DSurvey()
 
             except ValueError as e:
                 if self.ipCheck.checkState() != Qt.Checked:
@@ -2257,7 +2257,7 @@ class App(QMainWindow):
                 phaseplotError()
                 
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
                 
             self.errHist(self.recipErrDataIndex)
             self.plotManualFiltering(self.recipErrDataIndex)
@@ -2343,7 +2343,7 @@ class App(QMainWindow):
             self.infoDump('%i unpaired quadrupoles removed!' % numRemoved)
             
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
 
         self.recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         self.recipErrorUnpairedBtn.setFixedWidth(150)
@@ -2495,21 +2495,21 @@ class App(QMainWindow):
                 self.phaseFiltDataIndex, vmin, vmax))
             heatFilter()
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
 
         def removerecip():
             self.project.filterRecipIP(self.phaseFiltDataIndex)
             self.writeLog('k.filterRecipIP(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
 
         def removenested():
             self.project.filterNested(self.phaseFiltDataIndex)
             self.writeLog('k.filterNested(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
@@ -2520,7 +2520,7 @@ class App(QMainWindow):
             heatFilter()
             heatRaw()
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
 
         phitoplayout = QHBoxLayout()
         phitoplayoutL = QHBoxLayout()
@@ -2596,7 +2596,7 @@ class App(QMainWindow):
             heatFilter()
             self.dcaProgress.setValue(0)
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
             
 
         def phiCbarRange():
@@ -2727,7 +2727,7 @@ class App(QMainWindow):
                 heatFilter()
                 self.dcaButton.setEnabled(True)
                 if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                    self.project.updatePseudo3DSurvey()
+                    self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
@@ -5374,7 +5374,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             index, str(vmin), str(vmax)))    
             
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
             
             plotInvError(self.invErrorIndex)
             plotInvError2(self.invErrorIndex)
@@ -5387,7 +5387,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
             
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project.updatePseudo3DSurvey()
+                self.project._updatePseudo3DSurvey()
             
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
@@ -5448,7 +5448,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
                 if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                    self.project.updatePseudo3DSurvey()
+                    self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('Error plotting error graphs.')
                 pass
@@ -5881,9 +5881,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 elecList = None
                 if self.pseudo3DCheck.isChecked():
                     elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
-                    self.project.pseudo3DSurvey.elec = pd.concat(elecList, axis=0, ignore_index=True)
-                    self.project.updatePseudo3DSurvey()#elecList)
-                    elecList = self.project.create2DLines()#elecList) # convert to horizontal 2D lines
+                    self.project.setPseudo3DElec(pd.concat(elecList, axis=0, ignore_index=True))
+                    elecList = self.project._create2DLines()#elecList) # convert to horizontal 2D lines
                 
                 self.project.setElec(elec, elecList)
                 if self.project.elec['remote'].sum() > 0:

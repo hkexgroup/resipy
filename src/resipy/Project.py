@@ -98,7 +98,22 @@ try:
     checkExe(os.path.join(apiPath, 'exe'))
 except Exception as e:
     pass
-            
+
+
+# little class for managing multiple processes (for parallel inversion)
+class ProcsManagement(object): # little class to handle the kill
+    def __init__(self, r2object):
+        self.r2 = r2object
+        self.killFlag = False
+    def kill(self):
+        self.killFlag = True
+        print('killing...')
+        self.r2.irunParallel2 = False # this will end the infinite loop
+        procs = self.r2.procs # and kill the running processes
+        for p in procs:
+            p.terminate()
+        print('all done!')
+        
 #%% system check
 def getSysStat():
     """Return processor speed and usage, and free RAM and usage. 
@@ -353,6 +368,7 @@ class Project(object): # Project master class instanciated by the GUI
         return elec
     
     
+    
     def _findRemote(self, elec):
         """Flag remote electrodes.
         
@@ -374,6 +390,7 @@ class Project(object): # Project master class instanciated by the GUI
         if np.sum(iremote) > 0:
             print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
         return elec
+
 
     
     def setElec(self, elec, elecList=None):
@@ -1148,7 +1165,7 @@ class Project(object): # Project master class instanciated by the GUI
         for i, s in enumerate(self.surveys):
             directory = os.path.join(self.dirname, s.name)
             os.mkdir(directory) # making separate inversion diectories
-            proj = self.createProject(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            proj = self._createProjects4Pseudo3D(dirname=directory, invtyp=self.typ) # non-parallel meshing
             proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec, **kwargs)
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
             e = s.elec.copy()
@@ -1169,7 +1186,52 @@ class Project(object): # Project master class instanciated by the GUI
         self.setBorehole(self.iBorehole)
         
     
-    def updatePseudo3DSurvey(self, elecList=None):
+    
+    def importPseudo3DElec(self, fname=''):
+        """Import electrodes positions. The label columns should include line
+        number separated by space (like in 3D):
+            label,x,y,z
+            1 3,0,0,0
+            1 4,1,1,0
+            1 5,1,2,1
+
+        Parameters
+        ----------
+        fname : str
+            Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
+        """
+        with open(fname, 'r') as f:
+            try:
+                float(f.readline().split(',')[0])
+                header = None
+            except Exception:
+                header = 'infer'
+        df = pd.read_csv(fname, header=header)
+        if header is None:
+            elec = df.values
+        else:
+            elec = df
+        self.setPseudo3DElec(elec)
+    
+    
+    
+    def setPseudo3DElec(self, elec):
+        """Set pseudo 3D electrodes (with an electrode label as:
+            <line number> <electrode number>).
+    
+        Parameters
+        ----------
+        elecList : list of dataframes, optional
+            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        """
+        self.pseudo3DSurvey.elec = elec
+        
+        # take self.surveys information to inform all projects in self.projs
+        self._updatePseudo3DSurvey()
+        
+        
+        
+    def _updatePseudo3DSurvey(self, elecList=None):
         """Update a pseudo 3D survey based on 2D surveys. 
             Cleaned data, updated electrodes will be inserted in each survey.
         
@@ -1181,12 +1243,13 @@ class Project(object): # Project master class instanciated by the GUI
         if self.projs == []:
             raise ValueError('Survey needs to be created first! use Project.createPseudo3DSurvey()')
             
-        elecList = self.create2DLines(elecList)
+        elecList = self._create2DLines(elecList)
 
         for elecdf, proj, survey in zip(elecList, self.projs, self.surveys):
             survey.elec = elecdf.copy()
             proj.setElec(elecdf.copy())
             proj.surveys[0].df = survey.df.copy()               
+
 
 
     def split3DGrid(self, elec=None, changeLabel=True):
@@ -1216,7 +1279,8 @@ class Project(object): # Project master class instanciated by the GUI
         elecGroups = elec.groupby('lineNum')
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
         elecList = []
-        for elecdf in elecdfs:
+        for elecdfRaw in elecdfs:
+            elecdf = elecdfRaw.copy().reset_index(drop=True) # void pandas setting with copy warning annoying error
             if changeLabel:
                 elecdf['label'] = elecdf['elecNum'].values # it's 2D so let's get rid of line numbers in labels
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
@@ -1226,7 +1290,7 @@ class Project(object): # Project master class instanciated by the GUI
         return elecList
     
     
-    def create2DLines(self, elecList=None):
+    def _create2DLines(self, elecList=None):
         """Create a list of 2D electrode XYZ/topo where only x & z are variable and y=0.
             Simply, rotating an array of XY locations on x, y = 0 pivot to have all y values equal to zero
         
@@ -1280,14 +1344,15 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh = proj.mesh # just to have a populated mesh in master Project!
         
             ########## FOR PARALLEL MESHING ##### Although meshing is pretty fast anyway!
-            # p = multiprocessing.Process(target=self.createProject, kwargs=kwargs)
+            # p = multiprocessing.Process(target=self._createProjects4Pseudo3D, kwargs=kwargs)
             # p.start()
             # p.join()
             #############################   
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
-                         cropMesh=True, color_bar=False, **kwargs):
+                         cropMesh=True, color_bar=False, return_mesh = False,
+                         **kwargs):
         """Show 2D meshes in 3D view
         
         Parameters
@@ -1302,6 +1367,8 @@ class Project(object): # Project master class instanciated by the GUI
             If True, 2D mesh will be bound to electrodes and zlim.
         color_bar : Boolean, optional 
             `True` to plot colorbar.
+        return_mesh: bool, optional
+            if True method returns a merged mesh. 
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
@@ -1338,6 +1405,9 @@ class Project(object): # Project master class instanciated by the GUI
         xlimi = findminmax(matx)
         maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
         ylimi = findminmax(maty)
+        if return_mesh:
+            meshOutList = []
+            
         for proj, elecdf, mesh in zip(self.projs, elecList, meshList):
             if mesh is None:
                 print('Mesh undefined for this project!')
@@ -1369,7 +1439,14 @@ class Project(object): # Project master class instanciated by the GUI
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
+            if return_mesh:
+                meshOutList.append(meshMoved)
         ax.show() # call plotter.show()
+        
+        if return_mesh:
+            meshMerged = mt.mergeMeshes(meshOutList)
+            meshMerged.ndims = 3
+            return meshMerged
     
     
     def _setPseudo3DParam(self, targetProjParams):
@@ -1420,18 +1497,6 @@ class Project(object): # Project master class instanciated by the GUI
         """
         # kill management
         self.procs = []
-        class ProcsManagement(object): # little class to handle the kill
-            def __init__(self, r2object):
-                self.r2 = r2object
-                self.killFlag = False
-            def kill(self):
-                self.killFlag = True
-                print('killing...')
-                self.r2.irunParallel2 = False # this will end the infinite loop
-                procs = self.r2.procs # and kill the running processes
-                for p in procs:
-                    p.terminate()
-                print('all done!')
         self.proc = ProcsManagement(self)
                 
         self.meshResults = [] # clean meshResults list
@@ -1563,7 +1628,7 @@ class Project(object): # Project master class instanciated by the GUI
         
     
     @classmethod
-    def createProject(cls, dirname, invtyp='R2'):
+    def _createProjects4Pseudo3D(cls, dirname, invtyp='R2'):
         """Create a Project instance for future use of meshing and inversion.
         
         Parameters
@@ -3128,17 +3193,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.procs = []
 
         # kill management
-        class ProcsManagement(object): # little class to handle the kill
-            def __init__(self, r2object):
-                self.r2 = r2object
-            def kill(self):
-                print('killing...')
-                self.r2.irunParallel2 = False # this will end the infinite loop
-                procs = self.r2.procs # and kill the running processes
-                for p in procs:
-                    p.terminate()
-                print('all done!')
-
         self.proc = ProcsManagement(self)
 
         # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)

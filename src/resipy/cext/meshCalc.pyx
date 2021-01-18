@@ -1296,3 +1296,79 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     cdef int nsizeA = len(uni) + numnp # nsizeA can now be computed 
     
     return nsizeA, Nconnec
+
+def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threads=2):
+    """Cross check for overlapping faces in 2 different 2D face meshes... 
+    Finds repeats of the first face connection matrix in the second. 
+    
+    Parameters
+    -------------
+    fconnection1: np.array 
+        N by 3 array, describes how mesh nodes map to face elements 
+    fconnection2: np.array 
+        N by 3 array, describes how mesh nodes map to face elements 
+    
+    Returns
+    --------------
+    repeats: np.array 
+        Boolian array, where index == 1 then the face of fonnection1 is repeated 
+        in fconnection2. 
+    """
+    
+    cdef int i
+    cdef int numel1 = fconnection1.shape[0]
+    cdef int numel2 = fconnection2.shape[0]
+    
+    #face arrays 
+    cdef long[:] face = np.zeros(3,dtype=int)
+
+    #combination arrays 
+    cdef np.ndarray[long long, ndim=1] combo1 = np.zeros((numel1,),dtype=np.int64 ,order='C') # allocate space for combination matrix 
+    cdef long long[:] combov1 = combo1
+    cdef np.ndarray[long long, ndim=1] combo2 = np.zeros((numel2,),dtype=np.int64 ,order='C') # allocate space for combination matrix 
+    cdef long long[:] combov2 = combo2
+    #maximum number of node digits 
+    cdef int num_node = max([max(fconnection1[:,0]),max(fconnection1[:,1]),
+                             max(fconnection1[:,2]),max(fconnection2[:,0]),
+                             max(fconnection2[:,1]),max(fconnection2[:,2])])
+    cdef int pad = len(str(num_node))
+    
+    #assign unique node combinations to each face 
+    for i in range(numel1):
+        #setup nodes which are part of face
+        face[0] = fconnection1[i,0]
+        face[1] = fconnection1[i,1] 
+        face[2] = fconnection1[i,2]
+        # sort face indexes 
+        sortInt(face,3)
+        # assign each face an organised and unique code
+        combov1[i] = mergeInts(face[0],face[1],face[2],pad)
+    for i in range(numel2):
+        #setup nodes which are part of face
+        face[0] = fconnection2[i,0]
+        face[1] = fconnection2[i,1] 
+        face[2] = fconnection2[i,2]
+        # sort face indexes 
+        sortInt(face,3)
+        # assign each face an organised and unique code
+        combov2[i] = mergeInts(face[0],face[1],face[2],pad)
+        
+        
+    #using binary search and sorted lists for efficient lookup 
+    cdef np.ndarray[long long, ndim=1] cflatten = combo2.flatten() #all faces in one array 
+    cdef np.ndarray[long, ndim=1] tempidx = np.argsort(cflatten).astype(int,order='C') 
+    
+    cdef long long[:] csort = cflatten[tempidx] # sorted faces (for second matrix)
+    cdef long long o
+
+    cdef np.ndarray[long, ndim=1] repeats = np.zeros((numel1,),dtype=np.int64 ,order='C') 
+    cdef long[:] repeatv = repeats    
+    
+    for i in range(numel1):
+    #for i in prange(numel1,nogil=True,num_threads=num_threads,schedule='static'): # parrallel implimentation  
+        o = bisection_search(csort,combov1[i]) # only works on a sorted array  
+        #if the item is found then o!=-1 and it must be a repeat 
+        if o!=-1:
+            repeatv[i] = 1
+    
+    return repeats 

@@ -625,6 +625,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
 
 #%% test timelapse 3D -- takes a long time
+print('----------- Testing 3D time-lapse inversion -----------')
 t0 = time.time()
 k = Project(typ='R3t')
 k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
@@ -640,25 +641,35 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-timelapse'] = time.time() - t0
 
 #%% test pseudo 3D inversion
+print('----------- Testing pseudo 3D inversion -----------')
+t0 = time.time()
 k = Project(typ='R2')
 k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
                  ftype='Syscal')
+
+# manually setting up electrodes
 # rotating middle electrodes line here
-rotmat = np.array([[np.cos(0.2), np.sin(0.2)], 
-                   [-np.sin(0.2), np.cos(0.2)]])
-xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
-newmat = np.dot(rotmat, xy).T
-elecTemp = k.elec.copy()
-elecTemp.loc[0:23, 'y'] = 1
-elecTemp.loc[24:47,'x'] = newmat[:,0].copy()*0.6 + 2
-elecTemp.loc[24:47,'y'] = newmat[:,1].copy()*2 - 1
-elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
-k.pseudo3DSurvey.elec = elecTemp.copy()
-k.updatePseudo3DSurvey()
+# rotmat = np.array([[np.cos(0.2), np.sin(0.2)], 
+#                    [-np.sin(0.2), np.cos(0.2)]])
+# xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
+# newmat = np.dot(rotmat, xy).T
+# elecTemp = k.elec.copy()
+# elecTemp.loc[0:23, 'y'] = 1
+# elecTemp.loc[24:47,'x'] = newmat[:,0].copy()*0.6 + 2
+# elecTemp.loc[24:47,'y'] = newmat[:,1].copy()*2 - 1
+# elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
+# k.pseudo3DSurvey.elec = elecTemp.copy()
+# k.updatePseudo3DSurvey()
+
+# or load the files with 3D-like labels for elec positions of all lines
+k.importPseudo3DElec(testdir + 'dc-2d-timelapse/elec3pseudo3D.csv')
 k.createMultiMesh(typ='trian')
-# k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
+# meshMerged = k.showPseudo3DMesh(cropMesh=True,return_mesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)
 # k.showResults(index=-1) # only works with pyvista - thus commented for test
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-2d-pseudo3d'] = time.time() - t0
+
 #%% print final summary information 
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
