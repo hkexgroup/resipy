@@ -751,8 +751,9 @@ class Project(object): # Project master class instanciated by the GUI
             if key in self.param.keys():
                 sparams[key] = self.param[key]
         if 'node_elec' in self.param:
-            sparams['node_elec'] = [self.param['node_elec'][0].tolist(),
-                                    self.param['node_elec'][1].tolist()]
+            sparams['node_elec'] = [list(self.param['node_elec'][0]),
+                                    [int(a) for a in self.param['node_elec'][1]]]
+            # int64 not JSON serializable so we convert it to int (int32)
         if 'xz_poly_table' in self.param:
             sparams['xz_poly_table'] = self.param['xz_poly_table'].tolist()
         if 'xy_poly_table' in self.param:
