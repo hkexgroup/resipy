@@ -10,7 +10,7 @@ import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
 from copy import deepcopy
-# import multiprocessing
+from threading import Thread
 
 # used to download the binaries
 import requests
@@ -1329,23 +1329,26 @@ class Project(object): # Project master class instanciated by the GUI
         return elecList
     
     
-    def createMultiMesh(self, **kwargs):
+    def createMultiMesh(self, runParallel=True, **kwargs):
         """Create multiple meshes from avalable Projects in self.projs.
         
         Parameters
         ----------
+        runParallel : bool, optional
+            if True, mesh generation will run in multiple threads.
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
         """
         for proj in self.projs:
-            proj.createMesh(**kwargs)
-            self.mesh = proj.mesh # just to have a populated mesh in master Project!
-        
-            ########## FOR PARALLEL MESHING ##### Although meshing is pretty fast anyway!
-            # p = multiprocessing.Process(target=self.proj.createMesh, kwargs=kwargs)
-            # p.start()
-            # p.join()
-            #############################   
+            if runParallel:
+                p = Thread(target=proj.createMesh, kwargs=kwargs)
+                p.start()
+                p.join()
+            else:
+                proj.createMesh(**kwargs)
+                
+        self.mesh = self.projs[0].mesh # just to have a populated mesh in master Project!
+   
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
