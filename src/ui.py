@@ -149,6 +149,8 @@ class MatplotlibWidget(QWidget):
         else:
             axes = figure.get_axes()
         self.figure = figure
+        if resipySettings.param['dark'] == 'True':
+            self.figure.set_facecolor((0.2,0.2,0.2)) # just making figures's face color grey not the whole plot 
         self.axis = axes
         self.xlim = None
         self.ylim = None
@@ -489,6 +491,11 @@ class App(QMainWindow):
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.setColumnHidden(2, True)
                 self.regular3DCheck.setChecked(False)
+                self.pseudo3DCheck.setVisible(True)
+                if pvfound:
+                    self.pseudo3DCheck.setEnabled(True)
+                else:
+                    self.pseudo3DCheck.setEnabled(False)
                 if self.project is not None:
                     if self.project.elec is not None:
                         self.elecTable.initTable(self.project.elec)
@@ -539,6 +546,10 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(True)
                 self.sensWidget.setVisible(True)
                 show3DInvOptions(False)
+                
+                # post-processing
+                self.errorGraphs.setTabEnabled(0, True)
+                self.errorGraphs.setCurrentIndex(0)
             else:
                 self.typ = self.typ.replace('2','3t')
                 if self.project is not None:
@@ -557,6 +568,8 @@ class App(QMainWindow):
                 # self.boreholeCheck.setChecked(True) # to disable pseudo-section
                 self.boreholeCheck.setEnabled(False)
                 self.regular3DCheck.setVisible(True)
+                self.pseudo3DCheck.setChecked(False)
+                self.pseudo3DCheck.setVisible(False)
                 self.pParams['threed'] = True
                 self.pParamsIP['threed'] = True
                 if pvfound:
@@ -597,6 +610,10 @@ class App(QMainWindow):
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
+                
+                # post-processing
+                self.errorGraphs.setTabEnabled(0, False)
+                self.errorGraphs.setCurrentIndex(1)
             try: # to force update the pseudo sections
                 if self.project is not None:
                     self.plotPseudo()
@@ -644,6 +661,8 @@ class App(QMainWindow):
                 self.importDataBtn.clicked.connect(getdir)
                 self.ipCheck.setEnabled(False) # timelapse IP not available for now
                 self.batchCheck.setEnabled(False)
+                self.pseudo3DCheck.setEnabled(False)
+                self.pseudo3DCheck.setChecked(False)
             else:
                 self.iTimeLapse = False
                 if self.project is not None:
@@ -654,6 +673,8 @@ class App(QMainWindow):
                 self.importDataBtn.clicked.connect(importDataBtnFunc)
                 self.ipCheck.setEnabled(True) # timelapse IP not available for now
                 self.batchCheck.setEnabled(True)
+                self.pseudo3DCheck.setEnabled(True)
+
         self.timeLapseCheck = QCheckBox('Time-lapse Survey')
         self.timeLapseCheck.stateChanged.connect(timeLapseCheckFunc)
         self.timeLapseCheck.setToolTip('Check to import time-lapse datasets and enable time-lapse inversion.')
@@ -694,26 +715,97 @@ class App(QMainWindow):
                     self.writeLog('k.setBorehole(False)')
             try:
                 if self.fname is not None:
-                        self.plotPseudo()
-                        self.plotPseudoIP()
+                    self.plotPseudo()
+                    self.plotPseudoIP()
             except:
                 pass
         self.boreholeCheck = QCheckBox('Unconventional Survey')
         self.boreholeCheck.stateChanged.connect(boreholeCheckFunc)
         self.boreholeCheck.setToolTip('Check if you have an unconventional survey (e.g. boreholes).\nThis will just change the pseudo-section.')
 
+        def pseudo3DFunc(state):
+            if state == Qt.Checked:
+                self.lineSpacing.setVisible(True)
+                self.lineSpacingLabel.setVisible(True)
+                self.create3DBtn.setVisible(True)
+                self.create3DBtn.clicked.disconnect()
+                self.create3DBtn.clicked.connect(createPseudo3DFunc)
+                self.importDataBtn.setVisible(False)
+                self.batchCheck.setChecked(True)
+                self.batchCheck.setEnabled(False)
+                self.timeLapseCheck.setEnabled(False)
+                self.fwdRadio.setEnabled(False)
+                self.pseudoLayout.setCurrentIndex(1)
+                self.elecLineEdit.setEnabled(True)
+                self.elecLineSpacingEdit.setEnabled(True)
+                self.elecTable.setColumnHidden(2, False)
+                self.topoTable.hide() # we can't add extra topo points in here, we don't know which mesh they belong to
+                self.regionTable.hide() # we can't add regions at this level - future: set/design/create individual 2D meshes then create a pseudo 3D mesh
+                self.topoBtn.hide()
+                self.topoAddRowBtn.hide()
+                self.elecLabelTextP2 = '<br><b>IMPORTANT:</b> Labels <b>Must</b> be defined in <b><font color="red">"Line Number [space] Electrode Number"</font></b> format.'
+                self.designModelBtn.setEnabled(False)
+                self.importCustomMeshBtn2.setEnabled(False)
+                self.resetMeshBtn.hide()
+                instructionLabel.hide()
+                self.meshAspectBtn.hide()
+                meshSubLayout.setStretch(0,100)
+                meshSubLayout.setStretch(1,0)
+                meshOutputStack.setCurrentIndex(2)
+            
+            else:
+                self.lineSpacing.setVisible(False)
+                self.lineSpacingLabel.setVisible(False)
+                self.create3DBtn.setVisible(False)
+                self.importDataBtn.setVisible(True)
+                self.batchCheck.setChecked(False)
+                self.batchCheck.setEnabled(True)
+                self.timeLapseCheck.setEnabled(True)
+                self.fwdRadio.setEnabled(True)
+                self.pseudoLayout.setCurrentIndex(0)
+                self.elecLineEdit.setEnabled(False)
+                self.elecLineSpacingEdit.setEnabled(False)
+                self.elecTable.setColumnHidden(2, True)
+                self.topoTable.show()
+                self.regionTable.show()
+                self.topoBtn.show()
+                self.topoAddRowBtn.show()
+                self.elecLabelTextP2 = ''
+                self.designModelBtn.setEnabled(True)
+                self.importCustomMeshBtn2.setEnabled(True)
+                self.resetMeshBtn.show()
+                instructionLabel.show()
+                self.meshAspectBtn.show()
+                meshSubLayout.setStretch(0,70)
+                meshSubLayout.setStretch(1,30)
+                meshOutputStack.setCurrentIndex(1)
+            self.elecLabel.setText(self.elecLabelTextP1 + self.elecLabelTextP2)
+                
+        self.pseudo3DCheck = QCheckBox('Pseudo 3D inversion from 2D lines')
+        self.pseudo3DCheck.setToolTip('Arrange 2D inversion lines in a 3D grid. ResIPy will assume batch 2D surveys are imported.\n'
+                                      'Electrodes can be manually set in "Electrodes (XYZ/Topo)" tab.\n'
+                                      '***beta*** some ResIPy features may not work properly.\n\n'
+                                      'IMPORTANT: electrode labels MUST be imported and have "<line number> <electrode number>" format.')
+        self.pseudo3DCheck.stateChanged.connect(pseudo3DFunc)
+        if pvfound is False: # We can't (don't want to) have this feature without pyvista!!
+            self.pseudo3DCheck.setEnabled(False)
+        
         def regular3DFunc(state):
             if state == Qt.Checked:
                 self.lineSpacing.setVisible(True)
                 self.lineSpacingLabel.setVisible(True)
                 self.create3DBtn.setVisible(True)
+                self.create3DBtn.clicked.disconnect()
+                self.create3DBtn.clicked.connect(create3DFunc)
                 self.importDataBtn.setVisible(False)
             else:
                 self.lineSpacing.setVisible(False)
                 self.lineSpacingLabel.setVisible(False)
                 self.create3DBtn.setVisible(False)
                 self.importDataBtn.setVisible(True)
-        self.regular3DCheck = QCheckBox('3D survey from regular 2D lines')
+                
+        self.regular3DCheck = QCheckBox('3D survey from 2D lines')
+        self.regular3DCheck.setToolTip('3D survey from 2D lines - electrodes can be manually set in "Electrodes (XYZ/Topo)" tab')
         self.regular3DCheck.stateChanged.connect(regular3DFunc)
         self.regular3DCheck.setVisible(False)
         
@@ -727,6 +819,8 @@ class App(QMainWindow):
             self.importDataBtn.setEnabled(False)
             self.timeLapseCheck.setEnabled(False)
             self.batchCheck.setEnabled(False)
+            self.pseudo3DCheck.setEnabled(False)
+            self.pseudo3DCheck.setChecked(False)
             self.tabImporting.setTabEnabled(2,False) # no custom parser needed
             self.restartFunc() # let's first from previous inversion
             self.nbElecEdit.setEnabled(True)
@@ -753,6 +847,7 @@ class App(QMainWindow):
             self.ipCheck.setEnabled(False)
             self.tabImporting.setTabEnabled(2,True)
             self.batchCheck.setEnabled(True)
+            self.pseudo3DCheck.setEnabled(True)
             self.timeLapseCheck.setChecked(False) # not checked by default
             self.batchCheck.setChecked(False) # not checked by default
             self.activateTabs(False)
@@ -861,7 +956,7 @@ class App(QMainWindow):
 
         def getdir():
             fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)
-#            fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
+            # fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory containing the data', directory=self.datadir)
             
             if fnames != []:
                 fdir = os.path.dirname(fnames[0])
@@ -995,7 +1090,70 @@ class App(QMainWindow):
         self.lineSpacingLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.lineSpacingLabel.setVisible(False)
         self.lineSpacingLabel.setFixedWidth(120)
-
+        
+        def createPseudo3DFunc():
+            fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)            
+            if fnames != []:
+                fdir = os.path.dirname(fnames[0])
+                self.restartFunc()
+                self.datadir = os.path.dirname(fdir)
+                val = float(self.lineSpacing.text())
+                if len(fnames) <= 1:
+                    self.errorDump('More than one dataset is needed!')
+                    return
+                try:
+                    self.loadingWidget('Loading data, please wait...', False)
+                    self.project.createPseudo3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
+                    self.writeLog('k.createPseudo3DSurvey({:s}, lineSpacing={:s}, ftype="{:s}", parser={:s})'.format(
+                        str(fnames), str(val), self.ftype, str(self.parser)))
+                    self.infoDump('Pseudo 3D survey from 2D lines created.')
+                    self.ipCheck.setEnabled(True)
+                    self.psContourCheck.setEnabled(True)
+                    self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
+                    if 'magErr' in self.project.pseudo3DSurvey.df.columns:
+                        self.a_wgt.setText('0.0')
+                        self.b_wgt.setText('0.0')
+                    self.importDataRecipBtn.hide()
+                    self.psContourCheck.setEnabled(True)
+                    for s in self.project.surveys:
+                        self.errFitPlotIndexList.append(0)
+                        self.iperrFitPlotIndexList.append(0)
+                    self.errorCombosShow(True)
+                    errorCombosFill(self.prepFnamesComboboxes)
+                    self.elecTable.initTable(self.project.elec)
+                    self.tabImporting.setTabEnabled(1,True)
+                    if all(self.project.pseudo3DSurvey.df['irecip'].values == 0): # enabling some filtering capacities
+                        self.recipOrNoRecipShow(recipPresence=False)
+                    else:
+                        self.recipOrNoRecipShow(recipPresence=True)
+                        self.tabPreProcessing.setTabEnabled(2, True)
+                        self.filterAttrCombo.addItem('Reciprocal Error')
+                        self.plotError()
+                        self.errHist()
+                    self.plotManualFiltering()
+                    if 'dev' in self.project.pseudo3DSurvey.df.columns:
+                        self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                    if 'ip' in self.project.pseudo3DSurvey.df.columns:
+                        if np.sum(self.project.pseudo3DSurvey.df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
+                            self.ipCheck.setChecked(True)
+                        if self.ftype == 'Syscal':
+                            self.dcaButton.setEnabled(True)
+                            self.dcaProgress.setEnabled(True)               
+                    self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                    self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+                    self.loadingWidget(exitflag=True)
+                    self.invNowBtn.setEnabled(True)
+                    self.activateTabs(True)
+                    self.updateElec()
+                    self.plotPseudo()
+                    if np.isnan(self.project.elec[['x','y','z']].values).any():
+                        self.topoInterpBtnFunc()
+                except Exception as e:
+                    self.loadingWidget(exitflag=True)
+                    print('Error in createPseudo3DFunc(): ', e)
+                    self.errorDump('File format is not recognized or not all files have similar format!')
+            
+        
         def create3DFunc():
             fnames, _ = QFileDialog.getOpenFileNames(self.tabImportingData, 'Select file(s)', self.datadir, self.fformat)            
             if fnames != []:
@@ -1003,6 +1161,7 @@ class App(QMainWindow):
                 self.restartFunc()
                 self.datadir = os.path.dirname(fdir)
                 val = float(self.lineSpacing.text())
+                
                 try:
                     self.loadingWidget('Loading data, please wait...', False)
                     self.project.create3DSurvey(fnames, lineSpacing=val, ftype=self.ftype, parser=self.parser)
@@ -1011,7 +1170,7 @@ class App(QMainWindow):
                     self.infoDump('3D survey from regular 2D lines created.')
                     self.ipCheck.setEnabled(True)
                     self.psContourCheck.setEnabled(True)
-                    self.importDataBtn.setText(os.path.basename(fdir) + ' (Press to change)')
+                    self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     # self.calcAspectRatio()
                     if 'magErr' in self.project.surveys[0].df.columns:
                         self.a_wgt.setText('0.0')
@@ -1053,7 +1212,7 @@ class App(QMainWindow):
                 except Exception as e:
                     self.loadingWidget(exitflag=True)
                     print('Error in create3DFunc(): ', e)
-                    self.errorDump('File format is not recognized or not all files go the same number of electrodes')
+                    self.errorDump('File format is not recognized or not all files have similar format!')
         
         self.create3DBtn = QPushButton('Select 2D lines')
         self.create3DBtn.clicked.connect(create3DFunc)
@@ -1240,6 +1399,7 @@ class App(QMainWindow):
         hbox2.addWidget(self.timeLapseCheck)
         hbox2.addWidget(self.batchCheck)
         hbox2.addWidget(self.boreholeCheck)
+        hbox2.addWidget(self.pseudo3DCheck)
         hbox2.addWidget(self.regular3DCheck)
 
         hbox4 = QHBoxLayout()
@@ -1507,10 +1667,12 @@ class App(QMainWindow):
 
         self.elecTable = ElecTable(parent=self)
         self.elecTable.setColumnHidden(2, True)
-        self.elecLabel = QLabel('<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV with headers matching: label,x,y,z,buried.'
-                           'The last column (buried) is 1 if checked (= buried electrode) and 0 if not (=surface electrode).'
-                           'You can also use the form below to generate '
-                           'regular electrode spacing. <b>Click on the <font color="red">"Buried"</font> table header to check/unchek all</b></i>')
+        self.elecLabelTextP1 = '<i>Add electrode position. Use <code>Ctrl+V</code> to paste or import from CSV with headers matching: label,x,y,z,buried.' \
+            'The last column (buried) is 1 if checked (= buried electrode) and 0 if not (=surface electrode).' \
+                'You can also use the form below to generate ' \
+                    'regular electrode spacing. <b>Click on the <font color="red">"Buried"</font> table header to check/unchek all.</b></i>'
+        self.elecLabelTextP2 = ''
+        self.elecLabel = QLabel(self.elecLabelTextP1)
         self.elecLabel.setWordWrap(True)
 
         def importElecBtnFunc():
@@ -1567,13 +1729,13 @@ class App(QMainWindow):
             # df['y'] = np.linspace(0.0, (nbElec-1)*dy, nbElec)
             # df['z'] = np.linspace(0.0, (nbElec-1)*dz, nbElec)
             
-            # try:
-            self.project.generateElec(nb, dx, dz, nline, lineSpacing)
-            self.writeLog('k.generateElec(nb={:s},dx={:s},dz={:s},nline={:s},lineSpacing={:s})'.format(
-            str(nb), str(dx), str(dz), str(nline), str(lineSpacing)))
-            self.elecTable.initTable(self.project.elec)
-            # except Exception as e:
-            #     self.errorDump(e)
+            try:
+                self.project.generateElec(nb, dx, dz, nline, lineSpacing)
+                self.writeLog('k.generateElec(nb={:s},dx={:s},dz={:s},nline={:s},lineSpacing={:s})'.format(
+                str(nb), str(dx), str(dz), str(nline), str(lineSpacing)))
+                self.elecTable.initTable(self.project.elec)
+            except Exception as e:
+                self.errorDump(e)
         self.elecGenButton = QPushButton('Generate')
         self.elecGenButton.setAutoDefault(True)
         self.elecGenButton.clicked.connect(elecGenButtonFunc)
@@ -2059,6 +2221,9 @@ class App(QMainWindow):
                 self.plotManualFiltering(self.recipErrDataIndex)
                 self.errFitType.setCurrentIndex(0)
                 self.plotError()
+                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                    self.project._updatePseudo3DSurvey()
+
             except ValueError as e:
                 if self.ipCheck.checkState() != Qt.Checked:
                     self.errorDump(e)
@@ -2090,6 +2255,10 @@ class App(QMainWindow):
                 heatFilter()
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
+                
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
+                
             self.errHist(self.recipErrDataIndex)
             self.plotManualFiltering(self.recipErrDataIndex)
             self.errFitType.setCurrentIndex(0)
@@ -2172,6 +2341,9 @@ class App(QMainWindow):
             self.errFitType.setCurrentIndex(0)
             self.plotError()
             self.infoDump('%i unpaired quadrupoles removed!' % numRemoved)
+            
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
 
         self.recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         self.recipErrorUnpairedBtn.setFixedWidth(150)
@@ -2322,16 +2494,22 @@ class App(QMainWindow):
             self.writeLog('k.filterRangeIP(index={:d}, vmin={:.2f}, vmax={:.2f})'.format(
                 self.phaseFiltDataIndex, vmin, vmax))
             heatFilter()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
 
         def removerecip():
             self.project.filterRecipIP(self.phaseFiltDataIndex)
             self.writeLog('k.filterRecipIP(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
 
         def removenested():
             self.project.filterNested(self.phaseFiltDataIndex)
             self.writeLog('k.filterNested(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
@@ -2341,6 +2519,8 @@ class App(QMainWindow):
                 self.project.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
             heatFilter()
             heatRaw()
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
 
         phitoplayout = QHBoxLayout()
         phitoplayoutL = QHBoxLayout()
@@ -2415,6 +2595,8 @@ class App(QMainWindow):
                 self.infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             self.dcaProgress.setValue(0)
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
             
 
         def phiCbarRange():
@@ -2544,6 +2726,8 @@ class App(QMainWindow):
                 self.writeLog('k.filterDCA(index={:d})'.format(self.phaseFiltDataIndex))
                 heatFilter()
                 self.dcaButton.setEnabled(True)
+                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                    self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
@@ -2874,7 +3058,6 @@ class App(QMainWindow):
         self.tabs.addTab(tabMesh, 'Mesh')
         self.tabs.setTabEnabled(2, False)
         
-        
         fmdToolTip = 'Boundary depth (meters) below which the coarse (or background) mesh starts.\n'\
                      'Default = 2/3 max dipole length.'
         fmdLabel = QLabel('Fine/Coarse\nboundary depth')
@@ -2888,15 +3071,20 @@ class App(QMainWindow):
         
         
         def replotMesh(aspect='equal'):
-            if self.iDesign is False:
-                self.regionTable.reset()
-                self.iDesign is False
-            def func(ax):
-                self.project.createModel(ax=ax, addAction=self.regionTable.addRow)
-            # self.calcAspectRatio()
-            self.mwMesh.plot(func, aspect=aspect)
-            self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
-            self.mwMesh.canvas.setFocus() # set focus on the canvas
+            if self.pseudo3DCheck.isChecked(): # for pseudo 3D inversion
+                self.mesh3Dplotter.clear() # clear all actors 
+                self.project.showPseudo3DMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                meshOutputStack.setCurrentIndex(2)
+            else: # 2D mesh
+                if self.iDesign is False:
+                    self.regionTable.reset()
+                    self.iDesign is False
+                def func(ax):
+                    self.project.createModel(ax=ax, addAction=self.regionTable.addRow)
+                self.mwMesh.plot(func, aspect=aspect)
+                self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
+                self.mwMesh.canvas.setFocus() # set focus on the canvas
+                meshOutputStack.setCurrentIndex(1)
 
         
         def designModel():
@@ -2943,14 +3131,20 @@ class App(QMainWindow):
             nnodes = nnodesSld.value()
             try:
                 fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
-                self.project.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
-                self.writeLog('k.createMesh(typ="quad", elemx={:s}, surface={:s}, fmd={:s})'.format(
-                    str(nnodes), str(surface), str(fmd)))
-                self.scale.setVisible(False)
-                self.scaleLabel.setVisible(False)
-                meshOutputStack.setCurrentIndex(1)
+                if self.pseudo3DCheck.isChecked():
+                    self.project.createMultiMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
+                    meshOutputStack.setCurrentIndex(2)
+                    reqMemory = -1 if any([proj.param['reqMemory'] < 0 for proj in self.project.projs]) else 1
+                else:
+                    self.project.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
+                    self.writeLog('k.createMesh(typ="quad", elemx={:s}, surface={:s}, fmd={:s})'.format(
+                        str(nnodes), str(surface), str(fmd)))
+                    self.scale.setVisible(False)
+                    self.scaleLabel.setVisible(False)
+                    meshOutputStack.setCurrentIndex(1)
+                    reqMemory = self.project.param['reqMemory']
                 replotMesh()
-                if self.project.param['reqMemory'] <= 0: # RAM requirement
+                if reqMemory <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
                     ramRequiredLabel.show()
                 else:
@@ -3007,16 +3201,23 @@ class App(QMainWindow):
                               str(self.project.geom_input), str(surface), cl,
                               cl_factor, str(refine), str(fmd)))
             try:
-                self.project.createModelMesh(surface=surface,
-                                        cl=cl, cl_factor=cl_factor, show_output=True,
-                                        dump=meshLogTextFunc, refine=refine, fmd=fmd)
-                # if self.iForward is False:
-                #     self.regionTable.setColumnHidden(2, False) # show zone column
-                #     self.regionTable.setColumnHidden(3, False) # show fixed column
-                self.scale.setVisible(True)
-                self.scaleLabel.setVisible(True)
-                meshOutputStack.setCurrentIndex(1)
-                if self.project.param['reqMemory'] <= 0: # RAM requirement
+                if self.pseudo3DCheck.isChecked():
+                    self.project.createMultiMesh(typ='trian', surface=surface, cl=cl, cl_factor=cl_factor, 
+                                                 show_output=True, dump=meshLogTextFunc, refine=refine, fmd=fmd)
+                    meshOutputStack.setCurrentIndex(2)
+                    reqMemory = -1 if any([proj.param['reqMemory'] < 0 for proj in self.project.projs]) else 1
+                else:
+                    self.project.createModelMesh(surface=surface,
+                                            cl=cl, cl_factor=cl_factor, show_output=True,
+                                            dump=meshLogTextFunc, refine=refine, fmd=fmd)
+                    # if self.iForward is False:
+                    #     self.regionTable.setColumnHidden(2, False) # show zone column
+                    #     self.regionTable.setColumnHidden(3, False) # show fixed column
+                    self.scale.setVisible(True)
+                    self.scaleLabel.setVisible(True)
+                    meshOutputStack.setCurrentIndex(1)
+                    reqMemory = self.project.param['reqMemory']
+                if reqMemory <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
                     ramRequiredLabel.show()
                 else:
@@ -4473,45 +4674,62 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.param['zmin'] = np.inf 
                 self.project.param['zmax'] = np.inf 
             
-            # set initial model
-            x, phase0, zones, fixed = self.regionTable.getTable()
-            regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
-            self.project.setStartingRes(dict(zip(regid, x)),
-                                   dict(zip(regid, zones)),
-                                   dict(zip(regid, fixed)),
-                                   dict(zip(regid, phase0)))
-            self.writeLog('k.setStartingRes(regionValues={:s}, zoneValues={:s},'
-                          ' fixedValues={:s}, ipValues={:s}) '
-                          '# define region manually using k.addRegion()'.format(
-                            str(dict(zip(regid, x))),
-                            str(dict(zip(regid, zones))),
-                            str(dict(zip(regid, fixed))),
-                            str(dict(zip(regid, phase0)))))
-
-            # invert
-            # TODO run inversion in different thread to not block the UI
-            modErr=self.modErrCheck.isChecked()
-            parallel=self.parallelCheck.isChecked()
-            modelDOI=self.modelDOICheck.isChecked()
-            self.project.invert(iplot=False, dump=logTextFunc,
-                                modErr=modErr, parallel=parallel, modelDOI=modelDOI)
-            self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
-                str(modErr), str(parallel), str(modelDOI)))
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.pseudo3DInvtext = ''
+                def pseudo3DInvLog(dirname, typ):
+                    with open(os.path.join(dirname, typ + '.out'),'r') as f:
+                        self.pseudo3DInvtext += f.read() + '\n'
+                        
+                invLog = pseudo3DInvLog if self.parallelCheck.isChecked() is False else logTextFunc # handling dump
             
-            # replace the log by the R2.out
-            with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
-                text = f.read()
-            self.logText.setText(text)
-            self.project.proc = None
+                self.project.invertPseudo3D(iplot=False, runParallel=self.parallelCheck.isChecked(),
+                                            dump=logTextFunc, invLog=invLog)
             
-            # check if we don't have a fatal error
-            if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
-                self.end = False
-                self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+                self.logText.setText(self.pseudo3DInvtext)
+                if self.project.proc.killFlag is True: # make sure everything stops now!
+                    self.end = False
+                
+            else: # regular single Project (2D or 3D)
+                # set initial model
+                x, phase0, zones, fixed = self.regionTable.getTable()
+                regid = np.arange(len(x)) + 1 # 1 is the background (no 0)
+                self.project.setStartingRes(dict(zip(regid, x)),
+                                       dict(zip(regid, zones)),
+                                       dict(zip(regid, fixed)),
+                                       dict(zip(regid, phase0)))
+                self.writeLog('k.setStartingRes(regionValues={:s}, zoneValues={:s},'
+                              ' fixedValues={:s}, ipValues={:s}) '
+                              '# define region manually using k.addRegion()'.format(
+                                str(dict(zip(regid, x))),
+                                str(dict(zip(regid, zones))),
+                                str(dict(zip(regid, fixed))),
+                                str(dict(zip(regid, phase0)))))
+    
+                # invert
+                # TODO run inversion in different thread to not block the UI
+                modErr=self.modErrCheck.isChecked()
+                parallel=self.parallelCheck.isChecked()
+                modelDOI=self.modelDOICheck.isChecked()
             
-            if any(self.project.mesh.df['param'] == 0): # if fixed element are present, the mesh
-            # will be sorted, meaning we need to replot it
-                self.mwMesh.replot()
+                self.project.invert(iplot=False, dump=logTextFunc,
+                                    modErr=modErr, parallel=parallel, modelDOI=modelDOI)
+                self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
+                    str(modErr), str(parallel), str(modelDOI)))
+            
+                # replace the log by the R2.out
+                with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
+                    text = f.read()
+                self.logText.setText(text)
+                self.project.proc = None
+                
+                # check if we don't have a fatal error
+                if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
+                    self.end = False
+                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+                
+                if any(self.project.mesh.df['param'] == 0): # if fixed element are present, the mesh
+                # will be sorted, meaning we need to replot it
+                    self.mwMesh.replot()
             
             # show results
             if self.end is True:
@@ -4541,6 +4759,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.inversionOutput = ''
         self.end = False
 
+        
         def parseRMS(tt):
             newFlag = False
             a = tt.split()
@@ -4572,8 +4791,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         cropMaxDepth = False # this parameter doesnt make sense for 3D surveys 
                     else:
                         cropMaxDepth = self.cropBelowFmd.isChecked()
-                    self.mwIter.plot(partial(self.project.showIter, modelDOI=self.modelDOICheck.isChecked(), 
-                                              cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
+                    if self.pseudo3DCheck.isChecked():
+                        showIter = self.project.projectPseudo3D.showIter
+                    else:
+                        showIter = self.project.showIter
+                        
+                    self.mwIter.plot(partial(showIter, modelDOI=self.modelDOICheck.isChecked(),
+                                             cropMaxDepth=cropMaxDepth), aspect=self.plotAspect)
                 if a[0] == 'FATAL:':
 #                    self.invertBtn.animateClick()
                     self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
@@ -4656,6 +4880,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         # change survey
         def surveyComboFunc(index):
+            if self.pseudo3DCheck.isChecked():
+                if index == 0:
+                    self.showStackedLayout.setCurrentIndex(1)
+                else:
+                    self.showStackedLayout.setCurrentIndex(0)
+                    index -= 1 # first graph is pseudo 3D
             self.displayParams['index'] = index
             attrs = list(self.project.meshResults[index].df.keys())
             attr0 = str(self.attrCombo.currentText())
@@ -4723,7 +4953,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if (self.contourCheck.isChecked() is True) or (self.project.typ[-1] != '2'):
                 self.replotSection()
             else:
-                self.mwInv.setMinMax(vmin=vmin, vmax=vmax)
+                if self.pseudo3DCheck.isChecked() and self.surveyCombo.currentIndex() == 0:
+                    self.replotSection()
+                else:
+                    self.mwInv.setMinMax(vmin=vmin, vmax=vmax)
         self.vMinMaxBtn = QPushButton('Apply')
         self.vMinMaxBtn.setAutoDefault(True)
         self.vMinMaxBtn.clicked.connect(vMinMaxBtnFunc)
@@ -4846,6 +5079,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                   ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
                                   fdir, edge_color, str(contour), str(sens), attr,
                                   str(vmin), str(vmax), cmap, sensPrc))
+                    if self.pseudo3DCheck.isChecked():
+                        fname = os.path.join(fdir, 'Pseudo_3D_result.png')
+                        self.vtkWidget.screenshot(fname, transparent_background=True)
                 self.project.saveVtks(fdir)
                 self.writeLog('k.saveVtks("{:s}")'.format(fdir))
             self.project.saveData(fdir)
@@ -5106,12 +5342,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 plotInvError2(index)
                 if self.iBorehole is False and self.m3DRadio.isChecked() is False:
                     self.errorGraphs.setTabEnabled(0, True)
-                    self.errorGraphs.setCurrentIndex(0)
+                    # self.errorGraphs.setCurrentIndex(0)
                     plotInvError(index)
                     self.invErrorIndex = index
                 else:
                     self.errorGraphs.setTabEnabled(0, False)
-                    self.errorGraphs.setCurrentIndex(1)
+                    # self.errorGraphs.setCurrentIndex(1)
             except Exception as e:
                 print('Could not print error: ', e)
         self.invErrorCombo = QComboBox()
@@ -5138,7 +5374,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmax = float(vmaxVal) if vmaxVal != '' else None
             self.project.filterInvError(index=index, vmin=vmin, vmax=vmax)
             self.writeLog('k.filterInvError(index={:d}, vmin={}, vmax={})'.format(
-            index, str(vmin), str(vmax)))      
+            index, str(vmin), str(vmax)))    
+            
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
             
             plotInvError(self.invErrorIndex)
             plotInvError2(self.invErrorIndex)
@@ -5149,6 +5388,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     s.df = s.dfInvErrOutputOrigin.copy()
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
+            
+            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                self.project._updatePseudo3DSurvey()
+            
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
             plotInvError(self.invErrorIndex)
@@ -5207,6 +5450,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
+                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                    self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('Error plotting error graphs.')
                 pass
@@ -5629,13 +5874,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.elecTable.setTable(dfelec)
         self.infoDump('Interpolation successful.')
         
+    
     def updateElec(self):
         pdebug('updateElec()')
         try:
             elec = self.elecTable.getTable()
             if self.tempElec is None or np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
                 self.tempElec = elec
-                self.project.setElec(elec)
+                elecList = None
+                if self.pseudo3DCheck.isChecked():
+                    elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
+                    self.project.setPseudo3DElec(pd.concat(elecList, axis=0, ignore_index=True))
+                    elecList = self.project._create2DLines() # convert to horizontal 2D lines
+                
+                self.project.setElec(elec, elecList)
+                if self.project.elec['remote'].sum() > 0:
+                    self.meshQuadGroup.setEnabled(False)
+                else:
+                    self.meshQuadGroup.setEnabled(True)
                 self.writeLog('#k.setElec(elec)')
                 # TODO don't know how to write to log this
                 self.project.mesh = None
@@ -5655,7 +5911,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotter.clear()
             self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams, 
-                                    darkMode=eval(resipySettings.param['dark']))
+                                        darkMode=eval(resipySettings.param['dark']))
+        elif self.pseudo3DCheck.isChecked():
+            self.pseudoPlotter.clear()
+            self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],
+                                                   vmax=self.pParams['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudo.setCallback(self.project.showPseudo)
             self.mwPseudo.replot(aspect='auto', **self.pParams)
@@ -5669,7 +5929,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotterIP.clear()
             self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP, 
-                                      darkMode=eval(resipySettings.param['dark']))
+                                          darkMode=eval(resipySettings.param['dark']))
+        elif self.pseudo3DCheck.isChecked():
+            self.pseudoPlotterIP.clear()
+            self.project.pseudo3DSurvey.showPseudoIP(ax=self.pseudoPlotterIP, threed=True, vmin=self.pParamsIP['vmin'],
+                                                   vmax=self.pParamsIP['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudoIP.setCallback(self.project.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
@@ -5978,6 +6242,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.rangeInvErrorMaxInput.setText('')
 
         
+    def disableOptionsPseudo3D(self, flag):
+        if flag:
+            self.doiSensCheck.setChecked(False)
+            self.doiSensCheck.setEnabled(False)
+            self.contourCheck.setChecked(False)
+            self.contourCheck.setEnabled(False)
+            self.aspectCheck.setEnabled(False)
+            self.sensWidget.setEnabled(False)
+        else:
+            self.doiSensCheck.setEnabled(True)
+            self.contourCheck.setEnabled(True)
+            self.aspectCheck.setEnabled(True)
+            self.sensWidget.setEnabled(True)
+    
+    
     def replotSection(self): # main plotting function
         pdebug('replotSection() with', self.displayParams)
         index = self.displayParams['index']
@@ -5997,18 +6276,26 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pvcontour = self.displayParams['pvcontour']
         aspect = self.displayParams['aspect']
         if self.project.typ[-1] == '2':
-            self.mwInv.replot(threed=False, aspect=aspect,
-                              index=index, edge_color=edge_color,
-                              contour=contour, sens=sens, attr=attr,
-                              vmin=vmin, vmax=vmax, color_map=cmap, 
-                              sensPrc=sensPrc, doi=doi, doiSens=doiSens,
-                              cropMaxDepth=self.cropBelowFmd.isChecked())
-            self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
-                          ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
-                          'vmax={:s}, color_map="{:s}", sensPrc={:.2f}, doi={:s},'
-                          ' doiSens={:s})'.format(index, edge_color, str(contour),
-                            str(sens), attr, str(vmin), str(vmax), cmap, sensPrc, str(doi),
-                                                 str(doiSens)))
+            if self.pseudo3DCheck.isChecked() and self.surveyCombo.currentIndex() == 0:
+                self.disableOptionsPseudo3D(True)
+                self.vtkWidget.clear()
+                self.vtkWidget.clear_plane_widgets()
+                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color,
+                                         vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping,
+                                         background_color=(0.8,0.8,0.8), cropMaxDepth=self.cropBelowFmd.isChecked())
+            else:
+                self.disableOptionsPseudo3D(False)
+                self.mwInv.replot(threed=False, aspect=aspect,
+                                  index=index, edge_color=edge_color,
+                                  contour=contour, sens=sens, attr=attr,
+                                  vmin=vmin, vmax=vmax, color_map=cmap, 
+                                  sensPrc=sensPrc, doi=doi, doiSens=doiSens)
+                self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
+                              ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
+                              'vmax={:s}, color_map="{:s}", sensPrc={:.2f}, doi={:s},'
+                              ' doiSens={:s})'.format(index, edge_color, str(contour),
+                                str(sens), attr, str(vmin), str(vmax), cmap, sensPrc, str(doi),
+                                                     str(doiSens)))
         else:
             # mwInvResult3D.replot(threed=True, index=index, attr=attr,
                                   # vmin=vmin, vmax=vmax, color_map=cmap)
@@ -6050,7 +6337,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.invtabs.setTabEnabled(1, True)
         self.invtabs.setTabEnabled(2, True)
         if self.project.typ[-1] == '2':
-            self.showStackedLayout.setCurrentIndex(0)
+            if self.pseudo3DCheck.isChecked():
+                self.showStackedLayout.setCurrentIndex(1)
+            else:
+                self.showStackedLayout.setCurrentIndex(0)
 #                    maxDepth = self.project.fmd if self.cropBelowFmd.isChecked() else None
             self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))
         else:
@@ -6060,6 +6350,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.displayParams['attr'] = 'Sigma_real(log10)'
         self.surveyCombo.clear()
+        if self.pseudo3DCheck.isChecked():
+            self.surveyCombo.addItem('Pseudo 3D display')
         for m in self.project.meshResults:
             self.surveyCombo.addItem(m.mesh_title)
         index = 0
