@@ -4066,7 +4066,8 @@ class Project(object): # Project master class instanciated by the GUI
             seq[ie,2] = seq2[ie,3] # swap if K is < 0
             seq[ie,3] = seq2[ie,2]
             
-        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
+        protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq],
+                                columns=['index','a','b','m','n'])
         
         # if it's 3D, we add the line number (all electrode on line 1)
         if ((self.typ == 'R3t') | (self.typ == 'cR3t')):
