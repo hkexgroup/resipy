@@ -255,7 +255,7 @@ class Survey(object):
             if 'buried' not in elec.columns:
                 elec['buried'] = False
             if 'label' not in elec.columns:
-                elec['label'] = np.arange(dfelec.shape[0]).astype(str)
+                elec['label'] = np.arange(elec.shape[0]).astype(str)
             self.elec = elec
         
         else:

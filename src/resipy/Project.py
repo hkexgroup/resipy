@@ -9,6 +9,8 @@ ResIPy_version = '3.1.1' # ResIPy version (semantic versionning in use)
 import os, sys, shutil, platform, warnings, time # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
+from copy import deepcopy
+from threading import Thread
 
 # used to download the binaries
 import requests
@@ -96,7 +98,22 @@ try:
     checkExe(os.path.join(apiPath, 'exe'))
 except Exception as e:
     pass
-            
+
+
+# little class for managing multiple processes (for parallel inversion)
+class ProcsManagement(object): # little class to handle the kill
+    def __init__(self, r2object):
+        self.r2 = r2object
+        self.killFlag = False
+    def kill(self):
+        self.killFlag = True
+        print('killing...')
+        self.r2.irunParallel2 = False # this will end the infinite loop
+        procs = self.r2.procs # and kill the running processes
+        for p in procs:
+            p.terminate()
+        print('all done!')
+        
 #%% system check
 def getSysStat():
     """Return processor speed and usage, and free RAM and usage. 
@@ -292,6 +309,11 @@ class Project(object): # Project master class instanciated by the GUI
         self.iTimeLapse = False # to enable timelapse inversion
         self.iBatch = False # to enable batch inversion
         self.meshResults = [] # contains vtk mesh object of inverted section
+        self.projs = [] # contains Instances of Project for pseudo 3D inversion from 2D lines
+        self.projectPseudo3D = None # updates iteratively - for showing pseudo 3D inversion iterations, killing, etc.
+        self.pseudo3DBreakFlag = False # flag to cancel inversions in a chain (pseudo3D only)
+        self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
+        self.pseudo3DMeshResult = None # contains pseudo 3D mesh result (for external use - e.g., ParaView)
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -346,7 +368,32 @@ class Project(object): # Project master class instanciated by the GUI
         
         return elec
     
+    
+    
+    def _findRemote(self, elec):
+        """Flag remote electrodes.
+        
+        Parameters
+        ----------
+        elec : dataframe
+            contains the electrodes information
+            
+        Returns
+        -------
+        elec : dataframe
+            remote flag added to electrodes
+        """
+        remote_flags = [-9999999, -999999, -99999,-9999,-999,
+                    9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
+        iremote = np.in1d(elec['x'].values, remote_flags)
+        iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
+        elec.loc[:, 'remote'] = iremote
+        if np.sum(iremote) > 0:
+            print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
+        return elec
 
+
+    
     def setElec(self, elec, elecList=None):
         """Set electrodes. Automatically identified remote electrode.
 
@@ -387,14 +434,7 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                 ok = True # first assignement of electrodes
             if ok:
-                # identification remote electrode
-                remote_flags = [-9999999, -999999, -99999,-9999,-999,
-                            9999999, 999999, 99999] # values asssociated with remote electrodes
-                iremote = np.in1d(elec['x'].values, remote_flags)
-                iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
-                elec.loc[:, 'remote'] = iremote
-                if np.sum(iremote) > 0:
-                    print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
+                elec = self._findRemote(elec) # identification of remote electrode
                 self.elec = elec
                 for s in self.surveys:
                     s.elec = elec
@@ -410,12 +450,13 @@ class Project(object): # Project master class instanciated by the GUI
                     raise ValueError("The number of electrode matrices must match the number of surveys")
             except AttributeError:
                 raise AttributeError("No Survey attribute assocaited with R2 class, make sure you create a survey first")
-
-            initElec = elecList[0]
-            self.elec = self._num2elec(np.zeros((len(initElec),3)))
+            
+            if self.elec is None:
+                initElec = elecList[0]
+                self.elec = self._num2elec(np.zeros((len(initElec),3)))
             for i, survey in enumerate(self.surveys):
-                survey.elec = self._num2elec(elecList[i])
-        
+                survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
+
         if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             
@@ -857,11 +898,9 @@ class Project(object): # Project master class instanciated by the GUI
             sparams['node_elec'][1] = np.array(sparams['node_elec'][1]).astype(int)
         self.param = sparams
         
-            
-            
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
-                     parser=None, debug=True):
+                     parser=None, debug=True, **kwargs):
         """Read electrodes and quadrupoles data and return 
         a survey object.
 
@@ -881,8 +920,9 @@ class Project(object): # Project master class instanciated by the GUI
         debug : bool, optional
             If True, information about the reciprocal measurements, default 
             filtering, etc. will be displayed.
+        **kwargs: Keyword arguments to be passed to Survey()
         """
-        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug))
+        self.surveys.append(Survey(fname, ftype, spacing=spacing, parser=parser, debug=debug, **kwargs))
         self.surveysInfo.append(info)
         self.setBorehole(self.iBorehole)
 
@@ -1025,7 +1065,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.bigSurvey.ndata = df.shape[0]
 
 
-
     def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
                        name=None, parser=None):
         """Create a 3D survey based on 2D regularly spaced surveys.
@@ -1094,12 +1133,533 @@ class Project(object): # Project master class instanciated by the GUI
         survey0.dfReset = dfm # for reseting filters on res
         survey0.dfPhaseReset = dfm # for reseting filters on IP
         survey0.name = '3Dfrom2Dlines' if name is None else name
-        self.surveys= [survey0]
+        self.surveys = [survey0]
         self.elec = None
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
-        
 
+##################### Handling Pseudo 3D     BEGIN     ############################
+
+    def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
+        """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
+            THIS WILL NEED CORRECT ELECTRODE LAYOUT - DONE IN self.createPseudo3DSurvey()
+        
+        Parameters
+        ----------
+        dirname : list of str
+            List of 2D filenames in the right order for the grid or directory
+            name (the files will be sorted alphabetically in this last case).
+        lineSpacing : float, optional
+            Spacing in meter between each line.
+        ftype : str, optional
+            Type of the survey to choose which parser to use.
+        kwargs : -
+            Keyword arguments to be passed to Project.createBatchSurvey()
+        """
+        
+        self.createBatchSurvey(dirname=dirname, ftype=ftype, parser=parser, **kwargs) # We need surveys in the master Project for data procesing (error modeling, etc.)
+    
+        elecList = []
+        dfList = []
+        for i, s in enumerate(self.surveys):
+            directory = os.path.join(self.dirname, s.name)
+            os.mkdir(directory) # making separate inversion diectories
+            proj = self._createProjects4Pseudo3D(dirname=directory, invtyp=self.typ) # non-parallel meshing
+            proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec, **kwargs)
+            self.projs.append(proj) # appending projects list for later use of meshing and inversion
+            e = s.elec.copy()
+            e.loc[:, 'y'] = i*lineSpacing
+            prefix = '{:d} '.format(i+1)
+            e.loc[:, 'label'] = prefix + e['label']
+            elecList.append(e)
+            df = s.df.copy()
+            df.loc[:,['a','b','m','n']] = prefix + df[['a','b','m','n']]
+            dfList.append(df)
+            
+        elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
+        dfm = pd.concat(dfList, axis=0, sort=False).reset_index(drop=True)
+        
+        self.pseudo3DSurvey = Survey(fname=None, df=dfm, elec=elec)
+        self.elec = None
+        self.setElec(elec) # create initial electrodes df - to be populated later
+        self.setBorehole(self.iBorehole)
+        
+    
+    
+    def importPseudo3DElec(self, fname=''):
+        """Import electrodes positions. The label columns should include line
+        number separated by space (like in 3D):
+            label,x,y,z
+            1 3,0,0,0
+            1 4,1,1,0
+            1 5,1,2,1
+
+        Parameters
+        ----------
+        fname : str
+            Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
+        """
+        with open(fname, 'r') as f:
+            try:
+                float(f.readline().split(',')[0])
+                header = None
+            except Exception:
+                header = 'infer'
+        df = pd.read_csv(fname, header=header)
+        if header is None:
+            elec = df.values
+        else:
+            elec = df
+        self.setPseudo3DElec(elec)
+    
+    
+    
+    def setPseudo3DElec(self, elec):
+        """Set pseudo 3D electrodes (with an electrode label as:
+            <line number> <electrode number>).
+    
+        Parameters
+        ----------
+        elecList : list of dataframes, optional
+            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        """
+        self.pseudo3DSurvey.elec = elec
+        
+        # take self.surveys information to inform all projects in self.projs
+        self._updatePseudo3DSurvey()
+        
+        
+        
+    def _updatePseudo3DSurvey(self, elecList=None):
+        """Update a pseudo 3D survey based on 2D surveys. 
+            Cleaned data, updated electrodes will be inserted in each survey.
+        
+        Parameters
+        ----------
+        elecList : list of dataframes, optional
+            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        """
+        if self.projs == []:
+            raise ValueError('Survey needs to be created first! use Project.createPseudo3DSurvey()')
+            
+        elecList = self._create2DLines(elecList)
+
+        for elecdf, proj, survey in zip(elecList, self.projs, self.surveys):
+            survey.elec = elecdf.copy()
+            proj.setElec(elecdf.copy())
+            proj.surveys[0].df = survey.df.copy()               
+
+
+
+    def split3DGrid(self, elec=None, changeLabel=True):
+        """Split self.elec to available lines based on 'label' 
+        
+        
+        Parameters
+        ----------
+        elec : dataframe, optional
+            Contains the electrodes information. "label" column must be provided and
+            have "<line number> <electrode number>" format.
+        changeLable : bool, optional
+            If True, the line number will be dropped from labels - Flase for GUI related surveys.
+        
+        Returns
+        -------
+        elecList : list of dataframes
+            List of electrodes dataframes - each df can have a 3D like XYZ.
+        """
+        
+        if elec is None:
+            if self.pseudo3DSurvey is not None:
+               elec =  self.pseudo3DSurvey.elec.copy()
+            else:
+               elec = self.elec.copy()
+        elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
+        elecGroups = elec.groupby('lineNum')
+        elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
+        elecList = []
+        for elecdfRaw in elecdfs:
+            elecdf = elecdfRaw.copy().reset_index(drop=True) # void pandas setting with copy warning annoying error
+            if changeLabel:
+                elecdf['label'] = elecdf['elecNum'].values # it's 2D so let's get rid of line numbers in labels
+            elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
+            elecdf = self._findRemote(elecdf)
+            elecList.append(elecdf)
+        
+        return elecList
+    
+    
+    def _create2DLines(self, elecList=None):
+        """Create a list of 2D electrode XYZ/topo where only x & z are variable and y=0.
+            Simply, rotating an array of XY locations on x, y = 0 pivot to have all y values equal to zero
+        
+        Parameters
+        ----------
+        elecList : list of dataframes, optional
+            List of electrodes dataframes - each df can have a 3D like XYZ.
+        
+        Returns
+        -------
+        elecList : list of dataframes
+            List of electrodes dataframes - each df will have 2D like XYZ (rotated to have y=0).
+        """
+        
+        if elecList is None:
+            elecList = self.split3DGrid()
+            
+        for elecdf in elecList:
+            # transforming line to start from x, y = 0
+            elecdf['x'] = elecdf['x'].values - elecdf.loc[0,'x']
+            elecdf['y'] = elecdf['y'].values - elecdf.loc[0,'y']
+            
+            delx = elecdf['x'].max() - elecdf['x'].min()
+            dely = elecdf['y'].max() - elecdf['y'].min()
+            f = np.inf if delx == 0 else np.abs((dely)/(delx))
+            rotangle = np.arctan(f)
+            if elecdf['y'].values[0] > elecdf['y'].values[-1]: # CCW rotation needed
+                rotangle *= -1
+            # rotation     
+            rotmat = np.array([[np.cos(rotangle), np.sin(rotangle)], 
+                               [-np.sin(rotangle), np.cos(rotangle)]])
+            xy = np.array([elecdf['x'].values, elecdf['y'].values])
+            newmat = np.dot(rotmat, xy).T
+            
+            elecdf['x'] = newmat[:,0].copy()
+            elecdf['y'] = 0 # to make sure we don't end up with super small values
+                        
+        return elecList
+    
+    
+    def createMultiMesh(self, runParallel=True, **kwargs):
+        """Create multiple meshes from avalable Projects in self.projs.
+        
+        Parameters
+        ----------
+        runParallel : bool, optional
+            if True, mesh generation will run in multiple threads.
+        kwargs : -
+            Keyword arguments to be passed to mesh generation schemes
+        """
+        for proj in self.projs:
+            if runParallel:
+                p = Thread(target=proj.createMesh, kwargs=kwargs)
+                p.start()
+                p.join()
+            else:
+                proj.createMesh(**kwargs)
+                
+        self.mesh = self.projs[0].mesh # just to have a populated mesh in master Project!
+   
+    
+    
+    def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
+                         cropMesh=True, color_bar=False, returnMesh=False,
+                         cropMaxDepth=False, **kwargs):
+        """Show 2D meshes in 3D view
+        
+        Parameters
+        ----------
+        ax : matplotlib axis, optional
+            If specified, graph will be plotted on the given axis.
+        color_map : str, optional
+            Name of the colormap to be used.
+        meshList : list of Mesh classes
+            If not None, pseudo 3D meshes will be plotted by default.
+        cropMesh : bool, optional
+            If True, 2D mesh will be bound to electrodes and zlim.
+        color_bar : Boolean, optional 
+            `True` to plot colorbar.
+        returnMesh: bool, optional
+            if True method returns a merged mesh. 
+        cropMaxDepth : bool, optional
+            If True, region below fine mesh depth (fmd) will be cropped.
+        kwargs : -
+            Keyword arguments to be passed to Mesh.show() class.
+        """
+        
+        def findminmax(a):
+            mina = np.min(a) if np.min(a) != 0 else -1
+            maxa = np.max(a) if np.max(a) != 0 else +1
+            if mina == maxa:
+                mina -= 1
+                maxa += 1
+            return [mina, maxa]
+        
+        try:
+            import pyvista as pv
+        except Exception:
+            print('ERROR: pyvista is needed to show pseudo 3D meshes. Use pip install pyvista')
+            return
+        
+        if meshList is None:
+            meshList = [deepcopy(p.mesh) for p in self.projs]
+        
+        if ax is None:
+            ax = pv.Plotter()
+            
+        kwargs['pvshow'] = False # don't invoke show after each mesh added
+        
+        elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
+                
+        elec = []
+        for elecdf in elecList: # removing remote electrodes from 3D grid
+            elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
+        
+        matx = np.c_[[elecarr[:,0] for elecarr in elec]].T
+        xlimi = findminmax(matx)
+        maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
+        ylimi = findminmax(maty)
+        if returnMesh:
+            meshOutList = []
+            
+        for proj, elecdf, mesh in zip(self.projs, elecList, meshList):
+            if mesh is None:
+                print('Mesh undefined for this project!')
+                continue
+
+            if cropMesh:
+                node_x = mesh.node[:,0]
+                node_z = mesh.node[:,2]
+                xmin = np.min(node_x)
+                xmax = np.max(node_x)
+                zmin = np.min(node_z)
+                zmax = np.max(node_z)
+                (xsurf, zsurf) = mesh.extractSurface()
+                if cropMaxDepth and proj.fmd is not None:
+                    xfmd, zfmd = xsurf[::-1], zsurf[::-1] - proj.fmd
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
+                else:
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+                mesh = mesh.crop(verts)
+                limits = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
+            else:
+                limits = np.c_[mesh.node[:,0], mesh.node[:,1]]
+
+            meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
+
+            xlim = findminmax(limits[:,0])
+            ylim = findminmax(limits[:,1])
+            xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
+            ylim[0] = ylim[0] if ylim[0] < ylimi[0] else ylimi[0]
+            xlim[1] = xlim[1] if xlim[1] > xlimi[1] else xlimi[1]
+            ylim[1] = ylim[1] if ylim[1] > ylimi[1] else ylimi[1]
+            zlim = proj.zlim
+            meshMoved.ndims = 3 # overwrite dimension to use show3D() method
+            meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
+                      ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
+            if returnMesh:
+                meshOutList.append(meshMoved)
+        ax.show() # call plotter.show()
+        
+        if returnMesh:
+            meshMerged = mt.mergeMeshes(meshOutList)
+            meshMerged.ndims = 3
+            self.pseudo3DMeshResult = meshMerged
+    
+    
+    def _setPseudo3DParam(self, targetProjParams):
+        """Set params from master Project to a target Project.
+            IMPORTANT: some params (e.g., mesh, reg0, etc.) are excluded
+        
+        Parameters
+        ----------
+        targetProjParams : dict
+            Target Project instance params
+        
+        Returns
+        -------
+        targetProjParams : dict
+            Target Project instance params are set from self (master Project)
+        """
+        keys = ['num_xz_poly', 'num_xy_poly','a_wgt', 'b_wgt', 'lineTitle', 'job_type',  
+                'flux_type', 'singular_type', 'res_matrix', 'scale', 'patch_x', 'patch_z',
+                'inverse_type', 'target_decrease', 'qual_ratio', 'data_type', 'zmin', 'zmax',
+                'reg_mode', 'tolerance', 'max_iter', 'error_mod', 'alpha_aniso',
+                'alpha_s', 'min_error', 'rho_min', 'rho_max', 'mesh_type']
+        
+        for key in keys:
+            if key in self.param.keys():
+                targetProjParams[key] = self.param[key]
+        if 'node_elec' in self.param:
+            targetProjParams['node_elec'] = [self.param['node_elec'][0].tolist(),
+                                    self.param['node_elec'][1].tolist()]
+        if 'xz_poly_table' in self.param:
+            targetProjParams['xz_poly_table'] = self.param['xz_poly_table'].tolist()
+        if 'xy_poly_table' in self.param:
+            targetProjParams['xy_poly_table'] = self.param['xy_poly_table'].tolist()
+        
+        return targetProjParams
+    
+    
+    def invertPseudo3D(self, invLog=None, runParallel=False, **kwargs):
+        """Run non-parallel inversion - modifications needed
+        
+        Parameters
+        ----------
+        invLog : function, optional
+            Passes project inversion outputs.
+        runParallel : bool
+            if True, inversions will run in parallel based on number of CPU cores.
+        kwargs : -
+            Keyword arguments to be passed to invert().
+        """
+        # kill management
+        self.procs = []
+        self.proc = ProcsManagement(self)
+                
+        self.meshResults = [] # clean meshResults list
+        for proj in self.projs: # preparing inversion params
+            proj.param = self._setPseudo3DParam(proj.param)
+        
+        if runParallel is False: # non-parallel inversion
+            for proj in self.projs:
+                self.projectPseudo3D = proj # get functions for UI
+                proj.invert(**kwargs)
+                self.procs.append(proj.proc)
+                if self.proc.killFlag is True:
+                    break
+                if invLog is not None:
+                    invLog(proj.dirname, proj.typ)
+            
+        else: # parallel inversion
+            if invLog is None:
+                def invLog(x):
+                    print(x, end='')
+            
+            # create R2.exe path
+            exeName = self.typ + '.exe'
+            exePath = os.path.join(self.apiPath, 'exe', exeName)
+    
+            # create .in and protocol.dat files
+            wds = []
+            for proj in self.projs:
+                wds.append(proj.dirname)
+                invLog('Writing .in file and protocol.dat for {} survey... '.format(
+                    proj.surveys[0].name))
+                proj.write2in() # R2.in
+                proj.write2protocol() # protocol.dat
+                invLog('done!\n')
+            wds2 = wds.copy()
+    
+            # create workers directory
+            ncoresAvailable = ncores = systemCheck()['core_count']
+            if ncores is None:
+                ncores = ncoresAvailable
+            else:
+                if ncores > ncoresAvailable:
+                    raise ValueError('Number of cores larger than available')
+    
+            if OS == 'Windows':
+                cmd = [exePath]
+            elif OS == 'Darwin':
+                winetxt = 'wine'
+                if getMacOSVersion():
+                    winetxt = 'wine64'
+                winePath = []
+                wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)
+                for stdout_line in iter(wine_path.stdout.readline, ''):
+                    winePath.append(stdout_line)
+                if winePath != []:
+                    cmd = ['%s' % (winePath[0].strip('\n')), exePath]
+                else:
+                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+            else:
+                cmd = ['wine',exePath]
+    
+            if OS == 'Windows':
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    
+            # run them all in parallel as child processes
+            invLog('----------- PARALLEL INVERSION BEGINS ----------')
+            def dumpOutput(out):
+                for line in iter(out.readline, ''):
+                    invLog(line.rstrip() + '\n')
+                out.close()
+    
+            # create essential attribute
+            self.irunParallel2 = True
+    
+            # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
+            # In an infinite loop, will run an number of process (according to the number of cores)
+            # the loop will check when they finish and start new ones.
+            def done(p):
+                return p.poll() is not None
+
+            c = 0
+            invLog('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
+            while self.irunParallel2:
+                while wds and len(self.procs) < ncores:
+                    wd = wds.pop()
+                    if OS == 'Windows':
+                        p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    else:
+                        p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True)
+                    self.procs.append(p)
+    
+                for p in self.procs:
+                    if done(p):
+                        self.procs.remove(p)
+                        c = c+1
+                        # TODO get RMS and iteration number here ?
+                        invLog('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
+    
+                if not self.procs and not wds:
+                    invLog('\n')
+                    break
+                else:
+                    time.sleep(0.05)
+ 
+        if self.proc.killFlag is False: # make sure we haven't killed the processes
+            for proj, survey in zip(self.projs, self.surveys):
+                if runParallel:
+                    proj.getInvError()
+                    proj.getResults()
+                self.meshResults.append(deepcopy(proj.meshResults[0]))
+                survey.df = proj.surveys[0].df.copy() # to populate inversion error outputs
+                survey.dfInvErrOutputOrigin = survey.df.copy()
+
+        print('----------- END OF INVERSION IN // ----------')
+
+    
+    def showPseudo3DResults(self, cropMesh=False, **kwargs):
+        """Show 2D Inversions in 3D view
+        
+        Parameters
+        ----------
+        cropMesh : bool, optional
+            If True, 2D mesh will be bound to electrodes and zlim.
+        kwargs : -
+            Keyword arguments to be passed to showPseudo3DMesh().
+        """
+        meshResults = [deepcopy(p.meshResults[0]) for p in self.projs]
+        self.showPseudo3DMesh(color_bar=True, cropMesh=cropMesh, meshList=meshResults, **kwargs)
+        
+    
+    @classmethod
+    def _createProjects4Pseudo3D(cls, dirname, invtyp='R2'):
+        """Create a Project instance for future use of meshing and inversion.
+        
+        Parameters
+        ----------
+        dirname : str
+            directory where 2D line will be dealt with (meshing, inversion, etc.)
+        invtyp : str
+            'R2' - inverting 2D resistivity
+            'cR2' - inverting 2D induced polarization
+        
+        Returns
+        -------
+        ProjInstance : Instance of Project class
+        """
+        ProjInstance = cls(dirname=dirname, typ=invtyp)
+        ProjInstance.dirname = dirname
+        shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
+        return ProjInstance
+
+##################### Handling Pseudo 3D     END     ############################
 
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
@@ -2653,17 +3213,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.procs = []
 
         # kill management
-        class ProcsManagement(object): # little class to handle the kill
-            def __init__(self, r2object):
-                self.r2 = r2object
-            def kill(self):
-                print('killing...')
-                self.r2.irunParallel2 = False # this will end the infinite loop
-                procs = self.r2.procs # and kill the running processes
-                for p in procs:
-                    p.terminate()
-                print('all done!')
-
         self.proc = ProcsManagement(self)
 
         # run in // (http://code.activestate.com/recipes/577376-simple-way-to-execute-multiple-process-in-parallel/)
@@ -3015,7 +3564,8 @@ class Project(object): # Project master class instanciated by the GUI
         ----------
         index : int, optional
             Index of the inverted section (mainly in the case of time-lapse
-            inversion)
+            inversion). If index == -1, then all 2D survey will be plotted
+            on a 3D grid.
         ax : matplotlib axis, optional
             If specified, the inverted graph will be plotted agains `ax`.
         edge_color : str, optional
@@ -3072,7 +3622,10 @@ class Project(object): # Project master class instanciated by the GUI
             print('Attribute not found, revert to {:s}'.format(attr))
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
-            if self.typ[-1] == '2': # 2D case
+            if self.typ[-1] == '2' and index != -1: # 2D case
+                if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
+                    self.mesh = mesh # should update this based on current mesh to get right limits
+                    self.zlim = self.projs[index].zlim
                 if zlim is None:
                     zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
@@ -3104,6 +3657,12 @@ class Project(object): # Project master class instanciated by the GUI
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 if clipContour:
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
+            elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys (pseudo 3D)
+                self.showPseudo3DResults(ax=ax, edge_color=edge_color,
+                    attr=attr, color_map=color_map, clabel=clabel, returnMesh=True,
+                    use_pyvista=use_pyvista, background_color=background_color,
+                    pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+                    pvcontour=pvcontour, cropMaxDepth=cropMaxDepth, **kwargs)
             else: # 3D case
                 if zlim is None:
                     zlim = self.zlim
@@ -3115,6 +3674,7 @@ class Project(object): # Project master class instanciated by the GUI
                         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
                         pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
                         pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
+                
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
 
@@ -3140,11 +3700,8 @@ class Project(object): # Project master class instanciated by the GUI
             mesh0 = mt.vtk_import(fname, order_nodes=False)
             mesh0.mesh_title = self.surveys[0].name
             elec = self.surveys[0].elec.copy()
-            ie = ~elec['remote'].values
-            elec_x = elec[ie]['x'].values
-            elec_y = elec[ie]['y'].values
-            elec_z = elec[ie]['z'].values
-            mesh0.setElec(elec_x, elec_y, elec_z)
+            mesh0.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
+            mesh0.iremote = elec['remote'].values
             self.meshResults.append(mesh0)
             idone += 1
         if self.iForward is True:
@@ -3167,11 +3724,8 @@ class Project(object): # Project master class instanciated by the GUI
                     mesh = mt.vtk_import(fname, order_nodes=False)
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
-                    ie = ~elec['remote'].values
-                    elec_x = elec[ie]['x'].values
-                    elec_y = elec[ie]['y'].values
-                    elec_z = elec[ie]['z'].values
-                    mesh.setElec(elec_x, elec_y, elec_z)
+                    mesh.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
+                    mesh.iremote = elec['remote'].values
                     self.meshResults.append(mesh) # this will be very memory intensive to put all meshes into a list for long time lapse surveys
                     #TODO : Rethink storage of timelapse results 
                     idone += 1
@@ -4950,6 +5504,11 @@ class Project(object): # Project master class instanciated by the GUI
             file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
             mesh.vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+        if self.pseudo3DMeshResult is not None: 
+            self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
+            file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + '.vtk')
+            self.pseudo3DMeshResult.vtk(file_path, title='Pseudo_3D_result')
+            amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
         amtContent += endAnmt
         fh = open(os.path.join(dirname,'amt_track.py'),'w')
         fh.write(amtContent)

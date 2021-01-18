@@ -27,6 +27,8 @@ import matplotlib.path as mpath
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import cKDTree
+from copy import deepcopy
+
 #import R2gui API packages 
 import resipy.gmshWrap as gw
 from resipy.sliceMesh import sliceMesh # mesh slicing function
@@ -334,6 +336,8 @@ class Mesh:
     def copy(self):
         """Return a copy of mesh object. 
         """
+        # mesh = deepcopy(self) # not always working! below too not always working!!!
+        
         mesh = Mesh(self.node[:,0],
                     self.node[:,1],
                     self.node[:,2],
@@ -1096,10 +1100,10 @@ class Mesh:
         # filter element-based attribute
         ec = self.elmCentre.copy()[i2keep,:]
         
-        nmesh = self.copy()
+        nmesh = deepcopy(self)#.copy()
         nmesh.elmCentre = ec 
         nmesh.connection = self.connection[i2keep,:]
-        nmesh.elm_id = np.arrange(1,self.numel+1)[i2keep]
+        nmesh.elm_id = np.arange(1,self.numel+1)[i2keep]
         #nmesh.cell_attributes = np.array(self.cell_attributes)[i2keep]
         
         df = self.df.copy()
@@ -1107,7 +1111,7 @@ class Mesh:
         del nmesh.df['index']
         nmesh.numel = np.sum(i2keep)
         
-        nmesh.__rmexcessNodes         
+        nmesh.__rmexcessNodes()         
         return nmesh
         
     # return a truncated mesh (for 3D)
@@ -1126,7 +1130,7 @@ class Mesh:
             
         Returns
         ------------
-        mesh: Class
+        nmesh: Class
             New instance of mesh class which is truncated 
         """
         if self.elec is not None:
@@ -1149,7 +1153,7 @@ class Mesh:
         ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
              (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
              (elm_z > zlim[0]) & (elm_z < zlim[1])
-        
+                     
         nmesh = self.copy() # make a new mesh object with fewer elements 
         nmesh.df = nmesh.df[ie].reset_index(drop=True)
         nmesh.df['elm_id'] = 1 + np.arange(nmesh.df.shape[0])
@@ -1340,8 +1344,10 @@ class Mesh:
     def transMesh(self,x,y,z):
         """Translate mesh by x y z coordinate
         """
-        t = np.array([x,y,z]).T
-        self.node += t
+
+        self.node[:,0] += x
+        self.node[:,1] += y
+        self.node[:,2] += z
         self.cellCentres()
         
     def trans_mesh(self,x,y,z):
@@ -1889,6 +1895,7 @@ class Mesh:
         
         Plotting sensitivies using sens=True is not reccomended. The matplotlib renderer has trouble with it. 
         """
+        # print('+++', self.node[:,1])
         if not isinstance(color_map,str):#check the color map variable is a string
             raise NameError('color_map variable is not a string')
         
@@ -3437,7 +3444,51 @@ class Mesh:
             line += '\t{:d}\n'.format(0)
             fh.write(line)
         fh.close()
+        
+#%%  Moving mesh
+def moveMesh2D(meshObject, elecLocal, elecGrid): # probably better to go to meshTools
+    """Move mesh object to a certain place on the grid.
+        X, Y only. No Z relocation.
     
+    Parameters
+    ----------
+    meshObject : class object
+        Mesh class object.
+    elecLocal: dataframe
+        dataframe of electrodes on local 2D grid (i.e., y = 0)
+    elecGrid: dataframe
+        dataframe of electrodes on 3D grid (i.e., y != 0)
+    
+    Returns
+    -------
+    mesh : class object
+        Copy of moved Mesh class object.
+    """
+    mesh = deepcopy(meshObject) # Mesh.copy() not working here! not sure why!
+    xLocal = elecLocal['x'].copy().values
+    xGrid = elecGrid['x'].copy().values
+    yGrid = elecGrid['y'].copy().values
+    if np.all(xGrid == xGrid[0]): # line is vertical - x is constant
+        mesh.elec[:,0] = np.ones_like(xLocal) * xGrid[0]
+        mesh.elec[:,1] = xLocal + yGrid[0]
+        mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
+        mesh.node[:,0] = np.zeros_like(mesh.node[:,0]) + xGrid[0]
+
+    elif np.all(yGrid == yGrid[0]): # line is horizontal - y is constant
+        mesh.elec[:,0] = xLocal + xGrid[0]
+        mesh.elec[:,1] = np.ones_like(xLocal) * yGrid[0]
+        mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
+        mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
+        
+    else: 
+        mx = np.polyfit(xLocal,xGrid,1)
+        my = np.polyfit(xGrid, yGrid,1)
+        mesh.elec[:,0] = mx[0] * xLocal + mx[1]
+        mesh.elec[:,1] = my[0] * xGrid + my[1]
+        mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
+        mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
+
+    return mesh   
 #%% import a vtk file 
 def vtk_import(file_path='mesh.vtk', order_nodes=True):
     """
@@ -4906,126 +4957,80 @@ def custom_mesh_import(file_path, node_pos=None, order_nodes=True):
     mesh = readMesh(file_path, node_pos, order_nodes)
     return mesh
     
-#%% ram amount check and is wine installed?. Now handled by R2.py
-#Now for complicated meshes we need alot more RAM. the below function is a os agnostic
-#function for returning the amount of total ram. 
-# we also need to check wine is installed if running on macOs or linux. 
+#%% merge meshes from multiple mesh objects 
+def mergeMeshes(meshList):
+    """Merge multiple meshes into one mesh object, useful for psuedo 3d surveys. 
 
-# def systemCheckOld(show=False):
-#     """Performs a simple diagnostic of the system, no input commands needed. System
-#     info is printed to screen, number of CPUs, memory and OS. This check is 
-#     useful for parallel processing. 
-    
-#     Parameters
-#     ----------
-#     show : bool, optional
-#         If `True`, system specs will be printed.
-    
-#     Returns
-#     -------
-#     system_info: dict
-#         Dictionary keys refer information about the system 
-#     """
-#     if show:
-#         def dump(x):
-#             print(x)
-#     else:
-#         def dump(x):
-#             pass
-#     dump("________________System-Check__________________")
-    
-#     totalMemory = '' # incase system can't figure it out!
-#     num_threads = ''
-#     OpSys = ''
-#     #display processor info
-#     dump("Processor info: %s"%platform.processor())
-#     num_threads = multiprocessing.cpu_count()
-#     dump("Number of logical CPUs: %i"%num_threads)
-#     #this message will display if wine is not installed / detected
-#     helpful_msg ="""   
-# This version of ResIPy requires wine to run R2.exe, please consider installing
-# 'wine is not an emulator' package @ https://www.winehq.org/. On linux wine can be found on
-# most reprositories (ubuntu/debian users can use "sudo apt install wine"). Wine acts as
-# a compatiblity layer between unix like OS systems (ie macOS and linux) and windows programs. 
-#     """
-#     msg_flag = False
-#     #check operating system 
-#     OpSys=platform.system()    
-#     if OpSys=='Darwin':
-#         dump("Kernel type: macOS")
-#     else:
-#         dump("Kernel type: %s"%OpSys)
-#     #check the amount of ram 
-#     if OpSys=="Linux":
-#         p = Popen('free -m', stdout=PIPE, shell=True)
-#         totalMemory = p.stdout.readlines()[1].split()[1]
-#         #detect wine 
-#         p = Popen("wine --version", stdout=PIPE, shell=True)
-#         is_wine = str(p.stdout.readline())#[0].split()[0]
-#         if is_wine.find("wine") == -1:
-#             warnings.warn("Wine is not installed!", Warning)
-#             msg_flag = True
-#         else:
-#             wine_version = is_wine.split()[0].split('-')[1]
-#             dump("Wine version = "+wine_version)
-                          
-#     elif OpSys=="Windows":
-#         p = Popen('wmic MEMORYCHIP get Capacity', stdout=PIPE)
-#         info = p.stdout.readlines()#first entry is the header, subsiquent entries 
-#         #correspond to dimm slot capacity in bytes 
-#         totalMemory = 0 # memory returned in binary bytes 
-#         for i in range(1,len(info)):
-#             try:
-#                 mem=int(info[i].strip())
-#                 totalMemory += mem
-#             except ValueError:
-#                 break
-#         totalMemory = totalMemory/1048576
-                
-#     elif OpSys=='Darwin':
-#         sysinfo = []
-#         info = Popen(['system_profiler','SPHardwareDataType'], shell = False, stdout=PIPE, universal_newlines=True)
-#         for stdout_line in iter(info.stdout.readline, ''):
-#             sysinfo.append(stdout_line)
-#         memoryLine = [s for s in sysinfo if any(xs in s for xs in ['Memory'])] 
-#         totalMemory = re.findall('\\d+', memoryLine[0]) 
-#         totalMemory = int(totalMemory[0])*1000
-#         #detect wine
-#         try: 
-#             winePath = []
-#             wine_path = Popen(['which', 'wine'], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-#             for stdout_line in iter(wine_path.stdout.readline, ''):
-#                 winePath.append(stdout_line)
-#             if winePath != []:
-#                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
-#             else:
-#                 is_wine = Popen(['/usr/local/bin/wine','--version'], stdout=PIPE, shell = False, universal_newlines=True)
-#             wineVersion = []
-#             for stdout_line in iter(is_wine.stdout.readline, ""):
-#                 wineVersion.append(stdout_line)
-#             wine_version = stdout_line.split()[0].split('-')[1]
-#             dump("Wine version = "+wine_version)
-#         except:
-#             warnings.warn("Wine is not installed!", Warning)
-#             msg_flag = True
-        
-#     else:
-#         raise OSError("unrecognised/unsupported operating system")
-     
-#     if totalMemory != '':
-#         totalMemory = int(totalMemory)
-#         dump("Total RAM available: %i Mb"%totalMemory)
-        
-#         #print some warnings incase the user has a low end PC
-#         if totalMemory <= 4000:
-#             warnings.warn("The amount of RAM currently installed is low (<4Gb), complicated ERT problems may incur memory access voilations", Warning)
-    
-#     if num_threads!= '':
-#         if num_threads <=2:
-#             warnings.warn("Only one or two CPUs detected, multithreaded workflows will not perform well.", Warning)
-            
-#     if msg_flag:
-#         dump(helpful_msg)
-    
-#     return {'memory':totalMemory,'core_count':num_threads,'OS':OpSys}
+    Parameters
+    ----------
+    meshList : list
+        List of seperate mesh classes .
 
+    Returns
+    -------
+    mmesh: class
+        Merged mesh. 
+
+    """
+    mesh = meshList[0]
+    conmat = mesh.connection.copy()
+    node = mesh.node.copy()
+    centriod = mesh.elmCentre.copy()
+    df = mesh.df.copy()
+    ct = np.array(mesh.cell_type)
+    iremote = mesh.iremote
+    zone = mesh.zone 
+    numnp = np.max(conmat.flatten())
+    
+    #electrode handling
+    try:
+        if mesh.eNodes is not None:
+            eNodes = mesh.eNodes.copy()
+        else:
+            eNodes = None
+    except:
+        eNodes = None
+    
+    iremote_present = True
+    if iremote is None:
+        iremote_present = False 
+    zone_present = True
+    if zone is None:
+        zone_present = False 
+    node_present = True
+    if eNodes is None:
+        node_present = False
+    
+    for i in range(1,len(meshList)):
+        mesh = meshList[i]
+        nconmat = mesh.connection + numnp + 1
+        conmat = np.vstack([conmat,nconmat])
+        node = np.vstack([node,mesh.node])
+        centriod = np.vstack([centriod, mesh.elmCentre])
+        df = pd.concat([df,mesh.df],ignore_index=True)
+        ct = np.concatenate([ct,np.array(mesh.cell_type)],axis=0)
+        if iremote_present:
+            iremote = np.concatenate([iremote,mesh.iremote])
+        if zone_present:
+            zone = np.concatenate([zone,mesh.zone]) 
+        if node_present:
+            eNodes = np.concatenate([eNodes,mesh.eNodes+numnp+1])
+        numnp = np.max(conmat.flatten())
+        
+    mmesh = Mesh(node[:,0],
+                 node[:,1],
+                 node[:,2],
+                 conmat,
+                 ct,
+                 'merged from several meshes',
+                 order_nodes=False,# should be already ordered
+                 compute_centre=False,# should be already computed 
+                 check2D=False)# should be already computed 
+    
+    mmesh.elmCentre = centriod
+    mmesh.df = df.copy()
+    
+    mmesh.iremote = iremote
+    mmesh.zone = zone
+        
+    return mmesh # merged mesh  
