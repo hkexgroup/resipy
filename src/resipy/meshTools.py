@@ -1340,8 +1340,10 @@ class Mesh:
     def transMesh(self,x,y,z):
         """Translate mesh by x y z coordinate
         """
-        t = np.array([x,y,z]).T
-        self.node += t
+
+        self.node[:,0] += x
+        self.node[:,1] += y
+        self.node[:,2] += z
         self.cellCentres()
         
     def trans_mesh(self,x,y,z):
