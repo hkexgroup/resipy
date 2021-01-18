@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 import resipy.meshTools as mt
 from resipy import Project, Survey
 from resipy.Project import apiPath
+import warnings # so that we see all warning in CI
+warnings.simplefilter("always")
 
 use_pyvista = False
 
