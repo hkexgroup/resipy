@@ -67,7 +67,7 @@ def checkSHA1(fname):
 def checkExe(dirname):
     exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
     hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
-              'a4c5b76d8328e1733670be669492cadfa104146a',
+              '7c989946afb2457661c66f8cce1db12d7edc7b32',
               '9337435f018264771470d5d4312908b0d1242af1',
               # '4aad36d5333ddf163c46bab9d3c2a799aa48716e',
               # '91bd6e5fcb01a11d241456479c203624d0e681ed'
@@ -2288,7 +2288,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh.df['phase0'] = list(phase0)
             
 
-    def write2protocol(self, err=None, errTot=False, **kwargs):
+    def write2protocol(self, err=None, errTot=False, fm0=None, **kwargs):
         """Write a protocol.dat file for the inversion code.
 
         Parameters
@@ -2299,6 +2299,10 @@ class Project(object): # Project master class instanciated by the GUI
         errTot : bool, optional
             If `True`, it will compute the modelling error due to the mesh and
             add it to the error from an error model.
+        fm0 : numpy.array of float, optional
+            Only for 3D time-lapse with reg_mode == 2 (difference inversion).
+            Response of the inverted reference survey according to sequence of
+            the reference survey as transfer resistance (Ohm).
         **kwargs : optional
             To be passed to `Survey.write2protocol()`.
         """
@@ -2340,6 +2344,10 @@ class Project(object): # Project master class instanciated by the GUI
                 self.param['reg_mode'] = 2 # by default it's timelapse (difference)
             if self.param['reg_mode'] == 2: # it's a difference inversion
                 indexes = self.matchSurveys()
+                if (self.typ == 'R3t') | (self.typ == 'cR3t'):
+                    if fm0 is not None:
+                        fm0 = fm0[indexes[0]] # we crop it so it has the same
+                        # shape as all quad in common
             else:
                 indexes = [None]*len(self.surveys)
             # a bit simplistic but assign error to all based on Transfer resistance
@@ -2373,7 +2381,8 @@ class Project(object): # Project master class instanciated by the GUI
                 res0Bool = False if self.param['reg_mode'] == 1 else True
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
-                                            isubset=indexes[i], threed=threed)
+                                            isubset=indexes[i], threed=threed,
+                                            fm0=fm0)
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
@@ -2828,10 +2837,24 @@ class Project(object): # Project master class instanciated by the GUI
             self.runR2(refdir, dump=dump) # this line actually runs R2
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                         os.path.join(self.dirname, 'Start_res.dat'))
+            if ((self.typ == 'R3t') | (self.typ == 'cR3t')):
+                dump('----------------- Computing d-d0+f(m0) ---------------\n')
+                # as per v3.2 of R3t we need to compute MANUALLY d-d0+f(m0)
+                # this is done automatically in R2 and cR2
+                self.sequence = self.surveys[0].df[['a','b','m','n']].values
+                surveysBackup = self.surveys.copy()
+                res0Backup = self.mesh.df['res0'].values.copy()
+                iForwardBackup = self.iForward
+                self.forward()
+                self.iForward = iForwardBackup
+                fm0 = self.surveys[0].df['resist'].values.copy()
+                self.sequence = None
+                self.surveys = surveysBackup
+                self.write2protocol(errTot=errTot, fm0=fm0) # rewrite them with d-d0+f(m0)
         elif self.iTimeLapse == True and self.referenceMdl==True:
             print('Note: Skipping reference inversion, as reference model has already been assigned')
 
-        dump('--------------------- MAIN INVERSION ------------------\n')
+        dump('\n--------------------- MAIN INVERSION ------------------\n')
         if parallel is True and (self.iTimeLapse is True or self.iBatch is True):
             self.runParallel(dump=dump, iMoveElec=iMoveElec, ncores=ncores, rmDirTree=rmDirTree)
         else:
