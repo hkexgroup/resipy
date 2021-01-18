@@ -626,6 +626,7 @@ timings['dc-3d-column-mesh'] = time.time() - t0
 
 #%% test timelapse 3D -- takes a long time
 t0 = time.time()
+print('------------- 3D time-lapse difference inversion ---------------')
 k = Project(typ='R3t')
 k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d-timelapse-protocol/elec/electrodes3D-1.csv')
