@@ -744,6 +744,7 @@ class App(QMainWindow):
                 self.topoBtn.hide()
                 self.topoAddRowBtn.hide()
                 self.elecLabelTextP2 = '<br><b>IMPORTANT:</b> Labels <b>Must</b> be defined in <b><font color="red">"Line Number [space] Electrode Number"</font></b> format.'
+                self.designModelBtn.setEnabled(False)
                 self.importCustomMeshBtn2.setEnabled(False)
                 self.resetMeshBtn.hide()
                 instructionLabel.hide()
@@ -770,6 +771,7 @@ class App(QMainWindow):
                 self.topoBtn.show()
                 self.topoAddRowBtn.show()
                 self.elecLabelTextP2 = ''
+                self.designModelBtn.setEnabled(True)
                 self.importCustomMeshBtn2.setEnabled(True)
                 self.resetMeshBtn.show()
                 instructionLabel.show()
@@ -5884,6 +5886,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     elecList = self.project.create2DLines()#elecList) # convert to horizontal 2D lines
                 
                 self.project.setElec(elec, elecList)
+                if self.project.elec['remote'].sum() > 0:
+                    self.meshQuadGroup.setEnabled(False)
+                else:
+                    self.meshQuadGroup.setEnabled(True)
                 self.writeLog('#k.setElec(elec)')
                 # TODO don't know how to write to log this
                 self.project.mesh = None
