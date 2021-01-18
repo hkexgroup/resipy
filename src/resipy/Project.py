@@ -368,6 +368,7 @@ class Project(object): # Project master class instanciated by the GUI
         return elec
     
     
+    
     def _findRemote(self, elec):
         """Flag remote electrodes.
         
@@ -389,6 +390,7 @@ class Project(object): # Project master class instanciated by the GUI
         if np.sum(iremote) > 0:
             print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
         return elec
+
 
     
     def setElec(self, elec, elecList=None):
@@ -1184,7 +1186,52 @@ class Project(object): # Project master class instanciated by the GUI
         self.setBorehole(self.iBorehole)
         
     
-    def updatePseudo3DSurvey(self, elecList=None):
+    
+    def importPseudo3DElec(self, fname=''):
+        """Import electrodes positions. The label columns should include line
+        number separated by space (like in 3D):
+            label,x,y,z
+            1 3,0,0,0
+            1 4,1,1,0
+            1 5,1,2,1
+
+        Parameters
+        ----------
+        fname : str
+            Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
+        """
+        with open(fname, 'r') as f:
+            try:
+                float(f.readline().split(',')[0])
+                header = None
+            except Exception:
+                header = 'infer'
+        df = pd.read_csv(fname, header=header)
+        if header is None:
+            elec = df.values
+        else:
+            elec = df
+        self.setPseudo3DElec(elec)
+    
+    
+    
+    def setPseudo3DElec(self, elec):
+        """Set pseudo 3D electrodes (with an electrode label as:
+            <line number> <electrode number>).
+    
+        Parameters
+        ----------
+        elecList : list of dataframes, optional
+            List of electrodes dataframes - each df must have 2D like XYZ (rotated to have y=0).
+        """
+        self.pseudo3DSurvey.elec = elec
+        
+        # take self.surveys information to inform all projects in self.projs
+        self._updatePseudo3DSurvey()
+        
+        
+        
+    def _updatePseudo3DSurvey(self, elecList=None):
         """Update a pseudo 3D survey based on 2D surveys. 
             Cleaned data, updated electrodes will be inserted in each survey.
         
@@ -1202,6 +1249,7 @@ class Project(object): # Project master class instanciated by the GUI
             survey.elec = elecdf.copy()
             proj.setElec(elecdf.copy())
             proj.surveys[0].df = survey.df.copy()               
+
 
 
     def split3DGrid(self, elec=None, changeLabel=True):
@@ -1231,7 +1279,8 @@ class Project(object): # Project master class instanciated by the GUI
         elecGroups = elec.groupby('lineNum')
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
         elecList = []
-        for elecdf in elecdfs:
+        for elecdfRaw in elecdfs:
+            elecdf = elecdfRaw.copy().reset_index(drop=True) # void pandas setting with copy warning annoying error
             if changeLabel:
                 elecdf['label'] = elecdf['elecNum'].values # it's 2D so let's get rid of line numbers in labels
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
