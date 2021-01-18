@@ -1344,8 +1344,8 @@ class Project(object): # Project master class instanciated by the GUI
                 continue
             
             if cropMesh:
-                emin = mesh.elec[np.argmin(mesh.elec[:,0][~mesh.iremote])]
-                emax = mesh.elec[np.argmax(mesh.elec[:,0][~mesh.iremote])]
+                emin = mesh.elec.copy()[np.argmin(mesh.elec[:,0].copy()[~mesh.iremote])]
+                emax = mesh.elec.copy()[np.argmax(mesh.elec[:,0].copy()[~mesh.iremote])]
                 zbot = proj.zlim[0]
                 polyline = np.array([[emin[0], emin[2]],
                                      [emax[0], emax[2]],
@@ -1356,12 +1356,9 @@ class Project(object): # Project master class instanciated by the GUI
                 limits = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
             else:
                 limits = np.c_[mesh.node[:,0], mesh.node[:,1]]
-                
+
             meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
 
-            # elec = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
-            # xlim = findminmax(elec[:,0])
-            # ylim = findminmax(elec[:,1])
             xlim = findminmax(limits[:,0])
             ylim = findminmax(limits[:,1])
             xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
@@ -3615,11 +3612,8 @@ class Project(object): # Project master class instanciated by the GUI
             mesh0 = mt.vtk_import(fname, order_nodes=False)
             mesh0.mesh_title = self.surveys[0].name
             elec = self.surveys[0].elec.copy()
-            ie = ~elec['remote'].values
-            elec_x = elec[ie]['x'].values
-            elec_y = elec[ie]['y'].values
-            elec_z = elec[ie]['z'].values
-            mesh0.setElec(elec_x, elec_y, elec_z)
+            mesh0.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
+            mesh0.iremote = elec['remote'].values
             self.meshResults.append(mesh0)
             idone += 1
         if self.iForward is True:
@@ -3642,11 +3636,8 @@ class Project(object): # Project master class instanciated by the GUI
                     mesh = mt.vtk_import(fname, order_nodes=False)
                     mesh.mesh_title = self.surveys[j].name
                     elec = self.surveys[j].elec.copy()
-                    ie = ~elec['remote'].values
-                    elec_x = elec[ie]['x'].values
-                    elec_y = elec[ie]['y'].values
-                    elec_z = elec[ie]['z'].values
-                    mesh.setElec(elec_x, elec_y, elec_z)
+                    mesh.setElec(elec['x'].values, elec['y'].values, elec['z'].values)
+                    mesh.iremote = elec['remote'].values
                     self.meshResults.append(mesh) # this will be very memory intensive to put all meshes into a list for long time lapse surveys
                     #TODO : Rethink storage of timelapse results 
                     idone += 1
