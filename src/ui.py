@@ -4239,7 +4239,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         cropBelowFmdLabel.linkActivated.connect(showHelpAdv)
         self.cropBelowFmd = QCheckBox()
         self.cropBelowFmd.setChecked(True)
-        self.cropBelowFmd.stateChanged.connect(notCroppingFunc)
+        # not connected but read when calling displayInvertedResults()
         advForm.addRow(cropBelowFmdLabel, self.cropBelowFmd)
 
         def modelDOIFunc(status):
