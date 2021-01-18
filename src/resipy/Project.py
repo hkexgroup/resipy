@@ -4068,6 +4068,12 @@ class Project(object): # Project master class instanciated by the GUI
             
         protocol = pd.DataFrame(np.c_[1+np.arange(seq.shape[0]),seq])
         
+        # if it's 3D, we add the line number (all electrode on line 1)
+        if ((self.typ == 'R3t') | (self.typ == 'cR3t')):
+            if len(protocol['a'].values[0].split()) == 1: # we don't have string number
+                for c in ['a','b','m','n']: 
+                    protocol.loc[:, c] = '1 ' + protocol[c]
+        
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
