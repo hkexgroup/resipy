@@ -665,7 +665,7 @@ k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
 ## or load the files with 3D-like labels for elec positions of all lines
 k.importPseudo3DElec(testdir + 'dc-2d-timelapse/elec3pseudo3D.csv')
 k.createMultiMesh(typ='quad')
-# meshMerged = k.showPseudo3DMesh(cropMesh=True,returnMesh=True) # only works with pyvista - thus commented for test
+# k.showPseudo3DMesh(cropMesh=True,returnMesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)
 # k.showResults(index=-1, cropMesh=True) # only works with pyvista - thus commented for test
 print('elapsed: {:.4}s'.format(time.time() - t0))

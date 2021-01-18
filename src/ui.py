@@ -5079,6 +5079,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                   ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
                                   fdir, edge_color, str(contour), str(sens), attr,
                                   str(vmin), str(vmax), cmap, sensPrc))
+                    if self.pseudo3DCheck.isChecked():
+                        fname = os.path.join(fdir, 'Pseudo_3D_result.png')
+                        self.vtkWidget.screenshot(fname, transparent_background=True)
                 self.project.saveVtks(fdir)
                 self.writeLog('k.saveVtks("{:s}")'.format(fdir))
             self.project.saveData(fdir)
