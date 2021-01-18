@@ -5881,7 +5881,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
                     self.project.pseudo3DSurvey.elec = pd.concat(elecList, axis=0, ignore_index=True)
                     self.project.updatePseudo3DSurvey()#elecList)
-                    elecList = self.project.create2DLines()#elecList) # convert to horizontal 2D lines
+                    elecList = self.project._create2DLines()#elecList) # convert to horizontal 2D lines
                 
                 self.project.setElec(elec, elecList)
                 self.writeLog('#k.setElec(elec)')
