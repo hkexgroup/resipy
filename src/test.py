@@ -646,18 +646,23 @@ t0 = time.time()
 k = Project(typ='R2')
 k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
                  ftype='Syscal')
+
+# manually setting up electrodes
 # rotating middle electrodes line here
-rotmat = np.array([[np.cos(0.2), np.sin(0.2)], 
-                   [-np.sin(0.2), np.cos(0.2)]])
-xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
-newmat = np.dot(rotmat, xy).T
-elecTemp = k.elec.copy()
-elecTemp.loc[0:23, 'y'] = 1
-elecTemp.loc[24:47,'x'] = newmat[:,0].copy()*0.6 + 2
-elecTemp.loc[24:47,'y'] = newmat[:,1].copy()*2 - 1
-elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
-k.pseudo3DSurvey.elec = elecTemp.copy()
-k.updatePseudo3DSurvey()
+# rotmat = np.array([[np.cos(0.2), np.sin(0.2)], 
+#                    [-np.sin(0.2), np.cos(0.2)]])
+# xy = np.array([k.elec.loc[24:47,'x'].values, k.elec.loc[24:47,'y'].values])
+# newmat = np.dot(rotmat, xy).T
+# elecTemp = k.elec.copy()
+# elecTemp.loc[0:23, 'y'] = 1
+# elecTemp.loc[24:47,'x'] = newmat[:,0].copy()*0.6 + 2
+# elecTemp.loc[24:47,'y'] = newmat[:,1].copy()*2 - 1
+# elecTemp.loc[24:47,'z'] = np.linspace(0,1,24)
+# k.pseudo3DSurvey.elec = elecTemp.copy()
+# k.updatePseudo3DSurvey()
+
+# or load the files with 3D-like labels for elec positions of all lines
+k.importPseudo3DElec(testdir + 'dc-2d-timelapse/elec3pseudo3D.csv')
 k.createMultiMesh(typ='trian')
 # k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)
