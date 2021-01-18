@@ -896,8 +896,6 @@ class Project(object): # Project master class instanciated by the GUI
             sparams['node_elec'][1] = np.array(sparams['node_elec'][1]).astype(int)
         self.param = sparams
         
-            
-            
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
                      parser=None, debug=True, **kwargs):
@@ -1063,7 +1061,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
         self.bigSurvey.ndata = df.shape[0]
-
 
 
     def create3DSurvey(self, fname, lineSpacing=1, zigzag=False, ftype='Syscal',
@@ -1310,8 +1307,8 @@ class Project(object): # Project master class instanciated by the GUI
             
         for elecdf in elecList:
             # transforming line to start from x, y = 0
-            elecdf['x'] = elecdf['x'].values - elecdf['x'].iloc[0]
-            elecdf['y'] = elecdf['y'].values - elecdf['y'].iloc[0]
+            elecdf['x'] = elecdf['x'].values - elecdf.loc[0,'x']
+            elecdf['y'] = elecdf['y'].values - elecdf.loc[0,'y']
             
             delx = elecdf['x'].max() - elecdf['x'].min()
             dely = elecdf['y'].max() - elecdf['y'].min()
@@ -1351,8 +1348,8 @@ class Project(object): # Project master class instanciated by the GUI
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
-                         cropMesh=True, color_bar=False, return_mesh = False,
-                         **kwargs):
+                         cropMesh=True, color_bar=False, returnMesh=False,
+                         cropMaxDepth=False, **kwargs):
         """Show 2D meshes in 3D view
         
         Parameters
@@ -1367,8 +1364,10 @@ class Project(object): # Project master class instanciated by the GUI
             If True, 2D mesh will be bound to electrodes and zlim.
         color_bar : Boolean, optional 
             `True` to plot colorbar.
-        return_mesh: bool, optional
+        returnMesh: bool, optional
             if True method returns a merged mesh. 
+        cropMaxDepth : bool, optional
+            If True, region below fine mesh depth (fmd) will be cropped.
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
@@ -1405,24 +1404,30 @@ class Project(object): # Project master class instanciated by the GUI
         xlimi = findminmax(matx)
         maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
         ylimi = findminmax(maty)
-        if return_mesh:
+        if returnMesh:
             meshOutList = []
             
         for proj, elecdf, mesh in zip(self.projs, elecList, meshList):
             if mesh is None:
                 print('Mesh undefined for this project!')
                 continue
-            
+
             if cropMesh:
-                emin = mesh.elec[np.argmin(mesh.elec[:,0][~mesh.iremote])]
-                emax = mesh.elec[np.argmax(mesh.elec[:,0][~mesh.iremote])]
-                zbot = proj.zlim[0]
-                polyline = np.array([[emin[0], emin[2]],
-                                     [emax[0], emax[2]],
-                                     [emax[0], zbot],
-                                     [emin[0], zbot],
-                                     [emin[0], emin[2]]])
-                mesh = mesh.crop(polyline)
+                node_x = mesh.node[:,0]
+                node_z = mesh.node[:,2]
+                xmin = np.min(node_x)
+                xmax = np.max(node_x)
+                zmin = np.min(node_z)
+                zmax = np.max(node_z)
+                (xsurf, zsurf) = mesh.extractSurface()
+                if cropMaxDepth and proj.fmd is not None:
+                    xfmd, zfmd = xsurf[::-1], zsurf[::-1] - proj.fmd
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xfmd, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zfmd, zmin]]
+                else:
+                    verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
+                                  np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
+                mesh = mesh.crop(verts)
                 limits = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
             else:
                 limits = np.c_[mesh.node[:,0], mesh.node[:,1]]
@@ -1439,11 +1444,11 @@ class Project(object): # Project master class instanciated by the GUI
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
-            if return_mesh:
+            if returnMesh:
                 meshOutList.append(meshMoved)
         ax.show() # call plotter.show()
         
-        if return_mesh:
+        if returnMesh:
             meshMerged = mt.mergeMeshes(meshOutList)
             meshMerged.ndims = 3
             return meshMerged
@@ -1451,7 +1456,7 @@ class Project(object): # Project master class instanciated by the GUI
     
     def _setPseudo3DParam(self, targetProjParams):
         """Set params from master Project to a target Project.
-            IMPORTANT: some params (e.g., mesh, reg0, etc. are excluded)
+            IMPORTANT: some params (e.g., mesh, reg0, etc.) are excluded
         
         Parameters
         ----------
@@ -1526,7 +1531,8 @@ class Project(object): # Project master class instanciated by the GUI
             wds = []
             for proj in self.projs:
                 wds.append(proj.dirname)
-                invLog('Writing .in file and protocol.dat... ')
+                invLog('Writing .in file and protocol.dat for {} survey... '.format(
+                    proj.surveys[0].name))
                 proj.write2in() # R2.in
                 proj.write2protocol() # protocol.dat
                 invLog('done!\n')
@@ -3588,12 +3594,12 @@ class Project(object): # Project master class instanciated by the GUI
             print('Attribute not found, revert to {:s}'.format(attr))
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
+            if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
+                self.mesh = mesh
+                self.zlim = self.projs[index].zlim
             if self.typ[-1] == '2' and index != -1: # 2D case
                 if zlim is None:
-                    if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
-                        zlim = self.projs[index].zlim
-                    else:
-                        zlim = self.zlim
+                    zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
                             attr=attr, sens=sens, color_map=color_map,
                             zlim=zlim, clabel=clabel, contour=contour, **kwargs)
@@ -3628,7 +3634,7 @@ class Project(object): # Project master class instanciated by the GUI
                     attr=attr, color_map=color_map, clabel=clabel,
                     use_pyvista=use_pyvista, background_color=background_color,
                     pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
-                    pvcontour=pvcontour, **kwargs)
+                    pvcontour=pvcontour, cropMaxDepth=cropMaxDepth, **kwargs)
             else: # 3D case
                 if zlim is None:
                     zlim = self.zlim
