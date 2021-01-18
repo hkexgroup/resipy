@@ -1932,7 +1932,8 @@ class Survey(object):
     
     
     def write2protocol(self, outputname='', err=False, errTot=False,
-                       ip=False, res0=False, isubset=None, threed=False):
+                       ip=False, res0=False, isubset=None, threed=False,
+                       fm0=None):
         """Write a protocol.dat file for R2, cR2, R3t, cR3t.
         
         Parameters
@@ -1957,6 +1958,9 @@ class Survey(object):
         threed : bool, optional
             If `True`, it's for a 3D survey (and then add line numbers) or for
             a 2D survey (default).
+       fm0 : numpy.array of float, optional
+            Only for 3D timelapse, to compute d-d0+fm0 (if reg_mode == 2). If
+            provided, will automatically set res0 to False.
             
         Returns
         -------
@@ -1984,7 +1988,14 @@ class Survey(object):
         # NOTE for IP, this is the magnitude not the resistance
         # the magnitude is always positive. This is the case as by the way we
         # compute 'recipMean' in self.computeReciprocal()
-        protocol['res'] = df['recipMean'].values # non-paired will be nan
+        if fm0 is not None: # 3D time-lapse with reg_mode == 2 -> d-d0+f(m0)
+            res0 = False
+            d = df['recipMean'].values
+            d0 = df['recipMean0'].values
+            fm0 = fm0 # provided as already from quads in common
+            protocol['res'] = d-d0+fm0 # according to R3t manual v3.2
+        else:
+            protocol['res'] = df['recipMean'].values # non-paired will be nan
         
         # write background transfer resistance
         if res0 is True: # background for time-lapse and so
