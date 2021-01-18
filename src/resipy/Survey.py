@@ -2175,11 +2175,11 @@ class Survey(object):
         
         elecColor = 'ko' if darkMode is False else 'wo'
         if elec:
-            caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), elecColor, picker=5)
+            caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), elecColor, pickradius=5)
         else:
             caxElec, = ax2.plot([], [], elecColor)
         
-        cax = ax2.scatter(xpos, ypos, c=val, marker='o', picker=5, vmin=vmin,
+        cax = ax2.scatter(xpos, ypos, c=val, marker='o', pickradius=5, vmin=vmin,
                          vmax=vmax)
         cbar = fig.colorbar(cax, ax=ax2, fraction=0.046, pad=0.04)
         cbar.set_label(label)
