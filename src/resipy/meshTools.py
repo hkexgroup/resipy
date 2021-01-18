@@ -1100,7 +1100,7 @@ class Mesh:
         # filter element-based attribute
         ec = self.elmCentre.copy()[i2keep,:]
         
-        nmesh = self.copy()
+        nmesh = deepcopy(self)#.copy()
         nmesh.elmCentre = ec 
         nmesh.connection = self.connection[i2keep,:]
         nmesh.elm_id = np.arange(1,self.numel+1)[i2keep]

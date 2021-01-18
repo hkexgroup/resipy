@@ -5882,7 +5882,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if self.pseudo3DCheck.isChecked():
                     elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
                     self.project.setPseudo3DElec(pd.concat(elecList, axis=0, ignore_index=True))
-                    elecList = self.project._create2DLines()#elecList) # convert to horizontal 2D lines
+                    elecList = self.project._create2DLines() # convert to horizontal 2D lines
                 
                 self.project.setElec(elec, elecList)
                 if self.project.elec['remote'].sum() > 0:
@@ -6277,10 +6277,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.disableOptionsPseudo3D(True)
                 self.vtkWidget.clear()
                 self.vtkWidget.clear_plane_widgets()
-                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr,
-                                                  edge_color=edge_color, vmin=vmin,
-                                                  vmax=vmax, color_map=cmap, pvgrid=True,
-                                                  background_color=(0.8,0.8,0.8))
+                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color,
+                                         vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping,
+                                         background_color=(0.8,0.8,0.8), cropMaxDepth=self.cropBelowFmd.isChecked())
             else:
                 self.disableOptionsPseudo3D(False)
                 self.mwInv.replot(threed=False, aspect=aspect,
