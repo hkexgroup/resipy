@@ -625,6 +625,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
 
 #%% test timelapse 3D -- takes a long time
+print('----------- Testing 3D time-lapse inversion -----------')
 t0 = time.time()
 k = Project(typ='R3t')
 k.createTimeLapseSurvey(testdir + 'dc-3d-timelapse-protocol/data' ,ftype='ProtocolDC')
@@ -640,6 +641,8 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-timelapse'] = time.time() - t0
 
 #%% test pseudo 3D inversion
+print('----------- Testing pseudo 3D inversion -----------')
+t0 = time.time()
 k = Project(typ='R2')
 k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
                  ftype='Syscal')
@@ -659,6 +662,9 @@ k.createMultiMesh(typ='trian')
 # k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)
 # k.showResults(index=-1) # only works with pyvista - thus commented for test
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-2d-pseudo3d'] = time.time() - t0
+
 #%% print final summary information 
 for key in timings.keys():
     print('{:s} : {:.2f}s'.format(key, timings[key]))
