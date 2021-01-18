@@ -313,6 +313,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.projectPseudo3D = None # updates iteratively - for showing pseudo 3D inversion iterations, killing, etc.
         self.pseudo3DBreakFlag = False # flag to cancel inversions in a chain (pseudo3D only)
         self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
+        self.pseudo3DMeshResult = None # contains pseudo 3D mesh result (for external use - e.g., ParaView)
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -1341,7 +1342,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh = proj.mesh # just to have a populated mesh in master Project!
         
             ########## FOR PARALLEL MESHING ##### Although meshing is pretty fast anyway!
-            # p = multiprocessing.Process(target=self._createProjects4Pseudo3D, kwargs=kwargs)
+            # p = multiprocessing.Process(target=self.proj.createMesh, kwargs=kwargs)
             # p.start()
             # p.join()
             #############################   
@@ -1451,7 +1452,7 @@ class Project(object): # Project master class instanciated by the GUI
         if returnMesh:
             meshMerged = mt.mergeMeshes(meshOutList)
             meshMerged.ndims = 3
-            return meshMerged
+            self.pseudo3DMeshResult = meshMerged
     
     
     def _setPseudo3DParam(self, targetProjParams):
@@ -3594,10 +3595,10 @@ class Project(object): # Project master class instanciated by the GUI
             print('Attribute not found, revert to {:s}'.format(attr))
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
-            if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
-                self.mesh = mesh
-                self.zlim = self.projs[index].zlim
             if self.typ[-1] == '2' and index != -1: # 2D case
+                if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
+                    self.mesh = mesh # should update this based on current mesh to get right limits
+                    self.zlim = self.projs[index].zlim
                 if zlim is None:
                     zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
@@ -3631,7 +3632,7 @@ class Project(object): # Project master class instanciated by the GUI
                     self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
             elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys (pseudo 3D)
                 self.showPseudo3DResults(ax=ax, edge_color=edge_color,
-                    attr=attr, color_map=color_map, clabel=clabel,
+                    attr=attr, color_map=color_map, clabel=clabel, returnMesh=True,
                     use_pyvista=use_pyvista, background_color=background_color,
                     pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
                     pvcontour=pvcontour, cropMaxDepth=cropMaxDepth, **kwargs)
@@ -5469,6 +5470,11 @@ class Project(object): # Project master class instanciated by the GUI
             file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
             mesh.vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+        if self.pseudo3DMeshResult is not None: 
+            self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
+            file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + '.vtk')
+            self.pseudo3DMeshResult.vtk(file_path, title='Pseudo_3D_result')
+            amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
         amtContent += endAnmt
         fh = open(os.path.join(dirname,'amt_track.py'),'w')
         fh.write(amtContent)
