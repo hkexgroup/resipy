@@ -5014,7 +5014,7 @@ def mergeMeshes(meshList):
         if zone_present:
             zone = np.concatenate([zone,mesh.zone]) 
         if node_present:
-            eNodes = np.concatenate([eNodes,mesh.eNodes])
+            eNodes = np.concatenate([eNodes,mesh.eNodes+numnp+1])
         numnp = np.max(conmat.flatten())
         
     mmesh = Mesh(node[:,0],
