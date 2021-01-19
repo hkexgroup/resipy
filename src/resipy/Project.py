@@ -1138,7 +1138,6 @@ class Project(object): # Project master class instanciated by the GUI
         self.setElec(elec)
         self.setBorehole(self.iBorehole)
 
-##################### Handling Pseudo 3D     BEGIN     ############################
 
     def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
         """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
@@ -1250,7 +1249,6 @@ class Project(object): # Project master class instanciated by the GUI
             proj.surveys[0].df = survey.df.copy()               
 
 
-
     def split3DGrid(self, elec=None, changeLabel=True):
         """Split self.elec to available lines based on 'label' 
         
@@ -1268,7 +1266,6 @@ class Project(object): # Project master class instanciated by the GUI
         elecList : list of dataframes
             List of electrodes dataframes - each df can have a 3D like XYZ.
         """
-        self.elecList = [] ############################## REMOVE
         if elec is None:
             if self.pseudo3DSurvey is not None:
                elec =  self.pseudo3DSurvey.elec.copy()
@@ -1285,7 +1282,6 @@ class Project(object): # Project master class instanciated by the GUI
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
             elecdf = self._findRemote(elecdf)
             elecList.append(elecdf)
-        self.elecList = elecList  ############################## REMOVE
         return elecList
     
     
@@ -1660,7 +1656,6 @@ class Project(object): # Project master class instanciated by the GUI
         shutil.rmtree(os.path.join(dirname, 'invdir')) # we don't want this invdir anymore
         return ProjInstance
 
-##################### Handling Pseudo 3D     END     ############################
 
     def showPseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):
         """Plot pseudo-section with dots.
