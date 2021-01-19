@@ -3456,35 +3456,37 @@ def moveMesh2D(meshObject, elecLocal, elecGrid): # probably better to go to mesh
         Mesh class object.
     elecLocal: dataframe
         dataframe of electrodes on local 2D grid (i.e., y = 0)
+        'remote' column (bool) required.
     elecGrid: dataframe
         dataframe of electrodes on 3D grid (i.e., y != 0)
-    
+        'remote' column (bool) required
+        
     Returns
     -------
     mesh : class object
         Copy of moved Mesh class object.
     """
     mesh = deepcopy(meshObject) # Mesh.copy() not working here! not sure why!
-    xLocal = elecLocal['x'].copy().values
-    xGrid = elecGrid['x'].copy().values
-    yGrid = elecGrid['y'].copy().values
+    xLocal = elecLocal['x'][~elecLocal['remote']].copy().values
+    xGrid = elecGrid['x'][~elecGrid['remote']].copy().values
+    yGrid = elecGrid['y'][~elecGrid['remote']].copy().values
     if np.all(xGrid == xGrid[0]): # line is vertical - x is constant
-        mesh.elec[:,0] = np.ones_like(xLocal) * xGrid[0]
-        mesh.elec[:,1] = xLocal + yGrid[0]
+        mesh.elec[:,0][~mesh.iremote] = np.ones_like(xLocal) * xGrid[0]
+        mesh.elec[:,1][~mesh.iremote] = xLocal + yGrid[0]
         mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
         mesh.node[:,0] = np.zeros_like(mesh.node[:,0]) + xGrid[0]
 
     elif np.all(yGrid == yGrid[0]): # line is horizontal - y is constant
-        mesh.elec[:,0] = xLocal + xGrid[0]
-        mesh.elec[:,1] = np.ones_like(xLocal) * yGrid[0]
+        mesh.elec[:,0][~mesh.iremote] = xLocal + xGrid[0]
+        mesh.elec[:,1][~mesh.iremote] = np.ones_like(xLocal) * yGrid[0]
         mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
         mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
         
     else: 
         mx = np.polyfit(xLocal,xGrid,1)
         my = np.polyfit(xGrid, yGrid,1)
-        mesh.elec[:,0] = mx[0] * xLocal + mx[1]
-        mesh.elec[:,1] = my[0] * xGrid + my[1]
+        mesh.elec[:,0][~mesh.iremote] = mx[0] * xLocal + mx[1]
+        mesh.elec[:,1][~mesh.iremote] = my[0] * xGrid + my[1]
         mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
         mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
 
