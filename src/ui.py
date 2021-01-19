@@ -4098,7 +4098,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(self.forwardLogText)
         forwardOutputStack.addWidget(forwardPseudos)
-        forwardOutputStack.addWidget(pvFwdBottomWidget)
+        if pvfound:
+            forwardOutputStack.addWidget(pvFwdBottomWidget)
         forwardOutputStack.setCurrentIndex(0)
                 
         # general forward layout
