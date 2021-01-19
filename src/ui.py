@@ -3202,8 +3202,10 @@ class App(QMainWindow):
                               cl_factor, str(refine), str(fmd)))
             try:
                 if self.pseudo3DCheck.isChecked():
+                    self.loadingWidget('Creating the mesh. Please wait...')
                     self.project.createMultiMesh(typ='trian', surface=surface, cl=cl, cl_factor=cl_factor, 
                                                  show_output=True, dump=meshLogTextFunc, refine=refine, fmd=fmd)
+                    self.loadingWidget(exitflag=True)
                     meshOutputStack.setCurrentIndex(2)
                     reqMemory = -1 if any([proj.param['reqMemory'] < 0 for proj in self.project.projs]) else 1
                 else:
@@ -4617,7 +4619,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 print('done')
                 self.invertBtn.setStyleSheet('background-color:green; color:black')
                 self.invertBtn.setText('Invert')
-                # self.loadingWidget(exitflag=True)
+                # self.loadingWidget(exitflag=True) #self.loadingWidget('Killing in progress...')
                 frozeUI(False)
                 return
             

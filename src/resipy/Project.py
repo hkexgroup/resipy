@@ -1340,7 +1340,7 @@ class Project(object): # Project master class instanciated by the GUI
             if True, mesh generation will run in multiple threads.
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
-        """
+        """                
         for proj in self.projs:
             if runParallel:
                 p = Thread(target=proj.createMesh, kwargs=kwargs)
