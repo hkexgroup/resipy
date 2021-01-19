@@ -1373,8 +1373,9 @@ class Project(object): # Project master class instanciated by the GUI
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
-        
+
         def findminmax(a):
+            a = np.array(a)
             mina = np.min(a) if np.min(a) != 0 else -1
             maxa = np.max(a) if np.max(a) != 0 else +1
             if mina == maxa:
@@ -1401,10 +1402,12 @@ class Project(object): # Project master class instanciated by the GUI
         elec = []
         for elecdf in elecList: # removing remote electrodes from 3D grid
             elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
-        
-        matx = np.c_[[elecarr[:,0] for elecarr in elec]].T
+        matx = []
+        maty = []
+        for elecarr in elec:
+            matx.extend(np.unique(elecarr[:,0])) 
+            maty.extend(np.unique(elecarr[:,1])) 
         xlimi = findminmax(matx)
-        maty = np.c_[[elecarr[:,1] for elecarr in elec]].T
         ylimi = findminmax(maty)
         if returnMesh:
             meshOutList = []

@@ -669,7 +669,7 @@ k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
 k.importPseudo3DElec(testdir + 'dc-2d-timelapse/elec3pseudo3D.csv')
 k.createMultiMesh(typ='trian', runParallel=True)
 # k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
-k.invertPseudo3D(runParallel=True)
+# k.invertPseudo3D(runParallel=True)
 # k.showResults(index=-1, cropMesh=True) # only works with pyvista - thus commented for test
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-pseudo3d'] = time.time() - t0
