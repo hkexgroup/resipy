@@ -4619,7 +4619,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 print('done')
                 self.invertBtn.setStyleSheet('background-color:green; color:black')
                 self.invertBtn.setText('Invert')
-                # self.loadingWidget(exitflag=True) #self.loadingWidget('Killing in progress...')
+                # self.loadingWidget(exitflag=True)
                 frozeUI(False)
                 return
             
@@ -5610,8 +5610,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
            <li>Electrodes must be provided as if a 3D survey is imported.
            <ul><li>Electrodes must have all <i><b>label, x, y and z</i></b> values</li>
            <li>All electrode labels must <b><i>EXACTLY</b></i> have <font color="red">"Line Number [space] Electrode Number"</font></b> format.</li>
-           <li>In case of borehole surveys, each line <b>must</b> have at least one surface electrode (i.e., whole mesh problems are not supported).</li>
-           <li>Remote electrodes (pole-pole/dipole surveys) can cause issues.</li></ul>
+           <li>In case of borehole surveys, each line <b>must</b> have at least one surface electrode (i.e., whole mesh problems are not supported).</li></ul>
            </ul>
            <p><b>Output files</b> (Inversion/modeling results):</p>
            <ul>
