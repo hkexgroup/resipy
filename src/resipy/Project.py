@@ -1268,7 +1268,7 @@ class Project(object): # Project master class instanciated by the GUI
         elecList : list of dataframes
             List of electrodes dataframes - each df can have a 3D like XYZ.
         """
-        
+        self.elecList = [] ############################## REMOVE
         if elec is None:
             if self.pseudo3DSurvey is not None:
                elec =  self.pseudo3DSurvey.elec.copy()
@@ -1285,7 +1285,7 @@ class Project(object): # Project master class instanciated by the GUI
             elecdf = elecdf.drop(['lineNum', 'elecNum'], axis=1)
             elecdf = self._findRemote(elecdf)
             elecList.append(elecdf)
-        
+        self.elecList = elecList  ############################## REMOVE
         return elecList
     
     
@@ -1309,22 +1309,23 @@ class Project(object): # Project master class instanciated by the GUI
             
         for elecdf in elecList:
             # transforming line to start from x, y = 0
-            elecdf['x'] = elecdf['x'].values - elecdf.loc[0,'x']
-            elecdf['y'] = elecdf['y'].values - elecdf.loc[0,'y']
-            
-            delx = elecdf['x'].max() - elecdf['x'].min()
-            dely = elecdf['y'].max() - elecdf['y'].min()
+            ie = elecdf[~elecdf['remote']].index.values
+            elecdf.loc[ie,'x'] = elecdf.loc[ie,'x'].values - elecdf.loc[ie[0],'x']
+            elecdf.loc[ie,'y'] = elecdf.loc[ie,'y'].values - elecdf.loc[ie[0],'y']
+
+            delx = elecdf.loc[ie,'x'].max() - elecdf.loc[ie,'x'].min()
+            dely = elecdf.loc[ie,'y'].max() - elecdf.loc[ie,'y'].min()
             f = np.inf if delx == 0 else np.abs((dely)/(delx))
             rotangle = np.arctan(f)
-            if elecdf['y'].values[0] > elecdf['y'].values[-1]: # CCW rotation needed
+            if elecdf.loc[ie,'y'].values[0] > elecdf.loc[ie,'y'].values[-1]: # CCW rotation needed
                 rotangle *= -1
             # rotation     
             rotmat = np.array([[np.cos(rotangle), np.sin(rotangle)], 
                                [-np.sin(rotangle), np.cos(rotangle)]])
-            xy = np.array([elecdf['x'].values, elecdf['y'].values])
+            xy = np.array([elecdf.loc[ie,'x'].values, elecdf.loc[ie,'y'].values])
             newmat = np.dot(rotmat, xy).T
             
-            elecdf['x'] = newmat[:,0].copy()
+            elecdf.loc[ie,'x'] = newmat[:,0].copy()
             elecdf['y'] = 0 # to make sure we don't end up with super small values
                         
         return elecList
