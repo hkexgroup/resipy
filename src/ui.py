@@ -6542,12 +6542,12 @@ if __name__ == '__main__':
                 # dark theme matplotlib plots
                 matplotlib.style.use('dark_background')
         else:
-            resipySettings.param['dark'] = False
+            resipySettings.param['dark'] = 'False'
             resipySettings.genLocalSetting()
             
     else:
         print('Generating local settings file...')
-        resipySettings.param['dark'] = False
+        resipySettings.param['dark'] = 'False'
         resipySettings.genLocalSetting()
 
     app.setWindowIcon(QIcon(os.path.join(bundle_dir, 'logo.png'))) # that's the true app icon
