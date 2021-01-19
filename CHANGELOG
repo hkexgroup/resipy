@@ -4,10 +4,12 @@ v3.2.0
 - 3D time-lapse (difference from background) inversion 
 - 3D survey from any 2D surveys
 - Efficient mesh format (improved 3D inversion)
-- Save/Load project
-- API log
+- API log (converts UI action to Python format)
 - DAS-1 format support
-- Dark mode
+- Options menu:
+-- Save/Load project
+-- Dark mode
+-- Restart GUI
 - Bug fix: Borehole 3D inversion
 - Bug fix: Remote electrode in borehole
 
