@@ -56,7 +56,7 @@ example_gallery_config = {
     'gallery_dirs': 'auto_examples',
     'dont_preprocess': ['../jupyter-notebook/nb_Morris.ipynb', '../jupyter-notebook/nb_3d-visualisation.ipynb'],
     'pattern': 'nb_.+.ipynb',
-    'urls': 'https://gitlab.com/hkex/resipy/blob/master/jupyter-notebook',
+    'urls': 'https://gitlab.com/hkex/resipy/-/raw/master/jupyter-notebook', # for nb_viewer
     'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fresipy/stable?filepath=jupyter-notebook',
 }
 
