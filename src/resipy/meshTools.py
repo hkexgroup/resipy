@@ -3446,7 +3446,7 @@ class Mesh:
         fh.close()
         
 #%%  Moving mesh
-def moveMesh2D(meshObject, elecLocal, elecGrid): # probably better to go to meshTools
+def moveMesh2D(meshObject, elecLocal, elecGrid):
     """Move mesh object to a certain place on the grid.
         X, Y only. No Z relocation.
     

@@ -320,7 +320,7 @@ class App(QMainWindow):
 
         self.tabImportingData = QWidget()
         self.tabImporting.addTab(self.tabImportingData, 'Data')
-        tabImportingDataLayout = QVBoxLayout()
+        self.tabImportingDataLayout = QVBoxLayout()
         
         # restart a new project
         # self.restartBtn = QPushButton('Restart')
@@ -376,14 +376,14 @@ class App(QMainWindow):
                 # display mesh
                 if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
                     replotMesh()
-                    meshOutputStack.setCurrentIndex(1)
+                    self.meshOutputStack.setCurrentIndex(1)
                 else:
                     if pvfound:
                         self.mesh3Dplotter.clear() # clear all actors 
                         self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                     else:
                         self.mwMesh3D.plot(self.project.showMesh, threed=True)
-                    meshOutputStack.setCurrentIndex(2)
+                    self.meshOutputStack.setCurrentIndex(2)
                 
                 # load mesh regions back in
                 self.regionTable.nrow = 0
@@ -526,12 +526,12 @@ class App(QMainWindow):
                 # mesh tab
                 self.meshQuadGroup.setVisible(True)
                 self.meshTrianGroup.setVisible(True)
-                meshTetraGroup.setVisible(False)
-                meshCustomGroup.setVisible(True)
-                instructionLabel.setVisible(True)
+                self.meshTetraGroup.setVisible(False)
+                self.meshCustomGroup.setVisible(True)
+                self.instructionLabel.setVisible(True)
                 self.meshAspectBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
-                instructionLabel3D.setVisible(False)
+                self.instructionLabel3D.setVisible(False)
                 self.select3DRegionBtn.setVisible(False)
                 self.add3DRegionBtn.setVisible(False)
                 self.fin3DRegionBtn.setVisible(False)
@@ -590,12 +590,12 @@ class App(QMainWindow):
                 # mesh tab
                 self.meshQuadGroup.setVisible(False)
                 self.meshTrianGroup.setVisible(False)
-                meshTetraGroup.setVisible(True)
-                meshCustomGroup.setVisible(False)
-                instructionLabel.setVisible(False)
+                self.meshTetraGroup.setVisible(True)
+                self.meshCustomGroup.setVisible(False)
+                self.instructionLabel.setVisible(False)
                 self.meshAspectBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
-                instructionLabel3D.setVisible(True)
+                self.instructionLabel3D.setVisible(True)
                 self.select3DRegionBtn.setVisible(True)
                 self.add3DRegionBtn.setVisible(True)
                 self.fin3DRegionBtn.setVisible(True)
@@ -628,15 +628,15 @@ class App(QMainWindow):
         self.m3DRadio = QRadioButton('3D')
         self.m3DRadio.setChecked(False)
         self.m3DRadio.toggled.connect(dimSurvey)
-        dimLayout = QHBoxLayout()
-        dimLayout.addWidget(self.m2DRadio)
-        dimLayout.addWidget(self.m3DRadio)
-        dimLayout.setContentsMargins(0,0,0,0)
-        dimGroup = QGroupBox()
-        dimGroup.setLayout(dimLayout)
-        dimGroup.setFlat(True)
-        dimGroup.setContentsMargins(0,0,0,0)
-        dimGroup.setStyleSheet('QGroupBox{border: 0px;'
+        self.dimLayout = QHBoxLayout()
+        self.dimLayout.addWidget(self.m2DRadio)
+        self.dimLayout.addWidget(self.m3DRadio)
+        self.dimLayout.setContentsMargins(0,0,0,0)
+        self.dimGroup = QGroupBox()
+        self.dimGroup.setLayout(self.dimLayout)
+        self.dimGroup.setFlat(True)
+        self.dimGroup.setContentsMargins(0,0,0,0)
+        self.dimGroup.setStyleSheet('QGroupBox{border: 0px;'
                                 'border-style:inset;}')
 
         # meta data (title and date of survey)
@@ -747,11 +747,11 @@ class App(QMainWindow):
                 self.designModelBtn.setEnabled(False)
                 self.importCustomMeshBtn2.setEnabled(False)
                 self.resetMeshBtn.hide()
-                instructionLabel.hide()
+                self.instructionLabel.hide()
                 self.meshAspectBtn.hide()
-                meshSubLayout.setStretch(0,100)
-                meshSubLayout.setStretch(1,0)
-                meshOutputStack.setCurrentIndex(2)
+                self.meshSubLayout.setStretch(0,100)
+                self.meshSubLayout.setStretch(1,0)
+                self.meshOutputStack.setCurrentIndex(2)
             
             else:
                 self.lineSpacing.setVisible(False)
@@ -774,11 +774,11 @@ class App(QMainWindow):
                 self.designModelBtn.setEnabled(True)
                 self.importCustomMeshBtn2.setEnabled(True)
                 self.resetMeshBtn.show()
-                instructionLabel.show()
+                self.instructionLabel.show()
                 self.meshAspectBtn.show()
-                meshSubLayout.setStretch(0,70)
-                meshSubLayout.setStretch(1,30)
-                meshOutputStack.setCurrentIndex(1)
+                self.meshSubLayout.setStretch(0,70)
+                self.meshSubLayout.setStretch(1,30)
+                self.meshOutputStack.setCurrentIndex(1)
             self.elecLabel.setText(self.elecLabelTextP1 + self.elecLabelTextP2)
                 
         self.pseudo3DCheck = QCheckBox('Pseudo 3D inversion from 2D lines')
@@ -856,15 +856,15 @@ class App(QMainWindow):
         self.invRadio.toggled.connect(invRadioFunc)
         self.invRadio.setToolTip('To invert data that is already collected.')
         
-        dimInvLayout = QHBoxLayout()
-        dimInvLayout.addWidget(self.fwdRadio)
-        dimInvLayout.addWidget(self.invRadio)
-        dimInvLayout.setContentsMargins(0,0,0,0)
-        dimInvGroup = QGroupBox()
-        dimInvGroup.setLayout(dimInvLayout)
-        dimInvGroup.setFlat(True)
-        dimInvGroup.setContentsMargins(0,0,0,0)
-        dimInvGroup.setStyleSheet('QGroupBox{border: 0px;'
+        self.dimInvLayout = QHBoxLayout()
+        self.dimInvLayout.addWidget(self.fwdRadio)
+        self.dimInvLayout.addWidget(self.invRadio)
+        self.dimInvLayout.setContentsMargins(0,0,0,0)
+        self.dimInvGroup = QGroupBox()
+        self.dimInvGroup.setLayout(self.dimInvLayout)
+        self.dimInvGroup.setFlat(True)
+        self.dimInvGroup.setContentsMargins(0,0,0,0)
+        self.dimInvGroup.setStyleSheet('QGroupBox{border: 0px;'
                                 'border-style:inset;}')
 
 
@@ -1384,75 +1384,75 @@ class App(QMainWindow):
         self.mwPseudoIP.setVisible(False)
 
         # layout
-        hbox1 = QHBoxLayout()
-        hbox1.addWidget(dimGroup)
-        hbox1.addWidget(self.titleLabel)
-        hbox1.addWidget(self.titleEdit)
-        hbox1.addWidget(self.dateLabel)
-        hbox1.addWidget(self.dateEdit)
-        # hbox1.addWidget(self.saveProjectBtn)
-        # hbox1.addWidget(self.loadProjectBtn)
-        # hbox1.addWidget(self.restartBtn)
+        self.hbox1 = QHBoxLayout()
+        self.hbox1.addWidget(self.dimGroup)
+        self.hbox1.addWidget(self.titleLabel)
+        self.hbox1.addWidget(self.titleEdit)
+        self.hbox1.addWidget(self.dateLabel)
+        self.hbox1.addWidget(self.dateEdit)
+        # self.hbox1.addWidget(self.saveProjectBtn)
+        # self.hbox1.addWidget(self.loadProjectBtn)
+        # self.hbox1.addWidget(self.restartBtn)
 
-        hbox2 = QHBoxLayout()
-        hbox2.addWidget(dimInvGroup)
-        hbox2.addWidget(self.timeLapseCheck)
-        hbox2.addWidget(self.batchCheck)
-        hbox2.addWidget(self.boreholeCheck)
-        hbox2.addWidget(self.pseudo3DCheck)
-        hbox2.addWidget(self.regular3DCheck)
+        self.hbox2 = QHBoxLayout()
+        self.hbox2.addWidget(self.dimInvGroup)
+        self.hbox2.addWidget(self.timeLapseCheck)
+        self.hbox2.addWidget(self.batchCheck)
+        self.hbox2.addWidget(self.boreholeCheck)
+        self.hbox2.addWidget(self.pseudo3DCheck)
+        self.hbox2.addWidget(self.regular3DCheck)
 
-        hbox4 = QHBoxLayout()
-        hbox4.addWidget(self.wdBtn)
-        hbox4.addWidget(self.ftypeComboLabel)
-        hbox4.addWidget(self.ftypeCombo)
-#        hbox4.addWidget(self.spacingEdit)
-        hbox4.addWidget(self.importDataBtn)
-        hbox4.addWidget(self.importDataRecipBtn)
-        hbox4.addWidget(self.lineSpacingLabel)
-        hbox4.addWidget(self.lineSpacing)
-        hbox4.addWidget(self.create3DBtn)
-        hbox4.addWidget(self.invNowBtn)
+        self.hbox4 = QHBoxLayout()
+        self.hbox4.addWidget(self.wdBtn)
+        self.hbox4.addWidget(self.ftypeComboLabel)
+        self.hbox4.addWidget(self.ftypeCombo)
+#        self.hbox4.addWidget(self.spacingEdit)
+        self.hbox4.addWidget(self.importDataBtn)
+        self.hbox4.addWidget(self.importDataRecipBtn)
+        self.hbox4.addWidget(self.lineSpacingLabel)
+        self.hbox4.addWidget(self.lineSpacing)
+        self.hbox4.addWidget(self.create3DBtn)
+        self.hbox4.addWidget(self.invNowBtn)
         
-        hbox5 = QHBoxLayout()
-        hbox5.setAlignment(Qt.AlignRight)
-        hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
-        hbox5.addWidget(self.psContourCheck)
-        hbox5.addWidget(self.pvminLabel)
-        hbox5.addWidget(self.pvmin)
-        hbox5.addWidget(self.pvmaxLabel)
-        hbox5.addWidget(self.pvmax)
-        hbox5.addWidget(self.pvminIPLabel)
-        hbox5.addWidget(self.pvminIP)
-        hbox5.addWidget(self.pvmaxIPLabel)
-        hbox5.addWidget(self.pvmaxIP)
-        hbox5.addWidget(self.prescaleBtn)
-        hbox5.addWidget(self.fnamesComboLabel)
-        hbox5.addWidget(self.fnamesCombo)
+        self.hbox5 = QHBoxLayout()
+        self.hbox5.setAlignment(Qt.AlignRight)
+        self.hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
+        self.hbox5.addWidget(self.psContourCheck)
+        self.hbox5.addWidget(self.pvminLabel)
+        self.hbox5.addWidget(self.pvmin)
+        self.hbox5.addWidget(self.pvmaxLabel)
+        self.hbox5.addWidget(self.pvmax)
+        self.hbox5.addWidget(self.pvminIPLabel)
+        self.hbox5.addWidget(self.pvminIP)
+        self.hbox5.addWidget(self.pvmaxIPLabel)
+        self.hbox5.addWidget(self.pvmaxIP)
+        self.hbox5.addWidget(self.prescaleBtn)
+        self.hbox5.addWidget(self.fnamesComboLabel)
+        self.hbox5.addWidget(self.fnamesCombo)
 
-        metaLayout = QVBoxLayout()
-        metaLayout.addLayout(hbox1)
-        metaLayout.addLayout(hbox2)
-        metaLayout.addLayout(hbox4)
-        metaLayout.addLayout(hbox5)
-        tabImportingDataLayout.addLayout(metaLayout, 40)
+        self.metaLayout = QVBoxLayout()
+        self.metaLayout.addLayout(self.hbox1)
+        self.metaLayout.addLayout(self.hbox2)
+        self.metaLayout.addLayout(self.hbox4)
+        self.metaLayout.addLayout(self.hbox5)
+        self.tabImportingDataLayout.addLayout(self.metaLayout, 40)
 
         self.pseudoLayout = QStackedLayout()
-        mwLayoutWidget = QWidget()
-        mwLayout = QHBoxLayout()
-        mwLayout.addWidget(self.mwPseudo, 50)
-        mwLayout.addWidget(self.mwPseudoIP, 50)
-        mwLayoutWidget.setLayout(mwLayout)
-        self.pseudoLayout.addWidget(mwLayoutWidget)
+        self.mwLayoutWidget = QWidget()
+        self.mwLayout = QHBoxLayout()
+        self.mwLayout.addWidget(self.mwPseudo, 50)
+        self.mwLayout.addWidget(self.mwPseudoIP, 50)
+        self.mwLayoutWidget.setLayout(self.mwLayout)
+        self.pseudoLayout.addWidget(self.mwLayoutWidget)
         if pvfound:
-            pvLayoutWidget = QWidget()
-            pvLayout = QHBoxLayout()
-            pvLayout.addWidget(self.pseudoFrame, 50)
-            pvLayout.addWidget(self.pseudoFrameIP, 50)
-            pvLayoutWidget.setLayout(pvLayout)
-            self.pseudoLayout.addWidget(pvLayoutWidget)
-        tabImportingDataLayout.addLayout(self.pseudoLayout, 60)
-        self.tabImportingData.setLayout(tabImportingDataLayout)
+            self.pvLayoutWidget = QWidget()
+            self.pvLayout = QHBoxLayout()
+            self.pvLayout.addWidget(self.pseudoFrame, 50)
+            self.pvLayout.addWidget(self.pseudoFrameIP, 50)
+            self.pvLayoutWidget.setLayout(self.pvLayout)
+            self.pseudoLayout.addWidget(self.pvLayoutWidget)
+        self.tabImportingDataLayout.addLayout(self.pseudoLayout, 60)
+        self.tabImportingData.setLayout(self.tabImportingDataLayout)
 
 
         #%% sub tab with elec and topo informations
@@ -1487,24 +1487,24 @@ class App(QMainWindow):
                 if vals is None:
                     vals = np.zeros(self.nrow, dtype=bool)
                 for i in range(len(vals)):
-                    checkBoxWidget = QWidget()
+                    self.checkBoxWidget = QWidget()
                     checkBoxLayout = QHBoxLayout()
                     checkBoxLayout.setContentsMargins(5,5,5,5)
                     checkBoxLayout.setAlignment(Qt.AlignCenter)
-                    buriedCheck = QCheckBox()
-                    buriedCheck.setChecked(bool(vals[i]))
-                    checkBoxLayout.addWidget(buriedCheck)
-                    checkBoxWidget.setLayout(checkBoxLayout)
-                    self.setCellWidget(i, 4, checkBoxWidget) # column 4 == Buried
+                    self.buriedCheck = QCheckBox()
+                    self.buriedCheck.setChecked(bool(vals[i]))
+                    checkBoxLayout.addWidget(self.buriedCheck)
+                    self.checkBoxWidget.setLayout(checkBoxLayout)
+                    self.setCellWidget(i, 4, self.checkBoxWidget) # column 4 == Buried
 
             def setAllBuried(self, colIndex):
                 if colIndex == 4:
                     for i in range(self.nrow):
-                        buriedCheck = self.cellWidget(i, 4).findChildren(QCheckBox)[0]
-                        if buriedCheck.isChecked() is True:
-                            buriedCheck.setChecked(False)
+                        self.buriedCheck = self.cellWidget(i, 4).findChildren(QCheckBox)[0]
+                        if self.buriedCheck.isChecked() is True:
+                            self.buriedCheck.setChecked(False)
                         else:
-                            buriedCheck.setChecked(True)
+                            self.buriedCheck.setChecked(True)
                             
 
             def keyPressEvent(self, e):
@@ -1582,8 +1582,8 @@ class App(QMainWindow):
                                 t = self.item(i,j).text()
                                 df.loc[i, col] = float(t) if t != '' else np.nan
                         elif j == 4:
-                            buriedCheck = self.cellWidget(i, 4).findChildren(QCheckBox)[0]
-                            if buriedCheck.isChecked() is True:
+                            self.buriedCheck = self.cellWidget(i, 4).findChildren(QCheckBox)[0]
+                            if self.buriedCheck.isChecked() is True:
                                 df.loc[i, 'buried'] = True
                             else:
                                 df.loc[i, 'buried'] = False
@@ -1770,40 +1770,40 @@ class App(QMainWindow):
         
         
         # layout
-        topoLayout = QVBoxLayout()
+        self.topoLayout = QVBoxLayout()
 
-        elecGenLayout = QHBoxLayout()
-        elecGenLayout.addWidget(self.nbElecLabel)
-        elecGenLayout.addWidget(self.nbElecEdit)
-        elecGenLayout.addWidget(self.elecDxLabel)
-        elecGenLayout.addWidget(self.elecDxEdit)
-        elecGenLayout.addWidget(self.elecDzLabel)
-        elecGenLayout.addWidget(self.elecDzEdit)
-        elecGenLayout.addWidget(self.elecLineLabel)
-        elecGenLayout.addWidget(self.elecLineEdit)
-        elecGenLayout.addWidget(self.elecLineSpacingLabel)
-        elecGenLayout.addWidget(self.elecLineSpacingEdit)
-        elecGenLayout.addWidget(self.elecGenButton)
-        topoLayout.addWidget(self.elecLabel)
-        topoLayout.addLayout(elecGenLayout)
-        topoLayout.addWidget(self.importElecBtn)
-        topoLayout.addWidget(self.elecTable)
+        self.elecGenLayout = QHBoxLayout()
+        self.elecGenLayout.addWidget(self.nbElecLabel)
+        self.elecGenLayout.addWidget(self.nbElecEdit)
+        self.elecGenLayout.addWidget(self.elecDxLabel)
+        self.elecGenLayout.addWidget(self.elecDxEdit)
+        self.elecGenLayout.addWidget(self.elecDzLabel)
+        self.elecGenLayout.addWidget(self.elecDzEdit)
+        self.elecGenLayout.addWidget(self.elecLineLabel)
+        self.elecGenLayout.addWidget(self.elecLineEdit)
+        self.elecGenLayout.addWidget(self.elecLineSpacingLabel)
+        self.elecGenLayout.addWidget(self.elecLineSpacingEdit)
+        self.elecGenLayout.addWidget(self.elecGenButton)
+        self.topoLayout.addWidget(self.elecLabel)
+        self.topoLayout.addLayout(self.elecGenLayout)
+        self.topoLayout.addWidget(self.importElecBtn)
+        self.topoLayout.addWidget(self.elecTable)
         
-        topoLayout.addWidget(topoLabel)
-        topoBtnLayout = QHBoxLayout()
-        topoBtnLayout.addWidget(self.topoBtn, 70)
-        topoBtnLayout.addWidget(self.topoAddRowBtn, 10)
-        topoBtnLayout.addWidget(self.topoInterpBtn, 20)
-        topoLayout.addLayout(topoBtnLayout)
-        topoLayout.addWidget(self.topoTable)
+        self.topoLayout.addWidget(topoLabel)
+        self.topoBtnLayout = QHBoxLayout()
+        self.topoBtnLayout.addWidget(self.topoBtn, 70)
+        self.topoBtnLayout.addWidget(self.topoAddRowBtn, 10)
+        self.topoBtnLayout.addWidget(self.topoInterpBtn, 20)
+        self.topoLayout.addLayout(self.topoBtnLayout)
+        self.topoLayout.addWidget(self.topoTable)
 
-        self.tabImportingTopo.setLayout(topoLayout)
+        self.tabImportingTopo.setLayout(self.topoLayout)
         self.tabImporting.setTabEnabled(1, False)
 
 
         #%% sub tab for custom parser
-        customParser = QWidget()
-        self.tabImporting.addTab(customParser, 'Custom Parser')
+        self.customParser = QWidget()
+        self.tabImporting.addTab(self.customParser, 'Custom Parser')
         
         self.delimiter = ''
         def delimFunc(index):
@@ -2097,31 +2097,31 @@ class App(QMainWindow):
 
 
         # layout
-        parserLayout = QVBoxLayout()
-        parserOptions = QHBoxLayout()
-        columnsAssign = QGridLayout()
+        self.parserLayout = QVBoxLayout()
+        self.parserOptions = QHBoxLayout()
+        self.columnsAssign = QGridLayout()
 
-        parserLayout.addWidget(self.openFileBtn)
-        parserOptions.addWidget(self.delimLabel)
-        parserOptions.addWidget(self.delimCombo)
-        parserOptions.addWidget(self.delimiterBox)
-        parserOptions.addWidget(self.skipRowsLabel)
-        parserOptions.addWidget(self.skipRowsEdit)
-        parserOptions.addWidget(self.nrowsLabel)
-        parserOptions.addWidget(self.nrowsEdit)
-        parserOptions.addWidget(self.parseBtn)
-        parserLayout.addLayout(parserOptions)
+        self.parserLayout.addWidget(self.openFileBtn)
+        self.parserOptions.addWidget(self.delimLabel)
+        self.parserOptions.addWidget(self.delimCombo)
+        self.parserOptions.addWidget(self.delimiterBox)
+        self.parserOptions.addWidget(self.skipRowsLabel)
+        self.parserOptions.addWidget(self.skipRowsEdit)
+        self.parserOptions.addWidget(self.nrowsLabel)
+        self.parserOptions.addWidget(self.nrowsEdit)
+        self.parserOptions.addWidget(self.parseBtn)
+        self.parserLayout.addLayout(self.parserOptions)
 
-        parserLayout.addWidget(self.parserTable)
+        self.parserLayout.addWidget(self.parserTable)
         for i in range(len(boxes)):
             c = (i % 3)*2 # in 2*3 columns (with labels)
             r = int(i/3)
-            columnsAssign.addWidget(boxesLabels[i], r, c, Qt.AlignRight)
-            columnsAssign.addWidget(boxes[i], r, c+1)
-        parserLayout.addLayout(columnsAssign)
-        parserLayout.addWidget(self.importBtn)
+            self.columnsAssign.addWidget(boxesLabels[i], r, c, Qt.AlignRight)
+            self.columnsAssign.addWidget(boxes[i], r, c+1)
+        self.parserLayout.addLayout(self.columnsAssign)
+        self.parserLayout.addWidget(self.importBtn)
 
-        customParser.setLayout(parserLayout)
+        self.customParser.setLayout(self.parserLayout)
 
 
 #%% ===================== pre-processing tab =====================
@@ -2131,8 +2131,8 @@ class App(QMainWindow):
 
         
 #%% reciprocal filtering tab (or just normal filtering if no reciprocal)
-        recipErrorWidget = QWidget()
-        self.tabPreProcessing.addTab(recipErrorWidget, 'Reciprocal error analysis')
+        self.recipErrorWidget  = QWidget()
+        self.tabPreProcessing.addTab(self.recipErrorWidget , 'Reciprocal error analysis')
         self.tabPreProcessing.setTabEnabled(0, True)
 
         self.recipErrorLabel = QLabel('<b>Remove datapoints that have reciprocal error larger than what you prefer.</b><br>Either select (<i>click on the dots to select them</i>) the points on the pseudo section below or choose a percentage threshold or both!</br>')
@@ -2388,88 +2388,88 @@ class App(QMainWindow):
 
 
         # layout
-        recipErrorLayout = QVBoxLayout()
+        self.recipErrorLayout = QVBoxLayout()
 
-        recipErrorTopLayout = QVBoxLayout()
-        recipErrorLayout.addLayout(recipErrorTopLayout, 0) # number is stretch factor
+        self.recipErrorTopLayout = QVBoxLayout()
+        self.recipErrorLayout.addLayout(self.recipErrorTopLayout, 0) # number is stretch factor
 
-        recipErrorLabelLayout = QHBoxLayout()
-        recipErrorLabelLayout.addWidget(self.recipErrorLabel, 1)
-        recipErrorLabelLayout.addWidget(self.recipErrorfnamesComboLabel)
-        recipErrorLabelLayout.addWidget(self.recipErrorfnamesCombo)
-        recipErrorTopLayout.addLayout(recipErrorLabelLayout)
+        self.recipErrorLabelLayout = QHBoxLayout()
+        self.recipErrorLabelLayout.addWidget(self.recipErrorLabel, 1)
+        self.recipErrorLabelLayout.addWidget(self.recipErrorfnamesComboLabel)
+        self.recipErrorLabelLayout.addWidget(self.recipErrorfnamesCombo)
+        self.recipErrorTopLayout.addLayout(self.recipErrorLabelLayout)
         
-        recipErrorInputlayout = QHBoxLayout()
-        recipErrorTopLayout.addLayout(recipErrorInputlayout)
+        self.recipErrorInputlayout = QHBoxLayout()
+        self.recipErrorTopLayout.addLayout(self.recipErrorInputlayout)
         
-        recipErrorInputLeftlayout = QHBoxLayout()
-        recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
-        recipErrorInputLeftlayoutL = QHBoxLayout()
-        recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
-        recipErrorInputLeftlayoutL.addWidget(self.rhoRangeInputLabel)
-        recipErrorInputLeftlayoutL.addWidget(self.recipErrorInputLabel)
-        recipErrorInputLeftlayout.addLayout(recipErrorInputLeftlayoutL)
+        self.recipErrorInputLeftlayout = QHBoxLayout()
+        self.recipErrorInputLeftlayout.setAlignment(Qt.AlignLeft)
+        self.recipErrorInputLeftlayoutL = QHBoxLayout()
+        self.recipErrorInputLeftlayoutL.setAlignment(Qt.AlignRight)
+        self.recipErrorInputLeftlayoutL.addWidget(self.rhoRangeInputLabel)
+        self.recipErrorInputLeftlayoutL.addWidget(self.recipErrorInputLabel)
+        self.recipErrorInputLeftlayout.addLayout(self.recipErrorInputLeftlayoutL)
         
-        recipErrorInputLineLayout = QHBoxLayout()
-        recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
-        recipErrorInputLineLayout.addWidget(self.rhoRangeMinInput)
-        recipErrorInputLineLayout.addWidget(self.rhoRangeMaxInput)
-        recipErrorInputLineLayout.addWidget(self.recipErrorInputLine)
-        recipErrorInputLineLayout.addWidget(self.filterAttrCombo)
-        recipErrorInputLeftlayout.addLayout(recipErrorInputLineLayout)
+        self.recipErrorInputLineLayout = QHBoxLayout()
+        self.recipErrorInputLineLayout.setAlignment(Qt.AlignLeft)
+        self.recipErrorInputLineLayout.addWidget(self.rhoRangeMinInput)
+        self.recipErrorInputLineLayout.addWidget(self.rhoRangeMaxInput)
+        self.recipErrorInputLineLayout.addWidget(self.recipErrorInputLine)
+        self.recipErrorInputLineLayout.addWidget(self.filterAttrCombo)
+        self.recipErrorInputLeftlayout.addLayout(self.recipErrorInputLineLayout)
 
-        recipErrorInputlayout.addLayout(recipErrorInputLeftlayout)
+        self.recipErrorInputlayout.addLayout(self.recipErrorInputLeftlayout)
 
-        recipErrorBtnLayout = QHBoxLayout()
-        recipErrorBtnLayout.setAlignment(Qt.AlignRight)
-        recipErrorBtnLayout.addWidget(self.recipErrorUnpairedBtn)
-        recipErrorBtnLayout.addWidget(self.recipErrorPltBtn)
-        recipErrorBtnLayout.addWidget(self.recipErrorResetBtn)
-        recipErrorBtnLayout.addWidget(self.recipErrorSaveBtn)
-        recipErrorInputlayout.addLayout(recipErrorBtnLayout, 1)
+        self.recipErrorBtnLayout = QHBoxLayout()
+        self.recipErrorBtnLayout.setAlignment(Qt.AlignRight)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorUnpairedBtn)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorPltBtn)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorResetBtn)
+        self.recipErrorBtnLayout.addWidget(self.recipErrorSaveBtn)
+        self.recipErrorInputlayout.addLayout(self.recipErrorBtnLayout, 1)
                
         #tab widgets for the graphs
         self.recipErrorBottomTabs = QTabWidget()
 
-        recipErrorBottomLayout = QVBoxLayout()
-        recipErrorPlotLayout = QVBoxLayout()
-        recipErrorPlotLayout.addWidget(self.mwRecipError)
+        self.recipErrorBottomLayout = QVBoxLayout()
+        self.recipErrorPlotLayout = QVBoxLayout()
+        self.recipErrorPlotLayout.addWidget(self.mwRecipError)
 
-        recipErrorPseudoPlotLayout = QVBoxLayout()
-        recipErrorPseudoPlotLayout.addWidget(self.mwManualFiltering)
+        self.recipErrorPseudoPlotLayout = QVBoxLayout()
+        self.recipErrorPseudoPlotLayout.addWidget(self.mwManualFiltering)
 
-        pseudoSectionPlotTab = QWidget()
-        pseudoSectionPlotTab.setLayout(recipErrorPseudoPlotLayout)
-        self.recipErrorBottomTabs.addTab(pseudoSectionPlotTab, 'Pseudo Section')
+        self.pseudoSectionPlotTab = QWidget()
+        self.pseudoSectionPlotTab.setLayout(self.recipErrorPseudoPlotLayout)
+        self.recipErrorBottomTabs.addTab(self.pseudoSectionPlotTab, 'Pseudo Section')
 
-        errorHistogramPlotTab = QWidget()
-        errorHistogramPlotTab.setLayout(recipErrorPlotLayout)
-        self.recipErrorBottomTabs.addTab(errorHistogramPlotTab, 'Error Histogram')
+        self.errorHistogramPlotTab = QWidget()
+        self.errorHistogramPlotTab.setLayout(self.recipErrorPlotLayout)
+        self.recipErrorBottomTabs.addTab(self.errorHistogramPlotTab, 'Error Histogram')
 
-        recipErrorBottomLayout.addWidget(self.recipErrorBottomTabs)
-        recipErrorLayout.addLayout(recipErrorBottomLayout, 1) # '1' to keep the plot in largest strech
+        self.recipErrorBottomLayout.addWidget(self.recipErrorBottomTabs)
+        self.recipErrorLayout.addLayout(self.recipErrorBottomLayout, 1) # '1' to keep the plot in largest strech
 
-        recipErrorWidget.setLayout(recipErrorLayout)
+        self.recipErrorWidget .setLayout(self.recipErrorLayout)
 
 
 
 #%% phase filtering tab
-        ipfiltWidget = QWidget()
-        self.tabPreProcessing.addTab(ipfiltWidget, 'Phase Filtering')
+        self.ipfiltWidget = QWidget()
+        self.tabPreProcessing.addTab(self.ipfiltWidget, 'Phase Filtering')
         self.tabPreProcessing.setTabEnabled(1, False)
 
-        phasefiltlayout = QVBoxLayout()
-        phaseLabelLayout = QHBoxLayout()
+        self.phasefiltlayout = QVBoxLayout()
+        self.phaseLabelLayout = QHBoxLayout()
         
         self.phasefiltLabel = QLabel('<b>Filter the data based on the phase/IP measurements.</b><br>\
                                 Below graphs show the status of filtered data versus raw input.')
         self.phasefiltLabel.setWordWrap(True)
         self.phasefiltLabel.setAlignment(Qt.AlignLeft)
-        phaseLabelLayout.addWidget(self.phasefiltLabel, 1)
+        self.phaseLabelLayout.addWidget(self.phasefiltLabel, 1)
         
         self.phasefiltfnamesComboLabel = QLabel('Select a dataset:')
         self.phasefiltfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
-        phaseLabelLayout.addWidget(self.phasefiltfnamesComboLabel)
+        self.phaseLabelLayout.addWidget(self.phasefiltfnamesComboLabel)
         
         def phasefiltfnamesComboFunc(index):
             if index == 0:
@@ -2484,8 +2484,8 @@ class App(QMainWindow):
         self.phasefiltfnamesCombo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.phasefiltfnamesCombo.setMinimumWidth(150)
         self.phasefiltfnamesCombo.activated.connect(phasefiltfnamesComboFunc)
-        phaseLabelLayout.addWidget(self.phasefiltfnamesCombo)
-        phasefiltlayout.addLayout(phaseLabelLayout)
+        self.phaseLabelLayout.addWidget(self.phasefiltfnamesCombo)
+        self.phasefiltlayout.addLayout(self.phaseLabelLayout)
 
         def phirange():
             vmin = float(self.phivminEdit.text())
@@ -2522,13 +2522,13 @@ class App(QMainWindow):
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
                 self.project._updatePseudo3DSurvey()
 
-        phitoplayout = QHBoxLayout()
-        phitoplayoutL = QHBoxLayout()
-        phitoplayoutL.setAlignment(Qt.AlignLeft)
-        phitoplayoutC = QHBoxLayout()
-        phitoplayoutC.setAlignment(Qt.AlignRight)
-        phitoplayoutR = QHBoxLayout()
-        phitoplayoutR.setAlignment(Qt.AlignRight)
+        self.phitoplayout = QHBoxLayout()
+        self.phitoplayoutL = QHBoxLayout()
+        self.phitoplayoutL.setAlignment(Qt.AlignLeft)
+        self.phitoplayoutC = QHBoxLayout()
+        self.phitoplayoutC.setAlignment(Qt.AlignRight)
+        self.phitoplayoutR = QHBoxLayout()
+        self.phitoplayoutR.setAlignment(Qt.AlignRight)
         self.phiConvFactorlabel = QLabel('Conversion factor k (φ = -kM):')
         self.phiConvFactorlabel.setToolTip('Assuming linear relationship.\nk = 1.2 is for IRIS Syscal devices\nThis equation is not used when importing phase data')
         self.phiConvFactor = QLineEdit()
@@ -2560,28 +2560,28 @@ class App(QMainWindow):
         self.recipFiltBtn.setEnabled(False)
         self.recipFiltBtn.clicked.connect(removerecip)
 
-        nestedfilt = QPushButton('Remove nested')
-        nestedfilt.setFixedWidth(150)
-        nestedfilt.setToolTip('Measurments where M and/or N are inbetween A and B will be removed.\nNOTE: Wenner like arrays will also be affected')
-        nestedfilt.setAutoDefault(True)
-        nestedfilt.clicked.connect(removenested)
+        self.nestedfilt = QPushButton('Remove nested')
+        self.nestedfilt.setFixedWidth(150)
+        self.nestedfilt.setToolTip('Measurments where M and/or N are inbetween A and B will be removed.\nNOTE: Wenner like arrays will also be affected')
+        self.nestedfilt.setAutoDefault(True)
+        self.nestedfilt.clicked.connect(removenested)
 
-        phitoplayoutL.addWidget(self.phiConvFactorlabel)
-        phitoplayoutL.addWidget(self.phiConvFactor)
-        phitoplayoutC.addWidget(self.rangelabel)
-        phitoplayoutR.addWidget(self.phivminlabel)
-        phitoplayoutR.addWidget(self.phivminEdit)
-        phitoplayoutR.addWidget(self.phivmaxlabel)
-        phitoplayoutR.addWidget(self.phivmaxEdit)
-        phitoplayoutR.addWidget(self.rangebutton)
-        phitoplayoutR.addWidget(self.recipFiltBtn)
-        phitoplayoutR.addWidget(nestedfilt)
+        self.phitoplayoutL.addWidget(self.phiConvFactorlabel)
+        self.phitoplayoutL.addWidget(self.phiConvFactor)
+        self.phitoplayoutC.addWidget(self.rangelabel)
+        self.phitoplayoutR.addWidget(self.phivminlabel)
+        self.phitoplayoutR.addWidget(self.phivminEdit)
+        self.phitoplayoutR.addWidget(self.phivmaxlabel)
+        self.phitoplayoutR.addWidget(self.phivmaxEdit)
+        self.phitoplayoutR.addWidget(self.rangebutton)
+        self.phitoplayoutR.addWidget(self.recipFiltBtn)
+        self.phitoplayoutR.addWidget(self.nestedfilt)
         
-        phitoplayout.addLayout(phitoplayoutL, 0)
-        phitoplayout.addLayout(phitoplayoutC, 1)
-        phitoplayout.addLayout(phitoplayoutR, 0)
+        self.phitoplayout.addLayout(self.phitoplayoutL, 0)
+        self.phitoplayout.addLayout(self.phitoplayoutC, 1)
+        self.phitoplayout.addLayout(self.phitoplayoutR, 0)
         
-        phasefiltlayout.addLayout(phitoplayout,0)
+        self.phasefiltlayout.addLayout(self.phitoplayout,0)
 
         def filt_reset():
             if self.phaseFiltDataIndex == -1:
@@ -2602,11 +2602,11 @@ class App(QMainWindow):
         def phiCbarRange():
             if self.phaseFiltDataIndex == -1:
                 for s in self.project.surveys:
-                    s.phiCbarmin = float(phiCbarminEdit.text())
-                    s.phiCbarMax = float(phiCbarMaxEdit.text())
+                    s.phiCbarmin = float(self.phiCbarminEdit.text())
+                    s.phiCbarMax = float(self.phiCbarMaxEdit.text())
             else:
-                self.project.surveys[self.phaseFiltDataIndex].phiCbarmin = float(phiCbarminEdit.text())
-                self.project.surveys[self.phaseFiltDataIndex].phiCbarMax = float(phiCbarMaxEdit.text())
+                self.project.surveys[self.phaseFiltDataIndex].phiCbarmin = float(self.phiCbarminEdit.text())
+                self.project.surveys[self.phaseFiltDataIndex].phiCbarMax = float(self.phiCbarMaxEdit.text())
             heatFilter()
             heatRaw()
 
@@ -2633,59 +2633,59 @@ class App(QMainWindow):
             heatFilter()
             heatRaw()
 
-        resetlayout = QHBoxLayout()
-        resetlayoutL = QHBoxLayout()
-        resetlayoutL.setAlignment(Qt.AlignLeft)
-        resetlayoutR = QHBoxLayout()
-        resetlayoutR.setAlignment(Qt.AlignRight)
+        self.resetlayout = QHBoxLayout()
+        self.resetlayoutL = QHBoxLayout()
+        self.resetlayoutL.setAlignment(Qt.AlignLeft)
+        self.resetlayoutR = QHBoxLayout()
+        self.resetlayoutR.setAlignment(Qt.AlignRight)
         
-        phaseSavebtn = QPushButton('Save data')
-        phaseSavebtn.setStyleSheet("color: green")
-        phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
-        phaseSavebtn.clicked.connect(saveFilteredData)
-        phaseSavebtn.setFixedWidth(150)
+        self.phaseSavebtn = QPushButton('Save data')
+        self.phaseSavebtn.setStyleSheet("color: green")
+        self.phaseSavebtn.setToolTip('This will save the data in available formats (e.g. Res2DInv.dat)')
+        self.phaseSavebtn.clicked.connect(saveFilteredData)
+        self.phaseSavebtn.setFixedWidth(150)
         
-        filtreset = QPushButton('Reset phase filters')
-        filtreset.setStyleSheet("color: red")
-        filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
-        filtreset.setAutoDefault(True)
-        filtreset.clicked.connect(filt_reset)
-        filtreset.setFixedWidth(150)
-        phiCbarminlabel = QLabel('Colorbar<sub>min</sub>: ')
-        phiCbarminEdit = QLineEdit()
-        phiCbarminEdit.setFixedWidth(50)
-        phiCbarminEdit.setValidator(QDoubleValidator())
-        phiCbarminEdit.setText('0')
-        phiCbarMaxlabel = QLabel('Colorbar<sub>Max</sub>: ')
-        phiCbarMaxEdit = QLineEdit()
-        phiCbarMaxEdit.setFixedWidth(50)
-        phiCbarMaxEdit.setValidator(QDoubleValidator())
-        phiCbarMaxEdit.setText('25')
-        phiCbarrangebutton = QPushButton('Apply')
-        phiCbarrangebutton.setFixedWidth(100)
-        phiCbarrangebutton.setToolTip('This is not a filtering step.')
-        phiCbarrangebutton.setAutoDefault(True)
-        phiCbarrangebutton.clicked.connect(phiCbarRange)
-        phiCbarDatarangebutton = QPushButton('Raw data range')
-        phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
-        phiCbarDatarangebutton.setAutoDefault(True)
-        phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
-        phiCbarDatarangebutton.setFixedWidth(150)
-        resetlayoutL.addWidget(phiCbarminlabel)
-        resetlayoutL.addWidget(phiCbarminEdit)
-        resetlayoutL.addWidget(phiCbarMaxlabel)
-        resetlayoutL.addWidget(phiCbarMaxEdit)
-        resetlayoutL.addWidget(phiCbarrangebutton)
-        resetlayoutL.addWidget(phiCbarDatarangebutton)
-        resetlayoutR.addWidget(filtreset)
-        resetlayoutR.addWidget(phaseSavebtn)
+        self.filtreset = QPushButton('Reset phase filters')
+        self.filtreset.setStyleSheet("color: red")
+        self.filtreset.setToolTip('Reset all the filtering.\nk factor is not affected')
+        self.filtreset.setAutoDefault(True)
+        self.filtreset.clicked.connect(filt_reset)
+        self.filtreset.setFixedWidth(150)
+        self.phiCbarminlabel = QLabel('Colorbar<sub>min</sub>: ')
+        self.phiCbarminEdit = QLineEdit()
+        self.phiCbarminEdit.setFixedWidth(50)
+        self.phiCbarminEdit.setValidator(QDoubleValidator())
+        self.phiCbarminEdit.setText('0')
+        self.phiCbarMaxlabel = QLabel('Colorbar<sub>Max</sub>: ')
+        self.phiCbarMaxEdit = QLineEdit()
+        self.phiCbarMaxEdit.setFixedWidth(50)
+        self.phiCbarMaxEdit.setValidator(QDoubleValidator())
+        self.phiCbarMaxEdit.setText('25')
+        self.phiCbarrangebutton = QPushButton('Apply')
+        self.phiCbarrangebutton.setFixedWidth(100)
+        self.phiCbarrangebutton.setToolTip('This is not a filtering step.')
+        self.phiCbarrangebutton.setAutoDefault(True)
+        self.phiCbarrangebutton.clicked.connect(phiCbarRange)
+        self.phiCbarDatarangebutton = QPushButton('Raw data range')
+        self.phiCbarDatarangebutton.setToolTip('This is not a filtering step.')
+        self.phiCbarDatarangebutton.setAutoDefault(True)
+        self.phiCbarDatarangebutton.clicked.connect(phiCbarDataRange)
+        self.phiCbarDatarangebutton.setFixedWidth(150)
+        self.resetlayoutL.addWidget(self.phiCbarminlabel)
+        self.resetlayoutL.addWidget(self.phiCbarminEdit)
+        self.resetlayoutL.addWidget(self.phiCbarMaxlabel)
+        self.resetlayoutL.addWidget(self.phiCbarMaxEdit)
+        self.resetlayoutL.addWidget(self.phiCbarrangebutton)
+        self.resetlayoutL.addWidget(self.phiCbarDatarangebutton)
+        self.resetlayoutR.addWidget(self.filtreset)
+        self.resetlayoutR.addWidget(self.phaseSavebtn)
         
-        resetlayout.addLayout(resetlayoutL, 0)
-        resetlayout.addLayout(resetlayoutR, 1)
+        self.resetlayout.addLayout(self.resetlayoutL, 0)
+        self.resetlayout.addLayout(self.resetlayoutR, 1)
 #        self.recipFiltBtn.clicked.connect("add function")
 
 
-        ipfiltlayout = QHBoxLayout()
+        self.ipfiltlayout = QHBoxLayout()
 
         def heatRaw():
             if self.phaseFiltDataIndex == -1:
@@ -2709,8 +2709,8 @@ class App(QMainWindow):
 
         raw_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         filt_hmp = MatplotlibWidget(navi=True, aspect='auto', itight=True)
-        ipfiltlayout.addWidget(raw_hmp)
-        ipfiltlayout.addWidget(filt_hmp)
+        self.ipfiltlayout.addWidget(raw_hmp)
+        self.ipfiltlayout.addWidget(filt_hmp)
 
 
         def dcaDump(val):
@@ -2732,7 +2732,7 @@ class App(QMainWindow):
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
 
-        dcaLayout = QHBoxLayout()
+        self.dcaLayout = QHBoxLayout()
         self.dcaButton = QPushButton('DCA filtering')
         self.dcaButton.setToolTip('Decay Curve Analysis filtering.\nFor more see: Flores Orozco, et al. (2017), Decay curve analysis for data error quantification in\ntime-domain induced polarization imaging')
         self.dcaButton.setAutoDefault(True)
@@ -2740,36 +2740,36 @@ class App(QMainWindow):
         self.dcaProgress = QProgressBar()
         self.dcaButton.setEnabled(False)
         self.dcaProgress.setEnabled(False)
-        dcaLayout.addWidget(self.dcaButton)
-        dcaLayout.addWidget(self.dcaProgress)
+        self.dcaLayout.addWidget(self.dcaButton)
+        self.dcaLayout.addWidget(self.dcaProgress)
 
-        phasefiltlayout.addLayout(dcaLayout, 1)
-        phasefiltlayout.addLayout(resetlayout, 2)
-        phasefiltlayout.addLayout(ipfiltlayout, 3)
+        self.phasefiltlayout.addLayout(self.dcaLayout, 1)
+        self.phasefiltlayout.addLayout(self.resetlayout, 2)
+        self.phasefiltlayout.addLayout(self.ipfiltlayout, 3)
 
 
         # layout
         #TODO tidy up and put all layout here
         
-        ipfiltWidget.setLayout(phasefiltlayout)
+        self.ipfiltWidget.setLayout(self.phasefiltlayout)
 
 
 #%% resistance error modelling tab
-        errorWidget = QWidget()
-        self.tabPreProcessing.addTab(errorWidget, 'Resistance Error Model')
+        self.errorWidget = QWidget()
+        self.tabPreProcessing.addTab(self.errorWidget, 'Resistance Error Model')
         self.tabPreProcessing.setTabEnabled(2, False)
         
-        errFitLabel = QLabel('Select an error model from the drop-down menu. Once\
+        self.errFitLabel = QLabel('Select an error model from the drop-down menu. Once\
                              fitted, the model will generate an error for each quadrupoles\
                              (even the ones with no reciprocals). This error will\
                              be written in the <code>protocol.dat</code> file \
                              and used in the inversion if both <code>a_wgt</code> and\
                              <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
-        errFitLabel.setWordWrap(True)
-        errFitLabel.setToolTip('In case of batch/time-lapse inversion, <i>all</i> datesets must either have an error model \
+        self.errFitLabel.setWordWrap(True)
+        self.errFitLabel.setToolTip('In case of batch/time-lapse inversion, <i>all</i> datesets must either have an error model \
                                or not have any error models (i.e., select separate error models for each individual dataset or "Apply to all"). \
                                ResIPy can handle batch data with mixture of different error models.')
-        errFitLabel.setAlignment(Qt.AlignLeft)
+        self.errFitLabel.setAlignment(Qt.AlignLeft)
         
         self.errFitfnamesComboLabel = QLabel('Select a dataset:')
         self.errFitfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
@@ -2866,50 +2866,50 @@ class App(QMainWindow):
             if fname != '':
                 self.project.saveErrorData(fname)  
                 self.writeLog('k.saveErrorData("{:s}")'.format(fname))
-        saveErrBtn = QPushButton('Save Error Data')
-        saveErrBtn.setStyleSheet("color: green")
-        saveErrBtn.setFixedWidth(150)
-        saveErrBtn.clicked.connect(saveErrBtnFunc)
-        saveErrBtn.setToolTip('Save error data for DC and IP (if available) as .csv')
+        self.saveErrBtn = QPushButton('Save Error Data')
+        self.saveErrBtn.setStyleSheet("color: green")
+        self.saveErrBtn.setFixedWidth(150)
+        self.saveErrBtn.clicked.connect(saveErrBtnFunc)
+        self.saveErrBtn.setToolTip('Save error data for DC and IP (if available) as .csv')
         
         # layout
-        errorLayout = QVBoxLayout()
-        errorLayout.setAlignment(Qt.AlignTop)
+        self.errorLayout = QVBoxLayout()
+        self.errorLayout.setAlignment(Qt.AlignTop)
         
-        errorTopLayout = QHBoxLayout()
-        errorTopLayout.addWidget(errFitLabel, 1)
-        errorTopLayout.addWidget(self.errFitfnamesComboLabel)
-        errorTopLayout.addWidget(self.errFitfnamesCombo)
-        errorLayout.addLayout(errorTopLayout)
+        self.errorTopLayout = QHBoxLayout()
+        self.errorTopLayout.addWidget(self.errFitLabel, 1)
+        self.errorTopLayout.addWidget(self.errFitfnamesComboLabel)
+        self.errorTopLayout.addWidget(self.errFitfnamesCombo)
+        self.errorLayout.addLayout(self.errorTopLayout)
         
-        errFitLayout = QHBoxLayout()
-        errFitLayout.addWidget(self.errFitType, 70)
-        errFitLayout.addWidget(saveErrBtn, 30)
-        errorLayout.addLayout(errFitLayout)
+        self.errFitLayout = QHBoxLayout()
+        self.errFitLayout.addWidget(self.errFitType, 70)
+        self.errFitLayout.addWidget(self.saveErrBtn, 30)
+        self.errorLayout.addLayout(self.errFitLayout)
         
-        errorPlotLayout = QVBoxLayout()
-        errorPlotLayout.addWidget(self.mwFitError)
-        errorLayout.addLayout(errorPlotLayout, 1)
+        self.errorPlotLayout = QVBoxLayout()
+        self.errorPlotLayout.addWidget(self.mwFitError)
+        self.errorLayout.addLayout(self.errorPlotLayout, 1)
 
-        errorWidget.setLayout(errorLayout)
+        self.errorWidget.setLayout(self.errorLayout)
         
 
 #%% IP error model tab
-        ipWidget = QWidget()
-        self.tabPreProcessing.addTab(ipWidget, 'Phase Error Model')
+        self.ipWidget = QWidget()
+        self.tabPreProcessing.addTab(self.ipWidget, 'Phase Error Model')
         self.tabPreProcessing.setTabEnabled(3, False)
 
-        iperrFitLabel = QLabel('Select an error model from the drop-down menu. Once\
+        self.iperrFitLabel = QLabel('Select an error model from the drop-down menu. Once\
                      fitted, the model will generate an error for each quadrupoles\
                      (even the ones with no reciprocals). This error will\
                      be written in the <code>protocol.dat</code> file \
                      and used in the inversion if both <code>a_wgt</code> and\
                      <code>b_wgt</code> are both set to 0 (see \'Inversion settings\' tab).')
-        iperrFitLabel.setWordWrap(True)
-        iperrFitLabel.setToolTip('In case of batch/time-lapse inversion, <i>all</i> datesets must either have an error model \
+        self.iperrFitLabel.setWordWrap(True)
+        self.iperrFitLabel.setToolTip('In case of batch/time-lapse inversion, <i>all</i> datesets must either have an error model \
                                  or not have any error models (i.e., select separate error models for each individual dataset or "Apply to all"). \
                                  ResIPy can handle batch data with mixture of different error models.')
-        iperrFitLabel.setAlignment(Qt.AlignLeft)
+        self.iperrFitLabel.setAlignment(Qt.AlignLeft)
         
         self.iperrFitfnamesComboLabel = QLabel('Select a dataset:')
         self.iperrFitfnamesComboLabel.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
@@ -3003,25 +3003,25 @@ class App(QMainWindow):
         
         
         # layout
-        ipLayout = QVBoxLayout()
-        ipLayout.setAlignment(Qt.AlignTop)
+        self.ipLayout = QVBoxLayout()
+        self.ipLayout.setAlignment(Qt.AlignTop)
         
-        ipTopLayout = QHBoxLayout()
-        ipTopLayout.addWidget(iperrFitLabel, 1)
-        ipTopLayout.addWidget(self.iperrFitfnamesComboLabel)
-        ipTopLayout.addWidget(self.iperrFitfnamesCombo)
-        ipLayout.addLayout(ipTopLayout)
+        self.ipTopLayout = QHBoxLayout()
+        self.ipTopLayout.addWidget(self.iperrFitLabel, 1)
+        self.ipTopLayout.addWidget(self.iperrFitfnamesComboLabel)
+        self.ipTopLayout.addWidget(self.iperrFitfnamesCombo)
+        self.ipLayout.addLayout(self.ipTopLayout)
 
-        errIPFitLayout = QHBoxLayout()
-        errIPFitLayout.addWidget(self.iperrFitType, 70)
-        errIPFitLayout.addWidget(self.saveIPErrBtn, 30)        
-        ipLayout.addLayout(errIPFitLayout)
+        self.errIPFitLayout = QHBoxLayout()
+        self.errIPFitLayout.addWidget(self.iperrFitType, 70)
+        self.errIPFitLayout.addWidget(self.saveIPErrBtn, 30)        
+        self.ipLayout.addLayout(self.errIPFitLayout)
         
-        ipErrPlotLayout = QVBoxLayout()
-        ipErrPlotLayout.addWidget(self.mwIPFitError)
-        ipLayout.addLayout(ipErrPlotLayout,1)
+        self.ipErrPlotLayout = QVBoxLayout()
+        self.ipErrPlotLayout.addWidget(self.mwIPFitError)
+        self.ipLayout.addLayout(self.ipErrPlotLayout,1)
 
-        ipWidget.setLayout(ipLayout)
+        self.ipWidget.setLayout(self.ipLayout)
 
 
 #%% additional actions for pre-processing tab
@@ -3054,27 +3054,27 @@ class App(QMainWindow):
 
 
 #%% ============================= mesh tab =======================
-        tabMesh= QWidget()
-        self.tabs.addTab(tabMesh, 'Mesh')
+        self.tabMesh = QWidget()
+        self.tabs.addTab(self.tabMesh, 'Mesh')
         self.tabs.setTabEnabled(2, False)
         
-        fmdToolTip = 'Boundary depth (meters) below which the coarse (or background) mesh starts.\n'\
+        self.fmdToolTip = 'Boundary depth (meters) below which the coarse (or background) mesh starts.\n'\
                      'Default = 2/3 max dipole length.'
-        fmdLabel = QLabel('Fine/Coarse\nboundary depth')
-        fmdLabel.setToolTip(fmdToolTip)
-        fmdLabel.setAlignment(Qt.AlignCenter)
-        fmdBox = QLineEdit()
-        fmdBox.setAlignment(Qt.AlignCenter)
-        fmdBox.setPlaceholderText('[m]')
-        fmdBox.setToolTip(fmdToolTip)
-        fmdBox.setValidator(QDoubleValidator())
+        self.fmdLabel = QLabel('Fine/Coarse\nboundary depth')
+        self.fmdLabel.setToolTip(self.fmdToolTip)
+        self.fmdLabel.setAlignment(Qt.AlignCenter)
+        self.fmdBox = QLineEdit()
+        self.fmdBox.setAlignment(Qt.AlignCenter)
+        self.fmdBox.setPlaceholderText('[m]')
+        self.fmdBox.setToolTip(self.fmdToolTip)
+        self.fmdBox.setValidator(QDoubleValidator())
         
         
         def replotMesh(aspect='equal'):
             if self.pseudo3DCheck.isChecked(): # for pseudo 3D inversion
                 self.mesh3Dplotter.clear() # clear all actors 
                 self.project.showPseudo3DMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-                meshOutputStack.setCurrentIndex(2)
+                self.meshOutputStack.setCurrentIndex(2)
             else: # 2D mesh
                 if self.iDesign is False:
                     self.regionTable.reset()
@@ -3084,7 +3084,7 @@ class App(QMainWindow):
                 self.mwMesh.plot(func, aspect=aspect)
                 self.mwMesh.canvas.setFocusPolicy(Qt.ClickFocus) # allows the keypressevent to go to matplotlib
                 self.mwMesh.canvas.setFocus() # set focus on the canvas
-                meshOutputStack.setCurrentIndex(1)
+                self.meshOutputStack.setCurrentIndex(1)
 
         
         def designModel():
@@ -3105,7 +3105,7 @@ class App(QMainWindow):
             # if self.iForward is False:
             #     self.regionTable.setColumnHidden(2, False) # show zone column
             #     self.regionTable.setColumnHidden(3, False) # show fixed column
-            meshOutputStack.setCurrentIndex(1)
+            self.meshOutputStack.setCurrentIndex(1)
 
         self.designModelBtn = QPushButton('Design Model before meshing')
         self.designModelBtn.clicked.connect(designModel)
@@ -3128,12 +3128,12 @@ class App(QMainWindow):
             else:
                 surface = surface[inan,:]
             
-            nnodes = nnodesSld.value()
+            nnodes = self.nnodesSld.value()
             try:
-                fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
+                fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
                 if self.pseudo3DCheck.isChecked():
                     self.project.createMultiMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
-                    meshOutputStack.setCurrentIndex(2)
+                    self.meshOutputStack.setCurrentIndex(2)
                     reqMemory = -1 if any([proj.param['reqMemory'] < 0 for proj in self.project.projs]) else 1
                 else:
                     self.project.createMesh(typ='quad', elemx=nnodes, surface=surface, fmd=fmd)
@@ -3141,14 +3141,14 @@ class App(QMainWindow):
                         str(nnodes), str(surface), str(fmd)))
                     self.scale.setVisible(False)
                     self.scaleLabel.setVisible(False)
-                    meshOutputStack.setCurrentIndex(1)
+                    self.meshOutputStack.setCurrentIndex(1)
                     reqMemory = self.project.param['reqMemory']
                 replotMesh()
                 if reqMemory <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
-                    ramRequiredLabel.show()
+                    self.ramRequiredLabel.show()
                 else:
-                    ramRequiredLabel.hide()
+                    self.ramRequiredLabel.hide()
             except Exception as e:
                 self.errorDump('Error creating the mesh: ' + str(e))
         self.meshQuad = QPushButton('Quadrilateral Mesh')
@@ -3161,7 +3161,7 @@ class App(QMainWindow):
                 print('killing')
                 self.project.mproc.kill()
                 self.project.mproc = None
-                meshOutputStack.setCurrentIndex(1)
+                self.meshOutputStack.setCurrentIndex(1)
                 self.meshTrianBtn.setText('Triangular Mesh')
                 self.meshTrianBtn.setStyleSheet('background-color:orange; color:black')
                 return
@@ -3174,25 +3174,25 @@ class App(QMainWindow):
             if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            meshOutputStack.setCurrentIndex(0)
+            self.meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
             elecSpacing = np.sqrt(np.sum(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])**2 +
                                          np.diff(self.project.elec[~self.project.elec['remote']]['z'].values[:2])**2))
-            cl = float(clSld.value())/10*(elecSpacing-elecSpacing/8)
-            cl_factor = clFactorSld.value()
+            cl = float(self.clSld.value())/10*(elecSpacing-elecSpacing/8)
+            cl_factor = self.clFactorSld.value()
             if self.topoTable.useNarray:
                 surface = self.topoTable.xyz
             else:
                 surface = self.topoTable.getTable()[['x','y','z']].values
             inan = ~np.isnan(surface[:,0])
-            refine = 1 if refineTrianCheck.isChecked() else 0
+            refine = 1 if self.refineTrianCheck.isChecked() else 0
             if np.sum(~inan) == surface.shape[0]:
                 surface = None
             else:
                 surface = surface[inan,:]
             
-            fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
+            fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
             pdebug('meshTrian(): fmd', fmd)
             pdebug('meshTrian(): elec:', self.project.elec)
             pdebug('meshTrian(): surface:', surface)
@@ -3206,7 +3206,7 @@ class App(QMainWindow):
                     self.project.createMultiMesh(typ='trian', surface=surface, cl=cl, cl_factor=cl_factor, 
                                                  show_output=True, dump=meshLogTextFunc, refine=refine, fmd=fmd)
                     self.loadingWidget(exitflag=True)
-                    meshOutputStack.setCurrentIndex(2)
+                    self.meshOutputStack.setCurrentIndex(2)
                     reqMemory = -1 if any([proj.param['reqMemory'] < 0 for proj in self.project.projs]) else 1
                 else:
                     self.project.createModelMesh(surface=surface,
@@ -3217,13 +3217,13 @@ class App(QMainWindow):
                     #     self.regionTable.setColumnHidden(3, False) # show fixed column
                     self.scale.setVisible(True)
                     self.scaleLabel.setVisible(True)
-                    meshOutputStack.setCurrentIndex(1)
+                    self.meshOutputStack.setCurrentIndex(1)
                     reqMemory = self.project.param['reqMemory']
                 if reqMemory <= 0: # RAM requirement
                     self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
-                    ramRequiredLabel.show()
+                    self.ramRequiredLabel.show()
                 else:
-                    ramRequiredLabel.hide()
+                    self.ramRequiredLabel.hide()
             except Exception:
                 pass # caused by killing the mesh process
             self.meshTrianBtn.setText('Triangular Mesh')
@@ -3242,7 +3242,7 @@ class App(QMainWindow):
                 print('killing')
                 self.project.mproc.kill()
                 self.project.mproc = None
-                meshOutputStack.setCurrentIndex(1)
+                self.meshOutputStack.setCurrentIndex(1)
                 self.meshTetraBtn.setText('Tetrahedral Mesh')
                 self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
                 return
@@ -3264,19 +3264,19 @@ class App(QMainWindow):
             elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
                 self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
                 return
-            meshOutputStack.setCurrentIndex(0)
+            self.meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
-            cl = -1 if cl3Edit.text() == '' else float(cl3Edit.text())
-            cl_factor = float(cl3FactorEdit.text())
-            cln_factor = float(clnFactorEdit.text()) if clnFactorEdit.text() != '' else 100
-            refine = 1 if refineTetraCheck.isChecked() else 0
+            cl = -1 if self.cl3Edit.text() == '' else float(self.cl3Edit.text())
+            cl_factor = float(self.cl3FactorEdit.text())
+            cln_factor = float(self.clnFactorEdit.text()) if self.clnFactorEdit.text() != '' else 100
+            refine = 1 if self.refineTetraCheck.isChecked() else 0
             if np.sum(~inan) == topo.shape[0]:
                 topo = None
             else:
                 topo = topo[inan,:]
             
-            fmd = np.abs(float(fmdBox.text())) if fmdBox.text() != '' else None
+            fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
 #             try:
             self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
@@ -3290,12 +3290,12 @@ class App(QMainWindow):
             else:
                 self.mwMesh3D.plot(self.project.showMesh, threed=True)
             self.writeLog('k.showMesh()')
-            meshOutputStack.setCurrentIndex(2)
+            self.meshOutputStack.setCurrentIndex(2)
             if self.project.param['reqMemory'] <= 0: # RAM requirement
                 self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
-                ramRequiredLabel.show()
+                self.ramRequiredLabel.show()
             else:
-                ramRequiredLabel.hide()
+                self.ramRequiredLabel.hide()
 #             except Exception:
 #                 pass # caused by killing the mesh process
             self.meshTetraBtn.setText('Tetrahedral Mesh')
@@ -3309,91 +3309,91 @@ class App(QMainWindow):
 
 
         # additional options for quadrilateral mesh
-        nnodesLabel = QLabel('Number of elements\nbetween electrodes')
-        nnodesSld = QSlider(Qt.Horizontal)
-        nnodesSld.setMinimumWidth(50)
-        nnodesSld.setMinimum(1)
-        nnodesSld.setMaximum(10)
-        nnodesSld.setValue(4)
-        nnodesGrid = QGridLayout()
-        # nnodesGrid.setContentsMargins(9,0,9,0)
-        nnodesGrid.setSpacing(2)
-        nnodes1Label = QLabel('1')
-        nnodes10Label = QLabel('10')
-        nnodes10Label.setAlignment(Qt.AlignRight)#| Qt.AlignVCenter)
-        nnodesGrid.addWidget(nnodesSld, 0, 0, 1, 2)
-        nnodesGrid.addWidget(nnodes1Label, 1,0,1,1)
-        nnodesGrid.addWidget(nnodes10Label, 1,1,1,1)
+        self.nnodesLabel = QLabel('Number of elements\nbetween electrodes')
+        self.nnodesSld = QSlider(Qt.Horizontal)
+        self.nnodesSld.setMinimumWidth(50)
+        self.nnodesSld.setMinimum(1)
+        self.nnodesSld.setMaximum(10)
+        self.nnodesSld.setValue(4)
+        self.nnodesGrid = QGridLayout()
+        # self.nnodesGrid.setContentsMargins(9,0,9,0)
+        self.nnodesGrid.setSpacing(2)
+        self.nnodes1Label = QLabel('1')
+        self.nnodes10Label = QLabel('10')
+        self.nnodes10Label.setAlignment(Qt.AlignRight)#| Qt.AlignVCenter)
+        self.nnodesGrid.addWidget(self.nnodesSld, 0, 0, 1, 2)
+        self.nnodesGrid.addWidget(self.nnodes1Label, 1,0,1,1)
+        self.nnodesGrid.addWidget(self.nnodes10Label, 1,1,1,1)
         
 
         # additional options for triangular mesh
-        clLabel = QLabel('Characteristic Length:')
-        clLabel.setToolTip('Control the number and size of elements between electrodes.')
-        clGrid = QGridLayout()
-        clGrid.setContentsMargins(9,0,9,0)
-        clGrid.setSpacing(2)
-        clFineLabel = QLabel('Fine')
-        clFineLabel.setStyleSheet('font:12px;')
-        clCoarseLabel = QLabel('Coarse')
-        clCoarseLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        clCoarseLabel.setStyleSheet('font:12px;')
-        clSld = QSlider(Qt.Horizontal)
-        clSld.setMinimum(1) # this depends on electrode spacing
-        clSld.setMaximum(10)
-        clSld.setValue(5)
-        clGrid.addWidget(clSld, 0, 0, 1, 2)
-        clGrid.addWidget(clFineLabel, 1,0,1,1)
-        clGrid.addWidget(clCoarseLabel, 1,1,1,1)
-        clFactorLabel = QLabel('Growth factor:')
-        clFactorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        clFactorLabel.setToolTip('Factor by which elements grow away from electrodes.')
-        clFactorSld = QSlider(Qt.Horizontal)
-        clFactorSld.setMaximumWidth(200)
-        clFactorSld.setMinimum(1)
-        clFactorSld.setMaximum(10)
-        clFactorSld.setValue(4)
-        refineTrianCheck = QCheckBox('Refine')
-        refineTrianCheck.setToolTip('Refine the mesh for forward modelling'
+        self.clLabel = QLabel('Characteristic Length:')
+        self.clLabel.setToolTip('Control the number and size of elements between electrodes.')
+        self.clGrid = QGridLayout()
+        self.clGrid.setContentsMargins(9,0,9,0)
+        self.clGrid.setSpacing(2)
+        self.clFineLabel = QLabel('Fine')
+        self.clFineLabel.setStyleSheet('font:12px;')
+        self.clCoarseLabel = QLabel('Coarse')
+        self.clCoarseLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.clCoarseLabel.setStyleSheet('font:12px;')
+        self.clSld = QSlider(Qt.Horizontal)
+        self.clSld.setMinimum(1) # this depends on electrode spacing
+        self.clSld.setMaximum(10)
+        self.clSld.setValue(5)
+        self.clGrid.addWidget(self.clSld, 0, 0, 1, 2)
+        self.clGrid.addWidget(self.clFineLabel, 1,0,1,1)
+        self.clGrid.addWidget(self.clCoarseLabel, 1,1,1,1)
+        self.clFactorLabel = QLabel('Growth factor:')
+        self.clFactorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.clFactorLabel.setToolTip('Factor by which elements grow away from electrodes.')
+        self.clFactorSld = QSlider(Qt.Horizontal)
+        self.clFactorSld.setMaximumWidth(200)
+        self.clFactorSld.setMinimum(1)
+        self.clFactorSld.setMaximum(10)
+        self.clFactorSld.setValue(4)
+        self.refineTrianCheck = QCheckBox('Refine')
+        self.refineTrianCheck.setToolTip('Refine the mesh for forward modelling'
                                     'without increasing the number of parameters.')
 
         # additional options for tetrahedral mesh
-        cl3ToolTip = 'Describes how big the nodes assocaited elements will be aroud the electrodes.\n' \
+        self.cl3ToolTip = 'Describes how big the nodes assocaited elements will be aroud the electrodes.\n' \
                      'Default: 1/2 the minimum electrode spacing (in meters).'
-        cl3Label = QLabel('Characteristic Length:')
-        cl3Label.setToolTip(cl3ToolTip)
-        cl3Edit = QLineEdit()
-        cl3Edit.setValidator(QDoubleValidator())
-        cl3Edit.setText('')
-        cl3Edit.setPlaceholderText('[m]')
-        cl3Edit.setToolTip(cl3ToolTip)
-        cl3FactorToolTip = 'Factor for the incremental size increase with depth in the mesh.\n' \
+        self.cl3Label = QLabel('Characteristic Length:')
+        self.cl3Label.setToolTip(self.cl3ToolTip)
+        self.cl3Edit = QLineEdit()
+        self.cl3Edit.setValidator(QDoubleValidator())
+        self.cl3Edit.setText('')
+        self.cl3Edit.setPlaceholderText('[m]')
+        self.cl3Edit.setToolTip(self.cl3ToolTip)
+        self.cl3FactorToolTip = 'Factor for the incremental size increase with depth in the mesh.\n' \
                            'Default: 8 (elements at the fine/coarse bondary depth are 8 times as big as those at the surface)'
-        cl3FactorLabel = QLabel('Growth factor Top:')
-        cl3FactorLabel.setToolTip(cl3FactorToolTip)
-        cl3FactorEdit = QLineEdit()
-        cl3FactorEdit.setToolTip(cl3FactorToolTip)
-        cl3FactorEdit.setValidator(QDoubleValidator())
-        cl3FactorEdit.setText('8')
-        clnFactorToolTip = 'Factor applied to the characteristic length for the region below fine/coarse bondary depth to ' \
+        self.cl3FactorLabel = QLabel('Growth factor Top:')
+        self.cl3FactorLabel.setToolTip(self.cl3FactorToolTip)
+        self.cl3FactorEdit = QLineEdit()
+        self.cl3FactorEdit.setToolTip(self.cl3FactorToolTip)
+        self.cl3FactorEdit.setValidator(QDoubleValidator())
+        self.cl3FactorEdit.setText('8')
+        self.clnFactorToolTip = 'Factor applied to the characteristic length for the region below fine/coarse bondary depth to ' \
                            'compute a characteristic length for background region'
-        clnFactorLabel = QLabel('Growth factor Bottom:')
-        clnFactorLabel.setToolTip(clnFactorToolTip)
-        clnFactorEdit = QLineEdit()
-        clnFactorEdit.setToolTip(clnFactorToolTip)
-        clnFactorEdit.setValidator(QDoubleValidator())
-        clnFactorEdit.setText('100')
-        refineTetraCheck = QCheckBox('Refine')
-        refineTetraCheck.setToolTip('Refine the mesh for forward modelling'
+        self.clnFactorLabel = QLabel('Growth factor Bottom:')
+        self.clnFactorLabel.setToolTip(self.clnFactorToolTip)
+        self.clnFactorEdit = QLineEdit()
+        self.clnFactorEdit.setToolTip(self.clnFactorToolTip)
+        self.clnFactorEdit.setValidator(QDoubleValidator())
+        self.clnFactorEdit.setText('100')
+        self.refineTetraCheck = QCheckBox('Refine')
+        self.refineTetraCheck.setToolTip('Refine the mesh for forward modelling'
                                     'without increasing the number of parameters.')
         
         def saveMeshVtkBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(tabMesh, 'Open File', self.datadir)
+            fname, _ = QFileDialog.getSaveFileName(self.tabMesh, 'Open File', self.datadir)
             if fname != '':
                 self.project.saveMeshVtk(fname)
                 self.writeLog('k.saveMeshVtk("{:s}")'.format(fname))
                 self.infoDump('Mesh saved to {:s}'.format(fname))
-        saveMeshVtkBtn = QPushButton('Save Mesh as .vtk')
-        saveMeshVtkBtn.clicked.connect(saveMeshVtkBtnFunc)
+        self.saveMeshVtkBtn = QPushButton('Save Mesh as .vtk')
+        self.saveMeshVtkBtn.clicked.connect(saveMeshVtkBtnFunc)
 
         def importCustomMeshFunc():
             elec = self.elecTable.getTable()
@@ -3412,16 +3412,16 @@ class App(QMainWindow):
                     else:
                         self.mwMesh3D.plot(self.project.showMesh, threed=True)
                     self.writeLog('k.showMesh()')
-                    meshOutputStack.setCurrentIndex(2)
+                    self.meshOutputStack.setCurrentIndex(2)
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
         self.importCustomMeshBtn = QPushButton('Import Custom Mesh')
         self.importCustomMeshBtn.setFixedWidth(150)
         self.importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
 
-        importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
-        importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
-        importCustomMeshLabel2.setWordWrap(True)
+        self.importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
+        self.importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
+        self.importCustomMeshLabel2.setWordWrap(True)
         
         def importCustomMeshFunc2():
             print('using importCustomMeshFunc2')
@@ -3435,11 +3435,11 @@ class App(QMainWindow):
                     self.project.importMesh(fname, mesh_type='trian')
                     if (self.project.typ == 'R3t') or (self.project.typ == 'cR3t'):
                         self.mwMesh.plot(self.project.showMesh, threed=True)
-                        meshOutputStack.setCurrentIndex(2)
+                        self.meshOutputStack.setCurrentIndex(2)
                         print('NO WAY THIS CAN HAPPEN!')
                     else:
                         replotMesh()
-                        meshOutputStack.setCurrentIndex(1)
+                        self.meshOutputStack.setCurrentIndex(1)
                     self.regionTable.nrow = 0
                     self.regionTable.setRowCount(0)
                     for i in range(len(np.unique(self.project.mesh.df['region']))):
@@ -3523,13 +3523,13 @@ class App(QMainWindow):
                 self.setItem(0,0,QTableWidgetItem('100.0')) # resistivity [Ohm.m]
                 self.setItem(0,1,QTableWidgetItem('0')) # phase [mrad]
                 self.setItem(0,2,QTableWidgetItem('1')) # zone
-                checkBoxWidget = QWidget()
+                self.checkBoxWidget = QWidget()
                 checkBoxLayout = QHBoxLayout()
                 checkBoxLayout.setContentsMargins(5,5,5,5)
                 checkBoxLayout.setAlignment(Qt.AlignCenter)
                 checkBoxLayout.addWidget(QCheckBox())
-                checkBoxWidget.setLayout(checkBoxLayout)
-                self.setCellWidget(0,3, checkBoxWidget)
+                self.checkBoxWidget.setLayout(checkBoxLayout)
+                self.setCellWidget(0,3, self.checkBoxWidget)
                 
 
             def addRow(self):
@@ -3538,13 +3538,13 @@ class App(QMainWindow):
                 self.setItem(self.nrow-1, 0, QTableWidgetItem('100.0'))
                 self.setItem(self.nrow-1, 1, QTableWidgetItem('0'))
                 self.setItem(self.nrow-1, 2, QTableWidgetItem('1'))
-                checkBoxWidget = QWidget()
+                self.checkBoxWidget = QWidget()
                 checkBoxLayout = QHBoxLayout()
                 checkBoxLayout.setContentsMargins(5,5,5,5)
                 checkBoxLayout.setAlignment(Qt.AlignCenter)
                 checkBoxLayout.addWidget(QCheckBox())
-                checkBoxWidget.setLayout(checkBoxLayout)
-                self.setCellWidget(self.nrow-1, 3, checkBoxWidget)
+                self.checkBoxWidget.setLayout(checkBoxLayout)
+                self.setCellWidget(self.nrow-1, 3, self.checkBoxWidget)
 
             def getTable(self):
                 res0 = np.zeros(self.nrow)
@@ -3563,19 +3563,19 @@ class App(QMainWindow):
                 self.setRowCount(1)
 
 
-        instructionLabel = QLabel('Click on the buttons below to define a region.'
+        self.instructionLabel = QLabel('Click on the buttons below to define a region.'
             ' If polyline is selected, you can close the region by using the right'
             ' click of the mouse. Note that it is possible to define a zone (so'
             ' no smoothing at the boundaries) and fix the region value for '
             'triangular mesh only.')
-        instructionLabel.setWordWrap(True)
+        self.instructionLabel.setWordWrap(True)
         
-        instructionLabel3D = QLabel('Click on "Region Mode" to interactively'
+        self.instructionLabel3D = QLabel('Click on "Region Mode" to interactively'
             ' define a region in 3D using the box. When done, hit the "Add Region"'
             ' button to confirm. You can then specify different values in the '
             ' table on the side. Recreate a mesh to erase all regions.')
-        instructionLabel3D.setWordWrap(True)
-        instructionLabel3D.setVisible(False)
+        self.instructionLabel3D.setWordWrap(True)
+        self.instructionLabel3D.setVisible(False)
 
         self.mwMesh = MatplotlibWidget(navi=True, itight=False)
         self.mwMesh3D = MatplotlibWidget(threed=True, navi=True)
@@ -3601,143 +3601,143 @@ class App(QMainWindow):
 
 
         # layout
-        meshLayout = QVBoxLayout()
+        self.meshLayout = QVBoxLayout()
 
-        meshOptionQuadLayout = QHBoxLayout()
-        meshOptionQuadLayout.setAlignment(Qt.AlignVCenter)
-        meshOptionQuadLayout.addWidget(nnodesLabel)
-        meshOptionQuadLayout.addLayout(nnodesGrid, 1)
+        self.meshOptionQuadLayout = QHBoxLayout()
+        self.meshOptionQuadLayout.setAlignment(Qt.AlignVCenter)
+        self.meshOptionQuadLayout.addWidget(self.nnodesLabel)
+        self.meshOptionQuadLayout.addLayout(self.nnodesGrid, 1)
 
-        meshOptionTrianLayout = QHBoxLayout()
-        meshOptionTrianLayout.addWidget(clLabel)
-        meshOptionTrianLayout.addLayout(clGrid, 1)
-        meshOptionTrianLayout.addWidget(clFactorLabel, 1)
-        meshOptionTrianLayout.addWidget(clFactorSld, 1)
+        self.meshOptionTrianLayout = QHBoxLayout()
+        self.meshOptionTrianLayout.addWidget(self.clLabel)
+        self.meshOptionTrianLayout.addLayout(self.clGrid, 1)
+        self.meshOptionTrianLayout.addWidget(self.clFactorLabel, 1)
+        self.meshOptionTrianLayout.addWidget(self.clFactorSld, 1)
         
-        meshButtonTrianLayout = QHBoxLayout()
-        meshButtonTrianLayout.addWidget(refineTrianCheck)
-        meshButtonTrianLayout.addWidget(self.designModelBtn)
-        meshButtonTrianLayout.addWidget(self.meshTrianBtn)
+        self.meshButtonTrianLayout = QHBoxLayout()
+        self.meshButtonTrianLayout.addWidget(self.refineTrianCheck)
+        self.meshButtonTrianLayout.addWidget(self.designModelBtn)
+        self.meshButtonTrianLayout.addWidget(self.meshTrianBtn)
         
-        importCustomLayout = QVBoxLayout()
-        importCustomLayout.addWidget(importCustomMeshLabel2)
-        importCustomLayout.addWidget(self.importCustomMeshBtn2)
+        self.importCustomLayout = QVBoxLayout()
+        self.importCustomLayout.addWidget(self.importCustomMeshLabel2)
+        self.importCustomLayout.addWidget(self.importCustomMeshBtn2)
 
-        meshOptionTetraLayout = QHBoxLayout()
-        meshOptionTetraLayout.addWidget(cl3Label)
-        meshOptionTetraLayout.addWidget(cl3Edit)
-        meshOptionTetraLayout.addWidget(cl3FactorLabel)
-        meshOptionTetraLayout.addWidget(cl3FactorEdit)
-        meshOptionTetraLayout.addWidget(clnFactorLabel)
-        meshOptionTetraLayout.addWidget(clnFactorEdit)
-        meshOptionTetraLayout.addWidget(refineTetraCheck)
-        meshOptionTetraLayout.addWidget(saveMeshVtkBtn)
-        meshOptionTetraLayout.addWidget(self.importCustomMeshBtn)
+        self.meshOptionTetraLayout = QHBoxLayout()
+        self.meshOptionTetraLayout.addWidget(self.cl3Label)
+        self.meshOptionTetraLayout.addWidget(self.cl3Edit)
+        self.meshOptionTetraLayout.addWidget(self.cl3FactorLabel)
+        self.meshOptionTetraLayout.addWidget(self.cl3FactorEdit)
+        self.meshOptionTetraLayout.addWidget(self.clnFactorLabel)
+        self.meshOptionTetraLayout.addWidget(self.clnFactorEdit)
+        self.meshOptionTetraLayout.addWidget(self.refineTetraCheck)
+        self.meshOptionTetraLayout.addWidget(self.saveMeshVtkBtn)
+        self.meshOptionTetraLayout.addWidget(self.importCustomMeshBtn)
         
-        meshChoiceLayout = QHBoxLayout()
-        fmdLayout = QVBoxLayout()
-        fmdLayout.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
-        meshQuadLayout = QVBoxLayout()
-        meshQuadLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
-        meshTrianLayout = QVBoxLayout()
-        meshTetraLayout = QVBoxLayout()
-        meshTetraLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
-        fmdGroup = QGroupBox()
-        fmdGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshChoiceLayout = QHBoxLayout()
+        self.fmdLayout = QVBoxLayout()
+        self.fmdLayout.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
+        self.meshQuadLayout = QVBoxLayout()
+        self.meshQuadLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
+        self.meshTrianLayout = QVBoxLayout()
+        self.meshTetraLayout = QVBoxLayout()
+        self.meshTetraLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
+        self.fmdGroup = QGroupBox()
+        self.fmdGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         self.meshQuadGroup = QGroupBox()
         self.meshQuadGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         self.meshTrianGroup = QGroupBox()
         self.meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
-        meshTetraGroup = QGroupBox()
-        meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshTetraGroup = QGroupBox()
+        self.meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         
-        fmdLayout.addWidget(fmdLabel)
-        fmdLayout.addWidget(fmdBox)
-        fmdGroup.setLayout(fmdLayout)
-        meshChoiceLayout.addWidget(fmdGroup,0)
+        self.fmdLayout.addWidget(self.fmdLabel)
+        self.fmdLayout.addWidget(self.fmdBox)
+        self.fmdGroup.setLayout(self.fmdLayout)
+        self.meshChoiceLayout.addWidget(self.fmdGroup,0)
         
-        meshQuadLayout.addLayout(meshOptionQuadLayout, 1)
-        meshQuadLayout.addWidget(self.meshQuad, 0)
-        self.meshQuadGroup.setLayout(meshQuadLayout)
-        meshChoiceLayout.addWidget(self.meshQuadGroup,35)
+        self.meshQuadLayout.addLayout(self.meshOptionQuadLayout, 1)
+        self.meshQuadLayout.addWidget(self.meshQuad, 0)
+        self.meshQuadGroup.setLayout(self.meshQuadLayout)
+        self.meshChoiceLayout.addWidget(self.meshQuadGroup,35)
 
-        meshTrianLayout.addLayout(meshOptionTrianLayout)
-        meshTrianLayout.addLayout(meshButtonTrianLayout)
-        self.meshTrianGroup.setLayout(meshTrianLayout)
-        meshChoiceLayout.addWidget(self.meshTrianGroup,65)
+        self.meshTrianLayout.addLayout(self.meshOptionTrianLayout)
+        self.meshTrianLayout.addLayout(self.meshButtonTrianLayout)
+        self.meshTrianGroup.setLayout(self.meshTrianLayout)
+        self.meshChoiceLayout.addWidget(self.meshTrianGroup,65)
 
-        meshCustomGroup = QGroupBox()
-        meshCustomGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
-        meshCustomGroup.setLayout(importCustomLayout)
-        meshChoiceLayout.addWidget(meshCustomGroup,0)
+        self.meshCustomGroup = QGroupBox()
+        self.meshCustomGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshCustomGroup.setLayout(self.importCustomLayout)
+        self.meshChoiceLayout.addWidget(self.meshCustomGroup,0)
         
-        meshTetraLayout.addLayout(meshOptionTetraLayout)
-        meshTetraLayout.addWidget(self.meshTetraBtn)
-        meshTetraGroup.setLayout(meshTetraLayout)
-        meshChoiceLayout.addWidget(meshTetraGroup, 1)
-        meshTetraGroup.setHidden(True)
+        self.meshTetraLayout.addLayout(self.meshOptionTetraLayout)
+        self.meshTetraLayout.addWidget(self.meshTetraBtn)
+        self.meshTetraGroup.setLayout(self.meshTetraLayout)
+        self.meshChoiceLayout.addWidget(self.meshTetraGroup, 1)
+        self.meshTetraGroup.setHidden(True)
 
-        meshLayout.addLayout(meshChoiceLayout, 0)
+        self.meshLayout.addLayout(self.meshChoiceLayout, 0)
 
-        instructionLayout = QHBoxLayout()
-        instructionLayout.addWidget(instructionLabel, 86)
-        instructionLayout.addWidget(instructionLabel3D, 86)
-        instructionLayout.addWidget(self.meshAspectBtn, 7)
-        instructionLayout.addWidget(self.resetMeshBtn, 7)
+        self.instructionLayout = QHBoxLayout()
+        self.instructionLayout.addWidget(self.instructionLabel, 86)
+        self.instructionLayout.addWidget(self.instructionLabel3D, 86)
+        self.instructionLayout.addWidget(self.meshAspectBtn, 7)
+        self.instructionLayout.addWidget(self.resetMeshBtn, 7)
         ## for 3D forward modelling / region selection 
-        instructionLayout.addWidget(self.select3DRegionBtn, 7)
-        instructionLayout.addWidget(self.add3DRegionBtn, 7)
-        instructionLayout.addWidget(self.fin3DRegionBtn, 7)
-        meshLayout.addLayout(instructionLayout)
+        self.instructionLayout.addWidget(self.select3DRegionBtn, 7)
+        self.instructionLayout.addWidget(self.add3DRegionBtn, 7)
+        self.instructionLayout.addWidget(self.fin3DRegionBtn, 7)
+        self.meshLayout.addLayout(self.instructionLayout)
         
         # for RAM issue
-        ramRequiredLabel = QLabel('<font color="red">Make a coarser mesh!! It is likely that <b><u>more RAM is required</u></b> for inversion!</font>')
-        ramRequiredLabel.setAlignment(Qt.AlignCenter)
-        ramRequiredLabel.hide()
-        meshLayout.addWidget(ramRequiredLabel)
+        self.ramRequiredLabel = QLabel('<font color="red">Make a coarser mesh!! It is likely that <b><u>more RAM is required</u></b> for inversion!</font>')
+        self.ramRequiredLabel.setAlignment(Qt.AlignCenter)
+        self.ramRequiredLabel.hide()
+        self.meshLayout.addWidget(self.ramRequiredLabel)
         
-        regionLayout = QVBoxLayout()
-        regionLayout.addWidget(self.regionTable)
+        self.regionLayout = QVBoxLayout()
+        self.regionLayout.addWidget(self.regionTable)
 
-        meshPlot = QWidget()
-        meshPlotLayout = QHBoxLayout()
-        meshPlotLayout.addWidget(self.mwMesh)
-        meshPlot.setLayout(meshPlotLayout)
+        self.meshPlot = QWidget()
+        self.meshPlotLayout = QHBoxLayout()
+        self.meshPlotLayout.addWidget(self.mwMesh)
+        self.meshPlot.setLayout(self.meshPlotLayout)
 
-        meshPlot3D = QWidget()
-        meshPlot3DLayout = QHBoxLayout()
-        meshPlot3DLayout.addWidget(self.mwMesh3D)
+        self.meshPlot3D = QWidget()
+        self.meshPlot3DLayout = QHBoxLayout()
+        self.meshPlot3DLayout.addWidget(self.mwMesh3D)
         if pvfound:
-            meshPlot3DLayout.addWidget(self.meshFrame)
-        meshPlot3D.setLayout(meshPlot3DLayout)
+            self.meshPlot3DLayout.addWidget(self.meshFrame)
+        self.meshPlot3D.setLayout(self.meshPlot3DLayout)
 
-        meshOutputStack = QStackedLayout()
-        meshOutputStack.addWidget(self.meshLogText)
-        meshOutputStack.addWidget(meshPlot)
-        meshOutputStack.addWidget(meshPlot3D)
-        meshOutputStack.setCurrentIndex(0)
+        self.meshOutputStack = QStackedLayout()
+        self.meshOutputStack.addWidget(self.meshLogText)
+        self.meshOutputStack.addWidget(self.meshPlot)
+        self.meshOutputStack.addWidget(self.meshPlot3D)
+        self.meshOutputStack.setCurrentIndex(0)
 
-        meshSubLayout = QHBoxLayout()
-        meshSubLayout.addLayout(meshOutputStack, 70)
-        meshSubLayout.addLayout(regionLayout, 30)
+        self.meshSubLayout = QHBoxLayout()
+        self.meshSubLayout.addLayout(self.meshOutputStack, 70)
+        self.meshSubLayout.addLayout(self.regionLayout, 30)
         
-        meshLayout.addLayout(meshSubLayout, 1)
+        self.meshLayout.addLayout(self.meshSubLayout, 1)
 
-        tabMesh.setLayout(meshLayout)
+        self.tabMesh.setLayout(self.meshLayout)
 
 
 #%% =================== Tab for forward model ===================
-        tabForward = QWidget()
-        self.tabs.addTab(tabForward, 'Forward model')
+        self.tabForward = QWidget()
+        self.tabs.addTab(self.tabForward, 'Forward model')
         self.tabs.setTabEnabled(3, False)
         
-        fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
-        fwdSplitter = QSplitter(Qt.Vertical)
+        self.fwdSlpitterLayout = QHBoxLayout() # a splitter so the graphs are easier to visualize
+        self.fwdSplitter = QSplitter(Qt.Vertical)
 
-        seqLabel = QLabel('Design a sequence for the forward modelling. A \
+        self.seqLabel = QLabel('Design a sequence for the forward modelling. A \
 combination of multiple sequence is accepted as well as importing a custom sequence')
-        seqLabel.setWordWrap(True)
-        seqLabel.setAlignment(Qt.AlignTop)
+        self.seqLabel.setWordWrap(True)
+        self.seqLabel.setAlignment(Qt.AlignTop)
         
         # alternative design
         seqData = [('dpdp1', 'Dipole-Dipole', ['a','n']),
@@ -3838,11 +3838,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     return (self.seq, *vals)
 
 
-        seqRowLayout = QVBoxLayout()
-        seqRowLayout.setAlignment(Qt.AlignTop)
+        self.seqRowLayout = QVBoxLayout()
+        self.seqRowLayout.setAlignment(Qt.AlignTop)
         seqRows = []
         seqRow = RowOpt(parent=self)
-        seqRowLayout.addLayout(seqRow)
+        self.seqRowLayout.addLayout(seqRow)
         seqRows.append(seqRow)
         
         DpDp = resource_path('image/dipdip.png')
@@ -3858,24 +3858,24 @@ combination of multiple sequence is accepted as well as importing a custom seque
                'It is recommended to use a custom sequence in case of "unconventional surveys"'
             }
         
-        arrayLabel = QLabel('Sequence help will be display here.')
-        arrayLabel.setAlignment(Qt.AlignCenter)
+        self.arrayLabel = QLabel('Sequence help will be display here.')
+        self.arrayLabel.setAlignment(Qt.AlignCenter)
         def showArray(arg):
             if arg not in seqHelp.keys():
-                arrayLabel.setText('Sequence help not found.')
+                self.arrayLabel.setText('Sequence help not found.')
             else:
-                arrayLabel.setText(seqHelp[arg])
+                self.arrayLabel.setText(seqHelp[arg])
         showArray('dpdp1') # default
         
         def addRowBtnFunc():
             a = RowOpt(parent=self)
             seqRows.append(a)
-            seqRowLayout.addLayout(a)
+            self.seqRowLayout.addLayout(a)
             a.createRow()
             a.showArg()
-        addRowBtn = QPushButton('Add sequence')
-        addRowBtn.adjustSize()
-        addRowBtn.clicked.connect(addRowBtnFunc)
+        self.addRowBtn = QPushButton('Add sequence')
+        self.addRowBtn.adjustSize()
+        self.addRowBtn.clicked.connect(addRowBtnFunc)
         
         def getDataBtnFunc():
             vals = []
@@ -4060,10 +4060,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # top part
         seqOptionLayout = QVBoxLayout()
         seqOptionLayout.setAlignment(Qt.AlignTop)
-        seqOptionLayout.addLayout(seqRowLayout)
-        seqOptionLayout.addWidget(addRowBtn)
+        seqOptionLayout.addLayout(self.seqRowLayout)
+        seqOptionLayout.addWidget(self.addRowBtn)
         seqLayout.addLayout(seqOptionLayout, 50)
-        seqLayout.addWidget(arrayLabel, 50)
+        seqLayout.addWidget(self.arrayLabel, 50)
         
         # noise Layout
         noiseLayout.addWidget(self.noiseLabel)
@@ -4084,45 +4084,45 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwFwdPseudoIP.hide()
         
         if pvfound:
-            pvFwdBottomWidget = QWidget()
+            self.pvFwdBottomWidget = QWidget()
             pvFwdBottomLayout = QHBoxLayout()
             pvFwdBottomLayout.addWidget(self.pseudoFramefwd, 50)
             pvFwdBottomLayout.addWidget(self.pseudoFrameIPfwd, 50)
-            pvFwdBottomWidget.setLayout(pvFwdBottomLayout)
+            self.pvFwdBottomWidget.setLayout(pvFwdBottomLayout)
         
         forwardPseudoLayout.addLayout(forwardPseudoLayoutBottom)
 
-        forwardPseudos = QWidget()
-        forwardPseudos.setLayout(forwardPseudoLayout)
+        self.forwardPseudos = QWidget()
+        self.forwardPseudos.setLayout(forwardPseudoLayout)
 
         forwardOutputStack = QStackedLayout()
         forwardOutputStack.addWidget(self.forwardLogText)
-        forwardOutputStack.addWidget(forwardPseudos)
+        forwardOutputStack.addWidget(self.forwardPseudos)
         if pvfound:
-            forwardOutputStack.addWidget(pvFwdBottomWidget)
+            forwardOutputStack.addWidget(self.pvFwdBottomWidget)
         forwardOutputStack.setCurrentIndex(0)
                 
         # general forward layout
-        forwardLayout.addWidget(seqLabel)
+        forwardLayout.addWidget(self.seqLabel)
         forwardLayout.addLayout(seqLayout)
         forwardLayout.addLayout(noiseLayout)
 
-        fwdTopWidget = QWidget()
-        fwdTopWidget.setObjectName('fwdTopWidget')
-        fwdTopWidget.setStyleSheet("QWidget#fwdTopWidget {border:1px solid rgb(185,185,185)}")
-        fwdTopWidget.setLayout(forwardLayout)
+        self.fwdTopWidget = QWidget()
+        self.fwdTopWidget.setObjectName('self.fwdTopWidget')
+        self.fwdTopWidget.setStyleSheet("QWidget#self.fwdTopWidget {border:1px solid rgb(185,185,185)}")
+        self.fwdTopWidget.setLayout(forwardLayout)
         
         #bottom part 
-        fwdBottomWidget = QWidget()
-        fwdBottomWidget.setObjectName('fwdBottomWidget')
-        fwdBottomWidget.setStyleSheet("QWidget#fwdBottomWidget {border:1px solid rgb(185,185,185)}")
-        fwdBottomWidget.setLayout(forwardOutputStack)
+        self.fwdBottomWidget = QWidget()
+        self.fwdBottomWidget.setObjectName('self.fwdBottomWidget')
+        self.fwdBottomWidget.setStyleSheet("QWidget#fwdBottomWidget {border:1px solid rgb(185,185,185)}")
+        self.fwdBottomWidget.setLayout(forwardOutputStack)
         
-        fwdSplitter.addWidget(fwdTopWidget)
-        fwdSplitter.addWidget(fwdBottomWidget)
-        fwdSplitter.setCollapsible(1, False)
+        self.fwdSplitter.addWidget(self.fwdTopWidget)
+        self.fwdSplitter.addWidget(self.fwdBottomWidget)
+        self.fwdSplitter.setCollapsible(1, False)
         
-        fwdSlpitterLayout.addWidget(fwdSplitter)
+        self.fwdSlpitterLayout.addWidget(self.fwdSplitter)
         
         # instantiate the first row of the table
         # need to do this here as the layout needs to be integrated otherwise
@@ -4130,21 +4130,21 @@ combination of multiple sequence is accepted as well as importing a custom seque
         seqRow.createRow()
         seqRow.showArg()
         
-        tabForward.setLayout(fwdSlpitterLayout)
+        self.tabForward.setLayout(self.fwdSlpitterLayout)
 
 
         #%% tab INVERSION SETTINGS
-        tabInversionSettings = QTabWidget()
-        self.tabs.addTab(tabInversionSettings, 'Inversion settings')
+        self.tabInversionSettings = QTabWidget()
+        self.tabs.addTab(self.tabInversionSettings , 'Inversion settings')
         self.tabs.setTabEnabled(4, False)
 
         # general tab
-        generalSettings = QWidget()
+        self.generalSettings = QWidget()
         generalLayout = QHBoxLayout()
         invForm = QFormLayout()
 
         # advanced tab
-        advancedSettings = QWidget()
+        self.advancedSettings = QWidget()
         advancedLayout = QHBoxLayout()
         advForm = QFormLayout()
 
@@ -4238,12 +4238,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.notCropping.stateChanged.connect(notCroppingFunc)
         advForm.addRow(self.notCroppingLabel, self.notCropping)
                     
-        cropBelowFmdLabel = QLabel('<a href="cropBelowFmd">Crop below mesh fine region</a>')
-        cropBelowFmdLabel.linkActivated.connect(showHelpAdv)
+        self.cropBelowFmdLabel = QLabel('<a href="cropBelowFmd">Crop below mesh fine region</a>')
+        self.cropBelowFmdLabel.linkActivated.connect(showHelpAdv)
         self.cropBelowFmd = QCheckBox()
         self.cropBelowFmd.setChecked(True)
         # not connected but read when calling displayInvertedResults()
-        advForm.addRow(cropBelowFmdLabel, self.cropBelowFmd)
+        advForm.addRow(self.cropBelowFmdLabel, self.cropBelowFmd)
 
         def modelDOIFunc(status):
             if status == Qt.Checked:
@@ -4548,13 +4548,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         generalLayout.addLayout(invForm)
 
-        helpSection = QTextEdit('Help will be display here')
-        helpSection.setReadOnly(True)
-        helpSection.setText('Click on the labels and help will be displayed here')
-        generalLayout.addWidget(helpSection)
+        self.helpSection = QTextEdit('Help will be display here')
+        self.helpSection.setReadOnly(True)
+        self.helpSection.setText('Click on the labels and help will be displayed here')
+        generalLayout.addWidget(self.helpSection)
 
-        generalSettings.setLayout(generalLayout)
-        tabInversionSettings.addTab(generalSettings, 'General')
+        self.generalSettings .setLayout(generalLayout)
+        self.tabInversionSettings .addTab(self.generalSettings , 'General')
 
 
         advancedLayout.addLayout(advForm)
@@ -4564,22 +4564,22 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.helpSection2.setText('Click on the labels and help will be displayed here')
         advancedLayout.addWidget(self.helpSection2)
 
-        advancedSettings.setLayout(advancedLayout)
-        tabInversionSettings.addTab(advancedSettings, 'Advanced')
+        self.advancedSettings .setLayout(advancedLayout)
+        self.tabInversionSettings .addTab(self.advancedSettings , 'Advanced')
 
 
         #%% tab 5 INVERSION
-        tabInversion = QWidget()
-        self.tabs.addTab(tabInversion, '&Inversion')
+        self.tabInversion = QWidget()
+        self.tabs.addTab(self.tabInversion, '&Inversion')
         self.tabs.setTabEnabled(5, False)
         
         self.invtabs = QTabWidget()
-        logTab = QWidget()
-        showTab = QWidget()
-        computeTab = QWidget()
-        self.invtabs.addTab(logTab, 'Log')
-        self.invtabs.addTab(showTab, 'Results')
-        self.invtabs.addTab(computeTab, 'Compute attribute')
+        self.logTab = QWidget()
+        self.showTab = QWidget()
+        self.computeTab = QWidget()
+        self.invtabs.addTab(self.logTab, 'Log')
+        self.invtabs.addTab(self.showTab, 'Results')
+        self.invtabs.addTab(self.computeTab, 'Compute attribute')
         self.invtabs.setTabEnabled(1, False)
         self.invtabs.setTabEnabled(2, False)
                 
@@ -5030,9 +5030,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.sensSlider.setMinimum(0)
         self.sensSlider.setMaximum(11)
         self.sensSlider.setValue(5)
-        sensLabel = QLabel('Sensitivity overlay')
-        sensLabel.setAlignment(Qt.AlignCenter )
-        sensLayout.addWidget(sensLabel)
+        self.sensLabel = QLabel('Sensitivity overlay')
+        self.sensLabel.setAlignment(Qt.AlignCenter )
+        sensLayout.addWidget(self.sensLabel)
         self.sensSlider.setToolTip('Normalized sensivity threshold')
         self.sensSlider.valueChanged.connect(sensSliderFunc)
         sensLayout.addWidget(self.sensSlider)
@@ -5096,8 +5096,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         
         # 3D specific options for pyvista
-        pvthreshLabel = QLabel('Threshold:')
-        pvthreshLabel.setToolTip('Value which to keep the cells.')
+        self.pvthreshLabel = QLabel('Threshold:')
+        self.pvthreshLabel.setToolTip('Value which to keep the cells.')
         self.pvthreshMin = QLineEdit('')
         self.pvthreshMin.setPlaceholderText('Min')
         self.pvthreshMin.setValidator(QDoubleValidator())
@@ -5109,8 +5109,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvthreshMax.setValidator(QDoubleValidator())
         self.pvthreshMax.setToolTip('Maximal value below which to keep the cells.')
         
-        pvslicesLabel = QLabel('Axis slices:')
-        pvslicesLabel.setToolTip('Slice the mesh normal to X, Y and/or Z axis. '
+        self.pvslicesLabel = QLabel('Axis slices:')
+        self.pvslicesLabel.setToolTip('Slice the mesh normal to X, Y and/or Z axis. '
                                  'Set multiple slices on one axis by separating values with ","')
         self.pvxslices = QLineEdit('')
         self.pvxslices.setPlaceholderText('X [m]')
@@ -5129,7 +5129,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvzslices.setToolTip('e.g. 4, 5 to have to slices normal'
                                   'to Z in 4 and 5.')
                 
-        pvcontourLabel = QLabel('Isosurfaces:')
+        self.pvcontourLabel = QLabel('Isosurfaces:')
         self.pvcontour = QLineEdit('')
         self.pvcontour.setToolTip('Values of isosurfaces (comma separated).')
         
@@ -5185,15 +5185,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #          pvxslicesLabel, self.pvxslices,
         #          pvyslicesLabel, self.pvyslices,
         #          pvzslicesLabel, self.pvzslices,
-        #          pvcontourLabel, self.pvcontour,
+        #          self.pvcontourLabel, self.pvcontour,
         #          self.pvapplyBtn,
         #          self.pvgridCheck,
         #          self.screenshotBtn]
         
-        opt3d = [pvthreshLabel, self.pvthreshMin,
-                 self.pvthreshMax, pvslicesLabel, 
+        opt3d = [self.pvthreshLabel, self.pvthreshMin,
+                 self.pvthreshMax, self.pvslicesLabel, 
                  self.pvxslices, self.pvyslices,
-                 self.pvzslices, pvcontourLabel, 
+                 self.pvzslices, self.pvcontourLabel, 
                  self.pvcontour, self.pvapplyBtn,
                  self.pvgridCheck, self.screenshotBtn]
         
@@ -5297,18 +5297,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
         computeLayout.addLayout(computeLayoutTop)
         computeLayout.addWidget(self.evalLog)
         
-        logTab.setLayout(logLayout)
-        showTab.setLayout(showLayout)
-        computeTab.setLayout(computeLayout)
+        self.logTab.setLayout(logLayout)
+        self.showTab.setLayout(showLayout)
+        self.computeTab.setLayout(computeLayout)
         
         invLayout.addWidget(self.invtabs)
-        tabInversion.setLayout(invLayout)
+        self.tabInversion.setLayout(invLayout)
     
     
 
         #%% tab 6 POSTPROCESSING
-        tabPostProcessing = QWidget()
-        self.tabs.addTab(tabPostProcessing, 'Post-processing')
+        self.tabPostProcessing = QWidget()
+        self.tabs.addTab(self.tabPostProcessing, 'Post-processing')
         self.tabs.setTabEnabled(6,False)
         
         self.errorGraphs = QTabWidget()
@@ -5513,8 +5513,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         postProcessingLayout.addWidget(self.errorGraphs)
         
-        invError = QWidget()
-        self.errorGraphs.addTab(invError, 'Pseudo Section of Inversion Errors')
+        self.invError = QWidget()
+        self.errorGraphs.addTab(self.invError, 'Pseudo Section of Inversion Errors')
 
         invErrorLayout = QVBoxLayout()
         invErrorLayout.setAlignment(Qt.AlignTop)
@@ -5537,25 +5537,25 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorPlotLayout.addWidget(self.mwInvErrorIP, 50)
         
         invErrorLayout.addLayout(invErrorPlotLayout, 1)
-        invError.setLayout(invErrorLayout)
+        self.invError.setLayout(invErrorLayout)
 
-        invError2 = QWidget()
-        self.errorGraphs.addTab(invError2, 'Normalised Inversion Errors')
+        self.invError2 = QWidget()
+        self.errorGraphs.addTab(self.invError2, 'Normalised Inversion Errors')
         invErrorLayout2 = QVBoxLayout()
         invErrorLayout2Plot = QVBoxLayout()
 
         invErrorLayout2Plot.addWidget(self.mwInvError2, Qt.AlignCenter)
         invErrorLayout2.addLayout(invErrorLayout2Plot, 1)
         invErrorLayout2.addWidget(invErrorLabel)
-        invError2.setLayout(invErrorLayout2)
+        self.invError2.setLayout(invErrorLayout2)
         
-        tabPostProcessing.setLayout(postProcessingLayout)
+        self.tabPostProcessing.setLayout(postProcessingLayout)
 
 
 
         #%% Help tab
-        tabHelp = QTabWidget()
-        self.tabs.addTab(tabHelp, 'Help')
+        self.tabHelp = QTabWidget()
+        self.tabs.addTab(self.tabHelp, 'Help')
 
         helpLayout = QVBoxLayout()
         helpLayout.setAlignment(Qt.AlignTop)
@@ -5640,13 +5640,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         helpLabel.setOpenExternalLinks(True)
         helpLayout.addWidget(helpText)
         helpLayout.addWidget(helpLabel)
-        tabHelp.setLayout(helpLayout)
+        self.tabHelp.setLayout(helpLayout)
 
 
         #%% About tab
 
-        tabAbout = QTabWidget()
-        self.tabs.addTab(tabAbout, 'About')
+        self.tabAbout = QTabWidget()
+        self.tabs.addTab(self.tabAbout, 'About')
 
         infoLayout = QVBoxLayout()
         aboutText = QLabel()
@@ -5685,7 +5685,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         aboutText.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
         infoLayout.addWidget(aboutText, 0)
 
-        tabAbout.setLayout(infoLayout)
+        self.tabAbout.setLayout(infoLayout)
 
         #%% test tab
         # tabTest = QTabWidget()
@@ -5975,7 +5975,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             
         else:
             self.tabs.setTabEnabled(2,val)
-        self.meshTrianGroup.setFocus() # needed after tab activation as default is the fmdBox (QLineEdit) for some strange reasons...
+        self.meshTrianGroup.setFocus() # needed after tab activation as default is the self.fmdBox (QLineEdit) for some strange reasons...
 
     def errorCombosShow(self, state=False): #showing/hiding pre-processing comboboxes
         self.recipErrorfnamesCombo.setCurrentIndex(0)
