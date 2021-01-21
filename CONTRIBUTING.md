@@ -9,9 +9,9 @@ Best practices
 Here are a set of best coding practices that we need to respect in order to make a
 simple, consistent and as easy to maintain as possible code:
 
-- use **classes** to group functions inside thePython API (for instance all functions dealing with meshes should be implemented inside a big Mesh class if possible)
-- **document** functions : you can document your function directly in the code using the ReStructuredText convention (<link needed>) or just use comment with #
-- **separation of API and GUI** should allow to use the Python API in jupyter notebook as well as in standalone GUI using pyQt5
+- use **classes** to group functions inside the Python API (for instance all functions dealing with meshes should be implemented inside a big Mesh class if possible)
+- **document** functions : you can document your function directly in the code using [Numpy docstring](https://numpydoc.readthedocs.io/en/latest/format.html) or just use comment with # for line specific comments
+- **separation of API and GUI** should allow to use the Python API in jupyter notebook as well as in standalone GUI using PyQt5
 
 
 Use of git
@@ -20,8 +20,8 @@ Below is the usual commands you are likely to go through if you contribute to th
 
 First ensure you have cloned the project and are in the main project directory.
 ```bash
-git clone https://gitlab.com/hkex/pyr2
-cd pyr2
+git clone https://gitlab.com/hkex/resipy
+cd resipy
 ```
 Second, you can either (1) create a new branch for your changes (recommended) or (2) use the default `develop` branch.
 If you choose (1) you can create a new branch using:
@@ -58,18 +58,53 @@ This document describes the structre of the API and the files in it. Please refe
 to it before doing major modification to the code.
 
 
-- `ui.py`: GUI using PyQt5, it calls `R2 class` for processing
-- `api/R2`: main class that provides import, filtering, mesh creation and inversion,
-it calls functions from others scripts for specific purposes
-- `api/Survey.py`: important class that contains all data relative to one survey.
+- `src/ui.py`: GUI using PyQt5, it calls `R2 class` for processing
+- `src/resipy/Project`: main class that provides import, filtering, mesh creation and inversion,
+it calls functions from others scripts for specific purposes. The code is divided in tabs.
+- `src/resipy/Survey.py`: important class that contains all data relative to one survey.
 It provides methods for looking for reciprocal, fitting error model and filtering data
-- `api/parsers.py`: contains parser function to read data file from different instrument (e.g.: SyscalPro)
-- `api/meshTools.py`: contains the `mesh` class for all mesh creation (quadrilateral and triangular) and plotting
-- `api/gmshWrap.py`: provides a wrapper for `gmsh.exe` to create triangular mesh
-- `api/DCA.py`: provides function for DCA filtering of IP decay curves
-- `api/r2in.py`: provides function to write `R2.in` and `cR2.in` file. Is called by the `R2 class`.
+- `src/resipy/parsers.py`: contains parser function to read data file from different instrument (e.g.: SyscalPro)
+- `src/resipy/meshTools.py`: contains the `mesh` class for all mesh creation (quadrilateral and triangular) and plotting
+- `src/resipy/gmshWrap.py`: provides a wrapper for `gmsh.exe` to create triangular mesh
+- `src/resipy/DCA.py`: provides function for DCA filtering of IP decay curves
+- `src/resipy/r2in.py`: provides function to write `R2.in`, `cR2.in`, `R3t` and `cR3t.in` file. Is called by the `Project` class.
 
 
-Please see the ![documentation](https://hkex.gitlab.io/pyr2/api.html) for a full description of the API.
+Building the software
+----
+
+Bundles are build using `pyinstaller` (`pip install pyinstaller`). Different types of bundles can be produced:
+- `.zip` bundle, the user unzip it and inside can run `ResIPy.exe` (Windows) or just `ResIPy` (linux), or extractthe `.app` (mac)
+- `.exe` (Windows), no extension (linux), `.dmg` (mac). Windows and Linux are self-extractable archives which auto-extract themselves to a temporary directory at run-time (while the splashscreen is loading). Mac dmg image can be mounted and the .app can be drag and dropped to the Applications folder.
+
+Building is automated by the `build.sh` (linux), `build.bat` (windows), `build-app.sh` (mac) scripts.
+An additional `build-pypi.sh` is supplied to build PyPi packages.
+
+Note that you need to setup a python environment `pyenv`, as referenced by the scripts, which contains the necessary packages to run ResIPy (see requirements.txt and requirments-gui.txt). `pyenv` should be located at the same level as the repository folder. The scripts should be run from withing the `src` folder.
+
+e.g.
+```
+pyenv/
+resipy/
+    doc/
+    jupyter-notebook/
+    src/
+        build.sh
+        build.bat
+        build-app.sh
+        build-pypi.sh
+```
+
+To build the Windows bundle, do:
+```sh
+cd resipy/src
+build.bat
+```
+
+The bundles produced will be located in `resipy/src/dist/`.
+
+
+
+Please see the ![documentation](https://hkex.gitlab.io/resipy/api.html) for a full description of the API.
 
         
