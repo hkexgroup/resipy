@@ -9,6 +9,7 @@ Created on Thu Jan 10 11:34:56 2019
 
 import numpy as np
 import os
+import shutil
 import pandas as pd
 import time
 import matplotlib.pyplot as plt
@@ -41,6 +42,8 @@ k.createSurvey(testdir + 'ip-3d/protocol.dat', ftype='ProtocolIP')
 k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.createSurvey(testdir + 'parser/res2dinv-dd.dat', ftype='ResInv')
 k.createSurvey(testdir + 'parser/res2dinv-ga.dat', ftype='ResInv')
+k.createSurvey(testdir + 'parser/res2dinv-multigradient.dat', ftype='ResInv')
+k.createSurvey(testdir + 'parser/res2dinv-wenner32.dat', ftype='ResInv')
 k.createSurvey(testdir + 'parser/bgs-prime.dat', ftype='BGS Prime')
 k.createSurvey(testdir + 'parser/sting_2D_noIP.stg', ftype='Sting')
 #k.createSurvey(testdir + 'parser/sting_3D_noIP.stg', ftype='Sting') # not sure why this fails in the pipline
@@ -203,6 +206,10 @@ k.setElec(elec)
 k.createMesh('cylinder', zlim=[0, 47.5], cl=0.8)
 
 
+# specific mesh import
+mesh = mt.tetgen_import(testdir + 'mesh/tetgen_test.1.node')
+
+
 timings['methods-meshing'] = time.time() - tstart
 
 
@@ -340,8 +347,8 @@ print('-------------Testing Time-lapse in // ------------')
 t0 = time.time()
 k = Project(apiPath + '/invdir/test2d-timelapse/')
 k.createTimeLapseSurvey([testdir + 'dc-2d-timelapse/data/17031501.csv',
-                         testdir + 'dc-2d-timelapse/data/17051601.csv',
-                         testdir + 'dc-2d-timelapse/data/17040301.csv'])
+                         testdir + 'dc-2d-timelapse/data/17040301.csv',
+                         testdir + 'dc-2d-timelapse/17051601_incomplete.csv'])
 k.showPseudo(0)
 k.showPseudo(2)
 k.showError(0)
@@ -394,6 +401,7 @@ k.showResults(index=1)
 k.showResults(index=2, attr='difference(percent)', color_map='seismic', vmax=200)
 k.saveVtks()
 k.saveData('td')
+shutil.rmtree('td')
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-batch'] = time.time() - t0
 
