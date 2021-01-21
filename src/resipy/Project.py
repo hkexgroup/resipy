@@ -1141,7 +1141,7 @@ class Project(object): # Project master class instanciated by the GUI
 
     def createPseudo3DSurvey(self, dirname, lineSpacing=1, ftype='Syscal', parser=None, **kwargs):
         """Create a pseudo 3D survey based on 2D surveys. Multiple 2D Projects to be turned into a single pseudo 3D survey.
-            THIS WILL NEED CORRECT ELECTRODE LAYOUT - DONE IN self.createPseudo3DSurvey()
+            THIS WILL NEED CORRECT ELECTRODE LAYOUT - DONE IN self._updatePseudo3DSurvey()
         
         Parameters
         ----------
