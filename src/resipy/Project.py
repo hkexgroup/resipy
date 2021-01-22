@@ -3386,7 +3386,7 @@ class Project(object): # Project master class instanciated by the GUI
             self.runR2(refdir, dump=dump) # this line actually runs R2
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                         os.path.join(self.dirname, 'Start_res.dat'))
-            if ((self.typ == 'R3t') | (self.typ == 'cR3t')):
+            if ((self.typ == 'R3t') | (self.typ == 'cR3t')) & (self.param['reg_mode'] == 2):
                 dump('----------------- Computing d-d0+f(m0) ---------------\n')
                 # as per v3.2 of R3t we need to compute MANUALLY d-d0+f(m0)
                 # this is done automatically in R2 and cR2
@@ -3751,7 +3751,9 @@ class Project(object): # Project master class instanciated by the GUI
             for mesh in self.meshResults:
                 mesh.df['Chargeability(mV/V)'] = np.array(mesh.df['Phase(mrad)'])/-self.surveys[0].kFactor
         # compute difference in percent in case of reg_mode == 1
-        if (self.iTimeLapse is True) and (self.param['reg_mode'] == 1):
+        if (self.iTimeLapse is True):# and (self.param['reg_mode'] == 1):
+            # even with reg_mode == 2 when the inversion converged by overshooting
+            # it won't output 'difference(percent)' attribute, so let's compute for all TL
             try:
                 self.computeDiff()
             except Exception as e:
@@ -5410,15 +5412,17 @@ class Project(object): # Project master class instanciated by the GUI
         inside = np.ones(self.meshResults[0].numel, dtype=bool)
         if (self.typ == 'R3t') or (self.typ == 'cR3t'):
             pname = 'num_xy_poly'
+            tableName = 'xy_poly_table'
         else:
             pname = 'num_xz_poly'
+            tableName = 'xz_poly_table'
         if self.param[pname] > 0:
             meshx = np.array(self.meshResults[0].elmCentre[:,0])
             meshy = np.array(self.meshResults[0].elmCentre[:,1])
             meshz = np.array(self.meshResults[0].elmCentre[:,2])
             # poly = (self.param['xz_poly_table'][:,0],
                     # self.param['xz_poly_table'][:,1])
-            path = mpath.Path(self.param[pname])
+            path = mpath.Path(self.param[tableName])
 
             if self.typ[-2]=='3':
                 # inside1 = iip.isinpolygon(meshx, meshy, poly)
@@ -5434,13 +5438,14 @@ class Project(object): # Project master class instanciated by the GUI
         res_name = res_names[np.in1d(res_names, list(self.meshResults[0].df.keys()))][0]
         res0 = np.array(self.meshResults[0].df[res_name])[inside]
         for i in range(1, len(self.meshResults)):
-            try:
-                res = np.array(self.meshResults[i].df[res_name])
-                self.meshResults[i].addAttribute(res - res0, 'diff(Resistivity)')
-                self.meshResults[i].addAttribute((res-res0)/res0*100, 'difference(percent)')
-            except Exception as e:
-                print('error in computing difference:', e)
-                pass
+            if 'difference(percent)' not in self.meshResults[i].df.columns:
+                try:
+                    res = np.array(self.meshResults[i].df[res_name])
+                    self.meshResults[i].addAttribute(res - res0, 'diff(Resistivity)')
+                    self.meshResults[i].addAttribute((res-res0)/res0*100, 'difference(percent)')
+                except Exception as e:
+                    print('error in computing difference:', e)
+                    pass
         
         # num_attr = len(self.meshResults[0].df)
         # num_elm = self.meshResults[0].numel
