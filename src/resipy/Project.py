@@ -4898,10 +4898,13 @@ class Project(object): # Project master class instanciated by the GUI
         if len(fs) > 1: # the last file is always open and not filled with data
             x = pd.read_csv(os.path.join(self.dirname, fs[index]), header=None, delim_whitespace=True).values
             if self.typ[-1]=='t' and self.elec['buried'].sum()==0: # if 3D get the iteration mesh - and no buried electrodes [HOT FIX] #TODO: extract 3D xbh top surface
-                if self.surfaceIdx is None: # no surface index
-                    self.iterMesh = mt.readMesh(os.path.join(self.dirname, fs[index]).replace('.dat','.vtk')) 
-                    _, self.surfaceIdx = self.iterMesh.extractSurface(return_idx=True) # get surface index 
-                x = x[self.surfaceIdx,:]
+                try: # let it pass if surface extraction failed for showing iteration plot
+                    if self.surfaceIdx is None: # no surface index
+                        self.iterMesh = mt.readMesh(os.path.join(self.dirname, fs[index]).replace('.dat','.vtk')) 
+                        _, self.surfaceIdx = self.iterMesh.extractSurface(return_idx=True) # get surface index 
+                    x = x[self.surfaceIdx,:]
+                except:
+                    pass
             if x.shape[0] > 0:
                 triang = tri.Triangulation(x[:,0], x[:,1])
                 if self.typ[0] == 'c' and modelDOI is False:
