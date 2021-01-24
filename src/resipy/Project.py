@@ -757,8 +757,14 @@ class Project(object): # Project master class instanciated by the GUI
             survey.elec.to_csv(f + '-elec.csv', index=False, line_terminator='\n')
             if (c+i < len(self.meshResults)):
                 self.meshResults[c + i].vtk(f + '.vtk')
+        
+        # batch/time-lapse
+        if self.iBatch or self.iTimeLapse:
+            f = os.path.join(savedir, 'bigSurvey')
+            self.bigSurvey.df.to_csv(f + '-bigdf.csv', index=False, line_terminator='\n')
 
         settings = {'surveysInfo': self.surveysInfo,
+                    'darkMode': self.darkMode,
                     'topo': self.topo.values.tolist() if self.topo is not None else None,
                     'typ': self.typ,
                     'err': self.err,
@@ -852,6 +858,18 @@ class Project(object): # Project master class instanciated by the GUI
                     mesh = mt.vtk_import(f + '.vtk')
                     mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
                     self.meshResults.append(mesh)
+        
+        # batch/time-lapse
+        fbig = os.path.join(savedir, 'bigSurvey')
+        if os.path.exists(fbig + '-bigdf.csv'):
+            df = pd.read_csv(fbig + '-bigdf.csv')
+            for c in ['a','b','m','n']:
+                df[c] = df[c].astype(str)
+            self.bigSurvey = Survey(df=self.surveys[0].df, elec=self.surveys[0].elec)
+            self.bigSurvey.df = df.copy() 
+            self.bigSurvey.dfOrigin = df.copy()
+            self.bigSurvey.ndata = df.shape[0]
+            
         self.elec = pd.read_csv(os.path.join(savedir, 'elec.csv'))
         self.elec['label'] = self.elec['label'].astype(str)
         if os.path.exists(os.path.join(savedir, 'mesh.vtk')):
@@ -862,6 +880,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(os.path.join(savedir, 'settings.json'), 'r') as f:
             settings = json.load(f)
         self.surveysInfo = settings['surveysInfo']
+        self.darkMode = settings['darkMode']
         self.topo = pd.DataFrame(settings['topo'], columns=['x','y','z']) if settings['topo'] is not None else None
         self.typ = settings['typ']
         self.err = settings['err']
