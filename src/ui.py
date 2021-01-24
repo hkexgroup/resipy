@@ -340,15 +340,42 @@ class App(QMainWindow):
         # self.saveProjectBtn.clicked.connect(saveProjectBtnFunc)
         
         # loading project
+        def loadBatchProject(): # for batch/time-lapse/pseudo 3D
+            self.recipErrDataIndex = -1 # -1 is apply the function to all individually
+            self.errFitApplyToAll = True
+            self.errFitDataIndex = -1
+            self.iperrFitDataIndex = -1
+            self.errFitType.setCurrentIndex(0)
+            self.iperrFitType.setCurrentIndex(0)
+            self.dcaProgress.setValue(0)
+            self.errFitPlotIndexList = []
+            self.iperrFitPlotIndexList = []
+            self.phaseFiltDataIndex = -1
+            self.fnamesCombo.clear()
+            self.psContourCheck.setEnabled(True)
+            for m, s in zip(self.project.meshResults, self.project.surveys): # we already loaded the results
+                self.fnamesCombo.addItem(m.mesh_title)
+                s.name = m.mesh_title
+                self.errFitPlotIndexList.append(0)
+                self.iperrFitPlotIndexList.append(0)
+            self.errorCombosShow(True)
+            errorCombosFill(self.prepFnamesComboboxes)
+            self.fnamesCombo.show()
+            self.fnamesComboLabel.show()
+
+        
         def loadProjectBtnFunc():
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, '*.resipy')
             if fname != '':
+                self.loadingWidget('Loading Project, please wait...', False)
                 k = Project()
                 k.loadProject(fname)
                 
                 # set flags that call restartFunc()
                 if k.iTimeLapse:
                     self.timeLapseCheck.setChecked(True)
+                if k.iBatch:
+                    self.batchCheck.setChecked(True)
                 if (k.typ == 'R2') | (k.typ == 'cR2'):
                     self.m2DRadio.setChecked(True)
                 else:
@@ -373,6 +400,10 @@ class App(QMainWindow):
                 # display pseudo-section and filtering graphs
                 self.settingUI()
                 
+                # load batch/time-lapse/pseudo 3D results 
+                if self.batchCheck.isChecked() or self.timeLapseCheck.isChecked():
+                    loadBatchProject()
+                    
                 # display mesh
                 if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
                     replotMesh()
@@ -453,7 +484,7 @@ class App(QMainWindow):
                 if len(self.project.meshResults) > 0:
                     self.displayInvertedResults()
                     prepareInvError()
-                
+                self.loadingWidget(exitflag=True)
                 # activate tabs
                 self.activateTabs(True)
                 if self.project.iForward:
@@ -4196,9 +4227,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         # help sections
         def showHelp(arg): # for general tab
             if arg not in r2help:
-                helpSection.setText('SORRY NOT IN HELP')
+                self.helpSection.setText('SORRY NOT IN HELP')
             else:
-                helpSection.setHtml(r2help[arg])
+                self.helpSection.setHtml(r2help[arg])
 
         def showHelpAdv(arg): # for advanced tab
             if arg not in r2help:
