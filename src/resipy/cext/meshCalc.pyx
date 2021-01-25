@@ -194,10 +194,12 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int npere = 4
     #face arrays 
     cdef long[:] face = np.zeros(3,dtype=int)
-    cdef long[:] a = np.asarray([1,0,0,0], dtype=int)
-    cdef long[:] b = np.asarray([2,3,1,1], dtype=int)  
-    cdef long[:] c = np.asarray([3,2,3,2], dtype=int)  
-
+    # cdef long[:] a = np.asarray([1,0,0,0], dtype=int) #does not work for refined mesh, no idea why 
+    # cdef long[:] b = np.asarray([2,3,1,1], dtype=int)  
+    # cdef long[:] c = np.asarray([3,2,3,2], dtype=int)  
+    cdef long[:] a = np.asarray([0,0,0,1], dtype=int)
+    cdef long[:] b = np.asarray([1,1,2,2], dtype=int)  
+    cdef long[:] c = np.asarray([2,3,3,3], dtype=int)  
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,4),dtype=np.int64 ,order='C') # allocate space for tri_combo 
     cdef long long[:,:] tri_combov = tri_combo
@@ -213,7 +215,7 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
             face[0] = connection[i,a[j]]
             face[1] = connection[i,b[j]] 
             face[2] = connection[i,c[j]]
-            # sort face indexes 
+            # sort face indexes (inplace)
             sortInt(face,3)
             # assign each face an organised and unique code
             tri_combov[i,j] = mergeInts(face[0],face[1],face[2],pad)
@@ -324,74 +326,6 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
             #find missing node in future? 
         
     return fconnection, idxo 
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
-    """Return external faces of a 3D prism mesh 
-    
-    Parameters
-    ----------
-    connection: np.array (int)
-        N by 4 array, describes how mesh nodes map to elements 
-
-    neigh: np.array (int)
-        N by 4 array, describes indices of neighbour elements for each cell 
-        (output of neigh3d)
-
-    Returns
-    -------
-    fconnection : list
-        N by 3 matrix with the with the nodes of external faces 
-    idxa: np.array
-        N by 1 array. Indices of original mesh elements 
-
-    """
-    cdef int i,j,k #loop variables
-    cdef int numel = connection.shape[0]
-    cdef int c = 0
-    cdef np.ndarray[long, ndim=2] nmap = np.array([[0, 1, 2, -1], 
-                                                   [3, 4, 5, -1], 
-                                                   [0, 1, 4, 3], 
-                                                   [1, 2, 5, 4],
-                                                   [0, 2, 5, 3]])
-    
-    #first thing is to find all the cases where neigh == 1 
-    cdef list idx = [] # this is the index where a outside edge is 
-    cdef list fnum = [] # this is the face number ( 1 2 3 4 or 5)
-    for i in range(numel):
-        for j in range(5):
-            if neigh[i,j] == -1:
-                idx.append(i)
-                fnum.append(j)
-                c+=1
-    
-    cdef long[:] idxa = np.array(idx,dtype=int)
-    cdef np.ndarray[long, ndim=1] idxo = np.array(idx,dtype=int)
-    cdef long[:] fnuma = np.array(fnum,dtype=int)
-    
-    cdef int nfaces = len(idx)
-    cdef int fidx, fnumi 
-    
-    cdef list fcoords = [[]]*nfaces 
-    cdef tuple vert 
-    cdef list vertices = []
-    
-    for i in range(nfaces):
-        fidx = idxa[i]
-        fnumi = fnuma[i]
-        vertices = []
-        if fnumi < 2:
-            k=3
-        else:
-            k=4
-        for j in range(k):
-            search = connection[fidx, nmap[fnumi,j]]
-            vert = (node[search,0], node[search,1], node[search,2])
-            vertices.append(vert)
-        fcoords[i] = vertices 
-        
-    return fcoords, idxo 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -606,6 +540,74 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
+    """Return external faces of a 3D prism mesh 
+    
+    Parameters
+    ----------
+    connection: np.array (int)
+        N by 4 array, describes how mesh nodes map to elements 
+
+    neigh: np.array (int)
+        N by 4 array, describes indices of neighbour elements for each cell 
+        (output of neigh3d)
+
+    Returns
+    -------
+    fconnection : list
+        N by 3 matrix with the with the nodes of external faces 
+    idxa: np.array
+        N by 1 array. Indices of original mesh elements 
+
+    """
+    cdef int i,j,k #loop variables
+    cdef int numel = connection.shape[0]
+    cdef int c = 0
+    cdef np.ndarray[long, ndim=2] nmap = np.array([[0, 1, 2, -1], 
+                                                   [3, 4, 5, -1], 
+                                                   [0, 1, 4, 3], 
+                                                   [1, 2, 5, 4],
+                                                   [0, 2, 5, 3]])
+    
+    #first thing is to find all the cases where neigh == 1 
+    cdef list idx = [] # this is the index where a outside edge is 
+    cdef list fnum = [] # this is the face number ( 1 2 3 4 or 5)
+    for i in range(numel):
+        for j in range(5):
+            if neigh[i,j] == -1:
+                idx.append(i)
+                fnum.append(j)
+                c+=1
+    
+    cdef long[:] idxa = np.array(idx,dtype=int)
+    cdef np.ndarray[long, ndim=1] idxo = np.array(idx,dtype=int)
+    cdef long[:] fnuma = np.array(fnum,dtype=int)
+    
+    cdef int nfaces = len(idx)
+    cdef int fidx, fnumi 
+    
+    cdef list fcoords = [[]]*nfaces 
+    cdef tuple vert 
+    cdef list vertices = []
+    
+    for i in range(nfaces):
+        fidx = idxa[i]
+        fnumi = fnuma[i]
+        vertices = []
+        if fnumi < 2:
+            k=3
+        else:
+            k=4
+        for j in range(k):
+            search = connection[fidx, nmap[fnumi,j]]
+            vert = (node[search,0], node[search,1], node[search,2])
+            vertices.append(vert)
+        fcoords[i] = vertices 
+        
+    return fcoords, idxo 
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def splitTri(long[:,:] connection, double[:,:] node):
     """Split triangle elements down into 4 smaller triangles 
     Parameters
@@ -779,8 +781,8 @@ def splitTetra(long[:,:] connection, double[:,:] node):
     
     cdef int pad = len(str(num_nodes))
     
-    cdef long[:] a = np.array([0,1,2,0,1,2],dtype=int)
-    cdef long[:] b = np.array([1,2,0,3,3,3],dtype=int)
+    cdef long[:] a = np.array([0,1,2,3,3,3],dtype=int)
+    cdef long[:] b = np.array([1,2,0,0,1,2],dtype=int)
     
     #remap the element nodes with this matrix 
     cdef list remap = [[4, 7, 6, 0],
@@ -818,13 +820,9 @@ def splitTetra(long[:,:] connection, double[:,:] node):
             og_el_idv[tmpi+j] = i
     
     ### find unique node configs # ###       
-    # cdef list unicl, idx
-    # unicl, idx = unique(list(new_node_idx)) # unique and ordered node configs 
     cdef np.ndarray[long long, ndim=1] idxa, unicl
     unicl, idxa = np.unique(new_node_idx, return_index=True) # unique and ordered node configs 
-    cdef long[:] node_id = np.arange(len(unicl)) + num_nodes 
-    # cdef long[:] idxa = np.asarray(idx,dtype=int) 
-    # cdef long[:] uniclv = np.asarray(unicl,dtype=int)
+    cdef long[:] node_id = np.arange(len(unicl)) + num_nodes
     
     ### map back to elements #### 
     for i in range(numel):
@@ -1248,33 +1246,32 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     cdef long na, nb, nid
     
     #find unique node combinations 
-    with nogil, parallel(num_threads=num_threads):
-        for i in prange(numel,schedule='dynamic'):
-            for j in range(nedges):
-                na = connection[i,a[j]]
-                nb = connection[i,b[j]] 
-                if na < nb:
-                    merged = mergeInt(na,nb,pad) # merge
-                else:
-                    merged = mergeInt(nb,na,pad) # merge
-                combo[i,j] = merged       
+    for i in range(numel):
+        for j in range(nedges):
+            na = connection[i,a[j]]
+            nb = connection[i,b[j]] 
+            if na < nb:
+                merged = mergeInt(na,nb,pad) # merge
+            else:
+                merged = mergeInt(nb,na,pad) # merge
+            combo[i,j] = merged       
+            
+            #create the conductance matrix              
+            for k in range(nmax):
+                nid = Nconnecv[na,k]
+                if nid == -1: # then its not been assigned as a pair
+                    Nconnecv[na,k] = nb
+                    break # break out the loop 
+                elif nid == nb: #its already been assigned 
+                    break # so break out 
                 
-                #create the conductance matrix              
-                for k in range(nmax):
-                    nid = Nconnecv[na,k]
-                    if nid == -1: # then its not been assigned as a pair
-                        Nconnecv[na,k] = nb
-                        break # break out the loop 
-                    elif nid == nb: #its already been assigned 
-                        break # so break out 
-                    
-                for k in range(nmax):#same as above but for the inverse
-                    nid = Nconnecv[nb,k]
-                    if nid == -1:
-                        Nconnecv[nb,k] = na
-                        break
-                    elif nid == na:
-                        break
+            for k in range(nmax):#same as above but for the inverse
+                nid = Nconnecv[nb,k]
+                if nid == -1:
+                    Nconnecv[nb,k] = na
+                    break
+                elif nid == na:
+                    break
 
     #pure python code 
     combof = np.asarray(combo,dtype=np.int64).flatten()
