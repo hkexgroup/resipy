@@ -756,8 +756,6 @@ class Mesh:
         else:
             print('Sorry not implimented for this mesh type yet')
             return 
-        self.cellCentres()
-        self.orderNodes()
         
         
     def splitTri(self, param=None): # fix me 
@@ -840,6 +838,13 @@ class Mesh:
         nmesh.df = pd.DataFrame(new_df)
         
         nmesh.cellCentres()
+        nmesh.orderNodes()
+        
+        #mesh calculations - ensure all these are set to none so they are recalculated 
+        nmesh.neigh_matrix = None # neighbour matrix, not usually needed unless for 3d tetrahedra problems 
+        nmesh.tri_combo = None
+        nmesh.NsizeA = None # Nconnec + numnp  
+        nmesh.fconm = None # finite element conductance matrix
         return nmesh
     
     def quad2tri(self):
@@ -2894,10 +2899,11 @@ class Mesh:
             neigh = self.neigh_matrix.copy()
             
             #check if neigh parameters == element number 
-            if np.max(param) != self.numel:
-                neigh = param[neigh]
-            else:
-                neigh += 1 
+            # if np.max(param) != self.numel:
+            #     neigh = param[neigh]
+            # else:
+            neigh += 1 
+            param = np.arange(self.numel) + 1
             
             if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
                 self.computeNconnec()
