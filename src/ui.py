@@ -341,27 +341,20 @@ class App(QMainWindow):
         
         # loading project
         def loadBatchProject(): # for batch/time-lapse/pseudo 3D
-            self.recipErrDataIndex = -1 # -1 is apply the function to all individually
-            self.errFitApplyToAll = True
-            self.errFitDataIndex = -1
-            self.iperrFitDataIndex = -1
-            self.errFitType.setCurrentIndex(0)
-            self.iperrFitType.setCurrentIndex(0)
-            self.dcaProgress.setValue(0)
-            self.errFitPlotIndexList = []
-            self.iperrFitPlotIndexList = []
-            self.phaseFiltDataIndex = -1
             self.fnamesCombo.clear()
             self.psContourCheck.setEnabled(True)
-            for m, s in zip(self.project.meshResults, self.project.surveys): # we already loaded the results
-                self.fnamesCombo.addItem(m.mesh_title)
-                s.name = m.mesh_title
+            for s in self.project.surveys: # we already loaded the results
+                self.fnamesCombo.addItem(s.name)
                 self.errFitPlotIndexList.append(0)
                 self.iperrFitPlotIndexList.append(0)
             self.errorCombosShow(True)
             errorCombosFill(self.prepFnamesComboboxes)
-            self.fnamesCombo.show()
-            self.fnamesComboLabel.show()
+            if self.pseudo3DCheck.isChecked():
+                self.fnamesCombo.hide()
+                self.fnamesComboLabel.hide()
+            else:
+                self.fnamesCombo.show()
+                self.fnamesComboLabel.show()
 
         
         def loadProjectBtnFunc():
@@ -376,26 +369,43 @@ class App(QMainWindow):
                     self.timeLapseCheck.setChecked(True)
                 if k.iBatch:
                     self.batchCheck.setChecked(True)
+                if k.pseudo3DSurvey is not None:
+                    self.pseudo3DCheck.setChecked(True)
                 if (k.typ == 'R2') | (k.typ == 'cR2'):
                     self.m2DRadio.setChecked(True)
                 else:
                     self.m3DRadio.setChecked(True)
-                if (k.typ == 'cR2') | (k.typ == 'cR3t'):
-                    self.ipCheck.setChecked(True)
-                else:
-                    self.ipCheck.setChecked(False)
                 if k.iForward:
                     self.fwdRadio.setChecked(True)
                 else:
                     self.invRadio.setChecked(True)
                 
+                # pre-processing default flags
+                self.recipErrDataIndex = -1
+                self.errFitApplyToAll = True
+                self.errFitDataIndex = -1
+                self.iperrFitDataIndex = -1
+                self.errFitType.setCurrentIndex(0)
+                self.iperrFitType.setCurrentIndex(0)
+                self.dcaProgress.setValue(0)
+                self.errFitPlotIndexList = []
+                self.iperrFitPlotIndexList = []
+                self.phaseFiltDataIndex = -1
+                
                 self.project = k # assign the project object
-                self.elecTable.initTable(self.project.elec) # load electrodes back in
+                if self.pseudo3DCheck.isChecked():
+                    self.elecTable.initTable(self.project.pseudo3DSurvey.elec) # load electrodes back in
+                else:
+                    self.elecTable.initTable(self.project.elec) # load electrodes back in
                 self.tempElec = self.elecTable.getTable()
                 if self.project.iBorehole:
                     self.boreholeCheck.setChecked(True)
-                if self.project.topo.shape[0] > 0:
-                    self.topoTable.initTable(self.project.topo.values)
+                
+                if not self.project.topo.empty:
+                    if self.project.topo.shape[0] > 0:
+                        self.topoTable.initTable(self.project.topo.values)
+                else:
+                    self.topoTable.initTable(np.array([['',''],['','']]))
                 
                 # display pseudo-section and filtering graphs
                 self.settingUI()
@@ -404,30 +414,39 @@ class App(QMainWindow):
                 if self.batchCheck.isChecked() or self.timeLapseCheck.isChecked():
                     loadBatchProject()
                     
-                # display mesh
-                if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
-                    replotMesh()
-                    self.meshOutputStack.setCurrentIndex(1)
+                # load IP
+                if (self.project.typ == 'cR2') | (self.project.typ == 'cR3t'):
+                    self.ipCheck.setChecked(True)
+                    self.ipCheck.setEnabled(True)
                 else:
-                    if pvfound:
-                        self.mesh3Dplotter.clear() # clear all actors 
-                        self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                    self.ipCheck.setChecked(False)
+                    self.ipCheck.setEnabled(False)
+                    
+                # display mesh
+                if self.project.mesh is not None:
+                    if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
+                        replotMesh()
                     else:
-                        self.mwMesh3D.plot(self.project.showMesh, threed=True)
-                    self.meshOutputStack.setCurrentIndex(2)
+                        if pvfound:
+                            self.mesh3Dplotter.clear() # clear all actors 
+                            self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                        else:
+                            self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                        self.meshOutputStack.setCurrentIndex(2)
                 
                 # load mesh regions back in
-                self.regionTable.nrow = 0
-                self.regionTable.setRowCount(0)
-                for i in range(len(np.unique(self.project.mesh.df['region']))):
-                    self.regionTable.addRow()
-                    ie = self.project.mesh.df['region'] == i+1
-                    row = self.project.mesh.df[ie]
-                    self.regionTable.setItem(i, 0, QTableWidgetItem(str(row['res0'].values[0])))
-                    self.regionTable.setItem(i, 1, QTableWidgetItem(str(row['phase0'].values[0])))
-                    self.regionTable.setItem(i, 2, QTableWidgetItem(str(row['zones'].values[0])))
-                    if row['param'].values[0] == 0:
-                        self.regionTable.cellWidget(i,3).findChildren(QCheckBox)[0].setChecked(True)
+                if self.project.mesh is not None:
+                    self.regionTable.nrow = 0
+                    self.regionTable.setRowCount(0)
+                    for i in range(len(np.unique(self.project.mesh.df['region']))):
+                        self.regionTable.addRow()
+                        ie = self.project.mesh.df['region'] == i+1
+                        row = self.project.mesh.df[ie]
+                        self.regionTable.setItem(i, 0, QTableWidgetItem(str(row['res0'].values[0])))
+                        self.regionTable.setItem(i, 1, QTableWidgetItem(str(row['phase0'].values[0])))
+                        self.regionTable.setItem(i, 2, QTableWidgetItem(str(row['zones'].values[0])))
+                        if row['param'].values[0] == 0:
+                            self.regionTable.cellWidget(i,3).findChildren(QCheckBox)[0].setChecked(True)
                 
                 # restore changed inversion settings
 #                 self.modelDOICheck
@@ -690,7 +709,6 @@ class App(QMainWindow):
                 self.importDataBtn.setText('Import multiple datasets')
                 self.importDataBtn.clicked.disconnect()
                 self.importDataBtn.clicked.connect(getdir)
-                self.ipCheck.setEnabled(False) # timelapse IP not available for now
                 self.batchCheck.setEnabled(False)
                 self.pseudo3DCheck.setEnabled(False)
                 self.pseudo3DCheck.setChecked(False)
@@ -702,7 +720,6 @@ class App(QMainWindow):
                 self.importDataBtn.setText('Import Data')
                 self.importDataBtn.clicked.disconnect()
                 self.importDataBtn.clicked.connect(importDataBtnFunc)
-                self.ipCheck.setEnabled(True) # timelapse IP not available for now
                 self.batchCheck.setEnabled(True)
                 self.pseudo3DCheck.setEnabled(True)
 
@@ -825,10 +842,10 @@ class App(QMainWindow):
             if state == Qt.Checked:
                 self.lineSpacing.setVisible(True)
                 self.lineSpacingLabel.setVisible(True)
+                self.importDataBtn.setVisible(False)
                 self.create3DBtn.setVisible(True)
                 self.create3DBtn.clicked.disconnect()
-                self.create3DBtn.clicked.connect(create3DFunc)
-                self.importDataBtn.setVisible(False)
+                self.create3DBtn.clicked.connect(create3DFunc) 
             else:
                 self.lineSpacing.setVisible(False)
                 self.lineSpacingLabel.setVisible(False)
@@ -1263,8 +1280,11 @@ class App(QMainWindow):
 
         def ipCheckFunc(state):
             if state  == Qt.Checked:
-                self.project.typ = 'c' + self.project.typ
-                self.typ = 'c' + self.typ
+                if self.project.typ == 'R2' or self.project.typ == 'R3t':
+                    self.project.typ = 'c' + self.project.typ
+                    self.typ = 'c' + self.typ
+                else:
+                    self.typ = self.project.typ
                 showIpOptions(True)
                 [p.setVisible(True) for p in [self.pvminIPLabel, self.pvminIP, self.pvmaxIPLabel, self.pvmaxIP]]
 #                self.timeLapseCheck.setEnabled(False)
@@ -1303,7 +1323,7 @@ class App(QMainWindow):
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
-            pdebug('ipCheckFunc: mode=', self.project.typ)
+            pdebug('ipCheckFunc: mode =', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
         self.ipCheck.stateChanged.connect(ipCheckFunc)
@@ -6070,7 +6090,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.b_wgt.setText('0.0')
         if np.sum(self.project.surveys[0].df['irecip'].values != 0) < 2:
             # we need more than a single reciprocal to fit error model and so
-            self.importDataRecipBtn.show()
+            listOfNoRecipBtnShow = [self.pseudo3DCheck.isChecked(), self.regular3DCheck.isChecked(), # we can't import group reciprocal files
+                                    self.timeLapseCheck.isChecked(), self.batchCheck.isChecked()]
+            if not np.any(listOfNoRecipBtnShow):
+                self.importDataRecipBtn.show()
             self.recipOrNoRecipShow(recipPresence=False)
         else:
             self.recipOrNoRecipShow(recipPresence=True)
@@ -6091,7 +6114,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         else:
             self.project.setBorehole(False)
         self.plotManualFiltering()
-        self.elecTable.initTable(self.project.elec)
+        if self.pseudo3DCheck.isChecked() and self.project.pseudo3DSurvey is not None:
+            self.elecTable.initTable(self.project.pseudo3DSurvey.elec)
+        else:
+            self.elecTable.initTable(self.project.elec)
         self.tabImporting.setTabEnabled(1,True)
         if 'ip' in self.project.surveys[0].df.columns:
             if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN

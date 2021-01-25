@@ -6,7 +6,7 @@ Main R2 class, wraps the other ResIPy modules (API) in to an object orientated a
 ResIPy_version = '3.2.1' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
-import os, sys, shutil, platform, warnings, time # python standard libs
+import os, sys, shutil, platform, warnings, time, glob # python standard libs
 from subprocess import PIPE, call, Popen
 import psutil
 from copy import deepcopy
@@ -745,14 +745,14 @@ class Project(object): # Project master class instanciated by the GUI
         os.mkdir(savedir)
         
         # add files to it
-        if self.mesh is not None:
+        if self.mesh is not None and self.pseudo3DSurvey is None:
             self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
         self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False, line_terminator='\n')
         c = 0
         if self.iForward:
             c = 1
         for i, survey in enumerate(self.surveys):
-            f = os.path.join(savedir, 'survey{:d}'.format(i))
+            f = os.path.join(savedir, survey.name)
             survey.df.to_csv(f + '-df.csv', index=False, line_terminator='\n')
             survey.elec.to_csv(f + '-elec.csv', index=False, line_terminator='\n')
             if (c+i < len(self.meshResults)):
@@ -762,10 +762,20 @@ class Project(object): # Project master class instanciated by the GUI
         if self.iBatch or self.iTimeLapse:
             f = os.path.join(savedir, 'bigSurvey')
             self.bigSurvey.df.to_csv(f + '-bigdf.csv', index=False, line_terminator='\n')
+            
+        # pseudo 3D
+        if self.pseudo3DSurvey is not None:
+            f = os.path.join(savedir, 'pseudo3DSurvey')
+            self.pseudo3DSurvey.df.to_csv(f + '-pseudo3Ddf.csv', index=False, line_terminator='\n')
+            self.pseudo3DSurvey.elec.to_csv(f + '-pseudo3Delec.csv', index=False, line_terminator='\n')
+            for proj in self.projs:
+                if proj.mesh is not None:
+                    name = proj.surveys[0].name
+                    proj.mesh.vtk(os.path.join(savedir, '{}-ps3d.vtk'.format(name)))
 
         settings = {'surveysInfo': self.surveysInfo,
                     'darkMode': self.darkMode,
-                    'topo': self.topo.values.tolist() if self.topo is not None else None,
+                    'topo': self.topo.to_dict(),
                     'typ': self.typ,
                     'err': self.err,
                     'iBorehole': self.iBorehole,
@@ -815,9 +825,7 @@ class Project(object): # Project master class instanciated by the GUI
         shutil.rmtree(savedir)
         
         # TODO maybe add a self.uiParams = {} for UI specific parameters?
-
-        
-        
+     
         
     def loadProject(self, fname):
         """Load data from project file.
@@ -844,20 +852,36 @@ class Project(object): # Project master class instanciated by the GUI
         # read files an reconstruct Survey objects
         self.meshResults = []
         self.surveys = []
-        for i in range(100000): # don't think that someone will store so many
-            f = os.path.join(savedir, 'survey{:d}'.format(i))
-            if os.path.exists(f + '-df.csv'):
-                df = pd.read_csv(f + '-df.csv')
-                for c in ['a','b','m','n']:
-                    df[c] = df[c].astype(str)
-                dfelec = pd.read_csv(f + '-elec.csv')
-                dfelec['label'] = dfelec['label'].astype(str)
-                self.surveys.append(Survey(df=df, elec=dfelec)) 
-                elec = dfelec[~dfelec['remote']][['x','y','z']].values
-                if os.path.exists(f + '.vtk'):
-                    mesh = mt.vtk_import(f + '.vtk')
-                    mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
-                    self.meshResults.append(mesh)
+        dfnames = glob.glob(os.path.join(savedir,'*-df.csv'))
+        elecnames = glob.glob(os.path.join(savedir,'*-elec.csv'))
+        for dfname, elecname in zip(dfnames, elecnames): # better than 100000 loops!
+            df = pd.read_csv(dfname)
+            for c in ['a','b','m','n']:
+                df[c] = df[c].astype(str)
+            dfelec = pd.read_csv(elecname)
+            dfelec['label'] = dfelec['label'].astype(str)
+            surveyName = os.path.basename(dfname[:-7])
+            self.surveys.append(Survey(df=df, elec=dfelec, name=surveyName))
+            elec = dfelec[~dfelec['remote']][['x','y','z']].values
+            if os.path.exists(os.path.join(savedir, surveyName + '.vtk')):
+                mesh = mt.vtk_import(os.path.join(savedir, surveyName + '.vtk'))
+                mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
+                self.meshResults.append(mesh)
+            
+        # for i in range(100000): # don't think that someone will store so many
+        #     f = os.path.join(savedir, 'survey{:d}'.format(i))
+        #     if os.path.exists(f + '-df.csv'):
+        #         df = pd.read_csv(f + '-df.csv')
+        #         for c in ['a','b','m','n']:
+        #             df[c] = df[c].astype(str)
+        #         dfelec = pd.read_csv(f + '-elec.csv')
+        #         dfelec['label'] = dfelec['label'].astype(str)
+        #         self.surveys.append(Survey(df=df, elec=dfelec)) 
+        #         elec = dfelec[~dfelec['remote']][['x','y','z']].values
+        #         if os.path.exists(f + '.vtk'):
+        #             mesh = mt.vtk_import(f + '.vtk')
+        #             mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
+        #             self.meshResults.append(mesh)
         
         # batch/time-lapse
         fbig = os.path.join(savedir, 'bigSurvey')
@@ -865,11 +889,11 @@ class Project(object): # Project master class instanciated by the GUI
             df = pd.read_csv(fbig + '-bigdf.csv')
             for c in ['a','b','m','n']:
                 df[c] = df[c].astype(str)
-            self.bigSurvey = Survey(df=self.surveys[0].df, elec=self.surveys[0].elec)
-            self.bigSurvey.df = df.copy() 
-            self.bigSurvey.dfOrigin = df.copy()
-            self.bigSurvey.ndata = df.shape[0]
-            
+            self.bigSurvey = Survey(df=df, elec=self.surveys[0].elec)
+            # self.bigSurvey.df = df.copy() 
+            # self.bigSurvey.dfOrigin = df.copy()
+            # self.bigSurvey.ndata = df.shape[0]
+
         self.elec = pd.read_csv(os.path.join(savedir, 'elec.csv'))
         self.elec['label'] = self.elec['label'].astype(str)
         if os.path.exists(os.path.join(savedir, 'mesh.vtk')):
@@ -881,7 +905,7 @@ class Project(object): # Project master class instanciated by the GUI
             settings = json.load(f)
         self.surveysInfo = settings['surveysInfo']
         self.darkMode = settings['darkMode']
-        self.topo = pd.DataFrame(settings['topo'], columns=['x','y','z']) if settings['topo'] is not None else None
+        self.topo = pd.DataFrame(settings['topo'])
         self.typ = settings['typ']
         self.err = settings['err']
         self.iBorehole = settings['iBorehole']
@@ -917,6 +941,28 @@ class Project(object): # Project master class instanciated by the GUI
             sparams['node_elec'][1] = np.array(sparams['node_elec'][1]).astype(int)
         self.param = sparams
         
+        # pseudo 3D - must be here to take params from self
+        fpseudo3D = os.path.join(savedir, 'pseudo3DSurvey')
+        if os.path.exists(fpseudo3D + '-pseudo3Ddf.csv'):
+            df = pd.read_csv(fpseudo3D + '-pseudo3Ddf.csv')
+            for c in ['a','b','m','n']:
+                df[c] = df[c].astype(str)
+            dfelec = pd.read_csv(fpseudo3D + '-pseudo3Delec.csv')
+            dfelec['label'] = dfelec['label'].astype(str)
+            self.pseudo3DSurvey = Survey(df=df, elec=dfelec)
+            for s in self.surveys:
+                directory = os.path.join(self.dirname, s.name)
+                os.mkdir(directory) # making separate inversion diectories
+                proj = self._createProjects4Pseudo3D(dirname=directory, invtyp=self.typ) # non-parallel meshing
+                proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec)
+                self.projs.append(proj) # appending projects list for later use of meshing and inversion
+                if os.path.exists(os.path.join(savedir, '{}-ps3d.vtk'.format(s.name))):
+                    proj.importMesh(os.path.join(savedir, '{}-ps3d.vtk'.format(s.name)))
+            if self.meshResults != []:
+                for proj, mresult in zip(self.projs, self.meshResults):
+                    proj.meshResults.append(deepcopy(mresult))
+            self._updatePseudo3DSurvey()
+            self.mesh = self.projs[0].mesh # we don't want an empty self.mesh if there are meshes in self.projs
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
                      parser=None, debug=True, **kwargs):
@@ -2559,7 +2605,6 @@ class Project(object): # Project master class instanciated by the GUI
             zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
         # from surface then it is as well the zlimMin)
         self.zlim = [zlimBot, zlimTop]
-        
         self._computePolyTable()
         print('done')
         
@@ -2600,6 +2645,14 @@ class Project(object): # Project master class instanciated by the GUI
             self.param['zmax'] = zmax
             self.param['xy_poly_table'] = xz_poly_table
 
+    
+    def _defineZlim(self):
+        """Computes zlim"""
+        if self.fmd is None:
+            self.computeFineMeshDepth()
+        zlimMax = self.elec['z'].max()
+        zlimMin = self.elec['z'].min() - self.fmd
+        self.zlim = [zlimMin, zlimMax]
         
 
     def importMesh(self, file_path, mesh_type=None, node_pos=None, elec=None,
@@ -2704,12 +2757,8 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh.dat(os.path.join(self.dirname, 'mesh.dat'))
 
         # define zlim
-        if self.fmd is None:
-            self.computeFineMeshDepth()
-        zlimMax = self.elec['z'].max()
-        zlimMin = self.elec['z'].min() - self.fmd
-        self.zlim = [zlimMin, zlimMax]
-        
+        if self.zlim is None:
+            self._defineZlim()
         self._computePolyTable()
         
 
@@ -4138,6 +4187,8 @@ class Project(object): # Project master class instanciated by the GUI
             if addAction is not None:
                 addAction()
         self.mesh.atribute_title = 'Regions'
+        if self.zlim is None:
+            self._defineZlim()
         self.mesh.show(attr='region', ax=ax, zlim=self.zlim, darkMode=self.darkMode)
         # we need to assign a selector to self otherwise it's not used
         self.selector = SelectPoints(ax, self.mesh.elmCentre[:,[0,2]],
