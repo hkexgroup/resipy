@@ -889,10 +889,10 @@ class Project(object): # Project master class instanciated by the GUI
             df = pd.read_csv(fbig + '-bigdf.csv')
             for c in ['a','b','m','n']:
                 df[c] = df[c].astype(str)
-            self.bigSurvey = Survey(df=df, elec=self.surveys[0].elec)
-            # self.bigSurvey.df = df.copy() 
-            # self.bigSurvey.dfOrigin = df.copy()
-            # self.bigSurvey.ndata = df.shape[0]
+            self.bigSurvey = Survey(df=self.surveys[0].df, elec=self.surveys[0].elec)
+            self.bigSurvey.df = df.copy() 
+            self.bigSurvey.dfOrigin = df.copy()
+            self.bigSurvey.ndata = df.shape[0]
 
         self.elec = pd.read_csv(os.path.join(savedir, 'elec.csv'))
         self.elec['label'] = self.elec['label'].astype(str)

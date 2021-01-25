@@ -1184,6 +1184,8 @@ class App(QMainWindow):
                     if 'ip' in self.project.pseudo3DSurvey.df.columns:
                         if np.sum(self.project.pseudo3DSurvey.df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
+                            for proj in self.project.projs:
+                                proj.typ = 'cR2'
                         if self.ftype == 'Syscal':
                             self.dcaButton.setEnabled(True)
                             self.dcaProgress.setEnabled(True)               
