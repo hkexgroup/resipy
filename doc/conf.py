@@ -54,7 +54,7 @@ numpydoc_show_class_members = False
 example_gallery_config = {
     'examples_dirs': '../jupyter-notebook',
     'gallery_dirs': 'auto_examples',
-    'dont_preprocess': ['../jupyter-notebook/nb_Morris.ipynb', '../jupyter-notebook/nb_3d-visualisation.ipynb', '../jupyter-notebook/nb_pseudo3dsurvey.ipynb', '../jupyter-notebook/nb_3d-time-lapse.ipynb', '../jupyter-notebook/nb_3d-from-2d-lines.ipynb', '../jupyter-notebook/nb_3d-column-timelapse.ipynb'], # all 3D notebooks are note well handled by sphinx and pyvista on docker image (causes kernel to crash) - but works fine locally
+    'dont_preprocess': ['../jupyter-notebook/nb_Morris.ipynb', '../jupyter-notebook/nb_3d-visualisation.ipynb', '../jupyter-notebook/nb_pseudo3dsurvey.ipynb', '../jupyter-notebook/nb_3d-time-lapse.ipynb', '../jupyter-notebook/nb_3d-from-2d-lines.ipynb', '../jupyter-notebook/nb_3d-column-time-lapse.ipynb'], # all 3D notebooks are note well handled by sphinx and pyvista on docker image (causes kernel to crash) - but works fine locally
     'pattern': 'nb_.+.ipynb',
     'urls': 'https://github.com/hkexgroup/resipy/blob/master/jupyter-notebook/', # for nb_viewer but doesn't work as only github is supported
     'binder_url': 'https://mybinder.org/v2/gl/hkex%2Fresipy/stable?filepath=jupyter-notebook',
