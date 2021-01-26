@@ -572,7 +572,7 @@ k = Project(typ='cR3t')
 k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
-k.createMesh(cl=5)
+k.createMesh()#cl=5)
 k.showMesh(use_pyvista=use_pyvista)
 
 k.invert()
