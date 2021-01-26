@@ -587,11 +587,11 @@ timings['ip-3d'] = time.time() - t0
 
 
 #%% 3D column mesh -- forward modelling for 3D too 
-print('----------- Testing 3D Column inversion -----------')
+print('----------- Testing 3D Column prism with fwd and inv -----------')
 t0 = time.time()
 
 k = Project(typ='R3t') # create R2 class
-k.importElec(testdir + 'dc-3d-column/elec.csv') # import electrodes 
+k.importElec(testdir + 'dc-3d-column-prism/elec.csv') # import electrodes 
 k.createMesh(typ='prism',cl=0.1,elemz=2)
 
 #assign regions of resistivity 
@@ -633,6 +633,24 @@ k.showResults(index=1, use_pyvista=use_pyvista) #show result
 
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d-column-mesh'] = time.time() - t0
+
+
+#%% test 3D column inversion on tetrahedral mesh
+print('---------- Testing 3D columns tetrahedral ------------')
+t0 = time.time()
+k = Project(typ='R3t')
+k.createSurvey(testdir + 'dc-3d-column/protocol.dat', ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-column/elec.csv')
+k.importMesh(testdir + 'dc-3d-column/mesh.msh')
+k.param['num_xy_poly'] = 0
+k.param['zmin'] = -np.inf
+k.param['zmax'] = np.inf
+k.invert()
+k.showResults(use_pyvista=use_pyvista)
+
+print('elapsed: {:.4}s'.format(time.time() - t0))
+timings['dc-3d-column-mesh'] = time.time() - t0
+
 
 #%% test timelapse 3D -- takes a long time
 print('----------- Testing 3D time-lapse inversion -----------')
