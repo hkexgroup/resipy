@@ -2697,7 +2697,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         #add the electrodes to the R2 class
         if elec is not None or node_pos is not None: # then electrode positions should be known
-            self.setElec(np.array((self.mesh.elec_x, self.mesh.elec_y, self.mesh.elec_z)).T)
+            self.setElec(mesh.elec)
         else:
             try:
                 elec = self.elec[['x','y','z']].values
