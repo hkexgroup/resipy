@@ -519,7 +519,7 @@ k.importElec(testdir + 'dc-3d/elec.csv')
 k.typ = 'R2'
 k.elec2distance()
 
-k = Project(typ='R3t',dirname='/home/jimmy/Desktop/invdir-test')
+k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 # k.showPseudo(threed=True) # only tested in pyvista setup   
