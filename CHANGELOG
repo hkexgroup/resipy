@@ -1,3 +1,11 @@
+v3.2.2
+------
+- Bug fix: Ordering of neighbour matrix for advanced mesh format
+- Bug fix: Pseudo 3D IP 
+- Bug fix: Batch project saving/loading
+- Bug fix: Minor UI fixes
+- Adding column mesh examples
+
 v3.2.0
 ------
 - Pseudo 3D survey from any 2D surveys
