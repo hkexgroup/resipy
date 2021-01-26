@@ -194,12 +194,12 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int npere = 4
     #face arrays 
     cdef long[:] face = np.zeros(3,dtype=int)
-    # cdef long[:] a = np.asarray([1,0,0,0], dtype=int) #does not work for refined mesh, no idea why 
-    # cdef long[:] b = np.asarray([2,3,1,1], dtype=int)  
-    # cdef long[:] c = np.asarray([3,2,3,2], dtype=int)  
-    cdef long[:] a = np.asarray([0,0,0,1], dtype=int)
-    cdef long[:] b = np.asarray([1,1,2,2], dtype=int)  
-    cdef long[:] c = np.asarray([2,3,3,3], dtype=int)  
+    cdef long[:] a = np.asarray([1,0,0,0], dtype=int) #does not work for refined mesh, no idea why 
+    cdef long[:] b = np.asarray([2,2,1,1], dtype=int)  
+    cdef long[:] c = np.asarray([3,3,3,2], dtype=int)  
+    # cdef long[:] a = np.asarray([0,0,0,1], dtype=int)
+    # cdef long[:] b = np.asarray([1,1,2,2], dtype=int)  
+    # cdef long[:] c = np.asarray([2,3,3,3], dtype=int)  
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,4),dtype=np.int64 ,order='C') # allocate space for tri_combo 
     cdef long long[:,:] tri_combov = tri_combo
