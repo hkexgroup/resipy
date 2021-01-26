@@ -2898,12 +2898,7 @@ class Mesh:
                 self.computeNeigh()
             neigh = self.neigh_matrix.copy()
             
-            #check if neigh parameters == element number 
-            # if np.max(param) != self.numel:
-            #     neigh = param[neigh]
-            # else:
-            neigh += 1 
-            param = np.arange(self.numel) + 1
+            neigh += 1 # add one for FOTRAN indexing 
             
             if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
                 self.computeNconnec()
