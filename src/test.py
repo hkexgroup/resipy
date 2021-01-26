@@ -558,6 +558,8 @@ k.showSlice(axis='x')
 k.showSlice(axis='y')
 #mesh calculations 
 k.mesh.exportTetgenMesh(testdir + 'mesh/tetgen_test')
+shutil.rmtree(testdir + 'mesh/tetgen_test') # let's leave the example clean as
+# we embeded them in the UI for distribution
 smesh = k.mesh.extractSurface() # this test mesh.computeNiegh as well 
 tmesh = k.meshResults[0].threshold(attr='Resistivity(ohm.m)',vmin=20,vmax=100)
 print('elapsed: {:.4}s'.format(time.time() - t0))
