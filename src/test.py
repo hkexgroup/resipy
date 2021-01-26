@@ -639,9 +639,9 @@ timings['dc-3d-column-mesh'] = time.time() - t0
 print('---------- Testing 3D columns tetrahedral ------------')
 t0 = time.time()
 k = Project(typ='R3t')
-k.createSurvey(testdir + 'dc-3d-column/protocol.dat', ftype='ProtocolDC')
-k.importElec(testdir + 'dc-3d-column/elec.csv')
-k.importMesh(testdir + 'dc-3d-column/mesh.msh')
+k.createSurvey(testdir + 'dc-3d-timelapse-column/protocol.dat', ftype='ProtocolDC')
+k.importElec(testdir + 'dc-3d-timelapse-column/elec.csv')
+k.importMesh(testdir + 'dc-3d-timelapse-column/mesh.msh')
 k.param['num_xy_poly'] = 0
 k.param['zmin'] = -np.inf
 k.param['zmax'] = np.inf
