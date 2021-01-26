@@ -3693,6 +3693,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
                     self.mesh = mesh # should update this based on current mesh to get right limits
                     self.zlim = self.projs[index].zlim
+                    self.fmd = self.projs[index].fmd
                 if zlim is None:
                     zlim = self.zlim
                 mesh.show(ax=ax, edge_color=edge_color, darkMode=self.darkMode,
