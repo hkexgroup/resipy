@@ -519,7 +519,7 @@ k.importElec(testdir + 'dc-3d/elec.csv')
 k.typ = 'R2'
 k.elec2distance()
 
-k = Project(typ='R3t')
+k = Project(typ='R3t',dirname='/home/jimmy/Desktop/invdir-test')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 # k.showPseudo(threed=True) # only tested in pyvista setup   
@@ -547,8 +547,8 @@ t0 = time.time()
 k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
-k.importMesh(testdir + 'mesh/mesh3D.vtk')
-rmesh = k.mesh.refine() # test refining mesh 
+k.importMesh(testdir + 'mesh/coarse3D.vtk')
+k.mesh = k.mesh.refine() # test refining mesh 
 k.addFlatError()
 k.invert()
 
@@ -572,7 +572,7 @@ k = Project(typ='cR3t')
 k.createSurvey(testdir + 'ip-3d/protocol2.dat', ftype='ProtocolIP')
 k.importElec(testdir + 'ip-3d/elec2.csv')
 k.param['min_error'] = 0.0
-k.createMesh(cl=5)
+k.createMesh(cl=3)
 k.showMesh(use_pyvista=use_pyvista)
 
 k.invert()

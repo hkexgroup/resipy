@@ -189,17 +189,15 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
         connection matrix
     """
     
-    cdef int i, j, tid #thread indexing 
+    cdef int i, j, k #indexing 
     cdef int numel = connection.shape[0]
     cdef int npere = 4
     #face arrays 
     cdef long[:] face = np.zeros(3,dtype=int)
-    # cdef long[:] a = np.asarray([1,0,0,0], dtype=int) #does not work for refined mesh, no idea why 
-    # cdef long[:] b = np.asarray([2,3,1,1], dtype=int)  
-    # cdef long[:] c = np.asarray([3,2,3,2], dtype=int)  
-    cdef long[:] a = np.asarray([0,0,0,1], dtype=int)
-    cdef long[:] b = np.asarray([1,1,2,2], dtype=int)  
-    cdef long[:] c = np.asarray([2,3,3,3], dtype=int)  
+    cdef long[:] a = np.asarray([1,0,0,0], dtype=int) #does not work for refined mesh, no idea why 
+    cdef long[:] b = np.asarray([2,3,1,1], dtype=int)  
+    cdef long[:] c = np.asarray([3,2,3,2], dtype=int)  
+
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,4),dtype=np.int64 ,order='C') # allocate space for tri_combo 
     cdef long long[:,:] tri_combov = tri_combo
@@ -233,7 +231,8 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
 
     cdef long long o, idx
     #create lookup array 
-    cdef np.ndarray[long, ndim=1] lookup = np.zeros((numel*4),dtype=int)
+    cdef np.ndarray[long, ndim=1] lookup = np.zeros(numel*4,dtype=int)
+
     for i in range(numel):
         lookup[i] = i
         lookup[i+numel] = i
@@ -263,9 +262,21 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
             else:
                 idx = lookup_idxv[o]
             neighv[i,j] = idx
+            
+    #reorder each row (acsending but outside elements at end of row) 
+    cdef long mr_big = numel*2 #make a big number 
+    for i in range(numel):
+        for j in range(npere):
+            if neighv[i,j] == -1: #check if outside element 
+                neighv[i,j] = mr_big # if outside assign big number 
+                
+        sortInt(neigh[i,:],4) # sort in that part of the row
+        for j in range(npere):
+            if neighv[i,j] == mr_big: # replace outside values with -1 
+                neighv[i,j] = -1
     
     if return_tri_combo==1:
-        return neigh,tri_combo
+        return neigh, tri_combo
     else:
         return neigh
     
@@ -444,7 +455,7 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
     
     cdef int i, j
     cdef int numel = connection.shape[0]
-    cdef int npere = 6
+    cdef int npere = 5
     #face arrays 
     cdef long[:] faces = np.zeros(4,dtype=int) # face on side 
     cdef long[:] facet = np.zeros(3,dtype=int) # face on top / bottom 
@@ -514,7 +525,7 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
   
     #loop is parallel becuase it can be intense
     for i in prange(numel,nogil=True,num_threads=num_threads,schedule='dynamic'):
-        for j in range(5):
+        for j in range(npere):
             o = bisection_search(tri_sortv,tri_combov[i,j]) # only works on a sorted array
             #find the reference index
             if lookup_idxv[o]==i:# then there are 2 options 
@@ -532,6 +543,18 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
             else:
                 idx = lookup_idxv[o]
             neighv[i,j] = idx
+            
+    #reorder each row (acsending but outside elements at end of row) 
+    cdef long mr_big = numel*2 #make a big number 
+    for i in range(numel):
+        for j in range(npere):
+            if neighv[i,j] == -1: #check if outside element 
+                neighv[i,j] = mr_big # if outside assign big number 
+                
+        sortInt(neigh[i,:],npere) # sort in that part of the row
+        for j in range(npere):
+            if neighv[i,j] == mr_big: # replace outside values with -1 
+                neighv[i,j] = -1
     
     if return_tri_combo==1:
         return neigh,tri_combo
