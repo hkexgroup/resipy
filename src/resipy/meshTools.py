@@ -2810,9 +2810,6 @@ class Mesh:
             raise TypeError("expected string argument for file_path")
         ### write data to mesh.dat kind of file ###
         #open mesh.dat for input      
-        node_x = self.node[:,0]
-        node_y = self.node[:,1]
-        node_z = self.node[:,2]
         with open(file_path, 'w') as fid:
             #write to mesh.dat total num of elements and nodes
             # find furthest node from first electrode to be dirichlet node
@@ -2845,21 +2842,14 @@ class Mesh:
     
             #now add nodes
             if self.ndims == 3:
-                for i in range(self.numnp):
-                    ni_no=i+1
-                    fid.write("%i %16.8f %16.8f %16.8f\n"%#node number, x coordinate, y coordinate, z coordinate
-                              (ni_no,
-                               node_x[i],
-                               node_y[i],
-                               node_z[i]))
-                fid.write('{:d}'.format(idirichlet))
+                nidx = [0,1,2]
             else:
-                for i in range(self.numnp):
-                    ni_no=i+1
-                    fid.write("%i %16.8f %16.8f\n"%#node number, x coordinate, y coordinate
-                              (ni_no,
-                               node_x[i],
-                               node_z[i]))
+                nidx = [0,2]
+                
+            for i in range(self.numnp):
+                fid.write('{:<16d} '.format(i+1)) # node number 
+                [fid.write('{:<16.8f} '.format(self.node[i,k])) for k in nidx] # node coordinates 
+                fid.write('\n')#drop down a line 
                     
     def datAdv(self, file_path='mesh.dat'):
         """Write a mesh.dat kind of file for mesh input for R2/R3t. Advanced format
@@ -2889,19 +2879,17 @@ class Mesh:
         except:
             zone = np.ones(self.numel,dtype=int)
             
-        adv = True # hard coded ... advanced format always true for now
-        adv_flag = 0 
-        if adv: #if advanced mode
-            adv_flag = 1
-            #compute neighbourhood matrix 
-            if self.neigh_matrix is None:
-                self.computeNeigh()
-            neigh = self.neigh_matrix.copy()
             
-            neigh += 1 # add one for FOTRAN indexing 
-            
-            if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
-                self.computeNconnec()
+        adv_flag = 1
+        #compute neighbourhood matrix 
+        if self.neigh_matrix is None:
+            self.computeNeigh()
+        neigh = self.neigh_matrix.copy()
+        neigh = mc.sortNeigh(neigh) # organise for (c)R3t input  
+        neigh += 1 # add one for FOTRAN indexing 
+        
+        if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
+            self.computeNconnec()
             
         # NsizeA = self.NsizeA
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
@@ -2919,8 +2907,8 @@ class Mesh:
                 fid.write("{:<16d} ".format(i+1)) # add element number 
                 [fid.write("{:<16d} ".format(self.connection[i,k]+1)) for k in range(no_verts)] # connection matrix 
                 fid.write("{:<16d} {:<16d} ".format(param[i],zone[i])) # parameter and zones 
-                if adv: # add neighbours in advanced mode
-                    [fid.write('{:<16d} '.format(neigh[i,k])) for k in range(neigh.shape[1])]#add neighbours 
+                # add neighbours in advanced mode
+                [fid.write('{:<16d} '.format(neigh[i,k])) for k in range(neigh.shape[1])]#add neighbours 
                 fid.write('\n')#drop down a line 
     
             #now add nodes
@@ -2932,8 +2920,8 @@ class Mesh:
             for i in range(self.numnp):
                 fid.write('{:<16d} '.format(i+1)) # node number 
                 [fid.write('{:<16.8f} '.format(self.node[i,k])) for k in nidx] # node coordinates 
-                if adv: #add conductance matrix in advanced mode 
-                    [fid.write('{:<16d} '.format(fconm[i,k])) for k in range(fconm.shape[1])] 
+                #add conductance matrix in advanced mode 
+                [fid.write('{:<16d} '.format(fconm[i,k])) for k in range(fconm.shape[1])] 
                 fid.write('\n')#drop down a line 
 
             if self.ndims==3: 
