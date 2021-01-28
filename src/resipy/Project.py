@@ -3,7 +3,7 @@
 Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
 @author: Guillaume, Sina, Jimmy and Paul
 """
-ResIPy_version = '3.2.1' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.2.2' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -2697,7 +2697,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         #add the electrodes to the R2 class
         if elec is not None or node_pos is not None: # then electrode positions should be known
-            self.setElec(np.array((self.mesh.elec_x, self.mesh.elec_y, self.mesh.elec_z)).T)
+            self.setElec(mesh.elec)
         else:
             try:
                 elec = self.elec[['x','y','z']].values
