@@ -207,7 +207,7 @@ k.createMesh('cylinder', zlim=[0, 47.5], cl=0.8)
 
 
 # specific mesh import
-mesh = mt.tetgen_import(testdir + 'mesh/tetgen_test.1.node')
+#mesh = mt.tetgen_import(testdir + 'mesh/tetgen_test.1.node')
 
 
 timings['methods-meshing'] = time.time() - tstart
