@@ -1311,7 +1311,8 @@ class Project(object): # Project master class instanciated by the GUI
         for elecdf, proj, survey in zip(elecList, self.projs, self.surveys):
             survey.elec = elecdf.copy()
             proj.setElec(elecdf.copy())
-            proj.surveys[0].df = survey.df.copy()               
+            proj.surveys[0].df = survey.df.copy()
+            proj.typ = self.typ              
 
 
     def split3DGrid(self, elec=None, changeLabel=True):

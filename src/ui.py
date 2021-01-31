@@ -1325,6 +1325,7 @@ class App(QMainWindow):
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
+            self.project._updatePseudo3DSurvey()
             pdebug('ipCheckFunc: mode =', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
