@@ -1371,21 +1371,19 @@ class Project(object): # Project master class instanciated by the GUI
         for elecdf in elecList:
             # transforming line to start from x, y = 0
             ie = elecdf[~elecdf['remote']].index.values
-            elecdf.loc[ie,'x'] = elecdf.loc[ie,'x'].values - elecdf.loc[ie[0],'x']
-            elecdf.loc[ie,'y'] = elecdf.loc[ie,'y'].values - elecdf.loc[ie[0],'y']
-
+            elecdf.loc[ie,'x'] = elecdf.loc[ie,'x'].values - elecdf.loc[np.argmin(elecdf.loc[ie,'x']),'x']
+            elecdf.loc[ie,'y'] = elecdf.loc[ie,'y'].values - elecdf.loc[np.argmin(elecdf.loc[ie,'x']),'y']
             delx = elecdf.loc[ie,'x'].max() - elecdf.loc[ie,'x'].min()
             dely = elecdf.loc[ie,'y'].max() - elecdf.loc[ie,'y'].min()
             f = np.inf if delx == 0 else np.abs((dely)/(delx))
             rotangle = np.arctan(f)
-            if elecdf.loc[ie,'y'].values[0] > elecdf.loc[ie,'y'].values[-1]: # CCW rotation needed
+            if elecdf.loc[np.argmin(elecdf.loc[ie,'x']),'y'] > elecdf.loc[np.argmax(elecdf.loc[ie,'x']),'y']: # CCW rotation needed
                 rotangle *= -1
             # rotation     
             rotmat = np.array([[np.cos(rotangle), np.sin(rotangle)], 
-                               [-np.sin(rotangle), np.cos(rotangle)]])
+                                [-np.sin(rotangle), np.cos(rotangle)]])
             xy = np.array([elecdf.loc[ie,'x'].values, elecdf.loc[ie,'y'].values])
             newmat = np.dot(rotmat, xy).T
-            
             elecdf.loc[ie,'x'] = newmat[:,0].copy()
             elecdf['y'] = 0 # to make sure we don't end up with super small values
                         
