@@ -262,18 +262,6 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
             else:
                 idx = lookup_idxv[o]
             neighv[i,j] = idx
-            
-    #reorder each row (acsending but outside elements at end of row) 
-    cdef long mr_big = numel*2 #make a big number 
-    for i in range(numel):
-        for j in range(npere):
-            if neighv[i,j] == -1: #check if outside element 
-                neighv[i,j] = mr_big # if outside assign big number 
-                
-        sortInt(neigh[i,:],4) # sort in that part of the row
-        for j in range(npere):
-            if neighv[i,j] == mr_big: # replace outside values with -1 
-                neighv[i,j] = -1
     
     if return_tri_combo==1:
         return neigh, tri_combo
@@ -543,18 +531,6 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
             else:
                 idx = lookup_idxv[o]
             neighv[i,j] = idx
-            
-    #reorder each row (acsending but outside elements at end of row) 
-    cdef long mr_big = numel*2 #make a big number 
-    for i in range(numel):
-        for j in range(npere):
-            if neighv[i,j] == -1: #check if outside element 
-                neighv[i,j] = mr_big # if outside assign big number 
-                
-        sortInt(neigh[i,:],npere) # sort in that part of the row
-        for j in range(npere):
-            if neighv[i,j] == mr_big: # replace outside values with -1 
-                neighv[i,j] = -1
     
     if return_tri_combo==1:
         return neigh,tri_combo
@@ -627,7 +603,39 @@ def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
             vertices.append(vert)
         fcoords[i] = vertices 
         
-    return fcoords, idxo 
+    return fcoords, idxo
+ 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def sortNeigh(np.ndarray[long, ndim=2] neigh):
+    """Sort neighbour matrix for input into R3t. 
+    -----------
+    neigh: nd array 
+        M by N describing element neighbours 
+        
+    Returns
+    -----------
+    new_connection: np array 
+    neigh: nd array
+        Prepared neighbour matrix 
+    """
+    cdef int numel = neigh.shape[0]
+    cdef int npere = neigh.shape[1]
+    cdef long[:,:] neighv = neigh
+    
+    #reorder each row (acsending but outside elements at end of row) 
+    cdef long like_inf = numel*2 #make a big number 
+    for i in range(numel):
+        for j in range(npere):
+            if neighv[i,j] == -1: #check if outside element 
+                neighv[i,j] = like_inf # if outside assign big number 
+                
+        sortInt(neigh[i,:],npere) # sort in that part of the row
+        for j in range(npere):
+            if neighv[i,j] == like_inf: # replace outside values with -1 
+                neighv[i,j] = -1
+    return neigh
+                
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
