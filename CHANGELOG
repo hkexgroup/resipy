@@ -1,5 +1,7 @@
-v3.2.2
+v3.2.3
 ------
+- Bug fix: Pseudo 3D rotation of 2D meshes and UTM coordinates
+---- v3.2.2 ----
 - Bug fix: Ordering of neighbor matrix for advanced mesh format
 - Bug fix: Pseudo 3D IP 
 - Bug fix: Batch project saving/loading
