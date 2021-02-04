@@ -2132,8 +2132,10 @@ class App(QMainWindow):
                     self.nbElecEdit.setText('%s' % (len(elec)))
     #                self.nbElecEdit.setEnabled(False)
                     self.elecDxEdit.setText('%s' % (espacing))
+                    self.activateTabs(True)
                     return elec, df
                 except:
+                    self.activateTabs(False)
                     self.errorDump("Import Failed: 'nan' values must be removed before importation. Use the 'Number of rows to read or skip' to remove 'nan's.")
             self.parser = parserFunc
 
