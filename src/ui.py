@@ -1902,7 +1902,7 @@ class App(QMainWindow):
 
         self.fnameManual = None
         def openFileBtnFunc(file):
-            fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,'Open File')
+            fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,'Open File', directory=self.datadir)
             if fname != '':
                 self.fnameManual = fname
                 self.openFileBtn.setText(fname + ' (Click to change)')
@@ -3459,7 +3459,7 @@ class App(QMainWindow):
                 return
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir)
             if fname != '':
-                # try:
+                try:
                     self.project.importMesh(fname)
                     self.writeLog('k.importMesh("{:s}")'.format(fname))
                     print('mesh imported ... now displaying ... ')
@@ -3470,8 +3470,8 @@ class App(QMainWindow):
                         self.mwMesh3D.plot(self.project.showMesh, threed=True)
                     self.writeLog('k.showMesh()')
                     self.meshOutputStack.setCurrentIndex(2)
-                # except Exception as e:
-                #     self.errorDump('Error importing mesh' + str(e))
+                except Exception as e:
+                    self.errorDump('Error importing mesh' + str(e))
         self.importCustomMeshBtn = QPushButton('Import Custom Mesh')
         self.importCustomMeshBtn.setFixedWidth(150)
         self.importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
