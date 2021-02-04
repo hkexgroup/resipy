@@ -1338,7 +1338,7 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                elec = self.elec.copy()
         elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
-        elecGroups = elec.groupby('lineNum')
+        elecGroups = elec.groupby('lineNum', sort=False, as_index=False)
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
         elecList = []
         for elecdfRaw in elecdfs:
