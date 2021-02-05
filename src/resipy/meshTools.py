@@ -1152,12 +1152,21 @@ class Mesh:
             zlim=[min(self.node[:,2]), max(self.node[:,2])]
         # why not truncate as well to electrode extent?
         
-        elm_x = self.elmCentre[:,0]
-        elm_y = self.elmCentre[:,1]
-        elm_z = self.elmCentre[:,2]
-        ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
-             (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
-             (elm_z > zlim[0]) & (elm_z < zlim[1])
+        # elm_x = self.elmCentre[:,0]
+        # elm_y = self.elmCentre[:,1]
+        # elm_z = self.elmCentre[:,2]
+        # ie = (elm_x > xlim[0]) & (elm_x < xlim[1]) &\
+        #      (elm_y > ylim[0]) & (elm_y < ylim[1]) &\
+        #      (elm_z > zlim[0]) & (elm_z < zlim[1])
+             
+        # we keep all the elements which have at least 1 node inside
+        # the zone of interest
+        ie = (self.node[self.connection,0] > xlim[0]).any(1) &\
+             (self.node[self.connection,1] > ylim[0]).any(1) &\
+             (self.node[self.connection,2] > zlim[0]).any(1) &\
+             (self.node[self.connection,0] < xlim[1]).any(1) &\
+             (self.node[self.connection,1] < xlim[1]).any(1) &\
+             (self.node[self.connection,2] < xlim[1]).any(1)
                      
         nmesh = self.copy() # make a new mesh object with fewer elements 
         nmesh.df = nmesh.df[ie].reset_index(drop=True)
