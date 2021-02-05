@@ -3295,6 +3295,7 @@ class App(QMainWindow):
 
 
         def meshTetraFunc():
+            self.regionTable.reset()
             if self.project.mproc is not None:
                 print('killing')
                 self.project.mproc.kill()
