@@ -4768,9 +4768,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
     
                 # invert
                 # TODO run inversion in different thread to not block the UI
-                modErr=self.modErrCheck.isChecked()
-                parallel=self.parallelCheck.isChecked()
-                modelDOI=self.modelDOICheck.isChecked()
+                modErr = self.modErrCheck.isChecked()
+                parallel = self.parallelCheck.isChecked()
+                modelDOI = self.modelDOICheck.isChecked()
             
                 self.project.invert(iplot=False, dump=logTextFunc,
                                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
@@ -4788,9 +4788,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.end = False
                     self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
                 
-                if any(self.project.mesh.df['param'] == 0): # if fixed element are present, the mesh
-                # will be sorted, meaning we need to replot it
-                    self.mwMesh.replot()
+                # if fixed elements are present, the mesh will be automatically
+                # sorted at writing time, meaning we need to replot it
+                # in the mesh tab
+                if any(self.project.mesh.df['param'] == 0):
+                    if (self.project.typ == 'R3t') | (self.typ == 'cR3t'):
+                        if pvfound:
+                            self.mesh3Dplotter.clear() # clear all actors 
+                            self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                        else:
+                            self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                    else:
+                        replotMesh() # 2D only
             
             # show results
             if self.end is True:
