@@ -1312,7 +1312,8 @@ class Project(object): # Project master class instanciated by the GUI
             survey.elec = elecdf.copy()
             proj.setElec(elecdf.copy())
             proj.surveys[0].df = survey.df.copy()
-            proj.typ = self.typ              
+            proj.typ = self.typ    
+            proj.err = self.err
 
 
     def split3DGrid(self, elec=None, changeLabel=True):
@@ -1577,6 +1578,8 @@ class Project(object): # Project master class instanciated by the GUI
         # kill management
         self.procs = []
         self.proc = ProcsManagement(self)
+        
+        self._updatePseudo3DSurvey() # make sure we have set all attributes
                 
         self.meshResults = [] # clean meshResults list
         for proj in self.projs: # preparing inversion params
