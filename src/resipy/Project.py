@@ -1338,7 +1338,7 @@ class Project(object): # Project master class instanciated by the GUI
             else:
                elec = self.elec.copy()
         elec[['lineNum', 'elecNum']] = elec['label'].str.split(expand=True)
-        elecGroups = elec.groupby('lineNum', sort=False, as_index=False)
+        elecGroups = elec.groupby('lineNum', sort=False)#, as_index=False)
         elecdfs = [elecGroups.get_group(x) for x in elecGroups.groups]
         elecList = []
         for elecdfRaw in elecdfs:
@@ -1373,7 +1373,10 @@ class Project(object): # Project master class instanciated by the GUI
             # transforming line to start from x, y = 0
             ie = elecdf[~elecdf['remote']].index.values
             elecdf.loc[ie,'x'] = elecdf.loc[ie,'x'].values - elecdf.loc[np.argmin(elecdf.loc[ie,'x']),'x']
-            elecdf.loc[ie,'y'] = elecdf.loc[ie,'y'].values - elecdf.loc[np.argmin(elecdf.loc[ie,'x']),'y']
+            if np.all(elecdf.loc[ie,'x'] == elecdf.loc[0,'x']): # line is vertical
+                elecdf.loc[ie,'y'] = elecdf.loc[ie,'y'].values - elecdf.loc[np.argmin(elecdf.loc[ie,'y']),'y']
+            else:
+                elecdf.loc[ie,'y'] = elecdf.loc[ie,'y'].values - elecdf.loc[np.argmin(elecdf.loc[ie,'x']),'y']
             delx = elecdf.loc[ie,'x'].max() - elecdf.loc[ie,'x'].min()
             dely = elecdf.loc[ie,'y'].max() - elecdf.loc[ie,'y'].min()
             f = np.inf if delx == 0 else np.abs((dely)/(delx))
@@ -1463,16 +1466,16 @@ class Project(object): # Project master class instanciated by the GUI
         
         elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
                 
-        elec = []
-        for elecdf in elecList: # removing remote electrodes from 3D grid
-            elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
-        matx = []
-        maty = []
-        for elecarr in elec:
-            matx.extend(np.unique(elecarr[:,0])) 
-            maty.extend(np.unique(elecarr[:,1])) 
-        xlimi = findminmax(matx)
-        ylimi = findminmax(maty)
+        # elec = []
+        # for elecdf in elecList: # removing remote electrodes from 3D grid
+        #     elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
+        # matx = []
+        # maty = []
+        # for elecarr in elec:
+        #     matx.extend(np.unique(elecarr[:,0])) 
+        #     maty.extend(np.unique(elecarr[:,1])) 
+        # xlimi = findminmax(matx)
+        # ylimi = findminmax(maty)
         if returnMesh:
             meshOutList = []
             
@@ -1497,18 +1500,20 @@ class Project(object): # Project master class instanciated by the GUI
                     verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
                                   np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
                 mesh = mesh.crop(verts)
-                limits = proj.elec[['x','y']].values[~proj.elec['remote'].values,:]
-            else:
-                limits = np.c_[mesh.node[:,0], mesh.node[:,1]]
 
             meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
+            
+            if cropMesh:
+                limits = np.c_[meshMoved.elec[:,0][~meshMoved.iremote], meshMoved.elec[:,1][~meshMoved.iremote]]
+            else:
+                limits = np.c_[meshMoved.node[:,0], meshMoved.node[:,1]]
 
             xlim = findminmax(limits[:,0])
             ylim = findminmax(limits[:,1])
-            xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
-            ylim[0] = ylim[0] if ylim[0] < ylimi[0] else ylimi[0]
-            xlim[1] = xlim[1] if xlim[1] > xlimi[1] else xlimi[1]
-            ylim[1] = ylim[1] if ylim[1] > ylimi[1] else ylimi[1]
+            # xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
+            # ylim[0] = ylim[0] if ylim[0] < ylimi[0] else ylimi[0]
+            # xlim[1] = xlim[1] if xlim[1] > xlimi[1] else xlimi[1]
+            # ylim[1] = ylim[1] if ylim[1] > ylimi[1] else ylimi[1]
             zlim = proj.zlim
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,

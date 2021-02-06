@@ -673,8 +673,8 @@ timings['dc-3d-timelapse'] = time.time() - t0
 print('----------- Testing pseudo 3D inversion -----------')
 t0 = time.time()
 k = Project(typ='R2')
-k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
-                 ftype='Syscal')
+k.createPseudo3DSurvey(testdir + 'dc-3d-pseudo3d-synthetic/data', lineSpacing=1,
+                 ftype='ProtocolDC')
 
 ## manually setting up electrodes
 ## rotating middle electrodes line here
@@ -692,7 +692,7 @@ k.createPseudo3DSurvey(testdir + 'dc-2d-timelapse/data', lineSpacing=1,
 # k._updatePseudo3DSurvey()
 
 ## or load the files with 3D-like labels for elec positions of all lines
-k.importPseudo3DElec(testdir + 'dc-2d-timelapse/elec3pseudo3D.csv')
+k.importPseudo3DElec(testdir + 'dc-3d-pseudo3d-synthetic/lines-elec.csv')
 k.createMultiMesh(typ='trian', runParallel=True)
 # k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)

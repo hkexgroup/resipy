@@ -1165,8 +1165,8 @@ class Mesh:
              (self.node[self.connection,1] > ylim[0]).any(1) &\
              (self.node[self.connection,2] > zlim[0]).any(1) &\
              (self.node[self.connection,0] < xlim[1]).any(1) &\
-             (self.node[self.connection,1] < xlim[1]).any(1) &\
-             (self.node[self.connection,2] < xlim[1]).any(1)
+             (self.node[self.connection,1] < ylim[1]).any(1) &\
+             (self.node[self.connection,2] < zlim[1]).any(1)
                      
         nmesh = self.copy() # make a new mesh object with fewer elements 
         nmesh.df = nmesh.df[ie].reset_index(drop=True)
@@ -3470,14 +3470,14 @@ def moveMesh2D(meshObject, elecLocal, elecGrid):
     yGrid = elecGrid['y'][~elecGrid['remote']].copy().values
     if np.all(xGrid == xGrid[0]): # line is vertical - x is constant
         mesh.elec[:,0][~mesh.iremote] = np.ones_like(xLocal) * xGrid[0]
-        mesh.elec[:,1][~mesh.iremote] = xLocal + yGrid[0]
-        mesh.node[:,1] = mesh.node[:,0] + yGrid[0]
+        mesh.elec[:,1][~mesh.iremote] = xLocal + yGrid[np.argmin(yGrid)]
+        mesh.node[:,1] = mesh.node[:,0] + yGrid[np.argmin(yGrid)]
         mesh.node[:,0] = np.zeros_like(mesh.node[:,0]) + xGrid[0]
 
     elif np.all(yGrid == yGrid[0]): # line is horizontal - y is constant
-        mesh.elec[:,0][~mesh.iremote] = xLocal + xGrid[0]
+        mesh.elec[:,0][~mesh.iremote] = xLocal + xGrid[np.argmin(xGrid)]
         mesh.elec[:,1][~mesh.iremote] = np.ones_like(xLocal) * yGrid[0]
-        mesh.node[:,0] = mesh.node[:,0] + xGrid[0]
+        mesh.node[:,0] = mesh.node[:,0] + xGrid[np.argmin(xGrid)]
         mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
         
     else: 
