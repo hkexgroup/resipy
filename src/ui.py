@@ -1325,8 +1325,8 @@ class App(QMainWindow):
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
-            if self.pseudo3DCheck.isChecked():
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked():
+            #     self.project._updatePseudo3DSurvey()
             pdebug('ipCheckFunc: mode =', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
@@ -2278,8 +2278,8 @@ class App(QMainWindow):
                 self.plotManualFiltering(self.recipErrDataIndex)
                 self.errFitType.setCurrentIndex(0)
                 self.plotError()
-                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                    self.project._updatePseudo3DSurvey()
+                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                #     self.project._updatePseudo3DSurvey()
 
             except ValueError as e:
                 if self.ipCheck.checkState() != Qt.Checked:
@@ -2313,8 +2313,8 @@ class App(QMainWindow):
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
                 
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
                 
             self.errHist(self.recipErrDataIndex)
             self.plotManualFiltering(self.recipErrDataIndex)
@@ -2399,8 +2399,8 @@ class App(QMainWindow):
             self.plotError()
             self.infoDump('%i unpaired quadrupoles removed!' % numRemoved)
             
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
 
         self.recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         self.recipErrorUnpairedBtn.setFixedWidth(150)
@@ -2551,22 +2551,22 @@ class App(QMainWindow):
             self.writeLog('k.filterRangeIP(index={:d}, vmin={:.2f}, vmax={:.2f})'.format(
                 self.phaseFiltDataIndex, vmin, vmax))
             heatFilter()
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
 
         def removerecip():
             self.project.filterRecipIP(self.phaseFiltDataIndex)
             self.writeLog('k.filterRecipIP(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
 
         def removenested():
             self.project.filterNested(self.phaseFiltDataIndex)
             self.writeLog('k.filterNested(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
@@ -2576,8 +2576,8 @@ class App(QMainWindow):
                 self.project.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
             heatFilter()
             heatRaw()
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
 
         self.phitoplayout = QHBoxLayout()
         self.phitoplayoutL = QHBoxLayout()
@@ -2652,8 +2652,8 @@ class App(QMainWindow):
                 self.infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             self.dcaProgress.setValue(0)
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
             
 
         def phiCbarRange():
@@ -2783,8 +2783,8 @@ class App(QMainWindow):
                 self.writeLog('k.filterDCA(index={:d})'.format(self.phaseFiltDataIndex))
                 heatFilter()
                 self.dcaButton.setEnabled(True)
-                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                    self.project._updatePseudo3DSurvey()
+                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                #     self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
@@ -5446,8 +5446,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.writeLog('k.filterInvError(index={:d}, vmin={}, vmax={})'.format(
             index, str(vmin), str(vmax)))    
             
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
             
             plotInvError(self.invErrorIndex)
             plotInvError2(self.invErrorIndex)
@@ -5459,8 +5459,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
             
-            if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                self.project._updatePseudo3DSurvey()
+            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+            #     self.project._updatePseudo3DSurvey()
             
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
@@ -5520,8 +5520,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
-                if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                    self.project._updatePseudo3DSurvey()
+                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
+                #     self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('Error plotting error graphs.')
                 pass
