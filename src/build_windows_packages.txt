@@ -8,7 +8,6 @@ idna==2.9
 imageio==2.8.0
 importlib-metadata==1.6.0
 kiwisolver==1.2.0
-lmfit==1.0.0
 matplotlib==3.2.1
 meshio==4.0.10
 numpy==1.18.2

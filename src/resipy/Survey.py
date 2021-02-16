@@ -1591,7 +1591,10 @@ class Survey(object):
         xposNonNested  = np.min([cmiddlex, pmiddlex], axis=0) + np.abs(cmiddlex-pmiddlex)/2
         yposNonNested  = np.min([cmiddley, pmiddley], axis=0) + np.abs(cmiddley-pmiddley)/2
         pcdist = np.sqrt((cmiddlex-pmiddlex)**2 + (cmiddley-pmiddley)**2)
-        zposNonNested = np.sqrt(2)/2*pcdist
+        if np.all(cmiddley-pmiddley == 0):
+            zposNonNested = 0.25*pcdist
+        else: # for 3D arrays where there are mid-line measurements, this works closer to inversion results
+            zposNonNested = np.sqrt(2)/2*pcdist
         
         # for nested measurements use formula of Dalhin 2006
         xposNested = np.zeros(len(pmiddlex))

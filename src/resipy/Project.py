@@ -772,9 +772,8 @@ class Project(object): # Project master class instanciated by the GUI
                 if proj.mesh is not None:
                     name = proj.surveys[0].name
                     proj.mesh.vtk(os.path.join(savedir, '{}-ps3d.vtk'.format(name)))
-
+        
         settings = {'surveysInfo': self.surveysInfo,
-                    'darkMode': self.darkMode,
                     'topo': self.topo.to_dict(),
                     'typ': self.typ,
                     'err': self.err,
@@ -904,7 +903,6 @@ class Project(object): # Project master class instanciated by the GUI
         with open(os.path.join(savedir, 'settings.json'), 'r') as f:
             settings = json.load(f)
         self.surveysInfo = settings['surveysInfo']
-        self.darkMode = settings['darkMode']
         self.topo = pd.DataFrame(settings['topo'])
         self.typ = settings['typ']
         self.err = settings['err']
@@ -2704,7 +2702,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         #add the electrodes to the R2 class
         if elec is not None or node_pos is not None: # then electrode positions should be known
-            self.setElec(mesh.elec)
+            self.setElec(self.mesh.elec)
         else:
             try:
                 elec = self.elec[['x','y','z']].values
