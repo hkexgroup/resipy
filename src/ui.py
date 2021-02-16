@@ -333,7 +333,9 @@ class App(QMainWindow):
             fname, _ = QFileDialog.getSaveFileName(self.tabImportingData,'Save Project',
                                                    self.datadir, '.resipy')
             if fname != '':
+                self.loadingWidget('Saving project...')
                 self.project.saveProject(fname)
+                self.loadingWidget(exitflag=True)
                 self.infoDump('Project successfully saved.')
         # self.saveProjectBtn = QPushButton('Save Project')
         # self.saveProjectBtn.setToolTip('Save files and results to load them again in ResIPy later.')
@@ -5131,6 +5133,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def saveBtnFunc():
             fdir = QFileDialog.getExistingDirectory(self.tabImportingData, 'Choose the directory to export graphs and .vtk', directory=self.datadir)
             if fdir != '':
+                self.loadingWidget('Saving data...')
                 if self.project.typ[-1] == '2':
                     edge_color = self.displayParams['edge_color']
                     sens = self.displayParams['sens']
@@ -5156,7 +5159,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.writeLog('k.saveVtks("{:s}")'.format(fdir))
             self.project.saveData(fdir)
             self.writeLog('k.saveData("{:s}")'.format(fdir))
-            self.infoDump('All graphs saved successfully in the working directory.')
+            self.loadingWidget(exitflag=True)
+            self.infoDump('All data and graphs saved successfully!')
         self.saveBtn = QPushButton('Save Data')
         self.saveBtn.clicked.connect(saveBtnFunc)
         self.saveBtn.setToolTip('Save current graph to the working directory.')
