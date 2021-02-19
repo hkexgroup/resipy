@@ -4379,7 +4379,11 @@ class Project(object): # Project master class instanciated by the GUI
         params : list of tuple, optional
             Each tuple is the form (<array_name>, param1, param2, ...)
             Types of sequences available are : 'dpdp1','dpdp2','wenner_alpha',
-            'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad'.
+            'wenner_beta', 'wenner_gamma', 'schlum1', 'schlum2', 'multigrad',
+            'custSeq'.
+            if 'custSeq' is chosen, param1 should be a string of file path to a .csv
+            file containing a custom sequence with 4 columns (a, b, m, n) containing 
+            forward model sequence.
         seqIdx: list of array like 
             Each entry in list contains electrode indices (not label and string)
             for a given electrode string which is to be sequenced. The advantage
@@ -4389,13 +4393,15 @@ class Project(object): # Project master class instanciated by the GUI
         >>> k = R2()
         >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
         >>> k.createMesh(typ='trian')
-        >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)])
+        >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)]) # dipole-dipole sequence
+        >>> # k.createSequence([('custSeq', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
         >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
         def addCustSeq(fname): # add custoim sequence 
             seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
-                raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
+                raise ValueError('The file should be a CSV file with headers with exactly 4 columns '
+                                 '(a, b, m, n) with electrode numbers.')
             else:
                 return seq.values
         
@@ -4523,11 +4529,11 @@ class Project(object): # Project master class instanciated by the GUI
         Parameters
         ----------
         fname : str
-            Path of the CSV file to be imported. The file shouldn't have any headers just 4 columns with the 4 electrodes numbers.
+            Path of the CSV file to be imported. The file must have 4 columns with headers (a, b, m, n) containing 4 electrodes numbers.
         """
-        seq = pd.read_csv(fname, header=None)
+        seq = pd.read_csv(fname, header=0)
         if seq.shape[1] != 4:
-            raise ValueError('The file should be a CSV file wihtout headers with exactly 4 columns with electrode numbers.')
+            raise ValueError('The file should be a CSV file with headers (a, b, m, n) with exactly 4 columns with electrode numbers.')
         else:
             self.sequence = seq
 
