@@ -22,7 +22,7 @@ Note for Windows users:
 
 Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
-- *wine* is partially supported on macOS Catalina!
+- *wine* is partially supported on macOS Catalina and is **not supported on Big Sur**!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 Zip files:<br>
@@ -73,7 +73,7 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
-**IMPORTANT NOTE**: *wine* is partially supported on macOS Catalina! Please try installing *wine* v5.x with below instructions first.
+**IMPORTANT NOTE**: *wine* is partially supported on macOS Catalina and is **not supported on Big Sur**! Please try installing *wine* v5.x with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
 
 You first need to install ```wine``` through ```Homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
