@@ -5244,9 +5244,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         
         def screenshotBtnFunc():
             fname, _ = QFileDialog.getSaveFileName(self, 'Open File', self.datadir,
-                                                   'PNG (*.png);;TIFF (*.tif)')
+                                                   'PNG (*.png);;TIFF (*.tif);;JPEG (*.jpg)')
             if fname != '':
-                self.vtkWidget.screenshot(fname, transparent_background=True)
+                if fname[-3:] == 'jpg':
+                    transparent_background=False
+                else: 
+                    transparent_background=True
+                self.vtkWidget.screenshot(fname, transparent_background=transparent_background)
         self.screenshotBtn = QPushButton('Save screenshot')
         self.screenshotBtn.setAutoDefault(True)
         self.screenshotBtn.clicked.connect(screenshotBtnFunc)
