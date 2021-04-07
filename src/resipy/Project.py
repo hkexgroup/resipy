@@ -69,7 +69,7 @@ def checkSHA1(fname):
 def checkExe(dirname):
     exes = ['cR2.exe','R3t.exe','cR3t.exe']#,'R2.exe','gmsh.exe']
     hashes = ['e35f0271439761726473fa2e696d63613226b2a5',
-              '7c989946afb2457661c66f8cce1db12d7edc7b32',
+              '44e47d7d7e7bb8e8e26be83da56819abbbfb89bc',
               '9337435f018264771470d5d4312908b0d1242af1',
               # '4aad36d5333ddf163c46bab9d3c2a799aa48716e',
               # '91bd6e5fcb01a11d241456479c203624d0e681ed'
