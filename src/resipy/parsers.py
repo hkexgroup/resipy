@@ -130,6 +130,14 @@ def syscalParser(fname):#, spacing=None):
                                     'SP (mV)':'sp',
                                     'VMN (mV)':'vp',
                                     'IAB (mA)':'i',
+                                    'yA (m)':'ya', # new Syscal format supports topography and 3D output in the csv file
+                                    'yB (m)':'yb',
+                                    'yM (m)':'ym',
+                                    'yN (m)':'yn',
+                                    'zA (m)':'za',
+                                    'zB (m)':'zb',
+                                    'zM (m)':'zm',
+                                    'zN (m)':'zn',
                                     'M1 (mV/V)':'M1',
                                     'M2 (mV/V)':'M2',
                                     'M3 (mV/V)':'M3',
@@ -161,11 +169,26 @@ def syscalParser(fname):#, spacing=None):
         # get unique electrode positions and create ordered labels for them
         val = np.sort(np.unique(array.flatten()))
         elecLabel = 1 + np.arange(len(val))
-        newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+        searchsoterdArr = np.searchsorted(val, array)
+        newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
         df.loc[:,['a','b','m','n']] = newval # assign new label
         
         # build electrode array
-        elec = np.c_[val, np.zeros((len(val), 2))]
+        if 'za' in df.columns and not np.all(df['za'].values == 0): # see if we have topography
+            zarray = df[['za','zb','zm','zn']].values
+            zvalflat = np.c_[searchsoterdArr.flatten(), zarray.flatten()]
+            zval = np.unique(zvalflat[zvalflat[:,0].argsort()], axis=0)[:,1]
+        else:
+            zval = np.zeros_like(val)
+            
+        if 'ya' in df.columns and not np.all(df['ya'].values == 0): # for 3D arrays
+            yarray = df[['ya','yb','ym','yn']].values
+            yvalflat = np.c_[searchsoterdArr.flatten(), yarray.flatten()]
+            yval = np.unique(yvalflat[yvalflat[:,0].argsort()], axis=0)[:,1]
+        else:
+            yval = np.zeros_like(val)
+            
+        elec = np.c_[val, yval, zval]
         # NOTE: remote electrode identification is done in R2.setElec()
         # but we notice that setting same number for remote (-99999) makes
         # the pseudo-section of remote electrode survey nicer...
