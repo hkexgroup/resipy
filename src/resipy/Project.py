@@ -4737,7 +4737,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
-        fmd = self.fmd.copy()
+        # fmd = self.fmd
         elec = self.elec.copy()
         if self.typ[-1]=='t' and not self.hasElecString():
             #need to add elec strings to labels if in 3D
@@ -4755,7 +4755,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
-        self.fmd = fmd      
+        # self.fmd = fmd      
 
         # recompute doi (don't actually otherwise zlim is jumping)
         # self.computeFineMeshDepth()
