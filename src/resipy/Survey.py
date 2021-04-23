@@ -471,8 +471,8 @@ class Survey(object):
             
         self.dfOrigin = self.df.copy()
         self.ndata = len(self.df)
-        self.computeReciprocal()
         self.filterDefault() # we assume the user input reciprocal data not another
+        self.computeReciprocal()
         # normal survey
 
     
