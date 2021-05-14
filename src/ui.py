@@ -18,9 +18,9 @@ from PyQt5.QtWidgets import (QMainWindow, QSplashScreen, QApplication, QPushButt
     QTabWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QMessageBox, QSplitter,
     QFileDialog, QCheckBox, QComboBox, QTextEdit, QSlider, QHBoxLayout, QFrame, 
     QTableWidget, QFormLayout, QTableWidgetItem, QHeaderView, QProgressBar, QDialog,
-    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser, QAction, QMenu)#, qApp, QButtonGroup, QListWidget, QShortcut)
+    QStackedLayout, QRadioButton, QGroupBox, QTextBrowser, QMenu)#, QAction, qApp, QButtonGroup, QListWidget, QShortcut)
 from PyQt5.QtGui import QIcon, QPixmap, QIntValidator, QDoubleValidator, QColor, QPalette#, QKeySequence
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl#, QProcess#, QSize
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QUrl, QObject#, QProcess#, QSize
 from PyQt5.QtCore import Qt
 from functools import partial
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True) # for high dpi display
@@ -113,6 +113,29 @@ class customThread(QThread):
         self.signal.emit(output) # inform the main thread of the output
 
 
+# worker class to run the inversion in another thread
+# https://realpython.com/python-pyqt-qthread/
+class Worker(QObject):
+    finished = pyqtSignal()
+    progress = pyqtSignal('PyQt_PyObject')
+    
+    def __init__(self, project, kwargs, pseudo=False):
+        QThread.__init__(self)
+        self.project = project
+        self.kwargs = kwargs
+        self.pseudo = pseudo
+
+    def run(self):
+        """Long-running task."""
+        def emitLog(x):
+            self.progress.emit(x)
+        self.kwargs['dump'] = emitLog
+        if self.pseudo == False:
+            self.project.invert(**self.kwargs)
+        else:
+            self.project.invertPseudo3D(**self.kwargs)
+        self.finished.emit()
+        
 # small code to see where are all the directories
 frozen = 'not'
 if getattr(sys, 'frozen', False):
@@ -289,6 +312,8 @@ class App(QMainWindow):
         self.num_xz_poly = None # to store the values
         self.tempElec = None # place holder to compare the new electrode agains
         self.clip = None # to store the clipped mesh for 3D forward
+        self.apiLog = '' # store API calls
+        self.writeLog('# -------- ResIPy log file -------\n')
         
         if frozen == 'not':
             self.datadir = os.path.join(bundle_dir, './examples')
@@ -310,6 +335,7 @@ class App(QMainWindow):
         else:
             initErrMsgColor = 'black'
         self.errorLabel = QLabel('<i style="color:%s">Error messages will be displayed here</i>' % initErrMsgColor)
+        self.errorLabel.setWordWrap(True)
         QApplication.processEvents()
 
 
@@ -505,6 +531,7 @@ class App(QMainWindow):
                 if len(self.project.meshResults) > 0:
                     self.displayInvertedResults()
                     prepareInvError()
+                    self.logText.setText(self.project.invLog)
                 self.loadingWidget(exitflag=True)
                 # activate tabs
                 self.activateTabs(True)
@@ -525,6 +552,7 @@ class App(QMainWindow):
         self.optionMenu.addAction('Load Project', loadProjectBtnFunc)
         self.optionMenu.addAction('Save Project', saveProjectBtnFunc)
         self.optionMenu.addAction('Restart Project', self.restartFunc)
+        self.optionMenu.addAction('Save API log', self.saveLog)
         themeMode = 'Light theme' if resipySettings.param['dark'] == 'True' else 'Dark theme'
         self.optionMenu.addAction(themeMode, self.darkModeFunc)
         self.optionMenu.addAction('Restart ResIPy', self.restartGUI)
@@ -578,8 +606,12 @@ class App(QMainWindow):
                 # mesh tab
                 self.meshQuadGroup.setVisible(True)
                 self.meshTrianGroup.setVisible(True)
+                self.mesh3DGroup.setVisible(False)
                 self.meshTetraGroup.setVisible(False)
-                self.meshCustomGroup.setVisible(True)
+                self.meshTankGroup.setVisible(False)
+                self.meshCylinderGroup.setVisible(False)
+                self.meshCustom2dGroup.setVisible(True)
+                self.meshCustom3dGroup.setVisible(False)
                 self.instructionLabel.setVisible(True)
                 self.meshAspectBtn.setVisible(True)
                 self.resetMeshBtn.setVisible(True)
@@ -642,8 +674,17 @@ class App(QMainWindow):
                 # mesh tab
                 self.meshQuadGroup.setVisible(False)
                 self.meshTrianGroup.setVisible(False)
+                self.mesh3DGroup.setVisible(True)
+                self.mesh3DBtn.disconnect()
+                self.mesh3DBtn.clicked.connect(meshTetraFunc)
+                self.mesh3DCombo.disconnect()
+                self.mesh3DCombo.setCurrentIndex(0)
+                self.mesh3DCombo.currentIndexChanged.connect(mesh3DComboFunc)
                 self.meshTetraGroup.setVisible(True)
-                self.meshCustomGroup.setVisible(False)
+                self.meshTankGroup.setVisible(False)
+                self.meshCylinderGroup.setVisible(False)
+                self.meshCustom3dGroup.setVisible(False)
+                self.meshCustom2dGroup.setVisible(False)
                 self.instructionLabel.setVisible(False)
                 self.meshAspectBtn.setVisible(False)
                 self.resetMeshBtn.setVisible(False)
@@ -951,7 +992,7 @@ class App(QMainWindow):
                 self.fformat = 'DAT (*.dat *.DAT)'
             elif index == 4:
                 self.ftype = 'BGS Prime'
-                self.fformat = 'DAT (*.dat *.DAT)'
+                self.fformat = 'DAT (*.dat *.DAT *.tab *.TAB)'
             elif index == 5:
                 self.ftype = 'Sting'
                 self.fformat = 'Sting (*.stg *.STG)'
@@ -1085,7 +1126,6 @@ class App(QMainWindow):
                 self.datadir = os.path.dirname(fname)
                 self.importFile(fname)
                 self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
-                self.infoDump(fname + ' imported successfully')
                 self.invNowBtn.setEnabled(True)
                 self.activateTabs(True)
         self.importDataBtn = QPushButton('Import Data')
@@ -1096,35 +1136,40 @@ class App(QMainWindow):
         def importDataRecipBtnFunc(): # import reciprocal file
             fnameRecip, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, self.fformat)
             if fnameRecip != '':
-                self.loadingWidget('Loading data, please wait...', False)
-                self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
-                # if float(self.spacingEdit.text()) == -1:
-                #     spacing = None
-                # else:
-                #     spacing = float(self.spacingEdit.text())
-                self.project.addData(fname=fnameRecip, ftype=self.ftype, parser=self.parser)
-                self.writeLog('k.addData(fname={:s}, ftype="{:s}", parser={:s})'.format(
-                    fnameRecip, self.ftype, str(self.parser)))
-                if all(self.project.surveys[0].df['irecip'].values == 0) is False:
-                    self.recipOrNoRecipShow(recipPresence = True)
-                    self.filterAttrCombo.addItem('Reciprocal Error')
-                    self.tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
-                    self.plotError()
-                    if self.ipCheck.checkState() == Qt.Checked:
-                        self.tabPreProcessing.setTabEnabled(3, True)
-                        self.recipFiltBtn.setEnabled(True)
-                        phaseplotError()
-                        heatRaw()
-                        heatFilter()    
-                    self.errHist()
-                    if self.m3DRadio.isChecked():
-                        self.recipErrorBottomTabs.setCurrentIndex(1)
-                self.plotPseudo()
-                if self.project.typ[0] == 'c':
-                    self.plotPseudoIP()
-                self.plotManualFiltering()
-                self.loadingWidget(exitflag=True)
-                self.infoDump(fnameRecip + ' imported successfully')
+                try:
+                    self.loadingWidget('Loading data, please wait...', False)
+                    self.importDataRecipBtn.setText(os.path.basename(fnameRecip))
+                    self.project.addData(fname=fnameRecip, ftype=self.ftype, parser=self.parser)
+                    self.writeLog('k.addData(fname={:s}, ftype="{:s}", parser={:s})'.format(
+                        fnameRecip, self.ftype, str(self.parser)))
+                    if all(self.project.surveys[0].df['irecip'].values == 0) is False:
+                        self.recipOrNoRecipShow(recipPresence = True)
+                        self.filterAttrCombo.addItem('Reciprocal Error')
+                        self.tabPreProcessing.setTabEnabled(2, True) # no point in doing error processing if there is no reciprocal
+                        self.plotError()
+                        if self.ipCheck.checkState() == Qt.Checked:
+                            self.tabPreProcessing.setTabEnabled(3, True)
+                            self.recipFiltBtn.setEnabled(True)
+                            phaseplotError()
+                            heatRaw()
+                            heatFilter()    
+                        self.errHist()
+                        if self.m3DRadio.isChecked():
+                            self.recipErrorBottomTabs.setCurrentIndex(1)
+                    self.plotPseudo()
+                    if self.project.typ[0] == 'c':
+                        self.plotPseudoIP()
+                    self.plotManualFiltering()
+                    self.loadingWidget(exitflag=True)
+                    self.infoDump(fnameRecip + ' imported successfully')
+                except Exception as e:
+                    self.loadingWidget(exitflag=True)
+                    pdebug('importFile: ERROR:', e)
+                    self.errorDump('Importation failed. File is not being recognized. \
+                              Make sure you have selected the right file type.')
+                    pass
+                    
+                
         self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
         self.importDataRecipBtn.setAutoDefault(True)
         self.importDataRecipBtn.clicked.connect(importDataRecipBtnFunc)
@@ -3146,6 +3191,9 @@ class App(QMainWindow):
                 self.meshOutputStack.setCurrentIndex(1)
 
         
+        # design 2D features before meshing them, for instance for known
+        # region of given resistivity. Note that the region must not overlap
+        # and need to be distinct from each other (not touching each other)
         def designModel():
             self.iDesign = True
             # read electrodes locations
@@ -3169,8 +3217,27 @@ class App(QMainWindow):
         self.designModelBtn = QPushButton('Design Model before meshing')
         self.designModelBtn.clicked.connect(designModel)
 
+
+
+        # ------------ QUAD MESH -----------------
+        # additional options for quadrilateral mesh
+        self.nnodesLabel = QLabel('Number of elements\nbetween electrodes')
+        self.nnodesSld = QSlider(Qt.Horizontal)
+        self.nnodesSld.setMinimumWidth(50)
+        self.nnodesSld.setMinimum(1)
+        self.nnodesSld.setMaximum(10)
+        self.nnodesSld.setValue(4)
+        self.nnodesGrid = QGridLayout()
+        # self.nnodesGrid.setContentsMargins(9,0,9,0)
+        self.nnodesGrid.setSpacing(2)
+        self.nnodes1Label = QLabel('1')
+        self.nnodes10Label = QLabel('10')
+        self.nnodes10Label.setAlignment(Qt.AlignRight)#| Qt.AlignVCenter)
+        self.nnodesGrid.addWidget(self.nnodesSld, 0, 0, 1, 2)
+        self.nnodesGrid.addWidget(self.nnodes1Label, 1,0,1,1)
+        self.nnodesGrid.addWidget(self.nnodes10Label, 1,1,1,1)
+
         def meshQuadFunc():
-#            self.cropBelowFmd.setChecked(False)
             self.cropBelowFmd.setEnabled(True)
             self.regionTable.reset()
             elec = self.elecTable.getTable()
@@ -3215,6 +3282,39 @@ class App(QMainWindow):
         self.meshQuad.clicked.connect(meshQuadFunc)
         self.meshQuad.setToolTip('Generate quadrilateral mesh.')
 
+
+#%% --------------- TRIANGULAR MESH -------------------
+
+        # additional options for triangular mesh
+        self.clLabel = QLabel('Characteristic Length:')
+        self.clLabel.setToolTip('Control the number and size of elements between electrodes.')
+        self.clGrid = QGridLayout()
+        self.clGrid.setContentsMargins(9,0,9,0)
+        self.clGrid.setSpacing(2)
+        self.clFineLabel = QLabel('Fine')
+        self.clFineLabel.setStyleSheet('font:12px;')
+        self.clCoarseLabel = QLabel('Coarse')
+        self.clCoarseLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.clCoarseLabel.setStyleSheet('font:12px;')
+        self.clSld = QSlider(Qt.Horizontal)
+        self.clSld.setMinimum(1) # this depends on electrode spacing
+        self.clSld.setMaximum(10)
+        self.clSld.setValue(5)
+        self.clGrid.addWidget(self.clSld, 0, 0, 1, 2)
+        self.clGrid.addWidget(self.clFineLabel, 1,0,1,1)
+        self.clGrid.addWidget(self.clCoarseLabel, 1,1,1,1)
+        self.clFactorLabel = QLabel('Growth factor:')
+        self.clFactorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.clFactorLabel.setToolTip('Factor by which elements grow away from electrodes.')
+        self.clFactorSld = QSlider(Qt.Horizontal)
+        self.clFactorSld.setMaximumWidth(200)
+        self.clFactorSld.setMinimum(1)
+        self.clFactorSld.setMaximum(10)
+        self.clFactorSld.setValue(4)
+        self.refineTrianCheck = QCheckBox('Refine')
+        self.refineTrianCheck.setToolTip('Refine the mesh for forward modelling'
+                                    'without increasing the number of parameters.')
+
         def meshTrianFunc():
             if self.project.mproc is not None:
                 print('killing')
@@ -3227,7 +3327,6 @@ class App(QMainWindow):
             else:
                 self.meshTrianBtn.setText('Kill')
                 self.meshTrianBtn.setStyleSheet('background-color:red; color:black')
-#            self.cropBelowFmd.setChecked(True)
             self.cropBelowFmd.setEnabled(True)
             elec = self.elecTable.getTable()
             if self.project.elec['x'].isna().sum() > 0:
@@ -3250,7 +3349,6 @@ class App(QMainWindow):
                 surface = None
             else:
                 surface = surface[inan,:]
-            
             fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
             pdebug('meshTrian(): fmd', fmd)
             pdebug('meshTrian(): elec:', self.project.elec)
@@ -3296,125 +3394,8 @@ class App(QMainWindow):
         self.meshTrianBtn.setStyleSheet('background-color:orange; color:black')
 
 
-        def meshTetraFunc():
-            self.regionTable.reset()
-            if self.project.mproc is not None:
-                print('killing')
-                self.project.mproc.kill()
-                self.project.mproc = None
-                self.meshOutputStack.setCurrentIndex(1)
-                self.meshTetraBtn.setText('Tetrahedral Mesh')
-                self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
-                return
-            else:
-                self.meshTetraBtn.setText('Kill')
-                self.meshTetraBtn.setStyleSheet('background-color:red; color:black')
-#            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
-#            self.cropBelowFmd.setEnabled(False)
-            elec = self.elecTable.getTable()
-            if self.topoTable.useNarray:
-                topo = self.topoTable.xyz
-            else:
-                topo = self.topoTable.getTable()[['x','y','z']].values
-            inan = ~np.isnan(topo[:,0])
-            
-            if self.project.elec['x'].isna().sum() > 0:
-                self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
-                return
-            elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
-                self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
-                return
-            self.meshOutputStack.setCurrentIndex(0)
-            QApplication.processEvents()
-            self.meshLogText.clear()
-            cl = -1 if self.cl3Edit.text() == '' else float(self.cl3Edit.text())
-            cl_factor = float(self.cl3FactorEdit.text())
-            cln_factor = float(self.clnFactorEdit.text()) if self.clnFactorEdit.text() != '' else 100
-            refine = 1 if self.refineTetraCheck.isChecked() else 0
-            if np.sum(~inan) == topo.shape[0]:
-                topo = None
-            else:
-                topo = topo[inan,:]
-            
-            fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
-#             try:
-            self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
-                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
-                               cln_factor=cln_factor, refine=refine, show_output=True)
-            self.writeLog('k.createMesh(typ="tetra", surface={:s}, fmd={:s}, cl={:.2f},'
-                          ' cl_factor={:.2f}, cln_factor={:.2f}, refine={:d})'.format(
-                              str(topo), str(fmd), cl, cl_factor, cln_factor, refine))
-            if pvfound:
-                self.mesh3Dplotter.clear() # clear all actors 
-                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-            else:
-                self.mwMesh3D.plot(self.project.showMesh, threed=True)
-            self.writeLog('k.showMesh()')
-            self.meshOutputStack.setCurrentIndex(2)
-            if self.project.param['reqMemory'] <= 0: # RAM requirement
-                self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
-                self.ramRequiredLabel.show()
-            else:
-                self.ramRequiredLabel.hide()
-#             except Exception:
-#                 pass # caused by killing the mesh process
-            self.meshTetraBtn.setText('Tetrahedral Mesh')
-            self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
 
-        self.meshTetraBtn = QPushButton('Tetrahedral Mesh')
-        self.meshTetraBtn.setAutoDefault(True)
-        self.meshTetraBtn.clicked.connect(meshTetraFunc)
-        self.meshTetraBtn.setToolTip('Generate tetrahedral mesh.')
-        self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
-
-
-        # additional options for quadrilateral mesh
-        self.nnodesLabel = QLabel('Number of elements\nbetween electrodes')
-        self.nnodesSld = QSlider(Qt.Horizontal)
-        self.nnodesSld.setMinimumWidth(50)
-        self.nnodesSld.setMinimum(1)
-        self.nnodesSld.setMaximum(10)
-        self.nnodesSld.setValue(4)
-        self.nnodesGrid = QGridLayout()
-        # self.nnodesGrid.setContentsMargins(9,0,9,0)
-        self.nnodesGrid.setSpacing(2)
-        self.nnodes1Label = QLabel('1')
-        self.nnodes10Label = QLabel('10')
-        self.nnodes10Label.setAlignment(Qt.AlignRight)#| Qt.AlignVCenter)
-        self.nnodesGrid.addWidget(self.nnodesSld, 0, 0, 1, 2)
-        self.nnodesGrid.addWidget(self.nnodes1Label, 1,0,1,1)
-        self.nnodesGrid.addWidget(self.nnodes10Label, 1,1,1,1)
-        
-
-        # additional options for triangular mesh
-        self.clLabel = QLabel('Characteristic Length:')
-        self.clLabel.setToolTip('Control the number and size of elements between electrodes.')
-        self.clGrid = QGridLayout()
-        self.clGrid.setContentsMargins(9,0,9,0)
-        self.clGrid.setSpacing(2)
-        self.clFineLabel = QLabel('Fine')
-        self.clFineLabel.setStyleSheet('font:12px;')
-        self.clCoarseLabel = QLabel('Coarse')
-        self.clCoarseLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.clCoarseLabel.setStyleSheet('font:12px;')
-        self.clSld = QSlider(Qt.Horizontal)
-        self.clSld.setMinimum(1) # this depends on electrode spacing
-        self.clSld.setMaximum(10)
-        self.clSld.setValue(5)
-        self.clGrid.addWidget(self.clSld, 0, 0, 1, 2)
-        self.clGrid.addWidget(self.clFineLabel, 1,0,1,1)
-        self.clGrid.addWidget(self.clCoarseLabel, 1,1,1,1)
-        self.clFactorLabel = QLabel('Growth factor:')
-        self.clFactorLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.clFactorLabel.setToolTip('Factor by which elements grow away from electrodes.')
-        self.clFactorSld = QSlider(Qt.Horizontal)
-        self.clFactorSld.setMaximumWidth(200)
-        self.clFactorSld.setMinimum(1)
-        self.clFactorSld.setMaximum(10)
-        self.clFactorSld.setValue(4)
-        self.refineTrianCheck = QCheckBox('Refine')
-        self.refineTrianCheck.setToolTip('Refine the mesh for forward modelling'
-                                    'without increasing the number of parameters.')
+#%% ------------------------ TETRAHEDRAL MESH --------------------
 
         # additional options for tetrahedral mesh
         self.cl3ToolTip = 'Describes how big the nodes assocaited elements will be aroud the electrodes.\n' \
@@ -3446,15 +3427,349 @@ class App(QMainWindow):
         self.refineTetraCheck.setToolTip('Refine the mesh for forward modelling'
                                     'without increasing the number of parameters.')
         
-        def saveMeshVtkBtnFunc():
-            fname, _ = QFileDialog.getSaveFileName(self.tabMesh, 'Open File', self.datadir)
-            if fname != '':
-                self.project.saveMeshVtk(fname)
-                self.writeLog('k.saveMeshVtk("{:s}")'.format(fname))
-                self.infoDump('Mesh saved to {:s}'.format(fname))
-        self.saveMeshVtkBtn = QPushButton('Save Mesh as .vtk')
-        self.saveMeshVtkBtn.clicked.connect(saveMeshVtkBtnFunc)
+        def meshTetraFunc():
+            self.regionTable.reset()
+            if self.project.mproc is not None:
+                print('killing')
+                self.project.mproc.kill()
+                self.project.mproc = None
+                self.meshOutputStack.setCurrentIndex(1)
+                self.mesh3DBtn.setText('Create Mesh')
+                self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+                return
+            else:
+                self.mesh3DBtn.setText('Kill')
+                self.mesh3DBtn.setStyleSheet('background-color:red; color:black')
+#            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
+#            self.cropBelowFmd.setEnabled(False)
+            elec = self.elecTable.getTable()
+            if self.topoTable.useNarray:
+                topo = self.topoTable.xyz
+            else:
+                topo = self.topoTable.getTable()[['x','y','z']].values
+            inan = ~np.isnan(topo[:,0])
+            
+            if self.project.elec['x'].isna().sum() > 0:
+                self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
+                self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
+                return
+            self.meshOutputStack.setCurrentIndex(0)
+            QApplication.processEvents()
+            self.meshLogText.clear()
+            cl = -1 if self.cl3Edit.text() == '' else float(self.cl3Edit.text())
+            cl_factor = float(self.cl3FactorEdit.text())
+            cln_factor = float(self.clnFactorEdit.text()) if self.clnFactorEdit.text() != '' else 100
+            refine = 1 if self.refineTetraCheck.isChecked() else 0
+            if np.sum(~inan) == topo.shape[0]:
+                topo = None
+            else:
+                topo = topo[inan,:]
+            
+            fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
+            self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
+                               cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
+                               cln_factor=cln_factor, refine=refine, show_output=True)
+            self.writeLog('k.createMesh(typ="tetra", surface={:s}, fmd={:s}, cl={:.2f},'
+                          ' cl_factor={:.2f}, cln_factor={:.2f}, refine={:d})'.format(
+                              str(topo), str(fmd), cl, cl_factor, cln_factor, refine))
+            if pvfound:
+                self.mesh3Dplotter.clear() # clear all actors 
+                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+            else:
+                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            self.writeLog('k.showMesh()')
+            self.meshOutputStack.setCurrentIndex(2)
+            if self.project.param['reqMemory'] <= 0: # RAM requirement
+                self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
+                self.ramRequiredLabel.show()
+            else:
+                self.ramRequiredLabel.hide()
+            self.mesh3DBtn.setText('Create Mesh')
+            self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
 
+        # self.meshTetraBtn = QPushButton('Tetrahedral Mesh')
+        # self.meshTetraBtn.setAutoDefault(True)
+        # self.meshTetraBtn.clicked.connect(meshTetraFunc)
+        # self.meshTetraBtn.setToolTip('Generate tetrahedral mesh.')
+        # self.meshTetraBtn.setStyleSheet('background-color:orange; color:black')
+
+
+#%% ------------------------- TANK MESH -----------------------------
+        # addition options for tank mesh
+        self.clTankLabel = QLabel('Characteristic Length:')
+        self.clTankEdit = QLineEdit()
+        self.clTankEdit.setToolTip('Characterist Length for electrodes')
+        self.originTankLabel = QLabel('Origin [X,Y,Z]:')
+        self.originTankEdit = QLineEdit()
+        self.originTankEdit.setToolTip('Origin of the mesh as X,Y,Z')
+        self.dimensionTankLabel = QLabel('Dimensions [X,Y,Z]:')
+        self.dimensionTankEdit = QLineEdit()
+        self.dimensionTankEdit.setToolTip('Dimension of the mesh in X,Y,Z from origin')
+        # self.refineTankLabel = QLabel('Refine:')
+        self.refineTankCheck = QCheckBox('Refine')
+        self.refineTankCheck.setToolTip('Refin mesh by splitting parameters into 6 elements')
+        
+        def tankDefaultText():
+            try:
+                elec = self.project.elec
+                minvals = elec[['x','y','z']].min().values
+                maxvals = elec[['x','y','z']].max().values
+                ranvals = np.abs(maxvals - minvals)
+                meanval = np.mean(ranvals)
+                ranvals[ranvals == 0] = meanval
+                origvals = minvals - 0 * ranvals
+                dimvals = ranvals + 0 * ranvals
+                self.originTankEdit.setText(','.join(origvals.astype(str)))
+                self.dimensionTankEdit.setText(','.join(dimvals.astype(str)))
+            except:
+                pass # probably the electrodes are not defined yet
+
+        def meshTankFunc():
+            # cosmetic update to say we are running
+            if self.project.mproc is not None:
+                print('killing')
+                self.project.mproc.kill()
+                self.project.mproc = None
+                self.meshOutputStack.setCurrentIndex(1)
+                self.mesh3DBtn.setText('Tank Mesh')
+                self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+                return
+            else:
+                self.mesh3DBtn.setText('Kill')
+                self.mesh3DBtn.setStyleSheet('background-color:red; color:black')
+
+            # check electrodes are present
+            elec = self.elecTable.getTable()
+            if self.project.elec['x'].isna().sum() > 0:
+                self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            
+            # retrieve parameters
+            cl = -1 if self.clTankEdit.text() == '' else float(self.clTankEdit.text())
+            if self.originTankEdit.text() != '':
+                origin = [float(a) for a in self.originTankEdit.text().split(',')]
+            else:
+                origin = np.min(elec, axis=0)
+            if self.dimensionTankEdit.text() != '':
+                dimension = [float(a) for a in self.dimensionTankEdit.text().split(',')]
+            else:
+                dimension = np.max(elec, axis=0) - np.min(elec, axis=0)
+            refine = 1 if self.refineTankCheck.isChecked() else 0
+
+            # run the meshing
+            self.meshOutputStack.setCurrentIndex(0)
+            QApplication.processEvents()
+            self.meshLogText.clear()
+            self.project.createMesh(typ='tank',
+                                    cl=cl,
+                                    origin=origin,
+                                    dimension=dimension,
+                                    dump=meshLogTextFunc,
+                                    refine=refine,
+                                    show_output=True)
+            self.writeLog('k.createMesh(typ="tank", cl={:.2e}, origin={:s}, dimension={:s},'
+                          'refine={:d})'.format(cl, str(origin), str(dimension), refine))
+            
+            # display the mesh
+            if pvfound:
+                self.mesh3Dplotter.clear() # clear all actors 
+                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+            else:
+                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            self.writeLog('k.showMesh()')
+            self.meshOutputStack.setCurrentIndex(2)
+            if self.project.param['reqMemory'] <= 0: # RAM requirement
+                self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
+                self.ramRequiredLabel.show()
+            else:
+                self.ramRequiredLabel.hide()
+            self.mesh3DBtn.setText('Tank Mesh')
+            self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+
+        # self.meshTankBtn = QPushButton('Tank Mesh')
+        # self.meshTankBtn.setAutoDefault(True)
+        # self.meshTankBtn.clicked.connect(meshTankFunc)
+        # self.meshTankBtn.setToolTip('Generate a tank mesh.')
+        # self.meshTankBtn.setStyleSheet('background-color:orange; color:black')
+
+
+#%% ------------------------- CYLINDER MESH -----------------------------
+        # addition options for cylinder mesh
+        self.clCylinderLabel = QLabel('Characteristic Length')
+        self.clCylinderEdit = QLineEdit()
+        self.clCylinderEdit.setToolTip('Characteristic Length for electrodes')
+        # self.originCylinderEdit = QLineEdit()
+        # self.originCylinderEdit.setToolTip('Origin of the mesh as X,Y,Z')
+        # self.dimensionCylinderEdit = QLineEdit()
+        # self.dimensionCylinderEdit.setToolTip('Dimension of the mesh in X,Y,Z from origin')
+        # self.refineCylinderLabel = QLabel('Refine:')
+        self.refineCylinderCheck = QCheckBox('Refine')
+        self.refineCylinderCheck.setToolTip('Refine mesh by splitting parameters into 6 elements')
+        self.zlimCylinderLabel = QLabel('zBottom, zTop [m]:')
+        self.zlimCylinderEdit = QLineEdit()
+        
+        def cylinderEditDefaultText():
+            try:
+                elec = self.elecTable.getTable()
+                zBottom = elec['z'].min()
+                zTop = elec['z'].max()
+                distance = 0.1*(np.abs(zTop - zBottom))
+                if not np.isnan(zBottom) and not np.isnan(zTop):
+                    self.zlimCylinderEdit.setText(str(zBottom-distance)+','+str(zTop+distance))
+            except:
+                pass # probably the electrodes are not defined yet
+
+        def meshCylinderFunc():
+            # cosmetic update to say we are running
+            if self.project.mproc is not None:
+                print('killing')
+                self.project.mproc.kill()
+                self.project.mproc = None
+                self.meshOutputStack.setCurrentIndex(1)
+                self.mesh3DBtn.setText('Cylinder Mesh')
+                self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+                return
+            else:
+                self.mesh3DBtn.setText('Kill')
+                self.mesh3DBtn.setStyleSheet('background-color:red; color:black')
+
+            # check electrodes are present
+            elec = self.elecTable.getTable()
+            if self.project.elec['x'].isna().sum() > 0:
+                self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
+                return
+            
+            # retrieve parameters
+            cl = -1 if self.clCylinderEdit.text() == '' else float(self.clCylinderEdit.text())
+            # if self.originCylinderEdit.text() != '':
+            #     origin = [float(a) for a in self.originCylinderEdit.text().split(',')]
+            # else:
+            #     origin = np.min(elec, axis=0)
+            # if self.dimensionCylinderEdit.text() != '':
+            #     dimension = [float(a) for a in self.dimensionCylinderEdit.text().split(',')]
+            # else:
+            #     dimension = np.max(elec, axis=0) - np.min(elec, axis=0)
+            # print('++++', origin, dimension)
+            zlim = [float(a) for a in self.zlimCylinderEdit.text().split(',')]
+            refine = 1 if self.refineCylinderCheck.isChecked() else 0
+
+            # run the meshing
+            self.meshOutputStack.setCurrentIndex(0)
+            QApplication.processEvents()
+            self.meshLogText.clear()
+            self.project.createMesh(typ='cylinder',
+                                    cl=cl,
+                                    # origin=origin,
+                                    # dimension=dimension,
+                                    zlim=zlim,
+                                    dump=meshLogTextFunc,
+                                    refine=refine,
+                                    show_output=True)
+            self.writeLog('k.createMesh(typ="cylinder", cl={:.2e}, zlim={:s}'
+                          ', refine={:d})'.format(cl, str(zlim), refine))
+            
+            # display the mesh
+            if pvfound:
+                self.mesh3Dplotter.clear() # clear all actors 
+                self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+            else:
+                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+            self.writeLog('k.showMesh()')
+            self.meshOutputStack.setCurrentIndex(2)
+            if self.project.param['reqMemory'] <= 0: # RAM requirement
+                self.errorDump('Make a coarser mesh!! It is likely that <b>more RAM is required</b> for inversion!')
+                self.ramRequiredLabel.show()
+            else:
+                self.ramRequiredLabel.hide()
+            self.mesh3DBtn.setText('Cylinder Mesh')
+            self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+
+        # self.meshCylinderBtn = QPushButton('Cylinder Mesh')
+        # self.meshCylinderBtn.setAutoDefault(True)
+        # self.meshCylinderBtn.clicked.connect(meshCylinderFunc)
+        # self.meshCylinderBtn.setToolTip('Generate a Cylinder mesh.')
+        # self.meshCylinderBtn.setStyleSheet('background-color:orange; color:black')
+
+
+        
+#%% -------------------- ADDITIONAL 
+
+        # general meshing button (label and connect change according to combo)
+        self.mesh3DBtn = QPushButton('Create Mesh')
+        self.mesh3DBtn.setAutoDefault(True)
+        self.mesh3DBtn.clicked.connect(meshTetraFunc)
+        self.mesh3DBtn.setToolTip('Generate tetrahedral mesh.')
+        self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+        
+
+        def mesh3DComboFunc(index):
+            if index != 3:
+                self.mesh3DBtn.setText('Create Mesh')
+                self.mesh3DBtn.setToolTip('Generate tetrahedral mesh.')
+            if index == 0:
+                self.fmdGroup.setVisible(True)
+                self.meshTetraGroup.setVisible(True)
+                self.meshTankGroup.setVisible(False)
+                self.meshCylinderGroup.setVisible(False)
+                self.meshCustom3dGroup.setVisible(False)
+                self.mesh3DBtn.disconnect()
+                self.mesh3DBtn.clicked.connect(meshTetraFunc)
+            elif index == 1:
+                self.fmdGroup.setVisible(False)
+                self.meshTetraGroup.setVisible(False)
+                self.meshTankGroup.setVisible(True)
+                self.meshCylinderGroup.setVisible(False)
+                self.meshCustom3dGroup.setVisible(False)
+                if self.originTankEdit.text() == '' and self.dimensionTankEdit.text() == '':
+                    tankDefaultText()
+                self.mesh3DBtn.disconnect()
+                self.mesh3DBtn.clicked.connect(meshTankFunc)
+                
+            elif index == 2:
+                self.fmdGroup.setVisible(False)
+                self.meshTetraGroup.setVisible(False)
+                self.meshTankGroup.setVisible(False)
+                self.meshCylinderGroup.setVisible(True)
+                self.meshCustom3dGroup.setVisible(False)
+                if self.zlimCylinderEdit.text() == '':
+                    cylinderEditDefaultText()
+                self.mesh3DBtn.disconnect()
+                self.mesh3DBtn.clicked.connect(meshCylinderFunc)
+            elif index == 3:
+                self.fmdGroup.setVisible(False)
+                self.meshTetraGroup.setVisible(False)
+                self.meshTankGroup.setVisible(False)
+                self.meshCylinderGroup.setVisible(False)
+                self.meshCustom3dGroup.setVisible(True)
+                self.mesh3DBtn.setText('Import Mesh')
+                self.mesh3DBtn.setToolTip('Import custom mesh.')
+                self.mesh3DBtn.disconnect()
+                self.mesh3DBtn.clicked.connect(importCustomMeshFunc)
+            self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
+        self.mesh3DCombo = QComboBox()
+        self.mesh3DCombo.addItem('Half-space (tetra)')
+        self.mesh3DCombo.addItem('Tank (box)')
+        self.mesh3DCombo.addItem('Cylinder (column)')
+        self.mesh3DCombo.addItem('Custom Mesh')
+        self.mesh3DCombo.currentIndexChanged.connect(mesh3DComboFunc)
+
+        def saveMeshBtnFunc():
+            fname, _ = QFileDialog.getSaveFileName(self.tabMesh, 'Save mesh as .vtk, .dat or .node (tetgen) format', self.datadir)
+            if fname != '':
+                self.project.saveMesh(fname)
+                self.writeLog('k.saveMesh("{:s}")'.format(fname))
+                self.infoDump('Mesh saved to {:s}'.format(fname))
+        self.saveMeshBtn = QPushButton('Save Mesh')
+        self.saveMeshBtn.setToolTip('Save mesh as .vtk, .node (tetgen) or .dat')
+        self.saveMeshBtn.clicked.connect(saveMeshBtnFunc)
+
+        self.importCustomMeshLabel = QLabel('Import .msh or .vtk or .dat files.<br>'
+                                            'The electrodes will be snapped to the closest node.')
+        self.importCustomMeshLabel.setAlignment(Qt.AlignLeft)
+        self.importCustomMeshLabel.setWordWrap(True)
+        
         def importCustomMeshFunc():
             elec = self.elecTable.getTable()
             if self.project.elec['x'].isna().sum() > 0:
@@ -3475,11 +3790,11 @@ class App(QMainWindow):
                     self.meshOutputStack.setCurrentIndex(2)
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
-        self.importCustomMeshBtn = QPushButton('Import Custom Mesh')
-        self.importCustomMeshBtn.setFixedWidth(150)
-        self.importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
+        # self.importCustomMeshBtn = QPushButton('Import Custom Mesh')
+        # self.importCustomMeshBtn.setFixedWidth(150)
+        # self.importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
 
-        self.importCustomMeshLabel2 = QLabel('Import .msh or .vtk file.')
+        self.importCustomMeshLabel2 = QLabel('Import .msh or .vtk or .dat files.')
         self.importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
         self.importCustomMeshLabel2.setWordWrap(True)
         
@@ -3679,9 +3994,9 @@ class App(QMainWindow):
         self.meshButtonTrianLayout.addWidget(self.designModelBtn)
         self.meshButtonTrianLayout.addWidget(self.meshTrianBtn)
         
-        self.importCustomLayout = QVBoxLayout()
-        self.importCustomLayout.addWidget(self.importCustomMeshLabel2)
-        self.importCustomLayout.addWidget(self.importCustomMeshBtn2)
+        self.importCustomMesh2dLayout = QVBoxLayout()
+        self.importCustomMesh2dLayout.addWidget(self.importCustomMeshLabel2)
+        self.importCustomMesh2dLayout.addWidget(self.importCustomMeshBtn2)
 
         self.meshOptionTetraLayout = QHBoxLayout()
         self.meshOptionTetraLayout.addWidget(self.cl3Label)
@@ -3691,25 +4006,77 @@ class App(QMainWindow):
         self.meshOptionTetraLayout.addWidget(self.clnFactorLabel)
         self.meshOptionTetraLayout.addWidget(self.clnFactorEdit)
         self.meshOptionTetraLayout.addWidget(self.refineTetraCheck)
-        self.meshOptionTetraLayout.addWidget(self.saveMeshVtkBtn)
-        self.meshOptionTetraLayout.addWidget(self.importCustomMeshBtn)
+
+        self.meshOptionTankLayout = QHBoxLayout()
+        self.meshOptionTankLayout.addWidget(self.clTankLabel)
+        self.meshOptionTankLayout.addWidget(self.clTankEdit)
+        self.meshOptionTankLayout.addWidget(self.originTankLabel)
+        self.meshOptionTankLayout.addWidget(self.originTankEdit)
+        self.meshOptionTankLayout.addWidget(self.dimensionTankLabel)
+        self.meshOptionTankLayout.addWidget(self.dimensionTankEdit)
+        # self.meshOptionTankLayout.addWidget(self.refineTankLabel)
+        self.meshOptionTankLayout.addWidget(self.refineTankCheck)
+        
+        self.meshOptionCylinderLayout = QHBoxLayout()
+        self.meshOptionCylinderLayout.addWidget(self.clCylinderLabel)
+        self.meshOptionCylinderLayout.addWidget(self.clCylinderEdit)
+        # self.meshOptionCylinderLayout.addWidget(self.originCylinderLabel)
+        # self.meshOptionCylinderLayout.addWidget(self.originCylinderEdit)
+        # self.meshOptionCylinderLayout.addWidget(self.dimensionCylinderLabel)
+        # self.meshOptionCylinderLayout.addWidget(self.dimensionCylinderEdit)
+        self.meshOptionCylinderLayout.addWidget(self.zlimCylinderLabel)
+        self.meshOptionCylinderLayout.addWidget(self.zlimCylinderEdit)
+        # self.meshOptionCylinderLayout.addWidget(self.refineCylinderLabel)
+        self.meshOptionCylinderLayout.addWidget(self.refineCylinderCheck)
+
+        self.importCustomMesh3dLayout = QVBoxLayout()
+        self.importCustomMesh3dLayout.addWidget(self.importCustomMeshLabel)
+        # self.importCustomMesh3dLayout.addWidget(self.importCustomMeshBtn)        
         
         self.meshChoiceLayout = QHBoxLayout()
+        
         self.fmdLayout = QVBoxLayout()
         self.fmdLayout.setAlignment(Qt.AlignBottom | Qt.AlignCenter)
+        
         self.meshQuadLayout = QVBoxLayout()
         self.meshQuadLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
         self.meshTrianLayout = QVBoxLayout()
         self.meshTetraLayout = QVBoxLayout()
-        self.meshTetraLayout.setAlignment(Qt.AlignBottom | Qt.AlignHCenter)
+        self.meshTetraLayout.setAlignment(Qt.AlignHCenter)
+        self.meshTankLayout = QVBoxLayout()
+        self.meshTankLayout.setAlignment(Qt.AlignHCenter)
+        self.meshCylinderLayout = QVBoxLayout()
+        self.meshCylinderLayout.setAlignment(Qt.AlignHCenter)
+        
         self.fmdGroup = QGroupBox()
         self.fmdGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         self.meshQuadGroup = QGroupBox()
         self.meshQuadGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
         self.meshTrianGroup = QGroupBox()
         self.meshTrianGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshCustom2dGroup = QGroupBox()
+        self.meshCustom2dGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.mesh3DGroup = QGroupBox()
+        self.mesh3DGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.mesh3DGroup.setHidden(True)
         self.meshTetraGroup = QGroupBox()
         self.meshTetraGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshTetraGroup.setHidden(True)
+        self.meshTankGroup = QGroupBox()
+        self.meshTankGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshTankGroup.setHidden(True)
+        self.meshCylinderGroup = QGroupBox()
+        self.meshCylinderGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshCylinderGroup.setHidden(True)
+        self.meshCustom3dGroup = QGroupBox()
+        self.meshCustom3dGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
+        self.meshCustom3dGroup.setHidden(True)
+        
+        self.mesh3DComboLayout = QVBoxLayout()
+        self.mesh3DComboLayout.addWidget(self.mesh3DCombo)
+        self.mesh3DComboLayout.addWidget(self.mesh3DBtn)
+        self.mesh3DGroup.setLayout(self.mesh3DComboLayout)
+        self.meshChoiceLayout.addWidget(self.mesh3DGroup)
         
         self.fmdLayout.addWidget(self.fmdLabel)
         self.fmdLayout.addWidget(self.fmdBox)
@@ -3726,17 +4093,27 @@ class App(QMainWindow):
         self.meshTrianGroup.setLayout(self.meshTrianLayout)
         self.meshChoiceLayout.addWidget(self.meshTrianGroup,65)
 
-        self.meshCustomGroup = QGroupBox()
-        self.meshCustomGroup.setStyleSheet("QGroupBox{padding-top:1em; margin-top:-1em}")
-        self.meshCustomGroup.setLayout(self.importCustomLayout)
-        self.meshChoiceLayout.addWidget(self.meshCustomGroup,0)
+        self.meshCustom2dGroup.setLayout(self.importCustomMesh2dLayout)
+        self.meshChoiceLayout.addWidget(self.meshCustom2dGroup,0)
         
         self.meshTetraLayout.addLayout(self.meshOptionTetraLayout)
-        self.meshTetraLayout.addWidget(self.meshTetraBtn)
+        # self.meshTetraLayout.addWidget(self.meshTetraBtn)
         self.meshTetraGroup.setLayout(self.meshTetraLayout)
         self.meshChoiceLayout.addWidget(self.meshTetraGroup, 1)
-        self.meshTetraGroup.setHidden(True)
-
+        
+        self.meshTankLayout.addLayout(self.meshOptionTankLayout)
+        # self.meshTankLayout.addWidget(self.meshTankBtn)
+        self.meshTankGroup.setLayout(self.meshTankLayout)
+        self.meshChoiceLayout.addWidget(self.meshTankGroup, 1)
+        
+        self.meshCylinderLayout.addLayout(self.meshOptionCylinderLayout)
+        # self.meshCylinderLayout.addWidget(self.meshCylinderBtn)
+        self.meshCylinderGroup.setLayout(self.meshCylinderLayout)
+        self.meshChoiceLayout.addWidget(self.meshCylinderGroup, 1)
+        
+        self.meshCustom3dGroup.setLayout(self.importCustomMesh3dLayout)
+        self.meshChoiceLayout.addWidget(self.meshCustom3dGroup, 1)
+        
         self.meshLayout.addLayout(self.meshChoiceLayout, 0)
 
         self.instructionLayout = QHBoxLayout()
@@ -3748,6 +4125,7 @@ class App(QMainWindow):
         self.instructionLayout.addWidget(self.select3DRegionBtn, 7)
         self.instructionLayout.addWidget(self.add3DRegionBtn, 7)
         self.instructionLayout.addWidget(self.fin3DRegionBtn, 7)
+        self.instructionLayout.addWidget(self.saveMeshBtn)
         self.meshLayout.addLayout(self.instructionLayout)
         
         # for RAM issue
@@ -3849,8 +4227,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if fname != '':
                     self.fname = fname
                     self.importBtn.setText(os.path.basename(fname))
-                    self.parent.project.importSequence(fname)
-                
+                                 
             def comboFunc(self, i):
                 self.seq = seqData[i][0]
                 showArray(self.seq) # display help aside
@@ -3949,12 +4326,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             ok = False
                     if ok is True:
                         vals.append(val)
-                except:# Exception as e:
+                except:
                     pass
-#                    print('object does not exist', e)
             return vals
-#        getDataBtn = QPushButton('Get Data')
-#        getDataBtn.clicked.connect(getDataBtnFunc)
+
         
         def seqCreateFunc():
             if self.project.elec is None:
@@ -3997,11 +4372,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             if self.project.mesh is None: # we need to create mesh to assign starting resistivity
                 self.errorDump('Please specify a mesh and an initial model first.')
                 return
-            try:
-                seqCreateFunc()
-            except:
-                self.errorDump('Error in sequence generation! Use a custom sequence instead.')
-                return
+            # try:
+            seqCreateFunc()
+            # except:
+                # self.errorDump('Error in sequence generation! Use a custom sequence instead.')
+                # return
             if len(self.project.sequence) == 0:
                 self.errorDump('Sequence is empty, can not run forward model.')
                 return
@@ -4651,6 +5026,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 for i in range(n):
                     if i != 5:
                         self.tabs.setTabEnabled(i, False)
+                self.hamBtn.setEnabled(False)
             else: # unfrozing
                 for i in range(n):
                     self.tabs.setTabEnabled(i, self.tabState[i])
@@ -4658,7 +5034,54 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.tabs.setTabEnabled(6, True) # post processing tab should only be activated after successful inversion
                 else:
                     self.tabs.setTabEnabled(6, False)
+                self.hamBtn.setEnabled(True)
                     
+        def afterInversion():
+            # replace the log by the R2.out
+            with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
+                text = f.read()
+            self.logText.setText(text)
+            self.project.proc = None
+            
+            # check if we don't have a fatal error
+            if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
+                self.end = False
+                self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
+            
+            # if fixed elements are present, the mesh will be automatically
+            # sorted at writing time, meaning we need to replot it
+            # in the mesh tab
+            if any(self.project.mesh.df['param'] == 0):
+                if (self.project.typ == 'R3t') | (self.typ == 'cR3t'):
+                    if pvfound:
+                        self.mesh3Dplotter.clear() # clear all actors 
+                        self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                    else:
+                        self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                else:
+                    replotMesh() # 2D only
+                    
+        def afterInversionShow():
+            # show results
+            if self.end is True:
+                self.displayInvertedResults()
+                try:
+                    prepareInvError() # plot error graphs
+                    if self.parallelCheck.isChecked():
+                        self.logText.setText(self.project.invLog) # populate inversion log correctly after parallel inversion
+                except Exception as e:
+                    pdebug('ERROR: ui: invertBtnFunc:' + str(e))
+                    self.errorDump(e)
+                    pass
+            self.invertBtn.setText('Invert')
+            self.invertBtn.setStyleSheet('background-color:green; color:black')
+            frozeUI(False)
+            
+        def afterInversionPseudo():
+            self.logText.setText(self.pseudo3DInvtext)
+            if self.project.proc.killFlag is True: # make sure everything stops now!
+                self.end = False
+            
             
         # ------------------------ log sub tab
         def invertBtnFunc():
@@ -4745,12 +5168,32 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         
                 invLog = pseudo3DInvLog if self.parallelCheck.isChecked() is False else logTextFunc # handling dump
             
-                self.project.invertPseudo3D(iplot=False, runParallel=self.parallelCheck.isChecked(),
-                                            dump=logTextFunc, invLog=invLog)
-            
-                self.logText.setText(self.pseudo3DInvtext)
-                if self.project.proc.killFlag is True: # make sure everything stops now!
-                    self.end = False
+                # in thread to not block the UI
+                kwargs = {'dump': logTextFunc,
+                          'iplot': False, 
+                          'runParallel': self.parallelCheck.isChecked(),
+                          'invLog': invLog
+                          }
+                
+                # run inversion in different thread to not block the UI
+                self.thread = QThread()
+                self.worker = Worker(self.project, kwargs, pseudo=True)
+                self.worker.moveToThread(self.thread)
+                self.thread.started.connect(self.worker.run)
+                self.worker.finished.connect(self.thread.quit)
+                self.worker.finished.connect(self.worker.deleteLater)
+                self.thread.finished.connect(self.thread.deleteLater)
+                self.worker.progress.connect(logTextFunc)
+                self.thread.start()
+                
+                # self.project.invertPseudo3D(iplot=False, runParallel=self.parallelCheck.isChecked(),
+                #                             dump=logTextFunc, invLog=invLog)
+                self.writeLog('k.invertPseudo3D(iplot=False, runParallel={:s}, invLog={:s})'.format(
+                    str(kwargs['runParallel']), str(invLog)))
+                
+                self.thread.finished.connect(afterInversionPseudo)
+                self.thread.finished.connect(afterInversionShow)
+                
                 
             else: # regular single Project (2D or 3D)
                 # set initial model
@@ -4769,52 +5212,35 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                 str(dict(zip(regid, phase0)))))
     
                 # invert
-                # TODO run inversion in different thread to not block the UI
                 modErr = self.modErrCheck.isChecked()
                 parallel = self.parallelCheck.isChecked()
                 modelDOI = self.modelDOICheck.isChecked()
-            
-                self.project.invert(iplot=False, dump=logTextFunc,
-                                    modErr=modErr, parallel=parallel, modelDOI=modelDOI)
+                kwargs = {'dump': logTextFunc,
+                          'iplot': False,
+                          'modErr': modErr, 
+                          'parallel': parallel,
+                          'modelDOI': modelDOI}
+                
+                # run inversion in different thread to not block the UI
+                self.thread = QThread()
+                self.worker = Worker(self.project, kwargs)
+                self.worker.moveToThread(self.thread)
+                self.thread.started.connect(self.worker.run)
+                self.worker.finished.connect(self.thread.quit)
+                self.worker.finished.connect(self.worker.deleteLater)
+                self.thread.finished.connect(self.thread.deleteLater)
+                self.worker.progress.connect(logTextFunc)
+                self.thread.start()
+        
+
+                # self.project.invert(iplot=False, dump=logTextFunc,
+                #                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
                 self.writeLog('k.invert(modErr={:s}, parallel={:s}, modelDOI={:s})'.format(
                     str(modErr), str(parallel), str(modelDOI)))
-            
-                # replace the log by the R2.out
-                with open(os.path.join(self.project.dirname, self.project.typ + '.out'),'r') as f:
-                    text = f.read()
-                self.logText.setText(text)
-                self.project.proc = None
                 
-                # check if we don't have a fatal error
-                if 'FATAL' in text and not (self.iBatch or self.iTimeLapse):
-                    self.end = False
-                    self.errorDump('WARNING: Error weights too high! Use lower <b>a_wgt</b> and <b>b_wgt</b> or choose an error model.')
-                
-                # if fixed elements are present, the mesh will be automatically
-                # sorted at writing time, meaning we need to replot it
-                # in the mesh tab
-                if any(self.project.mesh.df['param'] == 0):
-                    if (self.project.typ == 'R3t') | (self.typ == 'cR3t'):
-                        if pvfound:
-                            self.mesh3Dplotter.clear() # clear all actors 
-                            self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
-                        else:
-                            self.mwMesh3D.plot(self.project.showMesh, threed=True)
-                    else:
-                        replotMesh() # 2D only
-            
-            # show results
-            if self.end is True:
-                self.displayInvertedResults()
-                try:
-                    prepareInvError() # plot error graphs
-                except Exception as e:
-                    pdebug('ERROR: ui: invertBtnFunc:' + str(e))
-                    self.errorDump(e)
-                    pass
-            self.invertBtn.setText('Invert')
-            self.invertBtn.setStyleSheet('background-color:green; color:black')
-            frozeUI(False)
+                self.thread.finished.connect(afterInversion)
+                self.thread.finished.connect(afterInversionShow)
+
             
         self.invertBtn = QPushButton('Invert')
         self.invertBtn.setStyleSheet('background:green;')
@@ -5207,7 +5633,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def pvapplyBtnFunc():
             threshMin = float(self.pvthreshMin.text()) if self.pvthreshMin.text() != '' else None
             threshMax = float(self.pvthreshMax.text()) if self.pvthreshMax.text() != '' else None
-            self.displayParams['pvthreshold'] = [threshMin, threshMax]
+            if threshMin is None and threshMax is None:
+                self.displayParams['pvthreshold'] = None
+            else:
+                self.displayParams['pvthreshold'] = [threshMin, threshMax]
             if self.pvxslices.text() != '':
                 xslices = [float(a) for a in self.pvxslices.text().split(',')]
             else:
@@ -5827,18 +6256,49 @@ combination of multiple sequence is accepted as well as importing a custom seque
     def infoDump(self, text):
         self.errorDump(text, flag=0)
         
-    def writeLog(self, text):
-        """Write a new line to the log file.
-        """
-        flog = os.path.join(self.project.dirname, 'log.txt')
-        try:
-            if os.path.exists(flog) is False:
-                with open(flog, 'w') as f:
-                    f.write('# -------- ResIPy log file -------\n')
-            with open(flog, 'a') as f:
-                f.write(text + '\n')
-        except Exception as e:
-            print('Error in writeLog:', e)
+    # def writeLog(self, text):
+    #     """Write a new line to the log file.
+    #     """
+    #     flog = os.path.join(self.project.dirname, 'log.txt')
+    #     try:
+    #         if os.path.exists(flog) is False:
+    #             with open(flog, 'w') as f:
+    #                 f.write('# -------- ResIPy log file -------\n')
+    #         with open(flog, 'a') as f:
+    #             f.write(text + '\n')
+    #     except Exception as e:
+    #         print('Error in writeLog:', e)
+    
+    def writeLog(self, text, dico=None):
+        if dico is None:
+            self.apiLog += text + '\n'
+        else:
+            arg = ''
+            for key in dico.keys():
+                val = dico[key]
+                if type(val) == str:
+                    arg += key + '="{:s}", '.format(val)
+                elif (type(val) == int or
+                    type(val) == float or
+                    type(val) == tuple or
+                    type(val) == list or
+                    type(val) == bool or
+                    val is None):
+                    arg += key + '={:s}, '.format(str(val))
+                elif type(val) == type(np.ndarray):
+                    arg += key + '={:s}, '.format(str(list(val)))
+                else:
+                    pass # ignore argument
+            self.apiLog += text + '(' + arg[:-2] + ')\n'
+        
+    def saveLog(self):
+        fname, _ = QFileDialog.getSaveFileName(self)
+        if fname != '':
+            if fname[-3:] != '.py':
+                fname = fname + '.py'
+            self.apiLog = self.apiLog.replace('"None"', 'None')
+            with open(fname, 'w') as f:
+                f.write(self.apiLog)
             
     def loadingWidget(self, msgtxt='', exitflag=False):
         '''Shows a dialog to indicate ResIPy is working (e.g., loading large dataset, etc.)'''
@@ -5965,7 +6425,17 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pdebug('updateElec()')
         try:
             elec = self.elecTable.getTable()
-            if self.tempElec is None or np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
+            ok = False
+            if self.tempElec is None:
+                ok = True
+            else:
+                if self.project.iForward is True:
+                    ok = True
+                elif np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
+                    ok = True
+                else:
+                    ok = False
+            if ok:
                 self.tempElec = elec
                 elecList = None
                 if self.pseudo3DCheck.isChecked():
@@ -6099,6 +6569,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 pass
             self.settingUI()
             self.loadingWidget(exitflag=True)
+            self.infoDump(fname + ' imported successfully')
         except Exception as e:
             self.loadingWidget(exitflag=True)
             pdebug('importFile: ERROR:', e)
