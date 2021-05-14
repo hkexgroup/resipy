@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Main R2 class, wraps the other ResIPy modules (API) in to an object orientated approach
-@author: Guillaume, Sina, Jimmy and Paul
+This file is part of the ResIPy project (https://gitlab.com/hkex/resipy).
+@licence: GPLv3
+@author: ResIPy authors and contributors
+
+The 'Project' class wraps all main interactions between R* executables
+and other filtering or meshing part of the code. It's the entry point for
+the user.
 """
-ResIPy_version = '3.2.3' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.3.0' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -112,7 +117,7 @@ class ProcsManagement(object): # little class to handle the kill
         procs = self.r2.procs # and kill the running processes
         for p in procs:
             p.terminate()
-        print('all done!')
+        print('all done')
         
 #%% system check
 def getSysStat():
@@ -299,11 +304,14 @@ class Project(object): # Project master class instanciated by the GUI
         self.elec = None # will be assigned when creating a survey
         self.surveys = [] # list of survey object
         self.surveysInfo = [] # info about surveys (date)
-        self.mesh = None # mesh object (one per R2 instance)
+        self.mesh = None # mesh object (one per Project instance)
+        self.meshParams = {} # mesh parameters passed to mesh creation scheme 
         self.topo = pd.DataFrame(columns=['x','y','z']) # store additional topo points
         self.param = {} # dict configuration variables for inversion
         self.configFile = ''
-        self.typ = typ # or cR2 or R3, cR3
+        self.invLog = '' # to save inversion output - all R2.out files
+        self.fwdLog = '' # to save forward modeling R2_forward.out files
+        self.typ = typ # or cR2 or R3t, cR3
         self.err = False # if we want error in protocol.dat or not
         self.iBorehole = False # to tell the software to not plot pseudoSection
         self.iTimeLapse = False # to enable timelapse inversion
@@ -330,7 +338,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.errTyp = 'global'# type of error model to be used in batch and timelapse surveys
         self.surfaceIdx = None # used to show plan view iterations of 3D inversions
         self.darkMode = False # If true, electrodes wil be plotted in white, else black
-
+        self.iadvanced = True # If true, use the advanced mesh format for 3D mesh
+        
             
     def setBorehole(self, val=False):
         """Set all surveys in borehole type if `True` is passed.
@@ -751,6 +760,8 @@ class Project(object): # Project master class instanciated by the GUI
         c = 0
         if self.iForward:
             c = 1
+            dfseq = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
+            dfseq.to_csv(os.path.join(savedir, 'dfseq.csv'), index=False, line_terminator='\n')
         for i, survey in enumerate(self.surveys):
             f = os.path.join(savedir, survey.name)
             survey.df.to_csv(f + '-df.csv', index=False, line_terminator='\n')
@@ -816,6 +827,12 @@ class Project(object): # Project master class instanciated by the GUI
             sparams['xy_poly_table'] = self.param['xy_poly_table'].tolist()
         with open(os.path.join(savedir, 'params.json'), 'w') as f:
             f.write(json.dumps(sparams))
+        
+        with open(os.path.join(savedir, 'invLog.log'), 'w') as f:
+            f.write(self.invLog)
+        
+        with open(os.path.join(savedir, 'fwdLog.log'), 'w') as f:
+            f.write(self.fwdLog)
         
         # zip the directory, move it and clean
         with ZipFile(fname, 'w') as fz:
@@ -912,6 +929,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.sequence = np.array(settings['sequence']) if settings['sequence'] is not None else None
         self.resist0 = settings['resist0']
         self.iForward = settings['iForward']
+        if self.iForward:
+            self.importSequence(os.path.join(savedir, 'dfseq.csv'))
         self.fmd = settings['fmd']
         self.zlim = settings['zlim']
         if self.iForward and self.mesh is not None:
@@ -961,6 +980,13 @@ class Project(object): # Project master class instanciated by the GUI
                     proj.meshResults.append(deepcopy(mresult))
             self._updatePseudo3DSurvey()
             self.mesh = self.projs[0].mesh # we don't want an empty self.mesh if there are meshes in self.projs
+        
+        # populating inversion/forward modeling logs 
+        with open(os.path.join(savedir, 'invLog.log'), 'r') as f:
+            self.invLog = f.read()
+        
+        with open(os.path.join(savedir, 'fwdLog.log'), 'r') as f:
+            self.fwdLog = f.read()
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
                      parser=None, debug=True, **kwargs):
@@ -1002,7 +1028,13 @@ class Project(object): # Project master class instanciated by the GUI
         if len(self.surveys) == 1:
             self.elec = None
             self.setElec(self.surveys[0].elec)
-            
+        
+        #do a check for reading in 3D protocol files for 2D projects 
+        if self.typ[-1] == '2' and 'Protocol' in ftype: 
+            for s in self.surveys:
+                if len(s.df['a'][0].split()) == 2: 
+                    s._rmLineNum() 
+        
             
     def addData(self, **kwargs):
         """Adds data to the survey - used usually to add reciprocal datasets
@@ -1227,7 +1259,11 @@ class Project(object): # Project master class instanciated by the GUI
             directory = os.path.join(self.dirname, s.name)
             os.mkdir(directory) # making separate inversion diectories
             proj = self._createProjects4Pseudo3D(dirname=directory, invtyp=self.typ) # non-parallel meshing
-            proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec, **kwargs)
+            # proj.createSurvey(fname=None, name=s.name, df=s.df, elec=s.elec, **kwargs)
+            proj.surveys = [s] # might be faster than importing survey again
+            # this actually stores a reference to the same survey object, so it's all good
+            # as filtering operation done in batch surveys will be directly done on the surveys of 
+            # each project as it's the same Survey object (with two references)
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
             e = s.elec.copy()
             e.loc[:, 'y'] = i*lineSpacing
@@ -1402,7 +1438,12 @@ class Project(object): # Project master class instanciated by the GUI
             if True, mesh generation will run in multiple threads.
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
-        """                
+        """
+        # TODO the below doesn't work well, we need to use
+        # 1) tempfile for creating temporary directory and then the 
+        # write all files to those and then use a similar approach to 
+        # Project.runParallel() with a while loop and limiting given ncores
+        # however, it's fast enough like this as it's a sequence of 2D meshes
         for proj in self.projs:
             if runParallel:
                 p = Thread(target=proj.createMesh, kwargs=kwargs)
@@ -1417,7 +1458,7 @@ class Project(object): # Project master class instanciated by the GUI
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
                          cropMesh=True, color_bar=False, returnMesh=False,
-                         cropMaxDepth=False, **kwargs):
+                         cropMaxDepth=False, pvshow=True, **kwargs):
         """Show 2D meshes in 3D view
         
         Parameters
@@ -1436,6 +1477,8 @@ class Project(object): # Project master class instanciated by the GUI
             if True method returns a merged mesh. 
         cropMaxDepth : bool, optional
             If True, region below fine mesh depth (fmd) will be cropped.
+        pvshow : bool, optional
+            Set to False to not call `Plotter.show()` (useful for subplots).
         kwargs : -
             Keyword arguments to be passed to Mesh.show() class.
         """
@@ -1519,7 +1562,9 @@ class Project(object): # Project master class instanciated by the GUI
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
             if returnMesh:
                 meshOutList.append(meshMoved)
-        ax.show() # call plotter.show()
+        
+        if pvshow:
+            ax.show() # call plotter.show()
         
         if returnMesh:
             meshMerged = mt.mergeMeshes(meshOutList)
@@ -1562,7 +1607,7 @@ class Project(object): # Project master class instanciated by the GUI
     
     
     def invertPseudo3D(self, invLog=None, runParallel=False, **kwargs):
-        """Run non-parallel inversion - modifications needed
+        """Run pseudo3D inversions.
         
         Parameters
         ----------
@@ -1610,7 +1655,7 @@ class Project(object): # Project master class instanciated by the GUI
                     proj.surveys[0].name))
                 proj.write2in() # R2.in
                 proj.write2protocol() # protocol.dat
-                invLog('done!\n')
+                invLog('done\n')
             wds2 = wds.copy()
     
             # create workers directory
@@ -1643,7 +1688,7 @@ class Project(object): # Project master class instanciated by the GUI
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     
             # run them all in parallel as child processes
-            invLog('----------- PARALLEL INVERSION BEGINS ----------')
+            invLog('----------- PARALLEL INVERSION BEGINS ----------\n')
             def dumpOutput(out):
                 for line in iter(out.readline, ''):
                     invLog(line.rstrip() + '\n')
@@ -1681,7 +1726,8 @@ class Project(object): # Project master class instanciated by the GUI
                     break
                 else:
                     time.sleep(0.05)
- 
+
+        self.invLog = '' # clearing the inversion log for saving
         if self.proc.killFlag is False: # make sure we haven't killed the processes
             for proj, survey in zip(self.projs, self.surveys):
                 if runParallel:
@@ -1690,6 +1736,10 @@ class Project(object): # Project master class instanciated by the GUI
                 self.meshResults.append(deepcopy(proj.meshResults[0]))
                 survey.df = proj.surveys[0].df.copy() # to populate inversion error outputs
                 survey.dfInvErrOutputOrigin = survey.df.copy()
+                if proj.invLog == '': # in case of parallel inversion
+                    with open(os.path.join(proj.dirname, proj.typ + '.out'),'r') as f:
+                        proj.invLog = f.read()
+                self.invLog += '###>>> Dataset: ' + survey.name + proj.invLog + '\n'
 
         print('----------- END OF INVERSION IN // ----------')
 
@@ -1887,6 +1937,34 @@ class Project(object): # Project master class instanciated by the GUI
                 s.filterDummy()
         else:
             self.surveys[index].filterDummy()
+            
+    def fixLegendItems(self,ax):
+        """Display legend items with survey names in the case of fitting 
+        individual error models to multiple data sets. 
+
+        Parameters
+        ----------
+        ax : matplotlib axes 
+            Axes handle with reciprocal error plots in it. 
+
+        """
+        newlegend = [] # list to store new legend entries 
+        legends = ax.get_legend().get_texts() # return text objects of the legend entries 
+        c = 0 # legend count number 
+        i = 0 # survey iteration number 
+        maxleg = len(self.surveys)*3 # maximum number of legends that should be possible 
+        for a in legends: 
+            if c%3 == 0 and c!=0:
+                i+=1 
+            name = self.surveys[i].name 
+            newlegend.append('{:s} {:s}'.format(name, a.get_text()))
+            c+=1 # add one every time loop is run 
+            if c == maxleg:
+                break # TODO: maybe delete surplus legend items in future? 
+            
+        ax.get_legend().remove()
+        ax.legend(newlegend, fontsize=10) # replace legend entries with survey names appended 
+        ax.set_title(ax.get_title().split('\n')[0])
 
 
     def fitErrorLin(self, index=-1, ax=None):
@@ -1914,14 +1992,8 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 s.fitErrorLin(ax=ax)
             # redo the legend
-            newlegend = []
             if ax is not None and len(self.surveys) > 1:
-                legends = ax.get_legend().get_texts()
-                for a in legends:
-                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
-                ax.get_legend().remove()
-                ax.legend(newlegend, fontsize=10)
-                ax.set_title(ax.get_title().split('\n')[0])
+                self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorLin(ax=ax)
 
@@ -1951,14 +2023,8 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 s.fitErrorPwl(ax=ax)
             # redo the legend
-            newlegend = []
             if ax is not None and len(self.surveys) > 1:
-                legends = ax.get_legend().get_texts()
-                for a in legends:
-                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
-                ax.get_legend().remove()
-                ax.legend(newlegend, fontsize=10)
-                ax.set_title(ax.get_title().split('\n')[0])
+                self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorPwl(ax=ax)
 
@@ -1986,13 +2052,8 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 s.fitErrorLME(ax=ax, rpath=rpath, iplot=iplot)
             # redo the legend
-            newlegend = []
             if ax is not None and len(self.surveys) > 1:
-                legends = ax.get_legend().get_texts()
-                for a in legends:
-                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
-                ax.get_legend().remove()
-                ax.legend(newlegend, fontsize=10)
+                self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorLME(ax=ax, rpath=rpath, iplot=iplot)
 
@@ -2046,14 +2107,8 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 s.fitErrorPwlIP(ax=ax)
             # redo the legend
-            newlegend = []
             if ax is not None and len(self.surveys) > 1:
-                legends = ax.get_legend().get_texts()
-                for a in legends:
-                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
-                ax.get_legend().remove()
-                ax.legend(newlegend, fontsize=10)
-                ax.set_title(ax.get_title().split('\n')[0])
+                self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorPwlIP(ax=ax)
 
@@ -2083,14 +2138,8 @@ class Project(object): # Project master class instanciated by the GUI
             for s in self.surveys:
                 s.fitErrorParabolaIP(ax=ax)
             # redo the legend
-            newlegend = []
             if ax is not None and len(self.surveys) > 1:
-                legends = ax.get_legend().get_texts()
-                for a in legends:
-                    newlegend.append('{:s} {:s}'.format(s.name, a.get_text()))
-                ax.get_legend().remove()
-                ax.legend(newlegend, fontsize=10)
-                ax.set_title(ax.get_title().split('\n')[0])
+                self.fixLegendItems(ax)
         else:
             self.surveys[index].fitErrorParabolaIP(ax=ax)
 
@@ -2407,9 +2456,16 @@ class Project(object): # Project master class instanciated by the GUI
         Parameters
         ----------
         typ : str, optional
-            Type of mesh. Either 'quad' or 'trian' in the case of 2d surveys.
-            By default, 'trian' is chosen for 2D and 'tetra' is used for 
-            3D surveys, but 'prism' or 'cylinder' (using tetra) can be used for column type experiments. 
+            Type of mesh.
+            For 2D:
+                - 'quad': quadrilateral (fast to build)
+                - 'trian': triangular (fast to run) - default
+                - 'circle': close circular mesh
+            For 3D: 
+                - 'tetra': tetrahedral mesh for half-space - default
+                - 'cylinder': column build with tetrahedral
+                - 'prism': column build with prism
+                - 'tank': closed geometry with tetrahedra
         buried : numpy.array, optional
             Boolean array of electrodes that are buried. Should be the same
             length as `R2.elec`
@@ -2433,7 +2489,7 @@ class Project(object): # Project master class instanciated by the GUI
             Depth of fine region specifies as a positive number relative to the mesh surface.
         remote : bool, optional
             Boolean array of electrodes that are remote (ie not real). Should be the same
-            length as `R2.elec`.
+            length as `Project.elec`.
         refine : int, optional
             Number times the mesh will be refined. Refinement split the triangles
             or the tetrahedra but keep the same number of parameter for the inversion.
@@ -2442,6 +2498,14 @@ class Project(object): # Project master class instanciated by the GUI
             triangles or tetrahedral mesh.
         kwargs : -
             Keyword arguments to be passed to mesh generation schemes
+            Specific for 'tank mesh':
+                - origin : list of 3 floats
+                    Origin in X,Y,Z of one of the tank corner.
+                - dimension : list of 3 floats
+                    Dimension from the corner on how to extend the tank.
+            Specific for 'cylinder mesh':
+                - zlim : list of 2 int
+                For the bottom and top of the column along the Z axis.
         """        
         if dump is None:
             if show_output:
@@ -2533,6 +2597,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.mproc = a
                 
             with cd(self.dirname):#change to working directory so that mesh files written in working directory
+                self.mproc = None
                 if typ == 'trian':
                     print('Creating triangular mesh...', end='')
                     mesh = mt.triMesh(elec_x,elec_z,elec_type,geom_input,
@@ -2541,8 +2606,15 @@ class Project(object): # Project master class instanciated by the GUI
                                  cl=cl, dump=dump, show_output=show_output,
                                  fmd=self.fmd, whole_space=whole_space,
                                  handle=setMeshProc, **kwargs)
-                    self.mproc = None
-                if typ == 'tetra': # TODO add buried
+                elif typ == 'circle':
+                    print('Creating circular mesh...NOT IMPLEMENTED YET', end='')
+                    mesh = mt.circularMesh(np.c_[elec_x, elec_y, elec_z],
+                                             path=os.path.join(self.apiPath, 'exe'),
+                                             cl=cl, dump=dump, show_output=show_output,
+                                             handle=setMeshProc, **kwargs)
+                    self.param['num_xy_poly'] = 0
+                    
+                elif typ == 'tetra':
                     print('Creating tetrahedral mesh...', end='')    
                     if cl == -1:
                         dist = cdist(self.elec[~self.elec['remote']][['x','y']].values)/2 # half the minimal electrode distance
@@ -2554,30 +2626,36 @@ class Project(object): # Project master class instanciated by the GUI
                                  cl=cl, dump=dump, show_output=show_output,
                                  fmd=self.fmd, whole_space=whole_space,
                                  handle=setMeshProc, **kwargs)
-                    self.mproc = None
-                if typ == 'prism':
+                elif typ == 'prism':
                     print('Creating prism mesh...', end='')
                     mesh = mt.prismMesh(elec_x, elec_y, elec_z,
                                          path=os.path.join(self.apiPath, 'exe'),
                                          cl=cl, dump=dump, show_output=show_output,
                                          handle=setMeshProc, **kwargs)
-                    self.mproc = None
                     self.param['num_xz_poly'] = 0
-                if typ == 'cylinder':
+                    # self.iadvanced = False # as current implimentation of advanced mesh doesnt work with prisms 
+                elif typ == 'cylinder':
                     print('Creating cylinder mesh...', end='')
                     mesh = mt.cylinderMesh(np.c_[elec_x, elec_y, elec_z],
                                              path=os.path.join(self.apiPath, 'exe'),
                                              cl=cl, dump=dump, show_output=show_output,
                                              handle=setMeshProc, **kwargs)
-                    self.mproc = None
                     self.param['num_xz_poly'] = 0
+                    # self.iadvanced = False # ditto 
+                elif typ == 'tank':
+                    print('Creating tank mesh...', end='')
+                    mesh = mt.tankMesh(np.c_[elec_x, elec_y, elec_z],
+                                             path=os.path.join(self.apiPath, 'exe'),
+                                             cl=cl, dump=dump, show_output=show_output,
+                                             handle=setMeshProc, **kwargs)
+                    self.param['num_xz_poly'] = 0
+            self.mproc = None # mesh successfully done so let's put this back to None in case it isn't already
 
             # mesh refinement
-            if (typ == 'trian') | (typ == 'tetra'):
+            if (typ != 'prism') and (typ != 'quad'):
                 for l in range(refine):
-                    print('Refining...', end='')
+                    print('refining...', end='')
                     mesh = mesh.refine()
-                print('Done')
             
             self.param['mesh_type'] = 3
             e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
@@ -2593,25 +2671,31 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
         self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
-        self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory() # if negative then we need more RAM
+        self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory(dump=dump) # if negative then we need more RAM
         self.mesh.iremote = self.elec['remote'].values
         
         # define zlim
-        if surface is not None:
-            zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
+        if (typ == 'tank') | (typ == 'cylinder') | (typ == 'prism'):
+            zmin = np.min(self.mesh.node[:,2])
+            zmax = np.max(self.mesh.node[:,2])
+            extent = zmax - zmin
+            self.zlim = [zmin - 0.1*extent, zmax + 0.1*extent]
         else:
-            # if all(self.elec['buried']): # if all buried we assume surface at 0 m
-                # zlimTop = 0
-            # else:
-            zlimTop = np.max(elec_z)
-        if all(self.elec['buried']) and surface is None: # whole mesh
-            zlimBot = np.min(elec_z)
-        else:
-            zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
-        # from surface then it is as well the zlimMin)
-        self.zlim = [zlimBot, zlimTop]
+            if surface is not None:
+                zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
+            else:
+                # if all(self.elec['buried']): # if all buried we assume surface at 0 m
+                    # zlimTop = 0
+                # else:
+                zlimTop = np.max(elec_z)
+            if all(self.elec['buried']) and surface is None: # whole mesh
+                zlimBot = np.min(elec_z)
+            else:
+                zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
+            # from surface then it is as well the zlimMin)
+            self.zlim = [zlimBot, zlimTop]
         self._computePolyTable()
-        print('done')
+        print('done ({:d} elements)'.format(self.mesh.df.shape[0]))
         
         
     def _computePolyTable(self):
@@ -2757,7 +2841,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh.iremote = self.elec['remote'].values
 
         if self.typ == 'R3t' or self.typ == 'cR3t':
-            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'))
+            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'), iadvanced=self.iadvanced)
         else:
             self.mesh.dat(os.path.join(self.dirname, 'mesh.dat'))
 
@@ -2801,6 +2885,11 @@ class Project(object): # Project master class instanciated by the GUI
                         kwargs['color_map'] = 'Spectral'
                 else:
                     kwargs['color_bar'] = False
+            
+            if 'typ' in self.meshParams.keys():
+                for a in ['tank', 'cylinder', 'prism']:
+                    if self.meshParams['typ'] == a:
+                        kwargs['clipping'] = False 
         
             self.mesh.show(ax=ax, darkMode=self.darkMode, **kwargs)
             
@@ -2881,7 +2970,7 @@ class Project(object): # Project master class instanciated by the GUI
         if np.sum(ifixed) > 0: # fixed element need to be at the end
             self.mesh.orderElem()
         if typ == 'R3t' or typ == 'cR3t':
-            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'))
+            self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'), iadvanced=self.iadvanced)
         else:
             self.mesh.dat(os.path.join(self.dirname, 'mesh.dat'))
         
@@ -2891,8 +2980,10 @@ class Project(object): # Project master class instanciated by the GUI
             print('All non fixed parameters reset to 100 Ohm.m and 0 mrad, '
                   'as the survey to be inverted is from a forward model.')
             ifixed = self.mesh.df['param'] == 0
-            res0 = np.array(self.mesh.df['res0'])
-            phase0 = np.array(self.mesh.df['phase0'])
+            # res0 = np.array(self.mesh.df['res0'])
+            res0 = np.zeros(self.mesh.numel)+100
+            # phase0 = np.array(self.mesh.df['phase0'])
+            phase0 = np.zeros(self.mesh.numel)
             res0f = res0.copy()
             phase0f = phase0.copy()
             res0f[~ifixed] = 100
@@ -3435,7 +3526,7 @@ class Project(object): # Project master class instanciated by the GUI
         if modErr is True and self.fwdErrModel is False: #check no error model exists
             dump('Computing error model... ')
             self.computeModelError()
-            dump('done!\n')
+            dump('done\n')
             errTot = True
         elif modErr is True and self.fwdErrModel:
             # avoid computing error model again if it has already been run.
@@ -3447,7 +3538,7 @@ class Project(object): # Project master class instanciated by the GUI
         dump('Writing .in file and protocol.dat... ')
         self.write2in(param=param) # R2.in
         self.write2protocol(errTot=errTot) # protocol.dat
-        dump('done!\n')
+        dump('done\n')
 
         # runs inversion
         if self.iTimeLapse == True and self.referenceMdl==False:
@@ -3490,6 +3581,11 @@ class Project(object): # Project master class instanciated by the GUI
             if modelDOI is True:
                 for m in self.meshResults:
                     m.df['doiSens'] = sensScaled
+            
+            # read final R2.out
+            with open(os.path.join(self.dirname, self.typ + '.out'),'r') as f:
+                self.invLog += f.read() + '\n'
+                
         except Exception as e:
             print('Could not retrieve files maybe inversion failed')
             print('Error: ', e)
@@ -3692,6 +3788,13 @@ class Project(object): # Project master class instanciated by the GUI
         if attr not in keys:
             attr = keys[3]
             print('Attribute not found, revert to {:s}'.format(attr))
+            
+        #check for clipping 
+        if 'typ' in self.meshParams.keys() and 'clipping' not in kwargs:
+            for a in ['tank', 'cylinder', 'prism']:
+                if self.meshParams['typ'] == a:
+                    kwargs['clipping'] = False 
+            
         if len(self.meshResults) > 0:
             mesh = self.meshResults[index]
             if self.typ[-1] == '2' and index != -1: # 2D case
@@ -4384,20 +4487,21 @@ class Project(object): # Project master class instanciated by the GUI
             if 'custSeq' is chosen, param1 should be a string of file path to a .csv
             file containing a custom sequence with 4 columns (a, b, m, n) containing 
             forward model sequence.
-        seqIdx: list of array like 
+        seqIdx: list of array like, optional
             Each entry in list contains electrode indices (not label and string)
             for a given electrode string which is to be sequenced. The advantage
             of a list means that sequences can be of different lengths. 
+        
         Examples
         --------
-        >>> k = R2()
+        >>> k = Project()
         >>> k.setElec(np.c_[np.linspace(0,5.75, 24), np.zeros((24, 2))])
         >>> k.createMesh(typ='trian')
         >>> k.createSequence([('dpdp1', 1, 8), ('wenner_alpha', 1), ('wenner_alpha', 2)]) # dipole-dipole sequence
-        >>> # k.createSequence([('custSeq', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
+        >>> k.createSequence([('custSeq', '<path to sequence file>/sequence.csv')]) # importing a custom sequence
         >>> seqIdx = [[0,1,2,3],[4,5,6,7],[8,9,10,11,12]]
         """
-        def addCustSeq(fname): # add custoim sequence 
+        def addCustSeq(fname): # add custom sequence 
             seq = pd.read_csv(fname, header=0)
             if seq.shape[1] != 4:
                 raise ValueError('The file should be a CSV file with headers with exactly 4 columns '
@@ -4416,16 +4520,18 @@ class Project(object): # Project master class instanciated by the GUI
               'multigrad': multigrad,
               'custSeq': addCustSeq}
 
-        if self.typ[-1] == 't': #its 3D
+        self.custSeq = False # reset the flag
+        if (self.typ == 'R3t') | (self.typ == 'cR3t'): #its 3D
             for p in params:
                 if p[0] == 'custSeq' and p[1] != '':
                     self.custSeq = True # we can't have custom sequence mixed with auto generated sequences in 3D - too complicated!
                     print('Custom sequence detected. Skipping auto sequence generation...')
                     sequence = addCustSeq(p[1]).astype(str)
-                    for i in range(sequence.shape[0]):
-                        for j in range(sequence.shape[1]):
-                            sequence[i,j] = '1 '+ str(sequence[i,j])
-                    break # only one custom sequence allowed
+                    if len(sequence[0][0].split(' ')) == 1: # no string, so let's add them
+                        for i in range(sequence.shape[0]):
+                            for j in range(sequence.shape[1]):
+                                sequence[i,j] = '1 '+ str(sequence[i,j])
+                    break # only one custom sequence allowed? 
                 
             if self.custSeq is False:                    
                 #determine sequence index if not already given 
@@ -4446,7 +4552,7 @@ class Project(object): # Project master class instanciated by the GUI
                     nelec = len(seqIdx[i])
                     slabels = self.elec['label'].values[seqIdx[i]] # string sequence labels
                     for p in params:
-                        if p[0] != 'custSeq': # not sure how to remove this from params
+                        if p[0] != 'custSeq': # ignore custSeq as already dealt with
                             pok = [int(p[i]) for i in np.arange(1, len(p))] # make sure all are int
                             str_seq = fdico[p[0]](nelec, *pok).values.astype(int) # return np array 
                             qs.append(slabels[str_seq-1])
@@ -4460,7 +4566,7 @@ class Project(object): # Project master class instanciated by the GUI
                             sequence[i,j] = '1 '+ sequence[i,j]
    
                     
-        else: #its 2D 
+        else: # it's 2D 
             nelec = self.elec.shape[0] 
             qs = []
             for p in params:
@@ -4532,10 +4638,41 @@ class Project(object): # Project master class instanciated by the GUI
             Path of the CSV file to be imported. The file must have 4 columns with headers (a, b, m, n) containing 4 electrodes numbers.
         """
         seq = pd.read_csv(fname, header=0)
+        keys = seq.keys()
+        
+        #check for headers 
+        trigger = False 
+        for a in ['a','b','m','n']:
+            if a not in keys:
+                print('Column "%s" not in sequence file'%a)
+                trigger =True 
+        if trigger:
+            raise Exception('Missing headers in sequence file!')
+                
         if seq.shape[1] != 4:
             raise ValueError('The file should be a CSV file with headers (a, b, m, n) with exactly 4 columns with electrode numbers.')
         else:
             self.sequence = seq
+            
+        #do check for electrode line numbers in the case of 3D 
+        if self.typ[-1] == 't':
+            if not isinstance(self.sequence['a'][0],str): # then add line numbers 
+                # print('adding line numbers')
+                surrogate = pd.DataFrame()
+                a = ['1']*len(seq)
+                b = ['1']*len(seq)
+                m = ['1']*len(seq)
+                n = ['1']*len(seq)
+                for i in range(len(seq)):
+                    a[i] = '1 '+ str(seq['a'][i])
+                    b[i] = '1 '+ str(seq['b'][i])
+                    m[i] = '1 '+ str(seq['m'][i])
+                    n[i] = '1 '+ str(seq['n'][i])
+                surrogate['a'] = a
+                surrogate['b'] = b
+                surrogate['m'] = m
+                surrogate['n'] = n
+                self.sequence = surrogate 
 
 
     def saveErrorData(self, fname):
@@ -4642,7 +4779,7 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             self.mesh.dat(os.path.join(fwdDir, 'mesh.dat'))
         else:
-            self.mesh.datAdv(os.path.join(fwdDir, 'mesh3d.dat'))
+            self.mesh.datAdv(os.path.join(fwdDir, 'mesh3d.dat'), iadvanced=self.iadvanced)
             
         # write the forward .in file
         if self.custSeq is True: # only in case of 3D custom sequence
@@ -4659,13 +4796,13 @@ class Project(object): # Project master class instanciated by the GUI
         fparam['res0File'] = 'resistivity.dat' # just starting resistivity
         
         write2in(fparam, fwdDir, typ=self.typ)
-        dump('done!\n')
+        dump('done\n')
 
         # write the protocol.dat (that contains the sequence)
         if self.sequence is None:
             dump('Creating sequence... ')
             self.createSequence()
-            dump('done!\n')
+            dump('done\n')
         dump('Writing protocol.dat... ')
         seq = self.sequence
 
@@ -4708,7 +4845,7 @@ class Project(object): # Project master class instanciated by the GUI
                                 columns=['index','a','b','m','n'])
         
         # if it's 3D, we add the line number (all electrode on line 1)
-        if ((self.typ == 'R3t') | (self.typ == 'cR3t')):
+        if ((self.typ == 'R3t') or (self.typ == 'cR3t')):
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
                     protocol.loc[:, c] = '1 ' + protocol[c]
@@ -4718,7 +4855,7 @@ class Project(object): # Project master class instanciated by the GUI
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
             protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
-        dump('done!\n')
+        dump('done\n')
 
         # fun the inversion
         dump('Running forward model... ')
@@ -4737,7 +4874,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.noise = noise # percentage noise e.g. 5 -> 5% noise
         self.noiseIP = noiseIP #absolute noise in mrad, following convention of cR2
         
-        # fmd = self.fmd
+        fmd = self.fmd#.copy()
         elec = self.elec.copy()
         if self.typ[-1]=='t' and not self.hasElecString():
             #need to add elec strings to labels if in 3D
@@ -4746,9 +4883,14 @@ class Project(object): # Project master class instanciated by the GUI
             
         self.surveys = [] # need to flush it (so no timeLapse forward)
         if self.typ[0] == 'c':
-            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolIP')
+            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), 
+                              ftype='forwardProtocolIP',
+                              compRecip=False) # dont compute reciprocals as that will be done after adding noise (see lines below)
         else:
-            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), ftype='forwardProtocolDC')
+            self.createSurvey(os.path.join(fwdDir, self.typ + '_forward.dat'), 
+                              ftype='forwardProtocolDC',
+                              compRecip=False)
+            
         # NOTE the 'ip' columns here is in PHASE not in chargeability
         self.surveys[0].kFactor = 1 # kFactor by default is = 1 now, though wouldn't hurt to have this here!
         self.surveys[0].df['resist'] = addnoise(self.surveys[0].df['resist'].values, self.noise/100)
@@ -4878,7 +5020,7 @@ class Project(object): # Project master class instanciated by the GUI
                 n = 3
                 name = 'mesh3d.dat'
                 file_path = os.path.join(fwdDir, name)
-                mesh.datAdv(file_path) # use advanced mesh format if 3D 
+                mesh.datAdv(file_path, iadvanced=self.iadvanced) # use advanced mesh format if 3D 
             #make starting resistivity file 
             resFile = np.zeros((centroids.shape[0],n+1)) # centroid x, y, z, res0
             resFile[:,-1] = 100
@@ -4988,7 +5130,12 @@ class Project(object): # Project master class instanciated by the GUI
                 except:
                     pass
             if x.shape[0] > 0:
-                triang = tri.Triangulation(x[:,0], x[:,1])
+                try: # sometimes i have this part to fail, not sure why
+                    triang = tri.Triangulation(x[:,0], x[:,1])
+                except ValueError:
+                    warnings.warn('Failed to plot iteration mesh')
+                    return # if the triangulation fails then fall out of function 
+                
                 if self.typ[0] == 'c' and modelDOI is False:
                     z = x[:,4]
                 else:
@@ -5219,9 +5366,39 @@ class Project(object): # Project master class instanciated by the GUI
             Output path of the .vtk produced. By default the mesh is saved in
             the working directory `self.dirname` as `mesh.vtk`.
         """
+        warnings.warn('The function is deprecated, use saveMesh() instead.',
+                      DeprecationWarning)
         if outputname is None:
             outputname = os.path.join(self.dirname, 'mesh.vtk')
         self.mesh.vtk(outputname)
+
+
+
+    def saveMesh(self, outputname=None):
+        """Save mesh as .vtk to be viewed in paraview.
+
+        Parameters
+        ----------
+        outputname : str, optional
+            Output path with extension. Available mesh format are:
+                - .vtk (Paraview)
+                - .node (Tetgen)
+                - .dat (R* codes)
+            If not provided the mesh is saved in the working directory
+            as mesh.vtk.
+        """
+        if outputname is None:
+            self.mesh.vtk(os.path.join(self.dirname, 'mesh.vtk'))
+        else:
+            if outputname.lower()[-4:] == '.vtk':
+                self.mesh.vtk(outputname)
+            elif outputname.lower()[-5:] == '.node':
+                self.mesh.exportTetgenMesh(prefix=outputname.replace('.node',''))
+            elif outputname.lower()[-4:] == '.dat':
+                self.mesh.dat(outputname)
+            else:
+                raise ValueError('mesh export format not recognized. Try either .vtk, .node or .dat.')
+
 
 
     def _toParaview(self, fname,  paraview_loc=None): # pragma: no cover
@@ -5662,10 +5839,10 @@ class Project(object): # Project master class instanciated by the GUI
         """
         #NB: using variable names from Andy's codes 
         if self.mesh is None:
-            print('A mesh is required before a memory usage estimate can be made')
+            dump('A mesh is required before a memory usage estimate can be made')
             return 0
         if len(self.surveys) == 0:
-            print('A survey needs to imported before a memory usage estimate can be made')
+            dump('A survey needs to imported before a memory usage estimate can be made')
             return 0
         else: # number of measurements computation 
             nmeas = []
@@ -5747,7 +5924,7 @@ class Project(object): # Project master class instanciated by the GUI
             
         return Gb
     
-    def _estimateMemoryJac(self,dump=print):
+    def _estimateMemoryJac(self, dump=print):
         """Estimates the memory needed by inversion code to formulate 
         a jacobian matrix
 
@@ -5808,14 +5985,195 @@ class Project(object): # Project master class instanciated by the GUI
         if type(ncores) != int:
             raise TypeError('Expected ncores as an int, but got %s'%str(type(ncores)))
         mt.ncores = ncores
-
         
 # for backward compatibility, retain the main class called R2
 class R2(Project):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+#%% Resolution matrix calculation
+# compute covariance matrix on Nvidia GPU / multi core processor 
+def __readSize(fname):
+    fh = open(fname)
+    line1 = fh.readline().split()
+    fh.close()
+    return [int(k) for k in line1]
+
+def __readJacob(fname):
+    array = []
+    fh = open(fname)
+    header = fh.readline()
+    size = [int(k) for k in header.split()]
+    lines = fh.readlines()
+    fh.close()
+    for line in lines:
+        array += [float(x) for x in line.split()]
+    return tuple(size), array
+
+def __readRm(fname, jsize, rsize):
+    Rmap = np.genfromtxt(fname.replace('R','Rindex'),
+                         skip_header=1,dtype=int)-1
+    
+    Rvals = np.genfromtxt(fname,
+                          skip_header=1)
+    
+    Rn = np.zeros((jsize[1],jsize[1]))
+    for i in range(rsize[0]):
+        for j in range(rsize[1]):
+            k = Rmap[i,j]
+            if k!=-1:
+                Rn[i,k] = Rvals[i,j]
+    
+    return Rn 
+
+def __getAlpha(fname):
+    #return final reported alpha value, file should be the .out file from andy's code
+    fh = open(fname,'r')
+    lines = fh.readlines()
+    fh.close()
+    idx = []
+    c = 0
+    for line in lines:
+        if line.find('Alpha:') != -1:
+            idx.append(c)
+        c+=1
+    if len(idx) == 0:
+        raise ValueError("Can't find alpha line")
         
+    fnl = lines[max(idx)].split()
+    alpha = float(fnl[1])
+    return alpha
+
+
+def cudaRm(invdir):
+    """Compute Resolution and Covariance matrix for 2D problems using nVIDIA GPU. 
+
+    Parameters
+    ----------
+    invdir : string 
+        Inversion directory used by R2.
+
+    Returns
+    -------
+    covar : nd array 
+        Values along the diagonal of the coviarance matrix.
+    remat : nd array 
+        Values along the diagonal of the Resolution matrix..
+
+    """
+    import cupy as cp # import cupy (needs cuda enabled pc)
+    
+    mempool = cp.get_default_memory_pool()
+    pinned_mempool = cp.get_default_pinned_memory_pool()
+    # read in jacobian
+    jsize, jdata = __readJacob(os.path.join(invdir,'f001_J.dat'))
+    Jn = np.array(jdata,dtype=np.float32).reshape(jsize) # numpy equivalent 
+    J = cp.array(Jn,dtype=np.float32)
+    
+    # read in data Weighting matrix
+    protocol = np.genfromtxt(os.path.join(invdir,'f001_err.dat'),
+                             skip_header=1)
+    
+    Wd = cp.array(np.diag(protocol[:,8]),dtype=np.float32)
+    
+    # read in model roughness matrix 
+    rsize = __readSize(os.path.join(invdir,'f001_R.dat'))
+    
+    Rn = __readRm(os.path.join(invdir,'f001_R.dat'), jsize, rsize)
+    R = cp.array(Rn,dtype=np.float32)
+    #construct A and b on GPU 
+    files = os.listdir(invdir)
+    for f in files:
+        if f.endswith('.out'):
+            alpha = __getAlpha(os.path.join(invdir,f))
+            break
+    S = cp.matmul(cp.matmul(J.T,Wd.T), cp.matmul(Wd,J))
+    A = S + alpha*R #Form A (Menke et al, 2015)
+    
+    #get rid of parameters we dont need anymore to free up memory 
+    J = None
+    Wd = None
+    R = None 
+    mempool.free_all_blocks()
+    
+    Cm = cp.linalg.inv(A) # solve inverse of A to get covariance matrix 
+    ResM = Cm*S
+    A = None
+    mempool.free_all_blocks()
+    
+    # retrieve outputs as numpy arrays 
+    covar = np.diagonal(Cm.get())
+    remat = np.diagonal(ResM.get())
+    
+    #finally clear memory once again 
+    Cm = None
+    S = None
+    ResM = None
+    mempool.free_all_blocks()
+    pinned_mempool.free_all_blocks()
+    
+    return covar, remat
+
+def parallelRm(invdir):
+    """Compute Resolution and Covariance matrix for 2D problems using multicore CPU. 
+    Behaves the same as cudaRm but uses numpy / openBlas. 
+
+    Parameters
+    ----------
+    invdir : string 
+        Inversion directory used by R2.
+
+    Returns
+    -------
+    covar : nd array 
+        Values along the diagonal of the coviarance matrix.
+    remat : nd array 
+        Values along the diagonal of the Resolution matrix..
+
+    """
+    # read in jacobian
+    jsize, jdata = __readJacob(os.path.join(invdir,'f001_J.dat'))
+    Jn = np.array(jdata,dtype=np.float32).reshape(jsize) # numpy equivalent 
+    
+    # read in data Weighting matrix
+    protocol = np.genfromtxt(os.path.join(invdir,'f001_err.dat'),
+                             skip_header=1)
+    
+    Wd = np.diag(protocol[:,8])
+    
+    # read in model roughness matrix 
+    rsize = __readSize(os.path.join(invdir,'f001_R.dat'))
+    
+    Rn = __readRm(os.path.join(invdir,'f001_R.dat'), jsize, rsize)
+    #construct A and b on GPU 
+    files = os.listdir(invdir)
+    for f in files:
+        if f.endswith('.out'):
+            alpha = __getAlpha(os.path.join(invdir,f))
+            break
+    S = np.matmul(np.matmul(Jn.T,Wd.T), np.matmul(Wd,Jn))
+    A = S + alpha*Rn #Form A (Menke et al, 2015)
+    
+    #get rid of parameters we dont need anymore to free up memory 
+    Jn = None
+    Wd = None
+    Rn = None 
+    
+    Cm = np.linalg.inv(A) # solve inverse of A to get covariance matrix (should use multiple cores)
+    ResM = Cm*S
+    A = None
+    
+    # retrieve outputs as numpy arrays 
+    covar = np.diagonal(Cm)
+    remat = np.diagonal(ResM)
+    
+    #finally clear memory once again 
+    Cm = None
+    S = None
+    ResM = None
+    
+    return covar, remat
+
 #%% deprecated funcions
 
     def pseudoIP(self, index=0, vmin=None, vmax=None, ax=None, **kwargs): # pragma: no cover

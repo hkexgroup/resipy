@@ -6,10 +6,10 @@
 
 
 # pull docker image with python 3.7 (debian stretch)
-docker pull python:3.7-stretch
+docker pull python:3.8-buster
 
-# run bash shell on the docker image
-docker run -it python:3.7-stretch bash
+# run bash shell on the docker image with a shared folder
+docker run -it -v /media/jkl/data/phd/tmp/resipy:/resipy python:3.8-buster bash
 
 # this will create a docker image in which you will need to run
 # the commands in .gitlab-ci.yml in order to install necessary
@@ -23,6 +23,14 @@ docker pull ubuntu:latest
 
 # and install
 sudo apt-get install python3 pip3
+
+
+# run existing container
+docker start <container name or id>
+docker exec -it <container name or id> bash
+
+# run jupyterlab inside container
+python -m jupyterlab --allow-root --ip 0.0.0.0
 
 
 

@@ -103,6 +103,36 @@ def polyfit(x,y,deg=1):
         
     return coef 
 
+def sortInt(arr, n): 
+    #adapted from https://www.geeksforgeeks.org/insertion-sort/
+    #sorts array in place
+    for i in range(1, n): 
+        key = arr[i] 
+        j = i-1
+        while j >= 0 and key < arr[j] : 
+                arr[j + 1] = arr[j] 
+                j -= 1
+        arr[j + 1] = key 
+
+def mergeInt(a, b, pad): #merge 2 ints 
+    return a*10**pad + b # merge a and b
+
+def bisectionSearch(arr, var):
+    """Efficent search algorithm for sorted array of postive ints 
+    """
+    L = 0
+    n = len(arr)
+    R = n-1
+    while L <= R:
+        m = int((L+R)/2)
+        if arr[m]<var:
+            L = m+1
+        elif arr[m]>var:
+            R = m-1
+        else:
+            return m
+    return -1
+
 class Survey(object):
     """Class that handles geophysical data and some basic functions. One 
     instance is created for each survey.
@@ -134,9 +164,12 @@ class Survey(object):
         If `True` will keep all the measurements even the ones without
         reciprocal. Note that if none of the quadrupoles have reciprocal
         they will all be kept anyway.
+    compRecip: bool, optional 
+        Compute reciprocal errors, default is True. 
     """
     def __init__(self, fname=None, ftype='', df=None, elec=None, name='',
-                 spacing=None, parser=None, keepAll=True, debug=True):
+                 spacing=None, parser=None, keepAll=True, debug=True,
+                 compRecip=True):
         
         # set default attributes
         self.iBorehole = False # True is it's a borehole
@@ -156,10 +189,12 @@ class Survey(object):
         # check arguments
         if name == '':
             if fname is not None:
+                # tmp = fname.split(os.sep)[-1] #gets file name (without path)
                 name = os.path.basename(os.path.splitext(fname)[0])
             else:
                 name = 'Survey'
         self.name = name
+        self.source = fname #save original file name 
         
         if spacing is not None:
             warnings.warn('The spacing argument is deprecated and will be removed in the next version.',
@@ -168,7 +203,7 @@ class Survey(object):
         # parsing data to form main dataframe and electrode array
         if fname is not None:
             avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
-                        'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
+                            'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
             if parser is not None:
                 elec, data = parser(fname)
             else:
@@ -264,7 +299,8 @@ class Survey(object):
         
         # apply basic filtering
         self.filterDefault()
-        self.computeReciprocal() # compute reciprocals
+        if compRecip:
+            self.computeReciprocal() # compute reciprocals
         
         # create backup copies
         self.dfReset = self.df.copy()
@@ -609,8 +645,95 @@ class Survey(object):
         
     #     return Ri
     
+    def computeReciprocal3(self): # pandas way
+        """Compute reciprocal measurements using `pandas.merge()`.
+        TODO
+        Notes
+        -----
+        The method first sorts the dipole AB and MN. Then creates a reciprocal
+        quadrupole matrix. These matrices are then used with
+        numpy.equal to produce a 2D matrix from which reciprocal are extracted.
+        """
+        resist = self.df['resist'].values
+        phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
+        ndata = self.ndata
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        
+        R = np.copy(resist)
+        M = np.copy(phase)
+        ndata = len(R)
+        Ri = np.zeros(ndata, dtype=int)
+        reciprocalErr = np.zeros(ndata)*np.nan
+        reciprocalErrRel = np.zeros(ndata)*np.nan
+        reciprocalMean = np.zeros(ndata)*np.nan
+        reci_IP_err = np.zeros(ndata)*np.nan
+        
+        # sort quadrupoles and creates reciprocal array
+        sortedArray = np.c_[np.sort(array[:,:2]), np.sort(array[:,2:])]
+        
+        # build dataframe of normal and reciprocal and merge them
+        df1 = pd.DataFrame(sortedArray, columns=['a','b','m','n'])
+        df1['index1'] = np.arange(df1.shape[0])
+        df2 = pd.DataFrame(sortedArray, columns=['m','n','a','b'])
+        df2['index2'] = np.arange(df2.shape[0])
+        dfm = pd.merge(df1, df2, on=['a','b','m','n'], how='outer')
+        dfm = dfm.dropna() # drom quad without reciprocal
+        
+        # sort and keep only half
+        indexArray = np.sort(dfm[['index1', 'index2']].values.astype(int), axis=1)
+        indexArrayUnique = np.unique(indexArray, axis=0)
+        inormal = indexArrayUnique[:,0]
+        irecip = indexArrayUnique[:,1]
+        
+        val = np.arange(ndata) + 1
+        Ri[inormal] = val[inormal]
+        Ri[irecip] = -val[inormal]
+        
+        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reci_IP_err[inormal] = M[irecip] - M[inormal]
+        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reci_IP_err[irecip] = M[inormal] - M[irecip]
+        
+        # compute reciprocal mean with all valid values
+        ok1 = ~(np.isnan(R[inormal]) | np.isinf(R[inormal]))
+        ok2 = ~(np.isnan(R[irecip]) | np.isinf(R[irecip]))
+        
+        ie = ok1 & ok2 # both normal and recip are valid
+        reciprocalMean[inormal[ie]] = np.mean(np.c_[np.abs(R[inormal]),np.abs(R[irecip])], axis=1)
+        reciprocalMean[irecip[ie]] = np.mean(np.c_[np.abs(R[inormal]),np.abs(R[irecip])], axis=1)
+        
+        ie = ok1 & ~ok2 # only use normal
+        reciprocalMean[inormal[ie]] = np.abs(R[inormal[ie]])
+        
+        ie =  ~ok1 & ok2 # only use reciproal
+        reciprocalMean[inormal[ie]] = np.abs(R[irecip[ie]])
+        
+        reciprocalErrRel = reciprocalErr / reciprocalMean
+        
+        reciprocalMean = np.sign(resist)*reciprocalMean # add sign
+        
+        ibad = np.array([np.abs(a) > 0.2 if ~np.isnan(a) else False for a in reciprocalErrRel])
+        if self.debug:
+            print('{:d}/{:d} reciprocal measurements found.'.format(np.sum(Ri != 0), len(Ri)))
+            if np.sum(Ri != 0) > 0: # no need to display that if there is no reciprocal
+                print('{:d} measurements error > 20 %'.format(np.sum(ibad)))        
+                
+        self.df['irecip'] = Ri
+        self.df['reciprocalErrRel'] = reciprocalErrRel
+        self.df['recipError'] = reciprocalErr
+        self.df['recipMean'] = reciprocalMean
+        self.df['reci_IP_err'] = reci_IP_err
+        # in order to compute error model based on a few reciprocal measurements
+        # we fill 'recipMean' column with simple resist measurements for lonely
+        # quadrupoles (which do not have reciprocals)
+        inotRecip = Ri == 0
+        self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
+        
+        return Ri
     
-    def computeReciprocal(self): # fast vectorize version
+    
+    def computeReciprocal2(self): # fast vectorize version
         """Compute reciprocal measurements.
         
         Notes
@@ -646,6 +769,124 @@ class Survey(object):
         imatch[inotfound, :] = False # in case one quad has multiple recip, this discards it
         inormal, irecip = np.where(imatch) # quad with only one reciprocal
         
+        val = np.arange(ndata) + 1
+        Ri[inormal] = val[inormal]
+        Ri[irecip] = -val[inormal]
+        
+        reciprocalErr[inormal] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reci_IP_err[inormal] = M[irecip] - M[inormal]
+        reciprocalErr[irecip] = np.abs(R[irecip]) - np.abs(R[inormal])
+        reci_IP_err[irecip] = M[inormal] - M[irecip]
+        
+        # compute reciprocal mean with all valid values
+        ok1 = ~(np.isnan(R[inormal]) | np.isinf(R[inormal]))
+        ok2 = ~(np.isnan(R[irecip]) | np.isinf(R[irecip]))
+        
+        ie = ok1 & ok2 # both normal and recip are valid
+        reciprocalMean[inormal[ie]] = np.mean(np.c_[np.abs(R[inormal]),np.abs(R[irecip])], axis=1)
+        reciprocalMean[irecip[ie]] = np.mean(np.c_[np.abs(R[inormal]),np.abs(R[irecip])], axis=1)
+        
+        ie = ok1 & ~ok2 # only use normal
+        reciprocalMean[inormal[ie]] = np.abs(R[inormal[ie]])
+        
+        ie =  ~ok1 & ok2 # only use reciproal
+        reciprocalMean[inormal[ie]] = np.abs(R[irecip[ie]])
+        
+        reciprocalErrRel = reciprocalErr / reciprocalMean
+        
+        reciprocalMean = np.sign(resist)*reciprocalMean # add sign
+        
+        ibad = np.array([np.abs(a) > 0.2 if ~np.isnan(a) else False for a in reciprocalErrRel])
+        if self.debug:
+            print('{:d}/{:d} reciprocal measurements found.'.format(np.sum(Ri != 0), len(Ri)))
+            if np.sum(Ri != 0) > 0: # no need to display that if there is no reciprocal
+                print('{:d} measurements error > 20 %'.format(np.sum(ibad)))        
+                
+        self.df['irecip'] = Ri
+        self.df['reciprocalErrRel'] = reciprocalErrRel
+        self.df['recipError'] = reciprocalErr
+        self.df['recipMean'] = reciprocalMean
+        self.df['reci_IP_err'] = reci_IP_err
+        # in order to compute error model based on a few reciprocal measurements
+        # we fill 'recipMean' column with simple resist measurements for lonely
+        # quadrupoles (which do not have reciprocals)
+        inotRecip = Ri == 0
+        self.df.loc[inotRecip, 'recipMean'] = self.df.loc[inotRecip, 'resist']
+        
+        return Ri
+    
+    def computeReciprocal(self): # fast vectorize version
+        """Compute reciprocal measurements.
+        
+        Notes
+        -----
+        The method first sorts the dipole AB and MN. Then efficiently searches
+        for reciprocal pairs with a bisection search. 
+        """
+        resist = self.df['resist'].values
+        phase = -self.kFactor*self.df['ip'].values #converting chargeability to phase shift
+        ndata = self.ndata
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        
+        #define inputs         
+        R = np.copy(resist)
+        M = np.copy(phase)
+        
+        ndata = array.shape[0]
+        pad = len(str(np.max(array)))
+        ab = array[:,0:2]
+        mn = array[:,2:4]
+    
+        #define outputs 
+        Ri = np.zeros(ndata,dtype=np.int_) 
+        reciprocalErr = np.zeros(ndata)*np.nan
+        reciprocalErrRel = np.zeros(ndata)*np.nan
+        reciprocalMean = np.zeros(ndata)*np.nan
+        reci_IP_err = np.zeros(ndata)*np.nan
+    
+        AB = np.zeros(ndata,dtype=np.int_) # AB combination 
+        MN = np.zeros(ndata,dtype=np.int_) # MN combination 
+        comboF = np.zeros(ndata,dtype=np.int_) # forward combination
+        comboR = np.zeros(ndata,dtype=np.int_) # reverse combination 
+        
+        #### efficient method to calculate inormal and irecip ####
+        
+        #merge integers to create unique codes 
+        for i in range(ndata):
+            sortInt(ab[i,:],2) # sort ints 
+            sortInt(mn[i,:],2)
+            AB[i] = mergeInt(ab[i,0], ab[i,1],pad)
+            MN[i] = mergeInt(mn[i,0], mn[i,1],pad)
+            comboF[i] = mergeInt(AB[i], MN[i], pad*2)
+            comboR[i] = mergeInt(MN[i], AB[i], pad*2)
+
+        idxcr = np.argsort(comboR).astype(np.int_) # sort arrays for efficient lookup 
+        sortR = comboR[idxcr]
+        
+        RealIndex = np.zeros(ndata,dtype=np.int_) - 1
+        ifwd = np.zeros(ndata,dtype=np.int_) 
+        inormal = np.zeros(ndata,dtype=np.int_) - 1
+        irecip = np.zeros(ndata,dtype=np.int_) - 1
+        
+        for i in range(ndata):
+            o = bisectionSearch(sortR,comboF[i]) # only works on a sorted array   
+            if o != -1:#then a match has been found! 
+                RealIndex[i] = idxcr[o] # lookup scheduled index 
+                if ifwd[i] == 0: # not assigned to the forward direction yet
+                    ifwd[i] = 1
+                    ifwd[RealIndex[i]] = -1
+                    inormal[i] = i
+                    irecip[i] = RealIndex[i]
+    
+            else: # there is no pairing 
+                ifwd[i] = 1
+            
+        #create inormal and irecip as above
+        inormal= inormal[inormal>-1]#truncate arrays 
+        irecip = irecip[irecip>-1]
+
+        #### rest of function is same as above #### 
         val = np.arange(ndata) + 1
         Ri[inormal] = val[inormal]
         Ri[irecip] = -val[inormal]
@@ -1535,6 +1776,58 @@ class Survey(object):
         
         self.df['K'] = K
         
+    def computeKborehole(self,Gl = None): # ground level 
+        """
+        Compute geometric factor for a borehole survery assuming a flat 2D 
+        surface. Gl = ground level. 
+        """
+      
+        lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0])))
+        array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
+        elec = self.elec[['x','y','z']].values 
+    
+        if Gl is None: 
+            Gl = np.max(elec[:,2]) # take maximum electrode coordinate elevation as ground level 
+            
+        Ax = elec[:,0][array[:,0]]
+        Ay = elec[:,1][array[:,0]]
+        Az = elec[:,2][array[:,0]]
+        
+        Bx = elec[:,0][array[:,1]]
+        By = elec[:,1][array[:,1]]
+        Bz = elec[:,2][array[:,1]]
+        
+        Mx = elec[:,0][array[:,2]]
+        My = elec[:,1][array[:,2]]
+        Mz = elec[:,2][array[:,2]]
+        
+        Nx = elec[:,0][array[:,3]]
+        Ny = elec[:,1][array[:,3]]
+        Nz = elec[:,2][array[:,3]]
+        
+        Ax_ = Ax.copy()
+        Ay_ = Ay.copy()
+        Az_ = 2*Gl-Az
+        
+        Bx_ = Bx.copy()
+        By_ = By.copy()
+        Bz_ = 2*Gl-Bz
+        
+        rAM = np.sqrt((Ax-Mx)**2 + (Ay-My)**2 + (Az-Mz)**2)
+        rAN = np.sqrt((Ax-Nx)**2 + (Ay-Ny)**2 + (Az-Nz)**2)
+        rBM = np.sqrt((Bx-Mx)**2 + (By-My)**2 + (Bz-Mz)**2)
+        rBN = np.sqrt((Bx-Nx)**2 + (By-Ny)**2 + (Bz-Nz)**2)
+        
+        rA_M = np.sqrt((Ax_-Mx)**2 + (Ay_-My)**2 + (Az_-Mz)**2)
+        rA_N = np.sqrt((Ax_-Nx)**2 + (Ay_-Ny)**2 + (Az_-Nz)**2)
+        rB_M = np.sqrt((Bx_-Mx)**2 + (By_-My)**2 + (Bz_-Mz)**2)
+        rB_N = np.sqrt((Bx_-Nx)**2 + (By_-Ny)**2 + (Bz_-Nz)**2)
+        
+        k = (1/rAM)+(1/rA_M)-(1/rAN)-(1/rA_N)-(1/rBM)-(1/rB_M)+(1/rBN)+(1/rB_N)
+        K = 4*np.pi/k
+        
+        return K 
+        
         
     def _computePseudoDepth(self):
         """Compute pseudo-depths.
@@ -1591,6 +1884,10 @@ class Survey(object):
         xposNonNested  = np.min([cmiddlex, pmiddlex], axis=0) + np.abs(cmiddlex-pmiddlex)/2
         yposNonNested  = np.min([cmiddley, pmiddley], axis=0) + np.abs(cmiddley-pmiddley)/2
         pcdist = np.sqrt((cmiddlex-pmiddlex)**2 + (cmiddley-pmiddley)**2)
+
+        # zposNonNested = np.sqrt(2)/2*pcdist
+        zposNonNested = pcdist/4
+
         if np.all(cmiddley-pmiddley == 0):
             zposNonNested = 0.25*pcdist
         else: # for 3D arrays where there are mid-line measurements, this works closer to inversion results
@@ -1702,7 +1999,8 @@ class Survey(object):
         if ax is None:
             return fig
     
-    def _showElecStrings3D(self,ax=None,strIdx=None, 
+    def _showElecStrings3D(self,ax=None,
+                           strIdx=None, 
                            background_color=(0.8,0.8,0.8),
                            elec_color='k'):
         if ax is None: # make a plotter object if not already given 
@@ -1744,7 +2042,7 @@ class Survey(object):
     def _showPseudoSection3D(self, ax=None, contour=False, log=False, geom=True,
                            vmin=None, vmax=None, column='resist', 
                            background_color=(0.8,0.8,0.8), elec_color='k',
-                           strIdx=None, magFlag=False, darkMode=False):
+                           strIdx=None, magFlag=False, darkMode=False, pvshow=True):
         """Create a pseudo-section for 3D surface array.
         
         Parameters
@@ -1766,17 +2064,20 @@ class Survey(object):
             Maximum value for the colorbar.
         background_color: tuple, optional 
             background color for pyvista plotter object
-        elec_color: tuple, string, optional
+        elec_color : tuple, string, optional
             color identifier for pyvista plotter object, determines color of 
             electrode points if they can be plotted. 
-        strIdx: list, optional 
+        strIdx : list, optional 
             returned from R2.detectStrings method. Each entry in list is an 
             array like of ints defining an electrode string. 
-        magFlag: bool, optional
+        magFlag : bool, optional
             If `True` then Tx resistance sign will be checked assuming a flat surface survey.
             `False`, resistance values are given with correct polarity.
-        darkmode: bool, optional
+        darkmode : bool, optional
             Alters coloring of pyvista plot for a darker appearance
+        pvshow : bool, optional
+            If True (default), the `Plotter.show()` is called. Set it to False
+            to make 3D subplot with pyvista.
             
         """
         if not pyvista_installed:
@@ -1875,7 +2176,8 @@ class Survey(object):
             print("Could not plot 3d electrodes, error = "+str(e))
             
         ax.show_grid(color=tcolor)
-        ax.show()
+        if pvshow:
+            ax.show()
 
     
     def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
@@ -2298,7 +2600,7 @@ class Survey(object):
             Print output to screen. Default is True.
         """
         df = self.df.copy()
-        tRes = self.df['resist']
+        tRes = np.abs(self.df['resist'])
         if vmin is None:
             vmin = np.min(tRes)
         if vmax is None:
@@ -2538,6 +2840,83 @@ class Survey(object):
             new_elec[put_back,2] = z_sorted[i]
     
         self.elec.loc[:, ['x','y','z']] = new_elec
+        
+    def _rmLineNum(self):
+        """Remove line numbers from dataframe.
+        """
+        print('removing line numbers')
+        for i in range(len(self.df)):
+            for col in ['a','b','m','n']:
+                val = self.df[col][i]
+                self.df.loc[i,col] = val.split()[-1]
+                
+    def _seq2mat(self):
+                
+        """
+        Read in ResIPy scheduling matrix and convert to 4 columns of integers 
+        (abmn). 
+    
+        Returns
+        -------
+        schedule: nd array 
+            N by 4 array of ints 
+    
+        """
+        scheduledf = self.df.copy()
+        nmeas = len(self.df)
+        
+        #go through and extract string and electrode id 
+        scheduledf['as'] = np.zeros(nmeas,dtype=int)
+        scheduledf['bs'] = np.zeros(nmeas,dtype=int)
+        scheduledf['ms'] = np.zeros(nmeas,dtype=int)
+        scheduledf['ns'] = np.zeros(nmeas,dtype=int)
+        
+        scheduledf['ai'] = np.zeros(nmeas,dtype=int)
+        scheduledf['bi'] = np.zeros(nmeas,dtype=int)
+        scheduledf['mi'] = np.zeros(nmeas,dtype=int)
+        scheduledf['ni'] = np.zeros(nmeas,dtype=int)
+        
+        labels = ['a', 'b', 'm', 'n']
+        for i in range(nmeas):
+            for l in labels :
+                e = scheduledf[l][i].split()
+                scheduledf.loc[i,l+'s'] = int(e[0]) # pandas approach 
+                scheduledf.loc[i,l+'i'] = int(e[1])
+                # scheduledf[l+'s'][i] = int(e[0])
+                # scheduledf[l+'i'][i] = int(e[1])
+                
+                
+        stringid = scheduledf[['as','bs','ms','ns']].values
+        elecid = scheduledf[['ai','bi','mi','ni']].values
+        # stringid = np.zeros((nmeas,4),dtype=int)
+        # elecid = np.zeros((nmeas,4),dtype=int)
+        for i in range(4):
+            stringid[:,i] = scheduledf[labels[i]+'s']
+            elecid[:,i] = scheduledf[labels[i]+'i']
+    
+        stringidf = stringid.flatten()
+        elecidf = elecid.flatten()
+        strings = np.unique(stringid.flatten())
+        correction = np.zeros_like(strings,dtype=int)
+        addme = 0
+        
+        for i in range(len(strings)):
+            s = strings[i]
+            correction[i] = addme 
+            addme += np.max(elecidf[stringidf==s])
+            
+        #correct the scheduling matrix 
+        schedule = np.zeros((nmeas,4),dtype=int)
+        
+        for i in range(nmeas):
+            c = 0
+            for l in labels :
+                e = scheduledf[l+'i'][i]
+                s = scheduledf[l+'s'][i]-1
+                schedule[i,c] = e + correction[s]
+                c+=1
+                
+        return schedule 
     
     def addPerError(self,pnct=2.5): # pragma: no cover
         """Add a flat percentage error to resistivity data.
@@ -2568,6 +2947,7 @@ class Survey(object):
         var_res = (a_wgt*a_wgt)+(b_wgt*b_wgt) * (res*res)
         std_res = np.sqrt(var_res)
         self.df['resError'] = std_res
+        return std_res 
 
 
     def exportSrv(self, fname=None): # pragma: no cover
@@ -2587,13 +2967,15 @@ class Survey(object):
         fh = open(fname,'w')
         numelec = self.elec.shape[0] # number of electrodes 
         elec = self.elec[['x','y','z']].values
+        buried = np.ones(elec.shape[0],dtype=int)#buried flag 
+        buried[self.elec['buried']]=0
         fh.write('%i number of electrodes\n'%numelec)
         for i in range(numelec):
             line = '{:d} {:f} {:f} {:f} {:d}\n'.format(i+1,
                     elec[i,0],#x coordinate
                     elec[i,1],#y coordinate
                     elec[i,2],#z coordinate
-                    1)#buried flag 
+                    buried[i])#buried flag 
             fh.write(line)
         #now write the scheduling matrix to file 
         ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
@@ -2601,17 +2983,30 @@ class Survey(object):
         nomeas = len(df) # number of measurements 
         df = df.reset_index().copy()
         fh.write('\n%i number of measurements \n'%nomeas)
-        if not 'resError' in self.df.columns: # the columns exists
-            self.estError()
+        
+        #check for error column 
+        check = np.isnan(self.df['resError'].values)
+        if any(check==True):
+        # if not 'resError' in self.df.columns: # the columns exists
+            err = self.estimateError()
+        else:
+            err = self.df['resError'].values 
+            
+        # convert seqeunce to matrix 
+        if len(self.df['a'][0].split()) == 2:
+            seq = self._seq2mat()
+        else:
+            seq = self.df[['a','b','m','n']].values
+        
         # format >>> m_indx a b m n V/I stdev_V/I
         for i in range(nomeas): 
             line = '{:d} {:d} {:d} {:d} {:d} {:f} {:f}\n'.format(i+1,
-                    int(df['a'][i]),
-                    int(df['b'][i]),
-                    int(df['m'][i]),
-                    int(df['n'][i]),
+                    int(seq[i,0]),
+                    int(seq[i,1]),
+                    int(seq[i,2]),
+                    int(seq[i,3]),
                     df['recipMean'][i],
-                    df['resError'][i])
+                    err[i])
             fh.write(line)
         fh.close()
 
