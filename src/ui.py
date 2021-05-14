@@ -1125,9 +1125,7 @@ class App(QMainWindow):
                 self.restartFunc()
                 self.datadir = os.path.dirname(fname)
                 self.importFile(fname)
-                self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
-                self.invNowBtn.setEnabled(True)
-                self.activateTabs(True)
+                
         self.importDataBtn = QPushButton('Import Data')
         self.importDataBtn.setAutoDefault(True)
         self.importDataBtn.clicked.connect(importDataBtnFunc)
@@ -6560,15 +6558,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 spacing = None
             else:
                 spacing = float(self.spacingEdit.text())
-            try:
-                self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
-                                     parser=self.parser)
-                self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
-            except:
-                self.errorDump('File is not recognized.')
-                pass
+
+            self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
+                                 parser=self.parser)
+            self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
             self.settingUI()
             self.loadingWidget(exitflag=True)
+            self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
+            self.invNowBtn.setEnabled(True)
+            self.activateTabs(True)
             self.infoDump(fname + ' imported successfully')
         except Exception as e:
             self.loadingWidget(exitflag=True)
