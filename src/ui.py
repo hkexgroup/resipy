@@ -3526,6 +3526,7 @@ class App(QMainWindow):
 
         def meshTankFunc():
             # cosmetic update to say we are running
+            self.regionTable.reset()
             if self.project.mproc is not None:
                 print('killing')
                 self.project.mproc.kill()
@@ -3621,6 +3622,7 @@ class App(QMainWindow):
 
         def meshCylinderFunc():
             # cosmetic update to say we are running
+            self.regionTable.reset()
             if self.project.mproc is not None:
                 print('killing')
                 self.project.mproc.kill()
