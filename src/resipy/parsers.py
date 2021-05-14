@@ -101,7 +101,7 @@ def geom_factor_3D(df, elec, array_type):
 
 #%% usual syscal parser
 def syscalParser(fname):#, spacing=None):
-        df = pd.read_csv(fname, skipinitialspace=True)
+        df = pd.read_csv(fname, skipinitialspace=True, engine='python')
         # delete space at the end and the beginning of columns names
         headers = df.columns
         if 'Spa.1' in headers:
@@ -117,7 +117,7 @@ def syscalParser(fname):#, spacing=None):
                                     'Dev.':'dev',
                                     'M':'ip', #M1, M2,...Mn are good for now when importing
                                     'Sp':'sp'})
-        else:
+        elif 'xA(m)' in headers: # latest Prosys II
             newheaders = list(map(str.strip, headers)) 
             dico = dict(zip(headers, newheaders))
             df = df.rename(index=str, columns=dico)
@@ -126,6 +126,49 @@ def syscalParser(fname):#, spacing=None):
                                     'xM(m)':'m',
                                     'xN(m)':'n',
                                     'Dev.':'dev',
+                                    'M (mV/V)':'ip',
+                                    'SP (mV)':'sp',
+                                    'VMN (mV)':'vp',
+                                    'IAB (mA)':'i',
+                                    'yA (m)':'ya', # new Syscal format supports topography and 3D output in the csv file
+                                    'yB (m)':'yb',
+                                    'yM (m)':'ym',
+                                    'yN (m)':'yn',
+                                    'zA (m)':'za',
+                                    'zB (m)':'zb',
+                                    'zM (m)':'zm',
+                                    'zN (m)':'zn',
+                                    'M1 (mV/V)':'M1',
+                                    'M2 (mV/V)':'M2',
+                                    'M3 (mV/V)':'M3',
+                                    'M4 (mV/V)':'M4',
+                                    'M5 (mV/V)':'M5',
+                                    'M6 (mV/V)':'M6',
+                                    'M7 (mV/V)':'M7',
+                                    'M8 (mV/V)':'M8',
+                                    'M9 (mV/V)':'M9',
+                                    'M10 (mV/V)':'M10',
+                                    'M11 (mV/V)':'M11',
+                                    'M12 (mV/V)':'M12',
+                                    'M13 (mV/V)':'M13',
+                                    'M14 (mV/V)':'M14',
+                                    'M15 (mV/V)':'M15',
+                                    'M16 (mV/V)':'M16',
+                                    'M17 (mV/V)':'M17',
+                                    'M18 (mV/V)':'M18',
+                                    'M19 (mV/V)':'M19',
+                                    'M20 (mV/V)':'M20',
+                                    'TM1 (ms)':'TM1'})
+        
+        else: # Prosys III format
+            newheaders = list(map(str.strip, headers)) 
+            dico = dict(zip(headers, newheaders))
+            df = df.rename(index=str, columns=dico)
+            df = df.rename(columns={'xA (m)':'a',
+                                    'xB (m)':'b',
+                                    'xM (m)':'m',
+                                    'xN (m)':'n',
+                                    'Dev. Rho (%)':'dev', # there is also Dev. M
                                     'M (mV/V)':'ip',
                                     'SP (mV)':'sp',
                                     'VMN (mV)':'vp',
@@ -196,6 +239,12 @@ def syscalParser(fname):#, spacing=None):
                                 9999999, 999999, 99999, 9999, 999])
         iremote = np.in1d(val, remoteFlags)
         elec[iremote, 0] = -99999
+        
+        if np.all(df['dev'].values == 0) and 'Dev. M' in df.columns: # Prosys III has to Dev. lists, assuming Dev. Rho (%) == 0 and Dev. M != 0 when IP data is collected.
+            df['dev'] = df['Dev. M'].values
+        
+        if 'ip' not in df.columns: # incase they forgot to enable 'M (mV/V)' column in Prosys
+            df['ip'] = np.nan
         
         # val = np.sort(np.unique(array.flatten()))
         # iremote = np.in1d(val, remoteFlags)        
@@ -439,7 +488,7 @@ def primeParserTab(fname, espacing=1):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
     
-    # shift electrodes to have continuous numbering
+    # shift electrodes to have continuous numbering? (not active)
     # array = df[['a','b','m','n']].values
     # arrayMin = np.min(np.unique(np.sort(array.flatten())))
     # if arrayMin != 0: # all surveys must start from x = 0
