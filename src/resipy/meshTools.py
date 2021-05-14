@@ -253,6 +253,7 @@ class Mesh:
     """
 
     #%% mesh creation
+    ptdf = None 
     def __init__(self,#function constructs our mesh object. 
                  node_x,#x coordinates of nodes 
                  node_y,#y coordinates of nodes
@@ -319,19 +320,9 @@ class Mesh:
             
         self.surfaceMesh = None # surface of mesh 
             
-        #old variable names 
-            
-        # self.num_nodes = len(node_x) # ninum >>> use Andy's naming scheme 
-        # self.num_elms = node_data.shape[0] # numel 
-        # self.node = np.array([node_x,node_y,node_z]).T 
-        # self.con_matrix = np.array(node_data,dtype='int64') #connection matrix # connection 
-        # self.cell_type = cell_type # cellType
-        # self.original_file_path = original_file_path # originalFilePath 
-        # self.e_nodes = None # node number that electrodes occupy # eNode 
-        # self.iremote = None # specify which electrode is remote
-        # self.cax = None # store mesh.show() output for faster mesh.draw()
-        # self.zone = np.ones(self.num_elms) # by default all in the same zone # remove? 
-        # self.elm_centre = None  # remove? 
+        #point data attributes 
+        ptdf = {'x':node_x,'y':node_y,'z':node_z}
+        self.ptdf = pd.DataFrame(ptdf)
     
     def copy(self):
         """Return a copy of mesh object. 
@@ -402,7 +393,7 @@ class Mesh:
         self.setElecNode(e_nodes)
     
     #add some functions to allow adding some extra attributes to mesh 
-    def add_sensitivity(self,values):#sensitivity of the mesh
+    def addSensitivity(self,values):#sensitivity of the mesh
         if len(values)!=self.numel:
             raise ValueError("The length of the new attributes array does not match the number of elements in the mesh")
         self.sensitivities = values
@@ -486,10 +477,25 @@ class Mesh:
             in other mesh functions. 
         """
         if len(values)!=self.numel:
-            print(len(values),self.numel)
             raise ValueError("The length of the new attributes array (%i) does not match the number of elements in the mesh (%i)"%(len(values),self.numel))
         self.no_attributes += 1
         self.df[key]=values #allows us to add an attributes to each element.
+        
+    def addPtAttribute(self,values,key):
+        """Associate attributes with the mesh nodes  
+        
+        Parameters
+        ------------
+        values: array like
+            Must have a length which matches the number of nodes. Discrete 
+            values which map to the nodes. 
+        key: str
+            Name of the attribute, this will be used to reference to the values
+            in other mesh functions. 
+        """
+        if len(values)!=self.numnp:
+            raise ValueError("The length of the new attributes array (%i) does not match the number of nodes in the mesh (%i)"%(len(values),self.numnp))
+        self.ptdf[key]=values #allows us to add an attributes to each element.
         
     def show_avail_attr(self,flag=True):
         warnings.warn("show_avail_attr is depreciated, use showAvailAttr instead", DeprecationWarning)
@@ -793,6 +799,13 @@ class Mesh:
             for key in self.df.keys():
                 a = np.repeat(df[key].values,4)
                 new_df[key] = a
+                
+        if self.ptdf is not None:
+            new_ptdf = {}
+            new_ptdf['x'] = new_node[:,0]
+            new_ptdf['y'] = new_node[:,1]
+            new_ptdf['z'] = new_node[:,2]
+            nmesh.ptdf = pd.DataFrame(new_ptdf)
             
         nmesh.df = pd.DataFrame(new_df)
         nmesh.cellCentres()
@@ -836,6 +849,13 @@ class Mesh:
                 new_df[key] = a
                 
         nmesh.df = pd.DataFrame(new_df)
+                
+        if self.ptdf is not None:
+            new_ptdf = {}
+            new_ptdf['x'] = new_node[:,0]
+            new_ptdf['y'] = new_node[:,1]
+            new_ptdf['z'] = new_node[:,2]
+            nmesh.ptdf = pd.DataFrame(new_ptdf)
         
         nmesh.cellCentres()
         nmesh.orderNodes()
@@ -925,20 +945,19 @@ class Mesh:
             1D faces of the top of the mesh, if the input is a triangular mesh 
         idx: array like 
             if return_idx == True an array of int
-
         """
-        if self.ndims==2:
+        if self.ndims == 2:
             typ = 2
             if self.type2VertsNo() == 4: 
                 qmesh = self.quad2tri() # get the triangle mesh instead 
                 return qmesh.extractSurface() # run the same function 
 
-        elif self.ndims==3: 
+        elif self.ndims == 3: 
             typ = 3
             if self.type2VertsNo() == 6 or self.type2VertsNo() == 8:#not a tetrahedra 3d mesh 
-                raise Exception("Sorry surface extraction isnt available for this type of mesh")
+                raise Exception("Sorry surface extraction is not available for this type of mesh")
         
-        con_mat=self.connection
+        con_mat = self.connection
         if self.neigh_matrix is None: # compute neighbour matrix 
             self.computeNeigh() # this will find the element neighbours and the elements which lie on the outside of the mesh! 
         neigh = self.neigh_matrix
@@ -1085,7 +1104,15 @@ class Mesh:
         self.connection = new_con
             
         self.numnp = len(uni_nodes)
-                       
+        
+        #sort point dataframe 
+        if self.ptdf is not None:
+            ptdf = self.ptdf.copy()   
+            a = np.array([False]*len(ptdf),dtype=bool)
+            a[uni_nodes] = True
+            new_ptdf = ptdf[a].reset_index()
+            self.ptdf = new_ptdf 
+        
         
     def crop(self, polyline):
         """Crop the mesh given a polyline in 2D.
@@ -1836,7 +1863,9 @@ class Mesh:
                 pvgrid=True,
                 pvcontour=[],
                 pvshow=True,
-                darkMode=False):
+                darkMode=False,
+                cell_picking=False,
+                clipping=True):
         """
         Shows a 3D tetrahedral mesh. 
         
@@ -1893,10 +1922,17 @@ class Mesh:
             This is useful in case of subplots.
         darkmode: bool, optional
             Alters coloring of pyvista plot for a darker appearance  
+        cell_picking: bool, optional 
+            Interactive picking flag, for the use within the UI only. Leave as 
+            False. 
+        clipping: bool, optional 
+            Flag to clip mesh in pyvista window, if tank type problem is expected 
+            set to False else set to True. Default is True. Note if False then the 
+            X Y and Z limit extents will be ignored. 
 
         Returns
         -------
-        figure : matplotlib figure
+        figure : matplotlib figure, pyvista plotter  
             Figure handle for the plotted mesh object.
         
         Notes
@@ -1976,27 +2012,31 @@ class Mesh:
             vmin = np.min(X)
         if vmax is None:
             vmax = np.max(X)
-        
+                    
         #### use pyvista for 3D viewing ####         
         if use_pyvista and pyvista_installed:
-            # if attr == 'region': 
             nmesh = self.copy() # this returns a mesh copy
-            nmesh = nmesh.truncateMesh(xlim, ylim, zlim) # truncating is the nly way to reduce the grid extent
+            if clipping:
+                nmesh = nmesh.truncateMesh(xlim, ylim, zlim) # truncating is the nly way to reduce the grid extent
             X = nmesh.df[attr].values # NEEDED as truncating change element index
             nmesh.df = pd.DataFrame(X, columns=[color_bar_title]) # make the attr of interest the only attribute            
+            
+            #save to temperory directory 
             folder = tempfile.TemporaryDirectory()
             fname = os.path.join(folder.name, '__to_pv_mesh.vtk')
             nmesh.vtk(fname)
-            self.pvmesh = pv.read(fname)
+            self.pvmesh = pv.read(fname) # read in temporary file 
             folder.cleanup()
+            
             #### possible to iniate pyvista mesh directly with vertices and connection matrix #### 
-            #### however the below code is apparently unstable on pyvista 0.24.0 #### 
-            # self.pvmesh = pv.PolyData(np.array([self.node_x,self.node_y,self.node_z]).T, 
-            #                           np.array(self.connection).T)
+            #### however the below code is apparently unstable on pyvista 0.29.0 #### 
+            # self.pvmesh = pv.PolyData(self.node, 
+            #                           self.connection)
             # self.pvmesh[color_bar_title] = X
             
             # clip mesh to bounding box ... we crop the mesh (only way to reduce it's bounds for better viewing)
-            self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
+            if clipping:
+                self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         
             if edge_color is None or edge_color=='none' or edge_color=='None':
                 edges = False # then dont show element edges 
@@ -2053,6 +2093,7 @@ class Mesh:
                             mesh_slice = self.pvmesh.slice(normal=normal, origin=origin)
                             if mesh_slice.number_of_points > 0 or mesh_slice.number_of_cells > 0:
                                 ax.add_mesh(mesh_slice,
+                                            scalars = attr,
                                             cmap=color_map,
                                             clim=[vmin, vmax],
                                             show_scalar_bar=color_bar,
@@ -2064,11 +2105,12 @@ class Mesh:
             else:        
                 if self.pvmesh.number_of_points > 0 or self.pvmesh.number_of_cells > 0:
                     ax.add_mesh(self.pvmesh,
+                                scalars = attr, # specify name of vector 
                                 cmap=color_map, #matplotlib colormap 
                                 clim=[vmin,vmax], #color bar limits 
                                 show_scalar_bar=color_bar,#plot the color bar? 
                                 show_edges=edges, #show edges
-                                opacity=alpha,
+                                # opacity=alpha,
                                 scalar_bar_args={'color':tcolor,# 'interactive':True,
                                                  'vertical':False,
                                                  'title_font_size':16,
@@ -2093,7 +2135,14 @@ class Mesh:
             # reads in, it should scale correctly in showMesh() even if the
             # mesh object represents the entire mesh with the coarse region.
             
-            return # exit function
+            if cell_picking:
+                ax.enable_cell_picking(mesh=self.pvmesh,start=True,through=False)
+                #data can then be probed with 
+                #data = ax.picked_cells.cell_arrays
+                #a = data['name of attribute'] # where a is a numpy array 
+                
+            
+            return ax # exit function
         #### else fall back on to matplotlib scheme ####    
         
         
@@ -2167,7 +2216,7 @@ class Mesh:
         try:
             polly.set_array(np.array(assign))
         except MemoryError:#catch this error and print something more helpful than matplotlibs output
-            raise MemoryError("Memory access voilation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
+            raise MemoryError("Memory access violation encountered when trying to plot mesh, \n please consider truncating the mesh or display the mesh using paraview.")
 
         if edge_color != 'face':#attempt to set edge colour 
             try:
@@ -2567,9 +2616,9 @@ class Mesh:
         if self.ndims==3:
             raise ValueError('Assign zone available with 2D meshes only')
             
-        no_elms=self.numel#number of elements 
+        numel=self.numel#number of elements 
         elm_xz=np.array([self.elmCentre[:,0],self.elmCentre[:,2]]).T#centriods of 2d mesh elements 
-        material_no=np.zeros(no_elms,dtype=int)#attribute number
+        material_no=np.zeros(numel,dtype=int)#attribute number
         
         if not isinstance(poly_data,dict):
             raise Exception("poly_data input is not a dictionary")
@@ -2860,7 +2909,7 @@ class Mesh:
                 [fid.write('{:<16.8f} '.format(self.node[i,k])) for k in nidx] # node coordinates 
                 fid.write('\n')#drop down a line 
                     
-    def datAdv(self, file_path='mesh.dat'):
+    def datAdv(self, file_path='mesh.dat', iadvanced=True):
         """Write a mesh.dat kind of file for mesh input for R2/R3t. Advanced format
         which includes the neighbourhood and conductance matrix. 
         
@@ -2868,6 +2917,9 @@ class Mesh:
         ----------
         file_path : str, optional
             Path to the file. By default 'mesh.dat' is saved in the working directory.
+        iadvanced : bool, optional
+            If `True`, use the advanced mesh format if `False`, use the normal
+            mesh format.
         """
         if not isinstance(file_path,str):
             raise TypeError("Expected string argument for file_path")
@@ -2889,7 +2941,7 @@ class Mesh:
             zone = np.ones(self.numel,dtype=int)
             
             
-        adv_flag = 1
+        adv_flag = int(iadvanced)
         #compute neighbourhood matrix 
         if self.neigh_matrix is None:
             self.computeNeigh()
@@ -2903,14 +2955,14 @@ class Mesh:
         # NsizeA = self.NsizeA
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
         ### write data to mesh.dat kind of file ###
-        #open mesh.dat for input      
+        # open mesh.dat for input      
         with open(file_path, 'w') as fid:
-            #write to mesh.dat total num of elements and nodes
+            # write to mesh.dat total num of elements and nodes
             if self.ndims == 3:
                 fid.write('%i\t%i\t%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,1,0,self.type2VertsNo(),adv_flag)) # flags 
             else:
                 fid.write('%i\t%i\t%i\t%i\n'%(self.numel,self.numnp,idirichlet,adv_flag))
-            #write out elements         
+            # write out elements         
             no_verts = self.type2VertsNo()
             for i in range(self.numel):
                 fid.write("{:<16d} ".format(i+1)) # add element number 
@@ -2920,7 +2972,7 @@ class Mesh:
                 [fid.write('{:<16d} '.format(neigh[i,k])) for k in range(neigh.shape[1])]#add neighbours 
                 fid.write('\n')#drop down a line 
     
-            #now add nodes
+            # now add nodes
             if self.ndims == 3:
                 nidx = [0,1,2]
             else:
@@ -2933,7 +2985,7 @@ class Mesh:
                 [fid.write('{:<16d} '.format(fconm[i,k])) for k in range(fconm.shape[1])] 
                 fid.write('\n')#drop down a line 
 
-            if self.ndims==3: 
+            if self.ndims == 3: 
                 fid.write('{:d}'.format(idirichlet))
                     
 
@@ -3003,7 +3055,15 @@ class Mesh:
             fh.write("\n")
         
         #finish writing
-        fh.write("POINT_DATA %i"%self.numnp)        
+        fh.write("POINT_DATA %i\n"%self.numnp)     
+        if self.ptdf is not None and len(self.ptdf.keys())>0:
+            for i,key in enumerate(self.ptdf.keys()):
+                fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
+                fh.write("LOOKUP_TABLE default\n")
+                X = np.array(self.ptdf[key])
+                X[np.isnan(X)]=replace_nan
+                [fh.write("%16.8f "%X[j]) for j in range(self.numnp)]
+                fh.write("\n")
         fh.close()
     
     def write_attr(self,attr_key=None,file_name='_res.dat'):
@@ -3074,12 +3134,14 @@ class Mesh:
         x_coords=self.elmCentre[:,0]#get element coordinates
         y_coords=self.elmCentre[:,1]
         z_coords=self.elmCentre[:,2]
-        keys = self.df.keys()
+        df = self.df.copy().reset_index()
+        keys0= self.df.keys()
+        keys=[]
         #ignore the x y z columns if already in df
         ignore = ['X','Y','Z']
-        for d in ignore:
-            if d in keys:
-                del keys[d]
+        for k in keys0:
+            if k not in ignore:
+                keys.append(k)
         
         #open file 
         fh = open(file_name,'w')
@@ -3089,7 +3151,7 @@ class Mesh:
         for i in range(self.numel):
             line = '{:f},{:f},{:f}'.format(x_coords[i],y_coords[i],z_coords[i])
             for key in keys:
-                line += ',{:}'.format(self.df[key][i])
+                line += ',{:}'.format(df[key][i])
             line += '\n'
             fh.write(line)
         #close file     
@@ -3181,10 +3243,11 @@ class Mesh:
             Popen(['paraview', fname])
             
     
-    def exportTetgenMesh(self,prefix='mesh',zone=None):
+    def exportTetgenMesh(self,prefix='mesh',zone=None, debug=False):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. Currently only tested for 
-        3D surface array like surveys. 
+        3D surface array like surveys. Assumes the sides of the mesh are parrallel 
+        to the x and y plane and that the surface has gentle to no topography. 
         
         Parameters
         ----------  
@@ -3207,87 +3270,33 @@ class Mesh:
                 raise ValueError('Number of zone array elements given to exportTetgenMesh does not match the number of elements in the mesh.')
         else:
             zone = [1]*self.numel # all elements are inside zone 1 
-            
-        print('## Exporting to tetgen format  ##')# 
-            
-        print('Computing boundary conditions ...', end ='')# this an intense process:
-        #Compute =neighbour and face element matrixes 
-        #1) Faces should be counter clockwise 
-        #2) Boundary conditions need to be computed, 
         
+        if debug: # print outputs? 
+            def stream(s,**kwargs):
+                print(s,**kwargs)
+        else:
+            def stream(s,**kwargs):
+                pass 
+            
+        stream('## Exporting to tetgen format  ##')
+            
+        stream('Computing boundary conditions ...', end ='')# this an intense process:        
         #NB: faces on side/bottom of mesh are given a marker of 2. Face on top of mesh denoted 1. 
         #NB: Nodes on side of mesh are given a marker of 2, 1 if on top of the mesh and 0 if inside the mesh 
-        con_mat=self.connection.copy()
+
         if self.neigh_matrix is None: # compute neighbour matrix 
             self.computeNeigh() # this will find the element neighbours and the elements which lie on the outside of the mesh! 
             
+        ## offload boundary condition calls to cython 
         neigh = self.neigh_matrix
-        out_elem = np.min(neigh, axis=1) == -1 # elements which have a face on the outside of the mesh 
-        neigh_trunc = neigh[out_elem]
-        con_trunc = con_mat[out_elem,:]
-        
-        ## map used in neigh calculation ##         
-        map1 = np.array([2,3,4]) -1 
-        map2 = np.array([1,4,3]) -1 
-        map3 = np.array([1,2,4]) -1 
-        map4 = np.array([1,2,3]) -1 
-        nmap = np.array([map1,map2,map3,map4])
-        node_x = self.node[:,0]
-        node_y = self.node[:,1]
-        node_z = self.node[:,2]
-        
-        face_list = []
-        ocheck = [] # orientation check, referenced for making face file 
-        for i in range(len(neigh_trunc)):
-            idx = np.argwhere(neigh_trunc[i]==-1)
-            for j in range(len(idx)):
-                enodes = con_trunc[i] # element nodes 
-                fnodes = con_trunc[i][nmap[idx[j]]][0] # face nodes
-                mnode = [enodes[k] not in fnodes for k in range(4)] # find node missing from the face 
-                x = np.append(node_x[fnodes],node_x[enodes[mnode]])
-                y = np.append(node_y[fnodes],node_y[enodes[mnode]])
-                z = np.append(node_z[fnodes],node_z[enodes[mnode]])
-                if interp.check_tetra(x,y,z)==2:#points are counter clockwise
-                    fnodes_sorted = fnodes
-                else: # reorganise so they are counter clockwise
-                    fnodes_sorted = np.array((fnodes[0],fnodes[2],fnodes[1]))
-                face_list.append(fnodes_sorted)
+        faces, idx = mc.faces3d(self.connection, neigh) # get outer faces 
+        tconnec = self.connection[idx,:] # truncated connection matrix 
+        node_bd, face_bd = mc.boundcall(tconnec, faces, self.node) # face and node boundary conditions 
+        self.addPtAttribute(node_bd,'node_bd')
+        stream('done')
                 
-                #now to compute if face boundary condition              
-                xm = np.mean(node_x[fnodes]) #determine approx middle of face
-                ym = np.mean(node_y[fnodes])
-                zm = np.mean(node_z[fnodes])
-                dx = abs(max(node_x[fnodes]) - min(node_x[fnodes])) # work out approx face dimensions 
-                dy = abs(max(node_y[fnodes]) - min(node_y[fnodes]))
-                dz = abs(max(node_z[fnodes]) - min(node_z[fnodes]))
-                dd = dx+dy+dz 
-                if dy < 1e-16 or dx < 1e-16 : # side of mesh 
-                    ocheck.append(0) 
-                else: # base or top of mesh 
-                    x = np.append(node_x[fnodes_sorted],xm)
-                    y = np.append(node_y[fnodes_sorted],ym)
-                    z = np.append(node_z[fnodes_sorted],zm+dd)
-                    ocheck.append(interp.check_tetra(x,y,z))
-                #if ocheck == 0 then the face is on the side of the mesh 
-                #if ocheck == 1 then the face is on top of the mesh 
-                #if ocheck == 2 then the face is on the bottom of the mesh 
-        
-        #assign node boundary markers 
-        ochecka = np.array(ocheck,dtype=int)
-        face_matrix = np.array(face_list)
-        #return ochecka, face_matrix
-        top_face = ochecka == 1
-        other_face = ochecka != 1
-        node_bounday_marker = np.zeros(self.numnp,dtype=int) # most nodes are inside the mesh 
-        top_nodes = np.unique(face_matrix[top_face])
-        node_bounday_marker[top_nodes]=1 # these nodes have a value of 1
-        
-        face_nodes = np.unique(face_matrix[other_face])
-        node_bounday_marker[face_nodes]=2 # these nodes have a value of 2 
-        print('done')
-                
-        #output .node file
-        print('writing .node file... ',end='')
+        ## output .node file
+        stream('writing .node file... ',end='')
         fh = open(prefix+'.1.node','w')
         #header line : 
         #<# of points> <dimension (3)> <# of attributes> <boundary markers (0 or 1)>
@@ -3296,72 +3305,68 @@ class Mesh:
         #<point #> <x> <y> <z> [attributes] [boundary marker]
         for i in range(self.numnp):
             line = '{:d}\t{:f}\t{:f}\t{:f}\t{:d}\t{:d}\n'.format((i+1),
-                                                        node_x[i],
-                                                        node_y[i],
-                                                        node_z[i],
+                                                        self.node[i,0],
+                                                        self.node[i,1],
+                                                        self.node[i,2],
                                                         1,
-                                                        node_bounday_marker[i])
+                                                        node_bd[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
         fh.close()   
-        print('done.')
+        stream('done.')
             
-        #output .ele file 
-        print('writing .ele file... ',end='')
+        ## output .ele file 
+        stream('writing .ele file... ',end='')
         fh = open(prefix+'.1.ele','w')
         #First line: <# of tetrahedra> <nodes per tet. (4 or 10)> <region attribute (0 or 1)>
         fh.write('{:d}\t{:d}\t{:d}\n'.format(self.numel,self.type2VertsNo(),1))
         #Remaining lines list # of tetrahedra:<tetrahedron #> <node> <node> ... <node> [attribute]
         for i in range(self.numel):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
-                                                         con_mat[i,0]+1,#need to add one because of fortran indexing 
-                                                         con_mat[i,1]+1,
-                                                         con_mat[i,2]+1,
-                                                         con_mat[i,3]+1,
+                                                         self.connection[i,0]+1,#need to add one because of fortran indexing 
+                                                         self.connection[i,1]+1,
+                                                         self.connection[i,2]+1,
+                                                         self.connection[i,3]+1,
                                                          zone[i])
             fh.write(line)
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')
         fh.close()
-        print('done.')
+        stream('done.')
         
         #output .trn file 
-        print('writing .trn file... ',end='')
+        stream('writing .trn file... ',end='')
         fh = open(prefix+'.trn','w')
         fh.write('0\t0\t0')
         fh.close()
-        print('done.')
+        stream('done.')
         
         #write .face file - which describes elements on the outer edges of the mesh
         
-        print('Writing .face file... ',end='') 
+        stream('Writing .face file... ',end='') 
 
         fh = open(prefix+'.1.face','w')
-        boundary_marker = np.zeros(len(face_list),dtype=int)+2
-        boundary_marker[ochecka==1]=1 # set boundary marker to one if top facing element 
         #First line: <# of faces> <boundary marker (0 or 1)>
-        fh.write('{:d}\t{:d}\n'.format(len(face_list),1))#header line 
-        for i in range(len(face_list)):
+        fh.write('{:d}\t{:d}\n'.format(faces.shape[0],1))#header line 
+        for i in range(faces.shape[0]):
             line = '{:d}\t{:d}\t{:d}\t{:d}\t{:d}\n'.format((i+1),
-                                                        face_list[i][0]+1,
-                                                        face_list[i][1]+1,
-                                                        face_list[i][2]+1,
-                                                        boundary_marker[i])
+                                                        faces[i,0]+1,
+                                                        faces[i,1]+1,
+                                                        faces[i,2]+1,
+                                                        face_bd[i])
             fh.write(line)
             
         
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
-        print('done.')
+        stream('done.')
         
-        #out .neigh file
-        #Here we want look for faces which share with another element 
-        #(handled by mesh calc)
-            
+        ## out .neigh file
+        stream('writing .neigh file... ',end='')
         neigh_matrix = neigh.copy()
         neigh_matrix+=1 # add one for tetgen indexing
         neigh_matrix[neigh_matrix==0]=-1#-1 for face elements 
         
-        print('writing .neigh file... ',end='')
+       
         fh = open(prefix+'.1.neigh','w') # write to file 
         fh.write('{:d}\t{:d}\n'.format(self.numel,self.type2VertsNo())) # header line         
         elm_id = np.arange(self.numel) + 1
@@ -3375,7 +3380,7 @@ class Mesh:
             
         fh.write('# exported from meshTools module in ResIPy electrical resistivity processing package')    
         fh.close()
-        print('done.')
+        stream('done.')
         
     def saveMesh(self, fname, ftype=None):
         """Save mesh into a file. Avaialble formats are .dat, .vtk and .node
@@ -3411,7 +3416,7 @@ class Mesh:
         elif ftype == 'csv':
             self.toCSV(fname)
         elif ftype == 'node':
-            self.exportTetgenMesh(fname)
+            self.exportTetgenMesh(fname.replace('.node',''))
         
         
     def writeRindex(self,fname):
@@ -3489,6 +3494,7 @@ def moveMesh2D(meshObject, elecLocal, elecGrid):
         mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
 
     return mesh   
+
 #%% import a vtk file 
 def vtk_import(file_path='mesh.vtk', order_nodes=True):
     """
@@ -3568,24 +3574,24 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     #now read in element data
     elm_info=fid.readline().strip().split()#read line with cell data
     try:
-        no_elms=int(elm_info[1])
+        numel=int(elm_info[1])
     except IndexError: # quick bug fix
         elm_info=fid.readline().strip().split()#read line with cell data
-        no_elms=int(elm_info[1])
+        numel=int(elm_info[1])
     
-    if no_elms ==0: 
+    if numel ==0: 
         raise ImportError("No elements in vtk file to import!")
         
     #read in first element and decide what mesh type it is 
     elm_data=fid.readline().strip().split()
     npere = int(elm_data[0]) # number of vertices per element 
-    elm_num = [0]*no_elms
-    con_mat = [[0]*no_elms for i in range(npere)]
+    elm_num = [0]*numel
+    con_mat = [[0]*numel for i in range(npere)]
     for j in range(npere):
         con_mat[j][0] = int(elm_data[j+1])
     
     #read in the rest of the elements 
-    for i in range(1,no_elms):
+    for i in range(1,numel):
         elm_data=fid.readline().strip().split()
         if int(elm_data[0]) != npere:
             raise ImportError("VTK file contains mixed element types, which are not supported by ResIPy mesh class, aborting...")
@@ -3602,7 +3608,7 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
             #cell_type = [int(k) for k in cell_attr_dump[i+1].strip().split()]
             line_idx = i+1
             cell_type = []
-            while len(cell_type) < no_elms:
+            while len(cell_type) < numel:
                 cell_type += [float(x) for x in cell_attr_dump[line_idx].split()]
                 line_idx += 1
             break
@@ -3613,8 +3619,17 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     #find scalar values in the vtk file
     num_attr = 0
     attr_dict = {}
+    pt_dict = {}
+    cells = True 
+    lookup = numel # number of possible lookup entries (depends whether looking at cell or point data)
 
     for i,line_info in enumerate(cell_attr_dump):
+        if line_info.find("CELL_DATA") == 0: 
+            cells = True
+            lookup = numel
+        if line_info.find("POINT_DATA") == 0:
+            cells = False 
+            lookup = numnp 
         if line_info.find("SCALARS") == 0:
             attr_title = line_info.split()[1]
             #check look up table
@@ -3624,13 +3639,15 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
             #values=[float(k) for k in cell_attr_dump[i+2].split()]
             array = []
             #while loop to get all scalar values 
-            while len(array) < no_elms:
+            while len(array) < lookup:
                 array += [float(x) for x in cell_attr_dump[line_idx].split()]
                 line_idx += 1
-            attr_dict[attr_title] = array
+            if cells:
+                attr_dict[attr_title] = array
+                num_attr += 1
+            else:
+                pt_dict[attr_title] = array 
             
-            num_attr += 1
-    
     #if cell_type[0] == 5 or cell_type[0] == 8 or cell_type[0] == 9: # then its a 2D mesh
     if title == 'Output from cR2' or title == 'Output from R2': # account for the fact the y and z columns should be swapped 
         mesh = Mesh(node_x,#x coordinates of nodes 
@@ -3652,15 +3669,9 @@ def vtk_import(file_path='mesh.vtk', order_nodes=True):
     #add attributes / cell parameters 
     for key in attr_dict.keys():
         mesh.df[key] = attr_dict[key]
-    
-    #see if sensivity output from R2/R3t is inside the .vtk 
-    try:
-        if mesh.ndims==2:
-            mesh.add_sensitivity(mesh.df['Sensitivity(log10)'])
-        else:
-            mesh.add_sensitivity(mesh.df['Sensitivity_map(log10)'])
-    except:
-        pass 
+        #see if sensivity output from R2/R3t is inside the .vtk 
+        if key in ['Sensitivity_map(log10)','Sensitivity(log10)']:
+            mesh.addSensitivity(np.array(attr_dict[key]))
     
     mesh.mesh_title = title
     return mesh
@@ -4195,6 +4206,74 @@ def quad_mesh(*args):
     warnings.warn('quad_mesh is depreciated, use quadMesh instead')
     quadMesh(*args)
 
+
+# handling gmsh
+def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=None):
+    """
+
+    Parameters
+    ----------
+    ewd : str
+        Directory where gmsh copy is stored.
+    file_name : str
+        Name of the .geo file without extension.
+    show_output : TYPE, optional
+        If True, output of gmsh is displayed to dump. The default is True.
+    threed : bool, optional
+        If True, 3D mesh is done, else 2D. The default is True.
+    handle : variable, optional
+        Will be assigned the output of 'Popen' in case the process needs to be
+        killed in the UI for instance.
+
+    Returns
+    -------
+    None.
+
+    """
+    opt = '-2' 
+    if threed: # if 3d use 3d option 
+        opt = '-3'
+
+    if platform.system() == "Windows":#command line input will vary slighty by system 
+        cmd_line = [os.path.join(ewd,'gmsh.exe'), file_name+'.geo', opt, 'nt %i'%ncores]
+        
+    elif platform.system() == 'Darwin': # its a macOS 
+        winetxt = 'wine'
+        if getMacOSVersion():
+            winetxt = 'wine64'
+        winePath = []
+        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
+        for stdout_line in iter(wine_path.stdout.readline, ''):
+            winePath.append(stdout_line)
+        if winePath != []:
+            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
+        else:
+            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
+    
+    elif platform.system() == 'Linux':
+        if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
+            cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', opt,'-nt','%i'%ncores] # using linux version if avialable (can be more performant)
+        else: # fall back to wine
+            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
+    
+    else:
+        raise Exception('Unsupported operating system') # if this even possible? BSD maybe. 
+
+    if show_output: 
+        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)#run gmsh with ouput displayed in console
+        if handle is not None:
+            handle(p)
+        while p.poll() is None:
+            line = p.stdout.readline().rstrip()
+            if line.decode('utf-8') != '':
+                dump(line.decode('utf-8'))
+    else:
+        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
+        if handle is not None:
+            handle(p)
+        p.communicate() # wait to finish
+
+
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
@@ -4292,44 +4371,11 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
         node_pos = gw.gen_2d_whole_space([elec_x,elec_z], geom_input = geom_input, 
                                          file_path=file_name,**kwargs)    
     
-    # handling gmsh
-    if platform.system() == "Windows":#command line input will vary slighty by system 
-#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -2'
-        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -2'+' '+'nt %i'%ncores
-    elif platform.system() == 'Darwin':
-        winetxt = 'wine'
-        if getMacOSVersion():
-            winetxt = 'wine64'
-        winePath = []
-        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-        for stdout_line in iter(wine_path.stdout.readline, ''):
-            winePath.append(stdout_line)
-        if winePath != []:
-            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
-        else:
-            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
-    else:
-        if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
-            cmd_line = [ewd + '/gmsh_linux', file_name + '.geo', '-2','-nt','%i'%ncores] # using linux version if avialable (can be more performant)
-        else: # fall back to wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-2','-nt','%i'%ncores]
-
-    if show_output: 
-        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)#run gmsh with ouput displayed in console
-        if handle is not None:
-            handle(p)
-        while p.poll() is None:
-            line = p.stdout.readline().rstrip()
-            if line.decode('utf-8') != '':
-                dump(line.decode('utf-8'))
-    else:
-        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
-        if handle is not None:
-            handle(p)
-        p.communicate() # wait to finish
+    # run gmsh
+    runGmsh(ewd, file_name, show_output=show_output, dump=dump, threed=False, handle=handle)
         
     #convert into mesh.dat
-    mesh_info = gw.msh_parse(file_path = file_name+'.msh') # read in mesh file
+    mesh_info = gw.mshParse(file_name+'.msh', debug=show_output) # read in mesh file
     
     # merge fine with coarse regions (coarse = 1, fine = -1)
     regions = np.array(mesh_info['parameters'])
@@ -4366,7 +4412,7 @@ def tri_mesh(*args):
 
 #%% 3D tetrahedral mesh 
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'triangulate',
-               surface_refinement = None, mesh_refinement = None,show_output=True, 
+               surface_refinement=None, mesh_refinement=None, show_output=True, 
                path='exe', dump=print, whole_space=False, padding=20,
                search_radius = 10, handle=None, **kwargs):
     """ Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
@@ -4399,7 +4445,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         considered in post processing in order to super impose topography on the mesh. 
     mesh_refinement : np.array, optional
         Coming soon ... Not yet implimented.
-    show_ouput : boolean, optional
+    show_output : boolean, optional
         `True` if gmsh output is to be printed to console. 
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
@@ -4510,7 +4556,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         z_interp = np.append(surf_elec_z,surf_z)
         
         if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
-            print('found buried electrodes')
+            dump('found buried electrodes')
             if interp_method == 'idw': 
                 bur_elec_z = interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
             elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
@@ -4559,49 +4605,17 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     #make .geo file
     file_name="mesh3d"
     if whole_space:#by default create survey with topography 
-        print("Whole space problem")
+        dump("Whole space problem")
         raise Exception("Sorry whole space 3D problems are not implemented yet")
         
     else:
         node_pos = gw.box_3d([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
             
     # handling gmsh
-    if platform.system() == "Windows":#command line input will vary slighty by system 
-#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
-        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3 -nt %i'%ncores 
-    elif platform.system() == 'Darwin':
-        winetxt = 'wine'
-        if getMacOSVersion():
-            winetxt = 'wine64'
-        winePath = []
-        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-        for stdout_line in iter(wine_path.stdout.readline, ''):
-            winePath.append(stdout_line)
-        if winePath != []:
-            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
-        else:
-            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
-    else:
-        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3', '-nt','%i'%ncores]
-        else: # fallback on wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3', '-nt','%i'%ncores]
-        
-    if show_output: 
-        p = Popen(cmd_line, stdout=PIPE, shell=False)
-        if handle is not None:
-            handle(p)
-        while p.poll() is None:
-            line = p.stdout.readline().rstrip()
-            dump(line.decode('utf-8'))
-    else:
-        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
-        if handle is not None:
-            handle(p)
-        p.communicate() # wait to finish
+    runGmsh(ewd, file_name, show_output=show_output, dump=dump, threed=True, handle=handle)
         
     #convert into mesh.dat
-    mesh_info = gw.msh_parse(file_path=file_name+'.msh') # read in 3D mesh file
+    mesh_info = gw.mshParse(file_name+'.msh', debug=show_output) # read in 3D mesh file
     
     # merge fine with coarse regions
     regions = np.array(mesh_info['parameters'])
@@ -4626,7 +4640,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     if keep_files is False: 
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
-    print('interpolating topography onto mesh using %s interpolation...'%interp_method, end='')
+    dump('interpolating topography onto mesh using %s interpolation...'%interp_method)
     
     x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
     y_interp = np.append(surf_elec_y,surf_y)
@@ -4645,7 +4659,6 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         nodez = interp.triangulate(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method == None:
         nodez = np.zeros_like(node_x,dtype=float)
-    print('done')
     
     mesh.node[:,2] = mesh.node[:,2] + nodez
     #need to recompute cell centres as well as they will have changed. 
@@ -4667,9 +4680,9 @@ def tetra_mesh(*args):
     tetraMesh(*args)
 
 
+
 #%% column mesh 
 def prismMesh(elec_x, elec_y, elec_z, 
-               file_path='column_mesh.geo',
                keep_files=True,
                show_output=True, 
                path='exe', dump=print,
@@ -4708,8 +4721,8 @@ def prismMesh(elec_x, elec_y, elec_z,
         raise ValueError("mismatch in electrode x and y vector length, they should be equal")
         
     #make prism mesh command script
-    file_name="prism_mesh"
-    gw.column_mesh([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
+    file_name = "prism_mesh"
+    gw.prism_mesh([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
     #note that this column mesh function doesnt return the electrode nodes 
     
     
@@ -4722,43 +4735,10 @@ def prismMesh(elec_x, elec_y, elec_z,
         ewd = path # points to the location of the .exe 
         # else its assumed a custom directory has been given to the gmsh.exe 
     # handling gmsh
-    if platform.system() == "Windows":#command line input will vary slighty by system 
-#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
-        cmd_line = os.path.join(ewd,'gmsh.exe')+' '+file_name+'.geo -3'
-    elif platform.system() == 'Darwin':
-        winetxt = 'wine'
-        if getMacOSVersion():
-            winetxt = 'wine64'
-        winePath = []
-        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-        for stdout_line in iter(wine_path.stdout.readline, ''):
-            winePath.append(stdout_line)
-        if winePath != []:
-            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', '-3']
-        else:
-            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', '-3']
-    else:
-        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh_linux', file_name+'.geo', '-3']
-        else: # fallback on wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3']
-        
-    if show_output: 
-        try:
-            p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        except: # hotfix to deal with failing commits on gitlab's server. 
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_name+'.geo', '-3'] # use .exe through wine instead
-            p = Popen(cmd_line, stdout=PIPE, shell=False)
-        while p.poll() is None:
-            line = p.stdout.readline().rstrip()
-            dump(line.decode('utf-8'))
-    else:
-        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
-        p.communicate() # wait to finish
-
+    runGmsh(ewd, file_name, show_output=show_output, dump=dump, threed=True, handle=handle)
         
     #convert into mesh.dat
-    mesh_info = gw.msh_parse(file_path = file_name+'.msh') # read in 3D mesh file
+    mesh_info = gw.mshParse(file_name+'.msh', debug=show_output) # read in 3D mesh file
    
     # merge fine with coarse regions
     regions = np.array(mesh_info['parameters'])
@@ -4802,7 +4782,7 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
     zlim : list, tuple, optional 
         Bottom and top z coordinate of column, in the form (min(z),max(z))
     radius: float, optional 
-        Radius of column.
+        Radius of column. If not provided, will be infered from elec positions.
     file_path : string, optional 
         Name of the generated gmsh file (can include file path also).
     cl : float, optional
@@ -4816,6 +4796,7 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
         Will be assigned the output of 'Popen' in case the process needs to be
         killed in the UI for instance.
     """
+    file_path = file_path if file_path[-4:] == '.geo' else file_path + '.geo'
     gw.cylinder_mesh(elec, zlim=zlim, radius=radius, file_path=file_path,
                      cl=cl, finer=finer)    
     
@@ -4829,42 +4810,10 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
         # else its assumed a custom directory has been given to the gmsh.exe 
     
     # handling gmsh
-    if platform.system() == "Windows":#command line input will vary slighty by system 
-#        cmd_line = ewd+'\gmsh.exe '+file_name+'.geo -3'
-        cmd_line = os.path.join(ewd, 'gmsh.exe') + ' ' + file_path + ' -3'
-    elif platform.system() == 'Darwin':
-        winetxt = 'wine'
-        if getMacOSVersion():
-            winetxt = 'wine64'
-        winePath = []
-        wine_path = Popen(['which', winetxt], stdout=PIPE, shell=False, universal_newlines=True)#.communicate()[0]
-        for stdout_line in iter(wine_path.stdout.readline, ''):
-            winePath.append(stdout_line)
-        if winePath != []:
-            cmd_line = ['%s' % (winePath[0].strip('\n')), ewd + '/gmsh.exe', file_path, '-3']
-        else:
-            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_path, '-3']
-    else:
-        if os.path.isfile(os.path.join(ewd,'gmsh_linux')): # if linux gmsh is present
-            cmd_line = [ewd+'/gmsh_linux', file_path, '-3']
-        else: # fallback on wine
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_path, '-3']
-        
-    if show_output: 
-        try:
-            p = Popen(cmd_line, stdout=PIPE, shell=False)#run gmsh with ouput displayed in console
-        except: # hotfix to deal with failing commits on gitlab's server. 
-            cmd_line = ['wine',ewd+'/gmsh.exe', file_path, '-3'] # use .exe through wine instead
-            p = Popen(cmd_line, stdout=PIPE, shell=False)
-        while p.poll() is None:
-            line = p.stdout.readline().rstrip()
-            dump(line.decode('utf-8'))
-    else:
-        p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
-        p.communicate() # wait to finish
+    runGmsh(ewd, file_path.replace('.geo',''), show_output=show_output, dump=dump, threed=True, handle=handle)        
 
     #convert into mesh.dat
-    mesh_info = gw.msh_parse(file_path=file_path.replace('.geo', '.msh')) # read in 3D mesh file
+    mesh_info = gw.mshParse(file_path.replace('.geo', '.msh'), debug=show_output) # read in 3D mesh file
 
     # merge fine with coarse regions
     regions = np.array(mesh_info['parameters'])
@@ -4894,9 +4843,99 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
 # angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
 # celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
 # elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
-# mesh = cylinderMesh(elec, file_path='/home/jkl/Downloads/mesh_cylinder.geo',
+# mesh = cylinderMesh(elec, file_path='/home/jkl/Downloads/mesh_cylinder',
 #                     zlim=[0, 47.5], cl=0.5)
 
+#%% tank mesh
+def tankMesh(elec=None, 
+             origin=None, 
+             dimension=[10,10,10],
+             file_path='tank_mesh.geo',
+             cl=-1,
+             keep_files=True,
+             show_output=True, 
+             path='exe',
+             dump=print,
+             handle=None):
+    """Make a tank mesh (3D closed box).
+    
+    Parameters
+    ----------
+    elec : list of array_like or nx3 array
+        First column/list is the x coordinates of electrode positions and so on ... 
+    origin : list of float, optional
+        Origin of the corner where the mesh will be drawned from. If not
+        provided and elec provided, the smaller elec position will be chosen.
+    dimension : list of float, optional
+        Dimension of the mesh in X,Y,Z from the corner origin.
+        The default is [10,10,10].
+    file_path : string, optional 
+        Name of the generated gmsh file (can include file path also).
+    cl : float, optional
+        Characteristic length, essentially describes how big the nodes 
+        associated elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed. 
+    finer : int, optional
+        Number of line between two consecutive electrodes to approximate the
+        circle shape.
+    handle : variable, optional
+        Will be assigned the output of 'Popen' in case the process needs to be
+        killed in the UI for instance.
+    """
+    file_path = file_path if file_path[-4:] == '.geo' else file_path + '.geo'
+    gw.tank_mesh(elec=elec, origin=origin, dimension=dimension,
+                 file_path=file_path, cl=cl)    
+    
+    # check directories 
+    if path == "exe":
+        ewd = os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+    else:
+        ewd = path # points to the location of the .exe 
+        # else its assumed a custom directory has been given to the gmsh.exe 
+    
+    # handling gmsh
+    runGmsh(ewd, file_path.replace('.geo',''), show_output=show_output, dump=dump, threed=True, handle=handle)        
+
+    #convert into mesh.dat
+    mesh_info = gw.mshParse(file_path.replace('.geo', '.msh'), debug=show_output) # read in 3D mesh file
+
+    # merge fine with coarse regions
+    regions = np.array(mesh_info['parameters'])
+    for reg in np.unique(regions)[1:]:
+        ie = regions == reg
+        regions[ie] = reg - 1
+        
+    # create mesh object        
+    mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
+                mesh_info['node_y'],
+                mesh_info['node_z'],
+                np.array(mesh_info['node_data']).T,
+                mesh_info['cell_type'],
+                mesh_info['original_file_path'])
+    
+    mesh.addAttribute(regions, 'region')
+    mesh.moveElecNodes(elec[:,0], elec[:,1], elec[:,2])
+    
+    if keep_files is False: 
+        os.remove(file_path)
+        os.remove(file_path.replace('.geo', '.msh'))
+        
+    return mesh
+
+# test
+# TODO debug
+# elec = np.array([[0,2,2],[0,2,6],[0,3,2],[0,3,6],
+#                   [10,2,2],[10,2,6],[10,3,2],[10,3,6],
+#                   [3,0,2],[5,0,2],[7,0,2],[3,0,6],[5,0,6],[7,0,6],
+#                   [3,5,2],[5,5,2],[7,5,2],[3,5,6],[5,5,6],[7,5,6]
+#                   ])
+# mesh = tankMesh(elec, origin=[0,0,0], dimension=[10, 5, 7], file_path='/home/jkl/Downloads/mesh_tank',)
+# mesh.show()
+
+#%% ciruclar mesh (TODO)
+def circularMesh():
+    # TODO
+    pass
 
 #%% import a custom mesh, you must know the node positions 
 def readMesh(file_path, node_pos=None, order_nodes=True):
@@ -4929,7 +4968,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
     if ext == '.vtk':
         mesh = vtk_import(file_path, order_nodes=order_nodes)
     elif ext == '.msh':
-        mesh_dict = gw.msh_parse(file_path)
+        mesh_dict = gw.mshParse(file_path, debug=False)
 
         mesh = Mesh(node_x = mesh_dict['node_x'],
                     node_y = mesh_dict['node_y'],

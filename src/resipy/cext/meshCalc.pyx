@@ -119,6 +119,31 @@ cdef double fmin(double[:] arr) nogil: # import note: You need to pass the memor
     return tmp
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
+cdef double fmax(double[:] arr) nogil: # import note: You need to pass the memory view
+    # to a nogil function like this otherwise you get instability 
+    cdef int n = arr.shape[0]
+    cdef double tmp = arr[0]
+    cdef int i 
+    for i in range(1,n):
+        if tmp<arr[i]:
+            tmp = arr[i]
+    return tmp
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef double mean_average(double[:] arr) nogil:
+    #compute mean average of an array 
+    cdef int n = arr.shape[0]
+    cdef double tmp = 0
+    cdef double a 
+    cdef int i 
+    for i in range(n):
+        tmp = tmp + arr[i]
+    a = tmp/n
+    return a 
+
+@cython.boundscheck(False)
 @cython.wraparound(False)    
 cdef long tetra_signp(double[:] a, double[:] b, double [:] c,  double [:] d) nogil:
     #parrall nogil tetra sign code, but needs memory views passed to it 
@@ -189,7 +214,7 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
         connection matrix
     """
     
-    cdef int i, j, k #indexing 
+    cdef int i, j, k, ti #indexing 
     cdef int numel = connection.shape[0]
     cdef int npere = 4
     #face arrays 
@@ -207,7 +232,7 @@ def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef int pad = len(str(num_node))
     
     #assign unique node combinations to each element edge, repeats pick out neighbours
-    for i in range(numel):
+    for i in range(numel):#,nogil=True,num_threads=num_threads,schedule='static'):
         for j in range(npere):
             #setup nodes which are part of face
             face[0] = connection[i,a[j]]
@@ -329,7 +354,7 @@ def faces3d(long[:,:] connection, long[:,:] neigh):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
-    """Compute neighbours of each element within a 2D triangular mesh 
+    """Compute neighbours of each element within a 2D triangular or quad mesh 
     
     Parameters
     -------------
@@ -450,10 +475,10 @@ def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
     cdef long[:] a = np.asarray([0,3], dtype=int)
     cdef long[:] b = np.asarray([1,4], dtype=int)  
     cdef long[:] c = np.asarray([2,5], dtype=int)  
-    cdef long[:] d = np.asarray([0,1,0] , dtype=int)
-    cdef long[:] e = np.asarray([1,2,2] , dtype=int)
-    cdef long[:] f = np.asarray([4,5,5] , dtype=int)
-    cdef long[:] g = np.asarray([3,4,3] , dtype=int)
+    cdef long[:] d = np.asarray([0,1,2] , dtype=int)
+    cdef long[:] e = np.asarray([1,2,0] , dtype=int)
+    cdef long[:] f = np.asarray([3,4,3] , dtype=int)
+    cdef long[:] g = np.asarray([4,5,5] , dtype=int)
 
     #combination array 
     cdef np.ndarray[long long, ndim=2] tri_combo = np.zeros((numel,5),dtype=np.int64 ,order='C') # allocate space for tri_combo 
@@ -1221,11 +1246,13 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     ----------
     connection: numpy array 
         mesh connection matrix.
-    node: numpy array
-        mesh node matrix.
+    numnp: int
+        Number of nodes
     typ: vtk cell type
         DESCRIPTION. The default is 0. Will raise an error if takes an 
         unexpected value. 
+    num_threads: int
+        (not currently in use)
 
     Returns
     -------
@@ -1253,17 +1280,17 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
         a = np.asarray([0,1,2], dtype=int)
         b = np.asarray([1,2,0], dtype=int)
     elif typ==8 or typ==9:#elements are quads
-        nedges = 4
-        a = np.asarray([0,1,2,3], dtype=int)
-        b = np.asarray([1,2,3,0], dtype=int)
+        nedges = 6
+        a = np.asarray([0,1,2,3,0,1], dtype=int)
+        b = np.asarray([1,2,3,0,2,3], dtype=int)
     elif typ == 10:# elements are tetrahedra 
         nedges = 6
         a = np.asarray([0,1,2,3,3,3], dtype=int)
         b = np.asarray([1,2,0,0,1,2], dtype=int)
     elif typ == 13: # elements are 3d wedges 
-        nedges = 9
-        a = np.asarray([0,1,2, 3,4,5, 0,1,2], dtype=int)
-        b = np.asarray([1,2,0, 4,5,3, 3,4,5], dtype=int)
+        a = np.asarray([0,1,2, 3,4,5, 0,1,2, 0,0, 1,1, 2,2], dtype=int)
+        b = np.asarray([1,2,0, 4,5,3, 3,4,5, 5,4, 3,5, 3,4], dtype=int)
+        nedges = len(a)
     else: 
         raise ValueError('Cell type argument does not match vtk cell types,', 
                          'used with meshTools must be one of the following:',
@@ -1271,7 +1298,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
 
     #looping variables     
     cdef long long[:,:] combo = np.zeros((numel,nedges),dtype=np.int64)
-    cdef long[:] nodes = np.zeros(2,dtype=int)
+    # cdef long[:] nodes = np.zeros(2,dtype=int)
     cdef int i,j,k
     cdef long long merged 
     cdef long na, nb, nid
@@ -1325,6 +1352,8 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     
     return nsizeA, Nconnec
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threads=2):
     """Cross check for overlapping faces in 2 different 2D face meshes... 
     Finds repeats of the first face connection matrix in the second. 
@@ -1400,3 +1429,201 @@ def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threa
             repeatv[i] = 1
     
     return repeats 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def boundcall(long[:,:] tconnection, long[:,:] fconnection, double[:,:] node):
+    """
+    Compute cell boundary conditions for E4D input. Works for gentle topography. 
+    Assumes sides of mesh are flat. 
+
+    Parameters
+    ----------
+    tconnection: nd array 
+        Truncated connection matrix, should be indexed with the output of faces3d. 
+        N by 4. 
+    fconnection: nd array 
+        Connection matrix of outer faces (same number of entries (N) as 
+        tconnection). N by 3 
+    node: nd array 
+        Node matrix. N by 3. 
+
+    Raises
+    ------
+    ValueError
+        If length of tconnection and fconnection are not the same. 
+
+    Returns
+    -------
+    node_bd : nd array 
+        1 dimensional array describing node boundary flags 
+    face_bd : nd array 
+        1 dimensional array describing face boundary flags 
+
+    """
+    
+    #declare vars 
+    cdef int numel = tconnection.shape[0]
+    cdef int numel_check = fconnection.shape[0]
+    cdef int numnp = node.shape[0]
+    
+    #face cell handling 
+    cdef int npere_face = 3
+    cdef double[:] x = np.zeros(npere_face ,dtype=float)
+    cdef double[:] y = np.zeros(npere_face ,dtype=float)
+    cdef double[:] z = np.zeros(npere_face ,dtype=float)
+    cdef double dx, dy, dz
+    
+    #tetrahedral cell handling 
+    cdef int npere = 4
+    cdef double[:] cx = np.zeros(npere ,dtype=float)
+    cdef double[:] cy = np.zeros(npere ,dtype=float)
+    cdef double[:] cz = np.zeros(npere ,dtype=float)
+    
+    cdef double[:] tcentriod = np.zeros(npere_face,dtype=float)
+    cdef double[:] fcentriod = np.zeros(npere_face,dtype=float)
+    
+    cdef long bd # boundary flags 
+    cdef np.ndarray[long, ndim=1] node_bd = np.zeros(numnp,dtype=int)
+    cdef np.ndarray[long, ndim=1] face_bd = np.zeros(numel,dtype=int)
+    cdef long[:] node_bdv = node_bd 
+    cdef long[:] face_bdv = face_bd 
+    
+    #do checks? 
+    if numel != numel_check:
+        raise ValueError('Mismatch in connection matrix lengths')
+    
+    #compute cell centres 
+    for i in range(numel):
+        for j in range(npere_face):
+            x[j] = node[fconnection[i,j],0]
+            y[j] = node[fconnection[i,j],1]
+            z[j] = node[fconnection[i,j],2]
+        
+        dx = fmax(x) - fmin(x)
+        dy = fmax(y) - fmin(y)
+        
+        if dy < 1e-16 or dx < 1e-16 : #face is on the side of the mesh 
+            bd = 2
+        else:
+            fcentriod[0] = mean_average(x)
+            fcentriod[1] = mean_average(y)
+            fcentriod[2] = mean_average(z)
+            for j in range(npere):
+                cx[j] = node[tconnection[i,j],0]
+                cy[j] = node[tconnection[i,j],1]
+                cz[j] = node[tconnection[i,j],2]
+            tcentriod[0] = mean_average(cx)
+            tcentriod[1] = mean_average(cy)
+            tcentriod[2] = mean_average(cz)              
+            #if outward vector faces downwards then then the element is on base of mesh 
+            if fcentriod[2] > tcentriod[2]:
+                bd = 1
+            else:
+                bd = 2
+        for j in range(npere_face):
+            if node_bdv[fconnection[i,j]] != 2: # check its not already assiged to side of mesh 
+                node_bdv[fconnection[i,j]] = bd 
+        
+        face_bdv[i] = bd    
+        
+    return node_bd, face_bd
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def rmRepeatNodes(double[:,:] node, long [:,:] connection, int n=10, int num_threads=2):
+    """
+    Remove colocated nodes, useful for some mesh formats or remapping the ABMN 
+    matrix when colocated electrodes are present (becuase of multiple survey lines). 
+
+    Parameters
+    ----------
+    node: numpy array
+        Mesh node matrix or in this case can be the electrode coordinates. Should
+        be N by 3. 
+    connection: numpy array 
+        Mesh connection matrix.
+    n : int, optional
+        Maximum number of expected colacated points per node (limited to save on memory). 
+        The default is 10. Nb: n can be set to the N (size of node matrix) but this will 
+        entail a longer processing time. 
+    num_threads:
+        Number of threads used when looking up colocated points, can be useful to 
+        have more threads engaged for big problems with 1000s of points. 
+
+    Raises
+    ------
+    Exception
+        if n is exceeded during the colacated point lookup. 
+
+    Returns
+    -------
+    idx : nd array 
+        n by numnp array describing the groupings of repeated nodes at each 
+        node coordinate, where -1 means no grouping. 
+    nnodes : nd array 
+        New nodes locations with repeated (colocated coordinates) filtered out.
+    nconnec : nd array 
+        New connection matrix, same size as connection but nodes indices have 
+        been remapped to ignore repeated points. 
+    """
+    cdef int numnp = node.shape[0] # number of nodes 
+    cdef double[:] x = node[:,0] # extract x y z columns 
+    cdef double[:] y = node[:,1]
+    cdef double[:] z = node[:,2]
+    cdef np.ndarray[double,ndim=2] nnodes = np.zeros((numnp,3), dtype=float) # allocate array for new point array 
+    cdef double[:,:] nnodev = nnodes #(memory view)
+
+    cdef int ndim = node.shape[1] # should be 3 (always)
+    
+    cdef int c = 0 # rolling count used in for loops 
+    cdef np.ndarray[long,ndim=2] idx = np.zeros((numnp,n), dtype=int)-1 # index grouping 
+    cdef long[:,:] idxv = idx 
+    cdef int err = 0 # error flag
+    cdef int i,j # looping variables 
+    
+    cdef int numel = connection.shape[0]
+    cdef int npere = connection.shape[1]
+    cdef np.ndarray[long,ndim=2] nconnec = np.zeros((numel,npere), dtype=np.int64)
+    cdef long[:,:] nconnecv = nconnec 
+
+    
+    cdef long[:] remap = np.zeros(numnp,dtype=int)-1 # array to allocate remapped node values to 
+    cdef long[:] flag = np.zeros(numnp,dtype=int) # decides if point already added
+    
+    for i in prange(numnp,nogil=True,num_threads=num_threads,schedule='static'):
+        #this bit can be parallel 
+        idx[i,0] = i
+        c=1
+        for j in range(numnp):
+            if i!=j and x[i]==x[j] and y[i]==y[j] and z[i]==z[j]:
+                idxv[i,c] = j
+                c=c+1
+                if c>n:
+                    err = 1
+                    
+    if err==1:
+        raise Exception("Maximum number of colocated points exceeded")
+        
+    c = 0 # reset count to zero 
+
+    for i in range(numnp): # needs to be processed sequentially 
+        if flag[i]==0:#point not already flagged 
+            for j in range(ndim):    
+                nnodev[c,j] = node[i,j]# put new point into array 
+            for j in range(n):
+                if idx[i,j]==-1:
+                    break
+                else:
+                    flag[idx[i,j]]=1 # remove colocated points from selection pool 
+                    remap[idx[i,j]]=c # add count to remapple array 
+            c+=1
+         
+    nnodes = nnodes[0:c,:] # truncate matrix down to the unique points 
+    
+    #sort remapping of connection matrix 
+    for i in range(numel):
+        for j in range(npere):
+            nconnecv[i,j] = remap[connection[i,j]]
+                    
+    return idx, nnodes, nconnec # index groupings, new points (filtered) and remapped connection matrix 

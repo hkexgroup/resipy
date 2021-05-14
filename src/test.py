@@ -197,17 +197,34 @@ k.showMesh()
 #k.createMesh()
 
 # 3D cylinder
-radius = 6.5/2 # cm
-angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
-celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
-elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+# radius = 6.5/2 # cm
+# angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+# celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
+# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
+k = Project(typ='R3t')
+# k.setElec(elec)
+k.importElec(testdir + 'dc-3d-cylinder/elec.csv')
+k.createMesh('cylinder', zlim=[0, 47.5], cl=0.8)
+# k.importSequence(testdir + 'dc-3d-cylinder/sequence.csv')
+k.createSequence([('custSeq', testdir + 'dc-3d-cylinder/sequence.csv')])
+k.forward()
+k.saveMesh(os.path.join(k.dirname, 'mesh.vtk'))
+k.saveMesh(os.path.join(k.dirname, 'mesh.node'))
+k.saveMesh(os.path.join(k.dirname, 'mesh.dat'))
+
+# 3D tank
+elec = np.array([[0,2,2],[0,2,6],[0,3,2],[0,3,6],
+                  [10,2,2],[10,2,6],[10,3,2],[10,3,6],
+                  [3,0,2],[5,0,2],[7,0,2],[3,0,6],[5,0,6],[7,0,6],
+                  [3,5,2],[5,5,2],[7,5,2],[3,5,6],[5,5,6],[7,5,6]
+                  ])
 k = Project(typ='R3t')
 k.setElec(elec)
-k.createMesh('cylinder', zlim=[0, 47.5], cl=0.8)
+k.createMesh('tank', origin=[0,0,0], dimension=[10,5,7])
 
 
 # specific mesh import
-#mesh = mt.tetgen_import(testdir + 'mesh/tetgen_test.1.node')
+# mesh = mt.tetgen_import(os.path.join(k.dirname, 'mesh.1.node'))
 
 
 timings['methods-meshing'] = time.time() - tstart
@@ -360,7 +377,7 @@ k.showErrorDist(-2) # combined surveys
 k.createMesh()
 k.showMesh()
 k.showParam()
-k.fitErrorPwl()
+k.fitErrorPwl(-1)
 k.err = True
 k.invert(parallel=True)
 df = k.getR2out()
@@ -523,7 +540,7 @@ k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d/elec.csv')
 # k.showPseudo(threed=True) # only tested in pyvista setup   
-k.createMesh(cl=4, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
+k.createMesh(cl=2, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
 
 k.createSequence()
 #k.err = True
@@ -586,7 +603,7 @@ print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['ip-3d'] = time.time() - t0
 
 
-#%% 3D column mesh -- forward modelling for 3D too 
+#%% 3D column mesh 
 print('----------- Testing 3D Column prism with fwd and inv -----------')
 t0 = time.time()
 
