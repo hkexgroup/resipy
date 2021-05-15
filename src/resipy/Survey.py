@@ -2115,6 +2115,8 @@ class Survey(object):
         if geom: # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
+            resist[np.isinf(resist)] = np.nan # sometimes inf are generated
+            # let's set them to nan to prevent colorscale to be meaningless
         
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
@@ -2156,8 +2158,6 @@ class Survey(object):
             levels = np.linspace(vmin, vmax, 13)[1:-1]
             contrmesh = pvpont.contour(isosurfaces=levels)
             #TODO somehow this does create an empty mesh
-            print(levels)
-            print(contrmesh)
             ax.add_mesh(contrmesh,
                         #cmap=color_map, #matplotlib colormap 
                         clim=[vmin,vmax], #color bar limits 
