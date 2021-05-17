@@ -5006,31 +5006,33 @@ class Project(object): # Project master class instanciated by the GUI
         fparam['job_type'] = 0
         centroids = mesh.elmCentre
         
-        if self.param['mesh_type'] == 6:
-            fparam['num_regions'] = 1
-            maxElem = centroids.shape[0]
-            fparam['regions'] = np.array([[1, maxElem, 100]])
+        #below block not needed now R2 reads in .dat files for quad mesh 
+        # if self.param['mesh_type'] == 6:
+        #     fparam['num_regions'] = 1
+        #     maxElem = centroids.shape[0]
+        #     fparam['regions'] = np.array([[1, maxElem, 100]])
+        # else:
+        if (self.typ == 'R2') | (self.typ == 'cR2'):
+            n = 2
+            name = 'mesh.dat'
+            file_path = os.path.join(fwdDir, name)
+            mesh.dat(file_path)
         else:
-            if (self.typ == 'R2') | (self.typ == 'cR2'):
-                n = 2
-                name = 'mesh.dat'
-                file_path = os.path.join(fwdDir, name)
-                mesh.dat(file_path)
-            else:
-                n = 3
-                name = 'mesh3d.dat'
-                file_path = os.path.join(fwdDir, name)
-                mesh.datAdv(file_path, iadvanced=self.iadvanced) # use advanced mesh format if 3D 
-            #make starting resistivity file 
-            resFile = np.zeros((centroids.shape[0],n+1)) # centroid x, y, z, res0
-            resFile[:,-1] = 100
-            np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
-                       fmt='%.3f')
+            n = 3
+            name = 'mesh3d.dat'
+            file_path = os.path.join(fwdDir, name)
+            mesh.datAdv(file_path, iadvanced=self.iadvanced) # use advanced mesh format if 3D 
+        #make starting resistivity file 
+        resFile = np.zeros((centroids.shape[0],n+1)) # centroid x, y, z, res0
+        resFile[:,-1] = 100
+        np.savetxt(os.path.join(fwdDir, 'resistivity.dat'), resFile,
+                   fmt='%.3f')
 
-            if node_elec is not None: # then we need to overwrite it
-                fparam['node_elec'] = node_elec
-            fparam['num_regions'] = 0
-            fparam['res0File'] = 'resistivity.dat'
+        if node_elec is not None: # then we need to overwrite it
+            fparam['node_elec'] = node_elec
+        fparam['num_regions'] = 0
+        fparam['res0File'] = 'resistivity.dat'
+        
         write2in(fparam, fwdDir, typ=self.typ)
 
         # write the protocol.dat based on measured sequence
