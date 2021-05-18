@@ -5361,7 +5361,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'cmap':'viridis', 'sensPrc':0.5,
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False,
-                            'pvslices':([],[],[]), 'pvthreshold':None,
+                            'pvslices':([],[],[]), 'pvthreshold':None, 'pvdelaunay3d': False,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}          
                 
         # reset attribute specific settings (like vmin, vmax, threshold, isosurface)
@@ -5665,6 +5665,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 pass
         self.pvgridCheck = QCheckBox('Grid')
         self.pvgridCheck.stateChanged.connect(pvgridCheckFunc)
+        
+        def pvdelaunay3dCheckFunc(state):
+            self.displayParams['pvdelaunay3d'] = self.pvdelaunay3dCheck.isChecked()
+            try:
+                self.replotSection()
+            except:
+                pass
+        self.pvdelaunay3dCheck = QCheckBox('Delaunay 3D')
+        self.pvdelaunay3dCheck.setToolTip('Apply a Delaunay 3D filter on the plot - similar to 2D contouring.')
+        self.pvdelaunay3dCheck.stateChanged.connect(pvdelaunay3dCheckFunc)
             
         self.pvapplyBtn = QPushButton('Apply 3D')
         self.pvapplyBtn.setAutoDefault(True)
@@ -5691,7 +5701,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #          pvzslicesLabel, self.pvzslices,
         #          self.pvcontourLabel, self.pvcontour,
         #          self.pvapplyBtn,
-        #          self.pvgridCheck,
+        #          self.pvdelaunay3dCheck, self.pvgridCheck,
         #          self.screenshotBtn]
         
         opt3d = [self.pvthreshLabel, self.pvthreshMin,
@@ -5699,7 +5709,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                  self.pvxslices, self.pvyslices,
                  self.pvzslices, self.pvcontourLabel, 
                  self.pvcontour, self.pvapplyBtn,
-                 self.pvgridCheck, self.screenshotBtn]
+                 self.pvdelaunay3dCheck, self.pvgridCheck, self.screenshotBtn]
         
         def show3DInvOptions(a):
             [o.setVisible(a) for o in opt3d]
@@ -6786,6 +6796,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvzslices.setText('')
         self.pvcontour.setText('')
         self.pvgridCheck.setChecked(False)
+        self.pvdelaunay3dCheck.setChecked(False)
         self.doiCheck.setChecked(False)
         self.doiSensCheck.setChecked(False)
         self.displayParams = {'index':0,'edge_color':'none',
@@ -6793,7 +6804,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5,
                             'doi':self.modelDOICheck.isChecked(),
-                            'doiSens':False,
+                            'doiSens':False, 'pvdelaunay3d': False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         self.mwInv.clear()
@@ -6836,6 +6847,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pvslices = self.displayParams['pvslices']
         pvthreshold = self.displayParams['pvthreshold']
         pvgrid = self.displayParams['pvgrid']
+        pvdelaunay3d = self.displayParams['pvdelaunay3d']
         pvcontour = self.displayParams['pvcontour']
         aspect = self.displayParams['aspect']
         if self.project.typ[-1] == '2':
@@ -6886,13 +6898,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                               background_color=(0.8,0.8,0.8),
                                               pvslices=pvslices,
                                               pvthreshold=pvthreshold,
-                                              pvgrid=pvgrid,
+                                              pvgrid=pvgrid, pvdelaunay3d=pvdelaunay3d,
                                               pvcontour=pvcontour)
             self.writeLog('k.showResults(index={:d}, attr="{:s}", edge_color="{:s}", vmin={:s}, '
                           'vmax={:s}, color_map="{:s}", background_color=(0.8, 0.8, 0.8),'
-                          'pvslices={:s}, pvthreshold={:s}, pvgrid={:s}, pvcontour={:s})'.format(
+                          'pvslices={:s}, pvthreshold={:s}, pvdelaunay3d={:s}, pvgrid={:s}, pvcontour={:s})'.format(
                           index, attr, edge_color, str(vmin), str(vmax), cmap, str(pvslices),
-                          str(pvthreshold), str(pvgrid), str(pvcontour)))
+                          str(pvthreshold), str(pvdelaunay3d), str(pvgrid), str(pvcontour)))
   
 
     def displayInvertedResults(self): # after inversion, plot graph

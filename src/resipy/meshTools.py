@@ -1862,6 +1862,7 @@ class Mesh:
                 pvthreshold=None,
                 pvgrid=True,
                 pvcontour=[],
+                pvdelaunay3d=False,
                 pvshow=True,
                 darkMode=False,
                 cell_picking=False,
@@ -1917,6 +1918,8 @@ class Mesh:
             Show grid or not.
         pvcontour : list of float, optional
             Values of the isosurface to be plotted.
+        pvdelaunay3d : bool, optional
+            If `True` a "Delaunay 3D" triangulation filter will be applied on the mesh.
         pvshow : bool, optional
             If `False`, that will prevent calling the `pyvista.Plotter.show()`.
             This is useful in case of subplots.
@@ -2034,9 +2037,9 @@ class Mesh:
             #                           self.connection)
             # self.pvmesh[color_bar_title] = X
             
-            # clip mesh to bounding box ... we crop the mesh (only way to reduce it's bounds for better viewing)
-            if clipping:
-                self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
+            # # clip mesh to bounding box ... we crop the mesh (only way to reduce it's bounds for better viewing)
+            # if clipping:
+            #     self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
                         
             if edge_color is None or edge_color=='none' or edge_color=='None':
                 edges = False # then dont show element edges 
@@ -2078,6 +2081,15 @@ class Mesh:
             # show grid
             if pvgrid:
                 ax.show_grid(color=tcolor)
+            
+            # Delaunay 3D
+            if pvdelaunay3d:
+                self.pvmesh = self.pvmesh.cell_data_to_point_data()
+                self.pvmesh = self.pvmesh.delaunay_3d()
+            
+            # clip mesh to bounding box ... we crop the mesh (only way to reduce its bounds for better viewing - must be after all pvmesh works)
+            if clipping:
+                self.pvmesh = self.pvmesh.clip_box((xlim[0],xlim[1],ylim[0],ylim[1],zlim[0],zlim[1]),invert=False)
             
             # plot slices or entire mesh
             if np.sum([len(a) for a in pvslices]) > 0: # we have slices

@@ -3725,7 +3725,7 @@ class Project(object): # Project master class instanciated by the GUI
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
                     clipContour=True, use_pyvista=True, background_color=(0.8,0.8,0.8),
                     pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
-                    pvcontour=[], **kwargs):
+                    pvcontour=[], pvdelaunay3d=False, **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -3777,6 +3777,8 @@ class Project(object): # Project master class instanciated by the GUI
             (3D only) Show grid or not.
         pvcontour: list of float, optional
             (3D only) Values of the isosurface to be plotted.
+        pvdelaunay3d : bool, optional
+            If `True` a "Delaunay 3D" triangulation filter will be applied on the mesh.
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -3849,7 +3851,7 @@ class Project(object): # Project master class instanciated by the GUI
                         attr=attr, color_map=color_map, clabel=clabel,
                         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
                         pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
-                        pvcontour=pvcontour, darkMode=self.darkMode, **kwargs)
+                        pvcontour=pvcontour, pvdelaunay3d=pvdelaunay3d, darkMode=self.darkMode, **kwargs)
                 
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
