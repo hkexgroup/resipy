@@ -2852,6 +2852,33 @@ class Mesh:
         return np.array(node_in_mesh, dtype=int) # note this is the node position with indexing starting at 0. 
 
     #%% write mesh to file 
+    def findIdirichlet(self):
+        """Find the best node for the dirchlet node 
+        Returns
+        -------
+        idirchlet: int 
+            A node far away as possible from each of the electrodes on the boundary of the 
+            mesh. (Add one if using inside of mesh(3d).dat)
+        """
+        if self.eNodes is None:
+            #this function cannot run because it assumes that it knows the electrode nodes
+            warnings.warn('Taken last node of mesh as dirchlet node, as no electrode nodes assigned to mesh class')
+            return self.numnp-1  #in which case take last node as idirchlet 
+        
+        if self.neigh_matrix is None:
+            self.computeNeigh()
+        neigh = self.neigh_matrix.copy()
+        edge = self.connection[np.min(neigh,axis=1) == -1,:]
+        edge_nodes = self.node[np.unique(edge.flatten()),:]
+        elec = self.node[self.eNodes,:]
+        # find average electrode position 
+        e = np.c_[np.mean(elec[:,0]),np.mean(elec[:,1]),np.mean(elec[:,2])]
+        
+        idirichlet = np.argmax(np.sqrt(np.sum((edge_nodes - e)**2, axis=1)))
+        
+        return idirichlet
+
+        
     def write_dat(self, file_path='mesh.dat'):
         warnings.warn('write_dat is depreciated, use dat instead')
         self.dat(file_path)
@@ -2871,11 +2898,7 @@ class Mesh:
         with open(file_path, 'w') as fid:
             #write to mesh.dat total num of elements and nodes
             # find furthest node from first electrode to be dirichlet node
-            xyz = self.node.copy() 
-            if self.eNodes  is not None:
-                idirichlet = np.argmax(np.sqrt(np.sum((xyz-xyz[self.eNodes [0],:])**2, axis=1)))
-            else:
-                idirichlet = self.numnp
+            idirichlet = self.findIdirichlet() + 1 
             if self.ndims == 3:
                 fid.write('%i %i %i 0 %i\n'%(self.numel,self.numnp,1,self.type2VertsNo()))
             else:
@@ -2927,11 +2950,7 @@ class Mesh:
             raise TypeError('Advanced mesh format not avialable with 2D meshes currently')
             
         # find furthest node from first electrode to be dirichlet node
-        xyz = self.node.copy() 
-        if self.eNodes  is not None:
-            idirichlet = np.argmax(np.sqrt(np.sum((xyz-xyz[self.eNodes [0],:])**2, axis=1)))
-        else:
-            idirichlet = self.numnp
+        idirichlet = self.findIdirichlet() + 1 
             
         # element parameters 
         param = np.asarray(self.df['param'],dtype=int)
