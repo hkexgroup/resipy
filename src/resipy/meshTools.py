@@ -4847,6 +4847,7 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
     for reg in np.unique(regions)[1:]:
         ie = regions == reg
         regions[ie] = reg - 1
+    regions[regions == 0] = 1 # fix to be sure the first region is 1 not 0
         
     # create mesh object        
     mesh = Mesh(mesh_info['node_x'], # convert output of parser into an object
