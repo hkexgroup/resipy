@@ -535,9 +535,12 @@ class App(QMainWindow):
                     
                     # display inversion results
                     if len(self.project.meshResults) > 0:
-                        self.displayInvertedResults()
-                        prepareInvError()
-                        self.logText.setText(self.project.invLog)
+                        if self.fwdRadio.isChecked() and len(self.project.meshResults) == 1: # a fwd-only project is saved
+                            pass
+                        else:
+                            self.displayInvertedResults()
+                            prepareInvError()
+                            self.logText.setText(self.project.invLog)
                     self.loadingWidget(exitflag=True)
                     # activate tabs
                     self.activateTabs(True)
