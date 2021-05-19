@@ -388,170 +388,171 @@ class App(QMainWindow):
         def loadProjectBtnFunc():
             fname, _ = QFileDialog.getOpenFileName(self.tabImportingData,'Open File', self.datadir, '*.resipy')
             if fname != '':
-                self.loadingWidget('Loading Project, please wait...', False)
-                k = Project()
-                k.loadProject(fname)
-                
-                # set flags that call restartFunc()
-                if k.iTimeLapse:
-                    self.timeLapseCheck.setChecked(True)
-                if k.iBatch:
-                    self.batchCheck.setChecked(True)
-                if k.pseudo3DSurvey is not None:
-                    self.pseudo3DCheck.setChecked(True)
-                if (k.typ == 'R2') | (k.typ == 'cR2'):
-                    self.m2DRadio.setChecked(True)
-                else:
-                    self.m3DRadio.setChecked(True)
-                if k.iForward:
-                    self.fwdRadio.setChecked(True)
-                else:
-                    self.invRadio.setChecked(True)
-                
-                # pre-processing default flags
-                self.recipErrDataIndex = -1
-                self.errFitApplyToAll = True
-                self.errFitDataIndex = -1
-                self.iperrFitDataIndex = -1
-                self.errFitType.setCurrentIndex(0)
-                self.iperrFitType.setCurrentIndex(0)
-                self.dcaProgress.setValue(0)
-                self.errFitPlotIndexList = []
-                self.iperrFitPlotIndexList = []
-                self.phaseFiltDataIndex = -1
-                
-                self.project = k # assign the project object
-                if self.pseudo3DCheck.isChecked():
-                    self.elecTable.initTable(self.project.pseudo3DSurvey.elec) # load electrodes back in
-                else:
-                    self.elecTable.initTable(self.project.elec) # load electrodes back in
-                self.tempElec = self.elecTable.getTable()
-                if self.project.iBorehole:
-                    self.boreholeCheck.setChecked(True)
-                
-                if not self.project.topo.empty:
-                    if self.project.topo.shape[0] > 0:
-                        self.topoTable.initTable(self.project.topo.values)
-                else:
-                    self.topoTable.initTable(np.array([['',''],['','']]))
-                
-                # display pseudo-section and filtering graphs
-                self.settingUI()
-                
-                # load batch/time-lapse/pseudo 3D results 
-                if self.batchCheck.isChecked() or self.timeLapseCheck.isChecked():
-                    loadBatchProject()
+                try:
+                    self.loadingWidget('Loading Project, please wait...', False)
+                    k = Project()
+                    k.loadProject(fname)
                     
-                # load IP
-                if (self.project.typ == 'cR2') | (self.project.typ == 'cR3t'):
-                    self.ipCheck.setChecked(True)
-                    self.ipCheck.setEnabled(True)
-                else:
-                    self.ipCheck.setChecked(False)
-                    self.ipCheck.setEnabled(False)
-                    
-                # display mesh
-                if self.project.mesh is not None:
-                    if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
-                        replotMesh()
+                    # set flags that call restartFunc()
+                    if k.iTimeLapse:
+                        self.timeLapseCheck.setChecked(True)
+                    if k.iBatch:
+                        self.batchCheck.setChecked(True)
+                    if k.pseudo3DSurvey is not None:
+                        self.pseudo3DCheck.setChecked(True)
+                    if (k.typ == 'R2') | (k.typ == 'cR2'):
+                        self.m2DRadio.setChecked(True)
                     else:
-                        if pvfound:
-                            self.mesh3Dplotter.clear() # clear all actors 
-                            if len(np.unique(self.project.mesh.df['region'])) == 1:
-                                color_map = 'Greys'
-                                color_bar = False
-                            else:
-                                color_map = 'Spectral'
-                                color_bar = True
-                            self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
+                        self.m3DRadio.setChecked(True)
+                    if k.iForward:
+                        self.fwdRadio.setChecked(True)
+                    else:
+                        self.invRadio.setChecked(True)
+                    
+                    # pre-processing default flags
+                    self.recipErrDataIndex = -1
+                    self.errFitApplyToAll = True
+                    self.errFitDataIndex = -1
+                    self.iperrFitDataIndex = -1
+                    self.errFitType.setCurrentIndex(0)
+                    self.iperrFitType.setCurrentIndex(0)
+                    self.dcaProgress.setValue(0)
+                    self.errFitPlotIndexList = []
+                    self.iperrFitPlotIndexList = []
+                    self.phaseFiltDataIndex = -1
+                    
+                    self.project = k # assign the project object
+                    if self.pseudo3DCheck.isChecked():
+                        self.elecTable.initTable(self.project.pseudo3DSurvey.elec) # load electrodes back in
+                    else:
+                        self.elecTable.initTable(self.project.elec) # load electrodes back in
+                    self.tempElec = self.elecTable.getTable()
+                    if self.project.iBorehole:
+                        self.boreholeCheck.setChecked(True)
+                    
+                    if not self.project.topo.empty:
+                        if self.project.topo.shape[0] > 0:
+                            self.topoTable.initTable(self.project.topo.values)
+                    else:
+                        self.topoTable.initTable(np.array([['',''],['','']]))
+                    
+                    # display pseudo-section and filtering graphs
+                    self.settingUI()
+                    
+                    # load batch/time-lapse/pseudo 3D results 
+                    if self.batchCheck.isChecked() or self.timeLapseCheck.isChecked():
+                        loadBatchProject()
+                        
+                    # load IP
+                    if (self.project.typ == 'cR2') | (self.project.typ == 'cR3t'):
+                        self.ipCheck.setChecked(True)
+                        self.ipCheck.setEnabled(True)
+                    else:
+                        self.ipCheck.setChecked(False)
+                        self.ipCheck.setEnabled(False)
+                        
+                    # display mesh
+                    if self.project.mesh is not None:
+                        if (self.project.typ == 'R2') | (self.project.typ == 'cR2'):
+                            replotMesh()
                         else:
-                            self.mwMesh3D.plot(self.project.showMesh, threed=True)
-                        self.meshOutputStack.setCurrentIndex(2)
-                
-                # load mesh regions back in
-                if self.project.mesh is not None:
-                    self.regionTable.nrow = 0
-                    self.regionTable.setRowCount(0)
-                    for i in range(len(np.unique(self.project.mesh.df['region']))):
-                        self.regionTable.addRow()
-                        ie = self.project.mesh.df['region'] == i+1
-                        row = self.project.mesh.df[ie]
-                        self.regionTable.setItem(i, 0, QTableWidgetItem(str(row['res0'].values[0])))
-                        self.regionTable.setItem(i, 1, QTableWidgetItem(str(row['phase0'].values[0])))
-                        self.regionTable.setItem(i, 2, QTableWidgetItem(str(row['zones'].values[0])))
-                        if row['param'].values[0] == 0:
-                            self.regionTable.cellWidget(i,3).findChildren(QCheckBox)[0].setChecked(True)
-                
-                # restore changed inversion settings
-#                 self.modelDOICheck
-#                 self.checkTxSign
-                if 'flux_type' in self.project.param:
-                    if self.project.param['flux_type'] == 3:
-                        self.flux_type.setCurrentIndex(0)
-                    else:
-                        self.flux_type.setCurrentIndex(1)
-                if 'singular_type' in self.project.param:
-                    if self.project.param['singular_type'] == 1:
-                        self.singular_type.setChecked(True)
-                    else:
-                        self.singular_type.setChecked(False)
-                if 'res_matrix' in self.project.param:
-                    self.res_matrix.setCurrentIndex(self.project.param['res_matrix'])
-                if 'scale' in self.project.param:
-                    self.scale.setText(str(self.project.param['scale']))
-                if 'patch_x' in self.project.param:
-                    self.patch_x.setText(str(self.project.param['patch_x']))
-                if 'patch_z' in self.project.param:
-                    self.patch_z.setText(str(self.project.param['patch_z']))
-                if 'inv_type' in self.project.param:
-                    self.inv_type.setCurrentIndex(self.project.param['inv_type'])
-                if 'target_decrease' in self.project.param:
-                    self.target_decrease.setText(str(self.project.param['target_decrease']))
-                if 'data_type' in self.project.param:
-                    self.data_type.setCurrentIndex(self.project.param['data_type'])
-                if 'reg_mode' in self.project.param:
-                    self.reg_mode.setCurrentIndex(self.project.param['reg_mode'])
-                if 'tolerance' in self.project.param:
-                    self.tolerance.setText(str(self.project.param['tolerance']))
-                if 'max_iter' in self.project.param:
-                    self.max_iterations.setText(str(self.project.param['max_iter']))
-                if 'error_mod' in self.project.param:
-                    self.error_mod.setCurrentIndex(self.project.param['error_mod'])
-                if 'alpha_aniso' in self.project.param:
-                    self.alpha_aniso.setText(str(self.project.param['alpha_aniso']))
-                if 'alpha_s' in self.project.param:
-                    self.alpha_s.setText(str(self.project.param['alpha_s']))
-                if 'min_error' in self.project.param:
-                    self.min_error.setText(str(self.project.param['min_error']))
-                if 'a_wgt' in self.project.param:
-                    self.a_wgt.setText(str(self.project.param['a_wgt']))
-                if 'b_wgt' in self.project.param:
-                    self.b_wgt.setText(str(self.project.param['b_wgt']))
-                if 'rho_min' in self.project.param:
-                    self.rho_min.setText(str(self.project.param['rho_min']))
-                if 'rho_max' in self.project.param:
-                    self.rho_max.setText(str(self.project.param['rho_max']))
-                
-                
-                # display inversion results
-                if len(self.project.meshResults) > 0:
-                    self.displayInvertedResults()
-                    prepareInvError()
-                    self.logText.setText(self.project.invLog)
-                self.loadingWidget(exitflag=True)
-                # activate tabs
-                self.activateTabs(True)
-                if self.project.iForward:
-                    self.tabs.setTabEnabled(4, True)
-                    self.tabs.setTabEnabled(5, True)
-                self.tabs.setTabEnabled(6, True)
-                
-                # write log and let the world knows!
-                self.writeLog('k.loadProject("{:s}")'.format(fname))
-                self.infoDump('Project successfully loaded.')
-        # self.loadProjectBtn = QPushButton('Load Project')
-        # self.loadProjectBtn.setToolTip('Select .resipy to load in ResIPy.')
-        # self.loadProjectBtn.clicked.connect(loadProjectBtnFunc)
+                            if pvfound:
+                                self.mesh3Dplotter.clear() # clear all actors 
+                                if len(np.unique(self.project.mesh.df['region'])) == 1:
+                                    color_map = 'Greys'
+                                    color_bar = False
+                                else:
+                                    color_map = 'Spectral'
+                                    color_bar = True
+                                self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
+                            else:
+                                self.mwMesh3D.plot(self.project.showMesh, threed=True)
+                            self.meshOutputStack.setCurrentIndex(2)
+                    
+                    # load mesh regions back in
+                    if self.project.mesh is not None:
+                        self.regionTable.nrow = 0
+                        self.regionTable.setRowCount(0)
+                        for i in range(len(np.unique(self.project.mesh.df['region']))):
+                            self.regionTable.addRow()
+                            ie = self.project.mesh.df['region'] == i+1
+                            row = self.project.mesh.df[ie]
+                            self.regionTable.setItem(i, 0, QTableWidgetItem(str(row['res0'].values[0])))
+                            self.regionTable.setItem(i, 1, QTableWidgetItem(str(row['phase0'].values[0])))
+                            self.regionTable.setItem(i, 2, QTableWidgetItem(str(row['zones'].values[0])))
+                            if row['param'].values[0] == 0:
+                                self.regionTable.cellWidget(i,3).findChildren(QCheckBox)[0].setChecked(True)
+                    
+                    # restore changed inversion settings
+    #                 self.modelDOICheck
+    #                 self.checkTxSign
+                    if 'flux_type' in self.project.param:
+                        if self.project.param['flux_type'] == 3:
+                            self.flux_type.setCurrentIndex(0)
+                        else:
+                            self.flux_type.setCurrentIndex(1)
+                    if 'singular_type' in self.project.param:
+                        if self.project.param['singular_type'] == 1:
+                            self.singular_type.setChecked(True)
+                        else:
+                            self.singular_type.setChecked(False)
+                    if 'res_matrix' in self.project.param:
+                        self.res_matrix.setCurrentIndex(self.project.param['res_matrix'])
+                    if 'scale' in self.project.param:
+                        self.scale.setText(str(self.project.param['scale']))
+                    if 'patch_x' in self.project.param:
+                        self.patch_x.setText(str(self.project.param['patch_x']))
+                    if 'patch_z' in self.project.param:
+                        self.patch_z.setText(str(self.project.param['patch_z']))
+                    if 'inv_type' in self.project.param:
+                        self.inv_type.setCurrentIndex(self.project.param['inv_type'])
+                    if 'target_decrease' in self.project.param:
+                        self.target_decrease.setText(str(self.project.param['target_decrease']))
+                    if 'data_type' in self.project.param:
+                        self.data_type.setCurrentIndex(self.project.param['data_type'])
+                    if 'reg_mode' in self.project.param:
+                        self.reg_mode.setCurrentIndex(self.project.param['reg_mode'])
+                    if 'tolerance' in self.project.param:
+                        self.tolerance.setText(str(self.project.param['tolerance']))
+                    if 'max_iter' in self.project.param:
+                        self.max_iterations.setText(str(self.project.param['max_iter']))
+                    if 'error_mod' in self.project.param:
+                        self.error_mod.setCurrentIndex(self.project.param['error_mod'])
+                    if 'alpha_aniso' in self.project.param:
+                        self.alpha_aniso.setText(str(self.project.param['alpha_aniso']))
+                    if 'alpha_s' in self.project.param:
+                        self.alpha_s.setText(str(self.project.param['alpha_s']))
+                    if 'min_error' in self.project.param:
+                        self.min_error.setText(str(self.project.param['min_error']))
+                    if 'a_wgt' in self.project.param:
+                        self.a_wgt.setText(str(self.project.param['a_wgt']))
+                    if 'b_wgt' in self.project.param:
+                        self.b_wgt.setText(str(self.project.param['b_wgt']))
+                    if 'rho_min' in self.project.param:
+                        self.rho_min.setText(str(self.project.param['rho_min']))
+                    if 'rho_max' in self.project.param:
+                        self.rho_max.setText(str(self.project.param['rho_max']))
+                    
+                    # display inversion results
+                    if len(self.project.meshResults) > 0:
+                        self.displayInvertedResults()
+                        prepareInvError()
+                        self.logText.setText(self.project.invLog)
+                    self.loadingWidget(exitflag=True)
+                    # activate tabs
+                    self.activateTabs(True)
+                    if self.project.iForward:
+                        self.tabs.setTabEnabled(4, True)
+                        self.tabs.setTabEnabled(5, True)
+                    self.tabs.setTabEnabled(6, True)
+                    
+                    # write log and let the world knows!
+                    self.writeLog('k.loadProject("{:s}")'.format(fname))
+                    self.infoDump('Project successfully loaded.')
+                except Exception as e:
+                    self.loadingWidget(exitflag=True)
+                    self.errorDump('Error in loading project: ' + str(e))
+
         
         # instead, let's make a hamburger menu in the top right corner
         self.optionMenu = QMenu()
