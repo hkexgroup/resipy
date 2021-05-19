@@ -883,7 +883,7 @@ class Project(object): # Project master class instanciated by the GUI
                 mesh = mt.vtk_import(os.path.join(savedir, surveyName + '.vtk'))
                 mesh.setElec(elec[:,0], elec[:,1], elec[:,2])
                 self.meshResults.append(mesh)
-            
+
         # for i in range(100000): # don't think that someone will store so many
         #     f = os.path.join(savedir, 'survey{:d}'.format(i))
         #     if os.path.exists(f + '-df.csv'):
@@ -932,6 +932,9 @@ class Project(object): # Project master class instanciated by the GUI
         if self.iForward:
             if os.path.exists(os.path.join(savedir, 'dfseq.csv')):
                 self.importSequence(os.path.join(savedir, 'dfseq.csv'))
+            shutil.copytree(savedir, os.path.join(self.dirname, 'fwd'))
+            shutil.move(os.path.join(self.dirname, 'fwd', 'mesh.vtk'),# needed for inverting a fwd_only project after loading
+                        os.path.join(self.dirname, 'fwd', 'forward_model.vtk'))
         self.fmd = settings['fmd']
         self.zlim = settings['zlim']
         if self.iForward and self.mesh is not None:
