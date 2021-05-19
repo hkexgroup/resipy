@@ -424,6 +424,7 @@ class App(QMainWindow):
                     self.phaseFiltDataIndex = -1
                     
                     self.project = k # assign the project object
+                    self.project.darkMode = eval(resipySettings.param['dark']) # set matplotlib theme
                     if self.pseudo3DCheck.isChecked():
                         self.elecTable.initTable(self.project.pseudo3DSurvey.elec) # load electrodes back in
                     else:
