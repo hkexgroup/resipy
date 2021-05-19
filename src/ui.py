@@ -457,7 +457,13 @@ class App(QMainWindow):
                     else:
                         if pvfound:
                             self.mesh3Dplotter.clear() # clear all actors 
-                            self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                            if len(np.unique(self.project.mesh.df['region'])) == 1:
+                                color_map = 'Greys'
+                                color_bar = False
+                            else:
+                                color_map = 'Spectral'
+                                color_bar = True
+                            self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
                         else:
                             self.mwMesh3D.plot(self.project.showMesh, threed=True)
                         self.meshOutputStack.setCurrentIndex(2)
@@ -3178,9 +3184,6 @@ class App(QMainWindow):
                 self.project.showPseudo3DMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
                 self.meshOutputStack.setCurrentIndex(2)
             else: # 2D mesh
-                if self.iDesign is False:
-                    self.regionTable.reset()
-                    self.iDesign is False
                 def func(ax):
                     self.project.createModel(ax=ax, addAction=self.regionTable.addRow)
                 self.mwMesh.plot(func, aspect=aspect)
@@ -3772,6 +3775,7 @@ class App(QMainWindow):
         
         def importCustomMeshFunc():
             elec = self.elecTable.getTable()
+            self.regionTable.reset()
             if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
@@ -3783,16 +3787,30 @@ class App(QMainWindow):
                     print('mesh imported ... now displaying ... ')
                     if pvfound:
                         self.mesh3Dplotter.clear() # clear all actors 
-                        self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
+                        if len(np.unique(self.project.mesh.df['region'])) == 1:
+                            color_map = 'Greys'
+                            color_bar = False
+                        else:
+                            color_map = 'Spectral'
+                            color_bar = True
+                        self.project.showMesh(ax=self.mesh3Dplotter, color_map=color_map, color_bar=color_bar)
                     else:
                         self.mwMesh3D.plot(self.project.showMesh, threed=True)
                     self.writeLog('k.showMesh()')
                     self.meshOutputStack.setCurrentIndex(2)
+                    self.regionTable.nrow = 0
+                    self.regionTable.setRowCount(0)
+                    for i in range(len(np.unique(self.project.mesh.df['region']))):
+                        self.regionTable.addRow()
+                        ie = self.project.mesh.df['region'] == i+1
+                        row = self.project.mesh.df[ie]
+                        self.regionTable.setItem(i, 0, QTableWidgetItem(str(row['res0'].values[0])))
+                        self.regionTable.setItem(i, 1, QTableWidgetItem(str(row['phase0'].values[0])))
+                        self.regionTable.setItem(i, 2, QTableWidgetItem(str(row['zones'].values[0])))
+                        if row['param'].values[0] == 0:
+                            self.regionTable.cellWidget(i,3).findChildren(QCheckBox)[0].setChecked(True)
                 except Exception as e:
                     self.errorDump('Error importing mesh' + str(e))
-        # self.importCustomMeshBtn = QPushButton('Import Custom Mesh')
-        # self.importCustomMeshBtn.setFixedWidth(150)
-        # self.importCustomMeshBtn.clicked.connect(importCustomMeshFunc)
 
         self.importCustomMeshLabel2 = QLabel('Import .msh or .vtk or .dat files.')
         self.importCustomMeshLabel2.setAlignment(Qt.AlignCenter)
@@ -3800,6 +3818,7 @@ class App(QMainWindow):
         
         def importCustomMeshFunc2():
             print('using importCustomMeshFunc2')
+            self.regionTable.reset()
             elec = self.elecTable.getTable()
             if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
