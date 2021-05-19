@@ -3522,9 +3522,9 @@ class App(QMainWindow):
                 meanval = np.mean(ranvals)
                 ranvals[ranvals == 0] = meanval
                 origvals = minvals.copy()
-                origvals[[0,2]] = minvals[[0,2]] - 0.1 * ranvals[[0,2]] # only changin x and z
+                origvals[2] = minvals[2] - 0.1 * ranvals[2] # only changing z (or one side) is enough
                 dimvals = ranvals.copy()
-                dimvals[[0,2]] = ranvals[[0,2]] + 0.2 * ranvals[[0,2]] # dimension changes must be twice as origin displacement
+                dimvals[2] = ranvals[2] + 0.2 * ranvals[2] # dimension changes must be twice as origin displacement
                 self.originTankEdit.setText(','.join(origvals.astype(str)))
                 self.dimensionTankEdit.setText(','.join(dimvals.astype(str)))
             except:
