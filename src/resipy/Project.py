@@ -930,7 +930,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.resist0 = settings['resist0']
         self.iForward = settings['iForward']
         if self.iForward:
-            self.importSequence(os.path.join(savedir, 'dfseq.csv'))
+            if os.path.exists(os.path.join(savedir, 'dfseq.csv')):
+                self.importSequence(os.path.join(savedir, 'dfseq.csv'))
         self.fmd = settings['fmd']
         self.zlim = settings['zlim']
         if self.iForward and self.mesh is not None:
@@ -982,11 +983,12 @@ class Project(object): # Project master class instanciated by the GUI
             self.mesh = self.projs[0].mesh # we don't want an empty self.mesh if there are meshes in self.projs
         
         # populating inversion/forward modeling logs 
-        with open(os.path.join(savedir, 'invLog.log'), 'r') as f:
-            self.invLog = f.read()
-        
-        with open(os.path.join(savedir, 'fwdLog.log'), 'r') as f:
-            self.fwdLog = f.read()
+        if os.path.exists(os.path.join(savedir, 'invLog.log')): # compatibility with old saves
+            with open(os.path.join(savedir, 'invLog.log'), 'r') as f:
+                self.invLog = f.read()
+            
+            with open(os.path.join(savedir, 'fwdLog.log'), 'r') as f:
+                self.fwdLog = f.read()
 
     def createSurvey(self, fname='', ftype='Syscal', info={}, spacing=None, 
                      parser=None, debug=True, **kwargs):
