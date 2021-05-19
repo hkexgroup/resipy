@@ -300,6 +300,7 @@ class App(QMainWindow):
 
         # UI attributes (sync with self.project attributes when instantiated)
         self.project = None
+        self.loadedProjectFlag = False # to prevent removing loaded files from working directory
         self.typ = 'R2'
         self.parser = None
         self.fname = None
@@ -390,8 +391,9 @@ class App(QMainWindow):
             if fname != '':
                 try:
                     self.loadingWidget('Loading Project, please wait...', False)
-                    k = Project()
+                    k = Project(dirname=self.newwd)
                     k.loadProject(fname)
+                    self.loadedProjectFlag = True
                     
                     # set flags that call restartFunc()
                     if k.iTimeLapse:
@@ -542,6 +544,7 @@ class App(QMainWindow):
                             prepareInvError()
                             self.logText.setText(self.project.invLog)
                     self.loadingWidget(exitflag=True)
+                    self.loadedProjectFlag = False # now if user toggles stuff, working directory should be cleaned.
                     # activate tabs
                     self.activateTabs(True)
                     if self.project.iForward:
@@ -923,7 +926,8 @@ class App(QMainWindow):
             self.pseudo3DCheck.setEnabled(False)
             self.pseudo3DCheck.setChecked(False)
             self.tabImporting.setTabEnabled(2,False) # no custom parser needed
-            self.restartFunc() # let's first from previous inversion
+            if self.loadedProjectFlag is False: # loading a project doesn't need a restart
+                self.restartFunc() # let's first from previous inversion
             self.nbElecEdit.setEnabled(True)
             self.tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             self.ipCheck.setEnabled(True)
@@ -6667,8 +6671,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
     def restartFunc(self):
         pdebug('restartFunc: creating new R2 object')
-        self.project = Project(self.newwd, typ=self.typ) # create new R2 instance
-        self.project.darkMode = eval(resipySettings.param['dark']) # set matplotlib theme
+        if self.loadedProjectFlag is False:
+            self.project = Project(self.newwd, typ=self.typ) # create new R2 instance
+            self.project.darkMode = eval(resipySettings.param['dark']) # set matplotlib theme
         self.writeLog('from resipy import Project')
         self.writeLog('k = Project("{:s}", typ="{:s}")'.format(self.newwd, self.typ))
         '''actually we don't really need to instanciate a new object each
