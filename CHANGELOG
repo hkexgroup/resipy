@@ -1,3 +1,15 @@
+v3.3.0
+------
+- New tetrahedral 'Column' and 'Tank' mesh designs for 3D inversion/modeling
+- Add support for Gmsh v4.x.x
+- Redesign of mesh tab for 3D
+- Add support for QThread during inversion (prevent 'app non responsive' message)
+- Add "Delaunay 3D" filter - similar to 2D contouring for 3D volumes
+- Add support for Prosys III file format and integrated 3D grid
+- Bug fixing in the UI
+- Bug fixing with save/load project
+
+
 v3.2.3
 ------
 - Bug fix: Pseudo 3D rotation of 2D meshes and UTM coordinates
