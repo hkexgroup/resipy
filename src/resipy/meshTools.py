@@ -2060,12 +2060,12 @@ class Mesh:
                         pvthreshold[0] = np.nanmin(X)
                     if pvthreshold[1] is None:
                         pvthreshold[1] = np.nanmax(X)
-                self.pvmesh = self.pvmesh.threshold(value=pvthreshold)
+                self.pvmesh = self.pvmesh.threshold(value=pvthreshold, scalars=attr)
             
             # create isosurfaces
             if len(pvcontour) > 0:
                 self.pvmesh = self.pvmesh.cell_data_to_point_data()
-                self.pvmesh = self.pvmesh.contour(isosurfaces=pvcontour)
+                self.pvmesh = self.pvmesh.contour(isosurfaces=pvcontour, scalars=attr)
                 
             # set colors for dark mode 
             tcolor = 'k'
