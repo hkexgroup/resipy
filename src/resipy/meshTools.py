@@ -2120,9 +2120,9 @@ class Mesh:
                                 show_edges=edges, #show edges
                                 # opacity=alpha,
                                 scalar_bar_args={'color':tcolor,# 'interactive':True,
-                                                 'vertical':False,
-                                                 'title_font_size':16,
-                                                 'label_font_size':14})
+                                                 'vertical':False})#,
+                                                 #'title_font_size':16,
+                                                 #'label_font_size':14})
                 else:
                     print('empty mesh')
             
