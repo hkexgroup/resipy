@@ -2053,6 +2053,11 @@ class Mesh:
                     raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
                 ax.set_background(background_color)
             
+            # Delaunay 3D
+            if pvdelaunay3d:
+                self.pvmesh = self.pvmesh.cell_data_to_point_data()
+                self.pvmesh = self.pvmesh.delaunay_3d()
+            
             # apply threshold
             if pvthreshold is not None:
                 if isinstance(pvthreshold, list):
@@ -2077,11 +2082,6 @@ class Mesh:
             # show grid
             if pvgrid:
                 ax.show_grid(color=tcolor)
-            
-            # Delaunay 3D
-            if pvdelaunay3d:
-                self.pvmesh = self.pvmesh.cell_data_to_point_data()
-                self.pvmesh = self.pvmesh.delaunay_3d()
             
             # clip mesh to bounding box ... we crop the mesh (only way to reduce its bounds for better viewing - must be after all pvmesh works)
             if clipping:
