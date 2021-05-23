@@ -5512,7 +5512,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.doiSensCheck.setToolTip('Depth of Investigation (DOI) estimated based on sensitivity.\nSee advanced inversion settings for DOI with the Oldengburg and Li method.')
         
         self.cmapComboLabel = QLabel('Colormap')
-        cmaps = ['viridis','plasma','seismic','cividis','winter','autumn','rainbow','jet','Spectral']
+        cmaps = ['viridis','viridis_r','plasma','plasma_r','seismic','seismic_r','cividis','cividis_r','winter',
+                 'winter_r','autumn','autumn_r','rainbow','rainbow_r','jet','jet_r','Spectral','Spectral_r']
         def cmapComboFunc(index):
             self.displayParams['cmap'] = cmaps[index]
             self.replotSection()
