@@ -1,4 +1,4 @@
-v3.3.0
+v3.3.1
 ------
 - New tetrahedral 'Column' and 'Tank' mesh designs for 3D inversion/modeling
 - Add support for Gmsh v4.x.x
