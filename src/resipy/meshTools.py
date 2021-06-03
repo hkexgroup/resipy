@@ -2053,6 +2053,11 @@ class Mesh:
                     raise Exception('Error plotting with pyvista, show3D (meshTools.py) expected a pyvista plotter object but got %s instead'%typ_str)
                 ax.set_background(background_color)
             
+            # Delaunay 3D
+            if pvdelaunay3d:
+                self.pvmesh = self.pvmesh.cell_data_to_point_data()
+                self.pvmesh = self.pvmesh.delaunay_3d()
+            
             # apply threshold
             if pvthreshold is not None:
                 if isinstance(pvthreshold, list):
@@ -2060,12 +2065,12 @@ class Mesh:
                         pvthreshold[0] = np.nanmin(X)
                     if pvthreshold[1] is None:
                         pvthreshold[1] = np.nanmax(X)
-                self.pvmesh = self.pvmesh.threshold(value=pvthreshold)
+                self.pvmesh = self.pvmesh.threshold(value=pvthreshold, scalars=attr)
             
             # create isosurfaces
             if len(pvcontour) > 0:
                 self.pvmesh = self.pvmesh.cell_data_to_point_data()
-                self.pvmesh = self.pvmesh.contour(isosurfaces=pvcontour)
+                self.pvmesh = self.pvmesh.contour(isosurfaces=pvcontour, scalars=attr)
                 
             # set colors for dark mode 
             tcolor = 'k'
@@ -2077,11 +2082,6 @@ class Mesh:
             # show grid
             if pvgrid:
                 ax.show_grid(color=tcolor)
-            
-            # Delaunay 3D
-            if pvdelaunay3d:
-                self.pvmesh = self.pvmesh.cell_data_to_point_data()
-                self.pvmesh = self.pvmesh.delaunay_3d()
             
             # clip mesh to bounding box ... we crop the mesh (only way to reduce its bounds for better viewing - must be after all pvmesh works)
             if clipping:
@@ -2120,9 +2120,9 @@ class Mesh:
                                 show_edges=edges, #show edges
                                 # opacity=alpha,
                                 scalar_bar_args={'color':tcolor,# 'interactive':True,
-                                                 'vertical':False,
-                                                 'title_font_size':16,
-                                                 'label_font_size':14})
+                                                 'vertical':False})#,
+                                                 #'title_font_size':16,
+                                                 #'label_font_size':14})
                 else:
                     print('empty mesh')
             
