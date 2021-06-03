@@ -249,13 +249,17 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             print(helpful_msg)
         else:
             dump(helpful_msg)
+            
+    #check graphics unit 
+    dump("GPU info: "+str(mt.gpuinfo))
     
     return {'totalMemory':totalMemory,
             'availMemory':availMemory,
             'core_count':num_threads,
             'max_freq':max_freq,
             'OS':OpSys,
-            'wineCheck':wineCheck}
+            'wineCheck':wineCheck,
+            'GPU':mt.gpuinfo}
 
 def pointer(x):
     pass

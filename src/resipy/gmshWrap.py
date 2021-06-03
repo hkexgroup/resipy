@@ -11,6 +11,7 @@ import os, warnings
 #general 3rd party libraries
 import numpy as np
 import matplotlib.path as mpath
+from scipy.spatial import cKDTree
 
 #%% utility functions 
 def arange(start,incriment,stop,endpoint=0):#create a list with a range without numpy 
@@ -255,6 +256,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         raise ValueError("topography x and z arrays are not the same length!")
     if len(elec_x) != len(elec_z):
         raise ValueError("electrode x and z arrays are not the same length!")
+        
+    # catch duplicated nodes 
     
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
@@ -292,19 +295,61 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #add flags which distinguish what each point is 
     flag_sort=[flag[i] for i in idx]
     
-    elec_x_cache = x_pts[np.array(flag_sort)=='electrode']
-    elec_z_cache = z_pts[np.array(flag_sort)=='electrode']
-    
     #we need protection against repeated points, as this will throw up an error in R2 when it comes calculating element areas
-    cache_idx=[]
-    rcheck = [z for i,z in enumerate(zip(x_pts,z_pts))]
-    for i in range(len(x_pts)):
-        if rcheck.count((x_pts[i],z_pts[i]))>1:
-            cache_idx.append(i)
+    pts = np.c_[x_pts,z_pts]
+    tree = cKDTree(pts)
+    dist,neigh = tree.query(pts,2)
      
-    if len(cache_idx)>0:
-        warnings.warn("Duplicated surface and electrode positions were detected, R2 inversion likley to fail due to the presence of elements with 0 area.")
-        #if duplicated points were dectected we should remove them?? - now disabled 
+    if any(dist[:,1]<1e-15): # raise an issue when repeated nodes are present 
+        # warnings.warn("Duplicated surface and electrode positions were detected, R2 inversion likley to fail due to the presence of elements with 0 area.",Warning)
+        #if duplicated points were dectected we should remove them??
+        pblm_idx = np.arange(pts.shape[0])[dist[:,1] < 1e-15]
+        
+        ## go through pairs of repeated nodes and keep one of them, so pair up the repeated nodes 
+        pairs = [] # stores pairs of repeated points 
+        probed = [] # chaches any points already probed (hence can be ignored)
+        del_idx = [] # indexes of points to be deleted 
+        for i in pblm_idx:
+            pair = (i,neigh[i,1])
+            trigger = False # triggers if pairing not already in list 
+            if pair[0] not in probed:
+                probed.append(pair[0])
+                trigger = True 
+            if pair[1] not in probed:
+                probed.append(pair[1])
+                trigger = True 
+            if trigger: 
+                pairs.append(pair)
+                if flag_sort[pair[0]] == flag_sort[pair[1]]: # if flags of same type keep the first 
+                    del_idx.append(pair[1])
+                else: # keep the electrode point 
+                    for p in pair:
+                        if flag_sort[p] != 'electrode':
+                            del_idx.append(p)
+
+        ## print out to user the problematic nodes 
+        error = 'The following surface nodes are repeated!\n'
+        # print(error.strip())
+        for pair in pairs:
+            for p in pair: 
+                x_ = x_pts[p]
+                z_ = z_pts[p]
+                f_ = flag_sort[p]
+                line = "X = {:16.8f}, Z = {:16.8f}, flag = {:}\n".format(x_,z_,f_)
+                # print(line.strip())
+                error += line 
+        
+        raise ValueError(error)
+        
+        #now delete entries from relevant arrays (commented out for now as it cuases issues elsewhere)
+        # print('Warning: %i point(s) deleted to avoid meshing artefacts!'%len(del_idx))
+        # flag_sort = np.delete(flag_sort,np.array(del_idx))
+        # x_pts = np.delete(x_pts ,np.array(del_idx))
+        # z_pts = np.delete(z_pts ,np.array(del_idx))
+        
+    elec_x_cache = x_pts[np.array(flag_sort)=='electrode']
+    elec_z_cache = z_pts[np.array(flag_sort)=='electrode']    
+        
     
     #now add the surface points to the file
     dump('adding surface points and electrodes to input file...')
@@ -620,7 +665,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     #find the original indexes  
     original_idx = [0]*len(node_pos)
     for i in range(len(node_pos)):
-        idx = (elec_x_cache == original_x[i]) & (elec_z_cache == original_z[i])
+        idx = (np.abs(elec_x_cache - original_x[i])<1e-15) & (np.abs(elec_z_cache - original_z[i])<1e-15)
         idx = idx.tolist()
         original_idx[i] = idx.index(True)
 
