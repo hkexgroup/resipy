@@ -60,8 +60,8 @@ global ncores
 ncores = 2 
 #get gpu info from pyvista 
 gpuinfo = None 
-if pyvista_installed:
-    gpuinfo = pv.GPUInfo().renderer
+# if pyvista_installed:
+#     gpuinfo = pv.GPUInfo().renderer
 
 
 #%% cropSurface function
