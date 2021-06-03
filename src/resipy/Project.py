@@ -4960,9 +4960,10 @@ class Project(object): # Project master class instanciated by the GUI
             s.estimateError(a_wgt=a_wgt, b_wgt=b_wgt)
             
 
-    def addFlatError(self, percent=2.5):# TODO (gb) why would we want that?
+    def addFlatError(self, percent=2.5):# TODO (gb) why would we want that? - see below (jb)
         """Add a flat percentage error to resistivity data (for each survey in
-        the class). This action is irreversable.
+        the class). This action is irreversable. Use case is for simulating 
+        modelling errors in unconventional surveys. 
 
         resError = res*(percent/100) + resError
 
