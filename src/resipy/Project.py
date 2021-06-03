@@ -251,7 +251,7 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             dump(helpful_msg)
             
     #check graphics unit 
-   # dump("GPU info: "+str(mt.gpuinfo))
+    dump("GPU info: "+str(mt.gpuinfo))
     
     return {'totalMemory':totalMemory,
             'availMemory':availMemory,
