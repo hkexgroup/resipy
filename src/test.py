@@ -543,7 +543,6 @@ k.importElec(testdir + 'dc-3d/elec.csv')
 # k.showPseudo(threed=True) # only tested in pyvista setup   
 k.createMesh(cl=2, refine=1)#, interp_method='bilinear', cl_factor=20, cln_factor=500)
 
-
 k.createSequence()
 #k.err = True
 k.invert(modErr=True)
