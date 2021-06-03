@@ -4372,8 +4372,8 @@ def check4repeatNodes(X,Y,Z,flag=None):
                 # print(line.strip())
                 error += line 
         
-        warnings.warn(error,Warning)
-        #raise ValueError(error)
+        #warnings.warn(error,Warning)
+        raise ValueError(error)
 
 
 #%% build a triangle mesh - using the gmsh wrapper
