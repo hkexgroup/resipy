@@ -54,10 +54,16 @@ except:
     pyvista_installed = False
     warnings.warn('pyvista not installed, 3D meshing viewing options will be limited')
     
-#%% number of cpu cores to use
+#%% system status 
+# number of cpu cores to use (in functions that can leverage more than 1 core)
 global ncores
 ncores = 2 
- 
+#get gpu info from pyvista 
+gpuinfo = None 
+if pyvista_installed:
+    gpuinfo = pv.GPUInfo().renderer
+
+
 #%% cropSurface function
 def cropSurface(triang, xsurf, ysurf):
     # check all centroid are below the surface
@@ -4234,7 +4240,7 @@ def quad_mesh(*args):
     quadMesh(*args)
 
 
-# handling gmsh
+#%% handling gmsh
 def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=None):
     """
 
@@ -4299,6 +4305,74 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if handle is not None:
             handle(p)
         p.communicate() # wait to finish
+        
+#%% handle repeated nodes 
+def check4repeatNodes(X,Y,Z,flag=None):
+    """Raise error if repeated nodes present 
+
+    Parameters
+    ----------
+    X : array like 
+        X coordinates of nodes (normally electrodes).
+    Y : array like 
+        Y coordinates of nodes (normally electrodes).
+    Z : array like 
+        Z coordinates of nodes (normally electrodes).
+    flag : list of string, optional
+        String flag assigned to each node. The default is None.
+
+    Raises
+    ------
+    ValueError
+        If repeated nodes detected 
+
+    Returns
+    -------
+    None.
+
+    """
+    if len(X) != len(Y) or len(X) != len(Z):
+        raise ValueError('XYZ Arrays not of equal length')
+        
+    if flag is None:
+        flag = ['node']*len(X)
+        
+    pts = np.c_[X,Y,Z]
+    tree = cKDTree(pts)
+    dist,neigh = tree.query(pts,2)
+    if any(dist[:,1]<1e-15): # raise an issue when repeated nodes are present 
+        pblm_idx = np.arange(pts.shape[0])[dist[:,1] < 1e-15]
+        
+        ## go through pairs of repeated nodes and keep one of them, so pair up the repeated nodes 
+        pairs = [] # stores pairs of repeated points 
+        probed = [] # chaches any points already probed (hence can be ignored)
+        del_idx = [] # indexes of points to be deleted (?)
+        for i in pblm_idx:
+            pair = (i,neigh[i,1])
+            c = 0  # triggers if pairing not already in list 
+            if pair[0] not in probed:
+                probed.append(pair[0])
+                c += 1 
+            if pair[1] not in probed:
+                probed.append(pair[1])
+                c += 1
+            if c!=0: 
+                pairs.append(pair)
+
+        ## print out to user the problematic nodes 
+        error = 'The following surface nodes are repeated!\n'
+        # print(error.strip())
+        for pair in pairs:
+            for p in pair: 
+                x_ = X[p]
+                y_ = Y[p]
+                z_ = Z[p]
+                f_ = flag[p]
+                line = "X = {:16.8f}, Y = {:16.8f}, Z = {:16.8f}, flag = {:}\n".format(x_,y_,z_,f_)
+                # print(line.strip())
+                error += line 
+        
+        raise ValueError(error)
 
 
 #%% build a triangle mesh - using the gmsh wrapper
@@ -4537,6 +4611,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     avail_methods = ['bilinear','idw','nearest','spline','triangulate',None]
     if interp_method not in avail_methods:
         raise NameError("'%s' is an unrecognised interpretation method"%interp_method)
+        
+    # check for repeated electrodes? 
+    check4repeatNodes(elec_x,elec_y,elec_z,elec_type)
             
     if surface_refinement is not None:
         surf_x = surface_refinement[:,0]
@@ -4615,9 +4692,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     if len(rem_elec_idx)>0:
         elec_x = np.delete(elec_x,rem_elec_idx)
         elec_y = np.delete(elec_y,rem_elec_idx)
-        elec_z = np.delete(elec_z,rem_elec_idx)
+        elec_z = np.delete(elec_z,rem_elec_idx)    
          
-    #check directories 
+    # check directories 
     if path == "exe":
         ewd = os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
