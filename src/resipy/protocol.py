@@ -230,12 +230,11 @@ def wenner_gamma(elec_num, a):
                     
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
-    
-    
-    
+
+
+
 def schlum1(elec_num, a, n):
     ''' Generates quadrupole matrix for Schlumberger survey.
-    
     Parameters
     ----------
     elec_num : int
@@ -243,39 +242,130 @@ def schlum1(elec_num, a, n):
     a : int or list of int
         Spacing between electrodes (in electrode spacing).
     n : int or list of int
-        Quadrupole seperation in electrode spacing. 
-   '''
+        Quadrupole seperation in electrode spacing.   
+    '''
     elec_id = np.arange(elec_num)+1
-    
-    if isinstance(a, list) is False:
+    proto_mtrx = pd.DataFrame([])
+    if isinstance(a, list) is False:  
         n_ = np.array(range(0,n))+1
         for j in np.array(range(0,len(n_))):
-            A = elec_id
-            M = A + n_[j] * a
-            N = M + a
-            B = N + n_[j] * a
-            if j == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if j > 0:
+            if n_[j] >= a:
+                #print(n_[j],a)
+                A = elec_id
+                M = A + n_[j]
+                N = M + a
+                B = N + n_[j]
+                # if j == 0:
+                #     proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
+                # if j > 0:
                 new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
                 proto_mtrx = proto_mtrx.append(new_rows)
-                
+
     else:
         for i in np.array(range(0,len(a))):
             n_ = np.array(range(0,n[i]))+1
             for j in np.array(range(0,len(n_))):
-                A = elec_id
-                M = A + n_[j] * a[i]
-                N = M + a[i]
-                B = N + n_[j] * a[i]
-                if (i + j) == 0:
-                    proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                if (i + j) > 0:
-                    new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                    proto_mtrx = proto_mtrx.append(new_rows)
-    
+                if n_[j] >= a[i]-1: #minus 1 here to permit measurements on level 2 of pseudosection
+                   A = elec_id
+                   M = A + n_[j]
+                   N = M + a[i]
+                   B = N + n_[j]
+
+                   new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
+                   proto_mtrx = proto_mtrx.append(new_rows)
+
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
+    
+    
+#def schlum1(elec_num, a, n):
+#    ''' Generates quadrupole matrix for Schlumberger survey.
+#    Parameters
+#    ----------
+#    elec_num : int
+#        Number of electrodes
+#    a : int or list of int
+#        Spacing between electrodes (in electrode spacing).
+#    n : int or list of int
+#        Quadrupole seperation in electrode spacing.   
+#    '''
+#    elec_id = np.arange(elec_num)+1
+#    proto_mtrx = pd.DataFrame([])
+#    if isinstance(a, list) is False:  
+#        n_ = np.array(range(0,n))+1
+#        for j in np.array(range(0,len(n_))):
+#            if n_[j] >= a:
+#                #print(n_[j],a)
+#                A = elec_id
+#                M = A + n_[j]
+#                N = M + a
+#                B = N + n_[j]
+#                # if j == 0:
+#                #     proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
+#                # if j > 0:
+#                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
+#                proto_mtrx = proto_mtrx.append(new_rows)
+
+#    else:
+#        for i in np.array(range(0,len(a))):
+#            n_ = np.array(range(0,n[i]))+1
+#            for j in np.array(range(0,len(n_))):
+#                if n_[j] >= a[i]:
+#                   A = elec_id
+#                   M = A + n_[j]
+#                   N = M + a[i]
+#                   B = N + n_[j]
+#
+#                   new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
+#                   proto_mtrx = proto_mtrx.append(new_rows)
+
+#    proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
+#    return(proto_mtrx)
+    
+    
+#def schlum1(elec_num, a, n):
+#    ''' Generates quadrupole matrix for Schlumberger survey.
+    
+#    Parameters
+#    ----------
+#    elec_num : int
+#        Number of electrodes
+#    a : int or list of int
+#        Spacing between electrodes (in electrode spacing).
+#    n : int or list of int
+#        Quadrupole seperation in electrode spacing. 
+#   '''
+#   elec_id = np.arange(elec_num)+1
+    
+#    if isinstance(a, list) is False:
+#        n_ = np.array(range(0,n))+1
+#        for j in np.array(range(0,len(n_))):
+#            A = elec_id
+#            M = A + n_[j] * a
+#            N = M + a
+#            B = N + n_[j] * a
+#            if j == 0:
+#                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
+#            if j > 0:
+#                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
+#                proto_mtrx = proto_mtrx.append(new_rows)
+#                
+#    else:
+#        for i in np.array(range(0,len(a))):
+#            n_ = np.array(range(0,n[i]))+1
+#            for j in np.array(range(0,len(n_))):
+#                A = elec_id
+#                M = A + n_[j] * a[i]
+#                N = M + a[i]
+#                B = N + n_[j] * a[i]
+#                if (i + j) == 0:
+#                    proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
+#                if (i + j) > 0:
+#                    new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
+#                    proto_mtrx = proto_mtrx.append(new_rows)
+#    
+#    proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
+#    return(proto_mtrx)
     
     
 def schlum2(elec_num, a, n):
