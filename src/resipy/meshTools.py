@@ -2805,6 +2805,32 @@ class Mesh:
         
         return idx 
     
+    def node2ElemAttr(self, node_array, name = 'NodeArray'):
+        """
+        Maps node attributes onto mesh elements 
+
+        Parameters
+        ----------
+        node_array : array like 
+            Array with same number of entries as there are nodes in the mesh. 
+        name : str, optional
+            Name of node attribute, will be used to index array in mesh dataframe. 
+            The default is 'NodeArray'.
+
+        Returns
+        -------
+        arr : nd array 
+            Node array mapped on mesh elements .
+
+        """
+        if len(node_array) != self.numnp:
+            raise ValueError("Length of node array does not match the number of nodes inside the mesh")
+            
+        node_arr = np.array(node_array) # array of node values 
+        arr = np.mean(node_arr[self.connection], axis = 1) # values of array on the node values 
+        self.addAttribute(arr,name)
+        return arr 
+    
     #%% electrode movements         
     def moveElecNodes(self, new_x, new_y, new_z, debug=True):
         """ Move the electrodes to different nodes which are close to the given coordinates. 
