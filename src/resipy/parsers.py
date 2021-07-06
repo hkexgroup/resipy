@@ -1308,7 +1308,7 @@ def stingParser(fname):
     #detecting IP (col 21 would be floats of IP vals)
     try:
         float(df_raw.iloc[0,21])
-        df['ip']=df_raw.iloc[0,21]
+        df['ip']=df_raw.iloc[:,21]
     except:
         df['ip']=[0]*len(df_raw)
     
