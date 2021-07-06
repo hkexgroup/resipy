@@ -1745,7 +1745,23 @@ class App(QMainWindow):
                         df2['y'] = df.values[:,1]
                         df2['z'] = df.values[:,2]
                         df2['buried'] = df.values[:,3]
-                if 'label' not in df.columns:
+                
+                # 3 options for constructing label here... 
+                if 'line' in df.columns and 'number' in df.columns:
+                    #construct label column from line number and electrode number 
+                    line = df.line.values # line number array 
+                    elecid  = df.number.values # electrode number array 
+                    label = ['1 1'] * len(df)
+                    for i in range(len(df)):
+                        label[i] = '%i %i'%(line[i],elecid[i])
+                    df2.insert(0,'label',label)
+                    pdebug('Constructed label column from individual line and electrode numbers')
+                elif 'label' in df.columns: # use label column directly 
+                    a = df['label'].values[0]
+                    if isinstance(a, str) is False:
+                        df['label'] = df['label'].astype(int).astype(str)
+                    df2.insert(0, 'label', df['label'].values)
+                else: # fallback if no label column provided/found  
                     df2.insert(0, 'label', (1 + np.arange(df.shape[0])).astype(str))
                     # if self.parent.r2.typ[-1] == 't': # 3D
                     #     df2_groups = df2.groupby('y') # finding number of lines based on y vals
@@ -1755,12 +1771,8 @@ class App(QMainWindow):
                     #         group.loc[:, 'label'] = str(i+1) + ' ' + group['label']
                     #     df2_temp = pd.concat(df2_grouppedData)
                     #     df2['label'] = df2_temp['label'].values
-                        # df2.loc[:, 'label'] = '1 ' + df2['label']
-                else:
-                    a = df['label'].values[0]
-                    if isinstance(a, str) is False:
-                        df['label'] = df['label'].astype(int).astype(str)
-                    df2.insert(0, 'label', df['label'].values)
+                    #     df2.loc[:, 'label'] = '1 ' + df2['label']
+
                 
                 pdebug('elecTable.readTable():\n', df2.head())
                 self.xyz = df2[['x','y','z']].values # just the xyz numpy array, called when creating meshes 
@@ -1799,7 +1811,7 @@ class App(QMainWindow):
                     nbElec = None
                 self.elecTable.readTable(fname, nbElec=nbElec)
                 self.writeLog('k.importElec("{:s}")'.format(fname))
-        self.importElecBtn = QPushButton('Import from CSV files with headers: label, x, y, z, buried')
+        self.importElecBtn = QPushButton('Import from CSV files with headers: label (or line, number), x, y, z, buried')
         self.importElecBtn.setAutoDefault(True)
         self.importElecBtn.clicked.connect(importElecBtnFunc)
         

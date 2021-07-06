@@ -3222,7 +3222,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if return_code:
                     print('error on return_code')
             for text in execute(cmd):
-                    dump(text)
+                dump(text)
 
 
     def runParallel(self, dirname=None, dump=None, iMoveElec=False,
