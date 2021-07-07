@@ -4688,6 +4688,13 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.parallelLabel.linkActivated.connect(showHelpAdv)
         self.parallelCheck = QCheckBox()
         advForm.addRow(self.parallelLabel, self.parallelCheck)
+        
+        # decide number of cpu cores to use 
+        self.ncoresLabel = QLabel('<a href="ncores">Number of parallel threads</a>')
+        self.ncoresLabel.linkActivated.connect(showHelpAdv)
+        self.ncoresText = QLineEdit()
+        self.ncoresText.setText('%i'%sysinfo['core_count'])
+        advForm.addRow(self.ncoresLabel, self.ncoresText)
 
         self.modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
         self.modErrLabel.linkActivated.connect(showHelpAdv)
@@ -5201,6 +5208,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.param['num_xy_poly'] = 0
                 self.project.param['zmin'] = np.inf 
                 self.project.param['zmax'] = np.inf 
+                
+            # check how many cores to use 
+            if self.ncoresText.text() == 'all':
+                ncores = None # defaults to all the cores 
+            else:
+                ncores = int(self.ncoresText.text())
+                if ncores < 1: # then fallback to using one core 
+                   ncores = 1
+                   
             
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
                 self.pseudo3DInvtext = ''
@@ -5214,7 +5230,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 kwargs = {'dump': logTextFunc,
                           'iplot': False, 
                           'runParallel': self.parallelCheck.isChecked(),
-                          'invLog': invLog
+                          'invLog': invLog,
+                          'ncores': ncores
                           }
                 
                 # run inversion in different thread to not block the UI
@@ -5257,11 +5274,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 modErr = self.modErrCheck.isChecked()
                 parallel = self.parallelCheck.isChecked()
                 modelDOI = self.modelDOICheck.isChecked()
-                kwargs = {'dump': logTextFunc,
+
+                kwargs = {'dump': logTextFunc, # keyword arguments for project.invert
                           'iplot': False,
                           'modErr': modErr, 
                           'parallel': parallel,
-                          'modelDOI': modelDOI}
+                          'modelDOI': modelDOI,
+                          'ncores': ncores
+                          }
                 
                 # run inversion in different thread to not block the UI
                 self.thread = QThread()

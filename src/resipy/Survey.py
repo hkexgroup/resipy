@@ -2298,7 +2298,7 @@ class Survey(object):
             d = df['recipMean'].values
             d0 = df['recipMean0'].values
             fm0 = fm0 # provided as already from quads in common
-            protocol['res'] = d-d0+fm0 # according to R3t manual v3.2
+            protocol['res'] = d-(d0+fm0) # according to R3t manual v3.2
         else:
             protocol['res'] = df['recipMean'].values # non-paired will be nan
         
