@@ -344,6 +344,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.darkMode = False # If true, electrodes wil be plotted in white, else black
         self.iadvanced = True # If true, use the advanced mesh format for 3D mesh
         
+        
             
     def setBorehole(self, val=False):
         """Set all surveys in borehole type if `True` is passed.
@@ -3298,12 +3299,13 @@ class Project(object): # Project master class instanciated by the GUI
                 # print('done')
 
         # create workers directory
-        ncoresAvailable = ncores = systemCheck()['core_count']
-        if ncores is None:
+        ncoresAvailable = systemCheck()['core_count']
+        if ncores is None: # and self.ncores is None:
             ncores = ncoresAvailable
         else:
             if ncores > ncoresAvailable:
                 raise ValueError('Number of cores larger than available')
+        dump('Using %i logical processors'%ncores)
 
 
         def prepare(wd, fname):
