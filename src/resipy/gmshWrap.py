@@ -1512,7 +1512,11 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     #Neumann boundary 
     flank_x = 5 * dp_len
     flank_y = 5 * dp_len
-    flank_z = 3*fmd
+    if any(elec_z < 0):       
+        flank_z = 5 * dp_len
+    else:
+        flank_z = 3*fmd
+        
     fh.write("//Neumannn boundary points\n")
     cln = cl*cln_factor # nuemom boundary characteristic length 
     fh.write("cln = %.2f;//characteristic length for background region\n"%cln)
