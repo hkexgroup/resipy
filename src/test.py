@@ -67,6 +67,7 @@ k.createSurvey(testdir + 'parser/protocolForward/cR3t_forward.dat', ftype='Proto
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv', ftype='Syscal')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
+k.mergeElec()
 
 # remote detection
 k = Project(typ='R2')

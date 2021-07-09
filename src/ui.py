@@ -372,6 +372,7 @@ class App(QMainWindow):
         def loadBatchProject(): # for batch/time-lapse/pseudo 3D
             self.fnamesCombo.clear()
             self.psContourCheck.setEnabled(True)
+            self.mergElecCheck.setEnabled(True)
             for s in self.project.surveys: # we already loaded the results
                 self.fnamesCombo.addItem(s.name)
                 self.errFitPlotIndexList.append(0)
@@ -933,6 +934,7 @@ class App(QMainWindow):
             self.tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
+            self.mergElecCheck.setEnabled(False)
             self.activateTabs(True)
         self.fwdRadio = QRadioButton('Forward')
         self.fwdRadio.setChecked(False)
@@ -1085,6 +1087,7 @@ class App(QMainWindow):
                         self.infoDump('Batch survey created.')
                     self.fnamesCombo.clear()
                     self.psContourCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(True)
                     
                     for s in self.project.surveys:
                         self.fnamesCombo.addItem(s.name)
@@ -1216,13 +1219,13 @@ class App(QMainWindow):
                         str(fnames), str(val), self.ftype, str(self.parser)))
                     self.infoDump('Pseudo 3D survey from 2D lines created.')
                     self.ipCheck.setEnabled(True)
-                    self.psContourCheck.setEnabled(True)
                     self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     if 'magErr' in self.project.pseudo3DSurvey.df.columns:
                         self.a_wgt.setText('0.0')
                         self.b_wgt.setText('0.0')
                     self.importDataRecipBtn.hide()
                     self.psContourCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(True)
                     for s in self.project.surveys:
                         self.errFitPlotIndexList.append(0)
                         self.iperrFitPlotIndexList.append(0)
@@ -1280,6 +1283,7 @@ class App(QMainWindow):
                     self.infoDump('3D survey from regular 2D lines created.')
                     self.ipCheck.setEnabled(True)
                     self.psContourCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(True)
                     self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     # self.calcAspectRatio()
                     if 'magErr' in self.project.surveys[0].df.columns:
@@ -1421,8 +1425,32 @@ class App(QMainWindow):
             self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
+                
+        def mergeElecs(state):
+            if self.project is not None and self.project.elec is not None:
+                if state  == Qt.Checked:
+                    self.elecBackUp = self.project.elec.copy() # backing up electrodes and surveys if checkbox is unchecked
+                    self.surveysBackUp = self.project.surveys.copy()
+                    if self.project.mergeElec():
+                        self.infoDump('Merging close electrodes successful!')
+                    else:
+                        self.errorDump('Merging close electrodes unsuccessful!')
+                else:
+                    self.project.elec = self.elecBackUp.copy() # backing up electrodes and surveys if checkbox is unchecked
+                    self.project.surveys = self.surveysBackUp.copy()
+                
+                self.elecTable.initTable(self.project.elec)
+                self.tempElec = None
+                self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+                self.updateElec()
         
         # display options for pseudo-sections
+        self.mergElecCheck = QCheckBox('Merge close electrodes')
+        self.mergElecCheck.stateChanged.connect(mergeElecs)
+        self.mergElecCheck.setEnabled(False)
+        self.mergElecCheck.setToolTip('Merge electrodes that are very close (0.01 of average electrode spacing)')
+        
         self.psContourCheck = QCheckBox('Contour')
         self.psContourCheck.stateChanged.connect(psContourFunc)
         self.psContourCheck.setEnabled(False)
@@ -1532,6 +1560,7 @@ class App(QMainWindow):
         self.hbox5 = QHBoxLayout()
         self.hbox5.setAlignment(Qt.AlignRight)
         self.hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
+        self.hbox5.addWidget(self.mergElecCheck)
         self.hbox5.addWidget(self.psContourCheck)
         self.hbox5.addWidget(self.pvminLabel)
         self.hbox5.addWidget(self.pvmin)
@@ -6628,6 +6657,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.loadingWidget('Loading data, please wait...', False) # for large datasets
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(True)
+            self.mergElecCheck.setEnabled(True)
             self.fname = fname
             if float(self.spacingEdit.text()) == -1:
                 spacing = None
@@ -6736,6 +6766,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.fnamesCombo.hide()
         self.fnamesComboLabel.hide()
         self.psContourCheck.setEnabled(False)
+        self.mergElecCheck.setEnabled(False)
         self.tabImporting.setTabEnabled(1, False)
         self.mwPseudo.clear() # clearing figure
         if pvfound:
@@ -6819,6 +6850,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.nbElecEdit.setEnabled(True)
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
+            self.mergElecCheck.setEnabled(False)
             if pvfound: # 3D pseudo-sections?
                 self.pseudo3Dplotter.clear()
                 self.pseudo3DplotterIP.clear()
