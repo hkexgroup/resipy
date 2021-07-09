@@ -2516,7 +2516,7 @@ class Project(object): # Project master class instanciated by the GUI
             Specific for 'cylinder mesh':
                 - zlim : list of 2 int
                 For the bottom and top of the column along the Z axis.
-        """        
+        """     
         if dump is None:
             if show_output:
                 def dump(x):
@@ -2694,15 +2694,17 @@ class Project(object): # Project master class instanciated by the GUI
             if surface is not None:
                 zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
             else:
-                # if all(self.elec['buried']): # if all buried we assume surface at 0 m
-                    # zlimTop = 0
-                # else:
                 zlimTop = np.max(elec_z)
             if all(self.elec['buried']) and surface is None: # whole mesh
                 zlimBot = np.min(elec_z)
+            elif any(self.elec['buried']):
+                if surface is None:
+                    zlimBot = np.min(elec_z[~self.elec['buried']]) - self.fmd 
+                else:
+                    zlimBot = np.min(self.topo['z'].values) - self.fmd 
             else:
-                zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
-            # from surface then it is as well the zlimMin)
+                zlimBot = np.min(elec_z) - self.fmd 
+                
             self.zlim = [zlimBot, zlimTop]
         self._computePolyTable()
         print('done ({:d} elements)'.format(self.mesh.df.shape[0]))
