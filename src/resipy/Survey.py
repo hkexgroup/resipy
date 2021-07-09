@@ -2149,9 +2149,7 @@ class Survey(object):
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,
                         scalar_bar_args={'color':tcolor,# 'interactive':True,
-                                         'vertical':False,
-                                         'title_font_size':16,
-                                         'label_font_size':14})
+                                         'vertical':False})
         else:
             warnings.warn('3D contours are currently not stable!')
             ax.add_mesh(pvpont.outline())
@@ -2164,9 +2162,7 @@ class Survey(object):
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,
                         scalar_bar_args={'color':tcolor,# 'interactive':True,
-                                         'vertical':False,
-                                         'title_font_size':16,
-                                         'label_font_size':14})
+                                         'vertical':False})
                                  
         try:
             self._showElecStrings3D(ax=ax, strIdx = strIdx, 
