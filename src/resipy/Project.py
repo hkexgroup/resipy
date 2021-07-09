@@ -475,6 +475,63 @@ class Project(object): # Project master class instanciated by the GUI
             self.computeFineMeshDepth()
             
     
+    def mergeElec(self, dist=-1):
+        """Merge electrodes that have lesstan a certain distance to eache other
+        
+        Parameters
+        ----------
+        dist : float, optional
+            maximum distance of close electrodes in meters (electrodes that have a distance less than dist will be merged)
+            -1 flag for auto calculation where dist = average(electrode spacing)/100
+            
+        Returns
+        -------
+        bool
+            True: merge successful
+            False: merge unsuccessful
+        """
+        
+        from scipy.spatial import distance
+        
+        eleccoors = self.elec[['x','y','z']].values.copy()
+        
+        if dist == -1:
+            dist = np.mean(distance.cdist(eleccoors, eleccoors))/100
+        
+        c = 0
+        closepairsL = [] # empty list to get len(closepairsL) == 0 in loop's first step (i=0)
+        for i in range(50):
+            elecdists = distance.cdist(eleccoors, eleccoors)
+            elecdists[np.triu_indices(len(elecdists))] = dist
+            elecdists[elecdists == 0] = dist
+            
+            # less than dist pairs indices
+            closepairs = np.c_[np.where(elecdists < dist)[0], np.where(elecdists < dist)[1]]
+            
+            if len(closepairs) > len(closepairsL): 
+                c += 1
+            else:
+                c = 0
+            if c >= 4:
+                break
+            
+            poses = np.zeros_like(closepairs[:,0])
+            for i in range(len(poses)):
+                poses[i] = closepairs[i,0] if closepairs[i,0] < closepairs[i,1] else closepairs[i,1]
+            
+            eleccoors[closepairs[:,0], :] = eleccoors[poses, :]
+            closepairsL = closepairs.copy()
+            
+            if len(closepairs) == 0:
+                print('Merging close electrodes successful!')
+                self.setElec(eleccoors)
+                return True
+        
+        if len(closepairs) != 0: # solution did not converge
+            print('Merging close electrodes unsuccessful - Choose a shorter merging distance (i.e., dist < {:.2f}m)'.format(dist))
+            return False
+    
+    
     def _checkElecDuplicate(self):
         """Check for duplicated electrodes positions and merge them
         to the same label in this case. Useful for 3D survey from 2D lines,
@@ -485,7 +542,7 @@ class Project(object): # Project master class instanciated by the GUI
         df = elec[['x','y','z']].copy()
         iunique = df.duplicated(keep=False)
         if np.sum(iunique) > 0:
-            print('merging electrodes positionned at the same location.')
+            print('Merging electrodes positionned at the same location.')
             df = df[iunique]
             dups = df.groupby(list(df)).apply(lambda x: tuple(x.index)).tolist()
             
