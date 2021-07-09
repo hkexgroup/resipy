@@ -204,34 +204,56 @@ def syscalParser(fname):#, spacing=None):
                                     'TM1 (ms)':'TM1'})
     
         df['resist'] = df['vp']/df['i']
-
-        # if spacing is None:    
-        # for unregularly spaced array
-        array = df[['a','b','m','n']].values
         
-        # get unique electrode positions and create ordered labels for them
-        val = np.sort(np.unique(array.flatten()))
-        elecLabel = 1 + np.arange(len(val))
-        searchsoterdArr = np.searchsorted(val, array)
-        newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-        df.loc[:,['a','b','m','n']] = newval # assign new label
+        # find if input contains 3D coordinates
+        if 'ya' in df.columns and not np.all(df[['ya','yb','ym','yn']].values.flatten() == 0):
+            syscal3D = True
+        else: # it's a 2D format file
+            syscal3D = False
         
-        # build electrode array
-        if 'za' in df.columns and not np.all(df['za'].values == 0): # see if we have topography
-            zarray = df[['za','zb','zm','zn']].values
-            zvalflat = np.c_[searchsoterdArr.flatten(), zarray.flatten()]
-            zval = np.unique(zvalflat[zvalflat[:,0].argsort()], axis=0)[:,1]
-        else:
-            zval = np.zeros_like(val)
+        if syscal3D is False:
+            # if spacing is None:    
+            # for unregularly spaced array
+            array = df[['a','b','m','n']].values
             
-        if 'ya' in df.columns and not np.all(df['ya'].values == 0): # for 3D arrays
-            yarray = df[['ya','yb','ym','yn']].values
-            yvalflat = np.c_[searchsoterdArr.flatten(), yarray.flatten()]
-            yval = np.unique(yvalflat[yvalflat[:,0].argsort()], axis=0)[:,1]
-        else:
-            yval = np.zeros_like(val)
+            # get unique electrode positions and create ordered labels for them
+            val = np.sort(np.unique(array.flatten()))
+            elecLabel = 1 + np.arange(len(val))
+            searchsoterdArr = np.searchsorted(val, array)
+            newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+            df.loc[:,['a','b','m','n']] = newval # assign new label
             
-        elec = np.c_[val, yval, zval]
+            # build electrode array
+            if 'za' in df.columns and not np.all(df[['za','zb','zm','zn']].values == 0): # see if we have topography
+                zarray = df[['za','zb','zm','zn']].values
+                zvalflat = np.c_[searchsoterdArr.flatten(), zarray.flatten()]
+                zval = np.unique(zvalflat[zvalflat[:,0].argsort()], axis=0)[:,1]
+            else:
+                zval = np.zeros_like(val)
+                
+            yval = np.zeros_like(val) # 2D so Y values are all zeros
+            elec = np.c_[val, yval, zval]
+        
+        else: # we have 3D input file
+            df = df.rename(columns={'a':'xa','b':'xb','m':'xm','n':'xn'})
+            xarray = df[['xa','xb','xm','xn']].values.flatten()
+            yarray = df[['ya','yb','ym','yn']].values.flatten()
+            zarray = df[['za','zb','zm','zn']].values.flatten()
+            arrayFull = np.c_[xarray, yarray, zarray]
+    
+            elec = np.unique(arrayFull, axis=0)
+    
+            elecdf = pd.DataFrame(np.c_[elec, 1 + np.arange(len(elec))], columns=['x', 'y', 'z', 'elecnum'])
+            elecs = ['a','b','m','n']
+            for i in range(4):
+                df = df.merge(elecdf, how='outer', left_on=['x%s' % elecs[i],'y%s' % elecs[i],'z%s' % elecs[i]], right_on=['x', 'y', 'z'])
+                df = df.rename(columns={'elecnum':'%s' % elecs[i]})
+                df = df.drop(['x', 'y', 'z'], axis=1)
+                
+            df = df.dropna(subset=['a','b','m','n'])
+            df = df.astype({'a':int, 'b':int, 'm':int, 'n':int}).copy()
+            val = np.sort(elec[:,0])
+            
         # NOTE: remote electrode identification is done in R2.setElec()
         # but we notice that setting same number for remote (-99999) makes
         # the pseudo-section of remote electrode survey nicer...
