@@ -2085,9 +2085,9 @@ class Survey(object):
             return
 
             
-        #TODO contour is not working!
-        if contour:
-            contour = False
+        #TODO contour is not working! # using Delaunay 3D instead.
+        # if contour:
+        #     contour = False
         
         # set colors for dark mode 
         tcolor = 'k'
@@ -2151,18 +2151,29 @@ class Survey(object):
                         scalar_bar_args={'color':tcolor,# 'interactive':True,
                                          'vertical':False})
         else:
-            warnings.warn('3D contours are currently not stable!')
-            ax.add_mesh(pvpont.outline())
-            levels = np.linspace(vmin, vmax, 13)[1:-1]
-            contrmesh = pvpont.contour(isosurfaces=levels)
-            #TODO somehow this does create an empty mesh
-            ax.add_mesh(contrmesh,
+            # using Delaunay 3D
+            mesh = pvpont.delaunay_3d()
+            ax.add_mesh(mesh,
+                        #render_points_as_spheres=True,
                         #cmap=color_map, #matplotlib colormap 
                         clim=[vmin,vmax], #color bar limits 
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,
                         scalar_bar_args={'color':tcolor,# 'interactive':True,
-                                         'vertical':False})
+                                         'vertical':False})            
+            
+            # warnings.warn('3D contours are currently not stable!')
+            # ax.add_mesh(pvpont.outline())
+            # levels = np.linspace(vmin, vmax, 13)[1:-1]
+            # contrmesh = pvpont.contour(isosurfaces=levels)
+            # #TODO somehow this does create an empty mesh
+            # ax.add_mesh(contrmesh,
+            #             #cmap=color_map, #matplotlib colormap 
+            #             clim=[vmin,vmax], #color bar limits 
+            #             #show_scalar_bar=color_bar,#plot the color bar? 
+            #             #opacity=alpha,
+            #             scalar_bar_args={'color':tcolor,# 'interactive':True,
+            #                              'vertical':False})
                                  
         try:
             self._showElecStrings3D(ax=ax, strIdx = strIdx, 
