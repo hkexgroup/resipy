@@ -1456,7 +1456,7 @@ class App(QMainWindow):
         self.psContourCheck = QCheckBox('Contour')
         self.psContourCheck.stateChanged.connect(psContourFunc)
         self.psContourCheck.setEnabled(False)
-        self.psContourCheck.setToolTip('Check/uncheck to contour pseudo section plots')
+        self.psContourCheck.setToolTip('Check/uncheck to contour pseudo section plots (in 3D mode "Delaunay 3D" is used).')
         
         self.pvminLabel = QLabel('ρ<sub>min</sub>')
         self.pvmin = QLineEdit()
@@ -4482,7 +4482,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                 self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
                                               strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
-                self.fwdContour.setDisabled(True)#can't contour 3D data atm 
+                # self.fwdContour.setDisabled(True)
                 self.pseudoFramefwd.setVisible(True)
             else:
                 self.mwFwdPseudo.plot(self.project.surveys[0].showPseudo, aspect='auto')
@@ -4543,16 +4543,26 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 contour = True
             else:
                 contour = False
-                
-            self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
-            self.mwFwdPseudo.replot(aspect='auto', contour=contour)
-            self.writeLog('k.showPseudo(contour={:s})'.format(str(contour)))
-            if self.project.typ[0] == 'c':
-                self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
-                self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
-                self.writeLog('k.showPseudoIP(contour={:s})'.format(str(contour)))
+
+            if pvfound and self.project.typ[-1] == 't': 
+                self.pseudo3Dplotter.clear() # clear all actors
+                self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, contour=contour,
+                                                   strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+                if self.project.typ[0] == 'c':
+                    self.pseudo3DplotterIP.clear() # clear all actors 
+                    self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, contour=contour,
+                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+            else:    
+                self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
+                self.mwFwdPseudo.replot(aspect='auto', contour=contour)
+                self.writeLog('k.showPseudo(contour={:s})'.format(str(contour)))
+                if self.project.typ[0] == 'c':
+                    self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
+                    self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
+                    self.writeLog('k.showPseudoIP(contour={:s})'.format(str(contour)))
         
         self.fwdContour = QCheckBox('Contour')
+        self.fwdContour.setToolTip('Check/uncheck to contour pseudo section plots (in 3D mode "Delaunay 3D" is used).')
         self.fwdContour.stateChanged.connect(fwdContourFunc)
         self.fwdContour.setVisible(False)
 
@@ -6588,6 +6598,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotter.clear()
             self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],
+                                                   contour=self.psContourCheck.isChecked(),
                                                    vmax=self.pParams['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudo.setCallback(self.project.showPseudo)
@@ -6606,7 +6617,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotterIP.clear()
             self.project.pseudo3DSurvey.showPseudoIP(ax=self.pseudoPlotterIP, threed=True, vmin=self.pParamsIP['vmin'],
-                                                   vmax=self.pParamsIP['vmax'], darkMode=eval(resipySettings.param['dark']))
+                                                     contour=self.psContourCheck.isChecked(),
+                                                     vmax=self.pParamsIP['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudoIP.setCallback(self.project.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
