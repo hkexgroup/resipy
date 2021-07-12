@@ -326,6 +326,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pseudo3DBreakFlag = False # flag to cancel inversions in a chain (pseudo3D only)
         self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
         self.pseudo3DMeshResult = None # contains pseudo 3D mesh result (for external use - e.g., ParaView)
+        self.pseudo3DMeshResultList = None # contains pseudo 3D meshes (individual 2D lines in 3D space - for external use - e.g., ParaView)
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -472,7 +473,7 @@ class Project(object): # Project master class instanciated by the GUI
             for i, survey in enumerate(self.surveys):
                 survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
 
-        if len(self.surveys) > 0:
+        if len(self.surveys) > 0 and self.fmd is None:
             self.computeFineMeshDepth()
             
     
@@ -1521,6 +1522,8 @@ class Project(object): # Project master class instanciated by the GUI
                 proj.createMesh(**kwargs)
                 
         self.mesh = self.projs[0].mesh # just to have a populated mesh in master Project!
+        if 'fmd' in kwargs:
+            self.fmd = kwargs['fmd']
    
     
     
@@ -1663,6 +1666,7 @@ class Project(object): # Project master class instanciated by the GUI
             ax.show() # call plotter.show()
         
         if returnMesh:
+            self.pseudo3DMeshResultList = meshOutList
             meshMerged = mt.mergeMeshes(meshOutList)
             meshMerged.ndims = 3
             self.pseudo3DMeshResult = meshMerged
@@ -1717,9 +1721,7 @@ class Project(object): # Project master class instanciated by the GUI
         # kill management
         self.procs = []
         self.proc = ProcsManagement(self)
-        
         self._updatePseudo3DSurvey() # make sure we have set all attributes
-                
         self.meshResults = [] # clean meshResults list
         for proj in self.projs: # preparing inversion params
             proj.param = self._setPseudo3DParam(proj.param)
@@ -5921,10 +5923,13 @@ class Project(object): # Project master class instanciated by the GUI
             meshcopy = mesh.copy()
             if self.trapeziod is not None and self.pseudo3DMeshResult is None:
                 meshcopy = meshcopy.crop(self.trapeziod)
-            elif self.pseudo3DMeshResult is not None:
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
                 meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
             meshcopy.vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+            if self.pseudo3DMeshResultList is not None:
+                file_path = os.path.join(dirname, mesh.mesh_title + '_3D.vtk')
+                self.pseudo3DMeshResultList[count-1].vtk(file_path, title=mesh.mesh_title)
         if self.pseudo3DMeshResult is not None: 
             self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
             file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + '.vtk')
