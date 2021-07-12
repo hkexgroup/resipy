@@ -642,6 +642,7 @@ class App(QMainWindow):
 
                 # inversion tab
                 self.contourCheck.setVisible(True)
+                self.clipCornersCheck.setVisible(True)
                 self.doiSensCheck.setVisible(True)
                 self.sensWidget.setVisible(True)
                 show3DInvOptions(False)
@@ -715,6 +716,7 @@ class App(QMainWindow):
 
                 # inversion tab
                 self.contourCheck.setVisible(False)
+                self.clipCornersCheck.setVisible(False)
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
@@ -4735,6 +4737,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iCropping = False
                 if 'num_xz_poly' in self.project.param:
                     self.num_xz_poly = self.project.param['num_xz_poly'] # store value
+                    self.clipCornersCheck.setChecked(False)
+                    self.clipCornersCheck.setEnabled(False)
                 elif 'num_xy_poly' in self.project.param:
                     self.num_xz_poly = self.project.param['num_xy_poly'] # store value
             else:
@@ -4742,6 +4746,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if ('num_xz_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xz_poly'] = self.num_xz_poly # restore value
                     self.writeLog('k.param["num_xz_poly"] = {:s}'.format(str(self.num_xz_poly)))
+                    self.clipCornersCheck.setEnabled(True)
                 elif ('num_xy_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xy_poly'] = self.num_xz_poly # restore value
                     self.writeLog('k.param["num_xy_poly"] = {:s}'.format(str(self.num_xy_poly)))
@@ -5451,7 +5456,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5,
                             'doi':self.modelDOICheck.isChecked(),
-                            'doiSens':False,
+                            'doiSens':False, 'clipCorners':False,
                             'pvslices':([],[],[]), 'pvthreshold':None, 'pvdelaunay3d': False,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}          
                 
@@ -5595,6 +5600,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.contourCheck = QCheckBox('Contour')
         self.contourCheck.stateChanged.connect(contourCheckFunc)
         self.contourCheck.setToolTip('Grid and contour the data.')
+        
+        def clipCornersFunc(state):
+            if state == Qt.Checked:
+                self.displayParams['clipCorners'] = True
+            else:
+                self.displayParams['clipCorners'] = False
+            self.replotSection()
+        self.clipCornersCheck = QCheckBox('Crop Corners')
+        self.clipCornersCheck.stateChanged.connect(clipCornersFunc)
+        self.clipCornersCheck.setToolTip('Triangles from bottom corners will be cropped (only if the whole mesh is not shown).')
       
         def sensSliderFunc(val):
             if val == 0:
@@ -5658,6 +5673,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     sensPrc = self.displayParams['sensPrc']
                     attr = self.displayParams['attr']
                     contour = self.displayParams['contour']
+                    clipCorners = self.displayParams['clipCorners']
                     vmin = self.displayParams['vmin']
                     vmax = self.displayParams['vmax']
                     cmap = self.displayParams['cmap']
@@ -5879,6 +5895,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.doiSensCheck)
         optsLayout.addWidget(self.cmapCombo)
         optsLayout.addWidget(self.contourCheck)
+        optsLayout.addWidget(self.clipCornersCheck)
         optsLayout.addWidget(self.sensWidget)
         optsLayout.addWidget(self.edgeCheck)
         optsLayout.addWidget(self.aspectCheck)
@@ -6898,7 +6915,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.displayParams = {'index':0,'edge_color':'none',
                             'sens':True, 'attr':'Resistivity(Ohm-m)',
                             'contour':False, 'vmin':None, 'vmax':None,
-                            'cmap':'viridis', 'sensPrc':0.5,
+                            'cmap':'viridis', 'sensPrc':0.5, 'clipCorners':False,
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False, 'pvdelaunay3d': False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
@@ -6918,11 +6935,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.doiSensCheck.setEnabled(False)
             self.contourCheck.setChecked(False)
             self.contourCheck.setEnabled(False)
+            self.clipCornersCheck.setChecked(False)
+            self.clipCornersCheck.setEnabled(False)
             self.aspectCheck.setEnabled(False)
             self.sensWidget.setEnabled(False)
         else:
             self.doiSensCheck.setEnabled(True)
             self.contourCheck.setEnabled(True)
+            self.clipCornersCheck.setEnabled(True)
             self.aspectCheck.setEnabled(True)
             self.sensWidget.setEnabled(True)
     
@@ -6934,6 +6954,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sens = self.displayParams['sens']
         attr = self.displayParams['attr']
         contour = self.displayParams['contour']
+        clipCorners = self.displayParams['clipCorners']
         vmin = self.displayParams['vmin']
         vmax = self.displayParams['vmax']
         cmap = self.displayParams['cmap']
@@ -6958,8 +6979,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.disableOptionsPseudo3D(False)
                 self.mwInv.replot(threed=False, aspect=aspect,
                                   index=index, edge_color=edge_color,
-                                  contour=contour, sens=sens, attr=attr,
-                                  vmin=vmin, vmax=vmax, color_map=cmap, 
+                                  contour=contour, sens=sens, clipCorners=clipCorners,
+                                  attr=attr, vmin=vmin, vmax=vmax, color_map=cmap, 
                                   sensPrc=sensPrc, doi=doi, doiSens=doiSens)
                 self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
                               ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
@@ -7045,6 +7066,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.vmaxEdit.setText('')
         self.doiCheck.setChecked(self.modelDOICheck.isChecked())
         self.contourCheck.setChecked(False)
+        self.clipCornersCheck.setChecked(False)
         self.edgeCheck.setChecked(False)
         self.replotSection() # this plot the results
        
