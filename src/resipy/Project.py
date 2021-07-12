@@ -3750,8 +3750,7 @@ class Project(object): # Project master class instanciated by the GUI
         return sensScaled
         
     
-    
-    def _clipContour(self, ax, collections, cropMaxDepth=False):
+    def _clipContour(self, ax, collections, cropMaxDepth=False, clipCorners=False):
         """Clip contours using mesh bound and surface if available.
         
         Parameters
@@ -3762,7 +3761,19 @@ class Project(object): # Project master class instanciated by the GUI
             Matplotlib collection.
         cropMaxDepth : bool, optional
             If 'True', area below fmd will be cropped out.
+        clipCorners : bool, optional
+            If 'True', triangles from bottom corners will be cropped (only if the whole mesh is not shown).
         """
+        
+        def patcher(verts):
+            # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
+            poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
+            path = mpath.Path(verts, poly_codes)
+            patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
+            ax.add_patch(patch) # need to add so it knows the transform
+            for col in collections:
+                col.set_clip_path(patch)
+        
         # mask outer region
         node_x = self.mesh.node[:,0]
         node_z = self.mesh.node[:,2]
@@ -3779,21 +3790,48 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
                           np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
-            
-        # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
-        poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
-        path = mpath.Path(verts, poly_codes)
-        patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
-        ax.add_patch(patch) # need to add so it knows the transform
-        for col in collections:
-            col.set_clip_path(patch)
-            
-        
+        patcher(verts)
+
+        if clipCorners and self.param['num_xz_poly'] != 0: # not clipping the corners of a mesh outside of the survey area!
+            elec_x = self.mesh.elec[:,0]
+            elec_z = self.mesh.elec[:,2]
+            elec_xmin = np.min(elec_x)
+            elec_xmax = np.max(elec_x)
+            if self.fmd is not None:
+                zminl = elec_z[elec_x.argmin()] - self.fmd
+                zminr = elec_z[elec_x.argmax()] - self.fmd
+            else:
+                zminl = zminr = zmin
+            zmaxl = elec_z[elec_x.argmin()]
+            zmaxr = elec_z[elec_x.argmax()]
+            ll = np.abs(zmaxl - zminl)
+            lr = np.abs(zmaxr - zminr)
+            lx = np.abs(elec_xmin - elec_xmax)
+            if ll >= lx/4:
+                ll = lx/4
+            if lr >= lx/4:
+                lr = lx/4
+
+            # surf bound to elecs
+            elec_surf = np.c_[xsurf, zsurf][(np.abs(xsurf - elec_xmin)).argmin():
+                                            (np.abs(xsurf - elec_xmax)).argmin(),:]
+            idxl = (np.abs(elec_surf[:,0] - ll)).argmin()
+            idxr = (np.abs(elec_surf[:,0] - np.abs(elec_xmax - lr))).argmin() + 1       
+            xtrapbot = elec_surf[idxl:idxr,0]
+            if self.fmd is not None:
+                ztrapbot = elec_surf[idxl:idxr,1] - self.fmd
+            else:
+                ztrapbot = np.ones_like(xtrapbot) * zminl
+                
+            trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+                              np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
+            patcher(trapeziod)
+     
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
-                    clipContour=True, use_pyvista=True, background_color=(0.8,0.8,0.8),
+                    clipContour=True, clipCorners=False, use_pyvista=True, background_color=(0.8,0.8,0.8),
                     pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
                     pvcontour=[], pvdelaunay3d=False, **kwargs):
         """Show the inverteds section.
@@ -3832,6 +3870,8 @@ class Project(object): # Project master class instanciated by the GUI
             This doesn't have any effect if clipContour is False.
         clipContour : bool, optional
             If True, the contour of the area of interest will be clipped (default).
+        clipCorners : bool, optional
+            If 'True', triangles from bottom corners will be cropped (only if the whole mesh is not shown).
         use_pyvista : bool, optional
             (3D only) Use visual toolkit backend for displaying 3D mesh, note that pyvista
             must be installed for this to work. 
@@ -3901,10 +3941,10 @@ class Project(object): # Project master class instanciated by the GUI
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
                     if clipContour:
-                        self._clipContour(mesh.ax, cont.collections)
+                        self._clipContour(mesh.ax, cont.collections, clipCorners=clipCorners)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 if clipContour:
-                    self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
+                    self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth, clipCorners=clipCorners)
             elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys (pseudo 3D)
                 self.showPseudo3DResults(ax=ax, edge_color=edge_color,
                     attr=attr, color_map=color_map, clabel=clabel, returnMesh=True,
