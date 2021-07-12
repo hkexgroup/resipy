@@ -3493,8 +3493,6 @@ class App(QMainWindow):
             else:
                 self.mesh3DBtn.setText('Kill')
                 self.mesh3DBtn.setStyleSheet('background-color:red; color:black')
-#            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
-#            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
             if self.topoTable.useNarray:
                 topo = self.topoTable.xyz
@@ -5680,7 +5678,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     self.project.saveInvPlots(outputdir=fdir, edge_color=edge_color,
                                        contour=contour, sens=sens, attr=attr,
                                        vmin=vmin, vmax=vmax, color_map=cmap,
-                                       sensPrc=sensPrc)
+                                       sensPrc=sensPrc, clipCorners=clipCorners)
                     self.writeLog('k.saveInvPlots(outputdir="{:s}", edge_color="{:s}",'
                                   ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s},'
                                   ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
@@ -6935,14 +6933,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.doiSensCheck.setEnabled(False)
             self.contourCheck.setChecked(False)
             self.contourCheck.setEnabled(False)
-            self.clipCornersCheck.setChecked(False)
-            self.clipCornersCheck.setEnabled(False)
             self.aspectCheck.setEnabled(False)
             self.sensWidget.setEnabled(False)
         else:
             self.doiSensCheck.setEnabled(True)
             self.contourCheck.setEnabled(True)
-            self.clipCornersCheck.setEnabled(True)
             self.aspectCheck.setEnabled(True)
             self.sensWidget.setEnabled(True)
     
@@ -6972,7 +6967,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.disableOptionsPseudo3D(True)
                 self.vtkWidget.clear()
                 self.vtkWidget.clear_plane_widgets()
-                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color,
+                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color, clipCorners=clipCorners,
                                          vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping,
                                          background_color=(0.8,0.8,0.8), cropMaxDepth=self.cropBelowFmd.isChecked())
             else:
@@ -7033,8 +7028,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.showStackedLayout.setCurrentIndex(1)
             else:
                 self.showStackedLayout.setCurrentIndex(0)
-#                    maxDepth = self.project.fmd if self.cropBelowFmd.isChecked() else None
-            self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))
+            self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))
         else:
             self.showStackedLayout.setCurrentIndex(1)
         if self.project.typ == 'R2' or self.project.typ == 'R3t':
