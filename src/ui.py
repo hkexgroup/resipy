@@ -841,6 +841,7 @@ class App(QMainWindow):
                 self.importDataBtn.setVisible(False)
                 self.batchCheck.setChecked(True)
                 self.batchCheck.setEnabled(False)
+                self.mergElecCheck.setEnabled(False)
                 self.timeLapseCheck.setEnabled(False)
                 self.fwdRadio.setEnabled(False)
                 self.pseudoLayout.setCurrentIndex(1)
@@ -868,6 +869,7 @@ class App(QMainWindow):
                 self.importDataBtn.setVisible(True)
                 self.batchCheck.setChecked(False)
                 self.batchCheck.setEnabled(True)
+                self.mergElecCheck.setEnabled(True)
                 self.timeLapseCheck.setEnabled(True)
                 self.fwdRadio.setEnabled(True)
                 self.pseudoLayout.setCurrentIndex(0)
@@ -1227,7 +1229,7 @@ class App(QMainWindow):
                         self.b_wgt.setText('0.0')
                     self.importDataRecipBtn.hide()
                     self.psContourCheck.setEnabled(True)
-                    self.mergElecCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(False)
                     for s in self.project.surveys:
                         self.errFitPlotIndexList.append(0)
                         self.iperrFitPlotIndexList.append(0)
@@ -1391,8 +1393,6 @@ class App(QMainWindow):
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
-            # if self.pseudo3DCheck.isChecked():
-            #     self.project._updatePseudo3DSurvey()
             pdebug('ipCheckFunc: mode =', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
@@ -2416,9 +2416,6 @@ class App(QMainWindow):
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
                 
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
-                
             self.errHist(self.recipErrDataIndex)
             self.plotManualFiltering(self.recipErrDataIndex)
             self.errFitType.setCurrentIndex(0)
@@ -2501,9 +2498,6 @@ class App(QMainWindow):
             self.errFitType.setCurrentIndex(0)
             self.plotError()
             self.infoDump('%i unpaired quadrupoles removed!' % numRemoved)
-            
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         self.recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         self.recipErrorUnpairedBtn.setFixedWidth(150)
@@ -2886,8 +2880,6 @@ class App(QMainWindow):
                 self.writeLog('k.filterDCA(index={:d})'.format(self.phaseFiltDataIndex))
                 heatFilter()
                 self.dcaButton.setEnabled(True)
-                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                #     self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
