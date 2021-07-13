@@ -473,7 +473,7 @@ class Project(object): # Project master class instanciated by the GUI
             for i, survey in enumerate(self.surveys):
                 survey.elec = self._findRemote(self._num2elec(elecList[i])) # plus identification of remote electrode
 
-        if len(self.surveys) > 0 and self.fmd is None:
+        if len(self.surveys) > 0:
             self.computeFineMeshDepth()
             
     
@@ -1417,6 +1417,8 @@ class Project(object): # Project master class instanciated by the GUI
             proj.surveys[0].df = survey.df.copy()
             proj.typ = self.typ    
             proj.err = self.err
+            if self.fmd is not None: # fmd has been forced elsewhere so needs to be added here
+                proj.fmd = self.fmd
 
 
     def split3DGrid(self, elec=None, changeLabel=True):
