@@ -327,6 +327,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
         self.pseudo3DMeshResult = None # contains pseudo 3D mesh result (for external use - e.g., ParaView)
         self.pseudo3DMeshResultList = None # contains pseudo 3D meshes (individual 2D lines in 3D space - for external use - e.g., ParaView)
+        self.pseudo3Dfmd = None # pseudo3D project FMD (only used when user defines a FMD in createMultiMesh())
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -1417,8 +1418,8 @@ class Project(object): # Project master class instanciated by the GUI
             proj.surveys[0].df = survey.df.copy()
             proj.typ = self.typ    
             proj.err = self.err
-            if self.fmd is not None: # fmd has been forced elsewhere so needs to be added here
-                proj.fmd = self.fmd
+            if self.pseudo3Dfmd is not None: # pseudo3D fmd has been forced elsewhere so needs to be added here
+                proj.fmd = self.pseudo3Dfmd
 
 
     def split3DGrid(self, elec=None, changeLabel=True):
@@ -1525,7 +1526,7 @@ class Project(object): # Project master class instanciated by the GUI
                 
         self.mesh = self.projs[0].mesh # just to have a populated mesh in master Project!
         if 'fmd' in kwargs:
-            self.fmd = kwargs['fmd']
+            self.pseudo3Dfmd = kwargs['fmd']
    
     
     
