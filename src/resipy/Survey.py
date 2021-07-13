@@ -2153,9 +2153,10 @@ class Survey(object):
         else:
             # using Delaunay 3D
             mesh = pvpont.delaunay_3d()
+            color_map = plt.cm.get_cmap('viridis', 14) # subdividing colorbar so it look more like contouring!
             ax.add_mesh(mesh,
                         #render_points_as_spheres=True,
-                        #cmap=color_map, #matplotlib colormap 
+                        cmap=color_map, #matplotlib colormap 
                         clim=[vmin,vmax], #color bar limits 
                         #show_scalar_bar=color_bar,#plot the color bar? 
                         #opacity=alpha,

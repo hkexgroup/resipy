@@ -1868,6 +1868,7 @@ class Mesh:
                 pvthreshold=None,
                 pvgrid=True,
                 pvcontour=[],
+                pseudo3DContour=False,
                 pvdelaunay3d=False,
                 pvshow=True,
                 darkMode=False,
@@ -1924,6 +1925,8 @@ class Mesh:
             Show grid or not.
         pvcontour : list of float, optional
             Values of the isosurface to be plotted.
+        pseudo3DContour: bool, optional
+            If 'True', pseudo 3D plots will be contoured. Only use in case of pseudo 3D surveys.
         pvdelaunay3d : bool, optional
             If `True` a "Delaunay 3D" triangulation filter will be applied on the mesh.
         pvshow : bool, optional
@@ -2063,6 +2066,7 @@ class Mesh:
             if pvdelaunay3d:
                 self.pvmesh = self.pvmesh.cell_data_to_point_data()
                 self.pvmesh = self.pvmesh.delaunay_3d()
+                color_map = plt.cm.get_cmap(color_map, 14) # subdividing colorbar so it look more like contouring!
             
             # apply threshold
             if pvthreshold is not None:
@@ -2085,6 +2089,11 @@ class Mesh:
                 # elec_color = 'w'
                 ax.set_background((0.2,0.2,0.2))
             
+             # create pseudo 3D contour plots - only for pseudo 3D surveys
+            if pseudo3DContour:
+                self.pvmesh = self.pvmesh.cell_data_to_point_data()
+                color_map = plt.cm.get_cmap(color_map, 14)
+
             # show grid
             if pvgrid:
                 ax.show_grid(color=tcolor)

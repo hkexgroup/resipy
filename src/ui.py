@@ -2381,8 +2381,6 @@ class App(QMainWindow):
                 self.plotManualFiltering(self.recipErrDataIndex)
                 self.errFitType.setCurrentIndex(0)
                 self.plotError()
-                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                #     self.project._updatePseudo3DSurvey()
 
             except ValueError as e:
                 if self.ipCheck.checkState() != Qt.Checked:
@@ -2648,22 +2646,16 @@ class App(QMainWindow):
             self.writeLog('k.filterRangeIP(index={:d}, vmin={:.2f}, vmax={:.2f})'.format(
                 self.phaseFiltDataIndex, vmin, vmax))
             heatFilter()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         def removerecip():
             self.project.filterRecipIP(self.phaseFiltDataIndex)
             self.writeLog('k.filterRecipIP(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         def removenested():
             self.project.filterNested(self.phaseFiltDataIndex)
             self.writeLog('k.filterNested(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
@@ -2673,8 +2665,6 @@ class App(QMainWindow):
                 self.project.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
             heatFilter()
             heatRaw()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         self.phitoplayout = QHBoxLayout()
         self.phitoplayoutL = QHBoxLayout()
@@ -2749,8 +2739,6 @@ class App(QMainWindow):
                 self.infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             self.dcaProgress.setValue(0)
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
             
 
         def phiCbarRange():
@@ -6001,10 +5989,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.project.filterInvError(index=index, vmin=vmin, vmax=vmax)
             self.writeLog('k.filterInvError(index={:d}, vmin={}, vmax={})'.format(
             index, str(vmin), str(vmax)))    
-            
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
-            
             plotInvError(self.invErrorIndex)
             plotInvError2(self.invErrorIndex)
             
@@ -6014,9 +5998,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     s.df = s.dfInvErrOutputOrigin.copy()
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
-            
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
             
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
@@ -6076,8 +6057,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
-                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                #     self.project._updatePseudo3DSurvey()
+
             except:
                 self.errorDump('Error plotting error graphs.')
                 pass
@@ -6935,13 +6915,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if flag:
             self.doiSensCheck.setChecked(False)
             self.doiSensCheck.setEnabled(False)
-            self.contourCheck.setChecked(False)
-            self.contourCheck.setEnabled(False)
             self.aspectCheck.setEnabled(False)
             self.sensWidget.setEnabled(False)
         else:
             self.doiSensCheck.setEnabled(True)
-            self.contourCheck.setEnabled(True)
             self.aspectCheck.setEnabled(True)
             self.sensWidget.setEnabled(True)
     
@@ -6972,7 +6949,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.vtkWidget.clear()
                 self.vtkWidget.clear_plane_widgets()
                 self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color, clipCorners=clipCorners,
-                                         vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping,
+                                         vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping, pseudo3DContour=contour,
                                          background_color=(0.8,0.8,0.8), cropMaxDepth=self.cropBelowFmd.isChecked())
             else:
                 self.disableOptionsPseudo3D(False)

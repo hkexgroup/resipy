@@ -1660,6 +1660,7 @@ class Project(object): # Project master class instanciated by the GUI
             ylim = findminmax(limits[:,1])
             zlim = proj.zlim
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
+
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
             if returnMesh:
