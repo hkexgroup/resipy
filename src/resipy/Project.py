@@ -326,6 +326,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.pseudo3DBreakFlag = False # flag to cancel inversions in a chain (pseudo3D only)
         self.pseudo3DSurvey = None # contains one survey instance with all 2D lines combined in a 3D grid
         self.pseudo3DMeshResult = None # contains pseudo 3D mesh result (for external use - e.g., ParaView)
+        self.pseudo3DMeshResultList = None # contains pseudo 3D meshes (individual 2D lines in 3D space - for external use - e.g., ParaView)
+        self.pseudo3Dfmd = None # pseudo3D project FMD (only used when user defines a FMD in createMultiMesh())
         self.sequence = None # quadrupoles sequence if forward model
         self.resist0 = None # initial resistivity
         self.iForward = False # if True, it will use the output of the forward
@@ -334,6 +336,7 @@ class Project(object): # Project master class instanciated by the GUI
         self.proc = None # where the process to run R2/cR2 will be
         self.mproc = None # where the process for mesh building
         self.zlim = None # zlim to plot the mesh by default (from max(elec, topo) to min(doi, elec))
+        self.trapeziod = None # trapeziod vertices of cropped 2D mesh (triangles removed from bottom corners)
         self.geom_input = {} # dictionnary used to create the mesh
         # attributes needed for independant error model for timelapse/batch inversion
         self.referenceMdl = False # is there a starting reference model already?
@@ -475,6 +478,63 @@ class Project(object): # Project master class instanciated by the GUI
             self.computeFineMeshDepth()
             
     
+    def mergeElec(self, dist=-1):
+        """Merge electrodes that have less than a certain distance to eache other
+        
+        Parameters
+        ----------
+        dist : float, optional
+            maximum distance of close electrodes in meters (electrodes that have a distance less than dist will be merged)
+            -1 flag for auto calculation where dist = average(electrode spacing)/100
+            
+        Returns
+        -------
+        bool
+            True: merge successful
+            False: merge unsuccessful
+        """
+        
+        from scipy.spatial import distance
+        
+        eleccoors = self.elec[['x','y','z']].values.copy()
+        
+        if dist == -1:
+            dist = np.mean(distance.cdist(eleccoors, eleccoors))/100
+        
+        c = 0
+        closepairsL = [] # empty list to get len(closepairsL) == 0 in loop's first step (i=0)
+        for i in range(50):
+            elecdists = distance.cdist(eleccoors, eleccoors)
+            elecdists[np.triu_indices(len(elecdists))] = dist
+            elecdists[elecdists == 0] = dist
+            
+            # less than dist pairs indices
+            closepairs = np.c_[np.where(elecdists < dist)[0], np.where(elecdists < dist)[1]]
+            
+            if len(closepairs) > len(closepairsL): 
+                c += 1
+            else:
+                c = 0
+            if c >= 4:
+                break
+            
+            poses = np.zeros_like(closepairs[:,0])
+            for i in range(len(poses)):
+                poses[i] = closepairs[i,0] if closepairs[i,0] < closepairs[i,1] else closepairs[i,1]
+            
+            eleccoors[closepairs[:,0], :] = eleccoors[poses, :]
+            closepairsL = closepairs.copy()
+            
+            if len(closepairs) == 0:
+                print('Merging close electrodes successful!')
+                self.setElec(eleccoors)
+                return True
+        
+        if len(closepairs) != 0: # solution did not converge
+            print('Merging close electrodes unsuccessful - Choose a shorter merging distance (i.e., dist < {:.2f}m)'.format(dist))
+            return False
+    
+    
     def _checkElecDuplicate(self):
         """Check for duplicated electrodes positions and merge them
         to the same label in this case. Useful for 3D survey from 2D lines,
@@ -485,7 +545,7 @@ class Project(object): # Project master class instanciated by the GUI
         df = elec[['x','y','z']].copy()
         iunique = df.duplicated(keep=False)
         if np.sum(iunique) > 0:
-            print('merging electrodes positionned at the same location.')
+            print('Merging electrodes positionned at the same location.')
             df = df[iunique]
             dups = df.groupby(list(df)).apply(lambda x: tuple(x.index)).tolist()
             
@@ -1358,6 +1418,8 @@ class Project(object): # Project master class instanciated by the GUI
             proj.surveys[0].df = survey.df.copy()
             proj.typ = self.typ    
             proj.err = self.err
+            if self.pseudo3Dfmd is not None: # pseudo3D fmd has been forced elsewhere so needs to be added here
+                proj.fmd = self.pseudo3Dfmd
 
 
     def split3DGrid(self, elec=None, changeLabel=True):
@@ -1463,12 +1525,14 @@ class Project(object): # Project master class instanciated by the GUI
                 proj.createMesh(**kwargs)
                 
         self.mesh = self.projs[0].mesh # just to have a populated mesh in master Project!
+        if 'fmd' in kwargs:
+            self.pseudo3Dfmd = kwargs['fmd']
    
     
     
     def showPseudo3DMesh(self, ax=None, color_map='Greys', meshList=None,
                          cropMesh=True, color_bar=False, returnMesh=False,
-                         cropMaxDepth=False, pvshow=True, **kwargs):
+                         cropMaxDepth=False, clipCorners=False, pvshow=True, **kwargs):
         """Show 2D meshes in 3D view
         
         Parameters
@@ -1487,6 +1551,8 @@ class Project(object): # Project master class instanciated by the GUI
             if True method returns a merged mesh. 
         cropMaxDepth : bool, optional
             If True, region below fine mesh depth (fmd) will be cropped.
+        clipCorners : bool, optional
+            If 'True', triangles from bottom corners will be cropped (only if the whole mesh is not shown).
         pvshow : bool, optional
             Set to False to not call `Plotter.show()` (useful for subplots).
         kwargs : -
@@ -1518,16 +1584,6 @@ class Project(object): # Project master class instanciated by the GUI
         
         elecList = self.split3DGrid()  # split the electrodes to lines in 3D space   
                 
-        # elec = []
-        # for elecdf in elecList: # removing remote electrodes from 3D grid
-        #     elec.append(elecdf[['x','y']].values[~elecdf['remote'].values,:])
-        # matx = []
-        # maty = []
-        # for elecarr in elec:
-        #     matx.extend(np.unique(elecarr[:,0])) 
-        #     maty.extend(np.unique(elecarr[:,1])) 
-        # xlimi = findminmax(matx)
-        # ylimi = findminmax(maty)
         if returnMesh:
             meshOutList = []
             
@@ -1552,6 +1608,46 @@ class Project(object): # Project master class instanciated by the GUI
                     verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
                                   np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
                 mesh = mesh.crop(verts)
+            
+            if clipCorners and proj.param['num_xz_poly'] != 0: # not clipping the corners of a mesh outside of the survey area!
+                elec_x = mesh.elec[:,0]
+                elec_z = mesh.elec[:,2]
+                elec_xmin = np.min(elec_x)
+                elec_xmax = np.max(elec_x)
+                if cropMaxDepth and proj.fmd is not None:
+                    zminl = elec_z[elec_x.argmin()] - proj.fmd
+                    zminr = elec_z[elec_x.argmax()] - proj.fmd
+                elif cropMaxDepth is False and proj.fmd is not None:
+                    zminl = zminr = np.min(elec_z) - proj.fmd
+                else:
+                    zminl = zminr = zmin
+                zmaxl = elec_z[elec_x.argmin()]
+                zmaxr = elec_z[elec_x.argmax()]
+                ll = np.abs(zmaxl - zminl)
+                lr = np.abs(zmaxr - zminr)
+                lx = np.abs(elec_xmin - elec_xmax)
+                if ll >= lx/4:
+                    ll = lx/4
+                if lr >= lx/4:
+                    lr = lx/4
+    
+                # surf bound to elecs
+                elec_surf = np.c_[xsurf, zsurf][(np.abs(xsurf - elec_xmin)).argmin():
+                                                (np.abs(xsurf - elec_xmax)).argmin(),:]
+                idxl = (np.abs(elec_surf[:,0] - ll)).argmin()
+                idxr = (np.abs(elec_surf[:,0] - np.abs(elec_xmax - lr))).argmin() + 1       
+                xtrapbot = elec_surf[idxl:idxr,0]
+                if cropMaxDepth and proj.fmd is not None:
+                    ztrapbot = elec_surf[idxl:idxr,1] - proj.fmd
+                else:
+                    ztrapbot = np.ones_like(xtrapbot) * zminl
+                    
+                proj.trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+                                  np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
+                mesh = mesh.crop(proj.trapeziod)
+            
+            else:
+                proj.trapeziod = None # make sure trapeziod mask is clear
 
             meshMoved = mt.moveMesh2D(meshObject=mesh, elecLocal=proj.elec, elecGrid=elecdf)
             
@@ -1562,12 +1658,9 @@ class Project(object): # Project master class instanciated by the GUI
 
             xlim = findminmax(limits[:,0])
             ylim = findminmax(limits[:,1])
-            # xlim[0] = xlim[0] if xlim[0] < xlimi[0] else xlimi[0]
-            # ylim[0] = ylim[0] if ylim[0] < ylimi[0] else ylimi[0]
-            # xlim[1] = xlim[1] if xlim[1] > xlimi[1] else xlimi[1]
-            # ylim[1] = ylim[1] if ylim[1] > ylimi[1] else ylimi[1]
             zlim = proj.zlim
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
+
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
                       ylim=ylim, zlim=zlim, darkMode=self.darkMode, **kwargs)
             if returnMesh:
@@ -1577,6 +1670,7 @@ class Project(object): # Project master class instanciated by the GUI
             ax.show() # call plotter.show()
         
         if returnMesh:
+            self.pseudo3DMeshResultList = meshOutList
             meshMerged = mt.mergeMeshes(meshOutList)
             meshMerged.ndims = 3
             self.pseudo3DMeshResult = meshMerged
@@ -1631,9 +1725,7 @@ class Project(object): # Project master class instanciated by the GUI
         # kill management
         self.procs = []
         self.proc = ProcsManagement(self)
-        
         self._updatePseudo3DSurvey() # make sure we have set all attributes
-                
         self.meshResults = [] # clean meshResults list
         for proj in self.projs: # preparing inversion params
             proj.param = self._setPseudo3DParam(proj.param)
@@ -2516,7 +2608,7 @@ class Project(object): # Project master class instanciated by the GUI
             Specific for 'cylinder mesh':
                 - zlim : list of 2 int
                 For the bottom and top of the column along the Z axis.
-        """        
+        """     
         if dump is None:
             if show_output:
                 def dump(x):
@@ -2694,15 +2786,17 @@ class Project(object): # Project master class instanciated by the GUI
             if surface is not None:
                 zlimTop = np.max([np.max(elec_z), np.max(surface[:,-1])])
             else:
-                # if all(self.elec['buried']): # if all buried we assume surface at 0 m
-                    # zlimTop = 0
-                # else:
                 zlimTop = np.max(elec_z)
             if all(self.elec['buried']) and surface is None: # whole mesh
                 zlimBot = np.min(elec_z)
+            elif any(self.elec['buried']):
+                if surface is None:
+                    zlimBot = np.min(elec_z[~self.elec['buried']]) - self.fmd 
+                else:
+                    zlimBot = np.min(self.topo['z'].values) - self.fmd 
             else:
-                zlimBot = np.min(elec_z)-self.fmd # if fmd is correct (defined as positive number
-            # from surface then it is as well the zlimMin)
+                zlimBot = np.min(elec_z) - self.fmd 
+                
             self.zlim = [zlimBot, zlimTop]
         self._computePolyTable()
         print('done ({:d} elements)'.format(self.mesh.df.shape[0]))
@@ -3691,8 +3785,7 @@ class Project(object): # Project master class instanciated by the GUI
         return sensScaled
         
     
-    
-    def _clipContour(self, ax, collections, cropMaxDepth=False):
+    def _clipContour(self, ax, collections, cropMaxDepth=False, clipCorners=False):
         """Clip contours using mesh bound and surface if available.
         
         Parameters
@@ -3703,7 +3796,19 @@ class Project(object): # Project master class instanciated by the GUI
             Matplotlib collection.
         cropMaxDepth : bool, optional
             If 'True', area below fmd will be cropped out.
+        clipCorners : bool, optional
+            If 'True', triangles from bottom corners will be cropped (only if the whole mesh is not shown).
         """
+        
+        def patcher(verts):
+            # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
+            poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
+            path = mpath.Path(verts, poly_codes)
+            patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
+            ax.add_patch(patch) # need to add so it knows the transform
+            for col in collections:
+                col.set_clip_path(patch)
+        
         # mask outer region
         node_x = self.mesh.node[:,0]
         node_z = self.mesh.node[:,2]
@@ -3720,21 +3825,53 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             verts = np.c_[np.r_[xmin, xmin, xsurf, xmax, xmax, xmin],
                           np.r_[zmin, zmax, zsurf, zmax, zmin, zmin]]
-            
-        # cliping using a patch (https://stackoverflow.com/questions/25688573/matplotlib-set-clip-path-requires-patch-to-be-plotted)
-        poly_codes = [mpath.Path.MOVETO] + (len(verts) - 2) * [mpath.Path.LINETO] + [mpath.Path.CLOSEPOLY]
-        path = mpath.Path(verts, poly_codes)
-        patch = mpatches.PathPatch(path, facecolor='none', edgecolor='none')
-        ax.add_patch(patch) # need to add so it knows the transform
-        for col in collections:
-            col.set_clip_path(patch)
-            
+        patcher(verts)
+
+        if clipCorners and self.param['num_xz_poly'] != 0: # not clipping the corners of a mesh outside of the survey area!
+            elec_x = self.mesh.elec[:,0]
+            elec_z = self.mesh.elec[:,2]
+            elec_xmin = np.min(elec_x)
+            elec_xmax = np.max(elec_x)
+            if cropMaxDepth and self.fmd is not None:
+                zminl = elec_z[elec_x.argmin()] - self.fmd
+                zminr = elec_z[elec_x.argmax()] - self.fmd
+            elif cropMaxDepth is False and self.fmd is not None:
+                zminl = zminr = np.min(elec_z) - self.fmd
+            else:
+                zminl = zminr = zmin
+            zmaxl = elec_z[elec_x.argmin()]
+            zmaxr = elec_z[elec_x.argmax()]
+            ll = np.abs(zmaxl - zminl)
+            lr = np.abs(zmaxr - zminr)
+            lx = np.abs(elec_xmin - elec_xmax)
+            if ll >= lx/4:
+                ll = lx/4
+            if lr >= lx/4:
+                lr = lx/4
+
+            # surf bound to elecs
+            elec_surf = np.c_[xsurf, zsurf][(np.abs(xsurf - elec_xmin)).argmin():
+                                            (np.abs(xsurf - elec_xmax)).argmin(),:]
+            idxl = (np.abs(elec_surf[:,0] - ll)).argmin()
+            idxr = (np.abs(elec_surf[:,0] - np.abs(elec_xmax - lr))).argmin() + 1       
+            xtrapbot = elec_surf[idxl:idxr,0]
+            if cropMaxDepth and self.fmd is not None:
+                ztrapbot = elec_surf[idxl:idxr,1] - self.fmd
+            else:
+                ztrapbot = np.ones_like(xtrapbot) * zminl
+                
+            self.trapeziod = np.c_[np.r_[elec_xmin, xsurf, elec_xmax, xtrapbot[::-1], elec_xmin],
+                                   np.r_[zmaxl, zsurf, zmaxr, ztrapbot[::-1], zmaxl]]
+            patcher(self.trapeziod)
         
+        else:
+            self.trapeziod = None # make sure trapeziod mask is clear
+     
 
     def showResults(self, index=0, ax=None, edge_color='none', attr='',
                     sens=True, color_map='viridis', zlim=None, clabel=None,
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
-                    clipContour=True, use_pyvista=True, background_color=(0.8,0.8,0.8),
+                    clipContour=True, clipCorners=False, use_pyvista=True, background_color=(0.8,0.8,0.8),
                     pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
                     pvcontour=[], pvdelaunay3d=False, **kwargs):
         """Show the inverteds section.
@@ -3773,6 +3910,8 @@ class Project(object): # Project master class instanciated by the GUI
             This doesn't have any effect if clipContour is False.
         clipContour : bool, optional
             If True, the contour of the area of interest will be clipped (default).
+        clipCorners : bool, optional
+            If 'True', triangles from bottom corners will be cropped (only if the whole mesh is not shown).
         use_pyvista : bool, optional
             (3D only) Use visual toolkit backend for displaying 3D mesh, note that pyvista
             must be installed for this to work. 
@@ -3812,6 +3951,7 @@ class Project(object): # Project master class instanciated by the GUI
             mesh = self.meshResults[index]
             if self.typ[-1] == '2' and index != -1: # 2D case
                 if self.pseudo3DSurvey is not None and self.projs != []: # we have pseudo 3D survey
+                    self.param['num_xz_poly'] = self.projs[index].param['num_xz_poly']
                     self.mesh = mesh # should update this based on current mesh to get right limits
                     self.zlim = self.projs[index].zlim
                     self.fmd = self.projs[index].fmd
@@ -3842,16 +3982,16 @@ class Project(object): # Project master class instanciated by the GUI
                     triang = tri.Triangulation(xc, yc)
                     cont = mesh.ax.tricontour(triang, z, levels=levels, colors='k', linestyles=linestyle)
                     if clipContour:
-                        self._clipContour(mesh.ax, cont.collections)
+                        self._clipContour(mesh.ax, cont.collections, clipCorners=clipCorners)
                 colls = mesh.cax.collections if contour == True else [mesh.cax]
                 if clipContour:
-                    self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth)
+                    self._clipContour(mesh.ax, colls, cropMaxDepth=cropMaxDepth, clipCorners=clipCorners)
             elif self.typ[-1] == '2' and index == -1: # 3D grid of 2D surveys (pseudo 3D)
                 self.showPseudo3DResults(ax=ax, edge_color=edge_color,
                     attr=attr, color_map=color_map, clabel=clabel, returnMesh=True,
                     use_pyvista=use_pyvista, background_color=background_color,
                     pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
-                    pvcontour=pvcontour, cropMaxDepth=cropMaxDepth, **kwargs)
+                    pvcontour=pvcontour, cropMaxDepth=cropMaxDepth, clipCorners=clipCorners, **kwargs)
             else: # 3D case
                 if zlim is None:
                     zlim = self.zlim
@@ -5784,8 +5924,16 @@ class Project(object): # Project master class instanciated by the GUI
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
             file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
-            mesh.vtk(file_path, title=mesh.mesh_title)
+            meshcopy = mesh.copy()
+            if self.trapeziod is not None and self.pseudo3DMeshResult is None:
+                meshcopy = meshcopy.crop(self.trapeziod)
+            elif self.pseudo3DMeshResult is not None and self.projs[count-1].trapeziod is not None:
+                meshcopy = meshcopy.crop(self.projs[count-1].trapeziod)
+            meshcopy.vtk(file_path, title=mesh.mesh_title)
             amtContent += "\tannotations.append('%s')\n"%mesh.mesh_title
+            if self.pseudo3DMeshResultList is not None:
+                file_path = os.path.join(dirname, mesh.mesh_title + '_3D.vtk')
+                self.pseudo3DMeshResultList[count-1].vtk(file_path, title=mesh.mesh_title)
         if self.pseudo3DMeshResult is not None: 
             self.pseudo3DMeshResult.mesh_title = 'Pseudo_3D_result'
             file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + '.vtk')

@@ -372,6 +372,7 @@ class App(QMainWindow):
         def loadBatchProject(): # for batch/time-lapse/pseudo 3D
             self.fnamesCombo.clear()
             self.psContourCheck.setEnabled(True)
+            self.mergElecCheck.setEnabled(True)
             for s in self.project.surveys: # we already loaded the results
                 self.fnamesCombo.addItem(s.name)
                 self.errFitPlotIndexList.append(0)
@@ -641,6 +642,7 @@ class App(QMainWindow):
 
                 # inversion tab
                 self.contourCheck.setVisible(True)
+                self.clipCornersCheck.setVisible(True)
                 self.doiSensCheck.setVisible(True)
                 self.sensWidget.setVisible(True)
                 show3DInvOptions(False)
@@ -714,6 +716,7 @@ class App(QMainWindow):
 
                 # inversion tab
                 self.contourCheck.setVisible(False)
+                self.clipCornersCheck.setVisible(False)
                 self.doiSensCheck.setVisible(False)
                 self.sensWidget.setVisible(False)
                 show3DInvOptions(True)
@@ -838,6 +841,7 @@ class App(QMainWindow):
                 self.importDataBtn.setVisible(False)
                 self.batchCheck.setChecked(True)
                 self.batchCheck.setEnabled(False)
+                self.mergElecCheck.setEnabled(False)
                 self.timeLapseCheck.setEnabled(False)
                 self.fwdRadio.setEnabled(False)
                 self.pseudoLayout.setCurrentIndex(1)
@@ -865,6 +869,7 @@ class App(QMainWindow):
                 self.importDataBtn.setVisible(True)
                 self.batchCheck.setChecked(False)
                 self.batchCheck.setEnabled(True)
+                self.mergElecCheck.setEnabled(True)
                 self.timeLapseCheck.setEnabled(True)
                 self.fwdRadio.setEnabled(True)
                 self.pseudoLayout.setCurrentIndex(0)
@@ -933,6 +938,7 @@ class App(QMainWindow):
             self.tabImporting.setTabEnabled(1, True) # here because restartFunc() set it to False
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
+            self.mergElecCheck.setEnabled(False)
             self.activateTabs(True)
         self.fwdRadio = QRadioButton('Forward')
         self.fwdRadio.setChecked(False)
@@ -1085,6 +1091,7 @@ class App(QMainWindow):
                         self.infoDump('Batch survey created.')
                     self.fnamesCombo.clear()
                     self.psContourCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(True)
                     
                     for s in self.project.surveys:
                         self.fnamesCombo.addItem(s.name)
@@ -1216,13 +1223,13 @@ class App(QMainWindow):
                         str(fnames), str(val), self.ftype, str(self.parser)))
                     self.infoDump('Pseudo 3D survey from 2D lines created.')
                     self.ipCheck.setEnabled(True)
-                    self.psContourCheck.setEnabled(True)
                     self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     if 'magErr' in self.project.pseudo3DSurvey.df.columns:
                         self.a_wgt.setText('0.0')
                         self.b_wgt.setText('0.0')
                     self.importDataRecipBtn.hide()
                     self.psContourCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(False)
                     for s in self.project.surveys:
                         self.errFitPlotIndexList.append(0)
                         self.iperrFitPlotIndexList.append(0)
@@ -1280,6 +1287,7 @@ class App(QMainWindow):
                     self.infoDump('3D survey from regular 2D lines created.')
                     self.ipCheck.setEnabled(True)
                     self.psContourCheck.setEnabled(True)
+                    self.mergElecCheck.setEnabled(True)
                     self.create3DBtn.setText(os.path.basename(fdir) + ' (Press to change)')
                     # self.calcAspectRatio()
                     if 'magErr' in self.project.surveys[0].df.columns:
@@ -1385,8 +1393,6 @@ class App(QMainWindow):
                     self.mwFwdPseudoIP.setVisible(False)
                     self.noiseLabelIP.hide()
                     self.noiseEditIP.hide()
-            # if self.pseudo3DCheck.isChecked():
-            #     self.project._updatePseudo3DSurvey()
             pdebug('ipCheckFunc: mode =', self.project.typ)
 
         self.ipCheck = QCheckBox('Induced Polarization')
@@ -1421,12 +1427,36 @@ class App(QMainWindow):
             self.plotPseudo()
             if self.project.typ[0] == 'c':
                 self.plotPseudoIP()
+                
+        def mergeElecs(state):
+            if self.project is not None and self.project.elec is not None:
+                if state  == Qt.Checked:
+                    self.elecBackUp = self.project.elec.copy() # backing up electrodes and surveys if checkbox is unchecked
+                    self.surveysBackUp = self.project.surveys.copy()
+                    if self.project.mergeElec():
+                        self.infoDump('Merging close electrodes successful!')
+                    else:
+                        self.errorDump('Merging close electrodes unsuccessful!')
+                else:
+                    self.project.elec = self.elecBackUp.copy() # backing up electrodes and surveys if checkbox is unchecked
+                    self.project.surveys = self.surveysBackUp.copy()
+                
+                self.elecTable.initTable(self.project.elec)
+                self.tempElec = None
+                self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+                self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+                self.updateElec()
         
         # display options for pseudo-sections
+        self.mergElecCheck = QCheckBox('Merge close electrodes')
+        self.mergElecCheck.stateChanged.connect(mergeElecs)
+        self.mergElecCheck.setEnabled(False)
+        self.mergElecCheck.setToolTip('Merge electrodes that are very close (0.01 of average electrode spacing)')
+        
         self.psContourCheck = QCheckBox('Contour')
         self.psContourCheck.stateChanged.connect(psContourFunc)
         self.psContourCheck.setEnabled(False)
-        self.psContourCheck.setToolTip('Check/uncheck to contour pseudo section plots')
+        self.psContourCheck.setToolTip('Check/uncheck to contour pseudo section plots (in 3D mode "Delaunay 3D" is used).')
         
         self.pvminLabel = QLabel('ρ<sub>min</sub>')
         self.pvmin = QLineEdit()
@@ -1532,6 +1562,7 @@ class App(QMainWindow):
         self.hbox5 = QHBoxLayout()
         self.hbox5.setAlignment(Qt.AlignRight)
         self.hbox5.addWidget(self.ipCheck, Qt.AlignLeft)
+        self.hbox5.addWidget(self.mergElecCheck)
         self.hbox5.addWidget(self.psContourCheck)
         self.hbox5.addWidget(self.pvminLabel)
         self.hbox5.addWidget(self.pvmin)
@@ -2350,8 +2381,6 @@ class App(QMainWindow):
                 self.plotManualFiltering(self.recipErrDataIndex)
                 self.errFitType.setCurrentIndex(0)
                 self.plotError()
-                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                #     self.project._updatePseudo3DSurvey()
 
             except ValueError as e:
                 if self.ipCheck.checkState() != Qt.Checked:
@@ -2384,9 +2413,6 @@ class App(QMainWindow):
                 heatFilter()
                 self.iperrFitType.setCurrentIndex(0)
                 phaseplotError()
-                
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
                 
             self.errHist(self.recipErrDataIndex)
             self.plotManualFiltering(self.recipErrDataIndex)
@@ -2470,9 +2496,6 @@ class App(QMainWindow):
             self.errFitType.setCurrentIndex(0)
             self.plotError()
             self.infoDump('%i unpaired quadrupoles removed!' % numRemoved)
-            
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         self.recipErrorUnpairedBtn = QPushButton('Remove Unpaired')
         self.recipErrorUnpairedBtn.setFixedWidth(150)
@@ -2623,22 +2646,16 @@ class App(QMainWindow):
             self.writeLog('k.filterRangeIP(index={:d}, vmin={:.2f}, vmax={:.2f})'.format(
                 self.phaseFiltDataIndex, vmin, vmax))
             heatFilter()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         def removerecip():
             self.project.filterRecipIP(self.phaseFiltDataIndex)
             self.writeLog('k.filterRecipIP(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         def removenested():
             self.project.filterNested(self.phaseFiltDataIndex)
             self.writeLog('k.filterNested(index={:d})'.format(self.phaseFiltDataIndex))
             heatFilter()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         def convFactK():
             if self.phaseFiltDataIndex == -1:
@@ -2648,8 +2665,6 @@ class App(QMainWindow):
                 self.project.surveys[self.phaseFiltDataIndex].kFactor = float(self.phiConvFactor.text())
             heatFilter()
             heatRaw()
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
 
         self.phitoplayout = QHBoxLayout()
         self.phitoplayoutL = QHBoxLayout()
@@ -2724,8 +2739,6 @@ class App(QMainWindow):
                 self.infoDump('Phase filters are now reset for selected dataset!')
             heatFilter()
             self.dcaProgress.setValue(0)
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
             
 
         def phiCbarRange():
@@ -2855,8 +2868,6 @@ class App(QMainWindow):
                 self.writeLog('k.filterDCA(index={:d})'.format(self.phaseFiltDataIndex))
                 heatFilter()
                 self.dcaButton.setEnabled(True)
-                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                #     self.project._updatePseudo3DSurvey()
             except:
                 self.errorDump('No decay curves found or incomplete set of decay curves! Export the data from "Prosys" with M1, M2, ... , M20 and TM1 tabs enabled.')
                 self.dcaButton.setEnabled(True)
@@ -3462,8 +3473,6 @@ class App(QMainWindow):
             else:
                 self.mesh3DBtn.setText('Kill')
                 self.mesh3DBtn.setStyleSheet('background-color:red; color:black')
-#            self.cropBelowFmd.setChecked(False) # TODO: come back here and see if maxDepth works on 3D
-#            self.cropBelowFmd.setEnabled(False)
             elec = self.elecTable.getTable()
             if self.topoTable.useNarray:
                 topo = self.topoTable.xyz
@@ -4453,7 +4462,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
                 self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, 
                                               strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
-                self.fwdContour.setDisabled(True)#can't contour 3D data atm 
+                # self.fwdContour.setDisabled(True)
                 self.pseudoFramefwd.setVisible(True)
             else:
                 self.mwFwdPseudo.plot(self.project.surveys[0].showPseudo, aspect='auto')
@@ -4514,16 +4523,26 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 contour = True
             else:
                 contour = False
-                
-            self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
-            self.mwFwdPseudo.replot(aspect='auto', contour=contour)
-            self.writeLog('k.showPseudo(contour={:s})'.format(str(contour)))
-            if self.project.typ[0] == 'c':
-                self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
-                self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
-                self.writeLog('k.showPseudoIP(contour={:s})'.format(str(contour)))
+
+            if pvfound and self.project.typ[-1] == 't': 
+                self.pseudo3Dplotter.clear() # clear all actors
+                self.project.surveys[0].showPseudo(ax=self.pseudo3Dplotter, threed=True, contour=contour,
+                                                   strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+                if self.project.typ[0] == 'c':
+                    self.pseudo3DplotterIP.clear() # clear all actors 
+                    self.project.surveys[0].showPseudoIP(ax=self.pseudo3DplotterIP, threed=True, contour=contour,
+                                                         strIdx=self.seqIdx, darkMode=eval(resipySettings.param['dark']))
+            else:    
+                self.mwFwdPseudo.setCallback(self.project.surveys[0].showPseudo)
+                self.mwFwdPseudo.replot(aspect='auto', contour=contour)
+                self.writeLog('k.showPseudo(contour={:s})'.format(str(contour)))
+                if self.project.typ[0] == 'c':
+                    self.mwFwdPseudoIP.setCallback(self.project.surveys[0].showPseudoIP)
+                    self.mwFwdPseudoIP.replot(aspect='auto', contour=contour)
+                    self.writeLog('k.showPseudoIP(contour={:s})'.format(str(contour)))
         
         self.fwdContour = QCheckBox('Contour')
+        self.fwdContour.setToolTip('Check/uncheck to contour pseudo section plots (in 3D mode "Delaunay 3D" is used).')
         self.fwdContour.stateChanged.connect(fwdContourFunc)
         self.fwdContour.setVisible(False)
 
@@ -4706,6 +4725,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.iCropping = False
                 if 'num_xz_poly' in self.project.param:
                     self.num_xz_poly = self.project.param['num_xz_poly'] # store value
+                    self.clipCornersCheck.setChecked(False)
+                    self.clipCornersCheck.setEnabled(False)
                 elif 'num_xy_poly' in self.project.param:
                     self.num_xz_poly = self.project.param['num_xy_poly'] # store value
             else:
@@ -4713,6 +4734,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if ('num_xz_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xz_poly'] = self.num_xz_poly # restore value
                     self.writeLog('k.param["num_xz_poly"] = {:s}'.format(str(self.num_xz_poly)))
+                    self.clipCornersCheck.setEnabled(True)
                 elif ('num_xy_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xy_poly'] = self.num_xz_poly # restore value
                     self.writeLog('k.param["num_xy_poly"] = {:s}'.format(str(self.num_xy_poly)))
@@ -5428,7 +5450,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5,
                             'doi':self.modelDOICheck.isChecked(),
-                            'doiSens':False,
+                            'doiSens':False, 'clipCorners':False,
                             'pvslices':([],[],[]), 'pvthreshold':None, 'pvdelaunay3d': False,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}          
                 
@@ -5572,6 +5594,16 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.contourCheck = QCheckBox('Contour')
         self.contourCheck.stateChanged.connect(contourCheckFunc)
         self.contourCheck.setToolTip('Grid and contour the data.')
+        
+        def clipCornersFunc(state):
+            if state == Qt.Checked:
+                self.displayParams['clipCorners'] = True
+            else:
+                self.displayParams['clipCorners'] = False
+            self.replotSection()
+        self.clipCornersCheck = QCheckBox('Crop Corners')
+        self.clipCornersCheck.stateChanged.connect(clipCornersFunc)
+        self.clipCornersCheck.setToolTip('Triangles from bottom corners will be cropped (only if the whole mesh is not shown).')
       
         def sensSliderFunc(val):
             if val == 0:
@@ -5635,13 +5667,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     sensPrc = self.displayParams['sensPrc']
                     attr = self.displayParams['attr']
                     contour = self.displayParams['contour']
+                    clipCorners = self.displayParams['clipCorners']
                     vmin = self.displayParams['vmin']
                     vmax = self.displayParams['vmax']
                     cmap = self.displayParams['cmap']
                     self.project.saveInvPlots(outputdir=fdir, edge_color=edge_color,
                                        contour=contour, sens=sens, attr=attr,
                                        vmin=vmin, vmax=vmax, color_map=cmap,
-                                       sensPrc=sensPrc)
+                                       sensPrc=sensPrc, clipCorners=clipCorners)
                     self.writeLog('k.saveInvPlots(outputdir="{:s}", edge_color="{:s}",'
                                   ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s},'
                                   ' vmax={:s}, color_map="{:s}", sensPrc={:.2f})'.format(
@@ -5856,6 +5889,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         optsLayout.addWidget(self.doiSensCheck)
         optsLayout.addWidget(self.cmapCombo)
         optsLayout.addWidget(self.contourCheck)
+        optsLayout.addWidget(self.clipCornersCheck)
         optsLayout.addWidget(self.sensWidget)
         optsLayout.addWidget(self.edgeCheck)
         optsLayout.addWidget(self.aspectCheck)
@@ -5961,10 +5995,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.project.filterInvError(index=index, vmin=vmin, vmax=vmax)
             self.writeLog('k.filterInvError(index={:d}, vmin={}, vmax={})'.format(
             index, str(vmin), str(vmax)))    
-            
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
-            
             plotInvError(self.invErrorIndex)
             plotInvError2(self.invErrorIndex)
             
@@ -5974,9 +6004,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     s.df = s.dfInvErrOutputOrigin.copy()
             else:
                 self.project.surveys[self.invErrorIndex].df = self.project.surveys[self.invErrorIndex].dfInvErrOutputOrigin.copy()
-            
-            # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-            #     self.project._updatePseudo3DSurvey()
             
             self.rangeInvErrorMinInput.setText('')
             self.rangeInvErrorMaxInput.setText('')
@@ -6036,8 +6063,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.project.surveys[self.invErrorIndex].filterData(~i2remove)
                 plotInvError(self.invErrorIndex)
                 plotInvError2(self.invErrorIndex)
-                # if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
-                #     self.project._updatePseudo3DSurvey()
+
             except:
                 self.errorDump('Error plotting error graphs.')
                 pass
@@ -6550,6 +6576,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotter.clear()
             self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],
+                                                   contour=self.psContourCheck.isChecked(),
                                                    vmax=self.pParams['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudo.setCallback(self.project.showPseudo)
@@ -6568,7 +6595,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotterIP.clear()
             self.project.pseudo3DSurvey.showPseudoIP(ax=self.pseudoPlotterIP, threed=True, vmin=self.pParamsIP['vmin'],
-                                                   vmax=self.pParamsIP['vmax'], darkMode=eval(resipySettings.param['dark']))
+                                                     contour=self.psContourCheck.isChecked(),
+                                                     vmax=self.pParamsIP['vmax'], darkMode=eval(resipySettings.param['dark']))
         else:
             self.mwPseudoIP.setCallback(self.project.showPseudoIP)
             self.mwPseudoIP.replot(aspect='auto', **self.pParamsIP)
@@ -6634,6 +6662,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.loadingWidget('Loading data, please wait...', False) # for large datasets
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(True)
+            self.mergElecCheck.setEnabled(True)
             self.fname = fname
             if float(self.spacingEdit.text()) == -1:
                 spacing = None
@@ -6742,6 +6771,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.fnamesCombo.hide()
         self.fnamesComboLabel.hide()
         self.psContourCheck.setEnabled(False)
+        self.mergElecCheck.setEnabled(False)
         self.tabImporting.setTabEnabled(1, False)
         self.mwPseudo.clear() # clearing figure
         if pvfound:
@@ -6825,6 +6855,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.nbElecEdit.setEnabled(True)
             self.ipCheck.setEnabled(True)
             self.psContourCheck.setEnabled(False)
+            self.mergElecCheck.setEnabled(False)
             if pvfound: # 3D pseudo-sections?
                 self.pseudo3Dplotter.clear()
                 self.pseudo3DplotterIP.clear()
@@ -6872,7 +6903,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.displayParams = {'index':0,'edge_color':'none',
                             'sens':True, 'attr':'Resistivity(Ohm-m)',
                             'contour':False, 'vmin':None, 'vmax':None,
-                            'cmap':'viridis', 'sensPrc':0.5,
+                            'cmap':'viridis', 'sensPrc':0.5, 'clipCorners':False,
                             'doi':self.modelDOICheck.isChecked(),
                             'doiSens':False, 'pvdelaunay3d': False,
                             'pvslices':([],[],[]), 'pvthreshold':None,
@@ -6890,13 +6921,10 @@ combination of multiple sequence is accepted as well as importing a custom seque
         if flag:
             self.doiSensCheck.setChecked(False)
             self.doiSensCheck.setEnabled(False)
-            self.contourCheck.setChecked(False)
-            self.contourCheck.setEnabled(False)
             self.aspectCheck.setEnabled(False)
             self.sensWidget.setEnabled(False)
         else:
             self.doiSensCheck.setEnabled(True)
-            self.contourCheck.setEnabled(True)
             self.aspectCheck.setEnabled(True)
             self.sensWidget.setEnabled(True)
     
@@ -6908,6 +6936,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         sens = self.displayParams['sens']
         attr = self.displayParams['attr']
         contour = self.displayParams['contour']
+        clipCorners = self.displayParams['clipCorners']
         vmin = self.displayParams['vmin']
         vmax = self.displayParams['vmax']
         cmap = self.displayParams['cmap']
@@ -6925,15 +6954,15 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.disableOptionsPseudo3D(True)
                 self.vtkWidget.clear()
                 self.vtkWidget.clear_plane_widgets()
-                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color,
-                                         vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping,
+                self.project.showResults(index=-1, ax=self.vtkWidget, attr=attr, edge_color=edge_color, clipCorners=clipCorners,
+                                         vmin=vmin, vmax=vmax, color_map=cmap, pvgrid=True, cropMesh=self.iCropping, pseudo3DContour=contour,
                                          background_color=(0.8,0.8,0.8), cropMaxDepth=self.cropBelowFmd.isChecked())
             else:
                 self.disableOptionsPseudo3D(False)
                 self.mwInv.replot(threed=False, aspect=aspect,
                                   index=index, edge_color=edge_color,
-                                  contour=contour, sens=sens, attr=attr,
-                                  vmin=vmin, vmax=vmax, color_map=cmap, 
+                                  contour=contour, sens=sens, clipCorners=clipCorners,
+                                  attr=attr, vmin=vmin, vmax=vmax, color_map=cmap, 
                                   sensPrc=sensPrc, doi=doi, doiSens=doiSens)
                 self.writeLog('k.showResults(index={:d}, edge_color="{:s}",'
                               ' contour={:s}, sens={:s}, attr="{:s}", vmin={:s}, '
@@ -6986,8 +7015,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.showStackedLayout.setCurrentIndex(1)
             else:
                 self.showStackedLayout.setCurrentIndex(0)
-#                    maxDepth = self.project.fmd if self.cropBelowFmd.isChecked() else None
-            self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))# maxDepth=maxDepth))
+            self.mwInv.setCallback(partial(self.project.showResults, cropMaxDepth=self.cropBelowFmd.isChecked()))
         else:
             self.showStackedLayout.setCurrentIndex(1)
         if self.project.typ == 'R2' or self.project.typ == 'R3t':
@@ -7019,6 +7047,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.vmaxEdit.setText('')
         self.doiCheck.setChecked(self.modelDOICheck.isChecked())
         self.contourCheck.setChecked(False)
+        self.clipCornersCheck.setChecked(False)
         self.edgeCheck.setChecked(False)
         self.replotSection() # this plot the results
        
