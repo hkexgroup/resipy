@@ -4279,7 +4279,7 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
     show_output : TYPE, optional
         If True, output of gmsh is displayed to dump. The default is True.
     threed : bool, optional
-        If True, 3D mesh is done, else 2D. The default is True.
+        If True, 3D mesh is done, else 2D. The default is False.
     handle : variable, optional
         Will be assigned the output of 'Popen' in case the process needs to be
         killed in the UI for instance.

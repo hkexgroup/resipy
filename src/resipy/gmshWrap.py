@@ -64,7 +64,7 @@ def find_dist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spac
 # 2D half space problem 
 def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                file_path='mesh.geo',fmd=-1,dp_len=-1,cl=-1,cl_factor=2,
-               debug=False):
+               edge_factor=5, debug=False):
     """Writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
     Parameters
@@ -101,6 +101,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     dp_len : float, optional 
         Largest dipole length in the 2D array. Default is the largest electrode 
         spacing. Controls the multipier applied to the edges of the coarse mesh region. 
+    edge_factor: float, optional 
+        Edge of the mesh is edge_factor*dp_len from the edge of the fine mesh zone. 
+        Normally a value of 5 is sufficient. 
     debug : bool, optional
         If `True`, debug messages will be displayed.
     
