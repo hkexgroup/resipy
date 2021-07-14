@@ -4896,6 +4896,12 @@ combination of multiple sequence is accepted as well as importing a custom seque
         def reg_modeFunc(index):
             self.project.param['reg_mode'] = index
             self.writeLog('k.param["reg_mode"] = {:d}'.format(index))
+            if int(index) == 1: # enable qedit for alpha_s (as only relevant to timelapse)
+                self.alpha_sLabel.setVisible(True)
+                self.alpha_s.setVisible(True)
+            else:
+                self.alpha_sLabel.setVisible(False)
+                self.alpha_s.setVisible(False)
         self.reg_modeLabel = QLabel('<a href="reg_mode">Regularization mode</a>:')
         self.reg_modeLabel.linkActivated.connect(showHelp)
         self.reg_mode = QComboBox()
