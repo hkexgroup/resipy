@@ -46,7 +46,7 @@ k.createSurvey(testdir + 'parser/res2dinv-multigradient.dat', ftype='ResInv')
 k.createSurvey(testdir + 'parser/res2dinv-wenner32.dat', ftype='ResInv')
 k.createSurvey(testdir + 'parser/bgs-prime.dat', ftype='BGS Prime')
 k.createSurvey(testdir + 'parser/sting_2D_noIP.stg', ftype='Sting')
-k.createSurvey(testdir + 'parser/sting_3D_noIP.stg', ftype='Sting') # not sure why this fails in the pipline
+k.createSurvey(testdir + 'parser/sting_3D_noIP.stg', ftype='Sting')
 k.createSurvey(testdir + 'parser/abem-lund-norm.ohm', ftype='ABEM-Lund')
 k.createSurvey(testdir + 'parser/Lippmann_1.tx0', ftype='Lippmann')
 k.createSurvey(testdir + 'parser/Lippmann_2.tx0', ftype='Lippmann')
@@ -67,6 +67,7 @@ k.createSurvey(testdir + 'parser/protocolForward/cR3t_forward.dat', ftype='Proto
 k = Project(typ='R2')
 k.createSurvey(testdir + 'dc-2d-topo/syscal.csv', ftype='Syscal')
 k.importElec(testdir + 'dc-2d-topo/elec.csv')
+k.mergeElec()
 
 # remote detection
 k = Project(typ='R2')
@@ -714,7 +715,7 @@ k.importPseudo3DElec(testdir + 'dc-2d-pseudo3d-synthetic/lines-elec.csv')
 k.createMultiMesh(typ='trian', runParallel=True)
 # k.showPseudo3DMesh(cropMesh=True) # only works with pyvista - thus commented for test
 k.invertPseudo3D(runParallel=True)
-# k.showResults(index=-1, cropMesh=True) # only works with pyvista - thus commented for test
+# k.showResults(index=-1, cropMesh=True, clipCorners=False, pseudo3DContour=True) # only works with pyvista - thus commented for test
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-2d-pseudo3d'] = time.time() - t0
 
