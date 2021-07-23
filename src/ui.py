@@ -5245,7 +5245,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if ncores < 1: # then fallback to using one core 
                    ncores = 1
                    
-            
             if self.pseudo3DCheck.isChecked(): # pseudo 3D (multiple Projects)
                 self.pseudo3DInvtext = ''
                 def pseudo3DInvLog(dirname, typ):
@@ -5302,7 +5301,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 modErr = self.modErrCheck.isChecked()
                 parallel = self.parallelCheck.isChecked()
                 modelDOI = self.modelDOICheck.isChecked()
-
                 kwargs = {'dump': logTextFunc, # keyword arguments for project.invert
                           'iplot': False,
                           'modErr': modErr, 
@@ -5321,7 +5319,6 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.thread.finished.connect(self.thread.deleteLater)
                 self.worker.progress.connect(logTextFunc)
                 self.thread.start()
-        
 
                 # self.project.invert(iplot=False, dump=logTextFunc,
                 #                     modErr=modErr, parallel=parallel, modelDOI=modelDOI)
