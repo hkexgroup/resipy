@@ -2618,7 +2618,8 @@ class Project(object): # Project master class instanciated by the GUI
                     pass
         self.meshParams = {'typ':typ, 'buried':buried, 'surface':surface,
                            'cl_factor':cl_factor, 'cl':cl, 'dump':dump,
-                           'res0': res0, 'show_output':show_output}#, 'dfm':doi}
+                           'res0': res0, 'show_output':show_output,
+                           'refine':refine,'fmd':fmd}
         if kwargs is not None:
             self.meshParams.update(kwargs)
 
@@ -2627,6 +2628,9 @@ class Project(object): # Project master class instanciated by the GUI
                 typ = 'trian'
             else:
                 typ = 'tetra'
+        
+        # flag for if mesh gets refined during mesh creation 
+        refined = False 
 
         # check if remote electrodes present
         if (self.elec['remote'].sum() > 0) & (typ == 'quad'):
@@ -2758,7 +2762,8 @@ class Project(object): # Project master class instanciated by the GUI
                 for l in range(refine):
                     print('refining...', end='')
                     mesh = mesh.refine()
-            
+                refined = True 
+                
             self.param['mesh_type'] = 3
             e_nodes = np.array(mesh.eNodes) + 1 # +1 because of indexing staring at 0 in python
             self.param['node_elec'] = [elecLabels, e_nodes.astype(int)]
@@ -2772,7 +2777,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel)*0, 'phase0') # default starting phase [mrad]
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
-        self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
+        if not refined: # dont want to re-allocate parameter number it has already been assigned  
+            self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
         self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory(dump=dump) # if negative then we need more RAM
         self.mesh.iremote = self.elec['remote'].values
         
@@ -3488,12 +3494,7 @@ class Project(object): # Project master class instanciated by the GUI
         # the loop will check when they finish and start new ones.
         def done(p):
             return p.poll() is not None
-#        def success(p):
-#            return p.returncode == 0 # this doesn't work so well in compiled windows binaries
-#        def fail():
-#            sys.exit(1)
 
-#        ts = []
         c = 0
         dump('\r{:.0f}/{:.0f} inversions completed'.format(c, len(wds2)))
         while self.irunParallel2:
@@ -4561,7 +4562,7 @@ class Project(object): # Project master class instanciated by the GUI
             idx = regions == key
             res0[idx] = regionValues[key]
         self.mesh.df['res0'] = res0
-        print('regionValues:',regionValues)
+        # print('regionValues:',regionValues)
 
         zones = np.array(self.mesh.df['zones']).copy()
         for key in zoneValues.keys():
@@ -4569,8 +4570,7 @@ class Project(object): # Project master class instanciated by the GUI
             zones[idx] = zoneValues[key]
         self.mesh.df['zones'] = zones
 
-        # fixed = np.array(self.mesh.df['param']).copy()
-        fixed = np.arange(self.mesh.numel)+1
+        fixed = self.mesh.df['param'].values.copy()
         for key in fixedValues.keys():
             idx = regions == key
             if fixedValues[key] == True:
@@ -5375,7 +5375,7 @@ class Project(object): # Project master class instanciated by the GUI
                         err = np.genfromtxt(fname, skip_header=1)
                         df = pd.DataFrame(err[:,[0,1,2,3,4,5,6,7,8]],
                                           columns=['sa','P+','sb','P-','sm','C+','sn','C-', 'Normalised_Error'])
-                        dfs.append(df)
+                        dfs.append(df);
             else: # TODO cR3t header needs to be standardized
                 dfs = []
                 if self.iTimeLapse:
@@ -5392,10 +5392,14 @@ class Project(object): # Project master class instanciated by the GUI
                         df = pd.DataFrame(err[:,[0,1,2,3,4,5,6,7,8,11,12]],
                                           columns=['sa','P+','sb','P-','sm','C+','sn','C-', 'Normalised_Error', 'Observed_Phase', 'Calculated_Phase'])
                         dfs.append(df)
+                        
             dfs2 = []
+            check = True # check if first value of survey frames are in line number and electrode fmt 
+            if len(self.surveys[0].df['a'][0].split()) == 1:
+                check = False 
             for df in dfs:
                 df = df.astype({'P+':int, 'P-':int, 'C+':int, 'C-':int})
-                if (self.typ == 'R3t') | (self.typ == 'cR3t'):
+                if check and (self.typ == 'R3t' or self.typ == 'cR3t'):
                     df = df.astype({'sa':int, 'sb':int, 'sm':int, 'sn':int})
                     df['P+'] = df['sa'].astype(str) + ' ' + df['P+'].astype(str)
                     df['P-'] = df['sb'].astype(str) + ' ' + df['P-'].astype(str)
@@ -5414,6 +5418,7 @@ class Project(object): # Project master class instanciated by the GUI
         for s, df in zip(self.surveys, dfs):
             df = df.rename(columns=dict(zip(['P+','P-','C+','C-', 'Normalised_Error'], ['a','b','m','n', 'resInvError'])))
             cols = ['a','b','m','n','resInvError']
+            
             if (self.typ == 'cR2') | (self.typ == 'cR3t'):
                 df['phaseInvMisfit'] = np.abs(df['Observed_Phase'] - df['Calculated_Phase'])
                 cols += ['phaseInvMisfit']
