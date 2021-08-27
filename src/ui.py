@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+sys.setrecursionlimit(10000) # to prevent the display issue if so many measurements are rejected at once.
 import time
 print(
 '''
