@@ -1937,7 +1937,8 @@ def dasParser(fname):
         
     # data
     df['resist'] = df_raw[resCol].values
-    df['dev'] = df_raw[devCol].values
+    if devCol >= 0:
+        df['dev'] = df_raw[devCol].values
     df['ip'] = df_raw[ipCol].values if ipCol > 1 else 0
     
     return dfelec, df
