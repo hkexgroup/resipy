@@ -2222,17 +2222,37 @@ class App(QMainWindow):
                         df['ip'] = 0
                     elif self.inputPhaseFlag == True:
                         df['ip'] *= -1 # if the input ip values are already phase, in custom parser only!
-                    array = df[['a','b','m','n']].values.copy()
-                    arrayMin = np.min(np.unique(np.sort(array.flatten())))
-                    if arrayMin != 0:
-                        array -= arrayMin
-                    if espacing is None:
-                        espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
-                    array = np.round(array/espacing+1).astype(int)
-                    df[['a','b','m','n']] = array
-                    imax = int(np.max(array))
-                    elec = np.zeros((imax,3))
-                    elec[:,0] = np.arange(0,imax)*espacing
+                        
+                    ################ better method (adopted from syscalParser)
+                    
+                    array = df[['a','b','m','n']].values
+            
+                    # get unique electrode positions and create ordered labels for them
+                    val = np.sort(np.unique(array.flatten()))
+                    elecLabel = 1 + np.arange(len(val))
+                    searchsoterdArr = np.searchsorted(val, array)
+                    newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+                    df.loc[:,['a','b','m','n']] = newval # assign new label
+                    zval = np.zeros_like(val)
+                    yval = np.zeros_like(val) # 2D so Y values are all zeros
+                    elec = np.c_[val, yval, zval]
+                    
+                    ##### Old way
+                        
+                    # array = df[['a','b','m','n']].values.copy()
+                    # arrayMin = np.min(np.unique(np.sort(array.flatten())))
+                    # if arrayMin != 0:
+                    #     array -= arrayMin
+                    # if espacing is None:
+                    #     espacing = np.unique(np.sort(array.flatten()))[1] - np.unique(np.sort(array.flatten()))[0]
+                    # array = np.round(array/espacing+1).astype(int)
+                    # df[['a','b','m','n']] = array
+                    # imax = int(np.max(array))
+                    # elec = np.zeros((imax,3))
+                    # elec[:,0] = np.arange(0,imax)*espacing
+                    
+                    ################
+                    
                     self.nbElecEdit.setText('%s' % (len(elec)))
     #                self.nbElecEdit.setEnabled(False)
                     self.elecDxEdit.setText('%s' % (espacing))
