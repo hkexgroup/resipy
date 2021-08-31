@@ -2236,6 +2236,12 @@ class App(QMainWindow):
                     zval = np.zeros_like(val)
                     yval = np.zeros_like(val) # 2D so Y values are all zeros
                     elec = np.c_[val, yval, zval]
+                    remoteFlags_p1 = np.array([-9999999, -999999, -99999,-9999,-999])
+                    remoteFlags_p2 = np.array([9999999, 999999, 99999, 9999, 999])
+                    iremote_p1 = np.in1d(val, remoteFlags_p1)
+                    elec[iremote_p1, 0] = -99999
+                    iremote_p2 = np.in1d(val, remoteFlags_p2)
+                    elec[iremote_p2, 0] = 99999
                     
                     ##### Old way
                         

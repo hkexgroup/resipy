@@ -257,10 +257,12 @@ def syscalParser(fname):#, spacing=None):
         # NOTE: remote electrode identification is done in R2.setElec()
         # but we notice that setting same number for remote (-99999) makes
         # the pseudo-section of remote electrode survey nicer...
-        remoteFlags = np.array([-9999999, -999999, -99999,-9999,-999,
-                                9999999, 999999, 99999, 9999, 999])
-        iremote = np.in1d(val, remoteFlags)
-        elec[iremote, 0] = -99999
+        remoteFlags_p1 = np.array([-9999999, -999999, -99999,-9999,-999])
+        remoteFlags_p2 = np.array([9999999, 999999, 99999, 9999, 999])
+        iremote_p1 = np.in1d(val, remoteFlags_p1)
+        elec[iremote_p1, 0] = -99999
+        iremote_p2 = np.in1d(val, remoteFlags_p2)
+        elec[iremote_p2, 0] = 99999
         
         if np.all(df['dev'].values == 0) and 'Dev. M' in df.columns: # Prosys III has to Dev. lists, assuming Dev. Rho (%) == 0 and Dev. M != 0 when IP data is collected.
             df['dev'] = df['Dev. M'].values
