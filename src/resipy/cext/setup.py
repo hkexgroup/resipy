@@ -28,6 +28,7 @@ else: # macOS
 		Assuming "Homebrew" is already installed. To successfully compile meshCalc on macOS
 		you need to install gcc through Homebrew by:
 		brew install cmake gcc
+        brew install cmake gcc@xx for specific version of gcc - then change below to specific version
     '''
     os.environ['CC'] = 'gcc-10' # gcc-xx based on gcc version
     os.environ['CXX'] = 'g++-10' # g++-xx based on g++ version

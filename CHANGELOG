@@ -1,3 +1,16 @@
+v3.3.2
+------
+- Add ability to clip contour maps (2D)
+- Syscal parser now natively supports 3D coordinates (Prosys 3)
+- Ability to merge the electrodes that are too close
+- Ability to contour pseudo 3D plots
+- Ability to export individual line vtk files (pseudo 3D)
+- Bug fix: mesh refinement not working properly
+- Bug fix: custom parser account for remote electrodes
+- Bug fix: DAS-1 parser accounts for no-data inputs
+- Bug fix: FMD in pseudo 3D
+
+
 v3.3.1
 ------
 - New tetrahedral 'Column' and 'Tank' mesh designs for 3D inversion/modeling
