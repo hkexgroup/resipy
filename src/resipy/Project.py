@@ -4559,27 +4559,27 @@ class Project(object): # Project master class instanciated by the GUI
         regions = np.array(self.mesh.df['region'])
         res0 = np.array(self.mesh.df['res0']).copy()
         for key in regionValues.keys():
-            idx = regions == key
+            idx = regions == int(key)
             res0[idx] = regionValues[key]
         self.mesh.df['res0'] = res0
         # print('regionValues:',regionValues)
 
         zones = np.array(self.mesh.df['zones']).copy()
         for key in zoneValues.keys():
-            idx = regions == key
+            idx = regions == int(key)
             zones[idx] = zoneValues[key]
         self.mesh.df['zones'] = zones
 
         fixed = self.mesh.df['param'].values.copy()
         for key in fixedValues.keys():
-            idx = regions == key
+            idx = regions == int(key)
             if fixedValues[key] == True:
                 fixed[idx] = 0
         self.mesh.df['param'] = fixed
 
         phase0 = np.array(self.mesh.df['phase0']).copy()
         for key in ipValues.keys():
-            idx = regions == key
+            idx = regions == int(key)
             phase0[idx] = ipValues[key]
         self.mesh.df['phase0'] = phase0
 
