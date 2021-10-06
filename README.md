@@ -15,7 +15,8 @@ Downloads
 Version 3.3.2:<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.3.2-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.3.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-macOS.dmg "wine is required - see below")
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.3.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-linux)
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.3.2-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-linux)<br>
+macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%2064bit-ResIPy%20v3.3.2-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-macos_mojave.dmg "wine is required - see below")
 
 Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
@@ -27,8 +28,9 @@ Notes for Mac and Linux users:
 
 Zip files:<br>
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.3.2%20(zip)-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-windows.zip)
-[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.3.2%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-macos.zip)
-[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.3.2%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-linux.zip)
+[![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.3.2%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-macos.zip "wine is required - see below")
+[![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.3.2%20(zip)-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-linux.zip)<br>
+macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%2064bit-ResIPy%20v3.3.2%20(zip)-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.3.2/ResIPy-macos_mojave.zip "wine is required - see below")
 
 
 What it can do
