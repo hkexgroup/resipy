@@ -22,7 +22,7 @@ Note for Windows users:
 
 Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
-- *wine* is partially supported on macOS Catalina and is **not supported on Big Sur**!
+- *wine* is partially supported on macOS Big Sur and is **only supported on Intel chip Mac computers**!
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 Zip files:<br>
@@ -73,7 +73,7 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
-**IMPORTANT NOTE**: *wine* is partially supported on macOS Catalina and is **not supported on Big Sur**! Please try installing *wine* v5.x with below instructions first.
+**IMPORTANT NOTE**: *wine* is partially supported on macOS Big Sur and is **only supported on Intel chip Mac computers**! Please try installing *wine* v5.x with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
 
 You first need to install ```wine``` through ```Homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
@@ -86,13 +86,13 @@ Follow the instructions. (You may need to install [Command Line Tools](http://os
 
 Once the ```Homebrew``` installation is successfully done, install ```xquartz``` by pasting below command in terminal:
 ```sh
-brew cask install xquartz
+brew install xquartz
 ```
 Then install ```wine```:
 
 On macOS Catalina and higher (paste below in terminal):
 ```sh
-brew cask install --no-quarantine wine-stable
+brew install --no-quarantine wine-stable
 ```
 On *older* macOS versions (paste below in terminal):
 ```sh
@@ -100,7 +100,7 @@ brew install wine
 ```
 If all is done with no errors, you are ready to run ResIPy!
 
-**NOTE**: the first time you're running ```wine``` it will need to be updated and that will take some time.
+**NOTE**: the first time you're running ```wine``` (e.g., creating a triangular mesh) it will need to be updated and install a few dependencies and that will take some time.
 
 
 Feature request and bug report
