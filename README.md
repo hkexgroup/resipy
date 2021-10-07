@@ -24,7 +24,7 @@ Note for Windows users:
 Notes for Mac and Linux users:
 - You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
 - *wine* is partially supported on macOS Big Sur and is **only supported on Intel chip Mac computers**!
---If you get "ResIPy is damaged" error, run this comman in terminal `xattr -cr /Applications/ResIPy.app`
+	- If you get "ResIPy is damaged" error, run this comman in terminal `xattr -cr /Applications/ResIPy.app`
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
 Zip files:<br>
