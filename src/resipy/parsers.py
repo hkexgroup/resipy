@@ -1641,27 +1641,11 @@ def aresParser(fname, spacing=None):
                             'U[mV]':'vp'})
     
     #Building electrode locations
-    df[['a','b','m','n']] = df[['a','b','m','n']].apply(pd.to_numeric, errors='coerce') # there are strange eletrode conbinations sometimes (e.g., 14*1)
+    df[['a','b','m','n']] = df[['a','b','m','n']].replace('\*\d+', '', regex=True).astype(int) # there are multi eletrode conbinations sometimes (e.g., 14*1) which basically mean the middle one
     df = df.dropna()
-    array = df[['a','b','m','n']].values
-    
-    # arrayMin = np.min(np.unique(np.sort(array.flatten())))
-    # if arrayMin != 0: # all surveys must start from x = 0
-    #     array -= arrayMin
-    val = np.sort(np.unique(array.flatten())) # unique electrodes positions/labels required are 
-    # elecLabel = 1 + np.arange(len(val))
-    # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-    # df.loc[:,['a','b','m','n']] = newval
-    
-    #calculations
-#    if 'EP[mV]' in df.columns: # TODO: correct this when you figure out how the IP values are calculated EP may acctualy be SP!!
-#        df['ip'] = df['EP[mV]']/df['vp'] # not sure this is correct way of calculating IP
-#        df = df[['a','b','m','n','i','vp','ip']]
-#    else:
-    
+
     
     # finding IP columns
-    
     ip_cols = [col for col in df.columns if all(i in col for i in ['IP', '[%]'])] # assuming IP columns are those with IP and [%]
     if ip_cols!= []:
         # df[ip_cols] = df[ip_cols]/100 # not sure about this... who reports IP in % anyway?!
@@ -1673,10 +1657,20 @@ def aresParser(fname, spacing=None):
         df['ip'] = 0 # should be under "else:"
     
     df = df.query("i != '-' & vp != '-' & ip != '-'").astype(float)    
+    df[['a','b','m','n']] = df[['a','b','m','n']].astype(int)
     
     df['resist'] = df['vp']/df['i']
     
-    #builting electrode table
+    # df = df.dropna()
+    
+    #building electrode table
+    array = df[['a','b','m','n']].values
+    val = np.sort(np.unique(array.flatten()))
+    elecLabel = 1 + np.arange(len(val))
+    searchsoterdArr = np.searchsorted(val, array)
+    newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    df.loc[:,['a','b','m','n']] = newval # assign new label
+    
     if spacing is not None:
         elec = np.c_[val*float(spacing), np.zeros((len(val),2))]
     else:
