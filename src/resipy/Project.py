@@ -371,6 +371,14 @@ class Project(object): # Project master class instanciated by the GUI
             elif elec.shape[1] == 4:
                 elec = pd.DataFrame(elec, columns=['x','y','z','buried'])
                 elec['buried'] = elec['buried'].astype(bool)
+
+        if 'line' in elec.columns and 'number' in elec.columns:                
+            elecid  = elec.number.values # electrode number array 
+            line = elec.line.values 
+            label = ['1 1'] * len(elec)
+            for i in range(len(elec)):
+                label[i] = '%i %i'%(line[i],elecid[i])
+            elec.insert(0,'label',label)
         if 'y' not in elec.columns:
             elec['y'] = 0 # all on same line by default
         if 'z' not in elec.columns:
@@ -2631,7 +2639,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         # flag for if mesh gets refined during mesh creation 
         refined = False 
-
+    
         # check if remote electrodes present
         if (self.elec['remote'].sum() > 0) & (typ == 'quad'):
             dump('remote electrode is not supported in quadrilateral mesh for now, please use triangular mesh instead.')
@@ -2778,7 +2786,11 @@ class Project(object): # Project master class instanciated by the GUI
         self.mesh.addAttribute(np.ones(numel, dtype=int), 'zones')
         self.mesh.addAttribute(np.zeros(numel, dtype=float), 'iter')
         if not refined: # dont want to re-allocate parameter number it has already been assigned  
+            ## is bugged in 2D, needs fixing! ## 
             self.mesh.addAttribute(np.arange(numel)+1,'param') # param = 0 if fixed
+        elif self.typ=='R2':
+            self.mesh.addAttribute(np.arange(numel)+1,'param')
+        
         self.param['reqMemory'] = getSysStat()[2] - self._estimateMemory(dump=dump) # if negative then we need more RAM
         self.mesh.iremote = self.elec['remote'].values
         

@@ -815,6 +815,7 @@ class Mesh:
             
         nmesh.df = pd.DataFrame(new_df)
         nmesh.cellCentres()
+        nmesh.orderNodes() 
         return nmesh 
              
         
