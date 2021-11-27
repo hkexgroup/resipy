@@ -40,7 +40,7 @@ sudo pacman -S binutils # if using arch based linux distro
 sudo apt-get install binutils # if using debian/ubuntu based distro 
 ```
 
-Conda vitual environment: 
+Conda virtual environment: 
 ```shell
 conda create -n <env_name> python
 conda activate <env_name>
