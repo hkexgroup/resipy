@@ -5436,7 +5436,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     ie = rmsIndex == ii
                     ax.plot(xx[ie], rms[ie], '*--')
             ax.set_xticks([])
-            ax.set_xticklabels([],[])
+            ax.set_xticklabels([])
             ax.set_xlabel('Iterations', fontsize=8)
             ax.tick_params(axis='both', which='major', labelsize=8)
             ax.set_ylabel('RMS', fontsize=8)
