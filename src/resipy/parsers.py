@@ -101,7 +101,7 @@ def geom_factor_3D(df, elec, array_type):
 
 #%% usual syscal parser
 def syscalParser(fname):#, spacing=None):
-        df = pd.read_csv(fname, skipinitialspace=True, engine='python')
+        df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
         # delete space at the end and the beginning of columns names
         headers = df.columns
         if 'Spa.1' in headers:
@@ -1725,7 +1725,7 @@ def bertParser(fname):
         data_input_raw = dump[line].split('#')[0] # getting rid of comments 
         vals = re.findall(numStr, data_input_raw)
     
-    headers = re.findall(r'[A-Za-z]+', dump[line-1]) # for finding data types
+    headers = re.findall(r'[A-Za-z\/]+', dump[line-1]) # for finding data types
 
     topo_check_vals = len(re.findall(numStr, dump[line].split('#')[0])) # TODO: is topography included without any flags?
     df_list = []
