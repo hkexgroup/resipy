@@ -2117,7 +2117,7 @@ class App(QMainWindow):
 
             def readTable(self, fname='', delimiter=None, skiprows=None, nrows=None):
                 if fname != '':
-                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows)
+                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows, encoding_errors='ignore')
                     df = df.reset_index() # in case all parse columns goes into the index (don't know why)
                     self.setRowCount(df.shape[0])
                     self.setColumnCount(df.shape[1])
