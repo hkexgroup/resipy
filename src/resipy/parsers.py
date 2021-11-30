@@ -206,7 +206,7 @@ def syscalParser(fname):#, spacing=None):
         df['resist'] = df['vp']/df['i']
         
         # find if input contains 3D coordinates
-        if 'ya' in df.columns and not np.all(df[['ya','yb','ym','yn']].values.flatten() == 0):
+        if 'ya' in df.columns: # it's a 3D format file - not necessary a 3D survey!
             syscal3D = True
         else: # it's a 2D format file
             syscal3D = False
@@ -234,7 +234,7 @@ def syscalParser(fname):#, spacing=None):
             yval = np.zeros_like(val) # 2D so Y values are all zeros
             elec = np.c_[val, yval, zval]
         
-        else: # we have 3D input file
+        else: # we have 3D format file
             df = df.rename(columns={'a':'xa','b':'xb','m':'xm','n':'xn'})
             xarray = df[['xa','xb','xm','xn']].values.flatten()
             yarray = df[['ya','yb','ym','yn']].values.flatten()
