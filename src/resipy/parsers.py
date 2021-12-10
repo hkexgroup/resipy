@@ -101,7 +101,7 @@ def geom_factor_3D(df, elec, array_type):
 
 #%% usual syscal parser
 def syscalParser(fname):#, spacing=None):
-        df = pd.read_csv(fname, skipinitialspace=True, engine='python')
+        df = pd.read_csv(fname, skipinitialspace=True, engine='python', encoding_errors='ignore')
         # delete space at the end and the beginning of columns names
         headers = df.columns
         if 'Spa.1' in headers:
@@ -206,7 +206,7 @@ def syscalParser(fname):#, spacing=None):
         df['resist'] = df['vp']/df['i']
         
         # find if input contains 3D coordinates
-        if 'ya' in df.columns and not np.all(df[['ya','yb','ym','yn']].values.flatten() == 0):
+        if 'ya' in df.columns: # it's a 3D format file - not necessary a 3D survey!
             syscal3D = True
         else: # it's a 2D format file
             syscal3D = False
@@ -234,7 +234,7 @@ def syscalParser(fname):#, spacing=None):
             yval = np.zeros_like(val) # 2D so Y values are all zeros
             elec = np.c_[val, yval, zval]
         
-        else: # we have 3D input file
+        else: # we have 3D format file
             df = df.rename(columns={'a':'xa','b':'xb','m':'xm','n':'xn'})
             xarray = df[['xa','xb','xm','xn']].values.flatten()
             yarray = df[['ya','yb','ym','yn']].values.flatten()
@@ -1725,7 +1725,7 @@ def bertParser(fname):
         data_input_raw = dump[line].split('#')[0] # getting rid of comments 
         vals = re.findall(numStr, data_input_raw)
     
-    headers = re.findall(r'[A-Za-z]+', dump[line-1]) # for finding data types
+    headers = re.findall(r'[A-Za-z\/]+', dump[line-1]) # for finding data types
 
     topo_check_vals = len(re.findall(numStr, dump[line].split('#')[0])) # TODO: is topography included without any flags?
     df_list = []

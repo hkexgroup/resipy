@@ -1,5 +1,5 @@
 numpy
-matplotlib==3.2.1
+matplotlib
 pandas
 scipy
 requests
@@ -7,4 +7,4 @@ psutil
 pyvista
 pyvistaqt
 PyQt5
-vtk==8.1.2
+vtk
