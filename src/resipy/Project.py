@@ -1110,7 +1110,7 @@ class Project(object): # Project master class instanciated by the GUI
         #do a check for reading in 3D protocol files for 2D projects 
         if self.typ[-1] == '2' and 'Protocol' in ftype: 
             for s in self.surveys:
-                if len(s.df['a'][0].split()) == 2: 
+                if len(s.df['a'].iloc[0].split()) == 2: 
                     s._rmLineNum() 
         
             
