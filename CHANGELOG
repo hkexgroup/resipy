@@ -1,6 +1,6 @@
 v3.3.2
 ------
-- Add ability to clip contour maps (2D)
+- Add ability to clip corners of the inverted plots (2D)
 - Syscal parser now natively supports 3D coordinates (Prosys 3)
 - Ability to merge the electrodes that are too close
 - Ability to contour pseudo 3D plots
