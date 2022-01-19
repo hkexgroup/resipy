@@ -2117,7 +2117,7 @@ class App(QMainWindow):
 
             def readTable(self, fname='', delimiter=None, skiprows=None, nrows=None):
                 if fname != '':
-                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows)
+                    df = pd.read_csv(fname, delimiter=delimiter, skiprows=skiprows, nrows=nrows, encoding_errors='ignore')
                     df = df.reset_index() # in case all parse columns goes into the index (don't know why)
                     self.setRowCount(df.shape[0])
                     self.setColumnCount(df.shape[1])
@@ -5436,7 +5436,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                     ie = rmsIndex == ii
                     ax.plot(xx[ie], rms[ie], '*--')
             ax.set_xticks([])
-            ax.set_xticklabels([],[])
+            ax.set_xticklabels([])
             ax.set_xlabel('Iterations', fontsize=8)
             ax.tick_params(axis='both', which='major', labelsize=8)
             ax.set_ylabel('RMS', fontsize=8)
