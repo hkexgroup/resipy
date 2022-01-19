@@ -2813,7 +2813,7 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     zlimBot = np.min(self.topo['z'].values) - self.fmd 
             else:
-                zlimBot = np.min(elec_z) - self.fmd 
+                zlimBot = np.min(elec_z[~self.elec['remote']]) - self.fmd 
                 
             self.zlim = [zlimBot, zlimTop]
         self._computePolyTable()
