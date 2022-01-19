@@ -1,3 +1,15 @@
+v3.3.3
+------
+- Bug fix: remote electrodes in 3D mesh generation
+- Bug fix: Custom Parser importing correctly
+- Bug fix: Importing protocol surveys
+- Bug fix: Save Res2DInv format data
+- Bug fix: BERT parser
+- Bug fix: ARES parser
+- Bug fix: Matplotlib xticklabel
+- Bug fix: Starting resistivity 
+
+
 v3.3.2
 ------
 - Add ability to clip corners of the inverted plots (2D)
