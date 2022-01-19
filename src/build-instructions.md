@@ -4,9 +4,7 @@ Dated: 2019-08-05
 # 1. Virtual Environments
 You should work inside a python virtual environment in order to build ResIPy into a frozen executable.
 There are a few options for initialising a virtual environment, the first is to 
-use a the `virtualenv` package, or through the vanilla python `venv` command. 
-We don't reccomend using conda to create a virtual environment or manage packages 
-inside the environment as it has been known to cause issues.
+use a the `virtualenv` package, or through the vanilla python `venv` command. Additionally, you could use `conda env` through Anaconda or Miniconda.
 
 ## using virtualenv
 Use python > 3.6.X. If not installed already then install it through pip*. 
@@ -40,6 +38,12 @@ On linux you'll likley need to have `binutils` installed if not already:
 ```shell
 sudo pacman -S binutils # if using arch based linux distro 
 sudo apt-get install binutils # if using debian/ubuntu based distro 
+```
+
+Conda virtual environment: 
+```shell
+conda create -n <env_name> python
+conda activate <env_name>
 ```
 
 # 2. Pyinstaller and packages
