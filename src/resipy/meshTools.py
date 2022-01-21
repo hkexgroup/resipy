@@ -374,18 +374,23 @@ class Mesh:
                 
     
     #%% mesh attribute handling 
-    def setElecNode(self, e_nodes):
+    def setElecNode(self, e_nodes, iremote =None):
         """Assign node numbers to electrodes. 
         
         Parameters
         ------------
         e_nodes: array like
             array of ints which index the electrode nodes in a mesh
+        iremote: array like, optional
+            Array of bool, if True then indexed electrode is remote. 
         """
         self.eNodes  = e_nodes
         self.elec = self.node[e_nodes,:]
-        self.iremote = np.array([False]*self.elec.shape[0],dtype=bool)
-    
+        if iremote is None:
+            self.iremote = np.array([False]*self.elec.shape[0],dtype=bool)
+        else:
+            self.iremote = iremote 
+            
     def setElec(self,elec_x,elec_y,elec_z):
         if len(elec_x) != len(elec_y) or len(elec_x) != len(elec_z):
             raise ValueError('Mismatch in the electrode array lengths when setting the electrodes in mesh class')
@@ -4037,7 +4042,7 @@ def tetgen_import(file_path, order_nodes=True):
         
 #%% build a quad mesh        
 def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.25, fmd=None, pad=2, 
-              surface_x=None,surface_z=None):
+              surface_x=None,surface_z=None,refine_x = None, refine_z=None):
     """Creates a quaderlateral mesh given the electrode x and y positions.
             
     Parameters
@@ -4048,12 +4053,14 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         Electrode y coordinates
     elec_type: list, optional
         strings, where 'electrode' is a surface electrode; 'buried' is a buried electrode
-    elemy : int, optional
-        Number of elements in the fine y region
+    elemx : int, optional
+        Number of nodes between electrodes. 
+    xgf : float, optional 
+        X factor multiplier for fine zone. 
     zf : float, optional
-         Z factor multiplier in the fine zone.
+         Z factor multiplier in the fine zone (must be >1).
     zgf : float, optional
-         Z factor multiplier in the coarse zone.
+         Z factor multiplier in the coarse zone (must be >1).
     fmd : float (m), optional 
          Fine mesh region depth specifies as positive number (if None, half survey width is used).
     pad : int, optional
@@ -4063,6 +4070,14 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
     surface_z: array like, optional
         Default is None. z coordinates of extra surface topography points for the generation of topography in the quad mesh. Note
         an error will be returned if len(surface_x) != len(surface_z)
+    refine_x: array like, optional
+        Default is None. Inserts points in the resulting quad mesh for more control over 
+        mesh refinement at depth. X coordinates. An error will be returned if 
+        len(refine_x) != len(refine_z).
+    refine_z: array like, optional
+        Default is None. Inserts points in the resulting quad mesh for more control over 
+        mesh refinement at depth. Z coordinates. An error will be returned if 
+        len(refine_x) != len(refine_z).
         
             
     Returns
@@ -4086,6 +4101,11 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
             raise Exception("The length of the surface_x argument does not match the surface_y argument, both need to be arrays of the same length.")
         surface_x = np.array(surface_x)
         surface_z = np.array(surface_z)
+        
+    if refine_x is None or refine_z is None: # flag if to use refinement points  
+        refine_flag = False 
+    else:
+        refine_flag = True 
     
     bh_flag = False
     #determine the relevant node ordering for the surface electrodes? 
@@ -4194,8 +4214,12 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
     
     if bh_flag:
         #insert y values of boreholes, normalised to topography
-        norm_bhy = np.interp(bh[:,0], elec[:,0], elec[:,1]) - bh[:,1]
+        norm_bhy = np.interp(bh[:,0], X, Y) - bh[:,1]
         meshz = np.unique(np.append(meshz,norm_bhy))
+        
+    if refine_flag:
+        norm_rz = np.interp(refine_x, X, Y) - refine_z 
+        meshz = np.unique(np.append(meshz,norm_rz))
     
     ###
     #find the columns relating to the electrode nodes? 
@@ -4808,11 +4832,24 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
     #check if remeote electrodes present, and insert them into the node position array
     if len(rem_elec_idx)>0: 
         rem_node_bool = min(node_x) == node_x #& (min(node_y) == node_y) & (min(node_z) == node_z)
-        rem_node = np.argwhere(rem_node_bool == True)
-        node_pos = np.insert(node_pos,np.array(rem_elec_idx),[rem_node[0][0]]*len(rem_elec_idx),axis=0)
-        
-    #add nodes to mesh
-    mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
+        rem_node = np.argwhere(rem_node_bool == True)[0][0]
+        #node_pos = np.insert(node_pos,np.array(rem_elec_idx),[rem_node]*len(rem_elec_idx),axis=0)
+        # insert node position in to electrode node array 
+        node_pos_tmp = [] # temporary node position array 
+        iremote = [False]*len(elec_type)
+        c = 0 
+        for i, key in enumerate(elec_type):
+            if key == 'remote':
+                node_pos_tmp.append(rem_node+1)
+                iremote[i] = True 
+            else: 
+                node_pos_tmp.append(node_pos[c])
+                c+=1            
+        node_pos = np.array(node_pos_tmp,dtype=int) # redefine node positioning 
+        mesh.setElecNode(node_pos-1,np.array(iremote,dtype=bool))
+    else:
+        #add nodes to mesh
+        mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
     
     return mesh
 
