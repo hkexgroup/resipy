@@ -4846,7 +4846,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
                 node_pos_tmp.append(node_pos[c])
                 c+=1            
         node_pos = np.array(node_pos_tmp,dtype=int) # redefine node positioning 
-        mesh.setElecNode(node_pos,np.array(iremote,dtype=bool))
+        mesh.setElecNode(node_pos-1,np.array(iremote,dtype=bool))
     else:
         #add nodes to mesh
         mesh.setElecNode(node_pos-1)#in python indexing starts at 0, in gmsh it starts at 1 
