@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.3.2' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.3.3' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -2813,7 +2813,7 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     zlimBot = np.min(self.topo['z'].values) - self.fmd 
             else:
-                zlimBot = np.min(elec_z) - self.fmd 
+                zlimBot = np.min(elec_z[~self.elec['remote']]) - self.fmd 
                 
             self.zlim = [zlimBot, zlimTop]
         self._computePolyTable()
