@@ -22,8 +22,7 @@ Note for Windows users:
 - If your Windows prevents you from running ResIPy on first run, on the “Windows protected your PC” message, click on “More info” and then click on “Run anyway” from the bottom. You may also allow ResIPy to run from your antivirus program. 
 
 Notes for Mac and Linux users:
-- You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction below).
-- *wine* is partially supported on macOS Big Sur and is **only supported on Intel chip Mac computers**!
+- You will need to have [*wine*](https://www.winehq.org/) installed as the executables beneath are compiled for Windows (detailed instruction [below](https://gitlab.com/hkex/resipy#wine-installation-linux-and-mac-users)).
 	- If you get "ResIPy is damaged" error, run this command in terminal `xattr -cr /Applications/ResIPy.app`
 - If you get "command not found" error, you might need to allow "executable permission" to the binary, using `sudo chmod 775 ResIPy`
 
@@ -76,7 +75,7 @@ sudo pacman -S install wine # if using arch based distribution
 
 ### On Mac
 
-**IMPORTANT NOTE**: *wine* is partially supported on macOS Big Sur and is **only supported on Intel chip Mac computers**! Please try installing *wine* v5.x with below instructions first.
+**IMPORTANT NOTE**: Please try installing *wine* > v5 with below instructions first.
 ResIPy cannot be run from within the dmg. You must drag it to a folder on your filesystem (e.g., Applications, Desktop).   
 
 You first need to install ```wine``` through ```Homebrew``` to be able to run ```.exe``` files on you Mac OS X.   
