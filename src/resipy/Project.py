@@ -229,7 +229,13 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             if winePath != []:
                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
             else:
-                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                global wPath
+                try:
+                    is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                    wPath = '/usr/local/bin/'
+                except:
+                    is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+                    wPath = '/opt/homebrew/bin/'
             wineVersion = []
             for stdout_line in iter(is_wine.stdout.readline, ""):
                 wineVersion.append(stdout_line)
@@ -1789,7 +1795,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+                    cmd = [wPath + winetxt, exePath]
             else:
                 cmd = ['wine',exePath]
     
@@ -3315,7 +3321,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+                    cmd = [wPath + winetxt, exePath]
             else:
                 cmd = ['wine',exePath]
     
@@ -3451,7 +3457,7 @@ class Project(object): # Project master class instanciated by the GUI
             if winePath != []:
                 cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+                cmd = [wPath + winetxt, exePath]
         else:
             cmd = ['wine',exePath]
 
