@@ -135,7 +135,10 @@ def getSysStat():
         in percent. 
     """
     #processor info
-    cpu_speed = psutil.cpu_freq()[0]
+    try: # for Apple silicon
+        cpu_speed = psutil.cpu_freq()[0]
+    except:
+        cpu_speed = 0
     cpu_usage = psutil.cpu_percent()
         
     #check the amount of ram avialable 
@@ -183,7 +186,10 @@ def systemCheck(dump=print):
     #display processor info
     dump("Processor info: %s"%platform.processor())
     num_threads = psutil.cpu_count()
-    max_freq = max(psutil.cpu_freq())
+    try: # for Apple silicon
+        max_freq = max(psutil.cpu_freq())
+    except:
+        max_freq = 0
     dump("%i Threads at <= %5.1f Mhz"%(num_threads,max_freq))
         
     #check the amount of ram 
