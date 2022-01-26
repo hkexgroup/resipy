@@ -1243,7 +1243,8 @@ class Project(object): # Project master class instanciated by the GUI
             ineg = df2['irecip'].values < 0
             df2.loc[ipos, 'irecip'] = df2[ipos]['irecip'] + c
             df2.loc[ineg, 'irecip'] = df2[ineg]['irecip'] - c
-            df = df.append(df2, sort=True) # sort to silence the future warning if concatenation axis is not aligned
+            #df = df.append(df2, sort=True) # sort to silence the future warning if concatenation axis is not aligned
+            df = pd.concat([df, df2], ignore_index=True)
             c = c + df2.shape[0]
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
@@ -3390,8 +3391,15 @@ class Project(object): # Project master class instanciated by the GUI
 
 
         # split the protocol.dat
+        # in pandas >= 1.4.0 header=None with first row with one column (nb of meas)
+        # causes ParseError. to fix it we first read the number of rows from line 2
+        with open(os.path.join(self.dirname, 'protocol.dat'), 'r') as f:
+            f.readline()  # first wow, we don't care
+            nline = len(f.readline().split('\t'))
         dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
-                            sep='\t', header=None, engine='python').reset_index()
+                            sep='\t', header=None, names=np.arange(nline))
+        
+        # the line where the last column is NaN is a line where a new dataset start
         idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
         idf.append(len(dfall))
         dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
@@ -4150,8 +4158,13 @@ class Project(object): # Project master class instanciated by the GUI
             ftype = 'ProtocolDC'
         if self.iTimeLapse:
             # split the protocol.dat
+            # in pandas >= 1.4.0 header=None with first row with one column (nb of meas)
+            # causes ParseError. to fix it we first read the number of rows from line 2
+            with open(os.path.join(invdir, 'protocol.dat'), 'r') as f:
+                f.readline()  # first wow, we don't care
+                nline = len(f.readline().split('\t'))
             dfall = pd.read_csv(os.path.join(invdir, 'protocol.dat'),
-                                sep='\t', header=None, engine='python').reset_index()
+                                sep='\t', header=None, names=np.arange(nline))
             idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
             idf.append(len(dfall))
             dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
@@ -4159,20 +4172,20 @@ class Project(object): # Project master class instanciated by the GUI
             # writing all protocol.dat
             files = []
             for i, df in enumerate(dfs):
-                outputname = os.path.join(self.dirname, 'protocol_{:03d}.dat'.format(i))
+                outputname = os.path.join(self.dirname, 'survey{:03d}.dat'.format(i))
                 files.append(outputname)
                 if self.typ[-1] == 't':
-                    df2 = df[1:].astype({'level_0':int, 'level_1':int, 'level_2':int,
-                                         'level_3':int, 'level_4':int, 'level_5':int,
-                                         'level_6':int, 'level_7':int, 'level_8':int})
-                    df2 = df2.drop('level_10', axis=1) # discard res0 as parser doesn't support it
+                    df2 = df[1:].astype({0:int, 1:int, 2:int,
+                                         3:int, 4:int, 5:int,
+                                         6:int, 7:int, 8:int})
+                    df2 = df2.drop(10, axis=1) # discard res0 as parser doesn't support it
                 else:
-                    df2 = df[1:].astype({'level_0':int, 'level_1':int, 'level_2':int,
-                                         'level_3':int, 'level_4':int})
-                    df2 = df2.drop('level_6', axis=1) # discard res0
+                    df2 = df[1:].astype({0:int, 1:int, 2:int,
+                                         3:int, 4:int})
+                    df2 = df2.drop(6, axis=1) # discard res0
 
                 with open(outputname, 'w') as f:
-                    f.write('{:d}\n'.format(df['level_0'].values[0]))
+                    f.write('{:d}\n'.format(df.loc[:, 0].values[0]))
                     df2.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
                 # header with line count already included
             
