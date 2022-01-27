@@ -8,6 +8,7 @@ v3.3.3
 - Bug fix: ARES parser
 - Bug fix: Matplotlib xticklabel
 - Bug fix: Starting resistivity 
+- Bug fix: Add wine64 path for apple silicon devices
 
 
 v3.3.2
