@@ -4341,7 +4341,13 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if winePath != []:
             cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
         else:
-            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
+            try:
+                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                wPath = '/usr/local/bin/'
+            except:
+                is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+                wPath = '/opt/homebrew/bin/'
+            cmd_line = [wPath + winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
     
     elif platform.system() == 'Linux':
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
