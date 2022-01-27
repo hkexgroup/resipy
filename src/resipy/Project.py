@@ -5070,7 +5070,20 @@ class Project(object): # Project master class instanciated by the GUI
         if iplot is True:
             self.showPseudo()
         dump('Forward modelling done.')
+        
+    def saveForwardModelResult(self,fname):
+        """
+        Save the result of a forward model run to a specific file name/ 
 
+        Parameters
+        ----------
+        fname : str
+            path to file. 
+        """
+        if self.iforward: 
+            _ = self.surveys[0].write2protocol(fname)
+        else:
+            print('No forward model has been run!')
 
     def createModelErrorMesh(self, **kwargs):
         """Create an homogeneous mesh to compute modelling error.
@@ -5940,7 +5953,11 @@ class Project(object): # Project master class instanciated by the GUI
         count=0
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
-            file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
+            if self.iTimeLapse:
+                fname = 'time_step{:0>4}.vtk'.format(count)
+            else:
+                fname = mesh.mesh_title + '.vtk'
+            file_path = os.path.join(dirname, fname) 
             meshcopy = mesh.copy()
             if self.trapeziod is not None and self.pseudo3DMeshResult is None:
                 meshcopy = meshcopy.crop(self.trapeziod)

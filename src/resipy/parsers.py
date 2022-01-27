@@ -346,8 +346,6 @@ def protocolParserLME(fname): # pragma: no cover
 # test code
 #protocolParserLME('api/test/protocol-lmeOut.dat')
 
-
-
 #%% protocol parser for 2D/3D and DC/IP
 def protocolParser(fname, ip=False, fwd=False):
     """
