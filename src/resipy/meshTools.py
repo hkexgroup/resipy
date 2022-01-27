@@ -4474,7 +4474,7 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
     whole_space: boolean, optional
-        flag for if the problem should be treated as a whole space porblem, in which case 
+        flag for if the problem should be treated as a whole space problem, in which case 
         electrode type is ingored and all electrodes are buried in the middle of a large mesh. 
     dump : function, optional
         Function to which pass the output during mesh generation. `print()` is
