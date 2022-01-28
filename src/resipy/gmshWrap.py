@@ -1372,8 +1372,8 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     cln_factor: float, optional
         Factor applied to the characteristic length for fine mesh region to compute
         a characteristic length for background (nuemmon) region
-    mesh_refinement: list of array likes 
-        Coordinates for discrete points in the mesh. 
+    mesh_refinement: dict, pd.DataFrame, optional 
+        Coordinates for discrete points in the mesh (advanced use cases). 
     dump : function, optional
         If None, output is printed using `print()`. Else the given function is passed.
     
@@ -1517,8 +1517,10 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     flank_y = 5 * dp_len
     if any(elec_z < 0):       
         flank_z = 5 * dp_len
+        fh.write('//Maximum mesh depth calculated as 5*max dipole length (%f)\n'%dp_len)
     else:
-        flank_z = 3*fmd
+        flank_z = fmd + (3*fmd)
+        fh.write('//Maximum mesh depth calculated as fmd  + (3*fmd) (fmd=%f)\n'%fmd)
         
     fh.write("//Neumannn boundary points\n")
     cln = cl*cln_factor # nuemom boundary characteristic length 
@@ -1600,6 +1602,7 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     fh.write("Surface Loop (2) = {2,3,4,5,6,7,8,9,10,11,12};\n") # background mesh region volume 
     fh.write("Volume(2) = {2};//End background mesh surfaces\n")   
     
+    # add electrodes to mesh 
     fh.write("//Electrode positions.\n")
     node_pos = [0]*len(elec_x)
     for i in range(len(elec_x)):
@@ -1614,6 +1617,41 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};//buried electrode\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
+    
+    # check if any mesh refinement is requested 
+    if mesh_refinement is not None:
+        fh.write('//Start mesh refinement points\n')
+        # find surface points 
+        rx = mesh_refinement['x']
+        ry = mesh_refinement['y']
+        rz = mesh_refinement['z']
+        npoints = len(rx) # number of refinement points 
+        if 'cl' in mesh_refinement.keys():
+            rcl = mesh_refinement['cl'] # use cl specified for each point 
+            fh.write('//Refinement point characteristic length specified for each point individually\n')
+        else:
+            rcl = [cl]*npoints # use same cl as for electrodes 
+            fh.write('//Refinement point characteristic length the same as for electrodes\n')
+        for i in range(npoints):
+            no_pts += 1
+            # check if point in refined zone or not 
+            if rx[i] > min_x and rx[i] < max_x and ry[i] > min_y and ry[i] < max_y and rz[i] > -fmd:
+                sur_idx = 1
+                vol_idx = 1 
+            else: # otherwise point placed in mesh outside of fine mesh region (zone 1)
+                sur_idx = 2 
+                vol_idx = 2 
+                
+            if rz[i] == 0: # it is on the surface! 
+                fh.write("Point (%i) = {%.2f, %.2f, %.2f, %.2f};\n"%(no_pts, rx[i], ry[i], 0, rcl[i]))
+                fh.write("Point{%i} In Surface{%i};//surface refinement point\n"%(no_pts,sur_idx))# put the point on surface
+            else:
+                if rz[i]>0:
+                    raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have refinement points above the surface!")
+                fh.write("Point (%i) = {%.2f, %.2f, %.2f, %.2f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
+                fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,vol_idx))# put the point in volume 
+        fh.write('//End mesh refinement points\n')
+    
     fh.close()
     # print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
     return np.array(node_pos) 
