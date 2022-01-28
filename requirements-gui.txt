@@ -1,6 +1,6 @@
 numpy
 matplotlib
-pandas==1.3.4
+pandas
 scipy
 requests
 psutil
