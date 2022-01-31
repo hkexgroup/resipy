@@ -9,6 +9,8 @@ v3.3.3
 - Bug fix: Matplotlib xticklabel
 - Bug fix: Starting resistivity 
 - Bug fix: Add wine64 path for apple silicon devices
+- Bug fix: Pandas 1.4.0 not reading time-lapse data (internal) 
+- Bug fix: 3D tetrahedral mesh refinement
 
 
 v3.3.2
