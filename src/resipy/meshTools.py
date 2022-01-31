@@ -4766,9 +4766,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         else:
             surf_elec_z = elec_z.copy()
             elec_z = np.array(elec_z) - np.array(elec_z)#normalise elec_z
-        x_interp = surf_elec_x
-        y_interp = surf_elec_y 
-        z_interp = surf_elec_z
+        x_interp = np.append(surf_elec_x,surf_x)
+        y_interp = np.append(surf_elec_y,surf_y)
+        z_interp = np.append(surf_elec_z,surf_z)
             
     #check if remeote electrodes present, and remove them 
     if len(rem_elec_idx)>0:
