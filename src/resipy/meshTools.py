@@ -4820,7 +4820,8 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
                 
         rz = np.array(mesh_refinement['z']) 
         rz[surf_idx] = 0
-        rz[bur_idx] = rz[bur_idx] - bur_rz_topo # normalise to zero surface 
+        if len(bur_rz)>0:
+            rz[bur_idx] = rz[bur_idx] - bur_rz_topo # normalise to zero surface 
         
         internal_mesh_refinement = {'x':mesh_refinement['x'],
                                     'y':mesh_refinement['y'],
