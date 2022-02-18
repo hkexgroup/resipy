@@ -5105,7 +5105,7 @@ class Project(object): # Project master class instanciated by the GUI
         fname : str
             path to file. 
         """
-        if self.iforward: 
+        if self.iForward: 
             _ = self.surveys[0].write2protocol(fname)
         else:
             print('No forward model has been run!')

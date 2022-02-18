@@ -1647,6 +1647,9 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
             else: # otherwise point placed in mesh outside of fine mesh region (zone 1)
                 sur_idx = 2 
                 vol_idx = 2 
+            
+            if rx[i] == min_x or rx[i] == max_x or ry[i] == min_y or ry[i] == max_y or rz[i] == -fmd:
+                continue 
                 
             if rz[i] == 0: # it is on the surface! 
                 fh.write("Point (%i) = {%.2f, %.2f, %.2f, %.2f};\n"%(no_pts, rx[i], ry[i], 0, rcl[i]))

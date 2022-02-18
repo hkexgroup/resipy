@@ -1306,7 +1306,7 @@ class Mesh:
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
         
-        nmesh.df = new_df
+        nmesh.df = new_df.reset_index()
         nmesh.numel = len(elm_id[in_elem])
         # nmesh.cell_attributes = new_attr[in_elem]
         # nmesh.elm_id = elm_id[in_elem]
@@ -4363,7 +4363,7 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if handle is not None:
             handle(p)
         while p.poll() is None:
-            line = p.stdout.readline().rstrip()
+            line = p.stdout.readline()
             if line.decode('utf-8') != '':
                 dump(line.decode('utf-8'))
     else:
@@ -4820,7 +4820,8 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
                 
         rz = np.array(mesh_refinement['z']) 
         rz[surf_idx] = 0
-        rz[bur_idx] = rz[bur_idx] - bur_rz_topo # normalise to zero surface 
+        if len(bur_rz)>0:
+            rz[bur_idx] = rz[bur_idx] - bur_rz_topo # normalise to zero surface 
         
         internal_mesh_refinement = {'x':mesh_refinement['x'],
                                     'y':mesh_refinement['y'],
