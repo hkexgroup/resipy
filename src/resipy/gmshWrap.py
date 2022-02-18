@@ -1342,7 +1342,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 #%% 3D half space 
 
 def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
-           cl=-1, cl_factor=8, cln_factor=100, dp_len=-1, mesh_refinement=None, dump=None):
+           cl=-1, cl_corner=-1, cl_factor=8, cln_factor=100, dp_len=-1, 
+           mesh_refinement=None, dump=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1361,9 +1362,12 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     file_path: string, optional 
         name of the generated gmsh file (can include file path also) (optional)
     cl: float, optional
-        characteristic length (optional), essentially describes how big the nodes 
-        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        characteristic length (optional) of electrodes, essentially describes how big the nodes 
+        assocaited elements will be on the electrodes. Usually no bigger than 5. If set as -1 (default)
         a characteristic length 1/4 the minimum electrode spacing is computed.
+    cl_corner: float, optional
+        characteristic length of the surface points on the corners of the fine mesh
+        region. By default is 1.2 * cl. 
     cl_factor: float, optional 
         This allows for tuning of the incremental size increase with depth in the 
         mesh, usually set to 2 such that the elements at the DOI are twice as big as those
@@ -1421,7 +1425,9 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
         dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
         triggered = True
-        #print('cl = %f'%cl)  
+
+    if cl_corner == -1: 
+        cl_corner = 1.2*cl 
         
     if dp_len == -1: # compute largest possible dipole length 
         if not triggered:# Avoid recalculating if done already 
@@ -1461,16 +1467,16 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     #add points to file at z = zero 
     no_pts = 1
     loop_pt_idx=[no_pts]
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, max_x, max_y, 0))#multiply by 2 grow the elements away from electrodes 
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, %.2f};\n"%(no_pts, max_x, max_y, 0, cl_corner))#multiply by 2 grow the elements away from electrodes 
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, max_x, min_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, %.2f};\n"%(no_pts, max_x, min_y, 0, cl_corner))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, min_x, min_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, %.2f};\n"%(no_pts, min_x, min_y, 0, cl_corner))
     no_pts += 1
     loop_pt_idx.append(no_pts)
-    fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl*1.2};\n"%(no_pts, min_x, max_y, 0))
+    fh.write("Point (%i) = {%.2f,%.2f,%.2f, %.2f};\n"%(no_pts, min_x, max_y, 0, cl_corner))
     
     #add line loop
     no_lns = 0 

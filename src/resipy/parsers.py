@@ -496,6 +496,18 @@ def primeParserTab(fname, espacing=1):
     #Note R2 expects the electrode format in the form:
     #meas.no | P+ | P- | C+ | C- | transfer resistance
     
+    def f_fill(df): # forward fill fix  
+        force_type ={'pt_p1_no:':'int64',
+                     'pt_p2_no:':'int64',
+                     'pt_c1_no:':'int64',
+                     'pt_c2_no:':'int64',
+                     'pt_calc_res:':'float64',
+                     'pt_meas_contact_resistance:':'float64'} 
+        df[['pt_c1_no:', 'pt_c2_no:']] = df[['pt_c1_no:', 'pt_c2_no:']].fillna(method='ffill', axis=0) 
+        return df.astype(force_type)
+    # fill in empty values in current electrode columns 
+    temp = f_fill(temp)  
+    
     a = temp["pt_p1_no:"]
     b = temp["pt_p2_no:"]
     m = temp["pt_c1_no:"]
