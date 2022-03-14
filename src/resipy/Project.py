@@ -185,13 +185,16 @@ def systemCheck(dump=print):
     
     #display processor info
     dump("Processor info: %s"%platform.processor())
-    num_threads = psutil.cpu_count()
+    cpu_cores = psutil.cpu_count(logical=True)
+    physical_cores = psutil.cpu_count(logical=False)
+
     try: # for Apple silicon
         max_freq = max(psutil.cpu_freq())
     except:
         max_freq = 0
-    dump("%i Threads at <= %5.1f Mhz"%(num_threads,max_freq))
-        
+    dump("%i Threads at <= %5.1f Mhz"%(cpu_cores,max_freq))
+    dump("(%i)"%physical_cores)
+    
     #check the amount of ram 
     ram = psutil.virtual_memory()
     totalMemory = ram[0]*9.31e-10
@@ -267,8 +270,9 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     
     return {'totalMemory':totalMemory,
             'availMemory':availMemory,
-            'core_count':num_threads,
-            'max_freq':max_freq,
+            'cpuCount':cpu_cores,
+            'physicalCpuCount':physical_cores, 
+            'maxFreq':max_freq,
             'OS':OpSys,
             'wineCheck':wineCheck,
             'GPU':mt.gpuinfo}
@@ -1782,9 +1786,9 @@ class Project(object): # Project master class instanciated by the GUI
             wds2 = wds.copy()
     
             # create workers directory
-            ncoresAvailable = ncores = systemCheck()['core_count']
+            ncoresAvailable = ncores = sysinfo['cpuCount']
             if ncores is None:
-                ncores = ncoresAvailable
+                ncores = sysinfo['physicalCpuCount']
             else:
                 if ncores > ncoresAvailable:
                     raise ValueError('Number of cores larger than available')
@@ -3431,9 +3435,9 @@ class Project(object): # Project master class instanciated by the GUI
                 # print('done')
 
         # create workers directory
-        ncoresAvailable = systemCheck()['core_count']
+        ncoresAvailable = sysinfo['cpuCount']
         if ncores is None: # and self.ncores is None:
-            ncores = ncoresAvailable
+            ncores = sysinfo['physicalCpuCount']
         else:
             if ncores > ncoresAvailable:
                 raise ValueError('Number of cores larger than available')
@@ -6203,7 +6207,7 @@ class Project(object): # Project master class instanciated by the GUI
             Raised if ncores is more than that avialable
 
         """
-        if ncores>sysinfo['core_count']:
+        if ncores>sysinfo['cpuCount']:
             raise EnvironmentError('More cores requested than detected/avialable')
         if type(ncores) != int:
             raise TypeError('Expected ncores as an int, but got %s'%str(type(ncores)))

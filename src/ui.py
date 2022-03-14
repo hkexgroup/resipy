@@ -4739,7 +4739,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.ncoresLabel = QLabel('<a href="ncores">Number of parallel threads</a>')
         self.ncoresLabel.linkActivated.connect(showHelpAdv)
         self.ncoresText = QLineEdit()
-        self.ncoresText.setText('%i'%sysinfo['core_count'])
+        self.ncoresText.setText('%i'%sysinfo['physicalCpuCount'])
         advForm.addRow(self.ncoresLabel, self.ncoresText)
 
         self.modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
@@ -7127,7 +7127,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         for key in sysinfo.keys():
             print(key + ' = ' + str(sysinfo[key]), end='')
-            if key == 'max_freq':
+            if key == 'maxFreq':
                 print(' Mhz')
             elif key.find('Memory') != -1:
                 print(' Gb')
