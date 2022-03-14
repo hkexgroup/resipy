@@ -1638,11 +1638,13 @@ def aresParser(fname, spacing=None):
     #getting spacing
     spacing_lineNum = [i for i in range(len(dump)) if 'Electrode distance' in dump[i]]
     if spacing_lineNum != []:
-        spacing = dump[spacing_lineNum[0]].split()[2]
-
+        spacing = dump[spacing_lineNum[0]].split()[2] 
+    
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if 'Measured data' in dump[i]]
-    df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+1, index_col=False)
+    dump_clean = [x.split() for x in dump[data_linNum_s[0]+1:] if 'too low current' not in x]  # filtering "too low current" values
+    # df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+1, index_col=False) # old way
+    df = pd.DataFrame(dump_clean[1:], columns=dump_clean[0])
     df = df.rename(columns={'C1[el]':'a',
                             'C2[el]':'b',
                             'P1[el]':'m',
@@ -1659,7 +1661,7 @@ def aresParser(fname, spacing=None):
     ip_cols = [col for col in df.columns if all(i in col for i in ['IP', '[%]'])] # assuming IP columns are those with IP and [%]
     if ip_cols!= []:
         # df[ip_cols] = df[ip_cols]/100 # not sure about this... who reports IP in % anyway?!
-        df['ip'] = df[ip_cols].mean(axis=1) # average of all IP windows
+        df['ip'] = df[ip_cols].astype(float).mean(axis=1) # average of all IP windows
         df = df[['a','b','m','n','i','vp','ip']]
         
     else:
