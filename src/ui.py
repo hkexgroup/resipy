@@ -4739,7 +4739,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.ncoresLabel = QLabel('<a href="ncores">Number of parallel threads</a>')
         self.ncoresLabel.linkActivated.connect(showHelpAdv)
         self.ncoresText = QLineEdit()
-        self.ncoresText.setText('%i'%sysinfo['core_count'])
+        self.ncoresText.setText('%i'%sysinfo['physicalCpuCount'])
         advForm.addRow(self.ncoresLabel, self.ncoresText)
 
         self.modErrLabel = QLabel('<a href="modErr">Compute Modelling Error</a>')
@@ -6554,38 +6554,39 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pdebug('updateElec()')
         try:
             elec = self.elecTable.getTable()
-            ok = False
-            if self.tempElec is None:
-                ok = True
-            else:
-                if self.project.iForward is True:
-                    ok = True
-                elif np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
+            if not np.all(elec[['x', 'y', 'z']].isnull().all().values): # see if there are any electrodes! in case of fwd modeling
+                ok = False
+                if self.tempElec is None:
                     ok = True
                 else:
-                    ok = False
-            if ok:
-                self.tempElec = elec
-                elecList = None
-                if self.pseudo3DCheck.isChecked():
-                    elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
-                    self.project.setPseudo3DElec(pd.concat(elecList, axis=0, ignore_index=True))
-                    elecList = self.project._create2DLines() # convert to horizontal 2D lines
-                
-                self.project.setElec(elec, elecList)
-                if self.project.elec['remote'].sum() > 0:
-                    self.meshQuadGroup.setEnabled(False)
-                else:
-                    self.meshQuadGroup.setEnabled(True)
-                self.writeLog('#k.setElec(elec)')
-                # TODO don't know how to write to log this
-                self.project.mesh = None
-                self.mwMesh.clear()
-                if len(self.project.surveys) > 0:
-                    self.plotPseudo()
-                    self.plotManualFiltering()
-                    if self.project.typ[0] == 'c':
-                        self.plotPseudoIP()
+                    if self.project.iForward is True and np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
+                        ok = True
+                    elif np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
+                        ok = True
+                    else:
+                        ok = False
+                if ok:
+                    self.tempElec = elec
+                    elecList = None
+                    if self.pseudo3DCheck.isChecked():
+                        elecList = self.project.split3DGrid(elec.copy(), changeLabel=False) # splitting lines
+                        self.project.setPseudo3DElec(pd.concat(elecList, axis=0, ignore_index=True))
+                        elecList = self.project._create2DLines() # convert to horizontal 2D lines
+                    
+                    self.project.setElec(elec, elecList)
+                    if self.project.elec['remote'].sum() > 0:
+                        self.meshQuadGroup.setEnabled(False)
+                    else:
+                        self.meshQuadGroup.setEnabled(True)
+                    self.writeLog('#k.setElec(elec)')
+                    # TODO don't know how to write to log this
+                    self.project.mesh = None
+                    self.mwMesh.clear()
+                    if len(self.project.surveys) > 0:
+                        self.plotPseudo()
+                        self.plotManualFiltering()
+                        if self.project.typ[0] == 'c':
+                            self.plotPseudoIP()
         except Exception as e:
             self.errorDump('Error updating pseudosection: ' + str(e))
     
@@ -6701,6 +6702,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.importDataBtn.setText(os.path.basename(fname) + ' (Press to change)')
             self.invNowBtn.setEnabled(True)
             self.activateTabs(True)
+            self.tempElec = self.elecTable.getTable()
             self.infoDump(fname + ' imported successfully')
         except Exception as e:
             self.loadingWidget(exitflag=True)
@@ -7127,7 +7129,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         for key in sysinfo.keys():
             print(key + ' = ' + str(sysinfo[key]), end='')
-            if key == 'max_freq':
+            if key == 'maxFreq':
                 print(' Mhz')
             elif key.find('Memory') != -1:
                 print(' Gb')
