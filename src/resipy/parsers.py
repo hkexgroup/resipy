@@ -346,8 +346,6 @@ def protocolParserLME(fname): # pragma: no cover
 # test code
 #protocolParserLME('api/test/protocol-lmeOut.dat')
 
-
-
 #%% protocol parser for 2D/3D and DC/IP
 def protocolParser(fname, ip=False, fwd=False):
     """
@@ -497,6 +495,18 @@ def primeParserTab(fname, espacing=1):
     temp = pd.read_csv(fname,header=26,delimiter='\t')
     #Note R2 expects the electrode format in the form:
     #meas.no | P+ | P- | C+ | C- | transfer resistance
+    
+    def f_fill(df): # forward fill fix  
+        force_type ={'pt_p1_no:':'int64',
+                     'pt_p2_no:':'int64',
+                     'pt_c1_no:':'int64',
+                     'pt_c2_no:':'int64',
+                     'pt_calc_res:':'float64',
+                     'pt_meas_contact_resistance:':'float64'} 
+        df[['pt_c1_no:', 'pt_c2_no:']] = df[['pt_c1_no:', 'pt_c2_no:']].fillna(method='ffill', axis=0) 
+        return df.astype(force_type)
+    # fill in empty values in current electrode columns 
+    temp = f_fill(temp)  
     
     a = temp["pt_p1_no:"]
     b = temp["pt_p2_no:"]
@@ -1628,11 +1638,13 @@ def aresParser(fname, spacing=None):
     #getting spacing
     spacing_lineNum = [i for i in range(len(dump)) if 'Electrode distance' in dump[i]]
     if spacing_lineNum != []:
-        spacing = dump[spacing_lineNum[0]].split()[2]
-
+        spacing = dump[spacing_lineNum[0]].split()[2] 
+    
     #getting data
     data_linNum_s = [i for i in range(len(dump)) if 'Measured data' in dump[i]]
-    df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+1, index_col=False)
+    dump_clean = [x.split() for x in dump[data_linNum_s[0]+1:] if 'too low current' not in x]  # filtering "too low current" values
+    # df = pd.read_csv(fname, delim_whitespace=True, skiprows=data_linNum_s[0]+1, index_col=False) # old way
+    df = pd.DataFrame(dump_clean[1:], columns=dump_clean[0])
     df = df.rename(columns={'C1[el]':'a',
                             'C2[el]':'b',
                             'P1[el]':'m',
@@ -1649,7 +1661,7 @@ def aresParser(fname, spacing=None):
     ip_cols = [col for col in df.columns if all(i in col for i in ['IP', '[%]'])] # assuming IP columns are those with IP and [%]
     if ip_cols!= []:
         # df[ip_cols] = df[ip_cols]/100 # not sure about this... who reports IP in % anyway?!
-        df['ip'] = df[ip_cols].mean(axis=1) # average of all IP windows
+        df['ip'] = df[ip_cols].astype(float).mean(axis=1) # average of all IP windows
         df = df[['a','b','m','n','i','vp','ip']]
         
     else:

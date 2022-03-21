@@ -135,7 +135,10 @@ def getSysStat():
         in percent. 
     """
     #processor info
-    cpu_speed = psutil.cpu_freq()[0]
+    try: # for Apple silicon
+        cpu_speed = psutil.cpu_freq()[0]
+    except:
+        cpu_speed = 0
     cpu_usage = psutil.cpu_percent()
         
     #check the amount of ram avialable 
@@ -182,10 +185,16 @@ def systemCheck(dump=print):
     
     #display processor info
     dump("Processor info: %s"%platform.processor())
-    num_threads = psutil.cpu_count()
-    max_freq = max(psutil.cpu_freq())
-    dump("%i Threads at <= %5.1f Mhz"%(num_threads,max_freq))
-        
+    cpu_cores = psutil.cpu_count(logical=True)
+    physical_cores = psutil.cpu_count(logical=False)
+
+    try: # for Apple silicon
+        max_freq = max(psutil.cpu_freq())
+    except:
+        max_freq = 0
+    dump("%i Threads at <= %5.1f Mhz"%(cpu_cores,max_freq))
+    dump("(%i)"%physical_cores)
+    
     #check the amount of ram 
     ram = psutil.virtual_memory()
     totalMemory = ram[0]*9.31e-10
@@ -229,7 +238,13 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
             if winePath != []:
                 is_wine = Popen(['%s' % (winePath[0].strip('\n')), '--version'], stdout=PIPE, shell = False, universal_newlines=True)
             else:
-                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                global wPath
+                try:
+                    is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                    wPath = '/usr/local/bin/'
+                except:
+                    is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+                    wPath = '/opt/homebrew/bin/'
             wineVersion = []
             for stdout_line in iter(is_wine.stdout.readline, ""):
                 wineVersion.append(stdout_line)
@@ -255,8 +270,9 @@ a compatiblity layer between unix like OS systems (ie macOS and linux) and windo
     
     return {'totalMemory':totalMemory,
             'availMemory':availMemory,
-            'core_count':num_threads,
-            'max_freq':max_freq,
+            'cpuCount':cpu_cores,
+            'physicalCpuCount':physical_cores, 
+            'maxFreq':max_freq,
             'OS':OpSys,
             'wineCheck':wineCheck,
             'GPU':mt.gpuinfo}
@@ -1231,7 +1247,8 @@ class Project(object): # Project master class instanciated by the GUI
             ineg = df2['irecip'].values < 0
             df2.loc[ipos, 'irecip'] = df2[ipos]['irecip'] + c
             df2.loc[ineg, 'irecip'] = df2[ineg]['irecip'] - c
-            df = df.append(df2, sort=True) # sort to silence the future warning if concatenation axis is not aligned
+            #df = df.append(df2, sort=True) # sort to silence the future warning if concatenation axis is not aligned
+            df = pd.concat([df, df2], ignore_index=True)
             c = c + df2.shape[0]
         self.bigSurvey.df = df.copy() # override it
         self.bigSurvey.dfOrigin = df.copy()
@@ -1769,9 +1786,9 @@ class Project(object): # Project master class instanciated by the GUI
             wds2 = wds.copy()
     
             # create workers directory
-            ncoresAvailable = ncores = systemCheck()['core_count']
+            ncoresAvailable = ncores = sysinfo['cpuCount']
             if ncores is None:
-                ncores = ncoresAvailable
+                ncores = sysinfo['physicalCpuCount']
             else:
                 if ncores > ncoresAvailable:
                     raise ValueError('Number of cores larger than available')
@@ -1789,7 +1806,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+                    cmd = [wPath + winetxt, exePath]
             else:
                 cmd = ['wine',exePath]
     
@@ -3315,7 +3332,7 @@ class Project(object): # Project master class instanciated by the GUI
                 if winePath != []:
                     cmd = ['%s' % (winePath[0].strip('\n')), exePath]
                 else:
-                    cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+                    cmd = [wPath + winetxt, exePath]
             else:
                 cmd = ['wine',exePath]
     
@@ -3378,8 +3395,15 @@ class Project(object): # Project master class instanciated by the GUI
 
 
         # split the protocol.dat
+        # in pandas >= 1.4.0 header=None with first row with one column (nb of meas)
+        # causes ParseError. to fix it we first read the number of rows from line 2
+        with open(os.path.join(self.dirname, 'protocol.dat'), 'r') as f:
+            f.readline()  # first wow, we don't care
+            nline = len(f.readline().split('\t'))
         dfall = pd.read_csv(os.path.join(self.dirname, 'protocol.dat'),
-                            sep='\t', header=None, engine='python').reset_index()
+                            sep='\t', header=None, names=np.arange(nline))
+        
+        # the line where the last column is NaN is a line where a new dataset start
         idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
         idf.append(len(dfall))
         dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
@@ -3411,9 +3435,9 @@ class Project(object): # Project master class instanciated by the GUI
                 # print('done')
 
         # create workers directory
-        ncoresAvailable = systemCheck()['core_count']
+        ncoresAvailable = sysinfo['cpuCount']
         if ncores is None: # and self.ncores is None:
-            ncores = ncoresAvailable
+            ncores = sysinfo['physicalCpuCount']
         else:
             if ncores > ncoresAvailable:
                 raise ValueError('Number of cores larger than available')
@@ -3451,7 +3475,7 @@ class Project(object): # Project master class instanciated by the GUI
             if winePath != []:
                 cmd = ['%s' % (winePath[0].strip('\n')), exePath]
             else:
-                cmd = ['/usr/local/bin/%s' % winetxt, exePath]
+                cmd = [wPath + winetxt, exePath]
         else:
             cmd = ['wine',exePath]
 
@@ -4138,8 +4162,13 @@ class Project(object): # Project master class instanciated by the GUI
             ftype = 'ProtocolDC'
         if self.iTimeLapse:
             # split the protocol.dat
+            # in pandas >= 1.4.0 header=None with first row with one column (nb of meas)
+            # causes ParseError. to fix it we first read the number of rows from line 2
+            with open(os.path.join(invdir, 'protocol.dat'), 'r') as f:
+                f.readline()  # first wow, we don't care
+                nline = len(f.readline().split('\t'))
             dfall = pd.read_csv(os.path.join(invdir, 'protocol.dat'),
-                                sep='\t', header=None, engine='python').reset_index()
+                                sep='\t', header=None, names=np.arange(nline))
             idf = list(np.where(np.isnan(dfall[dfall.columns[-1]].values))[0])
             idf.append(len(dfall))
             dfs = [dfall.loc[idf[i]:idf[i+1]-1,:] for i in range(len(idf)-1)]
@@ -4147,20 +4176,20 @@ class Project(object): # Project master class instanciated by the GUI
             # writing all protocol.dat
             files = []
             for i, df in enumerate(dfs):
-                outputname = os.path.join(self.dirname, 'protocol_{:03d}.dat'.format(i))
+                outputname = os.path.join(self.dirname, 'survey{:03d}.dat'.format(i))
                 files.append(outputname)
                 if self.typ[-1] == 't':
-                    df2 = df[1:].astype({'level_0':int, 'level_1':int, 'level_2':int,
-                                         'level_3':int, 'level_4':int, 'level_5':int,
-                                         'level_6':int, 'level_7':int, 'level_8':int})
-                    df2 = df2.drop('level_10', axis=1) # discard res0 as parser doesn't support it
+                    df2 = df[1:].astype({0:int, 1:int, 2:int,
+                                         3:int, 4:int, 5:int,
+                                         6:int, 7:int, 8:int})
+                    df2 = df2.drop(10, axis=1) # discard res0 as parser doesn't support it
                 else:
-                    df2 = df[1:].astype({'level_0':int, 'level_1':int, 'level_2':int,
-                                         'level_3':int, 'level_4':int})
-                    df2 = df2.drop('level_6', axis=1) # discard res0
+                    df2 = df[1:].astype({0:int, 1:int, 2:int,
+                                         3:int, 4:int})
+                    df2 = df2.drop(6, axis=1) # discard res0
 
                 with open(outputname, 'w') as f:
-                    f.write('{:d}\n'.format(df['level_0'].values[0]))
+                    f.write('{:d}\n'.format(df.loc[:, 0].values[0]))
                     df2.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
                 # header with line count already included
             
@@ -5070,7 +5099,20 @@ class Project(object): # Project master class instanciated by the GUI
         if iplot is True:
             self.showPseudo()
         dump('Forward modelling done.')
+        
+    def saveForwardModelResult(self,fname):
+        """
+        Save the result of a forward model run to a specific file name/ 
 
+        Parameters
+        ----------
+        fname : str
+            path to file. 
+        """
+        if self.iForward: 
+            _ = self.surveys[0].write2protocol(fname)
+        else:
+            print('No forward model has been run!')
 
     def createModelErrorMesh(self, **kwargs):
         """Create an homogeneous mesh to compute modelling error.
@@ -5940,7 +5982,11 @@ class Project(object): # Project master class instanciated by the GUI
         count=0
         for mesh, s in zip(self.meshResults, self.surveys):
             count+=1
-            file_path = os.path.join(dirname, mesh.mesh_title + '.vtk')
+            if self.iTimeLapse:
+                fname = 'time_step{:0>4}.vtk'.format(count)
+            else:
+                fname = mesh.mesh_title + '.vtk'
+            file_path = os.path.join(dirname, fname) 
             meshcopy = mesh.copy()
             if self.trapeziod is not None and self.pseudo3DMeshResult is None:
                 meshcopy = meshcopy.crop(self.trapeziod)
@@ -6161,7 +6207,7 @@ class Project(object): # Project master class instanciated by the GUI
             Raised if ncores is more than that avialable
 
         """
-        if ncores>sysinfo['core_count']:
+        if ncores>sysinfo['cpuCount']:
             raise EnvironmentError('More cores requested than detected/avialable')
         if type(ncores) != int:
             raise TypeError('Expected ncores as an int, but got %s'%str(type(ncores)))

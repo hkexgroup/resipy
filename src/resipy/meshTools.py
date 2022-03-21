@@ -1306,7 +1306,7 @@ class Mesh:
         
         nmesh = self.copy() # make a new mesh object with fewer elements 
         
-        nmesh.df = new_df
+        nmesh.df = new_df.reset_index()
         nmesh.numel = len(elm_id[in_elem])
         # nmesh.cell_attributes = new_attr[in_elem]
         # nmesh.elm_id = elm_id[in_elem]
@@ -4341,7 +4341,13 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if winePath != []:
             cmd_line = ['%s' % (winePath[0].strip('\n')), ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
         else:
-            cmd_line = ['/usr/local/bin/%s' % winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
+            try:
+                is_wine = Popen(['/usr/local/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True)
+                wPath = '/usr/local/bin/'
+            except:
+                is_wine = Popen(['/opt/homebrew/bin/%s' % winetxt,'--version'], stdout=PIPE, shell = False, universal_newlines=True) # quick fix for M1 Macs
+                wPath = '/opt/homebrew/bin/'
+            cmd_line = [wPath + winetxt, ewd+'/gmsh.exe', file_name+'.geo', opt,'-nt','%i'%ncores]
     
     elif platform.system() == 'Linux':
         if os.path.isfile(os.path.join(ewd,'gmsh_linux')):
@@ -4357,7 +4363,7 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         if handle is not None:
             handle(p)
         while p.poll() is None:
-            line = p.stdout.readline().rstrip()
+            line = p.stdout.readline()
             if line.decode('utf-8') != '':
                 dump(line.decode('utf-8'))
     else:
@@ -4605,8 +4611,10 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         Numpy array of shape (3,n), should follow the format np.array([x1,x2,x3,...],[y1,y2,y3,...],[z1,z2,z3,...]).
         Allows for extra refinement for the top surface of the mesh. The points are not added to the mesh, but 
         considered in post processing in order to super impose topography on the mesh. 
-    mesh_refinement : np.array, optional
-        Coming soon ... Not yet implimented.
+    mesh_refinement : dict, pd.DataFrame, optional 
+        Dataframe (or dict) contianing 'x', 'y', 'z', 'type' columns which describe points which can be used to refine the mesh,
+        unlike surface_refinement, this argument allows the user granular control over the refinement of mesh
+        elements. See further explanation in tetraMesh notes. 
     show_output : boolean, optional
         `True` if gmsh output is to be printed to console. 
     path : string, optional
@@ -4656,6 +4664,16 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
                     avialable. This is the default. 
         None : No interpolation method is used to interpolated topography on to 
                     mesh, hence a flat mesh is returned. 
+                    
+    Format of mesh_refinement:
+        The variable must have x,y,z and type columns
+        'x': x coordinate array like 
+        'y': y coordinate array like 
+        'z': z coordinate array like 
+        'type': list, object array of point types, use the tag 'surface' for 
+            surface points, use 'buried' for buried points. 
+        'cl': array like of characteristic lengths for each refinement point in 
+            the mesh. 
     """
     #formalities 
     if len(elec_x) != len(elec_y):
@@ -4748,13 +4766,73 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         else:
             surf_elec_z = elec_z.copy()
             elec_z = np.array(elec_z) - np.array(elec_z)#normalise elec_z
+        x_interp = np.append(surf_elec_x,surf_x)
+        y_interp = np.append(surf_elec_y,surf_y)
+        z_interp = np.append(surf_elec_z,surf_z)
             
     #check if remeote electrodes present, and remove them 
     if len(rem_elec_idx)>0:
         elec_x = np.delete(elec_x,rem_elec_idx)
         elec_y = np.delete(elec_y,rem_elec_idx)
-        elec_z = np.delete(elec_z,rem_elec_idx)    
-         
+        elec_z = np.delete(elec_z,rem_elec_idx)  
+        
+    # check if mesh refinement present 
+    if mesh_refinement is not None:        
+        surf_rx = []
+        surf_ry = []
+        surf_rz = []
+        surf_idx = []
+        bur_rx = []
+        bur_ry = []
+        bur_rz = []
+        bur_idx = []
+        for i, key in enumerate(mesh_refinement['type']):
+            if key == 'buried':
+                bur_rx.append(mesh_refinement['x'][i])
+                bur_ry.append(mesh_refinement['y'][i])
+                bur_rz.append(mesh_refinement['z'][i])
+                bur_idx.append(i)
+            if key == 'surface' or key=='electrode':
+                surf_rx.append(mesh_refinement['x'][i])
+                surf_ry.append(mesh_refinement['y'][i])
+                surf_rz.append(mesh_refinement['z'][i])
+                surf_idx.append(i)
+        #interpolate in order to normalise buried electrode elevations to 0
+        x_interp = np.append(x_interp,surf_rx)#parameters to be interpolated with
+        y_interp = np.append(y_interp,surf_ry)
+        z_interp = np.append(z_interp,surf_rz)
+        
+        #if we have buried points normalise their elevation to as if they are on a flat surface
+        if len(bur_rz)>0: 
+            dump('found buried mesh refinement points')
+            if interp_method == 'idw': 
+                bur_rz_topo = interp.idw(bur_rx, bur_ry, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
+            elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
+                bur_rz_topo = interp.interp2d(bur_rx, bur_ry, x_interp, y_interp, z_interp)
+            elif interp_method == 'nearest':
+                bur_rz_topo = interp.nearest(bur_rx, bur_ry, x_interp, y_interp, z_interp)
+            elif interp_method == 'spline':
+                bur_rz_topo = interp.interp2d(bur_rx, bur_ry, x_interp, y_interp, z_interp,method='spline')
+            elif interp_method == 'triangulate':
+                bur_rz_topo = interp.triangulate(bur_rx, bur_ry, x_interp, y_interp, z_interp)
+            elif interp_method is None:
+                bur_rz_topo = np.zeros_like(bur_idx)
+                
+        rz = np.array(mesh_refinement['z']) 
+        rz[surf_idx] = 0
+        if len(bur_rz)>0:
+            rz[bur_idx] = rz[bur_idx] - bur_rz_topo # normalise to zero surface 
+        
+        internal_mesh_refinement = {'x':mesh_refinement['x'],
+                                    'y':mesh_refinement['y'],
+                                    'z':rz}
+        if 'cl' in mesh_refinement.keys(): # pass individual characteristic lengths to box_3d 
+            internal_mesh_refinement['cl'] = mesh_refinement['cl']
+
+        kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to box_3d
+    else:
+        internal_mesh_refinement = None # then there will be no internal mesh refinement 
+    
     # check directories 
     if path == "exe":
         ewd = os.path.join(
@@ -4806,10 +4884,6 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         os.remove(file_name+".geo");os.remove(file_name+".msh")
         
     dump('interpolating topography onto mesh using %s interpolation...'%interp_method)
-    
-    x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
-    y_interp = np.append(surf_elec_y,surf_y)
-    z_interp = np.append(surf_elec_z,surf_z)
 
     #using home grown functions to interpolate / extrapolate topography on mesh
     if interp_method == 'idw': 
