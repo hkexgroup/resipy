@@ -532,7 +532,7 @@ class Project(object): # Project master class instanciated by the GUI
             elecdists[np.triu_indices(len(elecdists))] = dist
             elecdists[elecdists == 0] = dist
             
-            # less than dist pairs indices
+            # indices of pairs with distance < dist
             closepairs = np.c_[np.where(elecdists < dist)[0], np.where(elecdists < dist)[1]]
             
             if len(closepairs) > len(closepairsL): 
@@ -548,10 +548,12 @@ class Project(object): # Project master class instanciated by the GUI
             
             eleccoors[closepairs[:,0], :] = eleccoors[poses, :]
             closepairsL = closepairs.copy()
+            elecdf_temp = self.elec.copy() # to make it compatible with the new self.setElec
+            elecdf_temp[['x','y','z']] = eleccoors
             
             if len(closepairs) == 0:
                 print('Merging close electrodes successful!')
-                self.setElec(eleccoors)
+                self.setElec(elecdf_temp)
                 return True
         
         if len(closepairs) != 0: # solution did not converge
