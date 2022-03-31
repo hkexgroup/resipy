@@ -1871,6 +1871,7 @@ class Mesh:
                 use_pyvista=True,
                 background_color=(0.8,0.8,0.8),
                 pvslices=([],[],[]),
+                pvspline=None,
                 pvthreshold=None,
                 pvgrid=True,
                 pvcontour=[],
@@ -1925,6 +1926,9 @@ class Mesh:
         pvslices : tuple of list of float, optional
             Determine the X, Y, Z slices. e.g.: ([3], [], [-3, -4]) will add
             a slice normal to X in 3 and two slices normal to Z in -3 and -4.
+        pvspline : 'elec' or numpy array, optional
+            If 'elec' mesh will be sliced along the electrodes path otherwise 
+            an array of X, Y, Z of points on a path to slice the mesh along that path is needed.
         pvthreshold : list of two floats, optional
             Keep values between pvthreshold[0] and pvthreshold[1].
         pvgrid : bool, optional
@@ -2131,6 +2135,22 @@ class Mesh:
                                             scalar_bar_args={'color':tcolor})
                             else:
                                 print('empty mesh')
+            elif pvspline is not None:
+                if pvspline == 'elec':
+                    pvspline = self.elec.copy()[~iremote,:]
+                spline_sliced_path = pv.Spline(pvspline, int(len(pvspline)*10)) # pyvista spline for slicing (the number is how smooth we want it *10 makes 10 times more points on the slice path - smoother)
+                mesh_spline_slice = self.pvmesh.slice_along_line(spline_sliced_path)
+                if mesh_spline_slice.number_of_points > 0 or mesh_spline_slice.number_of_cells > 0:
+                    ax.add_mesh(mesh_spline_slice,
+                                scalars = attr,
+                                cmap=color_map,
+                                clim=[vmin, vmax],
+                                show_scalar_bar=color_bar,
+                                show_edges=edges,
+                                opacity=alpha,
+                                scalar_bar_args={'color':tcolor})
+                else:
+                    print('empty mesh')
             else:        
                 if self.pvmesh.number_of_points > 0 or self.pvmesh.number_of_cells > 0:
                     ax.add_mesh(self.pvmesh,
