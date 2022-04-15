@@ -5116,7 +5116,7 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
 # angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
 # celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
 # elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
-# mesh = cylinderMesh(elec, file_path='/home/jkl/Downloads/mesh_cylinder',
+# mesh = cylinderMesh(elec, file_path='invdir/mesh_cylinder',
 #                     zlim=[0, 47.5], cl=0.5)
 
 #%% tank mesh
