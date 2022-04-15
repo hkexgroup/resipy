@@ -532,7 +532,7 @@ class Project(object): # Project master class instanciated by the GUI
             elecdists[np.triu_indices(len(elecdists))] = dist
             elecdists[elecdists == 0] = dist
             
-            # less than dist pairs indices
+            # indices of pairs with distance < dist
             closepairs = np.c_[np.where(elecdists < dist)[0], np.where(elecdists < dist)[1]]
             
             if len(closepairs) > len(closepairsL): 
@@ -548,10 +548,12 @@ class Project(object): # Project master class instanciated by the GUI
             
             eleccoors[closepairs[:,0], :] = eleccoors[poses, :]
             closepairsL = closepairs.copy()
+            elecdf_temp = self.elec.copy() # to make it compatible with the new self.setElec
+            elecdf_temp[['x','y','z']] = eleccoors
             
             if len(closepairs) == 0:
                 print('Merging close electrodes successful!')
-                self.setElec(eleccoors)
+                self.setElec(elecdf_temp)
                 return True
         
         if len(closepairs) != 0: # solution did not converge
@@ -3821,7 +3823,6 @@ class Project(object): # Project master class instanciated by the GUI
         
         return sensScaled
         
-    
     def _clipContour(self, ax, collections, cropMaxDepth=False, clipCorners=False):
         """Clip contours using mesh bound and surface if available.
         
@@ -3909,7 +3910,7 @@ class Project(object): # Project master class instanciated by the GUI
                     sens=True, color_map='viridis', zlim=None, clabel=None,
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
                     clipContour=True, clipCorners=False, use_pyvista=True, background_color=(0.8,0.8,0.8),
-                    pvslices=([],[],[]), pvthreshold=None, pvgrid=True,
+                    pvslices=([],[],[]), pvspline=None, pvthreshold=None, pvgrid=True,
                     pvcontour=[], pvdelaunay3d=False, **kwargs):
         """Show the inverteds section.
 
@@ -3958,6 +3959,9 @@ class Project(object): # Project master class instanciated by the GUI
         pvslices : tuple of list of float, optional
             (3D only) Determine the X, Y, Z slices. e.g.: ([3], [], [-3, -4]) will add
             a slice normal to X in 3 and two slices normal to Z in -3 and -4.
+        pvspline : 'elec' or numpy array, optional
+            (3D only) If 'elec' mesh will be sliced along the electrodes path otherwise 
+            an array of X, Y, Z of points on a path to slice the mesh along that path is needed.
         pvthreshold : list of two floats, optional
             (3D only) Keep values between pvthreshold[0] and pvthreshold[1].
         pvgrid : bool, optional
@@ -4027,7 +4031,7 @@ class Project(object): # Project master class instanciated by the GUI
                 self.showPseudo3DResults(ax=ax, edge_color=edge_color,
                     attr=attr, color_map=color_map, clabel=clabel, returnMesh=True,
                     use_pyvista=use_pyvista, background_color=background_color,
-                    pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+                    pvslices=pvslices, pvspline=pvspline, pvthreshold=pvthreshold, pvgrid=pvgrid,
                     pvcontour=pvcontour, cropMaxDepth=cropMaxDepth, clipCorners=clipCorners, **kwargs)
             else: # 3D case
                 if zlim is None:
@@ -4038,7 +4042,7 @@ class Project(object): # Project master class instanciated by the GUI
                 mesh.show(ax=ax, edge_color=edge_color,
                         attr=attr, color_map=color_map, clabel=clabel,
                         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
-                        pvslices=pvslices, pvthreshold=pvthreshold, pvgrid=pvgrid,
+                        pvslices=pvslices, pvspline=pvspline, pvthreshold=pvthreshold, pvgrid=pvgrid,
                         pvcontour=pvcontour, pvdelaunay3d=pvdelaunay3d, darkMode=self.darkMode, **kwargs)
                 
         else:
