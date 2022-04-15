@@ -2052,7 +2052,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
         elec = electrodes
         
     # compute number of electrode per ring
-    nepr = np.vstack(list({tuple(e) for e in elec[:, :1]})).shape[0]
+    nepr = np.vstack(list({tuple(e) for e in elec[:, :2]})).shape[0]
     
     # compute distance matrix (useful for inferring cl and radius)
     def cdist(a):
@@ -2159,7 +2159,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     # horizontal line loop
     shor = []
     for l in lhor:
-        # n = 12*finer
+        # n = nepr*finer
         content += 'Line Loop({:d}) = {{'.format(c) + ' ,'.join(np.array(l)[:-1].astype(int).astype(str)) + '};\n'
         shor.append(c)
         c += 1
