@@ -2764,6 +2764,13 @@ class Mesh:
             depth = Z - elm_z
             self.df['depths'] = depth
             self.no_attributes += 1
+            
+            # compute for nodes too
+            nZ = np.interp(self.node[:,0],datum_x,datum_z,
+                           left=datum_z[min_idx],
+                           right=datum_z[max_idx])
+            node_depths = nZ - self.node[:,2]
+            self.ptdf['depths'] = node_depths
             return depth
         elif self.ndims == 3: # use 2D interpolation
             elm_x = np.array(self.elmCentre[:,0])
@@ -2776,6 +2783,14 @@ class Mesh:
             depth = Z - elm_z
             self.df['depths'] = depth # add cell depths to attribute cache
             self.no_attributes += 1
+            
+            # compute for nodes too
+            nZ = interp.triangulate(self.node[:,0], self.node[:,1], 
+                                    surmesh.node[:,0], 
+                                    surmesh.node[:,1], 
+                                    surmesh.node[:,2])
+            node_depths = nZ - self.node[:,2]
+            self.ptdf['depths'] = node_depths
             return depth
         
     #%% Gradients 
@@ -5019,12 +5034,13 @@ def prism_mesh(*args):
     
 
 #%% cylinder mesh
-def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
-               cl=-1, finer=4,
-               keep_files=True,
-               show_output=True, 
-               path='exe', dump=print,
-               handle=None):
+def cylinderMesh(elec_x, elec_y, elec_z,
+                 zlim=None, radius=None, file_path='cylinder_mesh.geo',
+                 cl=-1, finer=4,
+                 keep_files=True,
+                 show_output=True, 
+                 path='exe', dump=print,
+                 handle=None):
     """Make a cylinder mesh.
     
     Parameters
@@ -5049,9 +5065,10 @@ def cylinderMesh(elec, zlim=None, radius=None, file_path='cylinder_mesh.geo',
         killed in the UI for instance.
     """
     file_path = file_path if file_path[-4:] == '.geo' else file_path + '.geo'
+    elec = [elec_x,elec_y,elec_z]
     gw.cylinder_mesh(elec, zlim=zlim, radius=radius, file_path=file_path,
-                     cl=cl, finer=finer)    
-    
+                     cl=cl, elemz=finer)    
+    elec = np.array(elec).T 
     # check directories 
     if path == "exe":
         ewd = os.path.join(

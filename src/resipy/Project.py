@@ -2767,7 +2767,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # self.iadvanced = False # as current implimentation of advanced mesh doesnt work with prisms 
                 elif typ == 'cylinder':
                     print('Creating cylinder mesh...', end='')
-                    mesh = mt.cylinderMesh(np.c_[elec_x, elec_y, elec_z],
+                    mesh = mt.cylinderMesh(elec_x, elec_y, elec_z,
                                              path=os.path.join(self.apiPath, 'exe'),
                                              cl=cl, dump=dump, show_output=show_output,
                                              handle=setMeshProc, **kwargs)

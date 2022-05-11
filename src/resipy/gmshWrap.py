@@ -1868,7 +1868,7 @@ def tank_mesh(elec=None, origin=None, dimension=[10.0,10.0,10.0],
     return node_pos
 
 
-#%% column mesh
+#%% general column mesh (built with prisms)
 def prism_mesh(electrodes, poly=None, z_lim=None, radius=None,
                 file_path='prism_mesh.geo', cl=-1, elemz=4):
     """Make a prism mesh.
@@ -2020,10 +2020,167 @@ def prism_mesh(electrodes, poly=None, z_lim=None, radius=None,
         
     fh.close()
     
+#%% cylinder mesh 
+def cylinder_mesh(electrodes, zlim=None, radius=None,
+                  file_path='cylinder_mesh.geo', cl=-1, elemz=4):
+    """Make a prism mesh.
+    
+    Parameters
+    ------------
+    electrodes: list of array likes
+        first column/list is the x coordinates of electrode positions and so on ... 
+    poly: list, tuple, optional 
+        Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
+        x and y coordinates, ie (poly_x, poly_y)
+    zlim: list, tuple, optional 
+        top and bottom z coordinate of column, in the form (min(z),max(z))
+    radius: float, optional 
+        radius of column
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional), essentially describes how big the nodes 
+        assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    elemz: int, optional
+        Number of layers in between each electrode inside the column mesh. 
+    """
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+    
+    elec_x = electrodes[0]
+    elec_y = electrodes[1]
+    elec_z = electrodes[2]
+    #uni_z = np.unique(elec_z) # unique z values 
+    
+    if zlim is None:
+#        print('zlim not passed')
+        zlim = [min(elec_z),max(elec_z)]
+
+    if radius is None:
+        radius  = max(electrodes[0])
+    if cl == -1:
+        dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
+        cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance   
+    
+    num_elec = len(elec_z)
+
+    fh = open(file_path,'w')
+    fh.write("// ResIPy tetrahedral column mesh script\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")    
+    fh.write("cl=%f;\n"%cl)
+    
+    x = []
+    y = [] # ignore repeated vertices 
+    
+    fh.write("// Make a circle which is extruded\n")
+    fh.write("Point (1) = {0,0,%f,cl};\n"%(zlim[0]))
+    x.append(0);y.append(0)
+    fh.write("Point (2) = {%f,0,%f,cl};\n"%(radius,zlim[0]))
+    x.append(radius);y.append(0)
+    fh.write("Point (3) = {0,%f,%f,cl};\n"%(radius,zlim[0]))
+    x.append(0);y.append(radius)
+    fh.write("Point (4) = {0,-%f,%f,cl};\n"%(radius,zlim[0]))
+    x.append(0);y.append(-radius)
+    fh.write("Point (5) = {-%f,0,%f,cl};\n"%(radius,zlim[0]))
+    x.append(-radius);y.append(0)
+    fh.write("Circle (1) = {2,1,3};\n")
+    fh.write("Circle (2) = {3,1,4};\n")
+    fh.write("Circle (3) = {4,1,5};\n")
+    fh.write("Circle (4) = {5,1,2};\n")
+
+    fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
+    fh.write("Plane Surface(1) = {1};\n")
+    fh.write("Point {%i} In Surface {1};\n\n"%1)
+    edges = 3
+    pt_no = 6
+    
+    #work out which electrodes are inside or on the end of the column 
+    dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
+    inside = dist < radius 
+        
+    
+    if all(inside) == False:
+        fh.write("//Points on surface of the column\n")
+        # x = []
+        # y = [] # ignore repeated vertices 
+        for i in range(num_elec):
+            if elec_z[i] == zlim[0] or elec_z[i] == zlim[1]:
+                continue # come back to this later 
+            
+            if inside[i] and elec_x[i] not in x and elec_y[i] not in y:
+                pt_no+=1
+                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],zlim[0]))
+                fh.write("Point {%i} In Surface {1};\n"%pt_no)
+                x.append(elec_x[i])
+                y.append(elec_y[i])
+            
+    surface = 1
+    
+    if min(elec_z)<zlim[0] or max(elec_z) > zlim[1]:
+        fh.close()
+        raise ValueError ("Z coordinate of column electrodes is out of bounds")
+    
+    allz = np.append(elec_z,zlim)
+    
+    uni_z = np.unique(allz)
+    #extrude surfaces 
+    fh.write("//Extrude planes in between each electrode.\n") 
+    seg = 0 # segment number 
+        
+    for i in range(0,len(uni_z)-1):
+        #work out the amount to extrude 
+        diff = uni_z[i+1] - uni_z[i]    
+        seg += 1          
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i};};'%(seg,diff,surface,elemz))
+        surface += edges + 1
+        if i==0:
+            fh.write('//Base of column\n')
+        elif i == len(uni_z)-2:
+            fh.write('//top of column\n')
+        else:
+            fh.write('\n')
+        pt_no += 3 # add 3 points for each extruded segment 
+        
+    # delete extruded volumes 
+    fh.write('Delete {')
+    for i in range(seg):
+        fh.write('Volume{%i};'%(i+1))
+    fh.write('}\n')
+    
+    top_surf = 1 # number of circle surface at top of colum 
+    base_surf = (seg*4)+1 # number of circle surface at base of column 
+
+    c = 0 
+    fh.write('Surface Loop(%i) = {%i,'%(seg+1,top_surf))
+    for i in range(1,base_surf):
+        if c == 3:
+            c = 0 
+            continue 
+        fh.write('%i,'%(i+1))
+        c+=1 
+    fh.write('%i};\n'%base_surf)
+    fh.write('Volume(1) = {%i};//make surface loop a volume\n'%(seg+1)) 
+    
+    # check for electrodes in the column 
+    if all(inside) == False:
+        fh.write("//Points inside the column\n")
+        for i in range(num_elec):
+            if elec_z[i] == zlim[0] or elec_z[i] == zlim[1]:
+                continue 
+            if inside[i]:
+                pt_no+=1
+                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],elec_z[i]))
+                fh.write("Point {%i} In Volume {1};\n"%pt_no)
+                
+    fh.write('Physical Volume(1) = {1};//make column one physical volume\n')
+    fh.close()
+    
 
 
 #%% Cylinder mesh using tetrahedra
-def cylinder_mesh(electrodes, zlim=None, radius=None, 
+def cylinder_mesh_old(electrodes, zlim=None, radius=None, 
                   file_path='cylinder_mesh.geo', cl=-1, finer=4):
     """Make a cylinder mesh using tetrahedra.
     
@@ -2084,7 +2241,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
         radius = np.max(dist)/2
         
     if zlim is None:
-        zlim = [np.max(elec[:,2], np.min(elec[:,2]))]
+        zlim = [np.max(elec[:,2]), np.min(elec[:,2])]
         
     angles = np.linspace(0, 2*np.pi, 12*finer+1)[:-1]
     celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]

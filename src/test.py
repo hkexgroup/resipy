@@ -661,7 +661,8 @@ t0 = time.time()
 k = Project(typ='R3t')
 k.createSurvey(testdir + 'dc-3d-timelapse-column/protocol.dat', ftype='ProtocolDC')
 k.importElec(testdir + 'dc-3d-timelapse-column/elec.csv')
-k.importMesh(testdir + 'dc-3d-timelapse-column/mesh.msh')
+# k.importMesh(testdir + 'dc-3d-timelapse-column/mesh.msh')
+k.createMesh(typ='cylinder',cl=0.005,finer=4)
 k.param['num_xy_poly'] = 0
 k.param['zmin'] = -np.inf
 k.param['zmax'] = np.inf
