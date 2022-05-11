@@ -2202,10 +2202,14 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
         Number of line between two consecutive electrodes to approximate the
         circle shape.
     """
+    # check the type of electrodes argument
     if isinstance(electrodes, list):
         elec = np.array(electrodes).T
     else:
         elec = electrodes
+        
+    # compute number of electrode per ring
+    nepr = np.vstack(list({tuple(e) for e in elec[:, :2]})).shape[0] 
     
     # compute distance matrix (useful for inferring cl and radius)
     def cdist(a):
@@ -2236,18 +2240,21 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
     if file_path[-4:] != '.geo':
         file_path = file_path + '.geo'
         
-    # add points for the circle
+    # compute radius of not provided
     if radius is None:
         radius = np.max(dist)/2
         
+    # compute default zlim if not provided
     if zlim is None:
         zlim = [np.max(elec[:,2]), np.min(elec[:,2])]
         
-    angles = np.linspace(0, 2*np.pi, 12*finer+1)[:-1]
+    # compute angles and stages
+    angles = np.linspace(0, 2*np.pi, nepr*finer+1)[:-1]
     celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
     stages = [np.max(zlim), np.min(zlim)]
     ringPerStage = [len(np.unique(elec[:,2]))]
     
+    # add additional points to top and bottom ring to make it more circular
     cstg = []
     for stage in stages:
         tmp = []
@@ -2262,7 +2269,7 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
     lhor = []
     for a in cstg:
         tmp = []
-        for i in range(12*finer):
+        for i in range(nepr*finer):
               content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, a[i], a[i+1])
               tmp.append(c)
               c += 1
@@ -2275,12 +2282,19 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
         lver = []
         atop = cstg[l]
         abot = cstg[l+1]
-        for i in range(12*finer):
-            if i % finer == 0: # electrode line, let's connect
-                b = int(i/finer + 1)
-                offset = 0 if l == 0 else np.sum(np.array(ringPerStage)[:l])*12
-                el = np.arange(offset + b, offset + b + ring*12, 12).astype(int).tolist()
-                a = [atop[i]] + el + [abot[i]]
+        for i, ce in enumerate(celec):
+            # is there any electrode aligned with this node?
+            ie = np.isclose(elec[:, 0], ce[0]) & np.isclose(elec[:, 1], ce[1])
+            
+            if np.sum(ie) > 0: # electrode line, let's connect
+                # b = int(i/finer + 1)
+                # offset = 0 if l == 0 else np.sum(np.array(ringPerStage)[:l])*nepr
+                # print(b, offset, i, finer, atop, abot, lver, ring)
+                # el = np.arange(offset + b, offset + b + ring*nepr, nepr).astype(int).tolist()
+                iel = np.where(ie)[0] + 1  # first elec is 1, not 0 in .geo file
+                isort = np.argsort(elec[ie, 2])[::-1]  # from high z to low z
+                el = list(iel[isort])
+                a = [atop[i]] + el + [abot[i]]  # list concatenation
                 tmp = []
                 for j in range(len(a)-1):
                     content += 'Line({:d}) = {{{:d}, {:d}}};\n'.format(c, a[j], a[j+1])
@@ -2300,7 +2314,7 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
         ll = []
         ltop = lhor[l]
         lbot = lhor[l+1]
-        for i in range(12*finer):
+        for i in range(nepr*finer):
             a = str(lver[i][0]) if len(lver[i]) == 1 else ' ,'.join(np.array(lver[i]).astype(int).astype(str))
             b = str(-lver[i+1][0]) if len(lver[i+1]) == 1 else ' ,'.join((-np.array(lver[i+1]))[::-1].astype(int).astype(str))
             content += 'Line Loop({:d}) = {{{:d}, {:s}, {:d}, {:s}}};\n'.format(
@@ -2312,7 +2326,7 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
     # horizontal line loop
     shor = []
     for l in lhor:
-        # n = 12*finer
+        # n = nepr*finer
         content += 'Line Loop({:d}) = {{'.format(c) + ' ,'.join(np.array(l)[:-1].astype(int).astype(str)) + '};\n'
         shor.append(c)
         c += 1
@@ -2348,12 +2362,11 @@ def cylinder_mesh_old(electrodes, zlim=None, radius=None,
 
 # test
 # radius = 6.5/2 # cm
-# angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
+# angles = np.linspace(0, 2*np.pi, 13)[:-1][::6] # radian
 # celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
-# elec = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], 12)]
-
-# cylinder_mesh(elec, file_path='/home/jkl/Downloads/mesh_cylinder.geo',
-#               zlim=[0, 47.5])
+# elec2 = np.c_[np.tile(celec.T, 8).T, np.repeat(6.5+np.arange(0, 8*5.55, 5.55)[::-1], len(angles))]
+# cylinder_mesh(elec, file_path='invdir/mesh_cylinder.geo',
+#               zlim=[0, 48])
 
 
     

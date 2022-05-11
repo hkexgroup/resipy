@@ -5751,7 +5751,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvzslices.setPlaceholderText('Z [m]')
         self.pvzslices.setToolTip('e.g. 4, 5 to have to slices normal'
                                   'to Z in 4 and 5.')
-                
+        
         self.pvcontourLabel = QLabel('Isosurfaces:')
         self.pvcontour = QLineEdit('')
         self.pvcontour.setToolTip('Values of isosurfaces (comma separated).')
@@ -5791,6 +5791,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 pass
         self.pvgridCheck = QCheckBox('Grid')
         self.pvgridCheck.stateChanged.connect(pvgridCheckFunc)
+        
+        def pvsplineCheckFunc(state):
+            if self.pvsplineCheck.isChecked():
+                self.displayParams['pvspline'] = 'elec'
+            else:
+                self.displayParams['pvspline'] = None
+            try:
+                self.replotSection()
+            except:
+                pass
+        self.pvsplineCheck = QCheckBox('Slice along\nelectrodes')
+        self.pvsplineCheck.setToolTip('Slice the mesh alog the electrodes path.')
+        self.pvsplineCheck.stateChanged.connect(pvsplineCheckFunc)
         
         def pvdelaunay3dCheckFunc(state):
             self.displayParams['pvdelaunay3d'] = self.pvdelaunay3dCheck.isChecked()
@@ -5834,7 +5847,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                  self.pvthreshMax, self.pvslicesLabel, 
                  self.pvxslices, self.pvyslices,
                  self.pvzslices, self.pvcontourLabel, 
-                 self.pvcontour, self.pvapplyBtn,
+                 self.pvcontour, self.pvapplyBtn, self.pvsplineCheck,
                  self.pvdelaunay3dCheck, self.pvgridCheck, self.screenshotBtn]
         
         def show3DInvOptions(a):
@@ -6931,7 +6944,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5, 'clipCorners':False,
                             'doi':self.modelDOICheck.isChecked(),
-                            'doiSens':False, 'pvdelaunay3d': False,
+                            'doiSens':False, 'pvdelaunay3d': False, 'pvspline': None,
                             'pvslices':([],[],[]), 'pvthreshold':None,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
         self.mwInv.clear()
@@ -6973,6 +6986,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pvthreshold = self.displayParams['pvthreshold']
         pvgrid = self.displayParams['pvgrid']
         pvdelaunay3d = self.displayParams['pvdelaunay3d']
+        pvspline = self.displayParams['pvspline']
         pvcontour = self.displayParams['pvcontour']
         aspect = self.displayParams['aspect']
         if self.project.typ[-1] == '2':
@@ -7022,14 +7036,14 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                               vmax=vmax, color_map=cmap,
                                               background_color=(0.8,0.8,0.8),
                                               pvslices=pvslices,
-                                              pvthreshold=pvthreshold,
+                                              pvthreshold=pvthreshold, pvspline=pvspline,
                                               pvgrid=pvgrid, pvdelaunay3d=pvdelaunay3d,
                                               pvcontour=pvcontour)
             self.writeLog('k.showResults(index={:d}, attr="{:s}", edge_color="{:s}", vmin={:s}, '
                           'vmax={:s}, color_map="{:s}", background_color=(0.8, 0.8, 0.8),'
-                          'pvslices={:s}, pvthreshold={:s}, pvdelaunay3d={:s}, pvgrid={:s}, pvcontour={:s})'.format(
+                          'pvslices={:s}, pvthreshold={:s}, pvspline={:s},pvdelaunay3d={:s}, pvgrid={:s}, pvcontour={:s})'.format(
                           index, attr, edge_color, str(vmin), str(vmax), cmap, str(pvslices),
-                          str(pvthreshold), str(pvdelaunay3d), str(pvgrid), str(pvcontour)))
+                          str(pvthreshold), str(pvspline), str(pvdelaunay3d), str(pvgrid), str(pvcontour)))
   
 
     def displayInvertedResults(self): # after inversion, plot graph
