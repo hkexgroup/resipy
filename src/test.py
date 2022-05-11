@@ -199,7 +199,7 @@ k.showMesh()
 #k.createSurvey(testdir + 'dc-3d/protocol.dat', ftype='ProtocolDC')
 #k.createMesh()
 
-# 3D cylinder
+#%% 3D cylinder
 # radius = 6.5/2 # cm
 # angles = np.linspace(0, 2*np.pi, 13)[:-1] # radian
 # celec = np.c_[radius*np.cos(angles), radius*np.sin(angles)]
@@ -215,7 +215,7 @@ k.saveMesh(os.path.join(k.dirname, 'mesh.vtk'))
 k.saveMesh(os.path.join(k.dirname, 'mesh.node'))
 k.saveMesh(os.path.join(k.dirname, 'mesh.dat'))
 
-# 3D tank
+#%% 3D tank
 elec = np.array([[0,2,2],[0,2,6],[0,3,2],[0,3,6],
                   [10,2,2],[10,2,6],[10,3,2],[10,3,6],
                   [3,0,2],[5,0,2],[7,0,2],[3,0,6],[5,0,6],[7,0,6],
