@@ -3039,9 +3039,6 @@ class Mesh:
         if self.ndims == 2:
             raise TypeError('Advanced mesh format not avialable with 2D meshes currently')
             
-        # find furthest node from first electrode to be dirichlet node
-        idirichlet = self.findIdirichlet() + 1 
-            
         # element parameters 
         param = np.asarray(self.df['param'],dtype=int)
         try: 
@@ -3060,9 +3057,12 @@ class Mesh:
         
         if self.NsizeA is None:#then the finite element conductance matrix needs calculating 
             self.computeNconnec()
-            
-        # NsizeA = self.NsizeA
+
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
+
+        # find furthest node from first electrode to be dirichlet node
+        idirichlet = self.findIdirichlet() + 1 
+
         ### write data to mesh.dat kind of file ###
         # open mesh.dat for input      
         with open(file_path, 'w') as fid:

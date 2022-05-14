@@ -60,6 +60,34 @@ def find_dist(elec_x, elec_y, elec_z): # find maximum and minimum electrode spac
         dist[:,i] = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
     return dist.flatten() # array of all electrode distances 
 
+#organise unique xy positions clockwise 
+def bearing(x,y):
+    x0 = 0; y0 = 0 
+    if x == x0 and y == y0: # to avoid 0/ error 
+        return 0 
+    # check for points on bearing and return 
+    if x == x0 and y > y0:
+        return 0.0
+    elif x == x0 and y < y0:
+        return 180.0
+    elif x > x0 and y==y0:
+        return 90.0
+    elif x < x0 and y==y0:
+        return 270.0 
+    # compute raw angle between centre point and point on circle 
+    dx = np.abs(x - x0)
+    dy = np.abs(y - y0) 
+    theta = np.rad2deg(np.arctan(dy/dx)) 
+    if x > x0 and y > y0:
+        return 90-theta 
+    elif x > x0 and y < y0:
+        return 90+theta
+    elif x < x0 and y < y0:
+        return 270-theta  
+    elif x < x0 and y > y0:
+        return 270+theta 
+
+
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 # 2D half space problem 
 def genGeoFile(electrodes, electrode_type = None, geom_input = None,
@@ -342,6 +370,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
                 # print(line.strip())
                 error += line 
         
+        fh.close()
         raise ValueError(error)
         
         #now delete entries from relevant arrays (commented out for now as it cuases issues elsewhere)
@@ -1618,7 +1647,8 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
             fh.write("Point{%i} In Surface{1};//surface electrode\n"%(no_pts))# put the point on surface
         else:
-            if elec_z[i]>0:
+            if elec_z[i]>0:#
+                fh.close() # close file 
                 raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have buried electrodes above the surface!")
             fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};//buried electrode\n"%(no_pts))# put the point in volume 
@@ -1656,6 +1686,7 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
                 fh.write("Point{%i} In Surface{%i};//surface refinement point\n"%(no_pts,sur_idx))# put the point on surface
             else:
                 if rz[i]>0:
+                    fh.close()
                     raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have refinement points above the surface!")
                 fh.write("Point (%i) = {%.2f, %.2f, %.2f, %.2f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
                 fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,vol_idx))# put the point in volume 
@@ -2029,6 +2060,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     ------------
     electrodes: list of array likes
         first column/list is the x coordinates of electrode positions and so on ... 
+        geometry assumes centre of column base is at the origin. 
     poly: list, tuple, optional 
         Describes polygon where the argument is 2 by 1 tuple/list. Each entry is the polygon 
         x and y coordinates, ie (poly_x, poly_y)
@@ -2045,25 +2077,67 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     elemz: int, optional
         Number of layers in between each electrode inside the column mesh. 
     """
+    def cdist(x0,y0,x1,y1):
+        return np.sqrt((x0-x1)**2 + (y0-y1)**2)
+    # find unique x y 
+    
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
     
-    elec_x = electrodes[0]
-    elec_y = electrodes[1]
-    elec_z = electrodes[2]
-    #uni_z = np.unique(elec_z) # unique z values 
+    elec_x = np.array(electrodes[0])
+    elec_y = np.array(electrodes[1])
+    elec_z = np.array(electrodes[2])
     
-    if zlim is None:
-#        print('zlim not passed')
-        zlim = [min(elec_z),max(elec_z)]
-
+    #work out which electrodes are inside or on the end of the column 
+    dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
     if radius is None:
-        radius  = max(electrodes[0])
+        radius = np.max(dist) 
+    inside = dist < radius # electrodes on inside of column raduis 
+
+    # find unique xy positions
+    uni_x = []
+    uni_y = [] 
+    uni_flag = []
+    nelec = len(elec_x)
+    for i in range(nelec):
+        if len(uni_x) == 0: # first point is here 
+            uni_x.append(elec_x[i])
+            uni_y.append(elec_y[i])
+            uni_flag.append(inside[i])
+        dist = [cdist(uni_x[j],uni_y[j],elec_x[i],elec_y[i]) for j in range(len(uni_x))]
+        if min(dist) > 0: # if distance greater than 0 then the point has not been seen before 
+            uni_x.append(elec_x[i])
+            uni_y.append(elec_y[i])
+            uni_flag.append(inside[i]) # flag for if unique point on outside or inside of column 
+    
+    # find bearings for unique xy points 
+    bears = [bearing(uni_x[i],uni_y[i]) for i in range(len(uni_x))]
+    bear_sort = np.argsort(bears)
+    # sort by bearing 
+    uni_x = np.array(uni_x)[bear_sort]
+    uni_y = np.array(uni_y)[bear_sort]        
+    uni_flag = np.array(uni_flag,dtype=bool)[bear_sort]
+            
+    if zlim is None:
+        zlim = [min(elec_z),max(elec_z)]
+        
     if cl == -1:
         dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance   
     
     num_elec = len(elec_z)
+    
+    #constructor points for making a basic column 
+    cons_x = [0,radius,0,-radius]
+    cons_y = [radius,0,-radius,0]
+    
+    if len(uni_x) < 4: # ensure basic column can be created 
+        for i in range(4): 
+            dist = [cdist(uni_x[j],uni_y[j],cons_x[i],cons_y[i]) for j in range(len(uni_x))]
+            if min(dist) > 0: # if distance greater than 0 then the point has not been seen before 
+                uni_x.append(elec_x[i])
+                uni_y.append(elec_y[i])
+                uni_flag.append(False) # flag for if unique point on outside or inside of column 
 
     fh = open(file_path,'w')
     fh.write("// ResIPy tetrahedral column mesh script\n")
@@ -2071,51 +2145,45 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")    
     fh.write("cl=%f;\n"%cl)
     
-    x = []
-    y = [] # ignore repeated vertices 
-    
     fh.write("// Make a circle which is extruded\n")
     fh.write("Point (1) = {0,0,%f,cl};\n"%(zlim[0]))
-    x.append(0);y.append(0)
-    fh.write("Point (2) = {%f,0,%f,cl};\n"%(radius,zlim[0]))
-    x.append(radius);y.append(0)
-    fh.write("Point (3) = {0,%f,%f,cl};\n"%(radius,zlim[0]))
-    x.append(0);y.append(radius)
-    fh.write("Point (4) = {0,-%f,%f,cl};\n"%(radius,zlim[0]))
-    x.append(0);y.append(-radius)
-    fh.write("Point (5) = {-%f,0,%f,cl};\n"%(radius,zlim[0]))
-    x.append(-radius);y.append(0)
-    fh.write("Circle (1) = {2,1,3};\n")
-    fh.write("Circle (2) = {3,1,4};\n")
-    fh.write("Circle (3) = {4,1,5};\n")
-    fh.write("Circle (4) = {5,1,2};\n")
 
-    fh.write("Line Loop(1) = {3, 4, 1, 2};\n")
+    pt_no = 1 
+    ## to do, go around clockwise  
+    for i in range(len(uni_x)):
+        if not uni_flag[i]: 
+            pt_no += 1 
+            fh.write("Point (%i) = {%f,%f,%f,cl};//column circumfrence point\n"%(pt_no,uni_x[i],uni_y[i],zlim[0]))
+    ncirc_points = pt_no - 1     
+        
+    circle_no = 0
+    for i in range(1,pt_no):
+        circle_no += 1 
+        if i+1 == pt_no:
+            fh.write("Circle (%i) = {%i,1,%i};//circumfrence segment(last one)\n"%(circle_no,i+1,2))
+        else:
+            fh.write("Circle (%i) = {%i,1,%i};//circumfrence segment\n"%(circle_no,i+1,i+2))
+    edges = circle_no 
+         
+    fh.write("Line Loop(1) = {1")
+    for i in range(1,circle_no):
+        fh.write(",%i"%(i+1))
+    fh.write("};\n")
+    
+    # make a circle in gmsh 
     fh.write("Plane Surface(1) = {1};\n")
     fh.write("Point {%i} In Surface {1};\n\n"%1)
-    edges = 3
-    pt_no = 6
-    
-    #work out which electrodes are inside or on the end of the column 
-    dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
-    inside = dist < radius 
-        
-    
-    if all(inside) == False:
-        fh.write("//Points on surface of the column\n")
-        # x = []
-        # y = [] # ignore repeated vertices 
-        for i in range(num_elec):
-            if elec_z[i] == zlim[0] or elec_z[i] == zlim[1]:
-                continue # come back to this later 
-            
-            if inside[i] and elec_x[i] not in x and elec_y[i] not in y:
-                pt_no+=1
-                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],zlim[0]))
-                fh.write("Point {%i} In Surface {1};\n"%pt_no)
-                x.append(elec_x[i])
-                y.append(elec_y[i])
-            
+
+    fh.write("//Points on surface of the column\n")
+    for i in range(len(uni_x)):
+        if uni_x[i] == 0 and uni_y[i]==0:
+            continue # continue as this point is at origin 
+        if uni_flag[i]: # check if point inside of column radius, hence add it to column 
+            pt_no+=1
+            fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,uni_x[i],uni_y[i],zlim[0]))
+            fh.write("Point {%i} In Surface {1};\n"%pt_no)
+
+    fh.write("//End points on surface of column\n")
     surface = 1
     
     if min(elec_z)<zlim[0] or max(elec_z) > zlim[1]:
@@ -2133,29 +2201,30 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
         #work out the amount to extrude 
         diff = uni_z[i+1] - uni_z[i]    
         seg += 1          
-        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i};};'%(seg,diff,surface,elemz))
-        surface += edges + 1
+        # fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i};};'%(seg,diff,surface,elemz))
+        fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i};Recombine;};'%(seg,diff,surface))
+        surface += ncirc_points + 1 
         if i==0:
             fh.write('//Base of column\n')
         elif i == len(uni_z)-2:
             fh.write('//top of column\n')
         else:
             fh.write('\n')
-        pt_no += 3 # add 3 points for each extruded segment 
+        pt_no += ncirc_points # add points in circle for each extruded segment 
         
     # delete extruded volumes 
     fh.write('Delete {')
     for i in range(seg):
         fh.write('Volume{%i};'%(i+1))
     fh.write('}\n')
-    
+
     top_surf = 1 # number of circle surface at top of colum 
-    base_surf = (seg*4)+1 # number of circle surface at base of column 
+    base_surf = surface # number of circle surface at base of column 
 
     c = 0 
     fh.write('Surface Loop(%i) = {%i,'%(seg+1,top_surf))
     for i in range(1,base_surf):
-        if c == 3:
+        if c == ncirc_points:
             c = 0 
             continue 
         fh.write('%i,'%(i+1))
@@ -2164,15 +2233,16 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     fh.write('Volume(1) = {%i};//make surface loop a volume\n'%(seg+1)) 
     
     # check for electrodes in the column 
-    if all(inside) == False:
-        fh.write("//Points inside the column\n")
-        for i in range(num_elec):
-            if elec_z[i] == zlim[0] or elec_z[i] == zlim[1]:
-                continue 
-            if inside[i]:
-                pt_no+=1
-                fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],elec_z[i]))
-                fh.write("Point {%i} In Volume {1};\n"%pt_no)
+
+    fh.write("//Points inside the column\n")
+    for i in range(num_elec):
+        if elec_z[i] == zlim[0] or elec_z[i] == zlim[1]:
+            continue # should be included in the surface already 
+        if inside[i]:
+            pt_no+=1
+            fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],elec_z[i]))
+            fh.write("Point {%i} In Volume {1};\n"%pt_no)
+    fh.write("//End Points inside the column\n")
                 
     fh.write('Physical Volume(1) = {1};//make column one physical volume\n')
     fh.close()
