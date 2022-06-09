@@ -5474,7 +5474,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5,
                             'doi':self.modelDOICheck.isChecked(),
-                            'doiSens':False, 'clipCorners':False,
+                            'doiSens':False, 'clipCorners':False, 'pvspline': None,
                             'pvslices':([],[],[]), 'pvthreshold':None, 'pvdelaunay3d': False,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}          
                 
