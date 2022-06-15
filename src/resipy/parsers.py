@@ -1654,7 +1654,7 @@ def aresParser(fname, spacing=None):
     
     #Building electrode locations
     df[['a','b','m','n']] = df[['a','b','m','n']].replace('\*\d+', '', regex=True).astype(int) # there are multi eletrode conbinations sometimes (e.g., 14*1) which basically mean the middle one
-    df = df.dropna()
+    df = df.dropna(subset=['a', 'b', 'm', 'n', 'Pn', 'Pn+1', 'Array', 'Uout[V]', 'i', 'vp', 'EP[mV]', 'AppRes[Ohmm]', 'St-dev[%]']) # some IP cols are None anyways per sequence type
 
     
     # finding IP columns
