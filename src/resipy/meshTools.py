@@ -490,7 +490,10 @@ class Mesh:
         if len(values)!=self.numel:
             raise ValueError("The length of the new attributes array (%i) does not match the number of elements in the mesh (%i)"%(len(values),self.numel))
         self.no_attributes += 1
-        self.df[key]=values #allows us to add an attributes to each element.
+        if key in self.df.keys():
+            self.df.loc[:,key] # reallocate column if already set 
+        else:
+            self.df[key]=values #allows us to add an attributes to each element.
         
     def addPtAttribute(self,values,key):
         """Associate attributes with the mesh nodes  
