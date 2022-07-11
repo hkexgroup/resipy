@@ -509,8 +509,11 @@ class Mesh:
         """
         if len(values)!=self.numnp:
             raise ValueError("The length of the new attributes array (%i) does not match the number of nodes in the mesh (%i)"%(len(values),self.numnp))
-        self.ptdf[key]=values #allows us to add an attributes to each element.
-        
+        if key in self.ptdf.keys():
+            self.ptdf.loc[:,key] # reallocate column if already set 
+        else:
+            self.ptdf[key]=values #allows us to add an attributes to each point 
+            
     def show_avail_attr(self,flag=True):
         warnings.warn("show_avail_attr is depreciated, use showAvailAttr instead", DeprecationWarning)
         self.showAvailAttr(flag)
