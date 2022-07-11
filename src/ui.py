@@ -3315,6 +3315,12 @@ class App(QMainWindow):
                 surface = surface[inan,:]
             
             nnodes = self.nnodesSld.value()
+            
+            # check inv_type has option 4 (only relevant to a blocky mesh)
+            if self.inv_type.findText('Blocked Linear Regularized Inversion [4]') == -1:
+                self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+            
+            # now create mesh in try block 
             try:
                 fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
                 if self.pseudo3DCheck.isChecked():
@@ -3417,6 +3423,13 @@ class App(QMainWindow):
                           ' cl_factor={:f}, refine={:s}, fmd={:s})'.format(
                               str(self.project.geom_input), str(surface), cl,
                               cl_factor, str(refine), str(fmd)))
+            
+            # remove option 4 from inv_type if present  
+            opt4indx =self.inv_type.findText('Blocked Linear Regularized Inversion [4]')
+            if  opt4indx > -1:
+                self.inv_type.removeItem(opt4indx)
+                self.inv_type.setCurrentIndex(1)
+                
             try:
                 if self.pseudo3DCheck.isChecked():
                     self.loadingWidget('Creating the mesh. Please wait...')
@@ -4683,7 +4696,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.inv_type.clear()
                 self.inv_type.addItem('Pseudo Marquardt [0]')
                 self.inv_type.addItem('Regularized Inversion with Linear Filtering [1]')
-                self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+                #self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
                 self.inv_type.setCurrentIndex(1)
                 [o.setVisible(True) for o in settingsIP]
                 [o.setVisible(False) for o in settingsDC]
@@ -4695,10 +4708,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.inv_type.addItem('Regularized Inversion with Linear Filtering [1]')
                 self.inv_type.addItem('Regularized Inversion with Quadratic Filtering [2]')
                 self.inv_type.addItem('Qualitative Solution [3]')
-                self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+                #self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
                 self.inv_type.setCurrentIndex(1)
                 [o.setVisible(False) for o in settingsIP]
                 [o.setVisible(True) for o in settingsDC]
+                
             if self.project.iForward is False and len(self.project.surveys) >= 1:
                 if 'magErr' in self.project.surveys[0].df.columns:
                     self.a_wgt.setText('0.0')
@@ -4912,7 +4926,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.inv_type.addItem('Regularized Inversion with Linear Filtering [1]')
         self.inv_type.addItem('Regularized Inversion with Quadratic Filtering [2]')
         self.inv_type.addItem('Qualitative Solution [3]')
-        self.inv_type.addItem('Blocked Linear Regularized Inversion [4]')
+        # self.inv_type.addItem('Blocked Linear Regularized Inversion [4]') # commented out because only relevant to 2D quad meshes - Jimmy B 
         self.inv_type.setCurrentIndex(1)
         self.inv_type.activated.connect(inv_typeFunc)
         invForm.addRow(self.inv_typeLabel, self.inv_type)
