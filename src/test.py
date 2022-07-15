@@ -619,6 +619,7 @@ a = k.mesh.elmCentre
 idx = (a[:,1]<0.45) & (a[:,1]>-0.45) & (a[:,0]<0.45) & (a[:,0]>-0.45) # set a zone of different resistivity 
 res0 = np.array(k.mesh.df['res0'])
 res0[idx] = 50
+res0[np.invert(idx)] = 200 
 k.setRefModel(res0) # set parameters for forward model 
 
 k.showMesh(attr='res0',color_map='jet',use_pyvista=use_pyvista)

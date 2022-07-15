@@ -491,7 +491,7 @@ class Mesh:
             raise ValueError("The length of the new attributes array (%i) does not match the number of elements in the mesh (%i)"%(len(values),self.numel))
         self.no_attributes += 1
         if key in self.df.keys():
-            self.df.loc[:,key] # reallocate column if already set 
+            self.df.loc[:,key] = values # reallocate column if already set 
         else:
             self.df[key]=values #allows us to add an attributes to each element.
         
@@ -510,7 +510,7 @@ class Mesh:
         if len(values)!=self.numnp:
             raise ValueError("The length of the new attributes array (%i) does not match the number of nodes in the mesh (%i)"%(len(values),self.numnp))
         if key in self.ptdf.keys():
-            self.ptdf.loc[:,key] # reallocate column if already set 
+            self.ptdf.loc[:,key] = values # reallocate column if already set 
         else:
             self.ptdf[key]=values #allows us to add an attributes to each point 
             
