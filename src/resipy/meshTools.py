@@ -4076,7 +4076,7 @@ def tetgen_import(file_path, order_nodes=True):
                 original_file_path = file_path,
                 order_nodes = order_nodes)
     
-    mesh.addAttribute(zone,'zone')
+    mesh.addAttribute(zone,'zones')
     
     return mesh
         
@@ -5272,7 +5272,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
                     node_data = np.array(mesh_dict['node_data']).T,
                     cell_type = mesh_dict['cell_type'],
                     order_nodes = order_nodes)
-        mesh.addAttribute(mesh_dict['parameters'], 'region')
+        mesh.addAttribute(mesh_dict['parameters'], 'zones')
         
     elif ext == '.dat':
         mesh = dat_import(file_path, order_nodes=order_nodes)   
