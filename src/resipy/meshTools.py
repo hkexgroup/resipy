@@ -3051,7 +3051,7 @@ class Mesh:
             zone = np.asarray(self.df['zones'],dtype=int)
         except:
             zone = np.ones(self.numel,dtype=int)
-            
+        nzones = len(np.unique(zone))
             
         adv_flag = int(iadvanced)
         #compute neighbourhood matrix 
@@ -3101,7 +3101,11 @@ class Mesh:
                 fid.write('\n')#drop down a line 
 
             if self.ndims == 3: 
-                fid.write('{:d}'.format(idirichlet))
+                fid.write('{:d}\n'.format(idirichlet))
+                
+            if nzones > 1: 
+                for i in range(nzones):
+                    fid.write('{:d} {:f}\n'.format(i+1,1.0))
                     
 
     def write_vtk(self, file_path="mesh.vtk", title=None, replace_nan=-9999):
