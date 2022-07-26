@@ -287,6 +287,7 @@ class Mesh:
         self.eNodes  = None # node number that electrodes occupy 
         self.elec = None
         self.iremote = None # specify which electrode is remote
+        self.idirichlet = None # specify idirichlet node 
         self.cax = None # store mesh.show() output for faster mesh.draw()
         self.zone = np.ones(self.numel) # by default all in the same zone # remove? 
         self.elmCentre = None  # remove? 
@@ -629,7 +630,7 @@ class Mesh:
         self.connection = con_mat_fix
         self.cellCentres() # recompute them too
         self.addAttribute(paramFixed,'param')
-        
+        self.computeNeigh()
         
     def resetParam(self):
         """Reorder parameters into consective ascending order 
@@ -2970,8 +2971,11 @@ class Mesh:
         # find average electrode position 
         e = np.c_[np.mean(elec[:,0]),np.mean(elec[:,1]),np.mean(elec[:,2])]
         
-        idirichlet = np.argmax(np.sqrt(np.sum((edge_nodes - e)**2, axis=1)))
+        idirichlet_edge = np.argmax(np.sqrt(np.sum((edge_nodes - e)**2, axis=1)))
+        idirichlet_node = edge_nodes[idirichlet_edge]
         
+        idirichlet = np.argmin(np.sqrt(np.sum((self.node - idirichlet_node)**2, axis=1)))
+
         return idirichlet
 
         
@@ -2989,12 +2993,18 @@ class Mesh:
         """
         if not isinstance(file_path,str):
             raise TypeError("expected string argument for file_path")
+            
+        # find furthest node from any electrode to be dirichlet node
+        if self.idirichlet is None:
+            idirichlet = self.findIdirichlet() + 1 
+        else: 
+            idirichlet = self.idirichlet + 1 
+            
         ### write data to mesh.dat kind of file ###
         #open mesh.dat for input      
         with open(file_path, 'w') as fid:
             #write to mesh.dat total num of elements and nodes
-            # find furthest node from first electrode to be dirichlet node
-            idirichlet = self.findIdirichlet() + 1 
+
             if self.ndims == 3:
                 fid.write('%i %i %i 0 %i\n'%(self.numel,self.numnp,1,self.type2VertsNo()))
             else:
@@ -3067,8 +3077,11 @@ class Mesh:
         fconm = self.fconm.copy() + 1 #(add 1 for FORTRAN indexing)
 
         # find furthest node from first electrode to be dirichlet node
-        idirichlet = self.findIdirichlet() + 1 
-
+        if self.idirichlet is None:
+            idirichlet = self.findIdirichlet() + 1 
+        else: 
+            idirichlet = self.idirichlet + 1 
+            
         ### write data to mesh.dat kind of file ###
         # open mesh.dat for input      
         with open(file_path, 'w') as fid:
