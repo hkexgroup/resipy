@@ -3110,6 +3110,8 @@ class Project(object): # Project master class instanciated by the GUI
         ifixed = np.array(self.mesh.df['param']) == 0
         if np.sum(ifixed) > 0: # fixed element need to be at the end
             self.mesh.orderElem()
+            self.mesh.writeAttr('res0', os.path.join(self.dirname, 'Start_res.dat')) # needs rewriting if the elements are reordered. 
+            
         if typ == 'R3t' or typ == 'cR3t':
             self.mesh.datAdv(os.path.join(self.dirname, 'mesh3d.dat'), iadvanced=self.iadvanced)
         else:
