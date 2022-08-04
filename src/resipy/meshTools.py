@@ -5079,7 +5079,7 @@ def prism_mesh(*args):
 #%% cylinder mesh
 def cylinderMesh(elec_x, elec_y, elec_z,
                  zlim=None, radius=None, file_path='cylinder_mesh.geo',
-                 cl=-1, finer=4,
+                 cl=-1, cl_factor=2, finer=4,
                  keep_files=True,
                  show_output=True, 
                  path='exe', dump=print,
@@ -5102,7 +5102,7 @@ def cylinderMesh(elec_x, elec_y, elec_z,
         a characteristic length 1/4 the minimum electrode spacing is computed. 
     finer : int, optional
         Number of line between two consecutive electrodes to approximate the
-        circle shape.
+        circle shape. No longer used. 
     handle : variable, optional
         Will be assigned the output of 'Popen' in case the process needs to be
         killed in the UI for instance.
@@ -5110,7 +5110,7 @@ def cylinderMesh(elec_x, elec_y, elec_z,
     file_path = file_path if file_path[-4:] == '.geo' else file_path + '.geo'
     elec = [elec_x,elec_y,elec_z]
     gw.cylinder_mesh(elec, zlim=zlim, radius=radius, file_path=file_path,
-                     cl=cl, elemz=finer)    
+                     cl=cl, cl_factor=cl_factor, elemz=finer)    
     elec = np.array(elec).T 
     # check directories 
     if path == "exe":

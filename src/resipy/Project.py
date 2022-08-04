@@ -2771,7 +2771,8 @@ class Project(object): # Project master class instanciated by the GUI
                     print('Creating cylinder mesh...', end='')
                     mesh = mt.cylinderMesh(elec_x, elec_y, elec_z,
                                              path=os.path.join(self.apiPath, 'exe'),
-                                             cl=cl, dump=dump, show_output=show_output,
+                                             cl=cl, cl_factor=cl_factor, dump=dump, 
+                                             show_output=show_output,
                                              handle=setMeshProc, **kwargs)
                     self.param['num_xz_poly'] = 0
                     # self.iadvanced = False # ditto 
