@@ -10,6 +10,7 @@ parsing meshes into a python environment.
 import os, warnings
 #general 3rd party libraries
 import numpy as np
+import matplotlib.pyplot as plt 
 import matplotlib.path as mpath
 from scipy.spatial import cKDTree
 
@@ -2053,8 +2054,9 @@ def prism_mesh(electrodes, poly=None, z_lim=None, radius=None,
     
 #%% cylinder mesh 
 def cylinder_mesh(electrodes, zlim=None, radius=None,
-                  file_path='cylinder_mesh.geo', cl=-1, elemz=4):
-    """Make a prism mesh.
+                  file_path='cylinder_mesh.geo', cl=-1, elemz=4,cl_factor=2, 
+                  add_refine=True):
+    """Make a cylinderical tetrahedral mesh.
     
     Parameters
     ------------
@@ -2075,48 +2077,112 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
         assocaited elements will be. Usually no bigger than 5. If set as -1 (default)
         a characteristic length 1/4 the minimum electrode spacing is computed.
     elemz: int, optional
-        Number of layers in between each electrode inside the column mesh. 
+        Inactive parameter, left for compatiblity with prism mesh function. 
+    cl_factor: float, optional 
+        Factor by which to grow elements away from electrodes on the column. 
+        Default is 2. 
+    add_refine: bool, optional
+        Add in points to refine mesh around electrodes only, default is True. 
     """
     def cdist(x0,y0,x1,y1):
         return np.sqrt((x0-x1)**2 + (y0-y1)**2)
     # find unique x y 
-    
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
-    
+    pt_no = 1 
     elec_x = np.array(electrodes[0])
     elec_y = np.array(electrodes[1])
     elec_z = np.array(electrodes[2])
     
     #work out which electrodes are inside or on the end of the column 
     dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
+    # we assume the origin is at 0,0 
     if radius is None:
         radius = np.max(dist) 
     inside = dist < radius # electrodes on inside of column raduis 
-
+    
     # find unique xy positions
     uni_x = []
     uni_y = [] 
     uni_flag = []
+    uni_ref = []
+    curc_x = [] # circumfrence points 
+    curc_y = []
+
     nelec = len(elec_x)
     for i in range(nelec):
         if len(uni_x) == 0: # first point is here 
             uni_x.append(elec_x[i])
             uni_y.append(elec_y[i])
             uni_flag.append(inside[i])
+            uni_ref.append(False)
+            if not inside[i]:
+                curc_x.append(elec_x[i])
+                curc_y.append(elec_y[i])
         dist = [cdist(uni_x[j],uni_y[j],elec_x[i],elec_y[i]) for j in range(len(uni_x))]
         if min(dist) > 0: # if distance greater than 0 then the point has not been seen before 
             uni_x.append(elec_x[i])
             uni_y.append(elec_y[i])
             uni_flag.append(inside[i]) # flag for if unique point on outside or inside of column 
+            uni_ref.append(False) # flag if refinement point 
+            if not inside[i]:
+                curc_x.append(elec_x[i])
+                curc_y.append(elec_y[i])
+            
+    # check for at least 3 unique points on column circumfrence 
+    if len(curc_x)<3: 
+        #make constructor points for making a basic column 
+        cons_x = [0,radius,0,-radius]
+        cons_y = [radius,0,-radius,0]
+        for i in range(4):
+            dist = [cdist(uni_x[j],uni_y[j],cons_x[i],cons_y[i]) for j in range(len(uni_x))]
+            if min(dist) > 0: # if distance greater than 0 then the point has not been seen before 
+                uni_x.append(cons_x[i])
+                uni_y.append(cons_y[i])
+                uni_flag.append(False) # flag for if unique point on outside or inside of column 
+                uni_ref.append(True) # flag if refinement point 
+                curc_x.append(cons_x[i])
+                curc_y.append(cons_y[i])
+        
+
+    bears = [bearing(curc_x[i],curc_y[i]) for i in range(len(curc_x))]
+    bear_sort = np.argsort(bears)
+    curc_x = np.array(curc_x)[bear_sort]
+    curc_y = np.array(curc_y)[bear_sort]
     
+    if add_refine:
+        rx = np.linspace(-radius,radius,100000)
+        ry = np.sqrt(radius**2 - rx**2)
+        cx = np.append(rx,rx)
+        cy = np.append(ry,-ry)
+        
+        # were gonna walk around the circle and pick out coordinates for refinement points 
+        for i in range(len(curc_x)):
+            if i == len(curc_x)-1:
+                dx = curc_x[0] - curc_x[i]
+                dy = curc_y[0] - curc_y[i]
+            else:
+                dx = curc_x[i+1] - curc_x[i]
+                dy = curc_y[i+1] - curc_y[i]
+            # mid point of circumfrence points 
+            mx = curc_x[i] + (dx/2)
+            my = curc_y[i] + (dy/2)
+
+            dist = np.sqrt((cx-mx)**2 + (cy-my)**2)
+            mi = np.argmin(dist)
+            uni_x.append(cx[mi])
+            uni_y.append(cy[mi])
+            uni_flag.append(False)
+            uni_ref.append(True)
+            
     # find bearings for unique xy points 
     bears = [bearing(uni_x[i],uni_y[i]) for i in range(len(uni_x))]
     bear_sort = np.argsort(bears)
     # sort by bearing 
-    uni_x = np.array(uni_x)[bear_sort]
-    uni_y = np.array(uni_y)[bear_sort]        
-    uni_flag = np.array(uni_flag,dtype=bool)[bear_sort]
+    uni_x = np.array(uni_x)[bear_sort].tolist()
+    uni_y = np.array(uni_y)[bear_sort].tolist()
+    uni_flag = np.array(uni_flag,dtype=bool)[bear_sort].tolist()
+    uni_ref = np.array(uni_ref,dtype=bool)[bear_sort]
             
     if zlim is None:
         zlim = [min(elec_z),max(elec_z)]
@@ -2127,33 +2193,27 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     
     num_elec = len(elec_z)
     
-    #constructor points for making a basic column 
-    cons_x = [0,radius,0,-radius]
-    cons_y = [radius,0,-radius,0]
-    
-    if len(uni_x) < 4: # ensure basic column can be created 
-        for i in range(4): 
-            dist = [cdist(uni_x[j],uni_y[j],cons_x[i],cons_y[i]) for j in range(len(uni_x))]
-            if min(dist) > 0: # if distance greater than 0 then the point has not been seen before 
-                uni_x.append(elec_x[i])
-                uni_y.append(elec_y[i])
-                uni_flag.append(False) # flag for if unique point on outside or inside of column 
-
     fh = open(file_path,'w')
     fh.write("// ResIPy tetrahedral column mesh script\n")
     fh.write('SetFactory("OpenCASCADE");\n')
     fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")    
     fh.write("cl=%f;\n"%cl)
+    fh.write("cl_fac=%f;\n"%cl_factor)
     
-    fh.write("// Make a circle which is extruded\n")
-    fh.write("Point (1) = {0,0,%f,cl};\n"%(zlim[0]))
+    fh.write("// Make a circle at lowest z limit which is extruded\n")
+    fh.write("Point (%i) = {0,0,%f,cl};\n"%(pt_no,zlim[0]))
 
-    pt_no = 1 
-    ## to do, go around clockwise  
+    # pt_no = 1 
+    ## go around clockwise  
     for i in range(len(uni_x)):
         if not uni_flag[i]: 
             pt_no += 1 
-            fh.write("Point (%i) = {%f,%f,%f,cl};//column circumfrence point\n"%(pt_no,uni_x[i],uni_y[i],zlim[0]))
+            fh.write("Point (%i) = {%32.16f,%32.16f,%32.16f,cl"%(pt_no,uni_x[i],uni_y[i],zlim[0]))
+            if uni_ref[i]:
+                fh.write("*cl_fac};//column circumfrence point(coarse)\n")
+            else:
+                fh.write("};//column circumfrence point (fine)\n")
+    
     ncirc_points = pt_no - 1     
         
     circle_no = 0
@@ -2163,12 +2223,12 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
             fh.write("Circle (%i) = {%i,1,%i};//circumfrence segment(last one)\n"%(circle_no,i+1,2))
         else:
             fh.write("Circle (%i) = {%i,1,%i};//circumfrence segment\n"%(circle_no,i+1,i+2))
-    edges = circle_no 
+    # edges = circle_no 
          
     fh.write("Line Loop(1) = {1")
     for i in range(1,circle_no):
         fh.write(",%i"%(i+1))
-    fh.write("};\n")
+    fh.write("};//Base of column\n")
     
     # make a circle in gmsh 
     fh.write("Plane Surface(1) = {1};\n")
@@ -2193,24 +2253,33 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     allz = np.append(elec_z,zlim)
     
     uni_z = np.unique(allz)
+    if add_refine:
+        uni_z = np.unique(np.append(uni_z,uni_z[:-1] + np.diff(uni_z)/2))
     #extrude surfaces 
     fh.write("//Extrude planes in between each electrode.\n") 
     seg = 0 # segment number 
-        
-    for i in range(0,len(uni_z)-1):
+    nseg = len(uni_z)-1 # number of segments 
+    point_cache = np.zeros((nseg,ncirc_points),dtype=int)
+    refinement = np.zeros(nseg,dtype=int)
+    
+    for i in range(nseg):
         #work out the amount to extrude 
         diff = uni_z[i+1] - uni_z[i]    
         seg += 1          
-        # fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i}; Layers{%i};};'%(seg,diff,surface,elemz))
         fh.write('seg%i = Extrude {0, 0, %f} {Surface{%i};Recombine;};'%(seg,diff,surface))
         surface += ncirc_points + 1 
-        if i==0:
-            fh.write('//Base of column\n')
-        elif i == len(uni_z)-2:
-            fh.write('//top of column\n')
+        if uni_z[i+1] in elec_z:
+            fh.write('//Electrode plane')
+        else:
+            fh.write('//Refinement plane')
+            refinement[i] = 1 
+        if i == nseg-1:
+            fh.write('(Also Top of column)\n')
         else:
             fh.write('\n')
+        point_cache[i,:] = [pt_no + 1 + j for j in range(ncirc_points)] 
         pt_no += ncirc_points # add points in circle for each extruded segment 
+
         
     # delete extruded volumes 
     fh.write('Delete {')
@@ -2243,10 +2312,35 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
             fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,elec_x[i],elec_y[i],elec_z[i]))
             fh.write("Point {%i} In Volume {1};\n"%pt_no)
     fh.write("//End Points inside the column\n")
-                
     fh.write('Physical Volume(1) = {1};//make column one physical volume\n')
-    fh.close()
     
+    # make base of column points bigger if not actually in line with electrodes 
+    if zlim[0] != min(elec_z):
+        points = np.arange(ncirc_points)+2 
+        point_cache = np.vstack([points,point_cache])
+        refinement = np.append(np.ones(1,dtype=int),refinement)
+        fh.write("Characteristic Length {1} = cl*cl_fac;\n")
+    
+    # grow mesh elements away from electrodes
+    fh.write("//Grow mesh elements away from electrodes\n")
+    for i in range(len(refinement)):
+        if refinement[i] == 1:
+            points = point_cache[i,:]
+            fh.write("Characteristic Length {")
+            for j in range(ncirc_points):
+                if j > 0:
+                    fh.write(',')
+                fh.write('%i'%points[j])
+            fh.write("} = cl*cl_fac;\n")
+    # add a final centre point 
+    # surface += 1 
+    # pt_no += 1
+    # fh.write('//Top of column middle point\n')
+    # fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,0,0,zlim[1]))
+    # fh.write("Point {%i} In Surface {%i};\n"%(pt_no,surface))
+    
+    fh.write('//End of script\n')
+    fh.close()
 
 
 #%% Cylinder mesh using tetrahedra
