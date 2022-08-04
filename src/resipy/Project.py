@@ -1236,7 +1236,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         # create bigSurvey (useful if we want to fit a single error model
         # based on the combined data of all the surveys)
-        self.bigSurvey = Survey(files[0], ftype=ftype, spacing=spacing, debug=False)
+        self.bigSurvey = Survey(files[0], ftype=ftype, spacing=spacing, debug=False, parser=parser)
         # then override the df
         if len(isurveys) == 0: # assume all surveys would be use for error modelling
             isurveys = np.ones(len(self.surveys), dtype=bool)
