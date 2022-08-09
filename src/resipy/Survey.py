@@ -202,7 +202,7 @@ class Survey(object):
         
         # parsing data to form main dataframe and electrode array
         if fname is not None:
-            avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'ProtocolIP',
+            avail_ftypes = ['Syscal','ProtocolDC','ResInv', 'BGS Prime', 'RESIMGR', 'ProtocolIP',
                             'Sting', 'ABEM-Lund', 'Lippmann', 'ARES', 'E4D', 'BERT', 'DAS-1']# add parser types here! 
             if parser is not None:
                 elec, data = parser(fname)
@@ -215,6 +215,8 @@ class Survey(object):
                 elif ftype == 'ResInv':
                     elec, data = resInvParser(fname)
                 elif ftype == 'BGS Prime':
+                    elec, data = primeParserTab(fname)
+                elif ftype == 'RESIMGR': # same format as PRIME 
                     elec, data = primeParserTab(fname)
                 elif ftype == 'ProtocolIP':
                     elec, data = protocolParser(fname, ip=True)
