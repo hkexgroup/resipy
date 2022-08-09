@@ -1048,7 +1048,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('Syscal')
         self.ftypeCombo.addItem('Protocol IP')
         self.ftypeCombo.addItem('ResInv (2D/3D)')
-        self.ftypeCombo.addItem('BGS Prime')
+        self.ftypeCombo.addItem('RESIMGR/PRIME')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
@@ -1835,7 +1835,10 @@ class App(QMainWindow):
         self.elecLabel.setWordWrap(True)
 
         def importElecBtnFunc():
-            fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,'Open File', directory=self.datadir)
+            fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,
+                                                   'Open File', 
+                                                   self.datadir,
+                                                   'CSVs (*.csv *.CSV);;GEOM (*.geom *.GEOM)')
             if fname != '':
                 if self.iForward is False:
                     nbElec = int(self.nbElecEdit.text())
