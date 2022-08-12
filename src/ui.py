@@ -1048,7 +1048,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('Syscal')
         self.ftypeCombo.addItem('Protocol IP')
         self.ftypeCombo.addItem('ResInv (2D/3D)')
-        self.ftypeCombo.addItem('RESIMGR/PRIME')
+        self.ftypeCombo.addItem('PRIME/RESIMGR')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
@@ -2388,10 +2388,6 @@ class App(QMainWindow):
                         numRecipRemoved = self.project.filterStack(index=self.recipErrDataIndex, percent=percent)
                         self.writeLog('k.filterStack(index={:d}, percent={:f})'.format(
                         self.recipErrDataIndex, percent))
-                    elif self.filterAttrCombo.currentText() == 'Contact Resistance (ohm)':
-                        numRecipRemoved = self.project.filterContRes(index=self.recipErrDataIndex, vmax=percent)
-                        self.writeLog('k.filterContRes(index={:d}, vmax={:f})'.format(
-                        self.recipErrDataIndex, percent))
                     if numElecRemoved != 0:
                         self.infoDump("%i measurements with greater than %3.1f%% %s, \
                                  %i selected electrodes and %i measurements removed!" % (numRecipRemoved,percent,self.filterAttrCombo.currentText(),numElecRemoved,numSelectRemoved))
@@ -2410,6 +2406,10 @@ class App(QMainWindow):
                         elif self.filterAttrCombo.currentText() == 'App. Resistivity':
                             numRhoRangeRemoved = self.project.filterAppResist(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
                             self.writeLog('k.filterAppResist(index={:d}, vmin={}, vmax={})'.format(self.recipErrDataIndex, str(vmin), str(vmax)))
+                        elif self.filterAttrCombo.currentText() == 'Contact Resistance (ohm)':
+                            numRecipRemoved = self.project.filterContRes(index=self.recipErrDataIndex, vmin=vmin, vmax=vmax)
+                            self.writeLog('k.filterContRes(index={:d}, vmin={:f}, vmax={:f})'.format(
+                            self.recipErrDataIndex, vmin, vmax))
                         rhoRangeText = '%i measurements outside of the range and ' % numRhoRangeRemoved
                     if numElecRemoved != 0:
                         self.infoDump("%s%i selected electrodes and %i measurements removed!" % (rhoRangeText, numElecRemoved, numSelectRemoved))
@@ -2493,7 +2493,10 @@ class App(QMainWindow):
         def filterAttrComboFunc(index):
             self.plotManualFiltering(self.recipErrDataIndex)
             selection = self.filterAttrCombo.currentText()
-            if selection in ['Transfer Resistance', 'App. Resistivity']:
+            ranged_selections = ['Transfer Resistance', 
+                                 'App. Resistivity', 
+                                 'Contact Resistance (ohm)']
+            if selection in ranged_selections:
                 self.recipErrorInputLabel.hide()
                 self.rhoRangeInputLabel.show()
                 self.rhoRangeMinInput.show()
@@ -6779,6 +6782,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.errHist()
         if 'dev' in self.project.surveys[0].df.columns:
             self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+        if 'cR' in self.project.surveys[0].df.columns:
+            self.filterAttrCombo.addItem('Contact Resistance (ohm)')
 
         if self.project.elec['remote'].sum() > 0:
             self.meshQuadGroup.setEnabled(False)

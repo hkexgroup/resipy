@@ -1997,37 +1997,46 @@ class Survey(object):
         if magFlag: # in case magnitude is provided
             self.checkTxSign()
         
-        if geom: # compute and applied geometric factor
+        if geom and column=='resist': # compute and applied geometric factor
             self.computeK()
             resist = resist*self.df['K']
-        
+            
+        label = r'$\rho_a$ [$\Omega.m$]' # default label 
+        title = 'Apparent Resistivity\npseudo section'
         if log:
             resist = np.sign(resist)*np.log10(np.abs(resist))
             label = r'$\log_{10}(\rho_a)$ [$\Omega.m$]'
-        else:
-            label = r'$\rho_a$ [$\Omega.m$]'
+            
+        if column =='cR': # need to add more labels here probably 
+            label = r'$\rho_cr$ [$\Omega$]'
+            title = 'Contact Resistance/nPseudo Section'
+            
+        if vmin is None:
+            vmin = np.percentile(resist[~np.isnan(resist)],10) # use 10% percentile 
+        if vmax is None:
+            vmax = np.percentile(resist[~np.isnan(resist)],90) # use 90% percentile 
                                
         if ax is None:
             fig, ax = plt.subplots()
         else:
             fig = ax.get_figure()
        
-        if contour is False:
-            plotPsRes = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
-            cbar = fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
-            cbar.set_label(label)
-
+        levels = np.linspace(vmin, vmax, 13)
+        
         if contour:
-            if vmin is None:
-                vmin = np.min(resist)
-            if vmax is None:
-                vmax = np.max(resist)
-            levels = np.linspace(vmin, vmax, 13)
             plotPsRes = ax.tricontourf(xpos, ypos, resist, levels=levels, extend='both')
-            fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, label=label)
+        else:
+            plotPsRes = ax.scatter(xpos, ypos, c=resist, s=70, vmin=vmin, vmax=vmax)#, norm=mpl.colors.LogNorm())
+        cbar = fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, 
+                            label=label, ticks=levels)
+        cbar.set_label(label)
+            
+        if log:
+            val = ['{:.2f}'.format(10**lvl) for lvl in levels]
+            cbar.ax.set_yticklabels(val)
         
         ax.invert_yaxis() # to remove negative sign in y axis    
-        ax.set_title('Apparent Resistivity\npseudo section')
+        ax.set_title(title)
         ax.set_xlabel('Distance [m]')
         ax.set_ylabel('Pseudo depth [m]')
         if ax is None:
@@ -2118,7 +2127,6 @@ class Survey(object):
             print('pyvista not installed, cannot show 3D pseudo section')
             return
 
-            
         #TODO contour is not working! # using Delaunay 3D instead.
         # if contour:
         #     contour = False
@@ -2142,7 +2150,7 @@ class Survey(object):
             
         # elec = self.elec[['x','y','z']].values
         resist = self.df[column].values
-        
+                
         if magFlag: # for cR3t and its magnitude calculation
             self.checkTxSign()
             
@@ -2159,11 +2167,11 @@ class Survey(object):
             label = 'Phase [mrad]'
         else:
             label = 'Apparent Resistivity [Ohm.m]'
-
+            
         if vmin is None:
-            vmin = np.nanmin(resist)
+            vmin = np.percentile(resist[~np.isnan(resist)],10) # use 10% percentile 
         if vmax is None:
-            vmax = np.nanmax(resist)
+            vmax = np.percentile(resist[~np.isnan(resist)],90) # use 90% percentile 
             
         elecz = self.elec['z'].values
         elecz = elecz[np.invert(self.elec['remote'].values)]
