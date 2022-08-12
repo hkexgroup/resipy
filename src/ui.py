@@ -1121,6 +1121,8 @@ class App(QMainWindow):
                     self.activateTabs(True)
                     if 'dev' in self.project.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                    if 'cR' in self.project.surveys[0].df.columns:
+                        self.filterAttrCombo.addItem('Contact Resistance (ohm)')
                     if 'ip' in self.project.surveys[0].df.columns and self.iTimeLapse is False:
                         if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
@@ -1249,6 +1251,8 @@ class App(QMainWindow):
                     self.plotManualFiltering()
                     if 'dev' in self.project.pseudo3DSurvey.df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                    if 'cR' in self.project.pseudo3DSurvey.df.columns:
+                        self.filterAttrCombo.addItem('Contact Resistance (ohm)')
                     if 'ip' in self.project.pseudo3DSurvey.df.columns:
                         if np.sum(self.project.pseudo3DSurvey.df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
@@ -1312,6 +1316,8 @@ class App(QMainWindow):
                         self.errHist()
                     if 'dev' in self.project.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
+                    if 'cR' in self.project.pseudo3DSurvey.df.columns:
+                        self.filterAttrCombo.addItem('Contact Resistance (ohm)')
                     if 'ip' in self.project.surveys[0].df.columns:
                         if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
                             self.ipCheck.setChecked(True)
@@ -2373,6 +2379,10 @@ class App(QMainWindow):
                     elif self.filterAttrCombo.currentText() == 'Stacking Error (Dev.)':
                         numRecipRemoved = self.project.filterStack(index=self.recipErrDataIndex, percent=percent)
                         self.writeLog('k.filterStack(index={:d}, percent={:f})'.format(
+                        self.recipErrDataIndex, percent))
+                    elif self.filterAttrCombo.currentText() == 'Contact Resistance (ohm)':
+                        numRecipRemoved = self.project.filterContRes(index=self.recipErrDataIndex, vmax=percent)
+                        self.writeLog('k.filterContRes(index={:d}, vmax={:f})'.format(
                         self.recipErrDataIndex, percent))
                     if numElecRemoved != 0:
                         self.infoDump("%i measurements with greater than %3.1f%% %s, \
@@ -6511,7 +6521,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         dico = {'App. Resistivity':'app',
                 'Transfer Resistance':'resist',
                 'Reciprocal Error':'reciprocalErrRel',
-                'Stacking Error (Dev.)': 'dev'}
+                'Stacking Error (Dev.)': 'dev',
+                'Contact Resistance (ohm)':'cR'}
         attr = dico[attrText]
         pdebug('plotManualFiltering() with attr={:s} and index={:d}'.format(attr, index))
         if attr not in self.project.surveys[index].df.columns:

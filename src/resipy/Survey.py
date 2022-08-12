@@ -1062,7 +1062,39 @@ class Survey(object):
                 msgDump = "%i measurements outside [%s,%s] removed!" % (numRemoved, vmin, vmax)
                 print(msgDump)
                 return numRemoved
-        
+            
+    
+    def filterContRes(self,vmin=None, vmax=None, debug=True):
+         """Filter measurements by transfer resistance. 
+         
+         Parameters
+         -----------
+         vmin : float, optional
+             Minimum value.
+         vmax : float, optional
+             Maximum value.
+         debug : bool, optional
+             Print output to screen. Default is True.
+         """
+         df = self.df.copy()
+         if 'cR' not in df.columns:
+             raise Exception('No contact resistance column available')
+             
+         cR = np.abs(self.df['cR'])
+         if vmin is None:
+             vmin = np.min(cR)
+         if vmax is None:
+             vmax = np.max(cR)
+         ikeep = (cR >= vmin) & (cR <= vmax)
+         self.df = df[ikeep]
+         self.df.reset_index()
+         
+         if debug:
+             numRemoved = len(df)-len(self.df)
+             msgDump = "%i measurements outside [%s,%s] ohm removed!" % (numRemoved, vmin, vmax)
+             print(msgDump)
+             return numRemoved
+                
         
     def addFilteredIP(self):
         """Add filtered IP data after IP filtering and pre-processing. This is
