@@ -1953,3 +1953,52 @@ def dasParser(fname):
     return dfelec, df
     
     
+def geomParser(fname):
+    """
+    Parse PRIME Geometry file. 
+
+    Parameters
+    ----------
+    fname : str
+        Filepath to file.
+
+    Returns
+    -------
+    dfelec: pd.Dataframe() 
+        Geometry dataframe 
+    """
+    fh = open(fname,'r')
+    
+    x = []
+    y = []
+    z = []
+    n = []
+    b = []
+    
+    c = 0 
+    line = fh.readline()
+    # find header line 
+    while 'data:' not in line: 
+        line = fh.readline() 
+        c+=1 
+        if c>100:
+            raise Exception('Cannot find data line in geom file')
+            break 
+    _ = fh.readline()
+    # read in geometry information 
+    info = fh.readline().split() 
+    while len(info)>0:
+        n.append(int(info[0]))
+        x.append(float(info[1]))
+        y.append(float(info[2]))
+        z.append(float(info[3]))
+        if info[-1] =='Surface': 
+            b.append(0)
+        else:
+            b.append(1)
+        info = fh.readline().split()
+    # convert to pandas dataframe format 
+    d = {'x':x,'y':y,'z':z,'buried':b}
+    dfelec = pd.DataFrame(d)
+    return dfelec 
+    

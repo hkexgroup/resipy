@@ -1048,7 +1048,7 @@ class App(QMainWindow):
         self.ftypeCombo.addItem('Syscal')
         self.ftypeCombo.addItem('Protocol IP')
         self.ftypeCombo.addItem('ResInv (2D/3D)')
-        self.ftypeCombo.addItem('BGS Prime')
+        self.ftypeCombo.addItem('RESIMGR/PRIME')
         self.ftypeCombo.addItem('Sting')
         self.ftypeCombo.addItem('ABEM-Lund')
         self.ftypeCombo.addItem('Lippmann')
@@ -1744,19 +1744,24 @@ class App(QMainWindow):
             
 
             def readTable(self, fname, nbElec=None):
-                # identify if we have header (recommended) or not
-                with open(fname, 'r') as f:
-                    line = f.readline().split(',')[0]
-                try:
-                    float(line)
-                    header = None
-                    pdebug('elecTable.readTable: no header')
-                except Exception:
+                # check for geom type of file 
+                if fname.lower().endswith('.geom'):
+                    df = geomParser(fname)
                     header = 'infer'
-                    pdebug('elecTable.readTable: header provided')
-                df = pd.read_csv(fname, header=header)
-                newcols = [str(a).lower() for a in df.columns]
-                df = df.rename(columns = dict(zip(df.columns, newcols)))
+                else:
+                    # identify if we have header (recommended) or not
+                    with open(fname, 'r') as f:
+                        line = f.readline().split(',')[0]
+                    try:
+                        float(line)
+                        header = None
+                        pdebug('elecTable.readTable: no header')
+                    except Exception:
+                        header = 'infer'
+                        pdebug('elecTable.readTable: header provided')
+                    df = pd.read_csv(fname, header=header)
+                    newcols = [str(a).lower() for a in df.columns]
+                    df = df.rename(columns = dict(zip(df.columns, newcols)))
                 
                 # let's ensure we always have 4 columns
                 columns = ['x','y','z','buried']
@@ -1841,7 +1846,10 @@ class App(QMainWindow):
         self.elecLabel.setWordWrap(True)
 
         def importElecBtnFunc():
-            fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,'Open File', directory=self.datadir)
+            fname, _ = QFileDialog.getOpenFileName(self.tabImportingTopo,
+                                                   'Open File', 
+                                                   self.datadir,
+                                                   'CSVs (*.csv *.CSV);;GEOM (*.geom *.GEOM)')
             if fname != '':
                 if self.iForward is False:
                     nbElec = int(self.nbElecEdit.text())
@@ -7340,6 +7348,7 @@ if __name__ == '__main__':
     
     from resipy import Project
     from resipy.r2help import r2help
+    from resipy.parsers import geomParser 
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()
