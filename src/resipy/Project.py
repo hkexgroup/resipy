@@ -35,6 +35,7 @@ sys.path.append(os.path.relpath('..'))
 
 #import ResIPy resipy packages
 from resipy.Survey import Survey
+from resipy.parsers import geomParser
 from resipy.r2in import write2in
 import resipy.meshTools as mt
 from resipy.meshTools import cropSurface
@@ -1236,7 +1237,7 @@ class Project(object): # Project master class instanciated by the GUI
         
         # create bigSurvey (useful if we want to fit a single error model
         # based on the combined data of all the surveys)
-        self.bigSurvey = Survey(files[0], ftype=ftype, spacing=spacing, debug=False)
+        self.bigSurvey = Survey(files[0], ftype=ftype, spacing=spacing, debug=False, parser=parser)
         # then override the df
         if len(isurveys) == 0: # assume all surveys would be use for error modelling
             isurveys = np.ones(len(self.surveys), dtype=bool)
@@ -4835,8 +4836,15 @@ class Project(object): # Project master class instanciated by the GUI
         Parameters
         ----------
         fname : str
-            Path of the CSV file containing the electrodes positions. It should contains 3 columns maximum with the X, Y, Z positions of the electrodes.
+            Path of the CSV  (or file containing the electrodes positions. It 
+            should contains 3 columns maximum with the X, Y, Z positions 
+            of the electrodes.
         """
+        if fname.endswith('.geom'): # read in geometry file (special case) 
+            elec = geomParser(fname)
+            self.setElec(elec)
+            return 
+        
         with open(fname, 'r') as f:
             try:
                 float(f.readline().split(',')[0])
