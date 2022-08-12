@@ -2541,7 +2541,28 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             numRemoved = self.surveys[index].filterTransferRes(vmin=vmin, vmax=vmax)
         return numRemoved
-
+    
+    def filterContRes(self, index=-1, vmin=None, vmax=None):
+        """Filter measurements by contact resistance if avialable. 
+        
+        Parameters
+        -----------
+        vmin : float, optional
+            Minimum value.
+        vmax : float, optional
+            Maximum value.
+        index : int, optional
+            Index of the survey on which to apply the processing. If the
+            processing is to be applied to all surveys then specifiy
+            `index=-1` (default).
+        """
+        numRemoved = 0
+        if index == -1: # apply to all surveys
+            for s in self.surveys:
+                numRemoved += s.filterContRes(vmin=vmin, vmax=vmax)
+        else:
+            numRemoved = self.surveys[index].filterContRes(vmin=vmin, vmax=vmax)
+        return numRemoved
 
     def computeFineMeshDepth(self):
         """Compute the Fine Mesh Depth (FMD) based on electrode

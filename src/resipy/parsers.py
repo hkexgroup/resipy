@@ -519,8 +519,9 @@ def primeParserTab(fname, espacing=1):
     data_dict['dev'] = temp["pt_calc_res_error:"]
     data_dict["Rho"] = [float("nan")]*num_meas
     data_dict["ip"] = [0]*num_meas
+    data_dict['cR'] = temp['pt_meas_contact_resistance:']# contact resistance 
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
-    df = df[['a','b','m','n','Rho','dev','ip','resist']] # reorder columns to be consistent with the syscal parser
+    df = df[['a','b','m','n','Rho','dev','ip','resist','cR']] # reorder columns to be consistent with the syscal parser
     
     # shift electrodes to have continuous numbering? (not active)
     # array = df[['a','b','m','n']].values
