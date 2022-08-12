@@ -1699,6 +1699,11 @@ class Mesh:
                 else:
                     self.cbar.set_ticks([1])
                 self.cbar.set_ticklabels(val)
+            elif 'log' in attr: 
+                levels = np.linspace(vmin, vmax,13)
+                ticks = ['{:.2f}'.format(10**lvl) for lvl in levels]
+                self.cbar.set_ticks(levels)
+                self.cbar.set_ticklabels(ticks)
             self.cbar.set_label(color_bar_title) #set colorbar title
 
         ax.set_aspect(aspect)#set aspect ratio equal (stops a funny looking mesh)
@@ -1844,6 +1849,11 @@ class Mesh:
             else:
                 self.cbar.set_ticks([1])
             self.cbar.set_ticklabels(val) 
+        elif 'log' in attr: 
+            levels = np.linspace(vmin, vmax,13)
+            ticks = ['{:.2f}'.format(10**lvl) for lvl in levels]
+            self.cbar.set_ticks(levels)
+            self.cbar.set_ticklabels(ticks)
         else:
             cm = color_map
         self.cax.set_cmap(cm) # change the color map if the user wants to 
