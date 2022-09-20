@@ -1988,7 +1988,7 @@ class Project(object): # Project master class instanciated by the GUI
             x = cols2str(df[['a','b','m','n']].values)
             indexes.append(np.in1d(x, xcommon))
 
-        print('done in {:.5}s'.format(time.time()-t0))
+        print('done in {:.3}s'.format(time.time()-t0))
 
         return indexes
 
@@ -3563,11 +3563,11 @@ class Project(object): # Project master class instanciated by the GUI
         while self.irunParallel2:
             while wds and len(self.procs) < ncores:
                 wd = wds.pop()
-#                print('task', wd)
+                #print('------task', wd)
                 if OS == 'Windows':
-                    p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True, startupinfo=startupinfo)
+                    p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True, startupinfo=startupinfo)
                 else:
-                    p = Popen(cmd, cwd=wd, stdout=PIPE, shell=False, universal_newlines=True)
+                    p = Popen(cmd, cwd=wd, shell=False, universal_newlines=True)
                 self.procs.append(p)
 #                t = Thread(target=dumpOutput, args=(p.stdout,))
 #                t.daemon = True # thread dies with the program
@@ -3576,6 +3576,7 @@ class Project(object): # Project master class instanciated by the GUI
 
             for p in self.procs:
                 if done(p):
+                    #print('------done!!', p)
                     self.procs.remove(p)
                     c = c+1
                     # TODO get RMS and iteration number here ?
