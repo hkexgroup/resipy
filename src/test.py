@@ -24,7 +24,6 @@ use_pyvista = False
 tstart = time.time()
 timings = {}
 
-
 testdir = 'examples/'
 
 
