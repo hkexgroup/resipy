@@ -90,11 +90,11 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
     param['num_meas'] = len(dfr2d)
     if typ == 'R2':
         dfr2d = dfr2d.drop(['ip'], axis=1)
-        content = content + ''.join(['4 {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}\n']*len(dfr2d)).format(
+        content = content + ''.join(['4 {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {}\n']*len(dfr2d)).format(
             *np.array(dfr2d).flatten())
         
     elif typ == 'cR2':
-        content = content + ''.join(['4 {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}\n']*len(dfr2d)).format(
+        content = content + ''.join(['4 {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {} {}\n']*len(dfr2d)).format(
             *np.array(dfr2d).flatten())
     
     if np.sum(elec[:,2]) != 0: # if we have topography
@@ -104,7 +104,7 @@ def write2Res2DInv(param, fname, df, elec, typ='R2'):
                             param['topo_header'],
                             int(param['x_loc_type']),
                             int(param['num_topo']))
-        content = content + ''.join(['{:.2f} {:.2f}\n']*len(topodf)).format(
+        content = content + ''.join(['{} {}\n']*len(topodf)).format(
             *np.array(topodf).flatten())
         content = content + '{}\n'.format(int(param['topo_elec_num']))
         
