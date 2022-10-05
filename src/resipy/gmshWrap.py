@@ -1645,13 +1645,13 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
         no_pts += 1
         node_pos[i] = no_pts
         if elec_z[i] == 0:
-            fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
+            fh.write("Point (%i) = {%.16f,%.16f,%.16f, cl};\n"%(no_pts, elec_x[i], elec_y[i], 0))
             fh.write("Point{%i} In Surface{1};//surface electrode\n"%(no_pts))# put the point on surface
         else:
             if elec_z[i]>0:#
                 fh.close() # close file 
                 raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have buried electrodes above the surface!")
-            fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
+            fh.write("Point (%i) = {%.16f,%.16f,%.16f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};//buried electrode\n"%(no_pts))# put the point in volume 
     fh.write("//End electrodes\n")
     
@@ -1683,13 +1683,13 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
                 continue 
                 
             if rz[i] == 0: # it is on the surface! 
-                fh.write("Point (%i) = {%.2f, %.2f, %.2f, %.2f};\n"%(no_pts, rx[i], ry[i], 0, rcl[i]))
+                fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], 0, rcl[i]))
                 fh.write("Point{%i} In Surface{%i};//surface refinement point\n"%(no_pts,sur_idx))# put the point on surface
             else:
                 if rz[i]>0:
                     fh.close()
                     raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have refinement points above the surface!")
-                fh.write("Point (%i) = {%.2f, %.2f, %.2f, %.2f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
+                fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
                 fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,vol_idx))# put the point in volume 
         fh.write('//End mesh refinement points\n')
     

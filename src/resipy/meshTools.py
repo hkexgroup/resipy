@@ -4647,10 +4647,11 @@ def tri_mesh(*args):
 
 
 #%% 3D tetrahedral mesh 
-def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, interp_method = 'triangulate',
-               surface_refinement=None, mesh_refinement=None, show_output=True, 
-               path='exe', dump=print, whole_space=False, padding=20,
-               search_radius = 10, handle=None, **kwargs):
+def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, 
+              interp_method = 'triangulate',surface_refinement=None, 
+              mesh_refinement=None, show_output=True, add_refinement=False, 
+              path='exe', dump=print, whole_space=False, padding=20,
+              search_radius = 10, handle=None, **kwargs):
     """ Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
     in the working directory. This function expects the current working directory 
     has path: exe/gmsh.exe.
@@ -4685,6 +4686,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
         elements. See further explanation in tetraMesh notes. 
     show_output : boolean, optional
         `True` if gmsh output is to be printed to console. 
+    add_refinement: boolean
+        If True then points are added near to surface electrodes to encourage 
+        extra refinement near electrodes (option in development)
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
     whole_space: boolean, optional
@@ -4898,6 +4902,21 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, inte
             internal_mesh_refinement['cl'] = mesh_refinement['cl']
 
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to box_3d
+    elif add_refinement:
+        internal_mesh_refinement = {'x':[],'y':[],'z':[],'cl':[]}
+        if 'cl' in kwargs.keys():
+            cl = kwargs['cl']
+        else:
+            dist_sort = np.unique(gw.find_dist(elec_x,elec_y,elec_z))
+            cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
+        for i in range(len(surf_elec_x)):
+            x = surf_elec_x[i] 
+            y = surf_elec_y[i] 
+            internal_mesh_refinement['x'].append(x)
+            internal_mesh_refinement['y'].append(y + (cl*0.1))
+            internal_mesh_refinement['z'].append(0) # -(cl*0.1))
+            internal_mesh_refinement['cl'].append(cl*10)
+        kwargs['mesh_refinement'] = internal_mesh_refinement
     else:
         internal_mesh_refinement = None # then there will be no internal mesh refinement 
     
