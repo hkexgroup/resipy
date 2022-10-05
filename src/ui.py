@@ -3695,6 +3695,16 @@ class App(QMainWindow):
         self.clCylinderLabel = QLabel('Characteristic Length')
         self.clCylinderEdit = QLineEdit()
         self.clCylinderEdit.setToolTip('Characteristic Length for electrodes')
+
+        self.clCylinderFactorLabel = QLabel('Growth factor:')
+        self.clCylinderFactorToolTip = 'Factor applied to the characteristic' \
+            'length for points away from the electrodes'
+        self.clCylinderFactorLabel.setToolTip(self.clCylinderFactorToolTip)
+        self.clCylinderFactorEdit = QLineEdit()
+        self.clCylinderFactorEdit.setToolTip(self.clCylinderFactorToolTip)
+        self.clCylinderFactorEdit.setValidator(QDoubleValidator())
+        self.clCylinderFactorEdit.setText('2.5')
+                   
         # self.originCylinderEdit = QLineEdit()
         # self.originCylinderEdit.setToolTip('Origin of the mesh as X,Y,Z')
         # self.dimensionCylinderEdit = QLineEdit()
@@ -3739,6 +3749,7 @@ class App(QMainWindow):
             
             # retrieve parameters
             cl = -1 if self.clCylinderEdit.text() == '' else float(self.clCylinderEdit.text())
+            cl_factor = float(self.clCylinderFactorEdit.text())
             # if self.originCylinderEdit.text() != '':
             #     origin = [float(a) for a in self.originCylinderEdit.text().split(',')]
             # else:
@@ -3757,14 +3768,15 @@ class App(QMainWindow):
             self.meshLogText.clear()
             self.project.createMesh(typ='cylinder',
                                     cl=cl,
+                                    cl_factor=cl_factor,
                                     # origin=origin,
                                     # dimension=dimension,
                                     zlim=zlim,
                                     dump=meshLogTextFunc,
                                     refine=refine,
                                     show_output=True)
-            self.writeLog('k.createMesh(typ="cylinder", cl={:.2e}, zlim={:s}'
-                          ', refine={:d})'.format(cl, str(zlim), refine))
+            self.writeLog('k.createMesh(typ="cylinder", cl={:.2e}, cl_factor={:.2e}, zlim={:s}'
+                          ', refine={:d})'.format(cl, cl_factor, str(zlim), refine))
             
             # display the mesh
             if pvfound:
@@ -4132,8 +4144,8 @@ class App(QMainWindow):
         self.meshOptionCylinderLayout = QHBoxLayout()
         self.meshOptionCylinderLayout.addWidget(self.clCylinderLabel)
         self.meshOptionCylinderLayout.addWidget(self.clCylinderEdit)
-        # self.meshOptionCylinderLayout.addWidget(self.originCylinderLabel)
-        # self.meshOptionCylinderLayout.addWidget(self.originCylinderEdit)
+        self.meshOptionCylinderLayout.addWidget(self.clCylinderFactorLabel)
+        self.meshOptionCylinderLayout.addWidget(self.clCylinderFactorEdit)
         # self.meshOptionCylinderLayout.addWidget(self.dimensionCylinderLabel)
         # self.meshOptionCylinderLayout.addWidget(self.dimensionCylinderEdit)
         self.meshOptionCylinderLayout.addWidget(self.zlimCylinderLabel)
