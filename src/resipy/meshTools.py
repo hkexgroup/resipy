@@ -26,7 +26,7 @@ import matplotlib.patches as mpatches
 import matplotlib.path as mpath
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, Voronoi 
 from copy import deepcopy
 
 #import R2gui API packages 
@@ -4649,7 +4649,7 @@ def tri_mesh(*args):
 #%% 3D tetrahedral mesh 
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, 
               interp_method = 'triangulate',surface_refinement=None, 
-              mesh_refinement=None, show_output=True, add_refinement=False, 
+              mesh_refinement=None, show_output=True, add_refinement=True, 
               path='exe', dump=print, whole_space=False, padding=20,
               search_radius = 10, handle=None, **kwargs):
     """ Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
@@ -4903,19 +4903,24 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
 
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to box_3d
     elif add_refinement:
-        internal_mesh_refinement = {'x':[],'y':[],'z':[],'cl':[]}
+        
         if 'cl' in kwargs.keys():
             cl = kwargs['cl']
         else:
             dist_sort = np.unique(gw.find_dist(elec_x,elec_y,elec_z))
             cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
-        for i in range(len(surf_elec_x)):
-            x = surf_elec_x[i] 
-            y = surf_elec_y[i] 
-            internal_mesh_refinement['x'].append(x)
-            internal_mesh_refinement['y'].append(y + (cl*0.1))
-            internal_mesh_refinement['z'].append(0) # -(cl*0.1))
-            internal_mesh_refinement['cl'].append(cl*10)
+        if 'cl_corner' in kwargs.keys():
+            cl_corner = kwargs['cl_corner']
+        else:
+            cl_corner = 3 
+
+        vpoints = np.c_[surf_elec_x,surf_elec_y]
+        vor = Voronoi(vpoints)
+        
+        internal_mesh_refinement = {'x':vor.vertices[:,0],
+                                    'y':vor.vertices[:,1],
+                                    'z':np.zeros(vor.vertices.shape[0]),
+                                    'cl':np.zeros(vor.vertices.shape[0]) + (cl*cl_corner)}
         kwargs['mesh_refinement'] = internal_mesh_refinement
     else:
         internal_mesh_refinement = None # then there will be no internal mesh refinement 
