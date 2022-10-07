@@ -1595,8 +1595,8 @@ def lippmannParser(fname):
     elec_lineNum_s = [i for i in range(len(dump)) if '* Electrode positions *' in dump[i]]
     elec_lineNum_e = [i-1 for i in range(len(dump)) if '* Remote electrode positions *' in dump[i]]
     elec_nrows = elec_lineNum_e[0] - elec_lineNum_s[0]
-    elec_raw = pd.read_csv(fname, delim_whitespace=True, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)
-    elec = np.array(elec_raw.iloc[:,-3:])
+    elec_raw = pd.read_csv(fname, skiprows=elec_lineNum_s[0]+1, nrows=elec_nrows, header=None)[0].str.split('=', expand=True)[1]
+    elec = np.array(elec_raw.str.split(expand=True).astype(float))
     
     #for pole-pole and pole-dipole arrays
     elec[elec > 9999] = 999999
