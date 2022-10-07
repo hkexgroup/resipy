@@ -3501,25 +3501,27 @@ class App(QMainWindow):
         self.cl3Edit.setText('')
         self.cl3Edit.setPlaceholderText('[m]')
         self.cl3Edit.setToolTip(self.cl3ToolTip)
-        self.cl3FactorToolTip = 'Factor for the incremental size increase with depth in the mesh.\n' \
-                           'Default: 8 (elements at the fine/coarse bondary depth are 8 times as big as those at the surface)'
-        self.cl3FactorLabel = QLabel('Growth factor Top:')
+        self.cl3FactorToolTip = 'Characteristic length multiplier for the which increases' \
+            'the size of elements at the depth of investigation \n' \
+            'Default: 8 (elements at the fine/coarse bondary depth are 8 times as big as those at the surface)'
+        self.cl3FactorLabel = QLabel('Growth Factor Depth:')
         self.cl3FactorLabel.setToolTip(self.cl3FactorToolTip)
         self.cl3FactorEdit = QLineEdit()
         self.cl3FactorEdit.setToolTip(self.cl3FactorToolTip)
         self.cl3FactorEdit.setValidator(QDoubleValidator())
         self.cl3FactorEdit.setText('8')
-        self.clnFactorToolTip = 'Factor applied to the characteristic length for the region below fine/coarse bondary depth to ' \
-                           'compute a characteristic length for background region'
-        self.clnFactorLabel = QLabel('Growth factor Bottom:')
+        # CLN ENTERED INTO UI NOW CHANGES INTERELECTRODE ELEMENT GROWTH - jamyd91 
+        self.clnFactorToolTip = 'Characteristic length multiplier for the which increases' \
+            'the size of elements at away from electrodes on the surface of the mesh' 
+        self.clnFactorLabel = QLabel('Growth Factor Surface:')
         self.clnFactorLabel.setToolTip(self.clnFactorToolTip)
         self.clnFactorEdit = QLineEdit()
         self.clnFactorEdit.setToolTip(self.clnFactorToolTip)
         self.clnFactorEdit.setValidator(QDoubleValidator())
-        self.clnFactorEdit.setText('100')
+        self.clnFactorEdit.setText('3')
         self.refineTetraCheck = QCheckBox('Refine')
         self.refineTetraCheck.setToolTip('Refine the mesh for forward modelling'
-                                    'without increasing the number of parameters.')
+                                    'without increasing the number of parameters')
         
         def meshTetraFunc():
             self.regionTable.reset()
@@ -3562,9 +3564,9 @@ class App(QMainWindow):
             fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
             self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
-                               cln_factor=cln_factor, refine=refine, show_output=True)
+                               cl_corner=cln_factor, refine=refine, show_output=True)
             self.writeLog('k.createMesh(typ="tetra", surface={:s}, fmd={:s}, cl={:.2f},'
-                          ' cl_factor={:.2f}, cln_factor={:.2f}, refine={:d})'.format(
+                          ' cl_factor={:.2f}, cl_corner={:.2f}, refine={:d})'.format(
                               str(topo), str(fmd), cl, cl_factor, cln_factor, refine))
             if pvfound:
                 self.mesh3Dplotter.clear() # clear all actors 

@@ -1396,16 +1396,19 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
         assocaited elements will be on the electrodes. Usually no bigger than 5. If set as -1 (default)
         a characteristic length 1/4 the minimum electrode spacing is computed.
     cl_corner: float, optional
-        characteristic length of the surface points on the corners of the fine mesh
-        region. By default is 1.2 * cl. 
+        Characteristic length mulitplier for the surface points on away from the 
+        electrodes on the top of the fine mesh region. The reasoning for this 
+        is because the sensitivity of ERT drops off with distance from electrodes. 
     cl_factor: float, optional 
-        This allows for tuning of the incremental size increase with depth in the 
-        mesh, usually set to 2 such that the elements at the DOI are twice as big as those
+        Characteristic length mulitplier for the sub-surface points on away from the 
+        electrodes on the top of the fine mesh region.  This allows for tuning of 
+        the incremental size increase with depth in the mesh, usually set to 2 such 
+        that the elements at the DOI are twice as big as those
         at the surface. The reasoning for this is because the sensitivity of ERT drops
         off with depth. 
     cln_factor: float, optional
-        Factor applied to the characteristic length for fine mesh region to compute
-        a characteristic length for background (nuemmon) region
+        Characteristic length mulitplier for the nuemmon boundary points in the 
+        coarse mesh region. 
     mesh_refinement: dict, pd.DataFrame, optional 
         Coordinates for discrete points in the mesh (advanced use cases). 
     dump : function, optional
@@ -1457,7 +1460,7 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
         triggered = True
 
     if cl_corner == -1: 
-        cl_corner = 1.2*cl 
+        cl_corner = 3*cl 
         
     if dp_len == -1: # compute largest possible dipole length 
         if not triggered:# Avoid recalculating if done already 
@@ -2253,8 +2256,17 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     allz = np.append(elec_z,zlim)
     
     uni_z = np.unique(allz)
+    max_diff = np.max(np.abs(np.diff(uni_z)))
+    refine_z = [] 
     if add_refine:
-        uni_z = np.unique(np.append(uni_z,uni_z[:-1] + np.diff(uni_z)/2))
+        for i in range(1,len(uni_z)):
+            diff = abs(uni_z[i] - uni_z[i-1]) 
+            if diff<(0.2*max_diff):
+                continue 
+            refine_z.append(uni_z[i-1] + (diff/2))
+        # uni_z = np.unique(np.append(uni_z,uni_z[:-1] + np.diff(uni_z)/2))
+    uni_z = np.unique(np.append(uni_z,refine_z))
+    
     #extrude surfaces 
     fh.write("//Extrude planes in between each electrode.\n") 
     seg = 0 # segment number 
