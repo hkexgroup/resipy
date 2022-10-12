@@ -2258,7 +2258,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     uni_z = np.unique(allz)
     max_diff = np.max(np.abs(np.diff(uni_z)))
     refine_z = [] 
-    if add_refine and all(inside==False): # triggers if refinement requested and no internal electrodes 
+    if add_refine: # triggers if refinement requested and no internal electrodes 
         for i in range(1,len(uni_z)):
             diff = abs(uni_z[i] - uni_z[i-1]) 
             if diff<(0.2*max_diff):
@@ -2325,14 +2325,14 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
             fh.write("Point {%i} In Volume {1};\n"%pt_no)
             
     for i in range(1,len(uni_z)):
+        if all(inside==False):
+            continue # skip if internal electrodes present 
         z = uni_z[i]
         diff = abs(uni_z[i] - uni_z[i-1])
         if z== zlim[0] or z == zlim[1]:
             continue # should be included in the surface already 
         if diff<(0.2*max_diff):
             continue 
-        
-        # TODO: check distances to make sure point does not already exist?? 
         pt_no +=1 
         fh.write("Point (%i) = {%f,%f,%f,cl*cl_fac};//Internal refinement\n"%(pt_no,0,0,z))
         fh.write("Point {%i} In Volume {1};\n"%pt_no)
