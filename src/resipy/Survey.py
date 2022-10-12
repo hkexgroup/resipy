@@ -250,20 +250,20 @@ class Survey(object):
 
             # add error measured to the error columns (so they can be used if no error model are fitted)
             if 'magErr' in self.df.columns:
-                self.df['resError'] = self.df['magErr'].copy()
+                self.df.loc[:,'resError'] = self.df['magErr'].copy()
             else:
-                self.df['resError'] = np.nan
+                self.df.loc[:,'resError'] = np.nan
             if 'phiErr' in self.df.columns:
-                self.df['phaseError'] = self.df['phiErr'].copy()
+                self.df.loc[:,'phaseError'] = self.df['phiErr'].copy()
             else:
-                self.df['phaseError'] = np.nan
+                self.df.loc[:,'phaseError'] = np.nan
             
             # set electrode dataframe
             if type(elec) == np.ndarray: # TODO for temporary stability
                 self.elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
-                self.elec['remote'] = False
-                self.elec['buried'] = False
-                self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
+                self.elec.loc[:,'remote'] = False
+                self.elec.loc[:,'buried'] = False
+                self.elec.loc[:,'label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
             else:
                 self.elec = elec
             
@@ -277,9 +277,9 @@ class Survey(object):
             # convert apparent resistivity to resistance and vice versa
             self.computeK()
             if 'resist' in self.df.columns:
-                self.df['app'] = self.df['K']*self.df['resist']
+                self.df.loc[:,'app'] = self.df['K']*self.df['resist']
             elif 'app' in self.df.columns:
-                self.df['resist'] = self.df['app']/self.df['K']
+                self.df.loc[:,'resist'] = self.df['app']/self.df['K']
             
         # we provide df and elec dataframes
         elif df is not None and elec is not None:
