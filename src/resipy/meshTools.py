@@ -3628,12 +3628,12 @@ def moveMesh2D(meshObject, elecLocal, elecGrid):
         mesh.node[:,1] = np.zeros_like(mesh.node[:,1]) + yGrid[0]
         
     else: 
-        mx = np.polyfit(xLocal,xGrid,1)
-        my = np.polyfit(xGrid, yGrid,1)
-        mesh.elec[:,0][~mesh.iremote] = mx[0] * xLocal + mx[1]
-        mesh.elec[:,1][~mesh.iremote] = my[0] * xGrid + my[1]
-        mesh.node[:,0] = mx[0] * mesh.node[:,0] + mx[1]
-        mesh.node[:,1] = my[0] * mesh.node[:,0] + my[1]
+        px = np.polyfit(xLocal, xGrid,1)
+        py = np.polyfit(xGrid, yGrid,1)
+        mesh.elec[:,0][~mesh.iremote] = np.polyval(px, xLocal) 
+        mesh.elec[:,1][~mesh.iremote] = np.polyval(py, xGrid) 
+        mesh.node[:,0] = np.polyval(px, mesh.node[:,0])
+        mesh.node[:,1] = np.polyval(py, mesh.node[:,0]) 
 
     return mesh   
 

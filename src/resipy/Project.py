@@ -4632,27 +4632,28 @@ class Project(object): # Project master class instanciated by the GUI
         for key in regionValues.keys():
             idx = regions == int(key)
             res0[idx] = regionValues[key]
-        self.mesh.df['res0'] = res0
+            self.param['res0File'] = 'res0.dat'
+        self.mesh.df.loc[:,'res0'] = res0
         # print('regionValues:',regionValues)
 
         zones = np.array(self.mesh.df['zones']).copy()
         for key in zoneValues.keys():
             idx = regions == int(key)
             zones[idx] = zoneValues[key]
-        self.mesh.df['zones'] = zones
+        self.mesh.df.loc[:,'zones'] = zones
 
         fixed = self.mesh.df['param'].values.copy()
         for key in fixedValues.keys():
             idx = regions == int(key)
             if fixedValues[key] == True:
                 fixed[idx] = 0
-        self.mesh.df['param'] = fixed
+        self.mesh.df.loc[:,'param'] = fixed
 
         phase0 = np.array(self.mesh.df['phase0']).copy()
         for key in ipValues.keys():
             idx = regions == int(key)
             phase0[idx] = ipValues[key]
-        self.mesh.df['phase0'] = phase0
+        self.mesh.df.loc[:,'phase0'] = phase0
 
 
     def setRefModel(self, res0):
@@ -4950,7 +4951,9 @@ class Project(object): # Project master class instanciated by the GUI
             # df[['a','b','m','n']] *= spacing
             lookupDict = dict(zip(self.elec['label'], self.elec['x'].values))
             data = df[['a','b','m','n']].replace(lookupDict).values
-            df.loc[:,['a','b','m','n']] = data
+            for i,a in enumerate(['a','b','m','n']):
+                df.loc[:,a] = data[:,i] # this way should avoid warnings 
+            # df.loc[:,['a','b','m','n']] = data
             if savetyp == 'Res2DInv (*.dat)':
                 param = {'num_meas': df.shape[0],
                          'lineTitle': self.param['lineTitle'],
