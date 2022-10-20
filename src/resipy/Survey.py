@@ -2912,7 +2912,7 @@ class Survey(object):
         for i in range(len(x)-1):
             h = x_sorted[i] - x_sorted[i+1] # hypotenuse 
             dz = z_sorted[i] - z_sorted[i+1]
-            sq = h**2 - dz**2
+            sq = np.abs(h**2 - dz**2)
             x_hor[i+1] =  x_hor[i] + np.sqrt(sq)
         
         # return values in the order in which they came
