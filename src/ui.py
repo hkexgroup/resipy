@@ -1869,7 +1869,28 @@ class App(QMainWindow):
         self.elecDxLabel = QLabel('X spacing:')
         self.elecDxEdit = QLineEdit('1.0')
         self.elecDxEdit.setValidator(QDoubleValidator())
+        
+        def elecDx2DTapeFunc(state):
+            self.updateElec()
+            if state  == Qt.Checked:
+                self.elecBackUp2 = self.project.elec.copy() # backing up electrodes and surveys if checkbox is unchecked
+                self.surveysBackUp2 = self.project.surveys.copy()
+                self.project.elec2horidist()
+                self.infoDump('Eelectrodes distances corrected!')
+            else:
+                self.project.elec = self.elecBackUp2.copy() # backing up electrodes and surveys if checkbox is unchecked
+                self.project.surveys = self.surveysBackUp2.copy()
 
+            self.elecTable.initTable(self.project.elec)
+            self.tempElec = None
+            self.nbElecEdit.setText(str(self.project.elec.shape[0]))
+            self.elecDxEdit.setText('{:.2f}'.format(np.diff(self.project.elec[~self.project.elec['remote']]['x'].values[:2])[0]))
+            self.updateElec()
+        self.elecDx2DTape = QCheckBox('Tape Measured')
+        self.elecDx2DTape.setToolTip('Assuming the electrode spacing is measured at the surface with a tape (i.e., x is not the true horizontal distance)')
+        self.elecDx2DTape.stateChanged.connect(elecDx2DTapeFunc)
+        self.elecDx2DTape.setEnabled(False)
+                
         self.elecDzLabel = QLabel('Z spacing:')
         self.elecDzEdit = QLineEdit('0.0')
         self.elecDzEdit.setValidator(QDoubleValidator())
@@ -1950,6 +1971,7 @@ class App(QMainWindow):
         self.elecGenLayout.addWidget(self.nbElecEdit)
         self.elecGenLayout.addWidget(self.elecDxLabel)
         self.elecGenLayout.addWidget(self.elecDxEdit)
+        self.elecGenLayout.addWidget(self.elecDx2DTape)
         self.elecGenLayout.addWidget(self.elecDzLabel)
         self.elecGenLayout.addWidget(self.elecDzEdit)
         self.elecGenLayout.addWidget(self.elecLineLabel)
@@ -6766,6 +6788,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.invNowBtn.setEnabled(True)
             self.activateTabs(True)
             self.tempElec = self.elecTable.getTable()
+            self.elecDx2DTape.setEnabled(True)
             self.infoDump(fname + ' imported successfully')
         except Exception as e:
             self.loadingWidget(exitflag=True)
@@ -6858,6 +6881,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.importDataBtn.setText('Import Data')
         self.ipCheck.setChecked(False)
         self.ipCheck.setEnabled(False)
+        self.elecDx2DTape.setChecked(False)
+        self.elecDx2DTape.setEnabled(False)
         self.importDataRecipBtn.hide()
         self.fnamesCombo.hide()
         self.fnamesComboLabel.hide()
