@@ -584,6 +584,7 @@ class App(QMainWindow):
                     self.project.typ = self.project.typ.replace('3t','2')
                     self.writeLog('k.typ = {:s}'.format(self.project.typ))
                 # importing tab
+                self.elecDx2DTape.show()
                 self.elecTable.setColumnHidden(2, True)
                 self.topoTable.setColumnHidden(2, True)
                 self.regular3DCheck.setChecked(False)
@@ -658,6 +659,7 @@ class App(QMainWindow):
                     self.writeLog('k.typ = {:s}'.format(self.project.typ))
 
                 # importing tab
+                self.elecDx2DTape.hide()
                 self.elecLineEdit.setEnabled(True)
                 self.elecLineSpacingEdit.setEnabled(True)
                 self.elecTable.setColumnHidden(2, False)
