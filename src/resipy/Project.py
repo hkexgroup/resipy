@@ -799,6 +799,19 @@ class Project(object): # Project master class instanciated by the GUI
             string.append(this_string)
             
         return string
+    
+    def elec2horidist(self):
+        """
+        Convert 2D xz data into a true horizontal distance. Assumes that survey 
+        was done with a tape measure and the X distances are not true horizontal
+        distance but distances measured along the ground. 
+
+        """
+        for s in self.surveys:
+            s.elec2horidist() 
+            
+        # reset first survey electrodes to project electrodes 
+        self.setElec(self.surveys[0].elec)
 
 
     def setwd(self, dirname):
