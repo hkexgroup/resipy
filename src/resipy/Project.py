@@ -811,7 +811,7 @@ class Project(object): # Project master class instanciated by the GUI
             s.elec2horidist() 
             
         # reset first survey electrodes to project electrodes 
-        # self.setElec(self.surveys[0].elec)
+        self.setElec(self.surveys[0].elec)
 
 
     def setwd(self, dirname):
