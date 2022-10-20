@@ -2891,6 +2891,40 @@ class Survey(object):
     
         self.elec.loc[:, ['x','y','z']] = new_elec
         
+    def elec2horidist(self):
+        """
+        Convert 2D xz data into a true horizontal distance. Assumes that survey 
+        was done with a tape measure and the X distances are not true horizontal
+        distance but distances measured along the ground. 
+
+        """
+        elec = self.elec[['x','y','z']].values
+        x = elec[:,0]
+        y = elec[:,1]
+        z = elec[:,2]
+        
+        idx = np.argsort(x) # sort by x axis
+        x_sorted = x[idx]
+        z_sorted = z[idx]
+        
+        x_hor = np.zeros_like(x, dtype=float)
+        #the first entry should be x = 0
+        for i in range(len(x)-1):
+            h = x_sorted[i] - x_sorted[i+1] # hypotenuse 
+            dz = z_sorted[i] - z_sorted[i+1]
+            sq = h**2 - dz**2
+            x_hor[i+1] =  x_hor[i] + np.sqrt(sq)
+        
+        # return values in the order in which they came
+        new_elec = np.zeros_like(elec, dtype=float)
+        new_elec[:,1] = y         
+        for i in range(len(z)):
+            put_back = idx[i] # index to where to the value back again
+            new_elec[put_back,0] = x_hor[i]
+            new_elec[put_back,2] = z_sorted[i]
+    
+        self.elec.loc[:, ['x','y','z']] = new_elec
+        
     def _rmLineNum(self):
         """Remove line numbers from dataframe.
         """
