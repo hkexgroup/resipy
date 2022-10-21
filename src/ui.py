@@ -1897,7 +1897,7 @@ class App(QMainWindow):
         self.elecDzEdit = QLineEdit('0.0')
         self.elecDzEdit.setValidator(QDoubleValidator())
         
-        self.elecLineLabel = QLabel('Nb Lines:')
+        self.elecLineLabel = QLabel('Number of Lines:')
         self.elecLineEdit = QLineEdit('1')
         self.elecLineEdit.setValidator(QIntValidator())
         self.elecLineEdit.setEnabled(False)
