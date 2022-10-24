@@ -181,7 +181,7 @@ macOS Mojave and before: [![mac](https://img.shields.io/badge/macOS%20Mojave%206
 [![win](https://img.shields.io/badge/Windows%2064bit-ResIPy%20v3.0.3-blue.svg?style=flat&logo=Microsoft&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.3/ResIPy-windows.exe)
 [![mac](https://img.shields.io/badge/macOS%2064bit-ResIPy%20v3.0.3-lightgrey.svg?style=flat&logo=Apple&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.3/ResIPy-macOS.dmg "wine is required - see below")
 [![linux](https://img.shields.io/badge/Linux%2064bit-ResIPy%20v3.0.3-orange.svg?style=flat&logo=Linux&logoColor=white)](https://github.com/hkexgroup/resipy/releases/download/v3.0.3/ResIPy-linux)
-- v1.x.x and V2.x.x are available on github: https://github.com/hkexgroup/resipy/releases
+- Older versions are available on github: https://github.com/hkexgroup/resipy/releases
 
 Zenodo project DOI: [![zenodo doi](https://zenodo.org/badge/DOI/10.5281/zenodo.2530059.svg)](https://doi.org/10.5281/zenodo.2530059)
 
