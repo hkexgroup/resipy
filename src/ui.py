@@ -1318,7 +1318,7 @@ class App(QMainWindow):
                         self.errHist()
                     if 'dev' in self.project.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Stacking Error (Dev.)')
-                    if 'cR' in self.project.pseudo3DSurvey.df.columns:
+                    if 'cR' in self.project.surveys[0].df.columns:
                         self.filterAttrCombo.addItem('Contact Resistance (ohm)')
                     if 'ip' in self.project.surveys[0].df.columns:
                         if np.sum(self.project.surveys[0].df['ip'].values) > 0 or np.sum(self.project.surveys[0].df['ip'].values) < 0: # np.sum(self.project.surveys[0].df['ip'].values) !=0 will result in error if all the IP values are set to NaN
@@ -4115,7 +4115,7 @@ class App(QMainWindow):
         def meshLogTextFunc(text):
             cursor = self.meshLogText.textCursor()
             cursor.movePosition(cursor.End)
-            cursor.insertText(text + '\n')
+            cursor.insertText(text)# + '\n') # "\n" seems unnecessary for ResIPy v3.4.1 release
             self.meshLogText.ensureCursorVisible()
             QApplication.processEvents()
         self.meshLogText = QTextEdit()
