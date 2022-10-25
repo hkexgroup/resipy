@@ -1,6 +1,7 @@
 v3.4.1
+------
 - Bug fix: creating 3D survey from 2D lines (GUI only)
-v3.4.0
+** v3.4.0 **
 - Improved meshing for 3D surface arrays.
 - Support for 3D tetrahedral cylinder meshes.
 - Parsing contact resistance information (pseudo section).
