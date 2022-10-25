@@ -1,8 +1,10 @@
+v3.4.1
+- Bug fix: creating 3D survey from 2D lines (GUI only)
 v3.4.0
 - Improved meshing for 3D surface arrays.
 - Support for 3D tetrahedral cylinder meshes.
 - Parsing contact resistance information (pseudo section).
-- Ability to slice 3D mesh along a line (e.g., electrodes).
+- Ability to slice 3D meshes along a line (e.g., electrodes).
 - Ability to convert tape-measured X to true X (2D only).
 - Add custom parser for timelapse or batch (API only)
 - Various bug fixes.
