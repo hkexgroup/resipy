@@ -3159,9 +3159,9 @@ class Project(object): # Project master class instanciated by the GUI
             print('All non fixed parameters reset to 100 Ohm.m and 0 mrad, '
                   'as the survey to be inverted is from a forward model.')
             ifixed = self.mesh.df['param'] == 0
-            # res0 = np.array(self.mesh.df['res0'])
-            res0 = np.zeros(self.mesh.numel)+100
-            # phase0 = np.array(self.mesh.df['phase0'])
+            res0 = np.array(self.mesh.df['res0'])
+            # res0 = np.zeros(self.mesh.numel)+100
+            phase0 = np.array(self.mesh.df['phase0'])
             phase0 = np.zeros(self.mesh.numel)
             res0f = res0.copy()
             phase0f = phase0.copy()
