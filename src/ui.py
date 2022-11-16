@@ -3153,6 +3153,7 @@ class App(QMainWindow):
             self.project.err = False
             self.writeLog('k.showErrorIP(index={:d})'.format(index))
             self.writeLog('k.err = False')
+            QApplication.processEvents()
 
         def iperrFitTypeFunc(index):
             if len(self.project.surveys) == 0:
@@ -3200,6 +3201,8 @@ class App(QMainWindow):
                 a_wgtFunc()
                 self.b_wgt.setText('0')
                 b_wgtFunc()
+            QApplication.processEvents()
+            
         self.iperrFitType = QComboBox()
         self.iperrFitType.addItem('Observed discrepancies') 
         self.iperrFitType.addItem('Power law')
@@ -6156,7 +6159,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.mwInvErrorIP.setCallback(self.project.showPseudoInvErrorIP)
                 self.mwInvErrorIP.replot(index=index)
                 self.writeLog('k.showPseudoInvErrorIP(index={:d})'.format(index))
-            
+            QApplication.processEvents()
 
         self.mwInvError = MatplotlibWidget(navi=True, aspect='auto', itight=True)
         self.mwInvErrorIP = MatplotlibWidget(navi=True, aspect='auto', itight=True)
@@ -6201,6 +6204,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         invErrorLabel = QLabel('All errors should be between +/- 3% (Binley at al. 1995). '
                                'If it\'s not the case try to fit an error model or '
                                'manually change the a_wgt and b_wgt in inversion settings.')
+        QApplication.processEvents()
 
 
         # layout
@@ -6584,6 +6588,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         except ValueError as e:
             self.errorDump(e)
             self.mwManualFiltering.clear()
+        QApplication.processEvents()
 
     def errHist(self, index=0):
         pdebug('errHist()')
@@ -6597,6 +6602,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.writeLog('k.showErrorDist()')
         else:
             pass
+        QApplication.processEvents()
     
     def plotError(self, index=0):
         if len(self.project.surveys) == 0:
@@ -6605,6 +6611,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.mwFitError.replot(index=index)
         self.project.err = False
         self.writeLog('k.showError(index={:d})'.format(index))
+        QApplication.processEvents()
         
     def topoInterpBtnFunc(self):
         dfelec = self.elecTable.getTable()
