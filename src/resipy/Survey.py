@@ -961,7 +961,6 @@ class Survey(object):
         if errPercent > 100:
             errPercent = 100
         parametricFit = norm.pdf(np.arange(-100,100,0.5),np.mean(errMax), np.std(errMax))
-        print('~~~~~~~~~~~##############~~~~~~~~~~~\n%s\n~~~~~~~~~~~~##########~~~~~~~~~~~~~~' % str(errMax))
         KDEfit = gaussian_kde(errMax)
         ax.plot(np.arange(-100,100,0.5),parametricFit,'r--',label="Parametric fit")
         ax.plot(np.arange(-100,100,0.5), KDEfit(np.arange(-100,100,0.5)), 'blue',label="KDE fit")
