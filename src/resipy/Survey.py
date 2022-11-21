@@ -511,7 +511,11 @@ class Survey(object):
         self.ndata = len(self.df)
         self.filterDefault() # we assume the user input reciprocal data not another
         self.computeReciprocal()
-        # normal survey
+        
+        # backing up data
+        self.dfReset = self.df.copy()
+        self.dfPhaseReset = self.df.copy()
+        self.dfOrigin = self.df.copy()
 
     
     def filterData(self, i2keep):
