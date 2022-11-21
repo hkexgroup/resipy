@@ -2102,7 +2102,8 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     # we assume the origin is at 0,0 
     if radius is None:
         radius = np.max(dist) 
-    inside = dist < radius # electrodes on inside of column raduis 
+    diff = np.abs(dist - radius)
+    inside = diff > 1e16 # electrodes on inside of column raduis 
     
     # find unique xy positions
     uni_x = []
@@ -2167,6 +2168,10 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
             else:
                 dx = curc_x[i+1] - curc_x[i]
                 dy = curc_y[i+1] - curc_y[i]
+            d = np.sqrt(dx**2 + dy**2)
+            if d < 0.2*cl: 
+                # skip if inter electrode distance smaller than 20% characteristic length 
+                continue 
             # mid point of circumfrence points 
             mx = curc_x[i] + (dx/2)
             my = curc_y[i] + (dy/2)
