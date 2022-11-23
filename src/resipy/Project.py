@@ -1999,7 +1999,10 @@ class Project(object): # Project master class instanciated by the GUI
         xcommon = x0[icommon]
         for df in dfs2:
             x = cols2str(df[['a','b','m','n']].values)
-            indexes.append(np.in1d(x, xcommon))
+            iedups = np.array(pd.Series(x).duplicated()) # cols2str() can cause duplicates and messup np.in1d()
+            common = np.in1d(x, xcommon)
+            common[np.where(iedups)[0]] = False
+            indexes.append(common)
 
         print('done in {:.3}s'.format(time.time()-t0))
 
