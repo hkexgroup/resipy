@@ -6652,13 +6652,25 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 ok = False
                 if self.tempElec is None:
                     ok = True
-                else:
-                    if self.project.iForward is True and np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
+                else: 
+                    # check for changes in the electrode dataframe 
+                    # do this to avoid calling project.setElec in the case unnecessarily
+                    change = False 
+                    for i in range(len(elec)):
+                        for column in elec.columns:
+                            if i==0 and column not in self.tempElec.columns: 
+                                change = True 
+                                break 
+                            if elec[column][i] != self.tempElec[column][i]:
+                                change = True 
+                                break 
+                        if change:
+                            break # break out of loop to save on processing 
+                    if change:
                         ok = True
-                    elif np.sum(elec[['x','y','z']].values-self.tempElec[['x','y','z']].values) != 0:
-                        ok = True
-                    else:
-                        ok = False
+                if not ok:
+                    pdebug('No change in electrode dataframe detected')
+                    
                 if ok:
                     self.tempElec = elec
                     elecList = None
@@ -6668,6 +6680,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         elecList = self.project._create2DLines() # convert to horizontal 2D lines
                     
                     self.project.setElec(elec, elecList)
+                    pdebug('self.project.setElec()')
                     if self.project.elec['remote'].sum() > 0:
                         self.meshQuadGroup.setEnabled(False)
                     else:
