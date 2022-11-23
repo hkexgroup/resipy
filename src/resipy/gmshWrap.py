@@ -2096,6 +2096,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     elec_x = np.array(electrodes[0])
     elec_y = np.array(electrodes[1])
     elec_z = np.array(electrodes[2])
+    nelec = len(elec_x)
     
     #work out which electrodes are inside or on the end of the column 
     dist = np.sqrt(np.array(elec_x)**2 + np.array(elec_y)**2)
@@ -2103,7 +2104,22 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     if radius is None:
         radius = np.max(dist) 
     diff = np.abs(dist - radius)
-    inside = diff > 1e16 # electrodes on inside of column raduis 
+    inside = diff > 1e16 # electrodes on inside of column radius 
+    
+    rx = np.linspace(-radius,radius,100000)
+    ry = np.sqrt(radius**2 - rx**2)
+    cx = np.append(rx,rx)
+    cy = np.append(ry,-ry)
+    
+    # do correction for electrodes not quite exactly on radius
+    for i in range(nelec):
+        if not inside[i] and dist[i] != radius:
+            dx = elec_x[i] - cx 
+            dy = elec_y[i] - cy 
+            dd = np.sqrt((dx**2)+(dy**2))
+            di = np.argmin(dd)
+            elec_x[i] = cx[di]
+            elec_y[i] = cy[di]
     
     # find unique xy positions
     uni_x = []
@@ -2113,7 +2129,6 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     curc_x = [] # circumfrence points 
     curc_y = []
 
-    nelec = len(elec_x)
     for i in range(nelec):
         if len(uni_x) == 0: # first point is here 
             uni_x.append(elec_x[i])
@@ -2154,12 +2169,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     curc_x = np.array(curc_x)[bear_sort]
     curc_y = np.array(curc_y)[bear_sort]
     
-    if add_refine:
-        rx = np.linspace(-radius,radius,100000)
-        ry = np.sqrt(radius**2 - rx**2)
-        cx = np.append(rx,rx)
-        cy = np.append(ry,-ry)
-        
+    if add_refine:        
         # were gonna walk around the circle and pick out coordinates for refinement points 
         for i in range(len(curc_x)):
             if i == len(curc_x)-1:
@@ -2169,8 +2179,8 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
                 dx = curc_x[i+1] - curc_x[i]
                 dy = curc_y[i+1] - curc_y[i]
             d = np.sqrt(dx**2 + dy**2)
-            if d < 0.2*cl: 
-                # skip if inter electrode distance smaller than 20% characteristic length 
+            if d < 0.5*cl: 
+                # skip if inter electrode distance smaller than 50% characteristic length 
                 continue 
             # mid point of circumfrence points 
             mx = curc_x[i] + (dx/2)
@@ -2209,9 +2219,11 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
     fh.write("cl_fac=%f;\n"%cl_factor)
     
     fh.write("// Make a circle at lowest z limit which is extruded\n")
-    fh.write("Point (%i) = {0,0,%f,cl};\n"%(pt_no,zlim[0]))
+    if any(inside):
+        fh.write("Point (%i) = {0,0,%f,cl};\n"%(pt_no,zlim[0]))
+    else:
+        fh.write("Point (%i) = {0,0,%f,cl*cl_fac};\n"%(pt_no,zlim[0]))
 
-    # pt_no = 1 
     ## go around clockwise  
     for i in range(len(uni_x)):
         if not uni_flag[i]: 
@@ -2248,7 +2260,7 @@ def cylinder_mesh(electrodes, zlim=None, radius=None,
             continue # continue as this point is at origin 
         if uni_flag[i]: # check if point inside of column radius, hence add it to column 
             pt_no+=1
-            fh.write("Point (%i) = {%f,%f,%f,cl};\n"%(pt_no,uni_x[i],uni_y[i],zlim[0]))
+            fh.write("Point (%i) = {%32.16f,%32.16f,%32.16f,cl};\n"%(pt_no,uni_x[i],uni_y[i],zlim[0]))
             fh.write("Point {%i} In Surface {1};\n"%pt_no)
 
     fh.write("//End points on surface of column\n")
