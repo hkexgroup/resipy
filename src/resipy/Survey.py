@@ -500,7 +500,7 @@ class Survey(object):
                 raise Exception('Sorry this file type is not implemented yet')
         
         data = data.astype({'a':str, 'b':str, 'm':str, 'n':str})
-        self.df = self.df.append(data).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
+        self.df = pd.concat([self.df, data]).reset_index(drop = True) # for being similar to import one df with reciprocals (as new df will have its own indices!)
         if ftype == 'BGS Prime':
             self.checkTxSign()
         if ftype == 'Syscal':
