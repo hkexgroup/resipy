@@ -250,20 +250,20 @@ class Survey(object):
 
             # add error measured to the error columns (so they can be used if no error model are fitted)
             if 'magErr' in self.df.columns:
-                self.df.loc[:,'resError'] = self.df['magErr'].copy()
+                self.df['resError'] = self.df['magErr'].copy()
             else:
-                self.df.loc[:,'resError'] = np.nan
+                self.df['resError'] = np.nan
             if 'phiErr' in self.df.columns:
-                self.df.loc[:,'phaseError'] = self.df['phiErr'].copy()
+                self.df['phaseError'] = self.df['phiErr'].copy()
             else:
-                self.df.loc[:,'phaseError'] = np.nan
+                self.df['phaseError'] = np.nan
             
             # set electrode dataframe
             if type(elec) == np.ndarray: # TODO for temporary stability
                 self.elec = pd.DataFrame(elec.astype(float), columns=['x','y','z'])
-                self.elec.loc[:,'remote'] = False
-                self.elec.loc[:,'buried'] = False
-                self.elec.loc[:,'label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
+                self.elec['remote'] = False
+                self.elec['buried'] = False
+                self.elec['label'] = (1 + np.arange(self.elec.shape[0])).astype(str)
             else:
                 self.elec = elec
             
@@ -277,9 +277,9 @@ class Survey(object):
             # convert apparent resistivity to resistance and vice versa
             self.computeK()
             if 'resist' in self.df.columns:
-                self.df.loc[:,'app'] = self.df['K']*self.df['resist']
+                self.df['app'] = self.df['K']*self.df['resist']
             elif 'app' in self.df.columns:
-                self.df.loc[:,'resist'] = self.df['app']/self.df['K']
+                self.df['resist'] = self.df['app']/self.df['K']
             
         # we provide df and elec dataframes
         elif df is not None and elec is not None:
@@ -1555,14 +1555,14 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(df)) + '\n')
             with open(outputname, 'a') as f:
-                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e', line_terminator='\n')
+                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e', lineterminator='\n')
 
         outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(self.df)) + '\n')
             with open(outputname, 'a') as f:
-                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'], line_terminator='\n')
+                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'], lineterminator='\n')
                 
         try:        
             if (OS == 'Windows') and (rpath is None):
@@ -2392,14 +2392,14 @@ class Survey(object):
         if threed:
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
-                    protocol.loc[:, c] = '1 ' + protocol[c]
+                    protocol[c] = '1 ' + protocol[c]
         
         # write protocol.dat
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
+                protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
         
         return protocol
         
@@ -2893,7 +2893,7 @@ class Survey(object):
             new_elec[put_back,0] = x_abs[i]
             new_elec[put_back,2] = z_sorted[i]
     
-        self.elec.loc[:, ['x','y','z']] = new_elec
+        self.elec[['x','y','z']] = new_elec
         
     def elec2horidist(self):
         """
@@ -2927,7 +2927,7 @@ class Survey(object):
             new_elec[put_back,0] = x_hor[i]
             new_elec[put_back,2] = z_sorted[i]
     
-        self.elec.loc[:, ['x','y','z']] = new_elec
+        self.elec[['x','y','z']] = new_elec
         
     def _rmLineNum(self):
         """Remove line numbers from dataframe.

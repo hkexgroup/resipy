@@ -287,7 +287,7 @@ def syscalParser(fname):#, spacing=None):
         #     ie = ~np.in1d(array[:,i], remoteFlags)
         #     array[ie, i] = array[ie, i]/elecSpacing + a
         #     array[~ie, i] = n
-        # df.loc[:,['a','b','m','n']] = array.astype(int)
+        # df[['a','b','m','n']] = array.astype(int)
         # elec = np.zeros((n, 3))
         # elec[:,0] = np.arange(elec.shape[0])*elecSpacing # assumed regular spacing                
         # if np.sum(iremote) > 0:
@@ -531,7 +531,7 @@ def primeParserTab(fname, espacing=1):
     # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
     # elecLabel = 1 + np.arange(len(val))
     # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-    # df.loc[:,['a','b','m','n']] = newval
+    # df[['a','b','m','n']] = newval
     
     #compute default electrode positions
     array = df[['a','b','m','n']].values
@@ -1150,7 +1150,7 @@ def res3invInputParser(fname):
         m = 0
         while 2*m + 1 <= len(elecdf_lines) - 1: # electrodes are laid out like a snake - although not sure if this is correct
             i = 2*m + 1 # index of odd lines
-            elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i].loc[:, 'x'].values[::-1].copy()
+            elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1].copy()
             m += 1
         ######### NOT SURE ABOUT ABOVE #########
         
@@ -1262,7 +1262,7 @@ def stingParser(fname):
         elecdf = pd.DataFrame(elec_raw[elec_raw[:,1].argsort(kind='mergesort')]).rename(columns={0:'x',1:'y',2:'z'})
         # organize 3D electrodes
         elecdf_groups = elecdf.groupby('y', sort=False, as_index=False)
-        elecdf_lines = [elecdf_groups.get_group(x) for x in elecdf_groups.groups]
+        elecdf_lines = [elecdf_groups.get_group(x).copy() for x in elecdf_groups.groups]
         
         ######### NOT SURE ABOUT BELOW - are electrodes laid out like a snake? ##########
         m = 0
@@ -1654,7 +1654,7 @@ def aresParser(fname, spacing=None):
                             'U[mV]':'vp'})
     
     #Building electrode locations
-    df[['a','b','m','n']] = df[['a','b','m','n']].replace('\*\d+', '', regex=True).astype(int) # there are multi eletrode conbinations sometimes (e.g., 14*1) which basically mean the middle one
+    df[['a','b','m','n']] = df[['a','b','m','n']].replace(r'\*\d+', '', regex=True).astype(int) # there are multi eletrode conbinations sometimes (e.g., 14*1) which basically mean the middle one
     df = df.dropna(subset=['a', 'b', 'm', 'n', 'Pn', 'Pn+1', 'Array', 'Uout[V]', 'i', 'vp', 'EP[mV]', 'AppRes[Ohmm]', 'St-dev[%]']) # some IP cols are None anyways per sequence type
 
     
@@ -1682,7 +1682,7 @@ def aresParser(fname, spacing=None):
     elecLabel = 1 + np.arange(len(val))
     searchsoterdArr = np.searchsorted(val, array)
     newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-    df.loc[:,['a','b','m','n']] = newval # assign new label
+    df[['a','b','m','n']] = newval # assign new label
     
     if spacing is not None:
         elec = np.c_[val*float(spacing), np.zeros((len(val),2))]
@@ -1884,7 +1884,7 @@ def dasParser(fname):
                 9999999, 999999, 99999] # values asssociated with remote electrodes
     iremote = np.in1d(dfelec['x'].values, remote_flags)
     iremote = np.isinf(dfelec[['x','y','z']].values).any(1) | iremote
-    dfelec.loc[:, 'remote'] = iremote
+    dfelec['remote'] = iremote
     
     # getting data and creating df
     df_lineNum_s = [i+3 for i in range(len(dump)) if '#data_start' in dump[i]] # assuming headers exist
