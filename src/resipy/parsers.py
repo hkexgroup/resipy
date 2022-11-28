@@ -221,7 +221,7 @@ def syscalParser(fname):#, spacing=None):
             elecLabel = 1 + np.arange(len(val))
             searchsoterdArr = np.searchsorted(val, array)
             newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-            df.loc[:,['a','b','m','n']] = newval # assign new label
+            df[['a','b','m','n']] = newval # assign new label
             
             # build electrode array
             if 'za' in df.columns and not np.all(df[['za','zb','zm','zn']].values == 0): # see if we have topography
@@ -1268,7 +1268,7 @@ def stingParser(fname):
         m = 0
         while 2*m + 1 <= len(elecdf_lines) - 1: # electrodes are laid out like a snake - although not sure if this is correct
             i = 2*m + 1 # index of odd lines
-            elecdf_lines[i].loc[:, 'x'] = elecdf_lines[i]['x'].values[::-1].copy()
+            elecdf_lines[i]['x'] = elecdf_lines[i]['x'].values[::-1]
             m += 1
         ######### NOT SURE ABOUT ABOVE #########
         

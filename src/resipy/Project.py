@@ -1323,9 +1323,9 @@ class Project(object): # Project master class instanciated by the GUI
         dfs = []
         for i, s in enumerate(surveys):
             e = s.elec.copy()
-            e.loc[:, 'y'] = i*lineSpacing
+            e['y'] = i*lineSpacing
             prefix = '{:d} '.format(i+1)
-            e.loc[:, 'label'] = prefix + e['label']
+            e['label'] = prefix + e['label']
             elec.append(e)
             df = s.df.copy()
             df.loc[:,['a','b','m','n']] = prefix + df[['a','b','m','n']]
