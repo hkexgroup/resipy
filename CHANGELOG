@@ -1,3 +1,13 @@
+v3.4.2
+------
+- Bug fix: fixing mesh zones
+- Bug fix: matchSurveys() removing duplicates
+- Bug fix: cylinder mesh stability
+- Bug fix: buried electrodes not read (GUI only)
+- Bug fix: pre-processing reset filter
+- Bug fix: improving unresponsiveness
+
+
 v3.4.1
 ------
 - Bug fix: creating 3D survey from 2D lines (GUI only)
