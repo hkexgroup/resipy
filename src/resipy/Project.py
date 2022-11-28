@@ -429,7 +429,7 @@ class Project(object): # Project master class instanciated by the GUI
                     9999999, 999999, 99999, 9999, 999] # values asssociated with remote electrodes
         iremote = np.in1d(elec['x'].values, remote_flags)
         iremote = np.isinf(elec[['x','y','z']].values).any(1) | iremote
-        elec.loc[:, 'remote'] = iremote
+        elec['remote'] = iremote
         if np.sum(iremote) > 0:
             print('Detected {:d} remote electrode.'.format(np.sum(iremote)))
         return elec
@@ -635,7 +635,7 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R2') | (self.typ == 'cR2'):
             dfelec = pd.DataFrame(columns=['label','x','y','z','buried'])
             dfelec['label'] = (1 + np.arange(nb)).astype(int).astype(str)
-            dfelec.loc[:, ['x','y','z']] = elec
+            dfelec[['x','y','z']] = elec
             dfelec['buried'] = False
         else:
             grid = np.tile(elec.T, nline).T
@@ -861,29 +861,29 @@ class Project(object): # Project master class instanciated by the GUI
         # add files to it
         if self.mesh is not None and self.pseudo3DSurvey is None:
             self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
-        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False, line_terminator='\n')
+        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False, lineterminator='\n')
         c = 0
         if self.iForward:
             c = 1
             dfseq = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            dfseq.to_csv(os.path.join(savedir, 'dfseq.csv'), index=False, line_terminator='\n')
+            dfseq.to_csv(os.path.join(savedir, 'dfseq.csv'), index=False, lineterminator='\n')
         for i, survey in enumerate(self.surveys):
             f = os.path.join(savedir, survey.name)
-            survey.df.to_csv(f + '-df.csv', index=False, line_terminator='\n')
-            survey.elec.to_csv(f + '-elec.csv', index=False, line_terminator='\n')
+            survey.df.to_csv(f + '-df.csv', index=False, lineterminator='\n')
+            survey.elec.to_csv(f + '-elec.csv', index=False, lineterminator='\n')
             if (c+i < len(self.meshResults)):
                 self.meshResults[c + i].vtk(f + '.vtk')
         
         # batch/time-lapse
         if self.iBatch or self.iTimeLapse:
             f = os.path.join(savedir, 'bigSurvey')
-            self.bigSurvey.df.to_csv(f + '-bigdf.csv', index=False, line_terminator='\n')
+            self.bigSurvey.df.to_csv(f + '-bigdf.csv', index=False, lineterminator='\n')
             
         # pseudo 3D
         if self.pseudo3DSurvey is not None:
             f = os.path.join(savedir, 'pseudo3DSurvey')
-            self.pseudo3DSurvey.df.to_csv(f + '-pseudo3Ddf.csv', index=False, line_terminator='\n')
-            self.pseudo3DSurvey.elec.to_csv(f + '-pseudo3Delec.csv', index=False, line_terminator='\n')
+            self.pseudo3DSurvey.df.to_csv(f + '-pseudo3Ddf.csv', index=False, lineterminator='\n')
+            self.pseudo3DSurvey.elec.to_csv(f + '-pseudo3Delec.csv', index=False, lineterminator='\n')
             for proj in self.projs:
                 if proj.mesh is not None:
                     name = proj.surveys[0].name
@@ -1328,7 +1328,7 @@ class Project(object): # Project master class instanciated by the GUI
             e['label'] = prefix + e['label']
             elec.append(e)
             df = s.df.copy()
-            df.loc[:,['a','b','m','n']] = prefix + df[['a','b','m','n']]
+            df[['a','b','m','n']] = prefix + df[['a','b','m','n']]
             dfs.append(df)
         elec = pd.concat(elec, axis=0, sort=False).reset_index(drop=True)
         dfm = pd.concat(dfs, axis=0, sort=False).reset_index(drop=True)
@@ -1377,12 +1377,12 @@ class Project(object): # Project master class instanciated by the GUI
             # each project as it's the same Survey object (with two references)
             self.projs.append(proj) # appending projects list for later use of meshing and inversion
             e = s.elec.copy()
-            e.loc[:, 'y'] = i*lineSpacing
+            e['y'] = i*lineSpacing
             prefix = '{:d} '.format(i+1)
-            e.loc[:, 'label'] = prefix + e['label']
+            e['label'] = prefix + e['label']
             elecList.append(e)
             df = s.df.copy()
-            df.loc[:,['a','b','m','n']] = prefix + df[['a','b','m','n']]
+            df[['a','b','m','n']] = prefix + df[['a','b','m','n']]
             dfList.append(df)
             
         elec = pd.concat(elecList, axis=0, sort=False).reset_index(drop=True)
@@ -3302,7 +3302,7 @@ class Project(object): # Project master class instanciated by the GUI
                     s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
                 else:
                     content = content + str(protocol.shape[0]) + '\n'
-                    content = content + protocol.to_csv(sep='\t', header=False, index=False, line_terminator='\n')
+                    content = content + protocol.to_csv(sep='\t', header=False, index=False, lineterminator='\n')
 
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
@@ -3329,7 +3329,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # been populated when the files has been imported
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot, threed=threed)
                 content = content + str(len(df)) + '\n'
-                content = content + df.to_csv(sep='\t', header=False, index=False, line_terminator='\n')
+                content = content + df.to_csv(sep='\t', header=False, index=False, lineterminator='\n')
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
@@ -3456,7 +3456,7 @@ class Project(object): # Project master class instanciated by the GUI
         for s, df in zip(surveys, dfs):
             outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
             files.append(outputname)
-            df.to_csv(outputname, sep='\t', header=False, index=False, line_terminator='\n')
+            df.to_csv(outputname, sep='\t', header=False, index=False, lineterminator='\n')
             # header with line count already included
 
         # if iMoveElec is True, writing different R2.in
@@ -4235,8 +4235,8 @@ class Project(object): # Project master class instanciated by the GUI
                     df2 = df2.drop(6, axis=1) # discard res0
 
                 with open(outputname, 'w') as f:
-                    f.write('{:d}\n'.format(df.loc[:, 0].values[0]))
-                    df2.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
+                    f.write('{:d}\n'.format(int(df.values[0, 0])))
+                    df2.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
                 # header with line count already included
             
             fnames = [os.path.join(invdir, 'ref', 'protocol.dat')] + files
@@ -4649,27 +4649,27 @@ class Project(object): # Project master class instanciated by the GUI
             idx = regions == int(key)
             res0[idx] = regionValues[key]
             self.param['res0File'] = 'res0.dat'
-        self.mesh.df.loc[:,'res0'] = res0
+        self.mesh.df['res0'] = res0
         # print('regionValues:',regionValues)
 
         zones = np.array(self.mesh.df['zones']).copy()
         for key in zoneValues.keys():
             idx = regions == int(key)
             zones[idx] = zoneValues[key]
-        self.mesh.df.loc[:,'zones'] = zones
+        self.mesh.df['zones'] = zones
 
         fixed = self.mesh.df['param'].values.copy()
         for key in fixedValues.keys():
             idx = regions == int(key)
             if fixedValues[key] == True:
                 fixed[idx] = 0
-        self.mesh.df.loc[:,'param'] = fixed
+        self.mesh.df['param'] = fixed
 
         phase0 = np.array(self.mesh.df['phase0']).copy()
         for key in ipValues.keys():
             idx = regions == int(key)
             phase0[idx] = ipValues[key]
-        self.mesh.df.loc[:,'phase0'] = phase0
+        self.mesh.df['phase0'] = phase0
 
 
     def setRefModel(self, res0):
@@ -4845,7 +4845,7 @@ class Project(object): # Project master class instanciated by the GUI
         """
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname, index=False, line_terminator='\n')
+            df.to_csv(fname, index=False, lineterminator='\n')
             
 
     def importElec(self, fname=''):
@@ -4943,7 +4943,7 @@ class Project(object): # Project master class instanciated by the GUI
         dff = dff.rename(columns = {'resist':'Resistance [ohm]', 'recipError':'Resistance_err [ohm]',
                                     'resError':'Fit Resistance_err [ohm]','phase':'Phase [mRad]',
                                     'reci_IP_err':'Phase_err [mRad]','phaseError':'Fit Phase_err [mRad]'})
-        dff.to_csv(fname, index=False, line_terminator='\n')
+        dff.to_csv(fname, index=False, lineterminator='\n')
 
 
     def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
@@ -4959,7 +4959,7 @@ class Project(object): # Project master class instanciated by the GUI
         elec = self.elec[['x','y','z']].values
         spacing = elec[1,0] - elec[0,0] # TODO (gb) not sure if this is needed
         for s, i in zip(self.surveys, range(len(self.surveys))):
-            df = s.df.query('irecip >=0') # not saving reciprocal data
+            df = s.df.query('irecip >=0').copy() # not saving reciprocal data
             # if spacing == None:
             #     spacing = elec[1,0]-elec[0,0] # for batch surveys the spacing can differ and not follow user input
             # else:
@@ -4967,9 +4967,9 @@ class Project(object): # Project master class instanciated by the GUI
             # df[['a','b','m','n']] *= spacing
             lookupDict = dict(zip(self.elec['label'], self.elec['x'].values))
             data = df[['a','b','m','n']].replace(lookupDict).values
-            for i,a in enumerate(['a','b','m','n']):
-                df.loc[:,a] = data[:,i] # this way should avoid warnings 
-            # df.loc[:,['a','b','m','n']] = data
+            for i, a in enumerate(['a','b','m','n']):
+                df[a] = data[:,i] # this way should avoid warnings 
+            # df[['a','b','m','n']] = data
             if savetyp == 'Res2DInv (*.dat)':
                 param = {'num_meas': df.shape[0],
                          'lineTitle': self.param['lineTitle'],
@@ -5098,13 +5098,13 @@ class Project(object): # Project master class instanciated by the GUI
         if ((self.typ == 'R3t') or (self.typ == 'cR3t')):
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
-                    protocol.loc[:, c] = '1 ' + protocol[c]
+                    protocol[c] = '1 ' + protocol[c]
         
         outputname = os.path.join(fwdDir, 'protocol.dat')
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
+            protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
         dump('done\n')
 
         # fun the inversion
@@ -5312,7 +5312,7 @@ class Project(object): # Project master class instanciated by the GUI
         if (self.typ == 'R3t') | (self.typ == 'cR3t'): # it's a 3D survey
             if len(protocol['a'].values[0].split()) == 1: # we don't have string number
                 for c in ['a','b','m','n']: 
-                    protocol.loc[:, c] = '1 ' + protocol[c]
+                    protocol[c] = '1 ' + protocol[c]
             # protocol.insert(1, 'sa', 1)
             # protocol.insert(3, 'sb', 1)
             # protocol.insert(5, 'sm', 1)
@@ -5321,7 +5321,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False, line_terminator='\n')
+            protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
 
         # run the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
@@ -5816,8 +5816,8 @@ class Project(object): # Project master class instanciated by the GUI
                 elec = self.surveys[i].elec[['x','y','z']].values.copy()
                 x = elec[:,0]
                 y = elec[:,1]
-                self.surveys[i].elec.loc[:,'x'] = y
-                self.surveys[i].elec.loc[:,'y'] = x
+                self.surveys[i].elec['x'] = y
+                self.surveys[i].elec['y'] = x
 
         for i in range(len(self.surveys)):
             self.surveys[i].elec2distance() # go through each survey and compute electrode

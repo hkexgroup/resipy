@@ -491,10 +491,7 @@ class Mesh:
         if len(values)!=self.numel:
             raise ValueError("The length of the new attributes array (%i) does not match the number of elements in the mesh (%i)"%(len(values),self.numel))
         self.no_attributes += 1
-        if key in self.df.keys():
-            self.df.loc[:,key] = values # reallocate column if already set 
-        else:
-            self.df[key]=values #allows us to add an attributes to each element.
+        self.df[key] = values  #allows us to add an attributes to each element.
         
     def addPtAttribute(self,values,key):
         """Associate attributes with the mesh nodes  
@@ -511,7 +508,7 @@ class Mesh:
         if len(values)!=self.numnp:
             raise ValueError("The length of the new attributes array (%i) does not match the number of nodes in the mesh (%i)"%(len(values),self.numnp))
         if key in self.ptdf.keys():
-            self.ptdf.loc[:,key] = values # reallocate column if already set 
+            self.ptdf[key] = values # reallocate column if already set 
         else:
             self.ptdf[key]=values #allows us to add an attributes to each point 
             
@@ -2611,7 +2608,7 @@ class Mesh:
             ylim = [min(self.node[:,1])-1, max(self.node[:,1])+1]
                 
         # if 'elm_id' not in self.df.keys():
-        self.df.loc[:,'elm_id'] = np.arange(1,self.numel+1,1)
+        self.df['elm_id'] = np.arange(1,self.numel+1,1)
         
         # surface mesh
         if self.surfaceMesh is None: # do this to avoid recomputing surface mesh
