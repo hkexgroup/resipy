@@ -26,7 +26,7 @@ def dpdp1(elec_num, a, n):
     Length of `a` should match `n`.
     '''
     elec_id = np.arange(elec_num)+1
-    
+    abmn = []
     if isinstance(a, list) is False:
         if a < 1:
             raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
@@ -36,11 +36,7 @@ def dpdp1(elec_num, a, n):
             B = A + a
             M = B + n_[j] * a
             N = M + a
-            if (j) == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if (j) > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
+            abmn.append([A, B, M, N])
     
     else:
         for i in np.array(range(0,len(a))):
@@ -52,12 +48,10 @@ def dpdp1(elec_num, a, n):
                 B = A + a[i]
                 M = B + n_[j] * a[i]
                 N = M + a[i]
-                if (i + j) == 0:
-                    proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                if (i + j) > 0:
-                    new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                    proto_mtrx = proto_mtrx.append(new_rows)
+                abmn.append([A, B, M, N])
     
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
+    print(proto_mtrx)
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,3] <= elec_num]
     return proto_mtrx
 
@@ -80,7 +74,7 @@ def dpdp2(elec_num, a, n):
     Length of `a` should match `n`.
     '''
     elec_id = np.arange(elec_num)+1
-    
+    abmn = []
     if isinstance(a, list) is False:
         if a < 1:
             raise ValueError('a must be >= 1, it\'s the electrode spacing between C and V pairs (a = 1 is the same as skip 0)')
@@ -90,11 +84,7 @@ def dpdp2(elec_num, a, n):
             B = A + a
             M = B + n_[j]
             N = M + a
-            if (j) == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if (j) > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
+            abmn.append([A, B, M, N])
     
     else:
         for i in np.array(range(0,len(a))):
@@ -106,12 +96,9 @@ def dpdp2(elec_num, a, n):
                 B = A + a[i]
                 M = B + n_[j]
                 N = M + a[i]
-                if (i + j) == 0:
-                    proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                if (i + j) > 0:
-                    new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                    proto_mtrx = proto_mtrx.append(new_rows)
+                abmn.append([A, B, M, N])
     
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,3] <= elec_num]
     return proto_mtrx
 
@@ -137,13 +124,13 @@ def wenner_alpha(elec_num, a):
    '''
     
     elec_id = np.arange(elec_num)+1
-    
+    abmn = []
     if isinstance(a, list) is False:
         A = elec_id
         M = A + a
         N = M + a
         B = N + a
-        proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
+        abmn.append([A, B, M, N])
     
     else:
         for i in np.array(range(0,len(a))):
@@ -151,12 +138,9 @@ def wenner_alpha(elec_num, a):
             M = A + a[i]
             N = M + a[i]
             B = N + a[i]
-            if (i) == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if (i) > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
+            abmn.append([A, B, M, N])
                     
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
     
@@ -173,26 +157,24 @@ def wenner_beta(elec_num, a):
    '''
     
     elec_id = np.arange(elec_num)+1
+    abmn = []
     
     if type(a) == int:
         B = elec_id
         A = B + a
         M = A + a
         N = M + a
-        proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-    
+        abmn.append([A, B, M, N])
+        
     if type(a) == list:
         for i in np.array(range(0,len(a))):
             B = elec_id
             A = B + a[i]
             M = A + a[i]
             N = M + a[i]
-            if (i) == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if (i) > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
+            abmn.append([A, B, M, N])
                     
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
     
@@ -208,26 +190,23 @@ def wenner_gamma(elec_num, a):
    '''
     
     elec_id = np.arange(elec_num)+1
-    
+    abmn = []
     if isinstance(a, list) is False:
         A = elec_id
         M = A + a
         B = M + a
         N = B + a
-        proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-    
+        abmn.append([A, B, M, N])
+        
     else:
         for i in np.array(range(0,len(a))):
             A = elec_id
             M = A + a[i]
             B = M + a[i]
             N = B + a[i]
-            if (i) == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if (i) > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
-                    
+            abmn.append([A, B, M, N])
+             
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
 
@@ -245,7 +224,7 @@ def schlum1(elec_num, a, n):
         Quadrupole seperation in electrode spacing.   
     '''
     elec_id = np.arange(elec_num)+1
-    proto_mtrx = pd.DataFrame([])
+    abmn = []
     if isinstance(a, list) is False:  
         n_ = np.array(range(0,n))+1
         for j in np.array(range(0,len(n_))):
@@ -255,11 +234,7 @@ def schlum1(elec_num, a, n):
                 M = A + n_[j]
                 N = M + a
                 B = N + n_[j]
-                # if j == 0:
-                #     proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                # if j > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
+                abmn.append([A, B, M, N])
 
     else:
         for i in np.array(range(0,len(a))):
@@ -270,10 +245,9 @@ def schlum1(elec_num, a, n):
                    M = A + n_[j]
                    N = M + a[i]
                    B = N + n_[j]
+                   abmn.append([A, B, M, N])
 
-                   new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                   proto_mtrx = proto_mtrx.append(new_rows)
-
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return(proto_mtrx)
     
@@ -382,7 +356,7 @@ def schlum2(elec_num, a, n):
    '''
     
     elec_id = np.arange(elec_num)+1
-    
+    abmn = []
     if isinstance(a, list) is False:
         n_ = np.array(range(0,n))+1
         for j in np.array(range(0,len(n_))):
@@ -390,11 +364,7 @@ def schlum2(elec_num, a, n):
             M = A + n_[j] * a
             N = M + a
             B = N + n_[j] * a
-            if j == 0:
-                proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-            if j > 0:
-                new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                proto_mtrx = proto_mtrx.append(new_rows)
+            abmn.append([A, B, M, N])
                 
     else:
         for i in np.array(range(0,len(a))):
@@ -404,12 +374,9 @@ def schlum2(elec_num, a, n):
                 M = A + n_[j] 
                 N = M + a[i]
                 B = N + n_[j] 
-                if (i + j) == 0:
-                    proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                if (i + j) > 0:
-                    new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                    proto_mtrx = proto_mtrx.append(new_rows)
+                abmn.append([A, B, M, N])
     
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return proto_mtrx
     
@@ -430,6 +397,7 @@ def multigrad(elec_num, a, n, s):
         numbers.
     '''
     elec_id = np.arange(elec_num)+1
+    abmn = []
     
     if isinstance(a, list) is False:
         n_ = np.array(range(0, n))+1
@@ -440,11 +408,7 @@ def multigrad(elec_num, a, n, s):
                 B = A + s_[k] + 2
                 M = A + n_[j] * a
                 N = M + a
-                if (j + k) == 0:
-                    proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                if (j + k) > 0:
-                    new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                    proto_mtrx = proto_mtrx.append(new_rows)
+                abmn.append([A, B, M, N])
                     
     else:
         for i in np.array(range(0,len(a))):
@@ -456,12 +420,9 @@ def multigrad(elec_num, a, n, s):
                     B = A + s_[k] + 2
                     M = A + n_[j] * a[i]
                     N = M + a[i]
-                    if (i + j + k) == 0:
-                        proto_mtrx = pd.DataFrame(np.column_stack((A, B, M, N)))
-                    if (i + j + k) > 0:
-                        new_rows = pd.DataFrame(np.column_stack((A, B, M, N)))
-                        proto_mtrx = proto_mtrx.append(new_rows)
-                
+                    abmn.append([A, B, M, N])
+    
+    proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] > proto_mtrx.iloc[:,3]]          
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
     return proto_mtrx    
