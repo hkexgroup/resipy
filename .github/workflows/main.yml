@@ -104,7 +104,9 @@ jobs:
 
       - name: Run build
         run: |
-          cd src
+          cd src/resipy/cext
+          /usr/local/bin/python3.9 setup.py build_ext --inplace
+          cd ../..
           mkdir -p macdmg
           ./build-app.sh
           cd dist
