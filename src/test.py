@@ -553,7 +553,7 @@ k.showSlice(axis='x')
 k.showSlice(axis='y')
 k.showPseudoInvError()
 k.showInvError()
-k.saveMeshVtk()
+k.saveMesh()
 print('elapsed: {:.4}s'.format(time.time() - t0))
 timings['dc-3d'] = time.time() - t0
 #timeit k.mesh.orderNodes()
