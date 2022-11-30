@@ -93,7 +93,7 @@ jobs:
       - name: Set up environment
         run: |
           brew reinstall python@3.9
-          brew install gcc
+          brew reinstall gcc-10
           cd ..
           /usr/local/bin/python3.9 -m pip install virtualenv
           /usr/local/bin/python3.9 -m virtualenv -p /usr/local/bin/python3.9 pyenv
