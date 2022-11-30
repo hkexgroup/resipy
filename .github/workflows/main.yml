@@ -92,10 +92,10 @@ jobs:
 
       - name: Set up environment
         run: |
-          brew reinstall python@3.7
+          brew reinstall python@3.9
           cd ..
-          /usr/local/opt/python@3.7/bin/python3 -m pip install virtualenv
-          /usr/local/opt/python@3.7/bin/python3 -m virtualenv -p /usr/local/opt/python@3.7/bin/python3 pyenv
+          /usr/local/bin/python3.9 -m pip install virtualenv
+          /usr/local/bin/python3.9 -m virtualenv -p /usr/local/bin/python3.9 pyenv
           source pyenv/bin/activate
           cd resipy
           pip3 install setuptools==49.0.0
