@@ -36,7 +36,7 @@ def dpdp1(elec_num, a, n):
             B = A + a
             M = B + n_[j] * a
             N = M + a
-            abmn.append([A, B, M, N])
+            abmn.append(np.vstack([A, B, M, N]).T)
     
     else:
         for i in np.array(range(0,len(a))):
@@ -48,10 +48,9 @@ def dpdp1(elec_num, a, n):
                 B = A + a[i]
                 M = B + n_[j] * a[i]
                 N = M + a[i]
-                abmn.append([A, B, M, N])
-    
+                abmn.append(np.vstack([A, B, M, N]).T)
+
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
-    print(proto_mtrx)
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,3] <= elec_num]
     return proto_mtrx
 
@@ -84,7 +83,7 @@ def dpdp2(elec_num, a, n):
             B = A + a
             M = B + n_[j]
             N = M + a
-            abmn.append([A, B, M, N])
+            abmn.append(np.vstack([A, B, M, N]).T)
     
     else:
         for i in np.array(range(0,len(a))):
@@ -96,7 +95,7 @@ def dpdp2(elec_num, a, n):
                 B = A + a[i]
                 M = B + n_[j]
                 N = M + a[i]
-                abmn.append([A, B, M, N])
+                abmn.append(np.vstack([A, B, M, N]).T)
     
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,3] <= elec_num]
@@ -130,7 +129,7 @@ def wenner_alpha(elec_num, a):
         M = A + a
         N = M + a
         B = N + a
-        abmn.append([A, B, M, N])
+        abmn.append(np.vstack([A, B, M, N]).T)
     
     else:
         for i in np.array(range(0,len(a))):
@@ -138,7 +137,7 @@ def wenner_alpha(elec_num, a):
             M = A + a[i]
             N = M + a[i]
             B = N + a[i]
-            abmn.append([A, B, M, N])
+            abmn.append(np.vstack([A, B, M, N]).T)
                     
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
@@ -164,7 +163,7 @@ def wenner_beta(elec_num, a):
         A = B + a
         M = A + a
         N = M + a
-        abmn.append([A, B, M, N])
+        abmn.append(np.vstack([A, B, M, N]).T)
         
     if type(a) == list:
         for i in np.array(range(0,len(a))):
@@ -172,7 +171,7 @@ def wenner_beta(elec_num, a):
             A = B + a[i]
             M = A + a[i]
             N = M + a[i]
-            abmn.append([A, B, M, N])
+            abmn.append(np.vstack([A, B, M, N]).T)
                     
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
@@ -196,7 +195,7 @@ def wenner_gamma(elec_num, a):
         M = A + a
         B = M + a
         N = B + a
-        abmn.append([A, B, M, N])
+        abmn.append(np.vstack([A, B, M, N]).T)
         
     else:
         for i in np.array(range(0,len(a))):
@@ -204,7 +203,7 @@ def wenner_gamma(elec_num, a):
             M = A + a[i]
             B = M + a[i]
             N = B + a[i]
-            abmn.append([A, B, M, N])
+            abmn.append(np.vstack([A, B, M, N]).T)
              
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
@@ -234,7 +233,7 @@ def schlum1(elec_num, a, n):
                 M = A + n_[j]
                 N = M + a
                 B = N + n_[j]
-                abmn.append([A, B, M, N])
+                abmn.append(np.vstack([A, B, M, N]).T)
 
     else:
         for i in np.array(range(0,len(a))):
@@ -245,7 +244,7 @@ def schlum1(elec_num, a, n):
                    M = A + n_[j]
                    N = M + a[i]
                    B = N + n_[j]
-                   abmn.append([A, B, M, N])
+                   abmn.append(np.vstack([A, B, M, N]).T)
 
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
@@ -364,7 +363,7 @@ def schlum2(elec_num, a, n):
             M = A + n_[j] * a
             N = M + a
             B = N + n_[j] * a
-            abmn.append([A, B, M, N])
+            abmn.append(np.vstack([A, B, M, N]).T)
                 
     else:
         for i in np.array(range(0,len(a))):
@@ -374,7 +373,7 @@ def schlum2(elec_num, a, n):
                 M = A + n_[j] 
                 N = M + a[i]
                 B = N + n_[j] 
-                abmn.append([A, B, M, N])
+                abmn.append(np.vstack([A, B, M, N]).T)
     
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] <= elec_num]
@@ -408,7 +407,7 @@ def multigrad(elec_num, a, n, s):
                 B = A + s_[k] + 2
                 M = A + n_[j] * a
                 N = M + a
-                abmn.append([A, B, M, N])
+                abmn.append(np.vstack([A, B, M, N]).T)
                     
     else:
         for i in np.array(range(0,len(a))):
@@ -420,7 +419,7 @@ def multigrad(elec_num, a, n, s):
                     B = A + s_[k] + 2
                     M = A + n_[j] * a[i]
                     N = M + a[i]
-                    abmn.append([A, B, M, N])
+                    abmn.append(np.vstack([A, B, M, N]).T)
     
     proto_mtrx = pd.DataFrame(np.vstack(abmn))
     proto_mtrx = proto_mtrx[proto_mtrx.iloc[:,1] > proto_mtrx.iloc[:,3]]          
