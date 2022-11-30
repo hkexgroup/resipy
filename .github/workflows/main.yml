@@ -98,10 +98,10 @@ jobs:
           /usr/local/bin/python3.9 -m virtualenv -p /usr/local/bin/python3.9 pyenv
           source pyenv/bin/activate
           cd resipy
-          pip3 install setuptools==49.0.0
-          pip3 install -r requirements-gui.txt
-          pip3 install pyinstaller
-          pip3 install Cython
+          pip install setuptools==49.0.0
+          pip install -r requirements-gui.txt
+          pip install pyinstaller
+          pip install Cython
 
       - name: Run build
         run: |
