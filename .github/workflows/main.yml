@@ -101,6 +101,7 @@ jobs:
           pip3 install setuptools==49.0.0
           pip3 install -r requirements-gui.txt
           pip3 install pyinstaller
+          pip3 install Cython
 
       - name: Run build
         run: |
