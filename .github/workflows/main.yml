@@ -97,14 +97,16 @@ jobs:
           cd ..
           conda create -n pyenv python=3.9
           cd resipy
+          source /usr/local/anaconda3/etc/profile.d/conda.sh
           conda activate pyenv
-          /usr/local/bin/python -m pip install setuptools==49.0.0
-          /usr/local/bin/python -m pip install -r requirements-gui.txt
-          /usr/local/bin/python -m pip install pyinstaller==4.5.1
+          python -m pip install setuptools==49.0.0
+          python -m pip install -r requirements-gui.txt
+          python -m pip install pyinstaller==4.5.1
 
       - name: Run build
         run: |
           cd src
+          source /usr/local/anaconda3/etc/profile.d/conda.sh
           conda activate pyenv
           mkdir -p macdmg
           ./build-app.sh
