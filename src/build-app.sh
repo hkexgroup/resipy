@@ -1,4 +1,4 @@
-source ../../pyenv/bin/activate
+# source ../../pyenv/bin/activate
 
 
 # building ResIPy app
