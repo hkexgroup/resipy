@@ -93,6 +93,7 @@ jobs:
       - name: Set up environment
         run: |
           brew reinstall python@3.9
+          brew reinstall gcc@10
           cd ..
           /usr/local/bin/python3.9 -m pip install virtualenv
           /usr/local/bin/python3.9 -m virtualenv -p /usr/local/bin/python3.9 pyenv
@@ -101,10 +102,13 @@ jobs:
           /usr/local/bin/python3.9 -m pip install setuptools==49.0.0
           /usr/local/bin/python3.9 -m pip install -r requirements-gui.txt
           /usr/local/bin/python3.9 -m pip install pyinstaller
+          /usr/local/bin/python3.9 -m pip install Cython
 
       - name: Run build
         run: |
-          cd src
+          cd src/resipy/cext
+          /usr/local/bin/python3.9 setup.py build_ext --inplace
+          cd ../..
           mkdir -p macdmg
           ./build-app.sh
           cd dist
