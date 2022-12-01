@@ -1,5 +1,9 @@
 source ../../pyenv/bin/activate
 
+# building the cython extension
+cd resipy/cext
+python setup.py build_ext --inplace
+cd ../..
 
 # building ResIPy app
 pyinstaller -y ui-osx.spec
