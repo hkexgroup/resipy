@@ -97,7 +97,7 @@ jobs:
           cd ..
           cd resipy
           source /usr/local/anaconda3/etc/profile.d/conda.sh
-          conda create -n pyenv python=3.8
+          conda create -n pyenv python=3.9
           conda activate pyenv
           pip install setuptools==49.0.0
           pip install -U pip setuptools
