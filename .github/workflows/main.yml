@@ -102,7 +102,7 @@ jobs:
           pip install setuptools
           pip install -r requirements-gui.txt
           pip install pyinstaller==4.5.1
-          pip install vtk==9.0.2
+          conda install -c conda-forge vtk
 
       - name: Run build
         run: |
