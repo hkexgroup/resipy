@@ -101,6 +101,9 @@ jobs:
           /usr/local/bin/python3.9 -m pip install setuptools
           /usr/local/bin/python3.9 -m pip install -r requirements-gui.txt
           /usr/local/bin/python3.9 -m pip install pyinstaller==4.5.1
+          /usr/local/bin/python3.9 -m pip install pyvista==0.32.1
+          /usr/local/bin/python3.9 -m pip install pyvistaqt==0.5.0
+          /usr/local/bin/python3.9 -m pip install vtk==9.0.3
 
       - name: Run build
         run: |
