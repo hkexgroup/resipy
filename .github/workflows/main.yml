@@ -99,11 +99,10 @@ jobs:
           source /usr/local/anaconda3/etc/profile.d/conda.sh
           conda create -n pyenv python=3.9
           conda activate pyenv
-          pip install setuptools==49.0.0
-          pip install -U pip setuptools
+          pip install setuptools
           pip install -r requirements-gui.txt
           pip install pyinstaller==4.5.1
-          pip install vtk==9.0.1
+          pip install vtk==9.0.2
 
       - name: Run build
         run: |
