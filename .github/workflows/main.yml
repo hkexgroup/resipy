@@ -92,23 +92,20 @@ jobs:
 
       - name: Set up environment
         run: |
-          brew install --cask anaconda
-          brew install cmake gcc@10
+          brew reinstall python@3.9
           cd ..
+          /usr/local/bin/python3.9 -m pip install virtualenv
+          /usr/local/bin/python3.9 -m virtualenv -p /usr/local/bin/python3.9 pyenv
+          source pyenv/bin/activate
           cd resipy
-          source /usr/local/anaconda3/etc/profile.d/conda.sh
-          conda create -n pyenv python=3.9
-          conda activate pyenv
-          pip install setuptools
-          pip install -r requirements-gui.txt
-          pip install pyinstaller==4.5.1
-          conda install -c conda-forge vtk
+          /usr/local/bin/python3.9 -m pip install setuptools
+          /usr/local/bin/python3.9 -m pip install -r requirements-gui.txt
+          /usr/local/bin/python3.9 -m pip install pyinstaller==4.5.1
 
       - name: Run build
         run: |
           cd src
-          source /usr/local/anaconda3/etc/profile.d/conda.sh
-          conda activate pyenv
+          source ../../pyenv/bin/activate
           mkdir -p macdmg
           ./build-app.sh
           cd dist
