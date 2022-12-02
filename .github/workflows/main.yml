@@ -97,11 +97,12 @@ jobs:
           cd ..
           cd resipy
           source /usr/local/anaconda3/etc/profile.d/conda.sh
-          conda create -n pyenv python=3.9
+          conda create -n pyenv python=3.8
           conda activate pyenv
-          python -m pip install setuptools==49.0.0
-          python -m pip install -r requirements-gui.txt
-          python -m pip install pyinstaller==4.5.1
+          pip install setuptools==49.0.0
+          pip install -U pip setuptools
+          pip install -r requirements-gui.txt
+          pip install pyinstaller==4.5.1
 
       - name: Run build
         run: |
