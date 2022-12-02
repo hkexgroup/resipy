@@ -95,9 +95,9 @@ jobs:
           brew install --cask anaconda
           brew install cmake gcc@10
           cd ..
-          conda create -n pyenv python=3.9
           cd resipy
           source /usr/local/anaconda3/etc/profile.d/conda.sh
+          conda create -n pyenv python=3.9
           conda activate pyenv
           python -m pip install setuptools==49.0.0
           python -m pip install -r requirements-gui.txt
