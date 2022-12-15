@@ -1642,7 +1642,7 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     fh.write("Volume(2) = {2};//End background mesh surfaces\n")   
     
     # add electrodes to mesh 
-    fh.write("//Electrode positions.\n")
+    fh.write("//Start electrode positions.\n")
     node_pos = [0]*len(elec_x)
     for i in range(len(elec_x)):
         no_pts += 1
@@ -1679,6 +1679,7 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
                 sur_idx = 1
                 vol_idx = 1 
             else: # otherwise point placed in mesh outside of fine mesh region (zone 1)
+                continue 
                 sur_idx = 2 
                 vol_idx = 2 
             

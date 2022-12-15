@@ -4430,7 +4430,7 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         while p.poll() is None:
             line = p.stdout.readline()
             if line.decode('utf-8') != '':
-                dump(line.decode('utf-8'))
+                dump(line.decode('utf-8').strip())
     else:
         p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
         if handle is not None:
@@ -4912,12 +4912,30 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cl_corner = 3 
 
         vpoints = np.c_[surf_elec_x,surf_elec_y]
-        vor = Voronoi(vpoints)
+        vor = Voronoi(vpoints)    
+        vx = []
+        vy = []
+        vi = []
+        tree = cKDTree(vor.vertices[:,0:2])
+        nearby = tree.query_ball_tree(tree,cl*cl_corner) # find where points are within one 
+        # cl*cl_corner raduis of each other. 
         
-        internal_mesh_refinement = {'x':vor.vertices[:,0],
-                                    'y':vor.vertices[:,1],
-                                    'z':np.zeros(vor.vertices.shape[0]),
-                                    'cl':np.zeros(vor.vertices.shape[0]) + (cl*cl_corner)}
+        for i in range(len(nearby)):
+            near_idx = nearby[i]
+            # if point is clustered close to other refinement points it is 
+            # is not needed, only first instance is kept. 
+            for j in near_idx: 
+                if mc.bisection_searchL(vi,j) == -1: 
+                    vx.append(vor.vertices[j,0])
+                    vy.append(vor.vertices[j,1])
+                    vi += near_idx
+                    vi = sorted(vi)
+                    break 
+        
+        internal_mesh_refinement = {'x':np.array(vx),
+                                    'y':np.array(vy),
+                                    'z':np.zeros(len(vx)),
+                                    'cl':np.zeros(len(vx)) + (cl*cl_corner)}
         kwargs['mesh_refinement'] = internal_mesh_refinement
     else:
         internal_mesh_refinement = None # then there will be no internal mesh refinement 
