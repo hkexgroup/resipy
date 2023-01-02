@@ -5149,6 +5149,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
+        self.surveys[0].computeK()  # need to recompute K with the new electrode given by setElec()
+        self.surveys[0].df['app'] = self.surveys[0].df['K']*self.surveys[0].df['resist']  # and recompute app
         # self.fmd = fmd      
 
         # recompute doi (don't actually otherwise zlim is jumping)
