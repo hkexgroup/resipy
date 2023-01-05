@@ -1965,44 +1965,65 @@ class Project(object): # Project master class instanciated by the GUI
 
     def matchSurveys(self):
         """Will trim all surveys to get them ready for difference inversion
-        where all datasets must have the same number of quadrupoles.
+        so that each PAIRS of (background, surveyX) have the same number of
+        quadrupoles. We do not take all quadrupoles in common among all
+        surveys as this is not needed and if there is a small survey, it would
+        reduce all other larger surveys.
         """
-        print('Matching quadrupoles between surveys for difference inversion...', end='')
+        print('Matching quadrupoles between pairs of (background, surveyX) for difference inversion...', end='')
         t0 = time.time()
-        dfs = [s.df for s in self.surveys]
+        # dfs = [s.df for s in self.surveys]
 
         # sort all dataframe (should already be the case)
-        dfs2 = []
-        for df in dfs:
-            dfs2.append(df)#.sort_values(by=['a','b','m','n']).reset_index(drop=True))
+        # dfs2 = []
+        # for df in dfs:
+        #     dfs2.append(df)#.sort_values(by=['a','b','m','n']).reset_index(drop=True))
 
-        # concatenate columns of string
-        def cols2str(cols):
-            cols = cols.astype(str)
-            x = cols[:,0]
-            for i in range(1, cols.shape[1]):
-                x = np.core.defchararray.add(x, cols[:,i])
-            return x
+        # NOTE: method below as computing common quadrupoles
+        # among all surveys.
+        # # concatenate columns of string
+        # def cols2str(cols):
+        #     cols = cols.astype(str)
+        #     x = cols[:,0]
+        #     for i in range(1, cols.shape[1]):
+        #         x = np.core.defchararray.add(x, cols[:,i])
+        #     return x
 
-        # get measurements common to all surveys
-        df0 = dfs2[0]
-        x0 = cols2str(df0[['a','b','m','n']].values)
-        icommon = np.ones(len(x0), dtype=bool)
-        for df in dfs2[1:]:
-            x = cols2str(df[['a','b','m','n']].values)
-            ie = np.in1d(x0, x)
-            icommon = icommon & ie
-        print(np.sum(icommon), 'in common...', end='')
+        # # get measurements common to all surveys
+        # df0 = dfs2[0]
+        # x0 = cols2str(df0[['a','b','m','n']].values)
+        # icommon = np.ones(len(x0), dtype=bool)
+        # for df in dfs2[1:]:
+        #     x = cols2str(df[['a','b','m','n']].values)
+        #     ie = np.in1d(x0, x)
+        #     icommon = icommon & ie
+        # print(np.sum(icommon), 'in common...', end='')
 
-        # create boolean index to match those measurements
-        indexes = []
-        xcommon = x0[icommon]
-        for df in dfs2:
-            x = cols2str(df[['a','b','m','n']].values)
-            iedups = np.array(pd.Series(x).duplicated()) # cols2str() can cause duplicates and messup np.in1d()
-            common = np.in1d(x, xcommon)
-            common[np.where(iedups)[0]] = False
-            indexes.append(common)
+        # # create boolean index to match those measurements
+        # indexes = []
+        # xcommon = x0[icommon]
+        # for df in dfs2:
+        #     x = cols2str(df[['a','b','m','n']].values)
+        #     iedups = np.array(pd.Series(x).duplicated()) # cols2str() can cause duplicates and messup np.in1d()
+        #     common = np.in1d(x, xcommon)
+        #     common[np.where(iedups)[0]] = False
+        #     indexes.append(common)
+            
+        df0 = self.surveys[0].df
+        df0['tlindex0'] = df0.index.astype(int)
+        ie0 = np.ones(df0.shape[0], dtype=bool)
+        indexes = [(ie0, ie0)]  # array of tuple
+        for survey in self.surveys[1:]:
+            df = survey.df
+            df['tlindex'] = df.index.astype(int)
+            dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0']],
+                           df[['a', 'b', 'm', 'n', 'tlindex']],
+                           how='inner', on=['a', 'b', 'm', 'n'])
+            ie0 = np.zeros(df0.shape[0], dtype=bool)
+            ie0[dfm['tlindex0'].values] = True
+            ie = np.zeros(df.shape[0], dtype=bool)
+            ie[dfm['tlindex'].values] = True
+            indexes.append((ie0, ie))
 
         print('done in {:.3}s'.format(time.time()-t0))
 
@@ -3250,12 +3271,12 @@ class Project(object): # Project master class instanciated by the GUI
                 self.param['reg_mode'] = 2 # by default it's timelapse (difference)
             if self.param['reg_mode'] == 2: # it's a difference inversion
                 indexes = self.matchSurveys()
-                if (self.typ == 'R3t') | (self.typ == 'cR3t'):
-                    if fm0 is not None:
-                        fm0 = fm0[indexes[0]] # we crop it so it has the same
-                        # shape as all quad in common
+                # if (self.typ == 'R3t') | (self.typ == 'cR3t'):
+                #     if fm0 is not None:
+                #         fm0 = fm0[indexes[0] # we crop it so it has the same
+                #         # shape as all quad in common --> done when writing it below
             else:
-                indexes = [None]*len(self.surveys)
+                indexes = [(None, None)]*len(self.surveys)
             # a bit simplistic but assign error to all based on Transfer resistance
             # let's assume it's False all the time for now
             content = ''
@@ -3285,10 +3306,11 @@ class Project(object): # Project master class instanciated by the GUI
                 # been populated when the files has been imported
 
                 res0Bool = False if self.param['reg_mode'] == 1 else True
+                fm00 = fm0[indexes[i][0]] if fm0 is not None else fm0
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
-                                            isubset=indexes[i], threed=threed,
-                                            fm0=fm0)
+                                            isubset=indexes[i][1], threed=threed,
+                                            fm0=fm00)
                 if i == 0:
                     refdir = os.path.join(self.dirname, 'ref')
                     if os.path.exists(refdir) == False:
@@ -5149,6 +5171,8 @@ class Project(object): # Project master class instanciated by the GUI
         self.surveys[0].df['ip'] = addnoiseIP(self.surveys[0].df['ip'].values, self.noiseIP)
         self.surveys[0].computeReciprocal() # to recreate the other columns
         self.setElec(elec) # using R2.createSurvey() overwrite self.elec so we need to set it back
+        self.surveys[0].computeK()  # need to recompute K with the new electrode given by setElec()
+        self.surveys[0].df['app'] = self.surveys[0].df['K']*self.surveys[0].df['resist']  # and recompute app
         # self.fmd = fmd      
 
         # recompute doi (don't actually otherwise zlim is jumping)
