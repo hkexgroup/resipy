@@ -92,7 +92,7 @@ def bearing(x,y):
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 # 2D half space problem 
 def genGeoFile(electrodes, electrode_type = None, geom_input = None,
-               file_path='mesh.geo',fmd=-1,dp_len=-1,cl=-1,cl_factor=2,
+               file_path='mesh.geo',fmd=-1,dp_len=-1,cl=-1,cl_factor=2.0,
                edge_factor=5, debug=False):
     """Writes a gmsh .geo file for a 2d study area with topography assuming we wish to add electrode positions
     
@@ -155,8 +155,9 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         and a polygon is a discrete shape within the fine mesh region. See below example for format:
             
             geom_input = {'surface': [surf_x,surf_z],
-              'boundary1':[bound1x,bound1y],
-              'polygon1':[poly1x,poly1y]} 
+              'boundary1':[bound1x,bound1z],
+              'polygon1':[poly1x,poly1z],
+              'refine':[pointx,pointz]}
             
     electrodes and electrode_type (if not None) format: 
         
@@ -165,7 +166,8 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         
         like with geom_input, boreholes should be labelled borehole1, borehole2 and so on.
         The code will cycle through each borehole and internally sort them and add them to 
-        the mesh. 
+        the mesh. Surface electrodes can have the flag 'surface' or 'electrode', independently 
+        buried electrodes have the tag 'buried'. 
         
     The code expects that all polygons, boundaries and electrodes fall within x values 
     of the actaul survey area. So make sure your topography / surface electrode points cover 
@@ -208,9 +210,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         rem_idx=[]#remote electrode index
         for i,key in enumerate(electrode_type):
             if key == 'electrode': surface_idx.append(i)
+            if key == 'surface': surface_idx.append(i)
             if key == 'buried': bur_idx.append(i); bu_flag = True
             if key == 'borehole1': bh_flag = True
-            if key == 'remote':rem_idx.append(i)
+            if key == 'remote': rem_idx.append(i)
 
         if len(surface_idx)>0:# then surface electrodes are present
             elec_x=np.array(electrodes[0])[surface_idx]
@@ -300,6 +303,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     fh.write("//2D mesh script for ResIPy (run the following in gmsh to generate a triangular mesh with topograpghy)\n")
     fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")
     fh.write("cl=%.2f;//define characteristic length\n" %cl)
+    fh.write("cl_factor=%2.f;//define characteristic length factor\n"%cl_factor)
     fh.write("//Define surface points\n")
     #we have surface topograpghy, and electrode positions to make use of here:
     x_pts=np.append(topo_x,elec_x)#append our electrode positions to our topograpghy 
@@ -390,7 +394,10 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     sur_pnt_cache=[] # surface points cache 
     for i in range(len(x_pts)):
         tot_pnts+=1
-        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],0,z_pts[i],flag_sort[i]))
+        if i==0 or i==len(x_pts)-1:
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*cl_factor};//%s\n"%(tot_pnts,x_pts[i],0,z_pts[i],flag_sort[i]))
+        else:
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl};//%s\n"%(tot_pnts,x_pts[i],0,z_pts[i],flag_sort[i]))
         sur_pnt_cache.append(tot_pnts)
     
     #make the lines between each point
@@ -418,7 +425,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
     basal_pnt_cache = []
     for i in range(len(x_base)):
         tot_pnts += 1
-        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*%.2f};//%s\n"%(tot_pnts,x_base[i],0,z_base[i],cl_factor,
+        fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*cl_factor};//%s\n"%(tot_pnts,x_base[i],0,z_base[i],
                  'base of smoothed mesh region'))
         basal_pnt_cache.append(tot_pnts)
     
@@ -441,9 +448,7 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         if key in geom_input.keys():
             bdx = np.array(geom_input[key][0])
             bdz = np.array(geom_input[key][1])
-
             #filtx = (bdx > x_pts[0]) & (bdx < x_pts[-1]) # filter out points beyond x bounds? 
-
             pt_idx = [0] * (len(bdx)+2)
             # interpolate right and left boundary points 
             x_end = np.array([x_pts[0],x_pts[-1]])
@@ -456,7 +461,6 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
             sortid = np.argsort(bdx)
             bdx = bdx[sortid] # reassign to sorted arrays by x coordinate 
             bdz = bdz[sortid] # reassign to sorted arrays by x coordinate 
-            
             
             fh.write("// vertices for boundary line %i\n"%count)
             for k in range(len(bdx)):
@@ -684,6 +688,25 @@ def genGeoFile(electrodes, electrode_type = None, geom_input = None,
         node_pos = np.append(node_pos,e_pt_idx) #add remote electrode nodes to electrode node positions 
         fh.write("Point{%s} In Surface{1};\n"%(str(e_pt_idx).strip('[').strip(']')))
         fh.write('//End of remote electrodes.\n')
+        
+    if 'refine' in geom_input.keys():
+        fh.write('\n//Refinement points \n')
+        px = np.array(geom_input['refine'][0])
+        pz = np.array(geom_input['refine'][1])
+        #work out which nodes are inside the fine mesh region 
+        fmrx = np.append(x_pts,np.flipud(x_base))
+        fmrz = np.append(z_pts,np.flipud(z_base))
+        path = mpath.Path(np.c_[fmrx,fmrz])
+        inside = path.contains_points(np.c_[px,pz])
+        r_pt_idx = []
+        for k in range(len(px)):
+            if not inside[k]:
+                continue 
+            no_pts += 1 
+            fh.write("Point(%i) = {%.2f,%.2f,%.2f,cl*cl_factor};//refinement point %i\n"%(no_pts,px[k],0,pz[k],k+1))
+            r_pt_idx.append(no_pts) 
+        fh.write("Point{%s} In Surface{%i};//include nodes in meshing\n"%(str(r_pt_idx).strip('[').strip(']'), no_plane))
+        fh.write('//End refinement points\n')
                     
     fh.write("\n//End gmsh script\n")
     fh.close()

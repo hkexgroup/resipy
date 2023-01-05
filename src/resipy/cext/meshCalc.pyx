@@ -1352,6 +1352,73 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
     
     return nsizeA, Nconnec
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def externalN(long[:,;] connection, double[:,:] node, long[:,;] neigh):
+    """Get the external nodes of a triangle or tetrahedral mesh. Future plan 
+    is to add a flag to determine if nodes are on top of the mesh or on the side. 
+
+    Parameters
+    ----------
+    connection: np array 
+        4 by N array of int describing indices of element vertices (nodes)
+    node: np array 
+        3 by N array of node coordinates 
+    neigh: np.array (int)
+        N by 4 array, describes indices of neighbour elements for each cell 
+        (output of neigh3d)
+        
+    Returns
+    -------
+    enodes: np array 
+        1 by N array of indices where nodes are on the edge of the mesh. 
+
+    """
+    # generic variables for function 
+    cdef int flag3d = 0 
+    cdef int i, j, k 
+    cdef int numel = connection.shape[0]
+    cdef int numnp = node.shape[0]
+    cdef int nn = neigh.shape[1] # number of possible neighbours 
+    
+    if connection.shape[1] == 3:
+        flag3d = 0 
+    elif connection.shape[1] == 4: 
+        flag3d = 1 
+    else:
+        raise Exception('Unsupported mesh type for computing external nodes')
+        
+    cdef long[:] a, b, c 
+    if flag3d == 0: 
+        a = np.asarray([0,1,2], dtype=int)
+        b = np.asarray([1,2,0], dtype=int)
+    else:
+        a = np.asarray([1,0,0,0], dtype=int) 
+        b = np.asarray([2,3,1,1], dtype=int)  
+        c = np.asarray([3,2,3,2], dtype=int)  
+      
+    cdef list enodesl = [] # will be used to store all found face nodes 
+    cdef int enode0, enode1, enode2 # external nodes 
+    
+    for i in range(numel):
+        # skip if not an edge element 
+        if fmin(neigh[i,:]) > -1: 
+            continue 
+        for j in range(nn):
+            if neigh[i,j] == -1:
+                enode0 = connection[i][a[j]]
+                enode1 = connection[i][b[j]]
+                enodel.append(enode0)
+                enodel.append(enode1)
+                if flag3d: 
+                    enode2 = connection[i][c[j]]
+                    enodel.append(enode2)
+                    
+    cdef np.ndarray[long, ndim=1] enodes = np.asarray(np.unique(enodesl),dtype=int)
+    return enodes 
+    
+    
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threads=2):
