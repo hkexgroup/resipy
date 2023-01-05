@@ -598,7 +598,7 @@ class Mesh:
     def orderElem(self, param=None):
         """Order elements based on the parameter number. Ideally parameters 
         should be concurrent, and fixed elements should go at the base of the 
-        connection matrix
+        connection matrix.
         """
         if param is None:
             param = self.df['param'].values
@@ -761,6 +761,9 @@ class Mesh:
         cell_type = self.cell_type[0]
         self.NsizeA, self.fconm = mc.conductanceCall(self.connection, self.numnp,
                                                      cell_type,ncores)
+        
+    def externalNodes(self):
+        pass 
         
     def refine(self):
         """Refine the mesh into smaller elements 
@@ -4510,7 +4513,7 @@ def check4repeatNodes(X,Y,Z,flag=None):
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
-             handle=None, **kwargs):
+             handle=None, add_refinement=True, **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
     Uses gmsh version 3.0.6.
@@ -4593,6 +4596,52 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     
     if not os.path.isfile(os.path.join(ewd,'gmsh.exe')) and not os.path.isfile(os.path.join(ewd,'gmsh_linux')):
         raise Exception("No gmsh executable exists in the exe directory!")
+        
+    if 'cl' in kwargs.keys():
+        cl = kwargs['cl']
+    else:
+        dist_sort = np.unique(gw.find_dist(elec_x,np.zeros_like(elec_x),elec_z))
+        cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
+    if 'cl_factor' in kwargs.keys():
+        cl_factor = kwargs['cl_factor']
+    else: 
+        cl_factor = 2.0 
+
+    bur_idx=[]#buried electrode index 
+    bu_flag = False 
+    for i,key in enumerate(elec_type):
+        if key == 'buried': bur_idx.append(i); bu_flag = True 
+        
+    if bu_flag: 
+        bux = np.array(elec_x)[np.array(bur_idx)]
+        buz = np.array(elec_z)[np.array(bur_idx)]
+        vx = []
+        vz = []
+        vi = []
+        if len(bux) > 3: 
+            vpoints = np.c_[np.append(bux,elec_x),
+                            np.append(buz,elec_z)]
+            vor = Voronoi(vpoints)    
+            tree = cKDTree(vor.vertices)
+            nearby = tree.query_ball_tree(tree,cl*cl_factor) 
+            for i in range(len(nearby)):
+                near_idx = nearby[i]
+                # if point is clustered close to other refinement points it is 
+                # is not needed, only first instance is kept. 
+                for j in near_idx: 
+                    if mc.bisection_searchL(vi,j) == -1: 
+                        vx.append(vor.vertices[j,0])
+                        vz.append(vor.vertices[j,1])
+                        vi += near_idx
+                        vi = sorted(vi)
+                        break 
+        if geom_input is None: 
+            geom_input = {'refine':[vx,vz]} 
+        elif 'refine' in geom_input.keys():
+            geom_input['refine'][0] = list(geom_input['refine'][0]) + vx 
+            geom_input['refine'][1] = list(geom_input['refine'][1]) + vz
+        else:
+            geom_input['refine'] = [vx,vz]            
     
     #make .geo file
     file_name="mesh"
@@ -4810,21 +4859,22 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
             dump('found buried electrodes')
             if interp_method == 'idw': 
-                bur_elec_z = interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
+                bur_elec_z_topo = interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
             elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
-                bur_elec_z = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+                bur_elec_z_topo = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
             elif interp_method == 'nearest':
-                bur_elec_z = interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+                bur_elec_z_topo = interp.nearest(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
             elif interp_method == 'spline':
-                bur_elec_z = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
+                bur_elec_z_topo = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
             elif interp_method == 'triangulate':
-                bur_elec_z = interp.triangulate(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
+                bur_elec_z_topo = interp.triangulate(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
             elif interp_method is None:
-                bur_elec_z = np.zeros_like(bur_elec_idx)
+                bur_elec_z_topo= np.zeros_like(bur_elec_idx)
                 
-        elec_z = np.array(elec_z) 
-        elec_z[surf_elec_idx] = 0
-        elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z # normalise to zero surface 
+            elec_z = np.array(elec_z) 
+            elec_z[surf_elec_idx] = 0
+            elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z_topo # normalise to zero surface 
+            bur_elec_z = elec_z[bur_elec_idx] - bur_elec_z_topo
         
     else:
         surf_elec_x = elec_x 
@@ -4835,6 +4885,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         else:
             surf_elec_z = elec_z.copy()
             elec_z = np.array(elec_z) - np.array(elec_z)#normalise elec_z
+        bur_elec_x = []
+        bur_elec_y = []
+        bur_elec_z = []
         x_interp = np.append(surf_elec_x,surf_x)
         y_interp = np.append(surf_elec_y,surf_y)
         z_interp = np.append(surf_elec_z,surf_z)
@@ -4900,7 +4953,6 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
 
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to box_3d
     elif add_refinement:
-        
         if 'cl' in kwargs.keys():
             cl = kwargs['cl']
         else:
@@ -4910,32 +4962,57 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             cl_corner = kwargs['cl_corner']
         else:
             cl_corner = 3 
-
-        vpoints = np.c_[surf_elec_x,surf_elec_y]
-        vor = Voronoi(vpoints)    
+            
         vx = []
         vy = []
+        vz = []
         vi = []
-        tree = cKDTree(vor.vertices[:,0:2])
-        nearby = tree.query_ball_tree(tree,cl*cl_corner) # find where points are within one 
-        # cl*cl_corner raduis of each other. 
-        
-        for i in range(len(nearby)):
-            near_idx = nearby[i]
-            # if point is clustered close to other refinement points it is 
-            # is not needed, only first instance is kept. 
-            for j in near_idx: 
-                if mc.bisection_searchL(vi,j) == -1: 
-                    vx.append(vor.vertices[j,0])
-                    vy.append(vor.vertices[j,1])
-                    vi += near_idx
-                    vi = sorted(vi)
-                    break 
-        
-        internal_mesh_refinement = {'x':np.array(vx),
-                                    'y':np.array(vy),
-                                    'z':np.zeros(len(vx)),
-                                    'cl':np.zeros(len(vx)) + (cl*cl_corner)}
+        if len(surf_elec_x) > 3: 
+            vpoints = np.c_[surf_elec_x,surf_elec_y]
+            vor = Voronoi(vpoints)    
+            tree = cKDTree(vor.vertices[:,0:2])
+            nearby = tree.query_ball_tree(tree,cl*cl_corner) # find where points are within one 
+            # cl*cl_corner raduis of each other. 
+            
+            for i in range(len(nearby)):
+                near_idx = nearby[i]
+                # if point is clustered close to other refinement points it is 
+                # is not needed, only first instance is kept. 
+                for j in near_idx: 
+                    if mc.bisection_searchL(vi,j) == -1: 
+                        vx.append(vor.vertices[j,0])
+                        vy.append(vor.vertices[j,1])
+                        vz.append(0)
+                        vi += near_idx
+                        vi = sorted(vi)
+                        break 
+                    
+        if len(bur_elec_x) > 3: 
+            vpoints = np.c_[bur_elec_x, bur_elec_y, bur_elec_z]
+            print(vpoints)
+            vor = Voronoi(vpoints)    
+            tree = cKDTree(vor.vertices)
+            nearby = tree.query_ball_tree(tree,cl*cl_corner) 
+            for i in range(len(nearby)):
+                near_idx = nearby[i]
+                # if point is clustered close to other refinement points it is 
+                # is not needed, only first instance is kept. 
+                for j in near_idx: 
+                    if mc.bisection_searchL(vi,j) == -1 and vor.vertices[j,2] < 0: 
+                        vx.append(vor.vertices[j,0])
+                        vy.append(vor.vertices[j,1])
+                        vz.append(vor.vertices[j,2])
+                        vi += near_idx
+                        vi = sorted(vi)
+                        break 
+            
+        if len(vx) == 0:
+            internal_mesh_refinement = None 
+        else:   
+            internal_mesh_refinement = {'x':np.array(vx),
+                                        'y':np.array(vy),
+                                        'z':np.array(vz),
+                                        'cl':np.zeros(len(vx))+(cl*cl_corner)}
         kwargs['mesh_refinement'] = internal_mesh_refinement
     else:
         internal_mesh_refinement = None # then there will be no internal mesh refinement 
@@ -4957,7 +5034,6 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     if whole_space:#by default create survey with topography 
         dump("Whole space problem")
         raise Exception("Sorry whole space 3D problems are not implemented yet")
-        
     else:
         node_pos = gw.box_3d([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
             
@@ -4998,7 +5074,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     elif interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
         nodez = interp.interp2d(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method == 'nearest':
-        nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp,num_threads=ncores)
+        nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp, num_threads=ncores)
     elif interp_method == 'spline':
         nodez = interp.interp2d(node_x, node_y, x_interp, y_interp, z_interp,method='spline')
     elif interp_method == 'triangulate':
