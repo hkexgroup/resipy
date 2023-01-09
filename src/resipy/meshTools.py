@@ -763,6 +763,25 @@ class Mesh:
                                                      cell_type,ncores)
         
     def externalNodes(self):
+        """
+        Find the external nodes of the mesh (triangle and tetrahedral meshes only). 
+
+        Returns
+        -------
+        external_nodes : ndarray 
+            Indices of external nodes. 
+        surface_flag : ndarray 
+            Flag if external node is on the surface of the mesh, 1 for surface
+            and 0 for not. 
+
+        """
+        throw_error = True 
+        if self.ndims==2 and self.type2VertsNo()==3:
+            throw_error = False 
+        elif self.ndims==3 and self.type2VertsNo()==4:
+            throw_error = False 
+        if throw_error:
+            raise Exception('External boundary node call only avialable for triangle or tetrahedral meshes')
         if self.neigh_matrix is None: 
             self.computeNeigh()
         external_nodes, surface_flag = mc.externalN(self.connection, self.node,
