@@ -763,7 +763,11 @@ class Mesh:
                                                      cell_type,ncores)
         
     def externalNodes(self):
-        pass 
+        if self.neigh_matrix is None: 
+            self.computeNeigh()
+        external_nodes, surface_flag = mc.externalN(self.connection, self.node,
+                                                    self.neigh_matrix) 
+        return external_nodes, surface_flag
         
     def refine(self):
         """Refine the mesh into smaller elements 
@@ -4808,6 +4812,11 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     avail_methods = ['bilinear','idw','nearest','spline','triangulate',None]
     if interp_method not in avail_methods:
         raise NameError("'%s' is an unrecognised interpretation method"%interp_method)
+    if elec_z is not None and all(np.array(elec_z)==0):
+        interp_method = None 
+    if all(np.array(elec_y)==elec_y[0]):
+        add_refinement = False 
+        # refinement won't work unless there is some change in the y direction 
         
     # check for repeated electrodes? 
     check4repeatNodes(elec_x,elec_y,elec_z,elec_type)
@@ -4858,7 +4867,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         
         if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
             dump('found buried electrodes')
-            if interp_method == 'idw': 
+            if interp_method is None:
+                bur_elec_z_topo= np.zeros_like(bur_elec_idx)
+            elif interp_method == 'idw': 
                 bur_elec_z_topo = interp.idw(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
             elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
                 bur_elec_z_topo = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
@@ -4868,9 +4879,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                 bur_elec_z_topo = interp.interp2d(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp,method='spline')
             elif interp_method == 'triangulate':
                 bur_elec_z_topo = interp.triangulate(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
-            elif interp_method is None:
-                bur_elec_z_topo= np.zeros_like(bur_elec_idx)
-                
+
             elec_z = np.array(elec_z) 
             elec_z[surf_elec_idx] = 0
             elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z_topo # normalise to zero surface 
@@ -4927,7 +4936,9 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         #if we have buried points normalise their elevation to as if they are on a flat surface
         if len(bur_rz)>0: 
             dump('found buried mesh refinement points')
-            if interp_method == 'idw': 
+            if interp_method is None:
+                bur_rz_topo = np.zeros_like(bur_idx)
+            elif interp_method == 'idw': 
                 bur_rz_topo = interp.idw(bur_rx, bur_ry, x_interp, y_interp, z_interp,radius=search_radius)# use inverse distance weighting
             elif interp_method == 'bilinear' or interp_method == None: # still need to normalise electrode depths if we want a flat mesh, so use biliner interpolation instead
                 bur_rz_topo = interp.interp2d(bur_rx, bur_ry, x_interp, y_interp, z_interp)
@@ -4937,8 +4948,6 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                 bur_rz_topo = interp.interp2d(bur_rx, bur_ry, x_interp, y_interp, z_interp,method='spline')
             elif interp_method == 'triangulate':
                 bur_rz_topo = interp.triangulate(bur_rx, bur_ry, x_interp, y_interp, z_interp)
-            elif interp_method is None:
-                bur_rz_topo = np.zeros_like(bur_idx)
                 
         rz = np.array(mesh_refinement['z']) 
         rz[surf_idx] = 0

@@ -144,6 +144,18 @@ cdef double mean_average(double[:] arr) nogil:
     return a 
 
 @cython.boundscheck(False)
+@cython.wraparound(False)
+cdef ccw(p,q,r):#code expects points as p=(x,y) and so on ... 
+    # Checks if points in a triangle are ordered counter clockwise. 
+    val=((q[1]-p[1])*(r[0]-q[0]))-((q[0]-p[0])*(r[1]-q[1]))
+    if val == 0:
+        return 0 # lines are colinear
+    elif val > 0:
+        return 1 # points are oreintated clockwise
+    elif val < 0:
+        return 2 # points are oreintated counter clockwise 
+
+@cython.boundscheck(False)
 @cython.wraparound(False)    
 cdef long tetra_signp(double[:] a, double[:] b, double [:] c,  double [:] d) nogil:
     #parrall nogil tetra sign code, but needs memory views passed to it 
@@ -608,7 +620,7 @@ def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     cdef long[:] fnuma = np.array(fnum,dtype=int)
     
     cdef int nfaces = len(idx)
-    cdef int fidx, fnumi 
+    cdef int fidx, fnumi, search 
     
     cdef list fcoords = [[]]*nfaces 
     cdef tuple vert 
@@ -1355,7 +1367,7 @@ def conductanceCall(long[:,:] connection, int numnp, int typ=0,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def externalN(long[:,;] connection, double[:,:] node, long[:,;] neigh):
+def externalN(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     """Get the external nodes of a triangle or tetrahedral mesh. Future plan 
     is to add a flag to determine if nodes are on top of the mesh or on the side. 
 
@@ -1381,6 +1393,8 @@ def externalN(long[:,;] connection, double[:,:] node, long[:,;] neigh):
     cdef int numel = connection.shape[0]
     cdef int numnp = node.shape[0]
     cdef int nn = neigh.shape[1] # number of possible neighbours 
+    cdef int nvert = connection.shape[1] # number of element vertices 
+    cdef double xa, ya, za, xm, ym, zm, xmf, ymf, zmf 
     
     if connection.shape[1] == 3:
         flag3d = 0 
@@ -1399,24 +1413,128 @@ def externalN(long[:,;] connection, double[:,:] node, long[:,;] neigh):
         c = np.asarray([3,2,3,2], dtype=int)  
       
     cdef list enodesl = [] # will be used to store all found face nodes 
+    cdef list surfaceflagl = [] # will be used to store if node is at the surface 
     cdef int enode0, enode1, enode2 # external nodes 
+    
+    cdef double[:] node_xv = np.asarray(node[:,0],dtype=float) # extract 1D arrays of node coordinates  
+    cdef double[:] node_yv = np.asarray(node[:,1],dtype=float)
+    cdef double[:] node_zv = np.asarray(node[:,2],dtype=float)
+    # cdef np.ndarray[double,ndim=1] nodez =  np.asarray(node[:,2],dtype=float)
+    cdef double tqz = (max(node_zv) - min(node_zv)) + max(node_zv) # query point in z axis
+    
+    cdef double[:] q0 = np.zeros(3)#query points 
+    cdef double[:] q1 = np.zeros(3)
+    cdef double[:] p0 = np.zeros(3)
+    cdef double[:] p1 = np.zeros(3)
+    cdef double[:] p2 = np.zeros(3)
+    
+    cdef long s1,s2,s3,s4,s5
     
     for i in range(numel):
         # skip if not an edge element 
-        if fmin(neigh[i,:]) > -1: 
+        if min(neigh[i,:]) > -1: 
             continue 
+        
+        # compute cell centre 
+        xa = 0
+        ya = 0 
+        za = 0         
+        for j in range(nvert):
+            xa += node_xv[connection[i,j]]
+            ya += node_yv[connection[i,j]]
+            za += node_zv[connection[i,j]]
+        
+        xm = xa/nvert 
+        ym = ya/nvert 
+        zm = za/nvert 
+                          
         for j in range(nn):
             if neigh[i,j] == -1:
                 enode0 = connection[i][a[j]]
                 enode1 = connection[i][b[j]]
-                enodel.append(enode0)
-                enodel.append(enode1)
-                if flag3d: 
+                enodesl.append(enode0)
+                enodesl.append(enode1)
+                if flag3d == 1: 
                     enode2 = connection[i][c[j]]
-                    enodel.append(enode2)
+                    enodesl.append(enode2)
                     
-    cdef np.ndarray[long, ndim=1] enodes = np.asarray(np.unique(enodesl),dtype=int)
-    return enodes 
+                    p0[0] = node_xv[enode0]# corner 1 
+                    p0[1] = node_yv[enode0]
+                    p0[2] = node_zv[enode0]
+                    
+                    p1[0] = node_xv[enode1] # corner 2
+                    p1[1] = node_yv[enode1]
+                    p1[2] = node_zv[enode1]
+                    
+                    p2[0] = node_xv[enode2] # corner 3
+                    p2[1] = node_yv[enode2]
+                    p2[2] = node_zv[enode2]
+                    
+                    # work out mid point of external face 
+                    xmf = (p0[0] + p1[0] + p2[0])/3 
+                    ymf = (p0[1] + p1[1] + p2[1])/3 
+                    
+                    q0[0] = xmf
+                    q0[1] = ymf
+                    q0[2] = tqz # top query point 
+                    
+                    q1[0] = xmf
+                    q1[1] = ymf
+                    q1[2] = zm #bottom query point 
+                    
+                    s1 = tetra_signp(q0,p0,p1,p2)
+                    s2 = tetra_signp(q1,p0,p1,p2)
+                    
+                    if s1 != s2: # then query point is either side of the triangle so probe
+                        s3 = tetra_signp(q0,q1,p0,p1)
+                        s4 = tetra_signp(q0,q1,p1,p2)
+                        s5 = tetra_signp(q0,q1,p2,p0)
+            
+                        if s3 == s4 and s4 == s5:
+                            for k in range(3):
+                                surfaceflagl.append(1)
+                        else:
+                            for k in range(3):
+                                surfaceflagl.append(0)
+                    else:
+                        for k in range(3):
+                            surfaceflagl.append(0)
+                else:
+                    #now to compute if face boundary condition              
+                    dx = abs(node_xv[enode0] - node_xv[enode1]) # work out approx edge dimensions 
+                    dz = abs(node_zv[enode0] - node_zv[enode1]) # work out approx edge dimensions 
+                    
+                    if dx < 1e-16: # element on side of mesh 
+                        surfaceflagl.append(0) 
+                        surfaceflagl.append(0) 
+                    else: 
+                        p0[0] = node_xv[enode0]
+                        p0[1] = node_zv[enode0]
+                        p1[0] = node_xv[enode1]
+                        p1[1] = node_zv[enode1]
+                        p2[0] = xm
+                        p2[1] = zm+dx+dz  
+                        o = ccw(p0,p1,p2)  
+
+                        if o == 1:
+                            surfaceflagl.append(1) 
+                            surfaceflagl.append(1) 
+                        else:
+                            surfaceflagl.append(0) 
+                            surfaceflagl.append(0) 
+                            
+                            
+    cdef np.ndarray[long, ndim=1] enodeu, enodeidx 
+    enodeu, enodeidx = np.unique(enodesl,return_index=True) # get unique nodes 
+    
+    cdef np.ndarray[long, ndim=1] enodes = np.zeros(len(enodeu),dtype=int)
+    cdef np.ndarray[long, ndim=1] surfaceflag = np.zeros(len(enodeu),dtype=int)
+
+    for i in range(len(enodeu)):
+        enodes[i] = enodesl[enodeidx[i]]
+        surfaceflag[i] = surfaceflagl[enodeidx[i]]
+    
+    return enodes, surfaceflag 
     
     
 @cython.boundscheck(False)
