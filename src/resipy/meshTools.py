@@ -4889,6 +4889,13 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         z_interp = np.append(surf_elec_z,surf_z)
         elec_z = np.array(elec_z) 
         
+        if interp_method == 'triangulate':
+            # need to check the number of interpolation points is stable for triangulation 
+            if len(surf_elec_x) == 4: 
+                interp_method = 'bilinear'
+            elif len(surf_elec_x) < 4: 
+                interp_method = 'idw'
+        
         if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
             dump('found buried electrodes')
             if interp_method is None:
@@ -5022,7 +5029,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
                     
         if len(bur_elec_x) > 3: 
             vpoints = np.c_[bur_elec_x, bur_elec_y, bur_elec_z]
-            print(vpoints)
+            # print(vpoints)
             vor = Voronoi(vpoints)    
             tree = cKDTree(vor.vertices)
             nearby = tree.query_ball_tree(tree,cl*cl_corner) 
