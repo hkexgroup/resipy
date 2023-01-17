@@ -3017,7 +3017,7 @@ class Project(object): # Project master class instanciated by the GUI
 
         # checking
         if len(np.unique(e_nodes)) < len(e_nodes):
-            raise ValueError('Some electrodes are positionned on the same nodes : e_nodes=' + str(e_nodes))
+            warnings.warn('Some electrodes are positionned on the same nodes : e_nodes=' + str(e_nodes))
         
         # make regions continuous
         regions = self.mesh.df['region']

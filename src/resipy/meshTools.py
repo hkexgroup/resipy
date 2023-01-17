@@ -4417,6 +4417,10 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
     opt = '-2' 
     if threed: # if 3d use 3d option 
         opt = '-3'
+        
+    if dump is print: 
+        def dump(x):
+            print(x,end='')
 
     if platform.system() == "Windows":#command line input will vary slighty by system 
         cmd_line = [os.path.join(ewd,'gmsh.exe'), file_name+'.geo', opt, 'nt %i'%ncores]
@@ -4456,7 +4460,7 @@ def runGmsh(ewd, file_name, show_output=True, dump=print, threed=False, handle=N
         while p.poll() is None:
             line = p.stdout.readline()
             if line.decode('utf-8') != '':
-                dump(line.decode('utf-8').strip())
+                dump(line.decode('utf-8'))
     else:
         p = Popen(cmd_line, stdout=PIPE, stderr=PIPE, shell=False)
         if handle is not None:
@@ -4883,6 +4887,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         x_interp = np.append(surf_elec_x,surf_x)#parameters to be interpolated with
         y_interp = np.append(surf_elec_y,surf_y)
         z_interp = np.append(surf_elec_z,surf_z)
+        elec_z = np.array(elec_z) 
         
         if len(bur_elec_x)>0: #if we have buried electrodes normalise their elevation to as if they are on a flat surface
             dump('found buried electrodes')
@@ -4899,10 +4904,10 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             elif interp_method == 'triangulate':
                 bur_elec_z_topo = interp.triangulate(bur_elec_x, bur_elec_y, x_interp, y_interp, z_interp)
 
-            elec_z = np.array(elec_z) 
-            elec_z[surf_elec_idx] = 0
             elec_z[bur_elec_idx] = elec_z[bur_elec_idx] - bur_elec_z_topo # normalise to zero surface 
             bur_elec_z = elec_z[bur_elec_idx] - bur_elec_z_topo
+
+        elec_z[surf_elec_idx] = 0
         
     else:
         surf_elec_x = elec_x 
@@ -5040,7 +5045,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             internal_mesh_refinement = {'x':np.array(vx),
                                         'y':np.array(vy),
                                         'z':np.array(vz),
-                                        'cl':np.zeros(len(vx))+(cl*cl_corner)}
+                                        'cl':np.full(len(vx),cl*cl_corner)}
         kwargs['mesh_refinement'] = internal_mesh_refinement
     else:
         internal_mesh_refinement = None # then there will be no internal mesh refinement 
