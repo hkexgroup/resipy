@@ -69,7 +69,9 @@ startAnmt = """from paraview.simple import *
 def start_cue(self):
 	global annotations
 	global maxIndex
-	text_obj = Text()#make a text object
+    textSource = paraview.simple.FindSource('Text1')
+   	if textSource is None: 
+   		text_obj = Text()#make a text object
 	annotations= []\n"""
     
 endAnmt ="""	maxIndex = len(annotations)
