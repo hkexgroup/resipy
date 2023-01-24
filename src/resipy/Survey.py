@@ -2399,7 +2399,13 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
+                try: 
+                    protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
+                except TypeError: # sticking plaster solution to pandas issue 
+                    # pandas version 1.5 introduced the lineterminator argument
+                    # but this will cuase a crash with older versions of pandas 
+                    # or older python environments 
+                    protocol.to_csv(f, sep='\t', header=False, index=False) 
         
         return protocol
         
