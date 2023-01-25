@@ -523,24 +523,15 @@ def primeParserTab(fname, espacing=1):
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
     df = df[['a','b','m','n','Rho','dev','ip','resist','cR']] # reorder columns to be consistent with the syscal parser
     
-    # shift electrodes to have continuous numbering? (not active)
-    # array = df[['a','b','m','n']].values
-    # arrayMin = np.min(np.unique(np.sort(array.flatten())))
-    # if arrayMin != 0: # all surveys must start from x = 0
-    #     array -= arrayMin
-    # val = np.sort(np.unique(array.flatten())) # unique electrodes positions
-    # elecLabel = 1 + np.arange(len(val))
-    # newval = elecLabel[np.searchsorted(val, array)] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
-    # df[['a','b','m','n']] = newval
-    
     #compute default electrode positions
     array = df[['a','b','m','n']].values
-    arraySorted = np.sort(np.unique(array.flatten()))
-    n = np.max(arraySorted)
-    if arraySorted[0] == 0:
-        n = n + 1
-    elec = np.zeros((n, 3))
-    elec[:,0] = np.arange(n) * espacing
+    uelec = np.unique(array.flatten())
+    nelec = len(uelec)
+    elec = pd.DataFrame()
+    elec['label'] = np.asarray(uelec,dtype=str)
+    elec['x'] = np.arange(nelec)
+    elec['y'] = np.zeros(nelec)
+    elec['z'] = np.zeros(nelec)
     
     return elec, df
 ##Test code
