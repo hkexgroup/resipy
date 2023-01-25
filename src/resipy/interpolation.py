@@ -1,6 +1,6 @@
 #Topography interpolation schemes for ResIPy, python 3. Dated 2019. 
 #author: jimmy boyd 
-import sys
+import sys, warnings 
 import numpy as np
 from scipy.spatial import Delaunay, ConvexHull, cKDTree
 from scipy.interpolate import LinearNDInterpolator
@@ -262,6 +262,71 @@ def cdist(x1, y1, x2, y2):
     for i, (x, y) in enumerate(zip(x1,y1)):
         dist[i,:] = pdist(x, y, x2, y2)
     return dist
+
+#%% geometric median calculation 
+def fdist(u,x,y,z):
+    dx = (x-u[0])**2
+    dy = (y-u[1])**2
+    dz = (z-u[2])**2
+    return np.sqrt(dx+dy+dz)
+
+def geometricMedian(x,y,z, max_iter=30): 
+    """
+    Find the Geometric Median of a set of points using Weiszfeld's algorithm. 
+    See here: https://en.wikipedia.org/wiki/Geometric_median#cite_note-vz-13
+    
+
+    Parameters
+    ----------
+    x : array like 
+        DESCRIPTION.
+    y : array like 
+        DESCRIPTION.
+    z : array like 
+        DESCRIPTION.
+
+    Returns
+    -------
+    gm: nd array 
+        3 by 1 vector with the xyz coordinate of the point.
+
+    """
+    # make arrays in correct format 
+    x = np.asarray(x,dtype=float)
+    y = np.asarray(y,dtype=float)
+    z = np.asarray(z,dtype=float)
+    
+    # values cannot be absolutely 0 
+    x[x==0] = 1e-16
+    y[y==0] = 1e-16
+    z[z==0] = 1e-16 
+    
+    u = np.array([np.mean(x),np.mean(y),np.mean(z)]) # start point 
+    r = fdist(u,x,y,z)
+    if any(r==0):
+        # shift start point 
+        u = np.array(x[0], y[1], z[0]) 
+    
+    pu = np.zeros(3,dtype=float) # new proposed point 
+    delta = np.ones(3,dtype=float) # change between proposed and last model 
+    c = 0 # counter for while loop 
+    while sum(delta)>1e-16: 
+        sqdist = ((x - u[0])**2)  + ((y - u[1])**2) + ((z - u[2])**2)
+        dist = np.sqrt(sqdist)
+        
+        denom = sum(1/dist)
+        pu[0] = sum(x/dist)/denom 
+        pu[1] = sum(y/dist)/denom 
+        pu[2] = sum(z/dist)/denom 
+        
+        delta = np.abs(pu - u) # compute change 
+        u = np.array([pu[i] for i in range(3)])
+        c += 1 
+        if c > max_iter:
+            warnings.warn('could not converge when computing geometric median')
+            break
+        
+    return u 
 
 #%% interpolation using 4 known points over an irregular grid 
 #### New interpolation scheme coming in 2020 ####

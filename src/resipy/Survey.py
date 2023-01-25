@@ -22,6 +22,7 @@ from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      stingParser, ericParser, lippmannParser, aresParser,
                      srvParser, bertParser, dasParser)
 from resipy.DCA import DCA
+from resipy.interpolation import geometricMedian 
 
 # show the deprecation warnings
 import warnings
@@ -1877,7 +1878,9 @@ class Survey(object):
         lookupDict = dict(zip(self.elec['label'], np.arange(self.elec.shape[0]))) 
         array = self.df[['a','b','m','n']].replace(lookupDict).values.astype(int)
         elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
-            
+        buried = self.elec['buried'].values 
+        remote = self.elec['remote'].values
+        
         ### first determine if measurements are nested ###
         #find mid points of AB 
         AB = (elecm[array[:,0]] + elecm[array[:,1]]) / 2 # mid points of AB 
@@ -1895,7 +1898,7 @@ class Survey(object):
         inested = iABinMN | iMNinAB #if AB encompasses MN or MN encompasses AB 
                        
         # so it will never be taken as minimium
-        elecm[self.elec['remote'].values,:] = np.inf
+        elecm[remote,:] = np.inf
         
         # compute midpoint position of AB and MN dipoles
         elecx = elecm[:,0]
@@ -1968,6 +1971,26 @@ class Survey(object):
         zpos[~inested] = zposNonNested[~inested]
         zpos[inested] = zposNested[inested]
         
+        # use geometric median instead for buried/unconventional electrodes
+        
+        if any(buried): 
+            elecx = elecm[:,0]
+            elecy = elecm[:,1]
+            elecz = elecm[:,2]
+            for i in range(array.shape[0]):
+                if not any(buried[array[i,:]]):
+                    continue # skip if not including a buried electrode 
+                if any(remote[array[i,:]]):
+                    continue # skip if includes a infinite value, thats not good for this method. 
+
+                ex = elecx[array[i,:]]
+                ey = elecy[array[i,:]]
+                ez = elecz[array[i,:]]
+                med = geometricMedian(ex,ey,ez)
+                xpos[i] = med[0]
+                ypos[i] = med[1]
+                zpos[i] = med[2]
+                
         return xpos,ypos,zpos
     
         
@@ -2115,7 +2138,7 @@ class Survey(object):
             color identifier for pyvista plotter object, determines color of 
             electrode points if they can be plotted. 
         strIdx : list, optional 
-            returned from R2.detectStrings method. Each entry in list is an 
+            returned from Project.detectStrings method. Each entry in list is an 
             array like of ints defining an electrode string. 
         magFlag : bool, optional
             If `True` then Tx resistance sign will be checked assuming a flat surface survey.
