@@ -5455,6 +5455,7 @@ def readMesh(file_path, node_pos=None, order_nodes=True):
                     cell_type = mesh_dict['cell_type'],
                     order_nodes = order_nodes)
         mesh.addAttribute(mesh_dict['parameters'], 'zones')
+        mesh.addAttribute(mesh_dict['parameters'], 'region')
         
     elif ext == '.dat':
         mesh = dat_import(file_path, order_nodes=order_nodes)   
