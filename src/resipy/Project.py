@@ -387,7 +387,7 @@ class Project(object): # Project master class instanciated by the GUI
                 elec = pd.DataFrame(elec, columns=['x','y','z'])
             elif elec.shape[1] == 4:
                 elec = pd.DataFrame(elec, columns=['x','y','z','buried'])
-                elec['buried'] = elec['buried'].astype(bool)
+                elec.loc[:,'buried'] = elec['buried'].astype(bool)
 
         if 'line' in elec.columns and 'number' in elec.columns:                
             elecid  = elec.number.values # electrode number array 
@@ -397,15 +397,20 @@ class Project(object): # Project master class instanciated by the GUI
                 label[i] = '%i %i'%(line[i],elecid[i])
             elec.insert(0,'label',label)
         if 'y' not in elec.columns:
-            elec.loc[:,'y'] = 0 # all on same line by default
+            elec.insert(len(elec.columns),'y',0)
+            # elec['y'] = 0  # all on same line by default
         if 'z' not in elec.columns:
-            elec.loc[:,'z'] = 0 # all flat topo by default
+            elec.insert(len(elec.columns),'z',0)
+            # elec['z'] = 0 # all flat topo by default
         if 'remote' not in elec.columns:
-            elec.loc[:,'remote'] = False # all non remote by default
+            elec.insert(len(elec.columns),'remote',False)
+            # elec['remote'] = False # all non remote by default
         if 'buried' not in elec.columns:
-            elec.loc[:,'buried'] = False # all surface elec by default
+            elec.insert(len(elec.columns),'buried',False)
+            # elec['buried'] = False # all surface elec by default
         if 'label' not in elec.columns:
-            elec.loc[:,'label'] = (1 + np.arange(elec.shape[0])).astype(str) # all elec ordered and start at 1            
+            label = (1 + np.arange(elec.shape[0])).astype(str) 
+            elec.insert(0,'label',label)# all elec ordered and start at 1            
         elec = elec.astype({'x':float, 'y':float, 'z':float, 'buried':bool, 'remote':bool, 'label':str})
         
         return elec

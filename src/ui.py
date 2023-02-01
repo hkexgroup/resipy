@@ -1195,7 +1195,7 @@ class App(QMainWindow):
                     pass
                     
                 
-        self.importDataRecipBtn = QPushButton('If you have a reciprocal dataset upload it here')
+        self.importDataRecipBtn = QPushButton('If you have a reciprocal (or more) data upload it here')
         self.importDataRecipBtn.setAutoDefault(True)
         self.importDataRecipBtn.clicked.connect(importDataRecipBtnFunc)
         self.importDataRecipBtn.hide()
@@ -6834,7 +6834,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             self.recipOrNoRecipShow(recipPresence=False)
         else:
             self.recipOrNoRecipShow(recipPresence=True)
-            self.importDataRecipBtn.hide()
+            self.importDataRecipBtn.show() # still allows you to add more data 
             self.tabPreProcessing.setTabEnabled(2, True)
             self.filterAttrCombo.addItem('Reciprocal Error')
             self.plotError()
