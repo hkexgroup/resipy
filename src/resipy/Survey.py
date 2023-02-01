@@ -23,6 +23,7 @@ from resipy.parsers import (syscalParser, protocolParserLME, resInvParser,
                      srvParser, bertParser, dasParser)
 from resipy.DCA import DCA
 from resipy.interpolation import geometricMedian 
+from resipy.saveData import to_csv
 
 # show the deprecation warnings
 import warnings
@@ -2440,13 +2441,7 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                try: 
-                    protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
-                except TypeError: # sticking plaster solution to pandas issue 
-                    # pandas version 1.5 introduced the lineterminator argument
-                    # but this will cuase a crash with older versions of pandas 
-                    # or older python environments 
-                    protocol.to_csv(f, sep='\t', header=False, index=False) 
+                to_csv(protocol, f, sep='\t', header=False, index=False, lineterminator='\n')
         
         return protocol
         
