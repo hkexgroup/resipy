@@ -397,15 +397,15 @@ class Project(object): # Project master class instanciated by the GUI
                 label[i] = '%i %i'%(line[i],elecid[i])
             elec.insert(0,'label',label)
         if 'y' not in elec.columns:
-            elec['y'] = 0 # all on same line by default
+            elec.loc[:,'y'] = 0 # all on same line by default
         if 'z' not in elec.columns:
-            elec['z'] = 0 # all flat topo by default
+            elec.loc[:,'z'] = 0 # all flat topo by default
         if 'remote' not in elec.columns:
-            elec['remote'] = False # all non remote by default
+            elec.loc[:,'remote'] = False # all non remote by default
         if 'buried' not in elec.columns:
-            elec['buried'] = False # all surface elec by default
+            elec.loc[:,'buried'] = False # all surface elec by default
         if 'label' not in elec.columns:
-            elec['label'] = (1 + np.arange(elec.shape[0])).astype(str) # all elec ordered and start at 1            
+            elec.loc[:,'label'] = (1 + np.arange(elec.shape[0])).astype(str) # all elec ordered and start at 1            
         elec = elec.astype({'x':float, 'y':float, 'z':float, 'buried':bool, 'remote':bool, 'label':str})
         
         return elec
@@ -5077,6 +5077,18 @@ class Project(object): # Project master class instanciated by the GUI
             dump('Creating sequence... ')
             self.createSequence()
             dump('done\n')
+        elif isinstance(self.sequence, pd.core.frame.DataFrame):
+            pass
+        elif isinstance(self.sequence,np.ndarray): # check sequence is a matrix of string etc
+            if self.sequence.shape[1] != 4: 
+                raise Exception('Sequence should have 4 columns')
+            if isinstance(self.sequence[0,0], np.float32) or isinstance(self.sequence[0,0], np.float64):
+                self.sequence = np.asarray(self.sequence,dtype=int)
+            if isinstance(self.sequence[0,0], np.int32) or isinstance(self.sequence[0,0], np.int64):
+                self.sequence = np.char.mod('%d',self.sequence) # reassign to string 
+        else: 
+            raise Exception('Sequence should be a numpy.ndarray or pandas.DataFrame')
+            
         dump('Writing protocol.dat... ')
         seq = self.sequence
 
