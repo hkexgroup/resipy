@@ -4,7 +4,7 @@ Created on Thu Jul 11 11:12:08 2019
 
 @author: Sina
 """
-
+import os, io 
 import numpy as np
 import pandas as pd
 
@@ -206,3 +206,71 @@ def writeSrv(fname, df, elec): # pragma: no cover
                 df['resError'][i])
         fh.write(line)
     
+def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
+    """
+    Replacement for pandas to_csv function, that doesnt throw lineterminator 
+    error. 
+
+    Parameters
+    ----------
+    df : Pandas.Dataframe or Dict
+        DESCRIPTION.
+    fh : str or TextIOWrapper
+        DESCRIPTION.
+    index : bool, optional
+        DESCRIPTION. The default is True.
+    header : bool, optional
+        DESCRIPTION. The default is False.
+    lineterminator : str, optional
+        DESCRIPTION. The default is os.linesep. 
+
+    Returns
+    -------
+    None.
+
+    """
+    openedfile = False 
+    if isinstance(fh, str):
+        fh = open(fh,'w') # then assume the string is a file path and hence
+        # open a file 
+        openedfile = True 
+    if not isinstance(fh, io.TextIOWrapper):
+        raise TypeError('Expected a TextIOWrapper object for the file handle ')
+        
+    if lineterminator is None:
+        lineterminator = os.linesep 
+        
+    columns = df.keys() # works with both a dictionary and pandas data frame 
+    
+    ncol = len(columns) # number of columns 
+    hlist = [h for h in columns]# header list 
+    nline = len(df[header_list[0]])# number of lines
+    
+    if header:
+        line = ''
+        if index: 
+            line += 'index' + sep 
+            
+        for i,h in enumerate(hlist):
+            line += h
+            if i == ncol-1:
+                line += h + lineterminator
+                break 
+             line += sep 
+        fh.write(line)
+            
+    for i in range(nline):
+        line = ''
+        if index:
+            line += '%i'%i + sep 
+        for j,h in enumerate(hlist):
+            x = df[h][i]
+            line += '{:}'.format(x)
+            if j == ncol-1: 
+                line += lineterminator
+                break
+            line += sep 
+        fh.write(line)
+    
+    if openedfile:
+        fh.close() 
