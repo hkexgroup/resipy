@@ -244,7 +244,7 @@ def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
     
     ncol = len(columns) # number of columns 
     hlist = [h for h in columns]# header list 
-    nline = len(df[header_list[0]])# number of lines
+    nline = len(df[hlist[0]])# number of lines
     
     if header:
         line = ''
@@ -256,7 +256,7 @@ def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
             if i == ncol-1:
                 line += h + lineterminator
                 break 
-             line += sep 
+            line += sep 
         fh.write(line)
             
     for i in range(nline):
