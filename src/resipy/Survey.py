@@ -1869,7 +1869,8 @@ class Survey(object):
         
         
     def _computePseudoDepth(self):
-        """Compute pseudo-depths.
+        """Compute pseudo-depths. Now returns pseudo depths with respect to the 
+        electrode elevations. 
         
         Returns
         -------
@@ -1880,11 +1881,14 @@ class Survey(object):
         elecm = self.elec[['x','y','z']].values.astype(float).copy() # electrode matrix - should be array of floats so np.inf work properly
         buried = self.elec['buried'].values 
         remote = self.elec['remote'].values
+        flag3d = any(elecm[:,1]!=0)
         
         ### first determine if measurements are nested ###
         #find mid points of AB 
         AB = (elecm[array[:,0]] + elecm[array[:,1]]) / 2 # mid points of AB 
         MN = (elecm[array[:,2]] + elecm[array[:,3]]) / 2 # mid points of MN 
+        avgZ = np.mean(elecm[:,2][array],axis=1)
+
         ABrad = np.sqrt(np.sum((elecm[array[:,0]] - AB)**2,axis=1)) # radius of AB circle 
         MNrad = np.sqrt(np.sum((elecm[array[:,2]] - MN)**2,axis=1)) # radius of MN circle 
         
@@ -1932,7 +1936,7 @@ class Survey(object):
         if np.all(cmiddley-pmiddley == 0):
             zposNonNested = 0.25*pcdist
         else: # for 3D arrays where there are mid-line measurements, this works closer to inversion results
-            zposNonNested = np.sqrt(2)/2*pcdist
+            zposNonNested = np.sqrt(2)/2*pcdist 
         
         # for nested measurements use formula of Dalhin 2006
         xposNested = np.zeros(len(pmiddlex))
@@ -1972,6 +1976,7 @@ class Survey(object):
         zpos[inested] = zposNested[inested]
         
         # use geometric median instead for buried/unconventional electrodes
+        special = np.asarray([False]*array.shape[0],dtype=bool)
         
         if any(buried): 
             elecx = elecm[:,0]
@@ -1982,7 +1987,7 @@ class Survey(object):
                     continue # skip if not including a buried electrode 
                 if any(remote[array[i,:]]):
                     continue # skip if includes a infinite value, thats not good for this method. 
-
+                special[i] = True 
                 ex = elecx[array[i,:]]
                 ey = elecy[array[i,:]]
                 ez = elecz[array[i,:]]
@@ -1990,8 +1995,15 @@ class Survey(object):
                 xpos[i] = med[0]
                 ypos[i] = med[1]
                 zpos[i] = med[2]
-                
-        return xpos,ypos,zpos
+            
+        if flag3d: 
+            # find pseudo depth as if it they were below the surface 
+            zpos[np.invert(special)] = avgZ[np.invert(special)] - zpos[np.invert(special)]
+        else: 
+            # positions will be plotted in terms of pseudo depth, so correct 
+            zpos[special] = max(elecm[:,2]) - zpos[special]
+        
+        return xpos,ypos,zpos 
     
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
@@ -2038,7 +2050,7 @@ class Survey(object):
             label = r'$\rho_cr$ [$\Omega$]'
             title = 'Contact Resistance/nPseudo Section'
             
-        if vmin is None:
+        if vmin is None:        
             vmin = np.percentile(resist[~np.isnan(resist)],10) # use 10% percentile 
         if vmax is None:
             vmax = np.percentile(resist[~np.isnan(resist)],90) # use 90% percentile 
@@ -2057,6 +2069,12 @@ class Survey(object):
         cbar = fig.colorbar(plotPsRes, ax=ax, fraction=0.046, pad=0.04, 
                             label=label, ticks=levels)
         cbar.set_label(label)
+            
+        
+        if any(self.elec['buried'].values):
+            ax.scatter(self.elec['x'], max(self.elec['z'])-self.elec['z'], c= 'k')
+        else: 
+            ax.scatter(self.elec['x'],self.elec['y'],c='k')
             
         if log:
             val = ['{:.2f}'.format(10**lvl) for lvl in levels]
@@ -2204,9 +2222,10 @@ class Survey(object):
         elecz = elecz[np.invert(self.elec['remote'].values)]
         
         dp_x,dp_y,dp_z = self._computePseudoDepth() # get dipole depths 
-        #Nb pseudo depths are returned as positive 
-        
-        points = np.array([dp_x,dp_y,min(elecz)-dp_z]).T # convert to 3xn matrix. 
+        #Nb pseudo depths are returned as absolute values now 
+
+        points = np.c_[dp_x,dp_y,dp_z]# convert to 3xn matrix. 
+
         pvpont = pv.PolyData(points)
         pvpont[label] = resist
         
@@ -2276,7 +2295,6 @@ class Survey(object):
         fig : matplotlib figure
             If `ax` is not specified, the method returns a figure.
         """
-        elecpos = self.elec['x'].values.copy()
         xpos, _, ypos = self._computePseudoDepth()
         
         if self.protocolIPFlag == True:
