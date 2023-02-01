@@ -7,6 +7,9 @@ Created on Thu Jul 11 11:12:08 2019
 import os, io 
 import numpy as np
 import pandas as pd
+pd_vns = pd.__version__ # string version 
+
+pd_vn = float(pd_vns.split('.')[0]) + float('0.'+pd_vns.split('.')[1]) # version as float 
 
 def write2Res2DInv(param, fname, df, elec, typ='R2'):
     """Writes a Res2DInv format file.
@@ -206,7 +209,8 @@ def writeSrv(fname, df, elec): # pragma: no cover
                 df['resError'][i])
         fh.write(line)
     
-def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
+def to_csv(df, fh, sep=',', index=True, header=True, float_format = None, 
+           lineterminator=None):
     """
     Replacement for pandas to_csv function, that doesnt throw lineterminator 
     error. 
@@ -220,7 +224,7 @@ def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
     index : bool, optional
         DESCRIPTION. The default is True.
     header : bool, optional
-        DESCRIPTION. The default is False.
+        DESCRIPTION. The default is True. 
     lineterminator : str, optional
         DESCRIPTION. The default is os.linesep. 
 
@@ -229,6 +233,13 @@ def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
     None.
 
     """
+    # check pandas version, if greater than 1.5.0 then use to_csv as its quicker 
+    if pd_vn >= 1.5 and isinstance(df,pd.DataFrame):
+        df.to_csv(fh,sep = sep, index = index, header=header, 
+                  float_format = float_format, lineterminator = lineterminator)
+        return 
+    
+    #otherwise use homebuilt solution (also works for dictionarys)
     openedfile = False 
     if isinstance(fh, str):
         fh = open(fh,'w') # then assume the string is a file path and hence
@@ -267,7 +278,7 @@ def to_csv(df, fh, sep=',', index=True, header=False, lineterminator=None):
             x = df[h][i]
             line += '{:}'.format(x)
             if j == ncol-1: 
-                line += lineterminator
+                line += lineterminator 
                 break
             line += sep 
         fh.write(line)
