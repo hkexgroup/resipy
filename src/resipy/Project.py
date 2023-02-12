@@ -2014,12 +2014,12 @@ class Project(object): # Project master class instanciated by the GUI
         #     common[np.where(iedups)[0]] = False
         #     indexes.append(common)
             
-        df0 = self.surveys[0].df
+        df0 = self.surveys[0].df.reset_index(drop=True)
         df0['tlindex0'] = df0.index.astype(int)
         ie0 = np.ones(df0.shape[0], dtype=bool)
         indexes = [(ie0, ie0)]  # array of tuple
         for survey in self.surveys[1:]:
-            df = survey.df
+            df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
             dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0']],
                            df[['a', 'b', 'm', 'n', 'tlindex']],
