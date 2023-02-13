@@ -6444,7 +6444,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 <a href="https://pypi.org/project/pyvista/">PyVista</a>.
             </p>
             <p><strong>ResIPy's core developers: Guillaume Blanchy, Sina Saneiyan, Jimmy Boyd and Paul McLachlan.<strong></p>
-            <p>Contributors: Pedro Concha, Michael Tso</p>
+            <p>Contributors: Pedro Concha, Michael Tso, John McKnight</p>
             <p><b><a href="https://www.researchgate.net/project/pyR2-GUI-for-R2-family-codes">Visit our ResearchGate page!</a></b></p>
             <p><b>Citing ResIPy</b>:<br>Blanchy G., Saneiyan S., Boyd J., McLachlan P.
             and Binley A. 2020.<br>“ResIPy, an Intuitive Open Source Software for 
