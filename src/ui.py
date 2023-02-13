@@ -1487,8 +1487,8 @@ class App(QMainWindow):
         self.pvmaxIP.setValidator(QDoubleValidator())
         self.pvmaxIP.setVisible(False)
         
-        self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False}
-        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False}
+        self.pParams = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark'])}
+        self.pParamsIP = {'index':0, 'vmin':None, 'vmax':None, 'threed':False, 'darkMode':eval(resipySettings.param['dark'])}
         def prescaleBtnFunc():
             if self.project is not None:
                 self.pParams['vmin'] = float(self.pvmin.text()) if self.pvmin.text() != '' else None
@@ -5549,7 +5549,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'sens':True, 'attr':'Resistivity(Ohm-m)',
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5,
-                            'doi':self.modelDOICheck.isChecked(),
+                            'doi':self.modelDOICheck.isChecked(), 'volume':None,
                             'doiSens':False, 'clipCorners':False, 'pvspline': None,
                             'pvslices':([],[],[]), 'pvthreshold':None, 'pvdelaunay3d': False,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}          
@@ -5636,6 +5636,11 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmin = self.vminEdit.text()
             vmax = None if vmax == '' else float(vmax)
             vmin = None if vmin == '' else float(vmin)
+            if 'log' in self.displayParams['attr']:
+                if vmin is not None:
+                    vmin = np.log10(vmin)
+                if vmax is not None:
+                    vmax = np.log10(vmax)
             self.displayParams['vmin'] = vmin
             self.displayParams['vmax'] = vmax
             if (self.contourCheck.isChecked() is True) or (self.project.typ[-1] != '2'):
@@ -5644,7 +5649,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 if self.pseudo3DCheck.isChecked() and self.surveyCombo.currentIndex() == 0:
                     self.replotSection()
                 else:
-                    self.mwInv.setMinMax(vmin=vmin, vmax=vmax)
+                    self.replotSection()
+                    # self.mwInv.setMinMax(vmin=vmin, vmax=vmax) # this caused some problems in log format. the regular replotSection() works just fine
         self.vMinMaxBtn = QPushButton('Apply')
         self.vMinMaxBtn.setAutoDefault(True)
         self.vMinMaxBtn.clicked.connect(vMinMaxBtnFunc)
@@ -5857,8 +5863,50 @@ combination of multiple sequence is accepted as well as importing a custom seque
             else:
                 pvcontour = []
             self.displayParams['pvcontour'] = pvcontour
+            if self.volCheck.isChecked():
+                index = self.surveyCombo.currentIndex()
+                if self.pvthreshMin.text() != '' :
+                    vmin = float(self.pvthreshMin.text()) 
+                else:
+                    vmin = None
+                if self.pvthreshMax.text() != '':
+                    vmax = float(self.pvthreshMax.text()) 
+                else:
+                    vmax = None
+                volume= self.project.computeVol(vmin=vmin, vmax=vmax, attr=self.displayParams['attr'], index=index) 
+                self.displayParams['volume']= volume
+            else:
+                self.displayParams['volume'] = None
             self.replotSection()
+        
+        def volCheckFunc(state):
+            index = self.surveyCombo.currentIndex()
+            if self.volCheck.isChecked():
+                # try:
+                if self.pvthreshMin.text() != '' :
+                    vmin = float(self.pvthreshMin.text())
+                else:
+                    vmin = None
+                if self.pvthreshMax.text() != '':
+                    vmax = float(self.pvthreshMax.text())
+                else:
+                    vmax = None
+                volume =self.project.computeVol(vmin=vmin, vmax=vmax, attr=self.displayParams['attr'], index=index)
+                self.displayParams['volume']= volume
+                self.replotSection()
+                # except:
+                #     pass
+            else:
+                self.displayParams['volume'] = None
+                try:
+                    self.replotSection()
+                except:
+                    pass
             
+        self.volCheck = QCheckBox('Volume')
+        self.volCheck.setToolTip('Displays volume of the selected region of the mesh in cubic meters')
+        self.volCheck.stateChanged.connect(volCheckFunc)
+        
         def pvgridCheckFunc(state):
             self.displayParams['pvgrid'] = self.pvgridCheck.isChecked()
             try:
@@ -5920,7 +5968,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #          self.screenshotBtn]
         
         opt3d = [self.pvthreshLabel, self.pvthreshMin,
-                 self.pvthreshMax, self.pvslicesLabel, 
+                 self.pvthreshMax, self.volCheck, self.pvslicesLabel, 
                  self.pvxslices, self.pvyslices,
                  self.pvzslices, self.pvcontourLabel, 
                  self.pvcontour, self.pvapplyBtn, self.pvsplineCheck,
@@ -7035,6 +7083,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvzslices.setText('')
         self.pvcontour.setText('')
         self.pvgridCheck.setChecked(False)
+        self.volCheck.setChecked(False)
         self.pvdelaunay3dCheck.setChecked(False)
         self.doiCheck.setChecked(False)
         self.doiSensCheck.setChecked(False)
@@ -7042,7 +7091,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                             'sens':True, 'attr':'Resistivity(Ohm-m)',
                             'contour':False, 'vmin':None, 'vmax':None,
                             'cmap':'viridis', 'sensPrc':0.5, 'clipCorners':False,
-                            'doi':self.modelDOICheck.isChecked(),
+                            'doi':self.modelDOICheck.isChecked(), 'volume': None,
                             'doiSens':False, 'pvdelaunay3d': False, 'pvspline': None,
                             'pvslices':([],[],[]), 'pvthreshold':None,
                             'pvgrid':False, 'pvcontour':[], 'aspect':'equal'}
@@ -7085,6 +7134,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         pvthreshold = self.displayParams['pvthreshold']
         pvgrid = self.displayParams['pvgrid']
         pvdelaunay3d = self.displayParams['pvdelaunay3d']
+        volume = self.displayParams['volume']
         pvspline = self.displayParams['pvspline']
         pvcontour = self.displayParams['pvcontour']
         aspect = self.displayParams['aspect']
@@ -7134,7 +7184,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                               edge_color=edge_color, vmin=vmin,
                                               vmax=vmax, color_map=cmap,
                                               background_color=(0.8,0.8,0.8),
-                                              pvslices=pvslices,
+                                              pvslices=pvslices, volume=volume,
                                               pvthreshold=pvthreshold, pvspline=pvspline,
                                               pvgrid=pvgrid, pvdelaunay3d=pvdelaunay3d,
                                               pvcontour=pvcontour)
