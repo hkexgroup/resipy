@@ -5616,6 +5616,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
                         self.contourCheck.setChecked(True)
                         self.infoDump('Contouring data by default!')
                         return # replotting triggers by edgeCheckFunc()
+            if self.volCheck.isChecked():
+                self.displayParams['volume'] = volFunc()
             self.replotSection()
         self.attrCombo = QComboBox()
         self.attrCombo.activated.connect(attrComboFunc)
@@ -5838,6 +5840,19 @@ combination of multiple sequence is accepted as well as importing a custom seque
         self.pvcontour = QLineEdit('')
         self.pvcontour.setToolTip('Values of isosurfaces (comma separated).')
         
+        def volFunc():
+            index = self.surveyCombo.currentIndex()
+            if self.pvthreshMin.text() != '' :
+                vmin = float(self.pvthreshMin.text()) 
+            else:
+                vmin = None
+            if self.pvthreshMax.text() != '':
+                vmax = float(self.pvthreshMax.text()) 
+            else:
+                vmax = None
+            volume = self.project.computeVol(vmin=vmin, vmax=vmax, attr=self.displayParams['attr'], index=index)
+            return volume
+        
         def pvapplyBtnFunc():
             threshMin = float(self.pvthreshMin.text()) if self.pvthreshMin.text() != '' else None
             threshMax = float(self.pvthreshMax.text()) if self.pvthreshMax.text() != '' else None
@@ -5864,38 +5879,18 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 pvcontour = []
             self.displayParams['pvcontour'] = pvcontour
             if self.volCheck.isChecked():
-                index = self.surveyCombo.currentIndex()
-                if self.pvthreshMin.text() != '' :
-                    vmin = float(self.pvthreshMin.text()) 
-                else:
-                    vmin = None
-                if self.pvthreshMax.text() != '':
-                    vmax = float(self.pvthreshMax.text()) 
-                else:
-                    vmax = None
-                volume= self.project.computeVol(vmin=vmin, vmax=vmax, attr=self.displayParams['attr'], index=index) 
-                self.displayParams['volume']= volume
+                self.displayParams['volume'] = volFunc()
             else:
                 self.displayParams['volume'] = None
             self.replotSection()
         
         def volCheckFunc(state):
-            index = self.surveyCombo.currentIndex()
             if self.volCheck.isChecked():
-                # try:
-                if self.pvthreshMin.text() != '' :
-                    vmin = float(self.pvthreshMin.text())
-                else:
-                    vmin = None
-                if self.pvthreshMax.text() != '':
-                    vmax = float(self.pvthreshMax.text())
-                else:
-                    vmax = None
-                volume =self.project.computeVol(vmin=vmin, vmax=vmax, attr=self.displayParams['attr'], index=index)
-                self.displayParams['volume']= volume
-                self.replotSection()
-                # except:
-                #     pass
+                try:
+                    self.displayParams['volume'] = volFunc()
+                    self.replotSection()
+                except:
+                    pass
             else:
                 self.displayParams['volume'] = None
                 try:
@@ -6751,8 +6746,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotter.clear()
-            self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams, 
-                                        darkMode=eval(resipySettings.param['dark']))
+            self.project.showPseudo(ax=self.pseudoPlotter, **self.pParams)
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotter.clear()
             self.project.pseudo3DSurvey.showPseudo(ax=self.pseudoPlotter, threed=True, vmin=self.pParams['vmin'],
@@ -6770,8 +6764,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             & ((self.project.typ == 'R3t') | (self.project.typ == 'cR3t')) 
             & (self.boreholeCheck.isChecked() is False)):
             self.pseudoPlotterIP.clear()
-            self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP, 
-                                          darkMode=eval(resipySettings.param['dark']))
+            self.project.showPseudoIP(ax=self.pseudoPlotterIP, **self.pParamsIP)
         elif self.pseudo3DCheck.isChecked():
             self.pseudoPlotterIP.clear()
             self.project.pseudo3DSurvey.showPseudoIP(ax=self.pseudoPlotterIP, threed=True, vmin=self.pParamsIP['vmin'],
@@ -6848,7 +6841,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 spacing = None
             else:
                 spacing = float(self.spacingEdit.text())
-
+    
             self.project.createSurvey(self.fname, ftype=self.ftype, spacing=spacing,
                                  parser=self.parser)
             self.writeLog('k.createSurvey("{:s}", ftype="{:s}")'.format(self.fname, self.ftype))
