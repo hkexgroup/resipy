@@ -2008,7 +2008,7 @@ class Survey(object):
     
         
     def _showPseudoSection(self, ax=None, contour=False, log=False, geom=True,
-                           vmin=None, vmax=None, column='resist', magFlag=False):
+                           vmin=None, vmax=None, column='resist', magFlag=False, darkMode=False):
         """Create a pseudo-section for 2D given electrode positions.
         
         Parameters
@@ -2030,6 +2030,9 @@ class Survey(object):
         magFlag: bool, optional
             If `True` then Tx resistance sign will be checked assuming a flat surface survey.
             `False`, resistance values are given with correct polarity.
+        darkmode : bool, optional
+            Alters coloring of the plot for a darker appearance
+            
         """
         resist = self.df[column].values.copy()
         xpos, _, ypos = self._computePseudoDepth()
@@ -2071,11 +2074,9 @@ class Survey(object):
                             label=label, ticks=levels)
         cbar.set_label(label)
             
-        
+        elecColor = 'k' if darkMode is False else 'w'
         if any(self.elec['buried'].values):
-            ax.scatter(self.elec['x'], max(self.elec['z'])-self.elec['z'], c= 'k')
-        else: 
-            ax.scatter(self.elec['x'],self.elec['y'],c='k')
+            ax.scatter(self.elec['x'], max(self.elec['z'])-self.elec['z'], c=elecColor)
             
         if log:
             val = ['{:.2f}'.format(10**lvl) for lvl in levels]
@@ -2277,7 +2278,7 @@ class Survey(object):
             ax.show()
 
     
-    def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None): #IP pseudo section
+    def _showPseudoSectionIP(self, ax=None, contour=False, vmin=None, vmax=None, darkMode=False): #IP pseudo section
         """Create pseudo section of IP data with points (default)
         
         Parameters
@@ -2290,6 +2291,8 @@ class Survey(object):
             Miminum value for colorscale.
         vmax : float, optional
             Maximum value for colorscale.
+        darkmode : bool, optional
+            Alters coloring of the plot for a darker appearance
             
         Returns
         -------
@@ -2323,7 +2326,11 @@ class Survey(object):
             levels = np.linspace(vmin, vmax, 13)
             plotPsIP = ax.tricontourf(xpos, ypos, ip, levels = levels, extend = 'both')
             fig.colorbar(plotPsIP, ax=ax, fraction=0.046, pad=0.04, label=label)
-
+        
+        elecColor = 'k' if darkMode is False else 'w'
+        if any(self.elec['buried'].values):
+            ax.scatter(self.elec['x'], max(self.elec['z'])-self.elec['z'], c=elecColor)
+            
         ax.invert_yaxis() # to remove negative sign in y axis
         ax.set_title('Phase Shift\npseudo section')  
         ax.set_xlabel('Distance [m]')
@@ -2522,7 +2529,8 @@ class Survey(object):
             ipoints[ie] = boolVal
             self.iselect[~inan] = ipoints
         
-        elecpos = self.elec['x'].values.copy()        
+        elecpos = self.elec['x'].values.copy()   
+        
         elecpos[self.elec['remote']] = np.inf # so it will never be taken as minimium
         xpos, _, ypos = self._computePseudoDepth()
         self.eselect = np.zeros(len(elecpos), dtype=bool)
@@ -2577,6 +2585,7 @@ class Survey(object):
         elecColor = 'ko' if darkMode is False else 'wo'
         if elec:
             caxElec, = ax2.plot(elecpos, np.zeros(len(elecpos)), elecColor, picker=5)
+
         else:
             caxElec, = ax2.plot([], [], elecColor)
         
