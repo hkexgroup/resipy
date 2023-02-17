@@ -1811,7 +1811,10 @@ class Survey(object):
         BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
         AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
         BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
-        
+        AM[AM == 0] = np.nan
+        BM[BM == 0] = np.nan
+        AN[AN == 0] = np.nan
+        BN[BN == 0] = np.nan
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         
         self.df['K'] = K
