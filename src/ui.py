@@ -7180,7 +7180,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                                               pvslices=pvslices, volume=volume,
                                               pvthreshold=pvthreshold, pvspline=pvspline,
                                               pvgrid=pvgrid, pvdelaunay3d=pvdelaunay3d,
-                                              pvcontour=pvcontour)
+                                              pvcontour=pvcontour,clipping=self.iCropping)
             self.writeLog('k.showResults(index={:d}, attr="{:s}", edge_color="{:s}", vmin={:s}, '
                           'vmax={:s}, color_map="{:s}", background_color=(0.8, 0.8, 0.8),'
                           'pvslices={:s}, pvthreshold={:s}, pvspline={:s},pvdelaunay3d={:s}, pvgrid={:s}, pvcontour={:s})'.format(
