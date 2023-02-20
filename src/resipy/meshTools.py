@@ -1598,7 +1598,11 @@ class Mesh:
                 attr = keys[0]
 
         X = np.array(self.df[attr])
-        color_bar_title = attr
+        
+        if '(log10)' in attr: # the real values (later in the code) cause confusion
+            color_bar_title = attr.replace('(log10)', '')
+        else:
+            color_bar_title = attr
             
         if clabel is not None:
             color_bar_title = clabel
@@ -1724,7 +1728,10 @@ class Mesh:
                 self.cbar.set_ticklabels(val)
             elif 'log' in attr: 
                 levels = np.linspace(vmin, vmax,13)
-                ticks = ['{:.2f}'.format(10**lvl) for lvl in levels]
+                if vmax < 0.01:
+                    ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
+                else:
+                    ticks = ['{:.2f}'.format(10**lvl) for lvl in levels]
                 self.cbar.set_ticks(levels)
                 self.cbar.set_ticklabels(ticks)
             self.cbar.set_label(color_bar_title) #set colorbar title
@@ -1874,7 +1881,10 @@ class Mesh:
             self.cbar.set_ticklabels(val) 
         elif 'log' in attr: 
             levels = np.linspace(vmin, vmax,13)
-            ticks = ['{:.2f}'.format(10**lvl) for lvl in levels]
+            if vmax < 0.01:
+                ticks = ['{:.2e}'.format(10**lvl) for lvl in levels]
+            else:
+                ticks = ['{:.2f}'.format(10**lvl) for lvl in levels]
             self.cbar.set_ticks(levels)
             self.cbar.set_ticklabels(ticks)
         else:
@@ -1918,6 +1928,7 @@ class Mesh:
                 pseudo3DContour=False,
                 pvdelaunay3d=False,
                 pvshow=True,
+                volume = None, 
                 darkMode=False,
                 cell_picking=False,
                 clipping=True):
@@ -1982,6 +1993,8 @@ class Mesh:
         pvshow : bool, optional
             If `False`, that will prevent calling the `pyvista.Plotter.show()`.
             This is useful in case of subplots.
+        volume : float, optional
+            If not 'None' then volume float number will be printed onto the pyvista plot.
         darkmode: bool, optional
             Alters coloring of pyvista plot for a darker appearance  
         cell_picking: bool, optional 
@@ -2216,6 +2229,10 @@ class Mesh:
                                 render_points_as_spheres=True)
                 except AttributeError as e:
                     print("Could not plot 3d electrodes, error = "+str(e))
+            
+            # Volume for 3D
+            if volume is not None:
+                ax.add_text('Volume = {:.2f} m³'.format(volume), position='upper_left', color=tcolor)    
             
             # show mesh
             if pvshow:

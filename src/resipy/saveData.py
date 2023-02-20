@@ -133,9 +133,8 @@ def write2csv(fname, dfi, elec, typ='R2'):
     typ : str
         Type of file either `R2`, `cR2`, `R3t`, `cR3t`.
     """
-    df = dfi[['a','b','m','n','i','vp','resist','ip']]
-    df = df.rename(columns = {'i':'Input_Current',
-                              'resist':'Resistance',
+    df = dfi[['a','b','m','n','resist','ip']]
+    df = df.rename(columns = {'resist':'Resistance',
                               'ip':'Chargeability'})
     if 'recipMean' in dfi.columns:
         df['Mean_R_Error'] = dfi['recipMean']
