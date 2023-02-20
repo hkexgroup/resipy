@@ -73,8 +73,8 @@ r2help = {
 'min_step' : "<p><code>min_step</code> is the minimum step length for attempting to improve solution. This is "
             "usually set to 0.001 to 0.01.</p>",
 'notCropping' : '<p>If checked, this will prevent the mesh to be cropped to the region of interest after inversion.',
-'cropBelowFmd' : "<p>If checked, this will crop out the mesh (inverted plot) below fine/coarse boundary depth (set in mesh tab). "
-                 "If unchecked, only when there is topography the area below fine/coarse boundary depth is shown as a flat edge.</p>",
+'cropBelowFmd' : "<p>[Only when there is topography] If checked, this will crop out the mesh (inverted plot) below fine/coarse boundary depth (set in mesh tab). "
+                 "If unchecked, the area below fine/coarse boundary depth is shown as a flat edge.</p>",
 'modelDOI' : "<p>If checked, two more background constrained inversion will be run with the normal background and a background ten times more resistive."
             " The ratio of the difference of inverted value divided by the difference in initial resistivity gives"
             " an estimate of the depth of investigation of the inversion (Oldenburg and Li, 1999)</p>",
