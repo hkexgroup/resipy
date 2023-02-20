@@ -2014,12 +2014,12 @@ class Project(object): # Project master class instanciated by the GUI
         #     common[np.where(iedups)[0]] = False
         #     indexes.append(common)
             
-        df0 = self.surveys[0].df
+        df0 = self.surveys[0].df.reset_index(drop=True)
         df0['tlindex0'] = df0.index.astype(int)
         ie0 = np.ones(df0.shape[0], dtype=bool)
         indexes = [(ie0, ie0)]  # array of tuple
         for survey in self.surveys[1:]:
-            df = survey.df
+            df = survey.df.reset_index(drop=True)
             df['tlindex'] = df.index.astype(int)
             dfm = pd.merge(df0[['a', 'b', 'm', 'n', 'tlindex0']],
                            df[['a', 'b', 'm', 'n', 'tlindex']],
@@ -3980,7 +3980,7 @@ class Project(object): # Project master class instanciated by the GUI
                     doi=False, doiSens=False, contour=False, cropMaxDepth=True,
                     clipContour=True, clipCorners=False, use_pyvista=True, background_color=(0.8,0.8,0.8),
                     pvslices=([],[],[]), pvspline=None, pvthreshold=None, pvgrid=True,
-                    pvcontour=[], pvdelaunay3d=False, **kwargs):
+                    pvcontour=[], pvdelaunay3d=False, volume=None, **kwargs):
         """Show the inverteds section.
 
         Parameters
@@ -4039,6 +4039,8 @@ class Project(object): # Project master class instanciated by the GUI
             (3D only) Values of the isosurface to be plotted.
         pvdelaunay3d : bool, optional
             If `True` a "Delaunay 3D" triangulation filter will be applied on the mesh.
+        volume : float, optional
+            If not 'None' then volume of selected region of the mesh will be printed onto the pyvista plot.
         """
         if len(self.meshResults) == 0:
             self.getResults()
@@ -4112,7 +4114,7 @@ class Project(object): # Project master class instanciated by the GUI
                         attr=attr, color_map=color_map, clabel=clabel,
                         zlim=zlim, use_pyvista=use_pyvista, background_color=background_color,
                         pvslices=pvslices, pvspline=pvspline, pvthreshold=pvthreshold, pvgrid=pvgrid,
-                        pvcontour=pvcontour, pvdelaunay3d=pvdelaunay3d, darkMode=self.darkMode, **kwargs)
+                        pvcontour=pvcontour, pvdelaunay3d=pvdelaunay3d, darkMode=self.darkMode, volume=volume, **kwargs)
                 
         else:
             raise ValueError('len(R2.meshResults) == 0, no inversion results parsed.')
@@ -4200,7 +4202,83 @@ class Project(object): # Project master class instanciated by the GUI
                 print('failed to compute difference: ', e)
                 pass
     
-    
+    def computeVol(self, attr='Resistivity(ohm.m)', vmin=None , vmax=None, index=0):
+        """Given a 3D dataset, calculates volume based on mesh type.
+        Note: The majority of this function's code is also seen in the meshTools' cellArea function as well. But that calculates all the mesh not the mesh results. 
+            
+        Parameters
+        ----------
+        attr: str, optional 
+            Attribute displayed in mesh results where apropriate cell vertices are
+            assigned a location. These locations are utilized for volume calculations
+        vmin: float, optional
+            User assigned minimum threshold value of attribute
+        vmax: float, optional
+            User asigned maximum threshold value of attribute
+        index: int, optional
+            meshResults index. In case of multi-file inversion/modeling (e.g., timelapse)
+            
+        Return
+        ------
+        volume: float
+            The volume of selected mesh region in cubic meters
+        """
+        mesh = self.meshResults[index].copy()
+        con_mat = mesh.connection
+        elm_vol = np.zeros(mesh.numel)
+        node_x = mesh.node[:,0]
+        node_y = mesh.node[:,1]
+        node_z = mesh.node[:,2]
+        # now find volume according to cell type
+        if int(mesh.cell_type[0]) == 11: # elements are voxels
+            for i in range(mesh.numel):
+                p = mesh.node[con_mat[i]].T
+                #compute volume (which is a bit of an approximation)
+                dx = abs(max(p[0]) - min(p[0]))
+                dy = abs(max(p[1]) - min(p[1]))
+                dz = abs(max(p[2]) - min(p[2]))
+                elm_vol[i] = dx*dy*dz
+        elif int(mesh.cell_type[0]) == 10:# elements are tetrahedra 
+            for i in range(mesh.numel):
+                p = mesh.node[con_mat[i]].T    
+                P = p[:,0] # point 1 
+                Q = p[:,1] # point 2 
+                R = p[:,2] # point 3
+                pq = Q - P # p to q vector 
+                pr = R - P # p to r vector 
+                v = np.cross(pq, pr)
+                S = p[:,3] # point 4
+                #calculate height
+                PS= (S[0]-P[0]), (S[1]-P[1]), (S[2]-P[2])
+                #Calculate Volume
+                elm_vol[i]= (np.dot(v,PS))/6
+                 
+        elif int(mesh.cell_type[0]) == 13: # elements are 3d wedges
+            for i in range(mesh.numel):
+                n1=(node_x[con_mat[i][0]], node_y[con_mat[i][0]], node_z[con_mat[i][0]])
+                n2=(node_x[con_mat[i][1]], node_y[con_mat[i][1]], node_z[con_mat[i][1]])
+                n3=(node_x[con_mat[i][2]], node_y[con_mat[i][2]], node_z[con_mat[i][2]])
+                n4=(node_x[con_mat[i][3]], node_y[con_mat[i][3]], node_z[con_mat[i][3]])
+                n5=(node_x[con_mat[i][4]], node_y[con_mat[i][4]], node_z[con_mat[i][4]])
+                n6=(node_x[con_mat[i][5]], node_y[con_mat[i][5]], node_z[con_mat[i][5]])
+                #compute wedge volume by computing face area first
+                base=(((n1[0]-n2[0])**2) + ((n1[1]-n2[1])**2))**0.5
+                mid_pt=((n1[0]+n2[0])/2,(n1[1]+n2[1])/2)
+                height=(((mid_pt[0]-n3[0])**2) + ((mid_pt[1]-n3[1])**2))**0.5
+                area = 0.5*base*height
+                p = np.array((n1,n2,n3,n4,n5,n6)).T
+                dz = abs(max(p[2]) - min(p[2]))
+                elm_vol[i] = area * dz
+
+        mesh.df['Volume'] = elm_vol
+        if vmin is None:
+            vmin = np.min(mesh.df[attr].values)
+        if vmax is None:
+            vmax = np.max(mesh.df[attr].values)
+        sel_attr = mesh.df[(mesh.df[attr] >= vmin) & (mesh.df[attr] <= vmax)]
+        volume = np.sum(sel_attr['Volume'].values)
+        
+        return volume
     
     def loadResults(self, invdir):
         """Given working directory, will attempt to load the results of an
