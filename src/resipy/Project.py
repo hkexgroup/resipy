@@ -1704,7 +1704,7 @@ class Project(object): # Project master class instanciated by the GUI
 
             xlim = findminmax(limits[:,0])
             ylim = findminmax(limits[:,1])
-            zlim = proj.zlim
+            zlim = proj.zlim if cropMesh or cropMaxDepth else None
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
 
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,
