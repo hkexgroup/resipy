@@ -8,7 +8,6 @@ import os, io
 import numpy as np
 import pandas as pd
 pd_vns = pd.__version__ # string version 
-
 pd_vn = float(pd_vns.split('.')[0]) + float('0.'+pd_vns.split('.')[1]) # version as float 
 
 def write2Res2DInv(param, fname, df, elec, typ='R2'):
