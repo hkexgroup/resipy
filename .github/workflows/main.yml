@@ -101,6 +101,7 @@ jobs:
           /usr/local/bin/python3.9 -m pip install setuptools
           /usr/local/bin/python3.9 -m pip install -r requirements-gui.txt
           /usr/local/bin/python3.9 -m pip install pyinstaller
+          /usr/local/bin/python3.9 -m pip install numpy==1.19.4
           /usr/local/bin/python3.9 -m pip install vtk==9.0.3
 
       - name: Run build
