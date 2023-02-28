@@ -106,7 +106,10 @@ jobs:
         run: |
           cd src
           source ../../pyenv/bin/activate
-          mkdir -p macdmg
+          mkdir -p ResIPy-macos
+          cd ResIPy-macos
+          ln -s /Applications Applications
+          cd ..
           ./build-app.sh
           cd dist
           zip -r ResIPy-macos.zip ResIPy-macos.app
