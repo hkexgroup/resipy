@@ -87,7 +87,30 @@ def bearing(x,y):
         return 270-theta  
     elif x < x0 and y > y0:
         return 270+theta 
+    
+#%% refinement field
+def add_ball_field(fh,nfield,x,y,z,r,mincl,maxcl,thick=1):
+    fh.write('Field[%i] = Ball;\n'%nfield)
 
+    # set radius and area of influence 
+    fh.write('Field[%i].Radius = %f;\n'%(nfield,r))
+    fh.write('Field[%i].Thickness = %f;\n'%(nfield,thick))
+    # set characteristic lengths 
+    fh.write('Field[%i].VIn = %f;\n'%(nfield,mincl))
+    fh.write('Field[%i].VOut = %f;\n'%(nfield,maxcl))
+    # set ball origin 
+    fh.write('Field[%i].XCenter = %f;\n'%(nfield,x))
+    fh.write('Field[%i].YCenter = %f;\n'%(nfield,y))
+    fh.write('Field[%i].ZCenter = %f;\n'%(nfield,z))
+    
+def set_fields(fh,nfield):
+    field_list = [i+1 for i in range(nfield)]
+    nfield +=1 
+    fh.write('Field[%i] = Min;\n'%nfield)
+    field_list_s=str(field_list).replace('[','{').replace(']','}')
+    fh.write('Field[%i].FieldsList = %s;\n'%(nfield,field_list_s))
+    fh.write('Background Field = %i;\n'%nfield)
+    return nfield 
 
 #%% write a .geo file for reading into gmsh with topography (and electrode locations)
 # 2D half space problem 
@@ -1396,7 +1419,7 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 
 def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
            cl=-1, cl_corner=-1, cl_factor=8, cln_factor=100, dp_len=-1, 
-           mesh_refinement=None, dump=None):
+           mesh_refinement=None, use_fields=False, dump=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1476,24 +1499,17 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     if file_path.find('.geo')==-1:
         file_path=file_path+'.geo'#add file extension if not specified already
     
-    triggered=False
+    dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
     if cl==-1:
-        dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         cl = dist_sort[1]/2 # characteristic length is 1/2 the minimum electrode distance
-        triggered = True
 
     if cl_corner == -1: 
         cl_corner = 3*cl 
         
     if dp_len == -1: # compute largest possible dipole length 
-        if not triggered:# Avoid recalculating if done already 
-            triggered = True
-            dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         dp_len = dist_sort[-1] # maximum possible dipole length
     
     if fmd == -1: # compute depth of investigation
-        if not triggered:
-            dist_sort = np.unique(find_dist(elec_x,elec_y,elec_z))
         fmd = dist_sort[-1]/3 # maximum possible dipole length / 3
 
     if fmd < abs(np.min(elec_z)):
@@ -1679,6 +1695,14 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
                 raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have buried electrodes above the surface!")
             fh.write("Point (%i) = {%.16f,%.16f,%.16f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
             fh.write("Point{%i} In Volume{1};//buried electrode\n"%(no_pts))# put the point in volume 
+    
+    nfield=0 
+    if use_fields: 
+        fh.write('//Electrode refinement fields\n')
+        for i in range(len(elec_x)):
+            nfield += 1 
+            add_ball_field(fh, nfield, elec_x[i], elec_y[i], elec_z[i],
+                           dist_sort[1], cl, cl*cl_corner,0)
     fh.write("//End electrodes\n")
     
     # check if any mesh refinement is requested 
@@ -1719,6 +1743,11 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
                 fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
                 fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,vol_idx))# put the point in volume 
         fh.write('//End mesh refinement points\n')
+        
+    if nfield>0: 
+        fh.write('//Merged refinement feilds')
+        set_fields(fh, nfield)
+    fh.write('//End of script')
     
     fh.close()
     # print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
@@ -1922,7 +1951,8 @@ def tank_mesh(elec=None, origin=None, dimension=[10.0,10.0,10.0],
                 else: # buried
                     fh.write("Point (%i) = {%.2f,%.2f,%.2f, cl};\n"%(no_pts, elec_x[i], elec_y[i], elec_z[i]))
                     fh.write("Point{%i} In Volume{1}; //buried (in tank) electrode\n"%(no_pts))# put the point in volume 
-            fh.write("//End electrodes\n")
+            
+            fh.write("//End electrodes\n") 
 
     return node_pos
 

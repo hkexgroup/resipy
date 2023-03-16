@@ -100,16 +100,16 @@ jobs:
           cd resipy
           /usr/local/bin/python3.9 -m pip install setuptools
           /usr/local/bin/python3.9 -m pip install -r requirements-gui.txt
-          /usr/local/bin/python3.9 -m pip install pyinstaller==4.5.1
-          /usr/local/bin/python3.9 -m pip install pyvista==0.32.1
-          /usr/local/bin/python3.9 -m pip install pyvistaqt==0.5.0
-          /usr/local/bin/python3.9 -m pip install vtk==9.0.3
+          /usr/local/bin/python3.9 -m pip install pyinstaller
 
       - name: Run build
         run: |
           cd src
           source ../../pyenv/bin/activate
-          mkdir -p macdmg
+          mkdir -p ResIPy-macos
+          cd ResIPy-macos
+          ln -s /Applications Applications
+          cd ..
           ./build-app.sh
           cd dist
           zip -r ResIPy-macos.zip ResIPy-macos.app
