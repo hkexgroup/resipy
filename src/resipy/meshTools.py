@@ -3425,7 +3425,7 @@ class Mesh:
             Popen(['paraview', fname])
             
     
-    def exportTetgenMesh(self,prefix='mesh',zone=None, debug=False):
+    def exportTetgenMesh(self,prefix='mesh',zone=None, debug=False, mixed=False):
         """Export a mesh like the tetgen format for input into E4D. 
         This format is composed of several files. Currently only tested for 
         3D surface array like surveys. Assumes the sides of the mesh are parrallel 
@@ -3440,6 +3440,8 @@ class Mesh:
             attribute which is an array of integers identifying the zone 
             associated with each element. By default each element is assigned to 
             zone 1. 
+        mixed: bool
+            If true attempt to compute mixed boundary condition at mesh edges. 
         Notes
         ----------
         Please note routine is experimental and not garanteed to work 100% 
@@ -3474,6 +3476,10 @@ class Mesh:
         faces, idx = mc.faces3d(self.connection, neigh) # get outer faces 
         tconnec = self.connection[idx,:] # truncated connection matrix 
         node_bd, face_bd = mc.boundcall(tconnec, faces, self.node) # face and node boundary conditions 
+        if not mixed: 
+            node_bd[node_bd==2] = 1 
+            face_bd[face_bd==2] = 1 
+            
         self.addPtAttribute(node_bd,'node_bd')
         stream('done')
                 
