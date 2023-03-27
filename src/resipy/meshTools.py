@@ -4296,7 +4296,7 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         
 #    dyy = espacing/(elemx*4)
     meshz = [0]
-    dyy = 0.05
+    dyy = np.mean(np.diff(elecXsorted))/5
     for i in range(100):
         meshz.append(meshz[-1]+dyy*zf)
         dyy = dyy*zf
@@ -4739,7 +4739,6 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 def tri_mesh(*args):
     warnings.warn('tri_mesh is depreciated, use triMesh instead')
     triMesh(**args)
-
 
 
 #%% 3D tetrahedral mesh 
