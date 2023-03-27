@@ -3117,11 +3117,6 @@ class Survey(object):
                     buried[i])#buried flag 
             fh.write(line)
         #now write the scheduling matrix to file 
-        ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
-        df = self.df[ie]
-        nomeas = len(df) # number of measurements 
-        df = df.reset_index().copy()
-        fh.write('\n%i number of measurements \n'%nomeas)
         
         #check for error column 
         check = np.isnan(self.df['resError'].values)
@@ -3131,6 +3126,16 @@ class Survey(object):
         else:
             err = self.df['resError'].values 
             
+        if 'modErr' in self.df.columns:
+            # if present, compute Guassian propogation of errors (this is not geometric mean)
+            err = np.sqrt(err**2 + self.df['modErr'].values**2)
+            
+        ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
+        df = self.df[ie]
+        nomeas = len(df) # number of measurements 
+        df = df.reset_index().copy()
+        err=err[ie]
+        fh.write('\n%i number of measurements \n'%nomeas)
         # convert seqeunce to matrix 
         if len(self.df['a'][0].split()) == 2:
             seq = self._seq2mat()
