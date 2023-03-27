@@ -8,7 +8,7 @@ The 'Project' class wraps all main interactions between R* executables
 and other filtering or meshing part of the code. It's the entry point for
 the user.
 """
-ResIPy_version = '3.4.2' # ResIPy version (semantic versionning in use)
+ResIPy_version = '3.4.4' # ResIPy version (semantic versionning in use)
 
 #import relevant modules
 import os, sys, shutil, platform, warnings, time, glob # python standard libs
@@ -1704,7 +1704,7 @@ class Project(object): # Project master class instanciated by the GUI
 
             xlim = findminmax(limits[:,0])
             ylim = findminmax(limits[:,1])
-            zlim = proj.zlim
+            zlim = proj.zlim if cropMesh or cropMaxDepth else None
             meshMoved.ndims = 3 # overwrite dimension to use show3D() method
 
             meshMoved.show(ax=ax, color_map=color_map, color_bar=color_bar, xlim=xlim,

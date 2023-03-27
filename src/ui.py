@@ -4825,6 +4825,8 @@ combination of multiple sequence is accepted as well as importing a custom seque
 
         def notCroppingFunc(state):
             if state == Qt.Checked:
+                self.cropBelowFmd.setChecked(False)
+                self.cropBelowFmd.setEnabled(False)
                 self.iCropping = False
                 if 'num_xz_poly' in self.project.param:
                     self.num_xz_poly = self.project.param['num_xz_poly'] # store value
@@ -4833,6 +4835,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 elif 'num_xy_poly' in self.project.param:
                     self.num_xz_poly = self.project.param['num_xy_poly'] # store value
             else:
+                self.cropBelowFmd.setEnabled(True)
                 self.iCropping = True # default
                 if ('num_xz_poly' in self.project.param) and (self.num_xz_poly is not None):
                     self.project.param['num_xz_poly'] = self.num_xz_poly # restore value
