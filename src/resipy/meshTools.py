@@ -161,7 +161,7 @@ def in_box(x,y,z,xmax,xmin,ymax,ymin,zmax,zmin):
     return idx
 
 #%% write descrete points to a vtk file 
-def points2vtk (x,y,z,file_name="points.vtk",title='points'):
+def points2vtk (x,y,z,file_name="points.vtk",title='points',data=None):
     """
     Function makes a .vtk file for some xyz coordinates. optional argument
     renames the name of the file (needs file path also) (default is "points.vtk"). 
@@ -197,7 +197,20 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     #add data
     fh.write('POINTS      %i double\n'%len(x))
     [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
-    fh.close()
+    
+    if data is not None and len(data.keys())>0:
+        fh.write("POINT_DATA %i\n"%len(x))
+        for i,key in enumerate(data.keys()):
+            fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
+            fh.write("LOOKUP_TABLE default\n")
+            X = np.array(data[key])
+            X[np.isnan(X)]=-9999
+            [fh.write("%16.8f "%X[j]) for j in range(len(x))]
+            fh.write("\n")
+    
+    fh.close() 
+    
+    
 
 #%% check mac version for wine
 def getMacOSVersion():
@@ -2201,7 +2214,8 @@ class Mesh:
                                 show_scalar_bar=color_bar,
                                 show_edges=edges,
                                 opacity=alpha,
-                                scalar_bar_args={'color':tcolor})
+                                scalar_bar_args={'color':tcolor},
+                                lighting=True)
                 else:
                     print('empty mesh')
             else:        
@@ -2212,6 +2226,7 @@ class Mesh:
                                 clim=[vmin,vmax], #color bar limits 
                                 show_scalar_bar=color_bar,#plot the color bar? 
                                 show_edges=edges, #show edges
+                                lighting=True,
                                 # opacity=alpha,
                                 scalar_bar_args={'color':tcolor,# 'interactive':True,
                                                  'vertical':False})#,

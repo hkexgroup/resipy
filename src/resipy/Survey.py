@@ -1439,7 +1439,8 @@ class Survey(object):
         a1s = formattedCoefs[0]
         a2s = formattedCoefs[1]
         R2s = formattedCoefs[2]
-        print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1s,a2s,R2s))
+        if self.debug: 
+            print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1s,a2s,R2s))
         ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig
@@ -1512,7 +1513,8 @@ class Survey(object):
         a1s = formattedCoefs[0]
         a2s = formattedCoefs[1]
         R2s = formattedCoefs[2]
-        print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1s,a2s,R2s))
+        if self.debug: 
+            print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1s,a2s,R2s))
         ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig                  
