@@ -4406,7 +4406,7 @@ class Project(object): # Project master class instanciated by the GUI
                         name = self.surveys[idataset-1].name
                     else:
                         name = 'dataset{:03.0f}'.format(idataset)
-                elif line[0] == 'End':
+                elif line[0] == 'End' and self.typ != 'R3t':
                     idataset -= 1
         df = df.apply(pd.to_numeric, errors='ignore').reset_index(drop=True)
         return df
