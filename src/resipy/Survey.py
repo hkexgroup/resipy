@@ -1439,7 +1439,8 @@ class Survey(object):
         a1s = formattedCoefs[0]
         a2s = formattedCoefs[1]
         R2s = formattedCoefs[2]
-        print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1s,a2s,R2s))
+        if self.debug: 
+            print('Error model is R_err = {} R_avg^{} (R^2 = {})'.format(a1s,a2s,R2s))
         ax.set_title('Multi bin power-law resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}^{{{}}}$ (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig
@@ -1512,7 +1513,8 @@ class Survey(object):
         a1s = formattedCoefs[0]
         a2s = formattedCoefs[1]
         R2s = formattedCoefs[2]
-        print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1s,a2s,R2s))
+        if self.debug: 
+            print('Error model is R_err = {}*R_avg + {} (R^2 = {})'.format(a1s,a2s,R2s))
         ax.set_title('Multi bin linear resistance error plot\n' + r'$R_{{error}}$ = {}$R_{{avg}}$ + {} (R$^2$ = {})'.format(a1s,a2s,R2s))
         if ax is None:
             return fig                  
@@ -1811,7 +1813,10 @@ class Survey(object):
         BM = np.sqrt((bposx-mposx)**2 + (bposy-mposy)**2 + (bposz-mposz)**2)
         AN = np.sqrt((aposx-nposx)**2 + (aposy-nposy)**2 + (aposz-nposz)**2)
         BN = np.sqrt((bposx-nposx)**2 + (bposy-nposy)**2 + (bposz-nposz)**2)
-        
+        AM[AM == 0] = np.nan
+        BM[BM == 0] = np.nan
+        AN[AN == 0] = np.nan
+        BN[BN == 0] = np.nan
         K = 2*np.pi/((1/AM)-(1/BM)-(1/AN)+(1/BN)) # geometric factor
         
         self.df['K'] = K
@@ -3117,11 +3122,6 @@ class Survey(object):
                     buried[i])#buried flag 
             fh.write(line)
         #now write the scheduling matrix to file 
-        ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
-        df = self.df[ie]
-        nomeas = len(df) # number of measurements 
-        df = df.reset_index().copy()
-        fh.write('\n%i number of measurements \n'%nomeas)
         
         #check for error column 
         check = np.isnan(self.df['resError'].values)
@@ -3131,6 +3131,16 @@ class Survey(object):
         else:
             err = self.df['resError'].values 
             
+        if 'modErr' in self.df.columns:
+            # if present, compute Guassian propogation of errors (this is not geometric mean)
+            err = np.sqrt(err**2 + self.df['modErr'].values**2)
+            
+        ie = self.df['irecip'].values >= 0 # reciprocal + non-paired
+        df = self.df[ie]
+        nomeas = len(df) # number of measurements 
+        df = df.reset_index().copy()
+        err=err[ie]
+        fh.write('\n%i number of measurements \n'%nomeas)
         # convert seqeunce to matrix 
         if len(self.df['a'][0].split()) == 2:
             seq = self._seq2mat()

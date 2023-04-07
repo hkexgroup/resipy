@@ -161,7 +161,7 @@ def in_box(x,y,z,xmax,xmin,ymax,ymin,zmax,zmin):
     return idx
 
 #%% write descrete points to a vtk file 
-def points2vtk (x,y,z,file_name="points.vtk",title='points'):
+def points2vtk (x,y,z,file_name="points.vtk",title='points',data=None):
     """
     Function makes a .vtk file for some xyz coordinates. optional argument
     renames the name of the file (needs file path also) (default is "points.vtk"). 
@@ -197,7 +197,20 @@ def points2vtk (x,y,z,file_name="points.vtk",title='points'):
     #add data
     fh.write('POINTS      %i double\n'%len(x))
     [fh.write('{:<10} {:<10} {:<10}\n'.format(x[i],y[i],z[i])) for i in range(len(x))]
-    fh.close()
+    
+    if data is not None and len(data.keys())>0:
+        fh.write("POINT_DATA %i\n"%len(x))
+        for i,key in enumerate(data.keys()):
+            fh.write("SCALARS %s double 1\n"%key.replace(' ','_'))
+            fh.write("LOOKUP_TABLE default\n")
+            X = np.array(data[key])
+            X[np.isnan(X)]=-9999
+            [fh.write("%16.8f "%X[j]) for j in range(len(x))]
+            fh.write("\n")
+    
+    fh.close() 
+    
+    
 
 #%% check mac version for wine
 def getMacOSVersion():
@@ -2204,7 +2217,8 @@ class Mesh:
                                 show_scalar_bar=color_bar,
                                 show_edges=edges,
                                 opacity=alpha,
-                                scalar_bar_args={'color':tcolor})
+                                scalar_bar_args={'color':tcolor},
+                                lighting=True)
                 else:
                     print('empty mesh')
             else:        
@@ -2215,6 +2229,7 @@ class Mesh:
                                 clim=[vmin,vmax], #color bar limits 
                                 show_scalar_bar=color_bar,#plot the color bar? 
                                 show_edges=edges, #show edges
+                                lighting=True,
                                 # opacity=alpha,
                                 scalar_bar_args={'color':tcolor,# 'interactive':True,
                                                  'vertical':False})#,
@@ -4299,7 +4314,7 @@ def quadMesh(elec_x, elec_z, elec_type = None, elemx=4, xgf=1.5, zf=1.1, zgf=1.2
         
 #    dyy = espacing/(elemx*4)
     meshz = [0]
-    dyy = 0.05
+    dyy = np.mean(np.diff(elecXsorted))/5
     for i in range(100):
         meshz.append(meshz[-1]+dyy*zf)
         dyy = dyy*zf
@@ -4742,7 +4757,6 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
 def tri_mesh(*args):
     warnings.warn('tri_mesh is depreciated, use triMesh instead')
     triMesh(**args)
-
 
 
 #%% 3D tetrahedral mesh 
