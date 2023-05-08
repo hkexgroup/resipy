@@ -1840,6 +1840,13 @@ def srvParser(fname):
     data_dict['dev']=[0]*nmeas
     data_dict['ip']=[0]*nmeas
     df = pd.DataFrame(data=data_dict) # make a data frame from dictionary
+    array = df[['a','b','m','n']].values
+    # get unique electrode positions and create ordered labels for them
+    val = np.sort(np.unique(array.flatten()))
+    elecLabel = 1 + np.arange(len(val))
+    searchsoterdArr = np.searchsorted(val, array)
+    newval = elecLabel[searchsoterdArr] # magic ! https://stackoverflow.com/questions/47171356/replace-values-in-numpy-array-based-on-dictionary-and-avoid-overlap-between-new
+    df[['a','b','m','n']] = newval # assign new label
     df = df[['a','b','m','n','Rho','dev','ip','resist','magErr']] # reorder columns to be consistent with the syscal parser
     fh.close()
     
