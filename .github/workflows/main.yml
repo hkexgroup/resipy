@@ -100,8 +100,8 @@ jobs:
           cd resipy
           /usr/local/bin/python3.9 -m pip install setuptools
           /usr/local/bin/python3.9 -m pip install -r requirements-gui.txt
-          /usr/local/bin/python3.9 -m pip install pyvista==0.32.0
-          /usr/local/bin/python3.9 -m pip install pyvistaqt==0.5.0
+          /usr/local/bin/python3.9 -m pip install pyvista==0.35.2
+          /usr/local/bin/python3.9 -m pip install pyvistaqt==0.8.0
           /usr/local/bin/python3.9 -m pip install pyinstaller
 
       - name: Run build
