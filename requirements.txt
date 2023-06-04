@@ -4,5 +4,4 @@ pandas
 scipy
 requests
 psutil
-pyvista
-
+pyvista==0.36.1
