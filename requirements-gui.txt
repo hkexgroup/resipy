@@ -4,7 +4,7 @@ pandas
 scipy
 requests
 psutil
-pyvista
-pyvistaqt
+pyvista==0.36.1
+pyvistaqt==0.9.1
 PyQt5
 vtk
