@@ -4578,7 +4578,7 @@ def check4repeatNodes(X,Y,Z,flag=None):
 #%% build a triangle mesh - using the gmsh wrapper
 def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True, 
              show_output=True, path='exe', dump=print, whole_space=False, 
-             handle=None, add_refinement=True, **kwargs):
+             handle=None, **kwargs):
     """ Generates a triangular mesh for r2. Returns mesh class ...
     this function expects the current working directory has path: exe/gmsh.exe.
     Uses gmsh version 3.0.6.
@@ -4758,10 +4758,10 @@ def tri_mesh(*args):
 
 #%% 3D tetrahedral mesh 
 def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True, 
-              interp_method = 'triangulate',surface_refinement=None, 
-              mesh_refinement=None, show_output=True, add_refinement=True, 
+              interp_method = 'triangulate', surface_refinement=None, 
+              mesh_refinement=None, ball_refinement=True, add_voroni_refinement=False, 
               path='exe', dump=print, whole_space=False, padding=20,
-              search_radius = 10, handle=None, **kwargs):
+              search_radius = 10, handle=None, show_output=True, **kwargs):
     """ Generates a tetrahedral mesh for R3t (with topography). returns mesh3d.dat 
     in the working directory. This function expects the current working directory 
     has path: exe/gmsh.exe.
@@ -4794,11 +4794,12 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         Dataframe (or dict) contianing 'x', 'y', 'z', 'type' columns which describe points which can be used to refine the mesh,
         unlike surface_refinement, this argument allows the user granular control over the refinement of mesh
         elements. See further explanation in tetraMesh notes. 
-    show_output : boolean, optional
-        `True` if gmsh output is to be printed to console. 
-    add_refinement: boolean
-        If True then points are added near to surface electrodes to encourage 
-        extra refinement near electrodes (option in development)
+    ball_refinement: boolean
+        If True, tells gmsh to add a 'ball' of refined mesh around electrodes. 
+    add_voroni_refinement: boolean
+        If True then points are generated via creating voroni cells near to 
+        around the electrodes to encourage extra refinement in the resulting 
+        mesh. Works well for surveys that leverage arrays in a grid format. 
     path : string, optional
         Path to exe folder (leave default unless you know what you are doing).
     whole_space: boolean, optional
@@ -4815,6 +4816,8 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     handle : variable, optional
         Will be assigned the output of 'Popen' in case the process needs to be
         killed in the UI for instance.
+    show_output : boolean, optional
+        `True` if gmsh output is to be printed to console. 
     **kwargs : optional
         Key word arguments to be passed to box_3d. 
             
@@ -4875,7 +4878,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     if elec_z is not None and all(np.array(elec_z)==0):
         interp_method = None 
     if all(np.array(elec_y)==elec_y[0]):
-        add_refinement = False 
+        add_voroni_refinement = False 
         # refinement won't work unless there is some change in the y direction 
         
     # check for repeated electrodes? 
@@ -5029,7 +5032,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
             internal_mesh_refinement['cl'] = mesh_refinement['cl']
 
         kwargs['mesh_refinement'] = internal_mesh_refinement # actual mesh refinement passed to box_3d
-    elif add_refinement:
+    elif add_voroni_refinement:
         if 'cl' in kwargs.keys():
             cl = kwargs['cl']
         else:
@@ -5093,6 +5096,15 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
         kwargs['mesh_refinement'] = internal_mesh_refinement
     else:
         internal_mesh_refinement = None # then there will be no internal mesh refinement 
+    
+    if ball_refinement:
+        kwargs['use_fields'] = True 
+        
+    # remove these keyword arguments (very messy)
+    if 'ball_refinement' in kwargs:
+        del kwargs['ball_refinement']
+    if 'add_veroni_refinement' in kwargs: 
+        del kwargs['add_veroni_refinement']
     
     # check directories 
     if path == "exe":

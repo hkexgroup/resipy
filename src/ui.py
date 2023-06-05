@@ -3546,6 +3546,11 @@ class App(QMainWindow):
         self.clnFactorEdit.setToolTip(self.clnFactorToolTip)
         self.clnFactorEdit.setValidator(QDoubleValidator())
         self.clnFactorEdit.setText('3')
+        # ADDED OPTION TO REFINE FOR GRIDS 
+        self.optimize4gridCheck = QCheckBox('Optimize For Grid')
+        self.optimize4gridCheck.setToolTip('Optimize the mesh refinement for'
+                                           'Electrodes on a grid (or non uniform grid')
+        # OPTION TO REFINE GRID POST PROCESSING FOR FORWARD MODELLING 
         self.refineTetraCheck = QCheckBox('Refine')
         self.refineTetraCheck.setToolTip('Refine the mesh for forward modelling'
                                     'without increasing the number of parameters')
@@ -3583,6 +3588,13 @@ class App(QMainWindow):
             cl_factor = float(self.cl3FactorEdit.text())
             cln_factor = float(self.clnFactorEdit.text()) if self.clnFactorEdit.text() != '' else 100
             refine = 1 if self.refineTetraCheck.isChecked() else 0
+            # optimize refinement ? 
+            if self.optimize4gridCheck.isChecked(): 
+                ball_refinement = False 
+                voroni_refinement = True 
+            else:
+                ball_refinement = True 
+                voroni_refinement = False 
             if np.sum(~inan) == topo.shape[0]:
                 topo = None
             else:
@@ -3591,10 +3603,15 @@ class App(QMainWindow):
             fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
             self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
-                               cl_corner=cln_factor, refine=refine, show_output=True)
+                               cl_corner=cln_factor, refine=refine, 
+                               ball_refinement=ball_refinement, 
+                               add_veroni_refinement=voroni_refinement,
+                               show_output=True)
             self.writeLog('k.createMesh(typ="tetra", surface={:s}, fmd={:s}, cl={:.2f},'
-                          ' cl_factor={:.2f}, cl_corner={:.2f}, refine={:d})'.format(
-                              str(topo), str(fmd), cl, cl_factor, cln_factor, refine))
+                          ' cl_factor={:.2f}, cl_corner={:.2f}, refine={:d})'
+                          'ball_refinement={:s}, add_voroni_refinement={:s}'.format(
+                              str(topo), str(fmd), cl, cl_factor, cln_factor, refine,
+                              str(ball_refinement), str(voroni_refinement)))
             if pvfound:
                 self.mesh3Dplotter.clear() # clear all actors 
                 self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
@@ -4159,6 +4176,7 @@ class App(QMainWindow):
         self.meshOptionTetraLayout.addWidget(self.clnFactorLabel)
         self.meshOptionTetraLayout.addWidget(self.clnFactorEdit)
         self.meshOptionTetraLayout.addWidget(self.refineTetraCheck)
+        self.meshOptionTetraLayout.addWidget(self.optimize4gridCheck)
 
         self.meshOptionTankLayout = QHBoxLayout()
         self.meshOptionTankLayout.addWidget(self.clTankLabel)

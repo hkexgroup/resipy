@@ -103,10 +103,27 @@ def add_ball_field(fh,nfield,x,y,z,r,mincl,maxcl,thick=1):
     fh.write('Field[%i].YCenter = %f;\n'%(nfield,y))
     fh.write('Field[%i].ZCenter = %f;\n'%(nfield,z))
     
+def add_box_field(fh, nfield, xmin, xmax, ymin, ymax, zmin, zmax, mincl, maxcl,
+                  thick=0):
+    # setup box and volume of influence 
+    fh.write('Field[%i] = Box;\n'%nfield)
+    fh.write('Field[%i].Thickness = %f;\n'%(nfield,thick))
+    # set characteristic lengths 
+    fh.write('Field[%i].VIn = %f;\n'%(nfield,mincl))
+    fh.write('Field[%i].VOut = %f;\n'%(nfield,maxcl))
+    # setup geometry 
+    fh.write('Field[%i].XMin = %f;\n'%(nfield,xmin))
+    fh.write('Field[%i].XMax = %f;\n'%(nfield,xmax))
+    fh.write('Field[%i].YMin = %f;\n'%(nfield,ymin))
+    fh.write('Field[%i].YMax = %f;\n'%(nfield,ymax))
+    fh.write('Field[%i].ZMin = %f;\n'%(nfield,zmin))
+    fh.write('Field[%i].ZMax = %f;\n'%(nfield,zmax))
+    
+    
 def set_fields(fh,nfield):
     field_list = [i+1 for i in range(nfield)]
     nfield +=1 
-    fh.write('Field[%i] = Min;\n'%nfield)
+    fh.write('Field[%i] = Max;\n'%nfield)
     field_list_s=str(field_list).replace('[','{').replace(']','}')
     fh.write('Field[%i].FieldsList = %s;\n'%(nfield,field_list_s))
     fh.write('Background Field = %i;\n'%nfield)
@@ -1419,7 +1436,8 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
 
 def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
            cl=-1, cl_corner=-1, cl_factor=8, cln_factor=100, dp_len=-1, 
-           mesh_refinement=None, use_fields=False, dump=None):
+           mesh_refinement=None, use_fields=False, dump=None, 
+           ball_refinement=None, add_veroni_refinement=None):
     """
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
@@ -1702,7 +1720,7 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
         for i in range(len(elec_x)):
             nfield += 1 
             add_ball_field(fh, nfield, elec_x[i], elec_y[i], elec_z[i],
-                           dist_sort[1], cl, cl*cl_corner,0)
+                           dist_sort[1]/2, cl, cl*cl_corner,0)
     fh.write("//End electrodes\n")
     
     # check if any mesh refinement is requested 
@@ -1745,7 +1763,11 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
         fh.write('//End mesh refinement points\n')
         
     if nfield>0: 
-        fh.write('//Merged refinement feilds')
+        nfield += 1 
+        fh.write('//Refinement feild for fine mesh region\n')
+        add_box_field(fh, nfield, min_x, max_x, min_y, max_y, 0, -fmd, 
+                      cl*cl_factor, cln)
+        fh.write('//Merge refinement feilds\n')
         set_fields(fh, nfield)
     fh.write('//End of script')
     
