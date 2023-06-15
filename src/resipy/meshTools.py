@@ -1931,6 +1931,7 @@ class Mesh:
                 vmin=None,
                 attr=None,
                 elec_color='k',
+                elec_size=10.,
                 use_pyvista=True,
                 background_color=(0.8,0.8,0.8),
                 pvslices=([],[],[]),
@@ -1980,7 +1981,9 @@ class Mesh:
             as the key for this dictionary.
         elec_color : string, optional
             Colour of the electrodes on the plot if electrodes = True. Default
-            is 'k' for black. Can be a 3 by 1 tuple or string identifier. 
+            is 'k' for black. Can be a 3 by 1 tuple or string identifier.
+        elec_size : float, optional
+            Size of electrode points, default is 10, a number of 4-5 gives better visibility
         use_pyvista : bool, optional
             Use visual toolkit backend for displaying 3D mesh, note that pyvista
             must be installed for this to work. 
@@ -2240,7 +2243,7 @@ class Mesh:
                 try:
                     points = self.elec.copy()[~iremote,:]
                     pvelec = pv.PolyData(points)
-                    ax.add_mesh(pvelec, color=elec_color, point_size=10.,
+                    ax.add_mesh(pvelec, color=elec_color, point_size=elec_size,
                                 render_points_as_spheres=True)
                 except AttributeError as e:
                     print("Could not plot 3d electrodes, error = "+str(e))
