@@ -1,3 +1,18 @@
+v3.4.5
+------
+- Add ability to change electrode size in 3D (API only).
+- Buried electrodes are shown in pseudo section.
+- Time-lapse measurements are matched to the reference survey only.
+- Add volume calculation in the 3D.
+- Bug fix: Custom mesh regions now recognised.
+- Bug fix: 3D mesh refinement stability improved.
+- Bug fix: Fix for mesh regions/zones not being parsed (UI).
+- Bug fix: Fixed mesh being cropped in 3D viewer.
+- Bug fix: Geometric factor recomputed after forward modelling.
+- Bug fix: add data to a survey even if reciprocals are present.
+- Bug fix: Log scale for small values shows scientific values. 
+
+
 v3.4.2
 ------
 - Bug fix: fixing mesh zones
