@@ -5659,7 +5659,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
             vmin = self.vminEdit.text()
             vmax = None if vmax == '' else float(vmax)
             vmin = None if vmin == '' else float(vmin)
-            if 'log' in self.displayParams['attr']:
+            if 'log' in self.displayParams['attr'] and 'R3' not in self.project.typ:
                 if vmin is not None:
                     vmin = np.log10(vmin)
                 if vmax is not None:
