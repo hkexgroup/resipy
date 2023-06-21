@@ -1559,14 +1559,14 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(df)) + '\n')
             with open(outputname, 'a') as f:
-                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e', lineterminator='\n')
+                df.to_csv(f, sep='\t', header=False, index=False,float_format='%8.6e')
 
         outputname = os.path.join(os.path.dirname(os.path.realpath(__file__)),'invdir','protocol-lmeIn.dat')
         if outputname != '':
             with open(outputname, 'w') as f:
                 f.write(str(len(self.df)) + '\n')
             with open(outputname, 'a') as f:
-                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'], lineterminator='\n')
+                self.df.to_csv(f, sep='\t', header=False, index=True,float_format='%8.6e',columns=['a','b','m','n','recipMean'])
                 
         try:        
             if (OS == 'Windows') and (rpath is None):
@@ -2453,7 +2453,7 @@ class Survey(object):
             with open(outputname, 'w') as f:
                 f.write(str(len(protocol)) + '\n')
             with open(outputname, 'a') as f:
-                to_csv(protocol, f, sep='\t', header=False, index=False, lineterminator='\n')
+                to_csv(protocol, f, sep='\t', header=False, index=False)
         
         return protocol
         
