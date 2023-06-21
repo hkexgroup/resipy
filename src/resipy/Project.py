@@ -866,29 +866,29 @@ class Project(object): # Project master class instanciated by the GUI
         # add files to it
         if self.mesh is not None and self.pseudo3DSurvey is None:
             self.mesh.vtk(os.path.join(savedir, 'mesh.vtk'))
-        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False, lineterminator='\n')
+        self.elec.to_csv(os.path.join(savedir, 'elec.csv'), index=False)
         c = 0
         if self.iForward:
             c = 1
             dfseq = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            dfseq.to_csv(os.path.join(savedir, 'dfseq.csv'), index=False, lineterminator='\n')
+            dfseq.to_csv(os.path.join(savedir, 'dfseq.csv'), index=False)
         for i, survey in enumerate(self.surveys):
             f = os.path.join(savedir, survey.name)
-            survey.df.to_csv(f + '-df.csv', index=False, lineterminator='\n')
-            survey.elec.to_csv(f + '-elec.csv', index=False, lineterminator='\n')
+            survey.df.to_csv(f + '-df.csv', index=False)
+            survey.elec.to_csv(f + '-elec.csv', index=False)
             if (c+i < len(self.meshResults)):
                 self.meshResults[c + i].vtk(f + '.vtk')
         
         # batch/time-lapse
         if self.iBatch or self.iTimeLapse:
             f = os.path.join(savedir, 'bigSurvey')
-            self.bigSurvey.df.to_csv(f + '-bigdf.csv', index=False, lineterminator='\n')
+            self.bigSurvey.df.to_csv(f + '-bigdf.csv', index=False)
             
         # pseudo 3D
         if self.pseudo3DSurvey is not None:
             f = os.path.join(savedir, 'pseudo3DSurvey')
-            self.pseudo3DSurvey.df.to_csv(f + '-pseudo3Ddf.csv', index=False, lineterminator='\n')
-            self.pseudo3DSurvey.elec.to_csv(f + '-pseudo3Delec.csv', index=False, lineterminator='\n')
+            self.pseudo3DSurvey.df.to_csv(f + '-pseudo3Ddf.csv', index=False)
+            self.pseudo3DSurvey.elec.to_csv(f + '-pseudo3Delec.csv', index=False)
             for proj in self.projs:
                 if proj.mesh is not None:
                     name = proj.surveys[0].name
@@ -3329,7 +3329,7 @@ class Project(object): # Project master class instanciated by the GUI
                     s.write2protocol(os.path.join(refdir, 'protocol.dat'), err=err, threed=threed) # no subset for background, just use all
                 else:
                     content = content + str(protocol.shape[0]) + '\n'
-                    content = content + protocol.to_csv(sep='\t', header=False, index=False, lineterminator='\n')
+                    content = content + protocol.to_csv(sep='\t', header=False, index=False)
 
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
@@ -3356,7 +3356,7 @@ class Project(object): # Project master class instanciated by the GUI
                     # been populated when the files has been imported
                 df = s.write2protocol(outputname='', err=err, ip=ipBool, errTot=errTot, threed=threed)
                 content = content + str(len(df)) + '\n'
-                content = content + df.to_csv(sep='\t', header=False, index=False, lineterminator='\n')
+                content = content + df.to_csv(sep='\t', header=False, index=False)
             with open(os.path.join(self.dirname, 'protocol.dat'), 'w') as f:
                 f.write(content)
 
@@ -3483,7 +3483,7 @@ class Project(object): # Project master class instanciated by the GUI
         for s, df in zip(surveys, dfs):
             outputname = os.path.join(dirname, 'protocol_' + s.name + '.dat')
             files.append(outputname)
-            df.to_csv(outputname, sep='\t', header=False, index=False, lineterminator='\n')
+            df.to_csv(outputname, sep='\t', header=False, index=False)
             # header with line count already included
 
         # if iMoveElec is True, writing different R2.in
@@ -4341,7 +4341,7 @@ class Project(object): # Project master class instanciated by the GUI
 
                 with open(outputname, 'w') as f:
                     f.write('{:d}\n'.format(int(df.values[0, 0])))
-                    df2.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
+                    df2.to_csv(f, sep='\t', header=False, index=False)
                 # header with line count already included
             
             fnames = [os.path.join(invdir, 'ref', 'protocol.dat')] + files
@@ -4952,7 +4952,7 @@ class Project(object): # Project master class instanciated by the GUI
         """
         if self.sequence is not None:
             df = pd.DataFrame(self.sequence, columns=['a','b','m','n'])
-            df.to_csv(fname, index=False, lineterminator='\n')
+            df.to_csv(fname, index=False)
             
 
     def importElec(self, fname=''):
@@ -5050,7 +5050,7 @@ class Project(object): # Project master class instanciated by the GUI
         dff = dff.rename(columns = {'resist':'Resistance [ohm]', 'recipError':'Resistance_err [ohm]',
                                     'resError':'Fit Resistance_err [ohm]','phase':'Phase [mRad]',
                                     'reci_IP_err':'Phase_err [mRad]','phaseError':'Fit Phase_err [mRad]'})
-        dff.to_csv(fname, index=False, lineterminator='\n')
+        dff.to_csv(fname, index=False)
 
 
     def saveFilteredData(self, fname, savetyp='Res2DInv (*.dat)'):
@@ -5223,7 +5223,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
+            protocol.to_csv(f, sep='\t', header=False, index=False)
         dump('done\n')
 
         # fun the inversion
@@ -5442,7 +5442,7 @@ class Project(object): # Project master class instanciated by the GUI
         with open(outputname, 'w') as f:
             f.write(str(len(protocol)) + '\n')
         with open(outputname, 'a') as f:
-            protocol.to_csv(f, sep='\t', header=False, index=False, lineterminator='\n')
+            protocol.to_csv(f, sep='\t', header=False, index=False)
 
         # run the inversion
         self.runR2(fwdDir) # this will copy the R2.exe inside as well
