@@ -7280,6 +7280,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
         version_int = int(version.replace('.',''))
         if ResIPy_version_int < version_int: # check if version is older than online version 
             msg = QMessageBox()
+            msg.setWindowFlags(Qt.WindowStaysOnTopHint)
             msg.setIcon(QMessageBox.Information)
             msg.setText('''<b>ResIPy version %s is available</b>''' % (version))
             msg.setInformativeText('''Please download the latest version of ResIPy at:\
@@ -7482,7 +7483,7 @@ if __name__ == '__main__':
     splash.showMessage("ResIPy is ready!", Qt.AlignBottom | Qt.AlignCenter, Qt.black)
     progressBar.setValue(10)
     app.processEvents()
-
+    
     ex = App()
     ex.show()
     splash.hide() # hiding the splash screen when finished
