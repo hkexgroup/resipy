@@ -1832,9 +1832,9 @@ class Project(object): # Project master class instanciated by the GUI
                     cmd = [wPath + winetxt, exePath]
             else:
                 if platform.machine() == 'aarch64':
-                    cmd = [exePath + '_aarch64']
+                    cmd = [exePath.replace('.exe', '_aarch64')]
                 elif platform.machine() == 'armv7l':
-                    cmd = [exePath + '_armv7l']
+                    cmd = [exePath.replace('.exe', '_armv7l')]
                 else:
                     cmd = ['wine',exePath]
     
@@ -3413,9 +3413,9 @@ class Project(object): # Project master class instanciated by the GUI
             else:  # linux here
                 # check if running on raspberrypi
                 if platform.machine() == 'aarch64':
-                    cmd = [exePath + '_aarch64']
+                    cmd = [exePath.replace('.exe', '_aarch64')]
                 elif platform.machine() == 'armv7l':
-                    cmd = [exePath + '_armv7l']
+                    cmd = [exePath.replace('.exe', '_armv7l')]
                 else:
                     cmd = ['wine',exePath]
     
@@ -3562,9 +3562,9 @@ class Project(object): # Project master class instanciated by the GUI
         else:
             # check if running on raspberrypi
             if platform.machine == 'aarch64':
-                cmd = [exePath + '_aarch64']
+                cmd = [exePath.replace('.exe', '_aarch64')]
             if platform.machine == 'arm':
-                cmd = [exePath + '_arm']
+                cmd = [exePath.replace('.exe', '_arm')]
             else:
                 cmd = ['wine',exePath]
 

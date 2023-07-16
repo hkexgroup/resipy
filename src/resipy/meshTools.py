@@ -292,7 +292,9 @@ class Mesh:
         
         dint = 'int64' # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
-            dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer 
+            dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer
+        elif platform.machine() == 'armv7l':
+            dint = 'int64'
         self.connection = np.asarray(node_data,dtype=dint) #connection matrix
         
         self.cell_type = cell_type # cellType
@@ -760,7 +762,7 @@ class Mesh:
             
     def computeNeigh(self): # fix me 
         """Compute element neighbour matrix
-        """            
+        """
         if self.ndims == 2: #2d mesh 
             self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1)
         elif self.ndims == 3: #3d mesh 
@@ -3063,6 +3065,7 @@ class Mesh:
             raise TypeError("expected string argument for file_path")
             
         # find furthest node from any electrode to be dirichlet node
+        self.idirichlet = 0
         if self.idirichlet is None:
             idirichlet = self.findIdirichlet() + 1 
         else: 
