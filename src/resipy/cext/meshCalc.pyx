@@ -209,7 +209,7 @@ cdef long long mergeInt(int a, int b, int pad): #merge 2 ints
 
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
-def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
+def neigh3d(long long[:,:] connection, int return_tri_combo, int num_threads=2):
     """Compute neighbours of each element within a 3D tetrahedral mesh 
     
     Parameters
