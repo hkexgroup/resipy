@@ -200,12 +200,12 @@ cdef void sortInt(long[:] arr, int n) nogil:
                 j -= 1
         arr[j + 1] = key 
 
-cdef long long mergeInts(int a, int b, int c, int pad) nogil: # merge 3 ints 
-    cdef long long int x = a*10**pad + b # merge a and b
-    return x*10**pad + c # merge c 
+cdef long long mergeInts(int a, int b, int c, int pad): # merge 3 ints 
+    cdef long long int x = (long)(a*10**pad) + b # merge a and b
+    return (long)(x*10**pad) + c # merge c 
 
-cdef long long mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
-    return a*10**pad + b # merge a and b
+cdef long long mergeInt(int a, int b, int pad): #merge 2 ints 
+    return (long)(a*10**pad) + b # merge a and b
 
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
