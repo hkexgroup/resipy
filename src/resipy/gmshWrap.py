@@ -789,7 +789,7 @@ def mshParseLegacy(file_path, debug=True):
     #check the file is a mesh format
     if dump[0].strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
         raise Exception("Unrecognised file type...aborting!")
-    mesh_format=dump[1].strip() 
+    mesh_format=dump[1].strip()
     formats = ['2.2 0 8','4 0 8']
     if mesh_format not in formats:#warn people that the code was developed with a different mesh format in mind
         warnings.warn('Mesh file format unrecognised ... some errors may occur!\n')
@@ -834,7 +834,7 @@ def mshParseLegacy(file_path, debug=True):
             nodez[node_idx-1]=line[3]
     else:
         c = 0
-        i = node_start
+        i = node_start - 1
         while c <  no_nodes:
             line_info=dump[i].split()
             line = [int(k) for k in line_info] # entity line 
@@ -1002,7 +1002,7 @@ def mshParse47(fname,debug=True):
     if dump[0].strip() != '$MeshFormat':#removes formating strings, checks if the file is a gmsh file
         raise Exception("Unrecognised file type...aborting!")
     mesh_format=dump[1].strip() 
-    formats = ['4.1 0 8']
+    formats = ['4.1 0 8', '4.1 0 4']
     if mesh_format not in formats:#warn people that the code was developed with a different mesh format in mind
         warnings.warn('Mesh file format unrecognised ... some errors may occur!\n') 
     else:
@@ -1185,7 +1185,7 @@ def mshParse(fname, debug=True):
     l0 = fh.readline()
     l1 = fh.readline().strip()
     fh.close()
-    if l1 == '4.1 0 8': 
+    if l1 == '4.1 0 8' or l1 == '4.1 0 4': 
         return mshParse47(fname, debug)
     else:
         return mshParseLegacy(fname, debug)

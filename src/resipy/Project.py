@@ -1831,7 +1831,12 @@ class Project(object): # Project master class instanciated by the GUI
                 else:
                     cmd = [wPath + winetxt, exePath]
             else:
-                cmd = ['wine',exePath]
+                if platform.machine() == 'aarch64':
+                    cmd = [exePath + '_aarch64']
+                elif platform.machine() == 'armv7l':
+                    cmd = [exePath + '_armv7l']
+                else:
+                    cmd = ['wine',exePath]
     
             if OS == 'Windows':
                 startupinfo = subprocess.STARTUPINFO()
@@ -3407,8 +3412,10 @@ class Project(object): # Project master class instanciated by the GUI
                     cmd = [wPath + winetxt, exePath]
             else:  # linux here
                 # check if running on raspberrypi
-                if platform.machine == 'aarch64':
+                if platform.machine() == 'aarch64':
                     cmd = [exePath + '_aarch64']
+                elif platform.machine() == 'armv7l':
+                    cmd = [exePath + '_armv7l']
                 else:
                     cmd = ['wine',exePath]
     
