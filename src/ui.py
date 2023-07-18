@@ -5560,8 +5560,9 @@ combination of multiple sequence is accepted as well as importing a custom seque
         #interactive vtk widget with pyvista
         self.frame = QFrame()
         vlayout = QVBoxLayout()
-        self.vtkWidget = QtInteractor(self.frame)
-        vlayout.addWidget(self.vtkWidget.interactor)
+        if pvfound:
+            self.vtkWidget = QtInteractor(self.frame)
+            vlayout.addWidget(self.vtkWidget.interactor)
         self.frame.setLayout(vlayout)
         self.mSlice = None
         self.mMesh = None
