@@ -188,6 +188,8 @@ def systemCheck(dump=print):
     dump("Processor info: %s"%platform.processor())
     cpu_cores = psutil.cpu_count(logical=True)
     physical_cores = psutil.cpu_count(logical=False)
+    if isinstance(physical_cores, int) is False:
+        physical_cores = 1  # can be the case for raspberrypi
 
     try: # for Apple silicon
         max_freq = max(psutil.cpu_freq())
