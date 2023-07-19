@@ -290,12 +290,12 @@ class Mesh:
         self.numel = node_data.shape[0] # numel 
         self.node = np.array([node_x,node_y,node_z]).T 
         
-        dint = 'int64' # connection matrix needs to be in long format 
+        self.dint = 'int64' # connection matrix needs to be in long format 
         if platform.system() == 'Windows':
-            dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer
+            self.dint = np.int32 # avoid windows quirk where type long is actually a 32 bit integer
         elif platform.machine() == 'armv7l':
-            dint = 'int64'
-        self.connection = np.asarray(node_data,dtype=dint) #connection matrix
+            self.dint = 'int64'
+        self.connection = np.asarray(node_data,dtype=self.dint) #connection matrix
         
         self.cell_type = cell_type # cellType
         self.originalFilePath = original_file_path # originalFilePath 
@@ -555,7 +555,7 @@ class Mesh:
             Function returns the number of reordered elements, default is False. 
         """
         con_mat = self.connection
-        dint = self.connection.dtype
+        self.dint = self.connection.dtype
         con_mata = self.connection.copy() # new object of the connection matrix to reference
         node_x = self.node[:,0]
         node_y = self.node[:,1]
@@ -605,7 +605,7 @@ class Mesh:
                     con_mat[i][4] = con_mata[i][3]
 
         
-        self.connection = np.asarray(con_mat,dtype=dint)
+        self.connection = np.asarray(con_mat,dtype=self.dint)
         
         if return_count:
             return count
@@ -767,7 +767,7 @@ class Mesh:
             self.neigh_matrix, self.tri_combo = mc.neigh2d(self.connection,1)
         elif self.ndims == 3: #3d mesh 
             if self.type2VertsNo() == 4:# tetra mesh 
-                self.neigh_matrix, self.tri_combo = mc.neigh3d(self.connection,1,ncores)
+                self.neigh_matrix, self.tri_combo = mc.neigh3d(np.asarray(self.connection, dtype=self.dint),1,ncores)
             elif self.type2VertsNo() == 6:  # prism mesh 
                 self.neigh_matrix, self.tri_combo = mc.neighPrism(self.connection,1,ncores)
 
@@ -2318,8 +2318,8 @@ class Mesh:
         # triangles on the edge of the mesh will be used only once
         
         tmesh.computeNeigh()
-        fcon, idx = mc.faces3d(tmesh.connection, 
-                               tmesh.neigh_matrix)
+        fcon, idx = mc.faces3d(np.asarray(tmesh.connection, dtype=np.longlong), 
+                               np.asarray(tmesh.neigh_matrix, dtype=np.long))
         
 
         node_x = tmesh.node[:,0]
