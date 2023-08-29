@@ -39,7 +39,6 @@ from resipy.parsers import geomParser
 from resipy.r2in import write2in
 import resipy.meshTools as mt
 from resipy.meshTools import cropSurface
-from resipy.template import startAnmt, endAnmt
 from resipy.protocol import (dpdp1, dpdp2, wenner_alpha, wenner_beta, wenner,
                           wenner_gamma, schlum1, schlum2, multigrad)
 from resipy.SelectPoints import SelectPoints
@@ -6153,7 +6152,7 @@ class Project(object): # Project master class instanciated by the GUI
             dirname = self.dirname
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
-        amtContent = startAnmt
+        amtContent = ''
         if len(self.meshResults) == 0:
             self.getResults()
         count=0
@@ -6179,10 +6178,29 @@ class Project(object): # Project master class instanciated by the GUI
             file_path = os.path.join(dirname, self.pseudo3DMeshResult.mesh_title + '.vtk')
             self.pseudo3DMeshResult.vtk(file_path, title='Pseudo_3D_result')
             amtContent += "\tannotations.append('%s')\n"%self.pseudo3DMeshResult.mesh_title
-        amtContent += endAnmt
+
         fh = open(os.path.join(dirname,'amt_track.py'),'w')
+        fh.write('from paraview.simple import *\n')
+        fh.write('def start_cue(self):\n')
+        fh.write('\tglobal annotations\n')
+        fh.write('\tglobal maxIndex\n')
+        fh.write("\ttextSource = paraview.simple.FindSource('Text1')\n")
+        fh.write("\tif textSource is None:\n")
+        fh.write("\t\tText()\n")
+        fh.write("\tannotations = []\n")
         fh.write(amtContent)
+        fh.write('\tmaxIndex=len(annotations)\n')
+        fh.write('def tick(self):\n')
+        fh.write('\tglobal annotations\n')
+        fh.write('\tglobal maxIndex\n')
+        fh.write('\tindex = int( self.GetClockTime() )\n')
+        fh.write('\tif index >= maxIndex :\n')
+        fh.write('\t\tindex = maxIndex - 1\n')
+        fh.write("\ttextSource = paraview.simple.FindSource('Text1')\n")
+        fh.write('\ttextSource.Text = annotations[index]\n')
+        fh.write('def end_cue(self): pass\n')
         fh.close()
+
 
 
     def saveData(self, outputdir):

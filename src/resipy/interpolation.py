@@ -305,7 +305,7 @@ def geometricMedian(x,y,z, max_iter=30):
     r = fdist(u,x,y,z)
     if any(r==0):
         # shift start point 
-        u = np.array([x[0], y[1], z[0]]) 
+        u = np.array([x[0], y[1], z[2]]) 
     
     pu = np.zeros(3,dtype=float) # new proposed point 
     delta = np.ones(3,dtype=float) # change between proposed and last model 
