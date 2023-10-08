@@ -200,16 +200,16 @@ cdef void sortInt(long[:] arr, int n) nogil:
                 j -= 1
         arr[j + 1] = key 
 
-cdef long long mergeInts(int a, int b, int c, int pad): # merge 3 ints 
-    cdef long long int x = (long)(a*10**pad) + b # merge a and b
-    return (long)(x*10**pad) + c # merge c 
+cdef long long mergeInts(int a, int b, int c, int pad) nogil: # merge 3 ints 
+    cdef long long int x = a*10**pad + b # merge a and b
+    return x*10**pad + c # merge c 
 
-cdef long long mergeInt(int a, int b, int pad): #merge 2 ints 
-    return (long)(a*10**pad) + b # merge a and b
+cdef long long mergeInt(int a, int b, int pad) nogil: #merge 2 ints 
+    return a*10**pad + b # merge a and b
 
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
-def neigh3d(long long[:,:] connection, int return_tri_combo, int num_threads=2):
+def neigh3d(long[:,:] connection, int return_tri_combo, int num_threads=2):
     """Compute neighbours of each element within a 3D tetrahedral mesh 
     
     Parameters
@@ -307,7 +307,7 @@ def neigh3d(long long[:,:] connection, int return_tri_combo, int num_threads=2):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def faces3d(long long[:,:] connection, long[:,:] neigh):
+def faces3d(long[:,:] connection, long[:,:] neigh):
     """Return external faces of a 3D tetrahedral mesh 
     
     Parameters
@@ -365,7 +365,7 @@ def faces3d(long long[:,:] connection, long[:,:] neigh):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def neigh2d(long long[:,:] connection, int return_tri_combo=1, int num_threads=2):
+def neigh2d(long[:,:] connection, int return_tri_combo=1, int num_threads=2):
     """Compute neighbours of each element within a 2D triangular or quad mesh 
     
     Parameters
@@ -461,7 +461,7 @@ def neigh2d(long long[:,:] connection, int return_tri_combo=1, int num_threads=2
     
 @cython.boundscheck(False)    
 @cython.wraparound(False)             
-def neighPrism(long long[:,:] connection, int return_tri_combo, int num_threads=2):
+def neighPrism(long[:,:] connection, int return_tri_combo, int num_threads=2):
     """Compute neighbours of each element within a prism mesh 
     
     Parameters
@@ -576,7 +576,7 @@ def neighPrism(long long[:,:] connection, int return_tri_combo, int num_threads=
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def facesPrism(long long[:,:] connection, double[:,:] node, long[:,:] neigh):
+def facesPrism(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     """Return external faces of a 3D prism mesh 
     
     Parameters
@@ -676,7 +676,7 @@ def sortNeigh(np.ndarray[long, ndim=2] neigh):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def splitTri(long long[:,:] connection, double[:,:] node):
+def splitTri(long[:,:] connection, double[:,:] node):
     """Split triangle elements down into 4 smaller triangles 
     Parameters
     -----------
@@ -805,7 +805,7 @@ def splitTri(long long[:,:] connection, double[:,:] node):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def splitTetra(long long[:,:] connection, double[:,:] node):
+def splitTetra(long[:,:] connection, double[:,:] node):
     """Split tetrahedral elements down into 8 smaller tetrahedra 
     Parameters
     -----------
@@ -930,7 +930,7 @@ def splitTetra(long long[:,:] connection, double[:,:] node):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)   
-def orderTetra(long long[:,:] connection, double[:,:] node, int num_threads=2):
+def orderTetra(long[:,:] connection, double[:,:] node, int num_threads=2):
     """ Organise tetrahedral element nodes into a clockwise order
     
     following solution at: 
@@ -1024,7 +1024,7 @@ def orderTetra(long long[:,:] connection, double[:,:] node, int num_threads=2):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def orderQuad(long long[:,:] connection, double[:,:] node):
+def orderQuad(long[:,:] connection, double[:,:] node):
     """Order quaderlateral elements counterclockwise 
     
     Parameters
@@ -1249,7 +1249,7 @@ def surfaceCall(long[:,:] fconnection, double[:,:] node, double[:,:] cellcentres
 #nsizeA and finite element conductance calculation
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def conductanceCall(long long[:,:] connection, int numnp, int typ=0,
+def conductanceCall(long[:,:] connection, int numnp, int typ=0,
                     int num_threads=1):
     """Calculate the array size needed for the finite element conductance matrix
     in R2 class codes 
@@ -1281,7 +1281,7 @@ def conductanceCall(long long[:,:] connection, int numnp, int typ=0,
     cdef int nedges 
     cdef int pad = len(str(numnp))
     cdef long[:] a, b
-    cdef np.ndarray[int, ndim=1] idx, counts, # unique counts and indices 
+    cdef np.ndarray[long long, ndim=1] idx, counts, # unique counts and indices 
     cdef np.ndarray[long long, ndim=1] uni, combof # uni segment combinations 
     cdef np.ndarray[long, ndim=2] Nconnec = np.zeros((numnp,nmax),dtype=int) - 1
     cdef long[:,:] Nconnecv = Nconnec
@@ -1344,7 +1344,7 @@ def conductanceCall(long long[:,:] connection, int numnp, int typ=0,
                     break
 
     #pure python code 
-    combof = np.asarray(combo,dtype=np.longlong).flatten()
+    combof = np.asarray(combo,dtype=np.int64).flatten()
     uni, idx, counts = np.unique(combof, 
                                  return_index=True, 
                                  return_counts=True)
@@ -1367,7 +1367,7 @@ def conductanceCall(long long[:,:] connection, int numnp, int typ=0,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def externalN(long long[:,:] connection, double[:,:] node, long[:,:] neigh):
+def externalN(long[:,:] connection, double[:,:] node, long[:,:] neigh):
     """Get the external nodes of a triangle or tetrahedral mesh. Future plan 
     is to add a flag to determine if nodes are on top of the mesh or on the side. 
 
@@ -1539,7 +1539,7 @@ def externalN(long long[:,:] connection, double[:,:] node, long[:,:] neigh):
     
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def fcrosscheck(long long[:,:] fconnection1, long long[:,:] fconnection2):#, int num_threads=2):
+def fcrosscheck(long[:,:] fconnection1, long[:,:] fconnection2):#, int num_threads=2):
     """Cross check for overlapping faces in 2 different 2D face meshes... 
     Finds repeats of the first face connection matrix in the second. 
     
@@ -1617,7 +1617,7 @@ def fcrosscheck(long long[:,:] fconnection1, long long[:,:] fconnection2):#, int
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def boundcall(long long[:,:] tconnection, long long[:,:] fconnection, double[:,:] node):
+def boundcall(long[:,:] tconnection, long[:,:] fconnection, double[:,:] node):
     """
     Compute cell boundary conditions for E4D input. Works for gentle topography. 
     Assumes sides of mesh are flat. 
