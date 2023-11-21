@@ -3310,7 +3310,8 @@ class Project(object): # Project master class instanciated by the GUI
                 # been populated when the files has been imported
 
                 res0Bool = False if self.param['reg_mode'] == 1 else True
-                fm00 = fm0[indexes[i][0]] if fm0 is not None else fm0
+                # use the measurements that are matched with both the reference and timelapse inversion 
+                fm00 = fm0[indexes[i][0]] if fm0 is not None else fm0 
                 protocol = s.write2protocol('', err=err, errTot=errTot, res0=res0Bool,
                                             ip=False, # no IP timelapse possible for now
                                             isubset=indexes[i][1], threed=threed,
@@ -3762,13 +3763,16 @@ class Project(object): # Project master class instanciated by the GUI
             self.runR2(refdir, dump=dump) # this line actually runs R2
             shutil.copy(os.path.join(refdir, 'f001_res.dat'),
                         os.path.join(self.dirname, 'Start_res.dat'))
+            res0 = np.loadtxt(os.path.join(refdir, 'f001_res.dat'))[:,3] # reference resistivity  
+            
             if ((self.typ == 'R3t') | (self.typ == 'cR3t')) & (self.param['reg_mode'] == 2):
                 dump('----------------- Computing d-d0+f(m0) ---------------\n')
                 # as per v3.2 of R3t we need to compute MANUALLY d-d0+f(m0)
                 # this is done automatically in R2 and cR2
                 self.sequence = self.surveys[0].df[['a','b','m','n']].values
                 surveysBackup = self.surveys.copy()
-                res0Backup = self.mesh.df['res0'].values.copy()
+                # res0Backup = self.mesh.df['res0'].values.copy() # might want to reset res0 
+                self.mesh.df.loc[:,'res0'] = res0 # set res 0 to baseline inversion 
                 iForwardBackup = self.iForward
                 self.forward()
                 self.iForward = iForwardBackup
@@ -4191,12 +4195,13 @@ class Project(object): # Project master class instanciated by the GUI
         if self.typ[0] == 'c' and self.surveys[0].kFactor != 1: # if kFactor is 1 then probably phase is provided and we shouldn't estimate chargeability
             for mesh in self.meshResults:
                 mesh.df['Chargeability(mV/V)'] = np.array(mesh.df['Phase(mrad)'])/-self.surveys[0].kFactor
-        # compute difference in percent in case of reg_mode == 1
+        
+        # compute difference in percent for time lapse surveys 
         if (self.iTimeLapse is True):# and (self.param['reg_mode'] == 1):
             # even with reg_mode == 2 when the inversion converged by overshooting
             # it won't output 'difference(percent)' attribute, so let's compute for all TL
             try:
-                self.computeDiff()
+                self.postProcTl() 
             except Exception as e:
                 print('failed to compute difference: ', e)
                 pass
@@ -6051,8 +6056,11 @@ class Project(object): # Project master class instanciated by the GUI
     #         self.meshResults[i].computeReciprocal(res_name,'Conductivity(S/m)')
 
 
-    def computeDiff(self):
-        """Compute the absolute and the relative difference in resistivity
+    def postProcTl(self):
+        """
+        Post processing for time-lapse surveys. 
+        
+        Compute the absolute and the relative difference in resistivity
         between inverted surveys.
         """
         if not self.iTimeLapse:
@@ -6090,6 +6098,9 @@ class Project(object): # Project master class instanciated by the GUI
         res_names = np.array(['Resistivity','Resistivity(Ohm-m)','Resistivity(ohm.m)'])
         res_name = res_names[np.in1d(res_names, list(self.meshResults[0].df.keys()))][0]
         res0 = np.array(self.meshResults[0].df[res_name])[inside]
+        
+        # nb: the first survey will have 0 % change
+        self.meshResults[0].addAttribute(np.zeros(self.meshResults[0].numel), 'difference(percent)') 
         for i in range(1, len(self.meshResults)):
             if 'difference(percent)' not in self.meshResults[i].df.columns:
                 try:
@@ -6100,44 +6111,7 @@ class Project(object): # Project master class instanciated by the GUI
                     print('error in computing difference:', e)
                     pass
         
-        # num_attr = len(self.meshResults[0].df)
-        # num_elm = self.meshResults[0].numel
-        # baselines = np.zeros((num_attr,num_elm))
-        # for i, key in enumerate(self.meshResults[0].df):
-        #     baselines[i,:] = self.meshResults[0].df[key]
-        # change = np.zeros_like(baselines)
-        # new_keys = []
-        # baseline_keys = []
-        # for j, key in enumerate(self.meshResults[0].df):
-        #     new_keys.append('Difference('+key+')')
-        #     baseline_keys.append(key)
-        # for j, key in enumerate(new_keys):
-        #     self.meshResults[0].add_attribute(change[j,:],key)
-
-        # #filter baseline to just the measurements left over after cropping the mesh
-        # if crop:
-        #     baselines = baselines[:,inside]
-
-        # problem = 0
-        # for i in range(1,len(self.meshResults)):
-        #     step = self.meshResults[i]
-        #     new_keys = []
-        #     count = 0
-        #     change = np.zeros_like(baselines)
-        #     for j, key in enumerate(baseline_keys):
-        #         try:
-        #             change[count,:] = (np.array(step.df[key])-baselines[count,:])/baselines[count,:] * 100
-        #         except KeyError:
-        #             problem+=1
-        #         new_keys.append('Difference('+key+')')
-        #         count += 1
-        #     count = 0
-        #     for j, key in enumerate(new_keys):
-        #         self.meshResults[i].add_attribute(change[count,:],key)
-        #         count += 1
-        # if problem>0:
-        #     print('Had a problem computing differences for %i attributes'%problem)
-
+        
 
 
     def saveVtks(self, dirname=None):
@@ -6731,11 +6705,6 @@ def parallelRm(invdir):
     #     warnings.warn('This function is deprecated, use computeCond() instead.',
     #                   DeprecationWarning)
     #     self.computeCond()
-
-    def compDiff(self): # pragma: no cover
-        warnings.warn('This function is deprecated, use computeDiff() instead.',
-                      DeprecationWarning)
-        self.computeDiff()
 
 
     def pseudo(self, index=0, vmin=None, vmax=None, ax=None, **kwargs):  # pragma: no cover
