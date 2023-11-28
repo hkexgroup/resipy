@@ -3520,7 +3520,7 @@ class App(QMainWindow):
 
         # additional options for tetrahedral mesh
         self.cl3ToolTip = 'Describes how big the nodes assocaited elements will be aroud the electrodes.\n' \
-                     'Default: 1/2 the minimum electrode spacing (in meters).'
+                     'Default: 1/4 the minimum electrode spacing (in meters).'
         self.cl3Label = QLabel('Characteristic Length:')
         self.cl3Label.setToolTip(self.cl3ToolTip)
         self.cl3Edit = QLineEdit()
@@ -3528,28 +3528,24 @@ class App(QMainWindow):
         self.cl3Edit.setText('')
         self.cl3Edit.setPlaceholderText('[m]')
         self.cl3Edit.setToolTip(self.cl3ToolTip)
-        self.cl3FactorToolTip = 'Characteristic length multiplier for the which increases' \
+        self.cl3FactorToolTip = 'Characteristic length multiplier for the which increases ' \
             'the size of elements at the depth of investigation \n' \
-            'Default: 8 (elements at the fine/coarse bondary depth are 8 times as big as those at the surface)'
-        self.cl3FactorLabel = QLabel('Growth Factor Depth:')
+            'Default: 5 (elements at the fine/coarse bondary depth are 5 times as big as those at the surface)'
+        self.cl3FactorLabel = QLabel('Growth Factor:')
         self.cl3FactorLabel.setToolTip(self.cl3FactorToolTip)
         self.cl3FactorEdit = QLineEdit()
         self.cl3FactorEdit.setToolTip(self.cl3FactorToolTip)
         self.cl3FactorEdit.setValidator(QDoubleValidator())
-        self.cl3FactorEdit.setText('8')
+        self.cl3FactorEdit.setText('5')
         # CLN ENTERED INTO UI NOW CHANGES INTERELECTRODE ELEMENT GROWTH - jamyd91 
-        self.clnFactorToolTip = 'Characteristic length multiplier for the which increases' \
-            'the size of elements at away from electrodes on the surface of the mesh' 
-        self.clnFactorLabel = QLabel('Growth Factor Surface:')
+        self.clnFactorToolTip = 'Characteristic length multiplier for the which increases ' \
+            'the size of elements at away from electrodes towards the edge of the mesh' 
+        self.clnFactorLabel = QLabel('Growth Factor (Neumann):')
         self.clnFactorLabel.setToolTip(self.clnFactorToolTip)
         self.clnFactorEdit = QLineEdit()
         self.clnFactorEdit.setToolTip(self.clnFactorToolTip)
         self.clnFactorEdit.setValidator(QDoubleValidator())
-        self.clnFactorEdit.setText('3')
-        # ADDED OPTION TO REFINE FOR GRIDS 
-        self.optimize4gridCheck = QCheckBox('Optimize For Grid')
-        self.optimize4gridCheck.setToolTip('Optimize the mesh refinement for'
-                                           'Electrodes on a grid (or non uniform grid')
+        self.clnFactorEdit.setText('1000')
         # OPTION TO REFINE GRID POST PROCESSING FOR FORWARD MODELLING 
         self.refineTetraCheck = QCheckBox('Refine')
         self.refineTetraCheck.setToolTip('Refine the mesh for forward modelling'
@@ -3578,9 +3574,7 @@ class App(QMainWindow):
             if self.project.elec['x'].isna().sum() > 0:
                 self.errorDump('Please first import data or specify electrodes in the "Electrodes (XYZ/Topo)" tab.')
                 return
-            elif all(elec['y'].values == 0) & all(topo[inan,1] == 0):
-                self.errorDump('For 3D meshes, Y coordinates must be supplied for topo or elec at least.')
-                return
+
             self.meshOutputStack.setCurrentIndex(0)
             QApplication.processEvents()
             self.meshLogText.clear()
@@ -3588,13 +3582,7 @@ class App(QMainWindow):
             cl_factor = float(self.cl3FactorEdit.text())
             cln_factor = float(self.clnFactorEdit.text()) if self.clnFactorEdit.text() != '' else 100
             refine = 1 if self.refineTetraCheck.isChecked() else 0
-            # optimize refinement ? 
-            if self.optimize4gridCheck.isChecked(): 
-                ball_refinement = False 
-                voroni_refinement = True 
-            else:
-                ball_refinement = True 
-                voroni_refinement = False 
+
             if np.sum(~inan) == topo.shape[0]:
                 topo = None
             else:
@@ -3603,15 +3591,11 @@ class App(QMainWindow):
             fmd = np.abs(float(self.fmdBox.text())) if self.fmdBox.text() != '' else None
             self.project.createMesh(typ='tetra', surface=topo, fmd=fmd,
                                cl=cl, cl_factor=cl_factor, dump=meshLogTextFunc,
-                               cl_corner=cln_factor, refine=refine, 
-                               ball_refinement=ball_refinement, 
-                               add_veroni_refinement=voroni_refinement,
+                               cln_factor=cln_factor, refine=refine, 
                                show_output=True)
             self.writeLog('k.createMesh(typ="tetra", surface={:s}, fmd={:s}, cl={:.2f},'
-                          ' cl_factor={:.2f}, cl_corner={:.2f}, refine={:d})'
-                          'ball_refinement={:s}, add_voroni_refinement={:s}'.format(
-                              str(topo), str(fmd), cl, cl_factor, cln_factor, refine,
-                              str(ball_refinement), str(voroni_refinement)))
+                          ' cl_factor={:.2f}, cln_factor={:.2f}, refine={:d})'.format(
+                              str(topo), str(fmd), cl, cl_factor, cln_factor, refine))
             if pvfound:
                 self.mesh3Dplotter.clear() # clear all actors 
                 self.project.showMesh(ax=self.mesh3Dplotter, color_map='Greys', color_bar=False)
@@ -3903,10 +3887,10 @@ class App(QMainWindow):
                 self.mesh3DBtn.clicked.connect(importCustomMeshFunc)
             self.mesh3DBtn.setStyleSheet('background-color:orange; color:black')
         self.mesh3DCombo = QComboBox()
-        self.mesh3DCombo.addItem('Half-space (tetra)')
-        self.mesh3DCombo.addItem('Tank (box)')
-        self.mesh3DCombo.addItem('Cylinder (column)')
-        self.mesh3DCombo.addItem('Custom Mesh')
+        self.mesh3DCombo.addItem('Field Survey')
+        self.mesh3DCombo.addItem('Tank Experiment')
+        self.mesh3DCombo.addItem('Column Setup')
+        self.mesh3DCombo.addItem('Custom Mesh Import')
         self.mesh3DCombo.currentIndexChanged.connect(mesh3DComboFunc)
 
         def saveMeshBtnFunc():
@@ -4176,7 +4160,6 @@ class App(QMainWindow):
         self.meshOptionTetraLayout.addWidget(self.clnFactorLabel)
         self.meshOptionTetraLayout.addWidget(self.clnFactorEdit)
         self.meshOptionTetraLayout.addWidget(self.refineTetraCheck)
-        self.meshOptionTetraLayout.addWidget(self.optimize4gridCheck)
 
         self.meshOptionTankLayout = QHBoxLayout()
         self.meshOptionTankLayout.addWidget(self.clTankLabel)
@@ -4824,7 +4807,7 @@ combination of multiple sequence is accepted as well as importing a custom seque
                 self.helpSection2.setHtml(r2help[arg])
 
 
-        self.parallelLabel = QLabel('<a href="parallel">Parallel inversion</a>')
+        self.parallelLabel = QLabel('<a href="parallel">Timelapse parallel processing/a>')
         self.parallelLabel.linkActivated.connect(showHelpAdv)
         self.parallelCheck = QCheckBox()
         advForm.addRow(self.parallelLabel, self.parallelCheck)

@@ -2813,8 +2813,8 @@ class Project(object): # Project master class instanciated by the GUI
                 elif typ == 'tetra':
                     print('Creating tetrahedral mesh...', end='')    
                     if cl == -1:
-                        dist = cdist(self.elec[~self.elec['remote']][['x','y']].values)/2 # half the minimal electrode distance
-                        cl = np.min(dist[dist != 0])
+                        dist = cdist(self.elec[~self.elec['remote']][['x','y']].values) # half the minimal electrode distance
+                        cl = np.min(dist[dist != 0])/4 
                     mesh = mt.tetraMesh(elec_x, elec_y, elec_z,elec_type,
                                  path=os.path.join(self.apiPath, 'exe'),
                                  surface_refinement=surface,
@@ -3769,6 +3769,9 @@ class Project(object): # Project master class instanciated by the GUI
                 dump('----------------- Computing d-d0+f(m0) ---------------\n')
                 # as per v3.2 of R3t we need to compute MANUALLY d-d0+f(m0)
                 # this is done automatically in R2 and cR2
+                # unfortunatley R3t does not output the transfer resistances of the final model 
+                # (only apparent resistivities) , therefore forward modelling the baseline 
+                # resistivities seems like the best option 
                 self.sequence = self.surveys[0].df[['a','b','m','n']].values
                 surveysBackup = self.surveys.copy()
                 # res0Backup = self.mesh.df['res0'].values.copy() # might want to reset res0 

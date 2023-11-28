@@ -88,7 +88,7 @@ def bearing(x,y):
     elif x < x0 and y > y0:
         return 270+theta 
     
-#%% refinement field
+#%% refinement field (depreciated)
 def add_ball_field(fh,nfield,x,y,z,r,mincl,maxcl,thick=1):
     fh.write('Field[%i] = Ball;\n'%nfield)
 
@@ -121,6 +121,30 @@ def add_box_field(fh, nfield, xmin, xmax, ymin, ymax, zmin, zmax, mincl, maxcl,
     
     
 def set_fields(fh,nfield):
+    field_list = [i+1 for i in range(nfield)]
+    nfield +=1 
+    fh.write('Field[%i] = Max;\n'%nfield)
+    field_list_s=str(field_list).replace('[','{').replace(']','}')
+    fh.write('Field[%i].FieldsList = %s;\n'%(nfield,field_list_s))
+    fh.write('Background Field = %i;\n'%nfield)
+    return nfield 
+
+#%% refinment fields 
+def addBallField(fh,nfield,x,y,z,r,thick=0):
+    fh.write('Field[%i] = Ball;\n'%nfield)
+
+    # set radius and area of influence 
+    fh.write('Field[%i].Radius = %f;\n'%(nfield,r))
+    fh.write('Field[%i].Thickness = %f;\n'%(nfield,thick))
+    # set characteristic lengths 
+    fh.write('Field[%i].VIn = cl*cl_factor;\n'%(nfield))
+    fh.write('Field[%i].VOut = cl*cln_factor;\n'%(nfield))
+    # set ball origin 
+    fh.write('Field[%i].XCenter = %f;\n'%(nfield,x))
+    fh.write('Field[%i].YCenter = %f;\n'%(nfield,y))
+    fh.write('Field[%i].ZCenter = %f;\n'%(nfield,z))
+    
+def setFields(fh,nfield):
     field_list = [i+1 for i in range(nfield)]
     nfield +=1 
     fh.write('Field[%i] = Max;\n'%nfield)
@@ -1152,18 +1176,6 @@ def mshParse47(fname,debug=True):
                 'parameter_title':'regions',
                 'dict_type':'mesh_info',
                 'original_file_path':fname} 
-            
-    # mesh_dict = {'numel':real_no_elements,
-    #             'numnp':numnp,
-    #             'dump':dump,      
-    #             'node':node,# coordinates of nodes 
-    #             'node_id':node_id,#node id number 
-    #             'elm_id':elm_id,#element id number 
-    #             'connection':connection,#nodes of element vertices
-    #             'cell_type':cell_type,
-    #             'zone':phys_entity,#the values of the attributes given to each cell 
-    #             'dict_type':'mesh_info',
-    #             'original_fname':fname} 
     
     stream('Finished reading .msh file')
     
@@ -1190,7 +1202,7 @@ def mshParse(fname, debug=True):
     else:
         return mshParseLegacy(fname, debug)
         
-#%% 2D whole space 
+#%% whole space problems 
 def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_input = None,
                        file_path='mesh.geo',cl=-1,cl_factor=50,fmd=None,dp_len=None):
     """Writes a gmsh .geo for a 2D whole space. Ignores the type of electrode. 
@@ -1432,7 +1444,506 @@ def gen_2d_whole_space(electrodes, padding = 20, electrode_type = None, geom_inp
     print("writing .geo to file completed, save location:\n%s\n"%os.getcwd())
     return np.array(node_pos)
 
+def wholespace(elec_x, elec_y, elec_z = None,
+              fmd=-1, file_path='mesh3d.geo',
+              cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
+              mesh_refinement=None, use_fields=False, dump=None,
+              flank_fac = 12):
+    """
+    Writes a gmsh .geo for a 3D wholespace (spherical) mesh. Ignores the type 
+    of electrode. Z coordinates should be given as depth below the surface! 
+    If Z != 0 then its assumed that the electrode is buried. 
+    
+    Parameters
+    ----------
+    elec_x: array like
+        electrode x coordinates 
+    elec_y: array like 
+        electrode y coordinates 
+    elec_z: array like 
+        electrode z coordinates 
+    fmd: float, optional 
+        Depth of investigation of the survey. Doesn't actually do anything in this
+        function but kept to maintain consistency with half space code.  
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional) of electrodes, essentially describes how big the nodes 
+        assocaited elements will be on the electrodes. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    cl_factor: float, optional 
+        Characteristic length mulitplier for the sub-surface points on away from the 
+        electrodes on the top of the fine mesh region.  This allows for tuning of 
+        the incremental size increase with depth in the mesh, usually set to 2 such 
+        that the elements at the DOI are twice as big as those
+        at the surface. The reasoning for this is because the sensitivity of ERT drops
+        off with depth. 
+    cln_factor: float, optional
+        Characteristic length mulitplier for the Neumann boundary points in the 
+        coarse mesh region. 
+    mesh_refinement: dict, pd.DataFrame, optional 
+        Coordinates for discrete points in the mesh (advanced use cases). 
+    dump : function, optional
+        If None, output is printed using `print()`. Else the given function is passed.
+    flank_fac: float, int, optional
+        Defines how far away the outer radius of the of the mesh. The radius is 
+        flank_factor * dp_len. 
+    
+    Returns
+    ----------
+    Node_pos: numpy array
+        The indexes for the mesh nodes corresponding to the electrodes input, the ordering of the nodes
+        should be the same as the input of the electrodes. 
+    """
+    
+    if dump is None:
+        def dump(x):
+            print(x)
+    if dp_len != -1 and dp_len<0:
+        raise ValueError('Can not have a negative dipole length')
+    if fmd != -1 and fmd<0:#then set to a default 
+        raise ValueError('Can not have a negative depth of fine mesh')
+    if cl != -1 and cl<0:
+        raise ValueError('Can not have a negative mesh characteristic length')
+        
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+    
+    # check for z coordinates 
+    if elec_z is None:
+        elec_z = [0]*len(elec_x)
+
+    # definition variable setup  
+    nelec = len(elec_x)
+    no_pts = 0
+    nfield = 0 
+    node_pos = np.zeros(nelec,dtype=int)
+    dist = np.unique(find_dist(elec_x, elec_y, elec_z)) 
+    
+    dmin = dist[1]
+    dmax = dist[-1]
+    xmean = np.mean(elec_x)
+    ymean = np.mean(elec_y)
+    
+    if cl==-1:
+        cl = dmin/4 # characteristic length is 1/4 the minimum electrode distance
+
+    if cl_factor == -1: 
+        cl_factor = 5 
+        
+    if dp_len == -1: # compute largest possible dipole length 
+        dp_len = dmax # maximum possible dipole length
+    
+    fmd = None 
+    outer_rad = dp_len*flank_fac # outer raduis of hemi-sphere 
+    
+    # create file 
+    fh = open(file_path,'w')
+    fh.write('//3D Wholespace (tetra) mesh for ResIPy\n')
+    fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write('cl=%f;//electrode characteristic length\n'%float(cl))
+    fh.write('cl_factor=%f;//Fine region characteristic factor\n'%float(cl_factor))
+    fh.write('cln_factor=%f;//Neumann characteristic factor\n'%float(cln_factor))
+    
+    template = 'Sphere(1) = {%f, %f, %f, %f, -Pi/2, Pi/2, Pi*2};//create a sphere\n' 
+    no_pts+=2 # seems adding a sphere adds in 2 points 
+    fh.write(template%(xmean,ymean,0,outer_rad))#
+    fh.write("Mesh.CharacteristicLengthFromPoints=1;\n")
+    # fh.write("MeshSize{1,2} = cl*cln_factor;")
+    
+    # create electrodes
+    fh.write('//Start electrodes, include refinement sphere around the electrode\n')
+    template = "Point(%i) = {%f, %f, %f, cl};//electrode coordinate\n"
+    for i in range(nelec):
+        no_pts += 1 
+        fh.write(template%(no_pts,elec_x[i],elec_y[i],elec_z[i]))
+        node_pos[i] = no_pts
+        fh.write("Point{%i} In Volume{1};//specify electrode volume\n"%no_pts)
+        if use_fields: 
+            nfield += 1 
+            addBallField(fh,nfield,elec_x[i],elec_y[i],elec_z[i],
+                           dmin/4,0)
+    if use_fields:
+        set_fields(fh, nfield)
+    fh.write("//End of electrodes\n")
+        
+    # check if any mesh refinement is requested 
+    if mesh_refinement is not None:
+        fh.write('//Custom refinement points\n')
+        # find surface points 
+        rx = mesh_refinement['x']
+        ry = mesh_refinement['y']
+        rz = mesh_refinement['z']
+        npoints = len(rx) # number of refinement points 
+        if 'cl' in mesh_refinement.keys():
+            rcl = mesh_refinement['cl'] # use cl specified for each point 
+            fh.write('//Refinement point characteristic length specified for each point individually\n')
+        else:
+            rcl = [cl]*npoints # use same cl as for electrodes 
+            fh.write('//Refinement point characteristic length the same as for electrodes\n')
+        for i in range(npoints):
+            no_pts += 1
+            fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
+            fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,1))# put the point in volume 
+        fh.write('//End mesh refinement points\n')
+        
+    fh.write("//End of gmsh script\n")
+        
+    fh.close()
+    
+    return node_pos 
+    
+    
 #%% 3D half space 
+def halfspace(elec_x, elec_y, elec_z = None,
+              fmd=-1, file_path='mesh3d.geo',
+              cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
+              mesh_refinement=None, use_fields=False, dump=None,
+              flank_fac = 12):
+    """
+    Writes a gmsh .geo for a 3D half space with no topography for a hemispherical 
+    mesh. Ignores the type of electrode. Z coordinates should be given as depth 
+    below the surface! If Z != 0 then its assumed that the electrode is buried. 
+    
+    Parameters
+    ----------
+    elec_x: array like
+        electrode x coordinates 
+    elec_y: array like 
+        electrode y coordinates 
+    elec_z: array like 
+        electrode z coordinates 
+    fmd: float, optional 
+        Depth of investigation of the survey. 
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional) of electrodes, essentially describes how big the nodes 
+        assocaited elements will be on the electrodes. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    cl_factor: float, optional 
+        Characteristic length mulitplier for the sub-surface points on away from the 
+        electrodes on the top of the fine mesh region.  This allows for tuning of 
+        the incremental size increase with depth in the mesh, usually set to 2 such 
+        that the elements at the DOI are twice as big as those
+        at the surface. The reasoning for this is because the sensitivity of ERT drops
+        off with depth. 
+    cln_factor: float, optional
+        Characteristic length mulitplier for the Neumann boundary points in the 
+        coarse mesh region. 
+    mesh_refinement: dict, pd.DataFrame, optional 
+        Coordinates for discrete points in the mesh (advanced use cases). 
+    dump : function, optional
+        If None, output is printed using `print()`. Else the given function is passed.
+    flank_factor: float, int, optional
+        Defines how far away the outer radius of the of the mesh. The radius is 
+        flank_factor * dp_len. 
+    
+    Returns
+    ----------
+    Node_pos: numpy array
+        The indexes for the mesh nodes corresponding to the electrodes input, the ordering of the nodes
+        should be the same as the input of the electrodes. 
+    """
+    
+    if dump is None:
+        def dump(x):
+            print(x)
+    if dp_len != -1 and dp_len<0:
+        raise ValueError('Can not have a negative dipole length')
+    if fmd != -1 and fmd<0:#then set to a default 
+        raise ValueError('Can not have a negative depth of fine mesh')
+    if cl != -1 and cl<0:
+        raise ValueError('Can not have a negative mesh characteristic length')
+        
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+    
+    # check for z coordinates 
+    if elec_z is None:
+        elec_z = [0]*len(elec_x)
+
+    # definition variable setup  
+    nelec = len(elec_x)
+    no_pts = 0
+    nfield = 0 
+    node_pos = np.zeros(nelec,dtype=int)
+    dist = np.unique(find_dist(elec_x, elec_y, elec_z)) 
+    
+    dmin = dist[1]
+    dmax = dist[-1]
+    xmean = np.mean(elec_x)
+    ymean = np.mean(elec_y)
+    
+    if cl==-1:
+        cl = dmin/4 # characteristic length is 1/4 the minimum electrode distance
+
+    if cl_factor == -1: 
+        cl_factor = 5 
+        
+    if dp_len == -1: # compute largest possible dipole length 
+        dp_len = dmax # maximum possible dipole length
+    
+    if fmd == -1: # compute depth of investigation
+        fmd = dmax/3 # maximum possible dipole length / 3
+
+    if fmd < abs(np.min(elec_z)):
+        warnings.warn('depth of fine mesh is shallower than lowest electrode, adjusting...')
+        fmd = abs(np.min(elec_z)) + (dp_len*2)
+
+    outer_rad = dp_len*flank_fac # outer raduis of hemi-sphere 
+    
+    # create file 
+    fh = open(file_path,'w')
+    fh.write('//3D Half space (tetra) mesh for ResIPy\n')
+    fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write('cl=%f;//electrode characteristic length\n'%float(cl))
+    fh.write('cl_factor=%f;//Fine region characteristic factor\n'%float(cl_factor))
+    fh.write('cln_factor=%f;//Neumann characteristic factor\n'%float(cln_factor))
+    fh.write('//Create a wholespace which approximates an infinite halfspace\n')
+    
+    template = 'Sphere(1) = {%f, %f, %f, %f, -Pi/2, 0, Pi*2};//create a sphere\n' 
+    no_pts+=2 # seems adding a sphere adds in 2 points 
+    fh.write(template%(xmean,ymean,0,outer_rad))#
+    fh.write("Mesh.CharacteristicLengthFromPoints=1;\n")
+    # fh.write("MeshSize{1,2} = cl*cln_factor;")
+    
+    # create electrodes
+    fh.write('//Start electrodes, include refinement sphere around the electrode\n')
+    template = "Point(%i) = {%f, %f, %f, cl};//electrode coordinate\n"
+    for i in range(nelec):
+        no_pts += 1 
+        fh.write(template%(no_pts,elec_x[i],elec_y[i],elec_z[i]))
+        node_pos[i] = no_pts
+        if elec_z[i] == 0:
+            fh.write("Point{%i} In Surface{2};//specify electrode surface\n"%no_pts)
+        else:
+            fh.write("Point{%i} In Volume{1};//specify electrode volume\n"%no_pts)
+        if use_fields: 
+            nfield += 1 
+            addBallField(fh,nfield,elec_x[i],elec_y[i],elec_z[i],
+                         dmin/4,0)
+    if use_fields:
+        setFields(fh, nfield)
+    fh.write("//End of electrodes\n")
+    
+    if all(np.array(elec_z)==0):
+        fh.write("//Subsurface refinement fields\n")
+        template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//refienement coordinate\n"
+        for i in range(nelec):
+            no_pts += 1 
+            fh.write(template%(no_pts,elec_x[i],elec_y[i],-fmd))
+            fh.write("Point{%i} In Volume{1};//specify refinement in volume\n"%no_pts)
+        
+        
+    # check if any mesh refinement is requested 
+    if mesh_refinement is not None:
+        fh.write('//Custom refinement points\n')
+        # find surface points 
+        rx = mesh_refinement['x']
+        ry = mesh_refinement['y']
+        rz = mesh_refinement['z']
+        npoints = len(rx) # number of refinement points 
+        if 'cl' in mesh_refinement.keys():
+            rcl = mesh_refinement['cl'] # use cl specified for each point 
+            fh.write('//Refinement point characteristic length specified for each point individually\n')
+        else:
+            rcl = [cl]*npoints # use same cl as for electrodes 
+            fh.write('//Refinement point characteristic length the same as for electrodes\n')
+        for i in range(npoints):
+            no_pts += 1
+                
+            if rz[i] == 0: # it is on the surface! 
+                fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], 0, rcl[i]))
+                fh.write("Point{%i} In Surface{%i};//surface refinement point\n"%(no_pts,2))# put the point on surface
+            else:
+                if rz[i]>0:
+                    fh.close()
+                    raise ValueError("electrode z coordinate is greater than 0 in gmshWrap.py and you can't have refinement points above the surface!")
+                fh.write("Point (%i) = {%.16f, %.16f, %.16f, %.16f};\n"%(no_pts, rx[i], ry[i], rz[i], rcl[i]))
+                fh.write("Point{%i} In Volume{%i};//buried refinement point\n"%(no_pts,1))# put the point in volume 
+        fh.write('//End mesh refinement points\n')
+        
+    fh.write("//End of gmsh script\n")
+        
+    fh.close()
+    
+    return node_pos
+    
+def halfspace2dline(elec_x, elec_y, elec_z = None,
+                    fmd=-1, file_path='mesh3d.geo',
+                    cl=-1, cl_factor=-1, cln_factor=1000, dp_len=-1, 
+                    mesh_refinement=None, use_fields=False, dump=None,
+                    flank_fac = 12):
+    """
+    Writes a gmsh .geo for a 3D half space with no topography for a hemispherical 
+    mesh for a survey setup that is a single 2D line. Ignores the type of electrode. 
+    Z coordinates should be given as depth below the surface! If Z != 0 then 
+    its assumed that the electrode is buried. 
+    
+    Parameters
+    ----------
+    elec_x: array like
+        electrode x coordinates 
+    elec_z: array like 
+        electrode z coordinates 
+    fmd: float, optional 
+        Depth of investigation of the survey. 
+    file_path: string, optional 
+        name of the generated gmsh file (can include file path also) (optional)
+    cl: float, optional
+        characteristic length (optional) of electrodes, essentially describes how big the nodes 
+        assocaited elements will be on the electrodes. Usually no bigger than 5. If set as -1 (default)
+        a characteristic length 1/4 the minimum electrode spacing is computed.
+    cl_factor: float, optional 
+        Characteristic length mulitplier for the sub-surface points on away from the 
+        electrodes on the top of the fine mesh region.  This allows for tuning of 
+        the incremental size increase with depth in the mesh, usually set to 2 such 
+        that the elements at the DOI are twice as big as those
+        at the surface. The reasoning for this is because the sensitivity of ERT drops
+        off with depth. 
+    cln_factor: float, optional
+        Characteristic length mulitplier for the Neumann boundary points in the 
+        coarse mesh region. 
+    mesh_refinement: dict, pd.DataFrame, optional 
+        Coordinates for discrete points in the mesh (advanced use cases). 
+    dump : function, optional
+        If None, output is printed using `print()`. Else the given function is passed.
+    flank_fac: float, int, optional
+        Defines how far away the outer radius of the of the mesh. The radius is 
+        flank_factor * dp_len. 
+    
+    Returns
+    ----------
+    Node_pos: numpy array
+        The indexes for the mesh nodes corresponding to the electrodes input, the ordering of the nodes
+        should be the same as the input of the electrodes. 
+    """
+    if dump is None:
+        def dump(x):
+            print(x)
+    if dp_len != -1 and dp_len<0:
+        raise ValueError('Can not have a negative dipole length')
+    if fmd != -1 and fmd<0:#then set to a default 
+        raise ValueError('Can not have a negative depth of fine mesh')
+    if cl != -1 and cl<0:
+        raise ValueError('Can not have a negative mesh characteristic length')
+    
+    if file_path.find('.geo')==-1:
+        file_path=file_path+'.geo'#add file extension if not specified already
+    
+    nelec = len(elec_x)
+    if elec_z is None:
+        elec_z = [0]*len(elec_x)
+        
+    no_pts = 0
+    nfield = 0 
+    no_lines = 0 
+    node_pos = np.zeros(nelec,dtype=int)
+    dist = np.unique(find_dist(elec_x, np.zeros(nelec), elec_z)) 
+    
+    dmin = dist[1]
+    dmax = dist[-1]
+    xmean = np.mean(elec_x)
+    ymean = elec_y[0]
+
+    if cl==-1:
+        cl = dmin/4 # characteristic length is 1/4 the minimum electrode distance
+    
+    if cl_factor == -1: 
+        cl_factor = 5 
+        
+    if dp_len == -1: # compute largest possible dipole length 
+        dp_len = dmax # maximum possible dipole length
+    
+    if fmd == -1: # compute depth of investigation
+        fmd = dmax/3 # maximum possible dipole length / 3
+    
+    if fmd < abs(np.min(elec_z)):
+        warnings.warn('depth of fine mesh is shallower than lowest electrode, adjusting...')
+        fmd = abs(np.min(elec_z)) + (dp_len*2)
+    
+    cln_factor=1000
+    outer_rad = dmax*flank_fac
+    
+    # create file 
+    fh = open(file_path,'w')
+    fh.write('//3D Half space (tetra) mesh for ResIPy which is a 2D line\n')
+    fh.write("Mesh.Binary = 0;//specify we want ASCII format\n")
+    fh.write('SetFactory("OpenCASCADE");\n')
+    fh.write('cl=%f;//electrode characteristic length\n'%float(cl))
+    fh.write('cl_factor=%f;//Fine region characteristic factor\n'%float(cl_factor))
+    fh.write('cln_factor=%f;//Neumann characteristic factor\n'%float(cln_factor))
+    
+    template = 'Sphere(1) = {%f, %f, %f, %f, -Pi/2, 0, Pi*2};//create a sphere\n' 
+    no_pts+=2 # seems adding a sphere adds in 2 points 
+    no_lines+=3 # and three lines 
+    fh.write(template%(xmean,ymean,0.0,outer_rad))
+    
+    # create electrodes
+    fh.write('//Start electrodes, include refinement sphere around the electrode\n')
+    template = "Point(%i) = {%f, %f, %f, cl};//electrode\n"
+    pts_cache = []
+    lns_cache = []
+    bur_cache = [] # buried electrodes 
+    for i in range(len(elec_x)):
+        no_pts += 1 
+        fh.write(template%(no_pts,elec_x[i],elec_y[0],elec_z[i]))
+        node_pos[i] = no_pts
+        if elec_z[i] == 0:
+            fh.write("Point{%i} In Surface{2};\n"%no_pts)
+            pts_cache.append(no_pts)
+        else:
+            # fh.write("Point{%i} In Volume{1};\n"%no_pts)
+            bur_cache.append(no_pts)
+        nfield += 1 
+        addBallField(fh,nfield,elec_x[i],elec_y[0],elec_z[i],
+                     dmin/4)
+    setFields(fh, nfield)
+    
+    for i in range(1,len(pts_cache)):
+        no_lines += 1 
+        fh.write("Line(%i) = {%i, %i};\n"%(no_lines,pts_cache[i-1],pts_cache[i]))
+        lns_cache.append(no_lines)
+        
+    template = "Point(%i) = {%f, %f, %f, cl*cl_factor};//depth refinement point\n"
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[0],elec_y[0],-fmd))
+    no_pts += 1 
+    fh.write(template%(no_pts,elec_x[-1],elec_y[0],-fmd))
+    
+    no_lines += 1 
+    fh.write("Line(%i) = {%i, %i};\n"%(no_lines,pts_cache[-1],no_pts))
+    lns_cache.append(no_lines)
+    
+    no_lines += 1 
+    fh.write("Line(%i) = {%i, %i};\n"%(no_lines,no_pts,no_pts-1))
+    lns_cache.append(no_lines)
+    
+    no_lines += 1 
+    fh.write("Line(%i) = {%i, %i};\n"%(no_lines,pts_cache[0],no_pts-1))
+    lns_cache.append(no_lines)
+    
+    fh.write('Curve Loop(3) = {')
+    for i in range(len(lns_cache)-1):
+        fh.write('%i, '%lns_cache[i])
+    fh.write('-%i};\n'%lns_cache[-1])
+    
+    fh.write('Plane Surface(3) = {3};\n')
+    fh.write('Surface{3} In Volume{1};\n')
+    
+    for i in range(len(lns_cache)-3):
+        fh.write('Line{%i} In Surface{2};\n'%lns_cache[i])
+
+    # specify points below surface are in 2D mesh region         
+    for pt in bur_cache: 
+        fh.write('Point{%i} In Surface{3};\n'%pt)
+        
+    fh.close()
+    
+    return node_pos 
 
 def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
            cl=-1, cl_corner=-1, cl_factor=8, cln_factor=100, dp_len=-1, 
@@ -1442,6 +1953,8 @@ def box_3d(electrodes, padding=20, fmd=-1, file_path='mesh3d.geo',
     writes a gmsh .geo for a 3D half space with no topography. Ignores the type of electrode. 
     Z coordinates should be given as depth below the surface! If Z != 0 then its assumed that the
     electrode is buried. 
+    
+    !! Depreciated code as of Dec 2023 !! 
     
     Parameters
     ----------
