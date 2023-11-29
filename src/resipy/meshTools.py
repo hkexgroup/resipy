@@ -4714,12 +4714,12 @@ def triMesh(elec_x, elec_z, elec_type=None, geom_input=None, keep_files=True,
     #make .geo file
     file_name="mesh"
     if not whole_space:#by default create survey with topography 
-        node_pos = gw.genGeoFile([elec_x,elec_z], elec_type, geom_input,
-                             file_path=file_name,**kwargs)
+        node_pos = gw.halfspace2d([elec_x,elec_z], elec_type, geom_input,
+                                  file_path=file_name,**kwargs)
     elif whole_space:
         print("Whole space problem")
-        node_pos = gw.gen_2d_whole_space([elec_x,elec_z], geom_input = geom_input, 
-                                         file_path=file_name,**kwargs)    
+        node_pos = gw.wholespace2d([elec_x,elec_z], geom_input = geom_input, 
+                                   file_path=file_name,**kwargs)    
     
     # run gmsh
     runGmsh(ewd, file_name, show_output=show_output, dump=dump, threed=False, handle=handle)
@@ -5053,11 +5053,11 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     #make .geo file
     file_name="mesh3d"
     if whole_space:#by default create survey with topography 
-        node_pos = gw.wholespace(elec_x, elec_y, elec_z, file_path=file_name, **kwargs)
+        node_pos = gw.wholespace3d(elec_x, elec_y, elec_z, file_path=file_name, **kwargs)
     elif lineis2d:
-        node_pos = gw.halfspace2dline(elec_x, elec_y, elec_z, file_path=file_name, **kwargs)
+        node_pos = gw.halfspace3dline2d(elec_x, elec_y, elec_z, file_path=file_name, **kwargs)
     else:
-        node_pos = gw.halfspace(elec_x, elec_y, elec_z, file_path=file_name, **kwargs)
+        node_pos = gw.halfspace3d(elec_x, elec_y, elec_z, file_path=file_name, **kwargs)
             
     # handling gmsh
     runGmsh(ewd, file_name, show_output=show_output, dump=dump, threed=True, handle=handle)
@@ -5095,7 +5095,7 @@ def tetraMesh(elec_x,elec_y,elec_z=None, elec_type = None, keep_files=True,
     if interp_method == 'bilinear':# interpolate on a irregular grid, extrapolates the unknown coordinates
         nodez = interp.interp2d(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method == 'nearest':
-        nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp, num_threads=ncores)
+        nodez = interp.nearest(node_x, node_y, x_interp, y_interp, z_interp)
     elif interp_method == 'spline':
         nodez = interp.interp2d(node_x, node_y, x_interp, y_interp, z_interp,method='spline')
     elif interp_method == 'triangulate':
@@ -5621,7 +5621,7 @@ def prismMesh(elec_x, elec_y, elec_z,
         
     #make prism mesh command script
     file_name = "prism_mesh"
-    gw.prism_mesh([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
+    gw.prism([elec_x,elec_y,elec_z], file_path=file_name, **kwargs)
     #note that this column mesh function doesnt return the electrode nodes 
     
     
@@ -5698,8 +5698,8 @@ def cylinderMesh(elec_x, elec_y, elec_z,
     """
     file_path = file_path if file_path[-4:] == '.geo' else file_path + '.geo'
     elec = [elec_x,elec_y,elec_z]
-    gw.cylinder_mesh(elec, zlim=zlim, radius=radius, file_path=file_path,
-                     cl=cl, cl_factor=cl_factor, elemz=finer)    
+    gw.cylinder(elec, zlim=zlim, radius=radius, file_path=file_path,
+                cl=cl, cl_factor=cl_factor, elemz=finer)    
     elec = np.array(elec).T 
     # check directories 
     if path == "exe":
@@ -5785,8 +5785,8 @@ def tankMesh(elec=None,
         killed in the UI for instance.
     """
     file_path = file_path if file_path[-4:] == '.geo' else file_path + '.geo'
-    gw.tank_mesh(elec=elec, origin=origin, dimension=dimension,
-                 file_path=file_path, cl=cl)    
+    gw.tank(elec=elec, origin=origin, dimension=dimension,
+            file_path=file_path, cl=cl)    
     
     # check directories 
     if path == "exe":
